@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package aegis.core;
+
+message AuditNodeProto {
+    string state_id = 1;
+    double timestamp = 2;
+    double entropy = 3;
+    bytes payload = 4;
+    string tenant_id = 5;
+    string sampling_params_json = 6;
+    string prev_hash = 7;
+    string merkle_root = 8;
+    bytes signature = 9;
+}

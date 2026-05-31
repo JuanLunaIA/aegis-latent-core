@@ -1,0 +1,107 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aegis-latent-core"
+version = "2.0.0"
+description = "Forensic telemetry proxy and Merkle audit chain for LLM inference pipelines"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+authors = [{ name = "Aegis Project" }]
+keywords = [
+    "llm", "ai-safety", "forensics", "telemetry", "audit",
+    "openai", "proxy", "entropy", "merkle", "chain-of-custody",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.29.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.3.0",
+    "numpy>=1.26.0",
+    "python-dotenv>=1.0.0",
+    "structlog>=24.1.0",
+    "protobuf>=5.0.0",
+    "redis>=5.0.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+gpu = ["torch>=2.0.0"]
+vllm = ["vllm>=0.4.0", "torch>=2.0.0"]
+hf = ["transformers>=4.40.0", "torch>=2.0.0"]
+metrics = ["prometheus-fastapi-instrumentator>=6.1.0"]
+pqc = ["oqs-python>=0.10.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "httpx>=0.27.0",    # for TestClient
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "bandit>=1.7",
+]
+all = [
+    "aegis-latent-core[gpu,metrics,pqc,dev]",
+]
+
+[project.scripts]
+aegis = "aegis.proxy.app:main"
+aegis-server = "aegis.proxy.app:main"
+
+[project.urls]
+Homepage = "https://github.com/your-org/aegis-latent-core"
+Documentation = "https://your-org.github.io/aegis-latent-core"
+Repository = "https://github.com/your-org/aegis-latent-core"
+"Bug Tracker" = "https://github.com/your-org/aegis-latent-core/issues"
+Changelog = "https://github.com/your-org/aegis-latent-core/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["aegis", "integrations"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "--cov=aegis --cov-report=term-missing --cov-fail-under=85"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I", "N", "W", "UP", "S", "B", "A", "COM", "C4", "PT"]
+ignore = ["S101", "COM812"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]
+
+[tool.coverage.run]
+source = ["aegis"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@abstractmethod",
+]

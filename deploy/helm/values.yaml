@@ -1,0 +1,121 @@
+# Default values for aegis-latent-core Helm chart.
+# Override with: helm install aegis . -f my-values.yaml
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/your-org/aegis-latent-core
+  pullPolicy: IfNotPresent
+  tag: "2.0.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# ── Aegis configuration ───────────────────────────────────────────────────────
+aegis:
+  # URL of the upstream LLM backend
+  backendUrl: "https://api.openai.com"
+  # Reference to a Secret containing AEGIS_BACKEND_API_KEY and AEGIS_API_KEYS
+  # Create with: kubectl create secret generic aegis-keys \
+  #   --from-literal=AEGIS_BACKEND_API_KEY=sk-... \
+  #   --from-literal=AEGIS_API_KEYS=sk-aegis-1,sk-aegis-2 \
+  #   --from-literal=AEGIS_AUDIT_API_KEYS=sk-audit-1
+  existingSecret: "aegis-keys"
+  forceLogprobs: "true"
+  logLevel: "INFO"
+  klAlertThreshold: "2.0"
+  jsAlertThreshold: "0.5"
+  entropyAlertThresholdBits: "1.0"
+  webhookUrl: ""
+  workers: "2"
+
+# ── WAL persistence ───────────────────────────────────────────────────────────
+persistence:
+  enabled: true
+  storageClass: ""          # "" = cluster default
+  accessMode: ReadWriteOnce
+  size: 20Gi
+  mountPath: /data
+
+# ── Service ───────────────────────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+  annotations: {}
+
+# ── Ingress ───────────────────────────────────────────────────────────────────
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  hosts:
+    - host: aegis.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: aegis-tls
+      hosts:
+        - aegis.example.com
+
+# ── Resources ─────────────────────────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+
+# ── Autoscaling ───────────────────────────────────────────────────────────────
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+# ── Security context ──────────────────────────────────────────────────────────
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# ── Probes ────────────────────────────────────────────────────────────────────
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# ── Pod disruption budget ─────────────────────────────────────────────────────
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,56 @@
+# Aegis Latent Core — Docker Compose
+# Usage:
+#   cp .env.example .env && editor .env
+#   docker compose up -d
+#
+# To point at OpenAI:   AEGIS_BACKEND_URL=https://api.openai.com
+# To point at Ollama:   AEGIS_BACKEND_URL=http://ollama:11434
+# To point at vLLM:     AEGIS_BACKEND_URL=http://vllm:8000
+
+version: "3.9"
+
+services:
+  aegis:
+    image: ghcr.io/your-org/aegis-latent-core:latest
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${AEGIS_PORT:-8080}:8080"
+    volumes:
+      - aegis-wal:/data
+    environment:
+      AEGIS_BACKEND_URL: ${AEGIS_BACKEND_URL:-http://host.docker.internal:11434}
+      AEGIS_BACKEND_API_KEY: ${AEGIS_BACKEND_API_KEY:-}
+      AEGIS_API_KEYS: ${AEGIS_API_KEYS:-}
+      AEGIS_AUDIT_API_KEYS: ${AEGIS_AUDIT_API_KEYS:-}
+      AEGIS_WAL_PATH: /data/aegis.wal.jsonl
+      AEGIS_LOG_LEVEL: ${AEGIS_LOG_LEVEL:-INFO}
+      AEGIS_FORCE_LOGPROBS: ${AEGIS_FORCE_LOGPROBS:-true}
+      AEGIS_KL_ALERT_THRESHOLD: ${AEGIS_KL_ALERT_THRESHOLD:-2.0}
+      AEGIS_WEBHOOK_URL: ${AEGIS_WEBHOOK_URL:-}
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - aegis-net
+
+  # Optional: local Ollama backend
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   ports: ["11434:11434"]
+  #   volumes: [ollama-models:/root/.ollama]
+  #   networks: [aegis-net]
+
+volumes:
+  aegis-wal:
+    driver: local
+  # ollama-models:
+
+networks:
+  aegis-net:
+    driver: bridge

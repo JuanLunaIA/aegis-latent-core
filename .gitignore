@@ -1,0 +1,59 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Environments ---
+.venv/
+venv/
+ENV/
+env/
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# --- IDEs & Editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+.classpath
+
+# --- OS & System ---
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+
+# --- Aegis Specific ---
+*.wal.jsonl
+data/
+logs/
+
+*.db
+.hypothesis/
