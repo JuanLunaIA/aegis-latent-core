@@ -2,17 +2,18 @@
 aegis.proxy.dependencies — Shared FastAPI dependencies for the Aegis proxy.
 """
 from __future__ import annotations
-from typing import Annotated
-from fastapi import Request, HTTPException, status
-from aegis.auth.apikey import ProxyKeyAuth, AuditKeyAuth
-from aegis.proxy.mtls import mTLSAuth
+
+from fastapi import HTTPException, Request, status
+
+from aegis.auth.apikey import AuditKeyAuth, ProxyKeyAuth
+
 
 async def validate_proxy_auth(request: Request) -> str:
     """
     Validates the request using mTLS (SPIFFE) if enabled, falling back to API Keys.
     """
     state = request.app.state.aegis
-    
+
     # 1. Prioritize mTLS (SISTEMA INEXPUGNABLE requirement)
     if getattr(state, "mtls_auth", None) is not None:
         try:
@@ -35,7 +36,7 @@ async def validate_audit_auth(request: Request) -> str:
     Validates the Audit API using mTLS (SPIFFE) or Audit API Keys.
     """
     state = request.app.state.aegis
-    
+
     if getattr(state, "mtls_auth", None) is not None:
         try:
             return await state.mtls_auth.validate_request(request)

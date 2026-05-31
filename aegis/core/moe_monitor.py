@@ -1,7 +1,8 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Optional, List
+
 import math
+from dataclasses import dataclass
+
 import numpy as np
 
 
@@ -19,7 +20,7 @@ class MoERoutingMonitor:
     def __init__(
         self,
         gate_threshold: float = 0.5,
-        activation_bound: Optional[float] = None,
+        activation_bound: float | None = None,
         min_experts: int = 2,
     ) -> None:
         if not (0.0 < gate_threshold < 1.0):
@@ -31,7 +32,7 @@ class MoERoutingMonitor:
         self.min_experts = min_experts
 
     def calibrate_from_samples(
-        self, samples: List[np.ndarray], expert_norms: np.ndarray
+        self, samples: list[np.ndarray], expert_norms: np.ndarray
     ) -> None:
         aggregates = [np.dot(g, expert_norms) for g in samples]
         self.activation_bound = float(np.percentile(aggregates, 99))
@@ -51,7 +52,7 @@ class MoERoutingMonitor:
     def detect_entanglement(
         self,
         gate_weights: np.ndarray,
-        expert_norms: Optional[np.ndarray] = None,
+        expert_norms: np.ndarray | None = None,
     ) -> EntanglementResult:
         if gate_weights.ndim != 1 or gate_weights.size < self.min_experts:
             return EntanglementResult(

@@ -10,9 +10,9 @@ keywords:
   - forensics
   - audit
   - openai-proxy
-home: https://github.com/your-org/aegis-latent-core
+home: https://github.com/JuanLunaIA/aegis-latent-core
 sources:
-  - https://github.com/your-org/aegis-latent-core
+  - https://github.com/JuanLunaIA/aegis-latent-core
 maintainers:
-  - name: Aegis Project
-    email: security@your-org.com
+  - name: JuanLunaIA
+    url: https://github.com/JuanLunaIA

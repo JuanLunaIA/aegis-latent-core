@@ -2,14 +2,13 @@
 aegis.config — Centralized configuration via environment variables.
 """
 from __future__ import annotations
-import os
-import secrets
+
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated
 
 from pydantic import AnyHttpUrl, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class AegisSettings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -164,6 +163,18 @@ class AegisSettings(BaseSettings):
         default="redis://localhost:6379",
         description="Redis connection URL for distributed rate limiting.",
     )
+    rate_limit_backend: str = Field(
+        default="memory",
+        description="Rate limiter backend: 'memory' (default, no Redis) or 'redis'.",
+    )
+    request_entropy_guard: bool = Field(
+        default=False,
+        description="Block requests failing Shannon-entropy heuristics (enable in hardened mode).",
+    )
+    waf_strict_mode: bool = Field(
+        default=True,
+        description="Reject payloads that match known prompt-injection patterns.",
+    )
 
 
     # ── Server ────────────────────────────────────────────────────────────
@@ -182,6 +193,15 @@ class AegisSettings(BaseSettings):
         description="HTTP(S) URL to POST alert payloads to (Slack, Teams, custom SIEM).",
     )
     webhook_timeout_seconds: float = Field(default=5.0, ge=0.5, le=30.0)
+
+    @field_validator("rate_limit_backend")
+    @classmethod
+    def _validate_rate_limit_backend(cls, v: str) -> str:
+        allowed = {"memory", "redis"}
+        v_lower = v.lower()
+        if v_lower not in allowed:
+            raise ValueError(f"rate_limit_backend must be one of {allowed}")
+        return v_lower
 
     @field_validator("log_level")
     @classmethod

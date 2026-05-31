@@ -16,10 +16,10 @@ The LRU contract is documented so that callers are not surprised by eviction.
 """
 
 from __future__ import annotations
-import uuid
+
 import threading
+import uuid
 from collections import OrderedDict
-from typing import Optional, Tuple
 
 from aegis.core.telemetry import LogitEntropyMonitor
 
@@ -55,9 +55,9 @@ class SessionLifecycleManager:
 
     def get_monitor(
         self,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
         ema_alpha: float = 0.1,
-    ) -> Tuple[str, LogitEntropyMonitor]:
+    ) -> tuple[str, LogitEntropyMonitor]:
         """
         Retrieve or create the monitor for *session_id*.
 

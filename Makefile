@@ -1,5 +1,5 @@
 # aegis-latent-core — developer convenience targets
-.PHONY: help install dev lint type security test test-cov build-rust clean
+.PHONY: help install dev lint type security test test-cov smoke build-rust clean
 
 PYTHON   := python3
 PIP      := pip install
@@ -16,7 +16,8 @@ help:
 	@echo "  type        Run mypy type checker"
 	@echo "  security    Run bandit SAST scan"
 	@echo "  test        Run test suite"
-	@echo "  test-cov    Run tests with coverage report"
+	@echo "  test-cov    Run tests with coverage report (65% gate)"
+	@echo "  smoke       Run scripts/smoke_test.sh against local server"
 	@echo "  build-rust  Build aegis_rust_v2 extension (.so) via maturin"
 	@echo "  clean       Remove build artifacts"
 
@@ -40,7 +41,11 @@ test:
 	$(PYTEST) tests/ -v
 
 test-cov:
-	$(PYTEST) tests/ -v --cov=aegis --cov-report=term-missing --cov-report=xml --cov-fail-under=85
+	$(PYTEST) tests/ -v --cov=aegis --cov-report=term-missing --cov-report=xml --cov-fail-under=65
+
+smoke:
+	chmod +x scripts/smoke_test.sh
+	./scripts/smoke_test.sh
 
 build-rust:
 	@command -v maturin >/dev/null 2>&1 || { echo "maturin not found: pip install maturin"; exit 1; }

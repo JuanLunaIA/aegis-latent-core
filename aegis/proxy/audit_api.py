@@ -4,18 +4,20 @@ aegis.proxy.audit_api — Read-only REST endpoints for the Merkle audit chain.
 Mounted at /v1/audit/* and protected by AuditKeyAuth.
 """
 from __future__ import annotations
+
 import logging
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
-from aegis.proxy.schemas import AuditNodeOut, AuditSessionOut, IntegrityReport
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+
 from aegis.proxy.dependencies import validate_audit_auth
+from aegis.proxy.schemas import AuditNodeOut, IntegrityReport
 
 logger = logging.getLogger(__name__)
 
 def build_audit_router(
-    ledger: Any, 
-    auth_dependency: Any, 
+    ledger: Any,
+    auth_dependency: Any,
 ) -> APIRouter:
     router = APIRouter(tags=["audit"])
 
@@ -104,7 +106,7 @@ def build_audit_router(
     async def list_tenants(
         _key: Annotated[str, Depends(validate_audit_auth)],
     ) -> list[str]:
-        """Return distinct la tenant IDs present in the current memory window."""
+        """Return distinct tenant IDs present in the current memory window."""
         return sorted({n.tenant_id for n in ledger.chain})
 
     return router

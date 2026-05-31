@@ -4,7 +4,7 @@
 replicaCount: 2
 
 image:
-  repository: ghcr.io/your-org/aegis-latent-core
+  repository: ghcr.io/juanlunia/aegis-latent-core
   pullPolicy: IfNotPresent
   tag: "2.0.0"
 

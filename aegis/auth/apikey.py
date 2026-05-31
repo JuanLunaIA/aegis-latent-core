@@ -7,10 +7,10 @@ Security properties:
   - Key set is a frozenset built at startup; hot-reload not supported by design.
 """
 from __future__ import annotations
-import hmac
-from typing import Annotated
 
-from fastapi import Depends, HTTPException, Security, status, Request
+import hmac
+
+from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from aegis.config import AegisSettings, get_settings
@@ -48,8 +48,8 @@ class ProxyKeyAuth:
             credentials = None
         elif auth_header.startswith("Bearer "):
             credentials = HTTPAuthorizationCredentials(
-                scheme="Bearer", 
-                credentials=auth_header[7:]
+                scheme="Bearer",
+                credentials=auth_header[7:],
             )
         else:
             credentials = None
@@ -96,8 +96,8 @@ class AuditKeyAuth:
             credentials = None
         elif auth_header.startswith("Bearer "):
             credentials = HTTPAuthorizationCredentials(
-                scheme="Bearer", 
-                credentials=auth_header[7:]
+                scheme="Bearer",
+                credentials=auth_header[7:],
             )
         else:
             credentials = None

@@ -5,7 +5,9 @@ Covers: /v1/chat/completions, /v1/completions, /v1/embeddings.
 Extra fields are forwarded transparently (model_config extra='allow').
 """
 from __future__ import annotations
+
 from typing import Any, Literal
+
 from pydantic import BaseModel, Field
 
 

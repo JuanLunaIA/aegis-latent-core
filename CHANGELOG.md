@@ -37,5 +37,5 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-[Unreleased]: https://github.com/your-org/aegis-latent-core/compare/v2.0.0...HEAD
-[2.0.0]: https://github.com/your-org/aegis-latent-core/releases/tag/v2.0.0
+[Unreleased]: https://github.com/JuanLunaIA/aegis-latent-core/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v2.0.0

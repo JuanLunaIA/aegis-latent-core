@@ -4,13 +4,13 @@
 #
 # Usage:
 #   chmod +x init-repo.sh
-#   REMOTE_URL=https://github.com/YOUR_ORG/aegis-latent-core.git ./init-repo.sh
+#   REMOTE_URL=https://github.com/JuanLunaIA/aegis-latent-core.git ./init-repo.sh
 #
 # Prerequisites: git, python3>=3.11, maturin (for Rust .so build)
 
 set -euo pipefail
 
-REMOTE_URL="${REMOTE_URL:-}"
+REMOTE_URL="${REMOTE_URL:-https://github.com/JuanLunaIA/aegis-latent-core.git}"
 BRANCH="${BRANCH:-main}"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
@@ -98,7 +98,7 @@ if [[ -n "$REMOTE_URL" ]]; then
 else
   warn "REMOTE_URL not set — skipping push."
   warn "To push manually:"
-  warn "  git remote add origin https://github.com/YOUR_ORG/aegis-latent-core.git"
+  warn "  git remote add origin https://github.com/JuanLunaIA/aegis-latent-core.git"
   warn "  git push -u origin $BRANCH"
 fi
 

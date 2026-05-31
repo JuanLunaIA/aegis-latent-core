@@ -3,12 +3,14 @@ telemetry.py - Advanced Information-Theoretic Signal Analysis Layer
 """
 
 from __future__ import annotations
+
 import math
 from collections import deque
 from dataclasses import dataclass
-from typing import Optional, List
+
 import numpy as np
-from aegis.core.math_utils import normalize_logits, log_softmax
+
+from aegis.core.math_utils import log_softmax, normalize_logits
 
 
 @dataclass(frozen=True)
@@ -26,11 +28,11 @@ class LogitEntropyMonitor:
         if not (0.0 < ema_alpha < 1.0):
             raise ValueError("ema_alpha must be in (0, 1)")
         self.ema_alpha = ema_alpha
-        self.current_ema: Optional[float] = None
+        self.current_ema: float | None = None
         self.window_size = window_size
         self.history: deque[float] = deque(maxlen=window_size)
         # Baseline distribution for semantic drift detection
-        self._baseline_dist: Optional[np.ndarray] = None
+        self._baseline_dist: np.ndarray | None = None
 
 
     def compute_shannon_entropy(self, logits: np.ndarray) -> float:
@@ -115,16 +117,16 @@ class LogitEntropyMonitor:
             max_len = max(len(p_logits), len(q_logits))
             p_logits = np.pad(p_logits, (0, max_len - len(p_logits)), constant_values=-np.inf)
             q_logits = np.pad(q_logits, (0, max_len - len(q_logits)), constant_values=-np.inf)
-            
+
         log_p = log_softmax(p_logits)
         log_q = log_softmax(q_logits)
         p = np.exp(log_p)
-        
+
         # Robust KL computation avoiding log(0)
         kl_elements = p * (log_p - log_q) / np.log(2.0)
         kl_elements = np.nan_to_num(kl_elements, nan=0.0, posinf=0.0, neginf=0.0)
         kl_value = float(np.sum(kl_elements))
-        
+
         raw_q = np.exp(q_logits - np.max(q_logits))
         saturated_count = int(np.sum(raw_q == 0.0))
         return KLResult(

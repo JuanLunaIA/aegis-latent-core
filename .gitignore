@@ -1,8 +1,9 @@
-# --- Python ---
+# ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.dylib
 .Python
 build/
 develop-eggs/
@@ -16,25 +17,49 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+pip-wheel-metadata/
+MANIFEST
+
+# ── Tests & coverage ──────────────────────────────────────────────────────────
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+coverage.xml
+.tox/
+.nox/
+.hypothesis/
 
-# --- Environments ---
+# ── Type checkers & linters ───────────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.pytype/
+
+# ── Virtual environments ────────────────────────────────────────────────────────
 .venv/
 venv/
 ENV/
 env/
 .env
-.env.local
-.env.development
-.env.test
-.env.production
+.env.*
+!.env.example
 
-# --- IDEs & Editors ---
+# ── Secrets & credentials (never commit) ──────────────────────────────────────
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets/
+.secrets/
+
+# ── IDEs & editors ────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
@@ -43,17 +68,41 @@ env/
 .project
 .settings/
 .classpath
+*.sublime-project
+*.sublime-workspace
 
-# --- OS & System ---
+# ── OS & misc ─────────────────────────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 *.tmp
+*.bak
 *.log
+*.pid
 
-# --- Aegis Specific ---
+# ── Rust (optional extension build) ───────────────────────────────────────────
+aegis_rust_v2/target/
+**/target/
+Cargo.lock
+
+# ── Aegis runtime data ────────────────────────────────────────────────────────
 *.wal.jsonl
+aegis.wal.jsonl
 data/
 logs/
-
 *.db
-.hypothesis/
+*.sqlite
+*.sqlite3
+
+# ── Docker / local overrides ───────────────────────────────────────────────────
+docker-compose.override.yml
+.docker/
+
+# ── Cursor / agent artifacts (local only) ─────────────────────────────────────
+.cursor/
+.agent/

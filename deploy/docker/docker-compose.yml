@@ -11,7 +11,7 @@ version: "3.9"
 
 services:
   aegis:
-    image: ghcr.io/your-org/aegis-latent-core:latest
+    image: ghcr.io/juanlunia/aegis-latent-core:latest
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
@@ -31,7 +31,13 @@ services:
       AEGIS_KL_ALERT_THRESHOLD: ${AEGIS_KL_ALERT_THRESHOLD:-2.0}
       AEGIS_WEBHOOK_URL: ${AEGIS_WEBHOOK_URL:-}
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')",
+        ]
       interval: 30s
       timeout: 5s
       retries: 3

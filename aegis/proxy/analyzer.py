@@ -7,15 +7,17 @@ top-k logprobs, computes Shannon entropy, EMA, KL and JS divergence,
 and emits structured alerts when thresholds are exceeded.
 """
 from __future__ import annotations
+
+import logging
 import math
 import time
-import uuid
 from dataclasses import dataclass, field
 from typing import Any
+
 import numpy as np
+
 from aegis.core.telemetry import LogitEntropyMonitor
 from aegis.proxy.schemas import AlertOut, ChoiceLogprobs
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +121,7 @@ class ResponseAnalyzer:
         token_results: list[TokenAnalysis] = []
         alerts: list[AlertOut] = []
         entropies: list[float] = []
-        
+
         # --- Extraction ---
         content = None
         if isinstance(logprobs_data, list) and len(logprobs_data) > 0:
@@ -169,7 +171,7 @@ class ResponseAnalyzer:
             # 1. Semantic Drift Detection (vs Baseline)
             if self._monitor._baseline_dist is None and i == 0:
                 self._monitor._baseline_dist = pseudo_logits
-            
+
             if self._monitor._baseline_dist is not None:
                 kl_res = self._monitor.compute_kl_divergence(pseudo_logits, self._monitor._baseline_dist)
                 kl = kl_res.value

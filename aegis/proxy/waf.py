@@ -3,27 +3,28 @@ aegis.proxy.waf — Web Application Firewall for LLM Payloads.
 Analyzes incoming requests for prompt injection, adversarial patterns, and structural anomalies.
 """
 from __future__ import annotations
-import re
+
 import logging
-from typing import Any, Optional
+import re
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 @dataclass
 class WAFResult:
     allowed: bool
-    reason: Optional[str] = None
+    reason: str | None = None
     score: float = 0.0
 
 class AegisWAF:
     """
-    Linguistic and structural firewall to protect the LLM backend from 
+    Linguistic and structural firewall to protect the LLM backend from
     adversarial inputs and prompt injection.
     """
     def __init__(self, strict_mode: bool = True):
         self.strict_mode = strict_mode
-        
+
         # Known prompt injection patterns (Simplified for the implementation)
         self.adversarial_patterns = [
             re.compile(r"(ignore previous instructions|disregard all previous)", re.IGNORECASE),
@@ -43,13 +44,13 @@ class AegisWAF:
 
         # 2. Content Analysis: Scan all string values for adversarial patterns
         found_patterns = self._scan_content(body)
-        
+
         if found_patterns:
             score = len(found_patterns) / 5.0 # Simple scoring
             if self.strict_mode or score > 0.5:
                 return WAFResult(
-                    allowed=False, 
-                    reason=f"Adversarial patterns detected: {', '.join(found_patterns)}", 
+                    allowed=False,
+                    reason=f"Adversarial patterns detected: {', '.join(found_patterns)}",
                     score=min(score, 1.0)
                 )
 

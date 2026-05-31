@@ -2,15 +2,15 @@
 aegis.core.crypto_audit — Cryptographic audit ledger and PQC signing.
 """
 import hashlib
+import json
+import logging
 import os
 import time
-import asyncio
-import logging
-import json
-import numpy as np
-from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from threading import Lock
+from typing import Any
+
+import numpy as np
 
 from aegis.core.mmr import mmr_manager
 
@@ -24,7 +24,7 @@ try:
     pqc_provider = aegis_rust
     RUST_AVAILABLE = True
 except (ImportError, Exception):
-    logger.error("FAILED TO LOAD aegis_rust. Using Python-based fallback.")
+    logger.debug("aegis_rust extension not available; using Python PQC fallback")
     RUST_AVAILABLE = False
 
     class MockPQCKeyPair:
@@ -53,7 +53,7 @@ class AuditNode:
     entropy: float
     payload: str  # Stored as hex for JSON serialization
     tenant_id: str
-    sampling_params: Dict[str, Any]
+    sampling_params: dict[str, Any]
     prev_hash: str
     merkle_root: str
     signature: str # Stored as hex
@@ -94,7 +94,7 @@ class CryptographicAuditLedger:
         self.persistence_path = persistence_path
         self.max_memory_nodes = max_memory_nodes
         self.async_mode = async_mode
-        self.chain: List[AuditNode] = []
+        self.chain: list[AuditNode] = []
         self._lock = Lock()
         self._wal_handle = None
         self._load_from_wal()
@@ -109,15 +109,16 @@ class CryptographicAuditLedger:
     def _load_from_wal(self):
         if not os.path.exists(self.persistence_path):
             return
-        
+
         logger.info(f"Reconstructing ledger from {self.persistence_path}...")
         loaded_count = 0
         try:
             # Use a temporary handle to read to avoid issues with the persistent handle
-            with open(self.persistence_path, "r") as f:
+            with open(self.persistence_path) as f:
                 for line in f:
                     line = line.strip()
-                    if not line: continue
+                    if not line:
+                        continue
                     data = json.loads(line)
                     node = AuditNode(**data)
                     self.chain.append(node)
@@ -126,7 +127,7 @@ class CryptographicAuditLedger:
         except Exception as e:
             logger.error(f"WAL load/reconstruction failed: {e}")
 
-    def verify_integrity(self) -> Tuple[bool, Optional[int]]:
+    def verify_integrity(self) -> tuple[bool, int | None]:
         """
         Verifies the entire Merkle chain and consistency of the ledger.
         Returns (is_valid, error_index).
@@ -134,11 +135,11 @@ class CryptographicAuditLedger:
         with self._lock:
             for i in range(len(self.chain)):
                 current = self.chain[i]
-                
+
                 # 1. Check local hash integrity
                 if current.node_hash != current._calculate_hash():
                     return False, i
-                
+
                 # 2. Check chain link (prev_hash)
                 if i > 0:
                     prev = self.chain[i-1]
@@ -155,14 +156,15 @@ class CryptographicAuditLedger:
         entropy: float,
         payload: bytes,
         tenant_id: str = "default",
-        sampling_params: Optional[Dict[str, Any]] = None
+        sampling_params: dict[str, Any] | None = None
     ) -> AuditNode:
         if self.async_mode:
             raise RuntimeError("Async mode not implemented for synchronous commit_state")
 
-        if sampling_params is None: sampling_params = {}
+        if sampling_params is None:
+            sampling_params = {}
         if len(payload) > MAX_PAYLOAD_BYTES:
-            raise ValueError(f"payload too large")
+            raise ValueError("payload too large")
         if "\x00" in state_id:
             raise ValueError("state_id containing NULL byte is rejected")
         if not np.isfinite(entropy):
@@ -195,7 +197,7 @@ class CryptographicAuditLedger:
                 public_key=pub_key.hex(),
                 is_fallback=is_fallback
             )
-            
+
             self.chain.append(node)
             if len(self.chain) > self.max_memory_nodes:
                 self.chain.pop(0)
@@ -219,11 +221,11 @@ class CryptographicAuditLedger:
                 self._wal_handle.close()
                 self._wal_handle = None
 
-    def __enter__(self): 
+    def __enter__(self):
         with self._lock:
             if not self._wal_handle:
                 self._wal_handle = open(self.persistence_path, "a")
         return self
 
-    def __exit__(self, *args): 
+    def __exit__(self, *args):
         self.close()

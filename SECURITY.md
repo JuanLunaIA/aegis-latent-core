@@ -1,18 +1,27 @@
-# Security Policy
+# Política de seguridad
 
-## Supported Versions
+## Versiones soportadas
 
-| Version | Supported |
-|---------|-----------|
-| 2.x     | ✅ Yes    |
-| 1.x     | ❌ No     |
+| Versión | Soportada |
+| :--- | :--- |
+| 2.x | Sí |
+| 1.x | No |
 
-## Reporting a Vulnerability
+## Reportar una vulnerabilidad
 
-**Do not open a public GitHub issue for security vulnerabilities.**
+**No abras un issue público** para vulnerabilidades de seguridad.
 
-Email: security@your-org.com  
-PGP: [key on keyserver]  
-Response SLA: 48 hours for acknowledgment, 14 days for fix or mitigation.
+Usa [GitHub Security Advisories](https://github.com/JuanLunaIA/aegis-latent-core/security/advisories/new) en el repositorio **JuanLunaIA/aegis-latent-core**, o contacta al mantenedor por los canales privados de GitHub.
 
-We follow coordinated disclosure. Reporters are credited in the changelog unless they prefer anonymity.
+Objetivo de respuesta:
+
+- Acuse de recibo en **48 horas**
+- Mitigación o plan en **14 días** (según gravedad)
+
+Seguimos divulgación coordinada. Los reportes pueden acreditarse en el changelog salvo que pidan anonimato.
+
+## Buenas prácticas al desplegar
+
+- Define siempre `AEGIS_API_KEYS` en producción; no uses `AEGIS_AUTH_DISABLED`.
+- No versiones `.env`, claves PEM ni el archivo `*.wal.jsonl` con datos reales.
+- Restringe el acceso a `/v1/audit/*` con claves de solo lectura (`AEGIS_AUDIT_API_KEYS`).
