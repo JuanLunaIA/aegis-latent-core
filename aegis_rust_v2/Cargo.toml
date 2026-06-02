@@ -1,0 +1,30 @@
+[package]
+name = "aegis_rust"
+version = "2.0.0"
+edition = "2021"
+description = "PyO3 extension: HTTP forwarder, MMR, ML-DSA PQC for AEGIS Latent Core"
+license = "AGPL-3.0-only"
+
+[lib]
+name = "aegis_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "native-tls"] }
+serde_json = "1"
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
+subtle = "2"
+zeroize = { version = "1", features = ["derive"] }
+pqcrypto-mldsa = "0.1"
+pqcrypto-traits = "0.3"
+
+[dev-dependencies]
+wiremock = "0.6"
+tokio = { version = "1", features = ["rt", "macros"] }
+
+[profile.release]
+lto = true
+codegen-units = 1

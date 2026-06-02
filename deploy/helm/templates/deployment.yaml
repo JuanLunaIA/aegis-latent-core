@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aegis-latent-core.fullname" . }}
+  labels:
+    {{- include "aegis-latent-core.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "aegis-latent-core.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "aegis-latent-core.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: aegis
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: AEGIS_BACKEND_URL
+              value: {{ .Values.aegis.backendUrl | quote }}
+            - name: AEGIS_FORCE_LOGPROBS
+              value: {{ .Values.aegis.forceLogprobs | quote }}
+            - name: AEGIS_LOG_LEVEL
+              value: {{ .Values.aegis.logLevel | quote }}
+            - name: AEGIS_KL_ALERT_THRESHOLD
+              value: {{ .Values.aegis.klAlertThreshold | quote }}
+            - name: AEGIS_JS_ALERT_THRESHOLD
+              value: {{ .Values.aegis.jsAlertThreshold | quote }}
+            - name: AEGIS_ENTROPY_ALERT_THRESHOLD_BITS
+              value: {{ .Values.aegis.entropyAlertThresholdBits | quote }}
+            - name: AEGIS_WEBHOOK_URL
+              value: {{ .Values.aegis.webhookUrl | quote }}
+            - name: AEGIS_WORKERS
+              value: {{ .Values.aegis.workers | quote }}
+            - name: AEGIS_WAL_PATH
+              value: {{ .Values.persistence.mountPath }}/aegis.wal.jsonl
+            {{- if .Values.aegis.existingSecret }}
+            - name: AEGIS_BACKEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aegis.existingSecret }}
+                  key: AEGIS_BACKEND_API_KEY
+                  optional: true
+            - name: AEGIS_API_KEYS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aegis.existingSecret }}
+                  key: AEGIS_API_KEYS
+            - name: AEGIS_AUDIT_API_KEYS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aegis.existingSecret }}
+                  key: AEGIS_AUDIT_API_KEYS
+                  optional: true
+            {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: wal-data
+              mountPath: {{ .Values.persistence.mountPath }}
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: wal-data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "aegis-latent-core.fullname" . }}-wal
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,174 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aegis-latent-core"
+version = "2.1.0"
+description = "Forensic telemetry proxy and Merkle audit chain for LLM inference pipelines"
+readme = "README.md"
+license = { text = "AGPL-3.0-only" }
+requires-python = ">=3.11"
+authors = [{ name = "Aegis Project" }]
+keywords = [
+    "llm", "ai-safety", "forensics", "telemetry", "audit",
+    "openai", "proxy", "entropy", "merkle", "chain-of-custody",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.29.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.3.0",
+    "numpy>=1.26.0",
+    "python-dotenv>=1.0.0",
+    "structlog>=24.1.0",
+    "protobuf>=5.0.0",
+    "redis>=5.0.0",
+    "requests>=2.31.0",
+    "cryptography>=42.0.0",
+    # Enterprise storage backends (optional — install the one you need)
+    "aiosqlite>=0.20.0",
+    "asyncpg>=0.29.0",
+    "aioboto3>=13.0.0",
+    # Enterprise signing (optional)
+    "hvac>=2.1.0",
+]
+
+[project.optional-dependencies]
+gpu = ["torch>=2.0.0"]
+vllm = ["vllm>=0.4.0", "torch>=2.0.0"]
+hf = ["transformers>=4.40.0", "torch>=2.0.0"]
+metrics = ["prometheus-fastapi-instrumentator>=6.1.0"]
+pqc = ["oqs-python>=0.10.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "hypothesis>=6.100",
+    "httpx>=0.27.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "bandit>=1.7",
+]
+all = [
+    "aegis-latent-core[gpu,metrics,pqc,dev]",
+]
+
+[project.scripts]
+aegis = "aegis.proxy.app:main"
+aegis-server = "aegis.proxy.app:main"
+
+[project.urls]
+Homepage = "https://github.com/JuanLunaIA/aegis-latent-core"
+Documentation = "https://github.com/JuanLunaIA/aegis-latent-core#readme"
+Repository = "https://github.com/JuanLunaIA/aegis-latent-core"
+"Bug Tracker" = "https://github.com/JuanLunaIA/aegis-latent-core/issues"
+Changelog = "https://github.com/JuanLunaIA/aegis-latent-core/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["aegis", "integrations"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "--cov=aegis --cov-report=term-missing --cov-fail-under=65"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "S", "B", "A", "COM", "C4", "PT"]
+ignore = ["S101", "COM812", "E501", "S104", "N801", "N806", "S607", "S110"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["PT009", "PT011", "PT027", "S101", "S108", "N802", "C408", "E701"]
+"aegis/core/audit_node_pb2.py" = ["E712", "E501"]
+"aegis/core/**" = ["S311", "S603", "S108", "B904", "B007", "B006", "F841", "N813", "E701"]
+"aegis_server/**" = ["S311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101", "B104", "B108"]
+
+[tool.coverage.run]
+source_pkgs = ["aegis"]
+relative_files = true
+omit = [
+    "tests/*",
+    # Roadmap / platform-specific modules (not required for proxy runtime)
+    "aegis/core/adversarial_filter.py",
+    "aegis/core/anchoring.py",
+    "aegis/core/artifact_signing.py",
+    "aegis/core/audit_node_pb2.py",
+    "aegis/core/blockchain_anchor.py",
+    "aegis/core/boot_attestation.py",
+    "aegis/core/boot_guard.py",
+    "aegis/core/build_hardener.py",
+    "aegis/core/build_reproducibility.py",
+    "aegis/core/cfi_manager.py",
+    "aegis/core/codeql_config.py",
+    "aegis/core/dependency_audit.py",
+    "aegis/core/dpdk_engine.py",
+    "aegis/core/ebpf_monitor.py",
+    "aegis/core/enclave_provider.py",
+    "aegis/core/forensic_sealing.py",
+    "aegis/core/formal_proofs.py",
+    "aegis/core/formal_specs.py",
+    "aegis/core/fuzzing_harness.py",
+    "aegis/core/hsm.py",
+    "aegis/core/identity.py",
+    "aegis/core/kernel_hardener.py",
+    "aegis/core/memory.py",
+    "aegis/core/memory_invariants.py",
+    "aegis/core/mte_guard.py",
+    "aegis/core/network_isolation.py",
+    "aegis/core/panic_mode.py",
+    "aegis/core/pqc.py",
+    "aegis/core/pqc_tls.py",
+    "aegis/core/red_team_framework.py",
+    "aegis/core/root_ca_gateway.py",
+    "aegis/core/sandbox.py",
+    "aegis/core/sandbox_l1.py",
+    "aegis/core/sandbox_l2.py",
+    "aegis/core/secure_runtime.py",
+    "aegis/core/semantic_defense.py",
+    "aegis/core/state_snapshotter.py",
+    "aegis/core/tee_manager.py",
+    "aegis/core/tpm.py",
+    "aegis/core/transparency_log.py",
+    "aegis/core/transport_hardener.py",
+    "aegis/core/tsa_provider.py",
+    "aegis/core/worm_storage.py",
+    "aegis/core/xdp_dynamic_segmentation.py",
+    "aegis/core/entropy_analysis.py",
+    "aegis/core/taint_analysis.py",
+    "aegis/proxy/mtls.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@abstractmethod",
+]
