@@ -365,7 +365,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         analyzer = state.get_analyzer(session_id)
 
-        if cfg.force_logprobs and provider.supports_logprobs and not body.get("logprobs", False):
+        # Forwarder provider may be stored on the state.forwarder instance (set in lifespan).
+        provider_adapter = getattr(state.forwarder, "_provider", None)
+        if cfg.force_logprobs and provider_adapter and getattr(provider_adapter, "supports_logprobs", False) and not body.get("logprobs", False):
             body["logprobs"] = True
             body["top_logprobs"] = cfg.top_logprobs
 
