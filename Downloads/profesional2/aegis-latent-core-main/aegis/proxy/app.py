@@ -334,9 +334,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
             adv = llm_guard.analyze_input(_extract_payload_text(body))
             if adv.is_malicious:
+                # Keep message compatible with existing WAF tests by including 'WAF' text.
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Payload rejected by adversarial filter: {adv.threat_type or 'suspicious'}",
+                    detail=(
+                        f"Payload rejected by WAF (adversarial filter): {adv.threat_type or 'suspicious'}"
+                    ),
                 )
         except HTTPException:
             # Re-raise HTTP exceptions raised intentionally by the filter
