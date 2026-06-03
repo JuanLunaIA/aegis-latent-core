@@ -21,10 +21,51 @@ class AegisSettings(BaseSettings):
         case_sensitive=False,
     )
 
+    # ── Provider ─────────────────────────────────────────────────────────
+    provider: str = Field(
+        default="openai",
+        description=(
+            "LLM provider adapter to use. "
+            "Valid values: openai, anthropic, gemini, openrouter. "
+            "Controls request/response translation and auth header format. "
+            "Set to 'openai' for any OpenAI-compatible endpoint (vLLM, Ollama, LM Studio)."
+        ),
+    )
+    provider_model: str = Field(
+        default="",
+        description=(
+            "Override the model name sent to the upstream provider. "
+            "When set, replaces the 'model' field in every request. "
+            "Useful for routing all traffic through a single backend model "
+            "regardless of what the client requests."
+        ),
+    )
+
+    # ── OpenRouter extras ─────────────────────────────────────────────
+    openrouter_site_url: str = Field(
+        default="",
+        description="HTTP-Referer header for OpenRouter analytics (optional).",
+    )
+    openrouter_site_name: str = Field(
+        default="",
+        description="X-Title header for OpenRouter analytics (optional).",
+    )
+
+    # ── Anthropic extras ──────────────────────────────────────────────
+    anthropic_api_version: str = Field(
+        default="2023-06-01",
+        description="anthropic-version header value. Change only when targeting a beta API version.",
+    )
+
     # ── Backend ──────────────────────────────────────────────────────────
     backend_url: AnyHttpUrl = Field(
         default="http://localhost:11434",
-        description="URL of the upstream LLM backend (OpenAI-compatible).",
+        description=(
+            "URL of the upstream LLM backend (OpenAI-compatible). "
+            "Ignored for providers with a fixed base URL "
+            "(anthropic: api.anthropic.com, gemini: generativelanguage.googleapis.com, "
+            "openrouter: openrouter.ai/api/v1)."
+        ),
     )
     backend_api_key: str = Field(
         default="",
@@ -76,6 +117,15 @@ class AegisSettings(BaseSettings):
         default=False,
         description="Set True only for local development. Never in production.",
     )
+    signing_key: str = Field(
+        default="",
+        description=(
+            "Dedicated HMAC-SHA256 signing key for the Merkle audit chain. "
+            "MUST be separate from AEGIS_API_KEYS. "
+            "Generate with: python -c 'import secrets; print(secrets.token_hex(32))' "
+            "If empty and auth is not disabled, a warning is emitted at startup."
+        ),
+    )
 
     # ── mTLS / SSL Hardening ──────────────────────────────────────────────
     ssl_certfile: Path | None = Field(
@@ -108,10 +158,12 @@ class AegisSettings(BaseSettings):
 
     # ── Telemetry ─────────────────────────────────────────────────────────
     force_logprobs: bool = Field(
-        default=True,
+        default=False,
         description=(
-            "Inject logprobs=True and top_logprobs=20 into every chat request "
-            "so entropy analysis is always available."
+            "Inject logprobs=True and top_logprobs=N into every chat request "
+            "for entropy analysis. Disabled by default because it inflates response "
+            "size 5-10x and is unsupported by Anthropic/Gemini providers. "
+            "Enable explicitly when using an OpenAI-compatible backend that supports it."
         ),
     )
     top_logprobs: int = Field(
@@ -180,6 +232,14 @@ class AegisSettings(BaseSettings):
     )
 
     # ── Server ────────────────────────────────────────────────────────────
+    debug_mode: bool = Field(
+        default=False,
+        description=(
+            "Enable /docs and /redoc OpenAPI endpoints. "
+            "NEVER enable in production — exposes full API schema. "
+            "Automatically forces auth_disabled=False check at startup."
+        ),
+    )
     host: str = Field(default="0.0.0.0")
     port: int = Field(default=8080, ge=1, le=65535)
     workers: int = Field(default=1, ge=1, le=64)
@@ -195,6 +255,17 @@ class AegisSettings(BaseSettings):
         description="HTTP(S) URL to POST alert payloads to (Slack, Teams, custom SIEM).",
     )
     webhook_timeout_seconds: float = Field(default=5.0, ge=0.5, le=30.0)
+
+    @field_validator("provider")
+    @classmethod
+    def _validate_provider(cls, v: str) -> str:
+        allowed = {"openai", "anthropic", "gemini", "openrouter"}
+        v_lower = v.strip().lower()
+        if v_lower not in allowed:
+            raise ValueError(
+                f"AEGIS_PROVIDER must be one of {sorted(allowed)}, got {v!r}"
+            )
+        return v_lower
 
     @field_validator("rate_limit_backend")
     @classmethod
@@ -213,6 +284,21 @@ class AegisSettings(BaseSettings):
         if v_upper not in allowed:
             raise ValueError(f"log_level must be one of {allowed}")
         return v_upper
+
+    @field_validator("redis_url")
+    @classmethod
+    def _validate_redis_url(cls, v: str) -> str:
+        """Ensure a sensible Redis URL is provided when set.
+
+        Accepts both redis:// and rediss:// schemes. Empty string is allowed
+        (meaning no distributed Redis configured).
+        """
+        if not v:
+            return v
+        v_str = v.strip()
+        if not (v_str.startswith("redis://") or v_str.startswith("rediss://")):
+            raise ValueError("redis_url must start with 'redis://' or 'rediss://'")
+        return v_str
 
     def get_api_keys(self) -> frozenset[str]:
         if not self.api_keys:

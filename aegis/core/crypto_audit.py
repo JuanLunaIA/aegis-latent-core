@@ -338,10 +338,28 @@ class CryptographicAuditLedger:
             chain_list = list(self.chain)
 
         for i, node in enumerate(chain_list):
-            # 1. Hash self-consistency
-            if node.node_hash != node.node_hash:  # deterministic — always true;
-                # the real guard is below against a tampered node object
-                pass
+            # 1. Hash self-consistency — recompute deterministically from fields
+            computed_content = "|".join(
+                [
+                    node.state_id,
+                    f"{node.timestamp:.9f}",
+                    str(node.entropy),
+                    node.tenant_id,
+                    node.merkle_root,
+                    node.signature,
+                    node.request_hash,
+                    node.response_hash,
+                ]
+            )
+            computed_hash = hashlib.sha256(computed_content.encode()).hexdigest()
+            if computed_hash != node.node_hash:
+                logger.error(
+                    "Integrity violation: node %d node_hash mismatch (computed %s, actual %s)",
+                    i,
+                    computed_hash[:16],
+                    node.node_hash[:16],
+                )
+                return False, i
 
             # 2. Chain link
             expected_prev = "0" * 64 if i == 0 else chain_list[i - 1].node_hash

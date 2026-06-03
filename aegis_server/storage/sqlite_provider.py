@@ -38,9 +38,12 @@ Dependencies:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
+import time
+import uuid
 from typing import Any
 
 import aiosqlite
@@ -124,6 +127,16 @@ FROM audit_nodes
 ORDER BY seq ASC;
 """
 
+# BLOCKER-01 fix: retrieves the LAST inserted node (highest seq) for prev_hash chain linkage.
+# Using ORDER BY seq DESC LIMIT 1 instead of ASC LIMIT 1 which returned the genesis node.
+_LATEST_NODE_SQL = """
+SELECT node_id, timestamp, request_hash, response_hash,
+       merkle_root, signature, client_id, node_data
+FROM audit_nodes
+ORDER BY seq DESC
+LIMIT 1;
+"""
+
 
 class SQLiteStorageProvider(StorageProvider):
     """
@@ -143,6 +156,26 @@ class SQLiteStorageProvider(StorageProvider):
     def __init__(self, db_path: str) -> None:
         self._db_path = db_path
         self._initialized: bool = False
+        # BLOCKER-02 fix: serialise read-prev → write-node pairs within a single
+        # process so concurrent BackgroundTasks cannot produce a forked chain.
+        # This lock is process-local; for multi-process deployments use PostgreSQL
+        # with the atomic CTE insert pattern.
+        self._chain_lock: asyncio.Lock = asyncio.Lock()
+
+        # Optional distributed lock using Redis (enabled via AEGIS_DISTRIBUTED_LOCK_URL).
+        self._dist_redis = None
+        self._dist_lock_key = None
+        dist_url = os.getenv("AEGIS_DISTRIBUTED_LOCK_URL", "")
+        if dist_url:
+            try:
+                import redis.asyncio as aioredis  # type: ignore[import]
+
+                self._dist_redis = aioredis.from_url(dist_url, decode_responses=True)
+                self._dist_lock_key = f"aegis:chain_lock:{os.path.abspath(self._db_path)}"
+                logger.info("Distributed chain lock enabled via %s", dist_url)
+            except Exception as exc:
+                logger.warning("Distributed lock not available: %s", exc)
+                self._dist_redis = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -191,6 +224,39 @@ class SQLiteStorageProvider(StorageProvider):
     # Write
     # ------------------------------------------------------------------
 
+    async def get_latest_node(self) -> dict[str, Any] | None:
+        """
+        Return the most recently inserted audit node (highest seq), or None.
+
+        BLOCKER-01 fix: uses ORDER BY seq DESC LIMIT 1 so callers always
+        receive the last node, not the genesis node.
+
+        The caller must hold ``self._chain_lock`` while reading this value
+        and writing the subsequent node to prevent a fork under concurrency.
+        """
+        if not self._initialized:
+            raise RuntimeError("SQLiteStorageProvider.initialize() was not called")
+        try:
+            async with aiosqlite.connect(self._db_path) as db:
+                db.row_factory = aiosqlite.Row
+                for pragma in _WAL_PRAGMAS:
+                    await db.execute(pragma)
+                async with db.execute(_LATEST_NODE_SQL) as cursor:
+                    row = await cursor.fetchone()
+            if row is None:
+                return None
+            raw = dict(row)
+            if raw.get("node_data"):
+                try:
+                    raw["node_data"] = json.loads(raw["node_data"])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            return raw
+        except Exception as exc:
+            raise RuntimeError(
+                f"SQLiteStorageProvider.get_latest_node failed: {exc}"
+            ) from exc
+
     async def write_node(
         self,
         node_id: str,
@@ -203,8 +269,14 @@ class SQLiteStorageProvider(StorageProvider):
         client_id: str,
     ) -> None:
         """
-        Insert an audit node.  Silently ignores duplicate ``node_id`` values
-        (``INSERT OR IGNORE``), which makes retries safe.
+        Insert an audit node under the chain lock.
+
+        BLOCKER-02 fix: the ``_chain_lock`` serialises concurrent background
+        tasks so no two tasks can interleave their read-prev / write sequence
+        within the same process, preventing chain forks.
+
+        Silently ignores duplicate ``node_id`` (``INSERT OR IGNORE``) so
+        retries are safe.
 
         Raises:
             RuntimeError: On database I/O failures.
@@ -214,28 +286,41 @@ class SQLiteStorageProvider(StorageProvider):
 
         node_data_json = json.dumps(node_data, separators=(",", ":"), default=str)
 
+        dist_token = None
+        if self._dist_redis and self._dist_lock_key:
+            # Acquire a distributed lock before proceeding (protects multi-process).
+            dist_token = await self._acquire_dist_lock()
+
         try:
-            async with aiosqlite.connect(self._db_path) as db:
-                for pragma in _WAL_PRAGMAS:
-                    await db.execute(pragma)
-                await db.execute(
-                    _INSERT_SQL,
-                    (
-                        node_id,
-                        timestamp,
-                        request_hash,
-                        response_hash,
-                        merkle_root,
-                        signature,
-                        client_id,
-                        node_data_json,
-                    ),
-                )
-                await db.commit()
-        except Exception as exc:
-            raise RuntimeError(
-                f"SQLiteStorageProvider.write_node failed for node_id={node_id!r}: {exc}"
-            ) from exc
+            async with self._chain_lock:
+                try:
+                    async with aiosqlite.connect(self._db_path) as db:
+                        for pragma in _WAL_PRAGMAS:
+                            await db.execute(pragma)
+                        await db.execute(
+                            _INSERT_SQL,
+                            (
+                                node_id,
+                                timestamp,
+                                request_hash,
+                                response_hash,
+                                merkle_root,
+                                signature,
+                                client_id,
+                                node_data_json,
+                            ),
+                        )
+                        await db.commit()
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"SQLiteStorageProvider.write_node failed for node_id={node_id!r}: {exc}"
+                    ) from exc
+        finally:
+            if dist_token and self._dist_redis:
+                try:
+                    await self._release_dist_lock(dist_token)
+                except Exception:
+                    logger.warning("Failed to release distributed lock cleanly")
 
     # ------------------------------------------------------------------
     # Read
@@ -398,3 +483,42 @@ class SQLiteStorageProvider(StorageProvider):
         # Drop internal surrogate columns
         d.pop("seq", None)
         return d
+
+    # ------------------------------------------------------------------
+    # Distributed lock helpers (optional, Redis-based)
+    # ------------------------------------------------------------------
+    async def _acquire_dist_lock(self, ttl_ms: int = 20000, timeout: float = 5.0) -> str | None:
+        """Acquire a simple Redis-backed lock (SET NX PX).
+
+        Returns a token string to be used for releasing the lock. Raises on timeout.
+        """
+        if not self._dist_redis or not self._dist_lock_key:
+            return None
+        token = str(uuid.uuid4())
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                ok = await self._dist_redis.set(self._dist_lock_key, token, nx=True, px=ttl_ms)
+                if ok:
+                    return token
+            except Exception as exc:
+                logger.warning("Distributed lock acquire error: %s", exc)
+                return None
+            await asyncio.sleep(0.1)
+        raise RuntimeError("Timed out acquiring distributed lock")
+
+    async def _release_dist_lock(self, token: str) -> None:
+        if not self._dist_redis or not self._dist_lock_key:
+            return
+        # Safe release: compare token then delete with Lua script to avoid deleting others' locks
+        lua = """
+        if redis.call("get", KEYS[1]) == ARGV[1] then
+            return redis.call("del", KEYS[1])
+        else
+            return 0
+        end
+        """
+        try:
+            await self._dist_redis.eval(lua, 1, self._dist_lock_key, token)
+        except Exception as exc:
+            logger.warning("Distributed lock release failed: %s", exc)

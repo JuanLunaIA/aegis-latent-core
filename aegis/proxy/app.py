@@ -169,7 +169,14 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     state.waf = AegisWAF(strict_mode=cfg.waf_strict_mode)
     # Derive a stable HMAC signing key from the configured API keys.
     # Falls back to an empty string (Ed25519 ephemeral) if no keys are set.
-    _signing_key = sorted(cfg.get_api_keys())[0] if cfg.get_api_keys() else ""
+    _signing_key = cfg.signing_key
+    if not _signing_key and not cfg.auth_disabled:
+        import logging as _log
+        _log.getLogger(__name__).warning(
+            "AEGIS_SIGNING_KEY is not set. "
+            "The audit chain will use an empty signing key — signatures are NOT cryptographically valid. "
+            "Generate one with: python -c 'import secrets; print(secrets.token_hex(32))'"
+        )
     state.ledger = CryptographicAuditLedger(
         persistence_path=str(cfg.wal_path),
         signing_key=_signing_key,
@@ -234,7 +241,18 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
 
         forwarder_cfg = cfg.model_copy(update={"backend_api_key": backend_key})
-        state.forwarder = LLMForwarder(forwarder_cfg)
+
+        # Build the provider adapter (OpenAI passthrough, Anthropic translator,
+        # Gemini OpenAI-compat, or OpenRouter).
+        from aegis.providers import build_provider
+        provider = build_provider(
+            cfg.provider,
+            openrouter_site_url=cfg.openrouter_site_url,
+            openrouter_site_name=cfg.openrouter_site_name,
+            anthropic_api_version=cfg.anthropic_api_version,
+        )
+
+        state.forwarder = LLMForwarder(forwarder_cfg, provider=provider)
         await state.forwarder.start()
         state.sessions = SessionLifecycleManager(max_sessions=4_096)
 
@@ -252,9 +270,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             "Forensic telemetry proxy for LLM inference pipelines. "
             "OpenAI-compatible drop-in with Merkle chain-of-custody."
         ),
-        version="2.0.0",
-        docs_url="/docs",
-        redoc_url="/redoc",
+        version="2.2.0",
+        # MEDIUM-02 fix: /docs and /redoc are disabled in production.
+        # Set AEGIS_DEBUG_MODE=true only in local development environments.
+        docs_url="/docs" if cfg.debug_mode else None,
+        redoc_url="/redoc" if cfg.debug_mode else None,
+        openapi_url="/openapi.json" if cfg.debug_mode else None,
         lifespan=lifespan,
     )
     app.state.aegis = state
@@ -307,6 +328,26 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=400, detail="Invalid JSON") from exc
 
+        # Advanced adversarial pre-filter (LLMGuard). Run before the static WAF
+        try:
+            from aegis.core.adversarial_filter import llm_guard
+
+            adv = llm_guard.analyze_input(_extract_payload_text(body))
+            if adv.is_malicious:
+                # Keep message compatible with existing WAF tests by including 'WAF' text.
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=(
+                        f"Payload rejected by WAF (adversarial filter): {adv.threat_type or 'suspicious'}"
+                    ),
+                )
+        except HTTPException:
+            # Re-raise HTTP exceptions raised intentionally by the filter
+            raise
+        except Exception as exc:
+            # Non-fatal: if the adversarial filter fails, log and continue to static WAF
+            logger.exception("Adversarial filter failed: %s", exc)
+
         waf_result = state.waf.inspect_payload(body)
         if not waf_result.allowed:
             raise HTTPException(
@@ -327,7 +368,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         analyzer = state.get_analyzer(session_id)
 
-        if cfg.force_logprobs and not body.get("logprobs", False):
+        # Forwarder provider may be stored on the state.forwarder instance (set in lifespan).
+        provider_adapter = getattr(state.forwarder, "_provider", None)
+        if cfg.force_logprobs and provider_adapter and getattr(provider_adapter, "supports_logprobs", False) and not body.get("logprobs", False):
             body["logprobs"] = True
             body["top_logprobs"] = cfg.top_logprobs
 

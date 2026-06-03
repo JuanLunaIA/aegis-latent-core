@@ -149,9 +149,46 @@ class MerkleMountainRange:
 
     def get_consistency_proof(self, old_root: str, old_count: int) -> tuple[str, list[str]]:
         """
-        Placeholder for consistency proof (detecting if MMR has been tampered with).
+        Compute a simple consistency proof for an earlier MMR root given the
+        previous leaf count. This returns the current root plus the list of
+        peak hashes that reconstruct the canonical root for `old_count` leaves.
+
+        The caller can recompute the old root by hashing the concatenated peaks
+        (sorted by height descending) and compare against the supplied `old_root`.
         """
-        return self.get_root_hash(), []
+        if old_count < 0 or old_count > self._leaf_count:
+            raise ValueError("old_count out of range")
+
+        if old_count == 0:
+            old_peaks: list[MMRNode] = []
+        else:
+            # Collect the first `old_count` leaf hashes (in insertion order).
+            leaf_hashes: list[str] = []
+            for n in self.nodes:
+                if n.height == 0:
+                    leaf_hashes.append(n.hash)
+                    if len(leaf_hashes) >= old_count:
+                        break
+
+            # Rebuild temporary peaks from those leaf hashes
+            temp_peaks: list[MMRNode] = []
+            for lh in leaf_hashes:
+                node_hash = lh
+                node_height = 0
+                # Merge with the last peak while heights match
+                while temp_peaks and temp_peaks[-1].height == node_height:
+                    left = temp_peaks.pop()
+                    combined = hashlib.sha256((left.hash + node_hash).encode()).hexdigest()
+                    node_hash = combined
+                    node_height += 1
+                temp_peaks.append(MMRNode(hash=node_hash, height=node_height, index=-1))
+
+            # Canonicalize peaks by height descending
+            sorted_peaks = sorted(temp_peaks, key=lambda p: p.height, reverse=True)
+            old_peaks = sorted_peaks
+
+        proof_hashes = [p.hash for p in old_peaks]
+        return self.get_root_hash(), proof_hashes
 
 
 mmr_manager = MerkleMountainRange()
