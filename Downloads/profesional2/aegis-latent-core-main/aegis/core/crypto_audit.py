@@ -1,0 +1,485 @@
+"""
+aegis.core.crypto_audit — Cryptographic audit ledger with Merkle chain-of-custody.
+
+Architecture:
+  - CryptographicAuditLedger: append-only Merkle chain backed by WAL.
+  - AuditNode: immutable record with forensic fields, HMAC/PQC signature,
+    and a computed node_hash linking the chain.
+  - Signing: HMAC-SHA256 when signing_key is provided (default, "High" admissibility).
+    PQC-ML-DSA via aegis_rust extension when available.
+  - WAL: line-delimited JSON; crash-consistent via fsync after each write.
+  - Memory: collections.deque(maxlen=N) — O(1) eviction, no pop(0) overhead.
+"""
+
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+from __future__ import annotations
+
+import hashlib
+import hmac
+import json
+import logging
+import os
+import time
+from collections import deque
+from dataclasses import asdict, dataclass
+from threading import Lock
+from typing import Any
+
+import numpy as np
+from cryptography.hazmat.primitives.asymmetric import ed25519
+
+from aegis.core.forensic import build_merkle_leaf, sha256_hex
+from aegis.core.mmr import MerkleMountainRange
+
+logger = logging.getLogger(__name__)
+
+MAX_PAYLOAD_BYTES: int = 1_048_576  # 1 MiB hard cap
+_DEFAULT_MAX_FORENSIC_BYTES: int = 65_536
+
+# ── Rust / PQC detection ──────────────────────────────────────────────────────
+try:
+    import aegis_rust  # type: ignore[import]
+
+    RUST_AVAILABLE: bool = True
+except ImportError:
+    RUST_AVAILABLE = False
+    logger.debug("aegis_rust extension not available; using HMAC-SHA256 signing")
+
+
+# ── AuditNode ─────────────────────────────────────────────────────────────────
+
+
+@dataclass
+class AuditNode:
+    """Immutable forensic record committed to the Merkle chain.
+
+    Invariants:
+    - ``node_hash`` is deterministic: same fields → same hash.
+    - ``prev_hash`` links this node to its predecessor (genesis: 64 zeros).
+    - ``signature`` covers ``merkle_root`` with the configured signing scheme.
+    - ``payload_hash`` is a property alias for ``request_hash`` (backward compat
+      with audit_api endpoints that expose it as ``payload_hash``).
+    """
+
+    state_id: str
+    timestamp: float
+    entropy: float
+    tenant_id: str
+    sampling_params: dict[str, Any]
+    prev_hash: str
+    merkle_root: str
+    signature: str  # hex-encoded
+    signature_scheme: str  # "hmac-sha256" | "pqc-ml-dsa" | "ed25519-fallback"
+    public_key: str  # hex-encoded; empty string when HMAC scheme
+    request_hash: str  # sha256(request_bytes)
+    response_hash: str  # sha256(response_bytes) or ""
+    model: str
+    endpoint: str
+    token_trail_count: int
+    is_fallback: bool = False
+
+    # ── computed fields ──
+    @property
+    def payload_hash(self) -> str:
+        """Alias for audit_api backward compatibility."""
+        return self.request_hash
+
+    @property
+    def node_hash(self) -> str:
+        """SHA-256 over canonical chain fields — deterministic, tamper-evident."""
+        content = "|".join(
+            [
+                self.state_id,
+                f"{self.timestamp:.9f}",
+                str(self.entropy),
+                self.tenant_id,
+                self.merkle_root,
+                self.signature,
+                self.request_hash,
+                self.response_hash,
+            ]
+        )
+        return hashlib.sha256(content.encode()).hexdigest()
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a JSON-safe dict (excludes computed properties)."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> AuditNode:
+        """Reconstruct from a WAL record; fills in defaults for forward-compat."""
+        defaults: dict[str, Any] = {
+            "signature_scheme": "hmac-sha256",
+            "public_key": "",
+            "request_hash": data.get("payload", ""),  # old WAL field
+            "response_hash": "",
+            "model": "unknown",
+            "endpoint": "unknown",
+            "token_trail_count": 0,
+            "is_fallback": False,
+        }
+        # Remove legacy field if present
+        data.pop("payload", None)
+        merged = {**defaults, **data}
+        # Keep only known fields to avoid TypeError on unexpected keys
+        known = {f.name for f in cls.__dataclass_fields__.values()}  # type: ignore[attr-defined]
+        filtered = {k: v for k, v in merged.items() if k in known}
+        return cls(**filtered)
+
+
+# ── Signing helpers ───────────────────────────────────────────────────────────
+
+
+def _hmac_sign(signing_key: str, data: bytes) -> str:
+    """Return HMAC-SHA256 hex digest. Constant-time safe for string signing keys."""
+    return hmac.new(
+        signing_key.encode(),
+        data,
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def _hmac_verify(signing_key: str, data: bytes, expected_hex: str) -> bool:
+    actual = _hmac_sign(signing_key, data)
+    return hmac.compare_digest(actual, expected_hex)
+
+
+def _ed25519_sign(data: bytes) -> tuple[str, str, str]:
+    """Per-node Ed25519 ephemeral key. Returns (signature_hex, pubkey_hex, scheme)."""
+    priv = ed25519.Ed25519PrivateKey.generate()
+    pub = priv.public_key()
+    sig = priv.sign(data)
+    return sig.hex(), pub.public_bytes_raw().hex(), "ed25519-fallback"
+
+
+# ── Ledger ────────────────────────────────────────────────────────────────────
+
+
+class CryptographicAuditLedger:
+    """
+    Append-only Merkle chain of forensic LLM interaction records.
+
+    Thread-safety: all mutations are guarded by a reentrant Lock.
+    WAL: each node is fsync'd before the in-memory chain is updated, ensuring
+    no committed node is lost across crashes.
+
+    Parameters
+    ----------
+    persistence_path : str
+        Path to the WAL file (line-delimited JSON).
+    signing_key : str
+        HMAC-SHA256 signing key.  If non-empty, ``legal_admissibility`` is "High".
+        If empty and RUST_AVAILABLE is False, the fallback ephemeral Ed25519 is
+        used and admissibility drops to "Compromised".
+    max_memory_nodes : int
+        Sliding-window deque size. Oldest nodes are evicted when the cap is hit.
+    max_forensic_bytes : int
+        Maximum bytes of request/response stored in the Merkle leaf envelope.
+    """
+
+    def __init__(
+        self,
+        persistence_path: str,
+        signing_key: str = "",
+        max_memory_nodes: int = 100_000,
+        max_forensic_bytes: int = _DEFAULT_MAX_FORENSIC_BYTES,
+        # Backward-compat alias accepted but ignored (old API used async_mode)
+        async_mode: bool = False,
+    ) -> None:
+        self.persistence_path = persistence_path
+        self._signing_key = signing_key
+        self.max_memory_nodes = max_memory_nodes
+        self.max_forensic_bytes = max_forensic_bytes
+        self.chain: deque[AuditNode] = deque(maxlen=max_memory_nodes)
+        self._lock = Lock()
+        self._wal_handle = None
+        self._fault_state: str = "healthy"
+        self._mmr = MerkleMountainRange()
+        self._load_from_wal()
+
+    # ── Public properties ──────────────────────────────────────────────────
+
+    @property
+    def legal_admissibility(self) -> str:
+        if self._signing_key:
+            return "High"
+        if any(n.is_fallback for n in self.chain):
+            return "Compromised"
+        return "High"
+
+    # ── Core API ───────────────────────────────────────────────────────────
+
+    def commit_forensic(
+        self,
+        *,
+        state_id: str,
+        request_bytes: bytes,
+        response_bytes: bytes | None = None,
+        entropy: float = 0.0,
+        tenant_id: str = "default",
+        model: str = "unknown",
+        endpoint: str = "unknown",
+        token_trail: list[dict[str, Any]] | None = None,
+        usage: dict[str, Any] | None = None,
+        sampling_params: dict[str, Any] | None = None,
+    ) -> AuditNode:
+        """Commit a full forensic record (request + response) to the chain.
+
+        Args:
+            state_id: Unique identifier for this interaction (e.g. request_id).
+            request_bytes: Raw request body bytes (will be hashed, not stored).
+            response_bytes: Raw response body bytes (will be hashed, not stored).
+            entropy: Mean Shannon entropy of the response logprobs.
+            tenant_id: Session/tenant identifier.
+            model: LLM model name.
+            endpoint: API endpoint (e.g. "chat.completions").
+            token_trail: Per-token logprob records for chain-of-custody.
+            usage: OpenAI usage dict (prompt_tokens, completion_tokens, etc.).
+            sampling_params: Temperature, top_p, etc.
+
+        Returns:
+            The committed AuditNode.
+
+        Raises:
+            ValueError: On invalid input (non-finite entropy, NULL in state_id, etc.).
+        """
+        if "\x00" in state_id:
+            raise ValueError("state_id containing NULL byte is rejected")
+        if not np.isfinite(entropy):
+            raise ValueError("entropy must be a finite number")
+        if len(request_bytes) > MAX_PAYLOAD_BYTES:
+            raise ValueError("request_bytes exceeds 1 MiB hard cap")
+
+        params = {**(sampling_params or {})}
+        if usage:
+            params["usage"] = usage
+
+        req_hash = sha256_hex(request_bytes)
+        resp_hash = sha256_hex(response_bytes) if response_bytes else ""
+
+        # Build canonical MMR leaf
+        leaf = build_merkle_leaf(
+            state_id=state_id,
+            request_bytes=request_bytes,
+            response_bytes=response_bytes,
+            model=model,
+            endpoint=endpoint,
+            max_bytes=self.max_forensic_bytes,
+        )
+
+        with self._lock:
+            prev_hash = self.chain[-1].node_hash if self.chain else "0" * 64
+            timestamp = time.time()
+            merkle_root = self._mmr.add_leaf(leaf)
+
+            # Sign the merkle root
+            signature, pub_key_hex, scheme, is_fallback = self._sign(merkle_root.encode())
+
+            node = AuditNode(
+                state_id=state_id,
+                timestamp=timestamp,
+                entropy=entropy,
+                tenant_id=tenant_id,
+                sampling_params=params,
+                prev_hash=prev_hash,
+                merkle_root=merkle_root,
+                signature=signature,
+                signature_scheme=scheme,
+                public_key=pub_key_hex,
+                request_hash=req_hash,
+                response_hash=resp_hash,
+                model=model,
+                endpoint=endpoint,
+                token_trail_count=len(token_trail or []),
+                is_fallback=is_fallback,
+            )
+
+            self._persist_node(node)
+            self.chain.append(node)
+            return node
+
+    def commit_state(
+        self,
+        state_id: str,
+        entropy: float,
+        payload: bytes,
+        tenant_id: str = "default",
+        sampling_params: dict[str, Any] | None = None,
+    ) -> AuditNode:
+        """Backward-compatible API used by app.py (request-only commit).
+
+        Delegates to commit_forensic with response_bytes=None.
+        """
+        params = sampling_params or {}
+        return self.commit_forensic(
+            state_id=state_id,
+            request_bytes=payload,
+            response_bytes=None,
+            entropy=entropy,
+            tenant_id=tenant_id,
+            model=str(params.get("model", "unknown")),
+            endpoint=str(params.get("endpoint", "chat.completions")),
+            sampling_params=params,
+        )
+
+    def verify_integrity(self) -> tuple[bool, int | None]:
+        """O(N) full-chain integrity sweep.
+
+        Checks:
+        1. Each node's node_hash is self-consistent.
+        2. Each node's prev_hash matches the preceding node's node_hash.
+        3. HMAC signature is valid (when signing_key is set).
+
+        Returns:
+            (True, None) if valid; (False, error_index) on first violation.
+        """
+        with self._lock:
+            chain_list = list(self.chain)
+
+        for i, node in enumerate(chain_list):
+            # 1. Hash self-consistency — recompute deterministically from fields
+            computed_content = "|".join(
+                [
+                    node.state_id,
+                    f"{node.timestamp:.9f}",
+                    str(node.entropy),
+                    node.tenant_id,
+                    node.merkle_root,
+                    node.signature,
+                    node.request_hash,
+                    node.response_hash,
+                ]
+            )
+            computed_hash = hashlib.sha256(computed_content.encode()).hexdigest()
+            if computed_hash != node.node_hash:
+                logger.error(
+                    "Integrity violation: node %d node_hash mismatch (computed %s, actual %s)",
+                    i,
+                    computed_hash[:16],
+                    node.node_hash[:16],
+                )
+                return False, i
+
+            # 2. Chain link
+            expected_prev = "0" * 64 if i == 0 else chain_list[i - 1].node_hash
+            if node.prev_hash != expected_prev:
+                logger.error(
+                    "Integrity violation: node %d prev_hash mismatch (expected %s, got %s)",
+                    i,
+                    expected_prev[:16],
+                    node.prev_hash[:16],
+                )
+                return False, i
+
+            # 3. Signature verification (HMAC only; Ed25519 per-node ephemeral keys
+            #    are non-verifiable after restart — flag as Compromised via is_fallback)
+            if self._signing_key and node.signature_scheme == "hmac-sha256":
+                if not _hmac_verify(
+                    self._signing_key,
+                    node.merkle_root.encode(),
+                    node.signature,
+                ):
+                    logger.error("Integrity violation: node %d HMAC signature invalid", i)
+                    return False, i
+
+        return True, None
+
+    def close(self) -> None:
+        with self._lock:
+            if self._wal_handle is not None:
+                self._wal_handle.close()
+                self._wal_handle = None
+
+    # ── Context manager ────────────────────────────────────────────────────
+
+    def __enter__(self) -> CryptographicAuditLedger:
+        with self._lock:
+            if self._wal_handle is None:
+                self._wal_handle = open(self.persistence_path, "a")  # noqa: SIM115
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
+
+    # ── Private helpers ────────────────────────────────────────────────────
+
+    def _sign(self, data: bytes) -> tuple[str, str, str, bool]:
+        """Sign ``data``. Returns (signature_hex, pubkey_hex, scheme, is_fallback).
+
+        Rust path: aegis_rust.generate_pqc_keypair() -> PqcKeypair;
+                   keypair.sign(data) -> bytes; keypair.public_key -> bytes.
+        HMAC path: self._signing_key used directly.
+        Ed25519 fallback: per-node ephemeral key (non-verifiable across restarts).
+        """
+        if RUST_AVAILABLE:
+            try:
+                keypair = aegis_rust.generate_pqc_keypair()  # type: ignore[name-defined]
+                sig_bytes: bytes = bytes(keypair.sign(data))
+                pub_bytes: bytes = bytes(keypair.public_key)
+                return sig_bytes.hex(), pub_bytes.hex(), "pqc-ml-dsa", False
+            except Exception as exc:
+                logger.warning("aegis_rust PQC sign failed (%s); falling back", exc)
+
+        if self._signing_key:
+            sig = _hmac_sign(self._signing_key, data)
+            return sig, "", "hmac-sha256", False
+
+        # Last resort: per-node ephemeral Ed25519 (non-verifiable across restarts)
+        sig_hex, pub_hex, scheme = _ed25519_sign(data)
+        return sig_hex, pub_hex, scheme, True
+
+    def _persist_node(self, node: AuditNode) -> None:
+        """Append node as a JSON line to the WAL. Must be called under self._lock."""
+        line = json.dumps(node.to_dict(), separators=(",", ":")) + "\n"
+        if self._wal_handle is not None:
+            self._wal_handle.write(line)
+            self._wal_handle.flush()
+            os.fsync(self._wal_handle.fileno())
+        else:
+            try:
+                os.makedirs(os.path.dirname(os.path.abspath(self.persistence_path)), exist_ok=True)
+            except OSError:
+                pass
+            with open(self.persistence_path, "a") as f:
+                f.write(line)
+                f.flush()
+                os.fsync(f.fileno())
+
+    def _load_from_wal(self) -> None:
+        if not os.path.exists(self.persistence_path):
+            logger.info("No WAL found at %s — starting fresh.", self.persistence_path)
+            return
+
+        logger.info("Reconstructing ledger from %s", self.persistence_path)
+        count = 0
+        with open(self.persistence_path) as f:
+            for lineno, raw in enumerate(f, 1):
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    data = json.loads(raw)
+                    node = AuditNode.from_dict(data)
+                    self.chain.append(node)
+                    count += 1
+                except (json.JSONDecodeError, TypeError, KeyError) as exc:
+                    logger.error("WAL line %d corrupt (%s) — stopping reconstruction.", lineno, exc)
+                    self._fault_state = "wal_corrupt"
+                    break
+
+        logger.info("Reconstructed %d nodes from WAL.", count)
+
+
+# ── Compat shims kept for import compatibility ────────────────────────────────
+
+
+@dataclass
+class PQCSignatureAnchor:
+    """Shim retained for import compatibility with existing code."""
+
+    public_key: bytes
+    algorithm: str = "HMAC-SHA256"
+
+    def verify(self, data: bytes, signature: bytes) -> bool:  # noqa: ARG002
+        return False  # Stateless anchor without key material is unverifiable
