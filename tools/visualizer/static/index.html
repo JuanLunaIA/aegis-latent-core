@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aegis Latent Core - Visualizer & Forensics</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Mermaid.js -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --card-bg: rgba(17, 24, 39, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-amber: #f59e0b;
+      --accent-purple: #8b5cf6;
+      --shadow-color: rgba(0, 0, 0, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      padding: 24px;
+      line-height: 1.5;
+      background-image: radial-gradient(circle at 10% 20%, rgba(13, 22, 54, 0.4) 0%, transparent 50%),
+                        radial-gradient(circle at 90% 80%, rgba(20, 10, 50, 0.3) 0%, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--card-border);
+      backdrop-filter: blur(8px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-glow {
+      width: 14px;
+      height: 14px;
+      background-color: var(--accent-cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent-cyan);
+      animation: pulse-glow 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { transform: scale(1); opacity: 0.7; box-shadow: 0 0 8px var(--accent-cyan); }
+      50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 16px var(--accent-cyan); }
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .actions-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    button {
+      background: linear-gradient(135deg, var(--accent-blue) 0%, #1d4ed8 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background-color: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+    }
+
+    /* Grid Layout */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 10px 15px -3px var(--shadow-color);
+      backdrop-filter: blur(12px);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .card-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .card-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-top: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .card-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .card-accent {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background-color: var(--accent-blue);
+    }
+
+    /* Columns Layout */
+    .dashboard-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+
+    .panel-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: white;
+    }
+
+    /* Tabs Control */
+    .tabs-nav {
+      display: flex;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 3px;
+      border-radius: 8px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      box-shadow: none;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .tab-btn:hover {
+      transform: none;
+      box-shadow: none;
+      color: white;
+    }
+
+    .tab-btn.active {
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Mermaid diagrams container */
+    .diagram-container {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 8px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      display: flex;
+      justify-content: center;
+      overflow-x: auto;
+    }
+
+    .mermaid {
+      background: transparent !important;
+      width: 100%;
+    }
+
+    /* Codeblock styling */
+    pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      color: #e5e7eb;
+      overflow-x: auto;
+      max-height: 250px;
+    }
+
+    /* Forensics Security Scan panel */
+    .forensic-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .forensic-category {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+
+    .forensic-category:hover {
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .forensic-header {
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .forensic-header:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .forensic-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .category-badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-weight: 700;
+    }
+
+    .badge-alert {
+      background-color: rgba(239, 68, 68, 0.1);
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .badge-warn {
+      background-color: rgba(245, 158, 11, 0.1);
+      color: var(--accent-amber);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+    .badge-info {
+      background-color: rgba(59, 130, 246, 0.1);
+      color: var(--accent-blue);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .forensic-body {
+      padding: 0 12px 12px 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.03);
+      background: rgba(0, 0, 0, 0.2);
+      display: none;
+    }
+
+    .forensic-body.expanded {
+      display: block;
+    }
+
+    .file-item {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+      color: var(--text-muted);
+      word-break: break-all;
+    }
+
+    .file-item:last-child {
+      border-bottom: none;
+    }
+
+    /* Skeleton Loading State */
+    .skeleton {
+      animation: pulse-skeleton 1.5s infinite ease-in-out;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.05) 75%);
+      background-size: 200% 100%;
+      border-radius: 4px;
+    }
+
+    @keyframes pulse-skeleton {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Error banner styling */
+    .error-banner {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: var(--accent-red);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    /* Spinner */
+    .spinner {
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      border-top: 2px solid white;
+      width: 14px;
+      height: 14px;
+      animation: spin 1s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <div class="brand">
+        <div class="logo-glow"></div>
+        <h1>AEGIS LATENT CORE</h1>
+      </div>
+      <p class="subtitle">Inference Governance & Forensic Telemetry Dashboard</p>
+    </div>
+    <div class="actions-bar">
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span id="sys-status">HEALTHY</span>
+      </div>
+      <button id="refresh-btn">
+        <div class="spinner" id="refresh-spinner"></div>
+        <span>Refresh Dashboard</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="error-banner" id="error-box"></div>
+
+  <!-- Metrics Grid -->
+  <div class="metrics-grid">
+    <div class="card">
+      <div class="card-accent" style="background-color: var(--accent-blue)"></div>
+      <div class="card-label">Git HEAD</div>
+      <div class="card-value" id="val-git-head">-</div>
+      <div class="card-meta">Current commit snapshot</div>
+    </div>
+    <div class="card">
+      <div class="card-accent" style="background-color: var(--accent-cyan)"></div>
+      <div class="card-label">Repository Core</div>
+      <div class="card-value" id="val-files-count">-</div>
+      <div class="card-meta" id="val-files-meta">Python / Rust files</div>
+    </div>
+    <div class="card">
+      <div class="card-accent" style="background-color: var(--accent-green)" id="pytest-accent"></div>
+      <div class="card-label">Pytest Telemetry</div>
+      <div class="card-value" id="val-pytest-status">-</div>
+      <div class="card-meta" id="val-pytest-meta">Targeted test runs</div>
+    </div>
+    <div class="card">
+      <div class="card-accent" style="background-color: var(--accent-amber)" id="rust-accent"></div>
+      <div class="card-label">Rust Extension</div>
+      <div class="card-value" id="val-rust-status">-</div>
+      <div class="card-meta" id="val-rust-meta">Maturin compilation</div>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="dashboard-layout">
+    
+    <!-- Left Column: Diagrams & Nodes -->
+    <div class="panel">
+      <div class="card" style="flex: 1">
+        <div class="panel-header">
+          <div class="panel-title">System Visualization</div>
+          <div class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab('tab-architecture', this)">Architecture</button>
+            <button class="tab-btn" onclick="switchTab('tab-lifecycle', this)">Lifecycle</button>
+          </div>
+        </div>
+
+        <div id="tab-architecture" class="tab-content active">
+          <div class="diagram-container">
+            <div class="mermaid" id="mer-arch">
+              flowchart TB
+                Client["Client / App"] --> Proxy["AEGIS Proxy"]
+                Proxy --> Upstream["LLM Providers"]
+                Proxy --> Forensics["Merkle / Audit / Entropy"]
+                Forensics --> MMR["MMR (Rust Acceleration)"]
+                Forensics --> Ledger["Audit Ledger (Python Fallback)"]
+                
+                style Client fill:#1e293b,stroke:#475569,stroke-width:1px,color:#f8fafc
+                style Proxy fill:#1e1b4b,stroke:#4338ca,stroke-width:2px,color:#e0e7ff
+                style Upstream fill:#1c1917,stroke:#44403c,stroke-width:1px,color:#f5f5f4
+                style Forensics fill:#042f2e,stroke:#0f766e,stroke-width:1px,color:#ccfbf1
+                style MMR fill:#1b1f2b,stroke:#2563eb,stroke-width:1px,color:#eff6ff
+                style Ledger fill:#1b1f2b,stroke:#10b981,stroke-width:1px,color:#ecfdf5
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-lifecycle" class="tab-content">
+          <div class="diagram-container">
+            <div class="mermaid" id="mer-life">
+              sequenceDiagram
+                autonumber
+                participant Client as Client App
+                participant Proxy as Aegis Proxy
+                participant Provider as Upstream Provider
+                participant Forensics as Telemetry Forensics
+                
+                Client->>Proxy: Chat Completion request (OpenAI Format)
+                Note over Proxy: Check WAF rules & Rate Limits
+                Proxy->>Provider: Translate payload & forward
+                Provider-->>Proxy: Response bytes
+                Note over Proxy: Translate response to OpenAI Format
+                Proxy-->>Client: Immediate return (Zero added latency)
+                Proxy->>Forensics: Background async commit
+                Note over Forensics: Calculate Shannon Entropy<br/>Merkle Mountain Range update<br/>HMAC-SHA256 signature
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="panel-header">
+          <div class="panel-title">Audit Ledger Node Layout</div>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+          Every inference request constructs a cryptographically linked, signed node in the ledger.
+        </p>
+        <pre><code class="language-json">{
+  "node_id": "sha256(merkle_root || signature)",
+  "prev_hash": "sha256(previous_node_fields)",
+  "merkle_root": "mmr.get_root_hash()",
+  "signature": "hmac_sha256(AEGIS_SIGNING_KEY, merkle_root)",
+  "timestamp": 1700000000.123,
+  "entropy": 3.142,
+  "model": "gpt-4o",
+  "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 45
+  }
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- Right Column: Forensics Scan -->
+    <div class="panel">
+      <div class="card" style="flex: 1">
+        <div class="panel-header">
+          <div class="panel-title">Static Security Forensics Scan</div>
+          <span style="font-size: 0.75rem; color: var(--text-muted);" id="forensic-time">Last scanned: n/a</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+          Results from the local repo static security scanner. Matches highlight credentials, excessive privileges, or potential vulnerabilities.
+        </p>
+
+        <div class="forensic-list" id="forensics-container">
+          <!-- Dynamically populated -->
+          <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+            Loading forensics data...
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      themeVariables: {
+        background: '#0b0f19',
+        primaryColor: '#1e293b',
+        primaryTextColor: '#f3f4f6',
+        lineColor: '#374151'
+      }
+    });
+
+    function switchTab(tabId, btn) {
+      // Hide all contents
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      // Deactivate all buttons
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+      });
+      // Show targeted content & activate button
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+      
+      // Re-initialize mermaid for the tab
+      mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+    }
+
+    async function loadData() {
+      const spinner = document.getElementById('refresh-spinner');
+      const errBox = document.getElementById('error-box');
+      spinner.style.display = 'inline-block';
+      errBox.style.display = 'none';
+
+      try {
+        // Fetch API Summary
+        const summaryRes = await fetch('/api/summary');
+        if (!summaryRes.ok) throw new Error(`Summary API returned ${summaryRes.status}`);
+        const summary = await summaryRes.json();
+
+        // Populate Summary Cards
+        document.getElementById('val-git-head').textContent = summary.git_head || 'n/a';
+        document.getElementById('val-files-count').textContent = 
+          `${(summary.counts.python_files || 0) + (summary.counts.rust_files || 0)}`;
+        document.getElementById('val-files-meta').textContent = 
+          `${summary.counts.python_files || 0} Python · ${summary.counts.rust_files || 0} Rust files`;
+
+        // Pytest Card
+        const pt = summary.test_results?.pytest || {};
+        const ptStatus = pt.status || 'unknown';
+        const ptPassed = pt.passed || 0;
+        const ptRun = pt.tests_run || 0;
+        document.getElementById('val-pytest-status').textContent = ptStatus.toUpperCase();
+        document.getElementById('val-pytest-meta').textContent = `${ptPassed}/${ptRun} tests passed`;
+        
+        const ptAccent = document.getElementById('pytest-accent');
+        if (ptStatus === 'ok') {
+          ptAccent.style.backgroundColor = 'var(--accent-green)';
+        } else if (ptStatus === 'failed') {
+          ptAccent.style.backgroundColor = 'var(--accent-red)';
+        } else {
+          ptAccent.style.backgroundColor = 'var(--accent-amber)';
+        }
+
+        // Rust compilation card
+        const rb = summary.test_results?.rust_tests || summary.rust_build || {};
+        const rbStatus = rb.status || 'unknown';
+        document.getElementById('val-rust-status').textContent = rbStatus.toUpperCase();
+        document.getElementById('val-rust-meta').textContent = rb.summary || 'Build report status';
+        
+        const rustAccent = document.getElementById('rust-accent');
+        if (rbStatus === 'done' || rbStatus === 'ok') {
+          rustAccent.style.backgroundColor = 'var(--accent-green)';
+        } else if (rbStatus === 'failed') {
+          rustAccent.style.backgroundColor = 'var(--accent-red)';
+        } else {
+          rustAccent.style.backgroundColor = 'var(--accent-amber)';
+        }
+
+        // Fetch Forensic Report
+        const forensicRes = await fetch('/api/forensic_report');
+        if (!forensicRes.ok) throw new Error(`Forensics API returned ${forensicRes.status}`);
+        const forensic = await forensicRes.json();
+
+        // Populate Forensic lists
+        const container = document.getElementById('forensics-container');
+        container.innerHTML = '';
+
+        const categories = forensic.patterns || {};
+        const keys = Object.keys(categories);
+        
+        if (keys.length === 0) {
+          container.innerHTML = `<div style="text-align: center; color: var(--accent-green); padding: 40px 0;">✓ No static security matches found.</div>`;
+        } else {
+          keys.forEach(key => {
+            const files = categories[key] || [];
+            if (files.length === 0) return; // skip empty pattern matches
+
+            const catDiv = document.createElement('div');
+            catDiv.className = 'forensic-category';
+            
+            // Format category title
+            const prettyTitle = key.replace(/_/g, ' ');
+            const isCritical = ['private_key', 'openai_key_like', 'password'].includes(key);
+            const badgeClass = isCritical ? 'badge-alert' : 'badge-warn';
+            
+            catDiv.innerHTML = `
+              <div class="forensic-header" onclick="toggleForensicBody(this)">
+                <div class="forensic-title">
+                  <span>${prettyTitle}</span>
+                  <span class="category-badge ${badgeClass}">${files.length} matches</span>
+                </div>
+                <span style="font-size: 0.8rem; color: var(--text-muted)">▶</span>
+              </div>
+              <div class="forensic-body">
+                ${files.map(f => `<div class="file-item">${f}</div>`).join('')}
+              </div>
+            `;
+            container.appendChild(catDiv);
+          });
+        }
+        document.getElementById('forensic-time').textContent = `Last scanned: ${new Date().toLocaleTimeString()}`;
+
+      } catch (err) {
+        errBox.textContent = `Error loading dashboard metrics: ${err.message}`;
+        errBox.style.display = 'block';
+        document.getElementById('sys-status').textContent = 'ERROR';
+        document.getElementById('sys-status').parentElement.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+        document.getElementById('sys-status').parentElement.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+        document.getElementById('sys-status').previousElementSibling.style.backgroundColor = 'var(--accent-red)';
+        document.getElementById('sys-status').previousElementSibling.style.boxShadow = '0 0 8px var(--accent-red)';
+      } finally {
+        spinner.style.display = 'none';
+        mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+      }
+    }
+
+    function toggleForensicBody(header) {
+      const body = header.nextElementSibling;
+      const indicator = header.querySelector('span:last-child');
+      if (body.style.display === 'block') {
+        body.style.display = 'none';
+        indicator.textContent = '▶';
+      } else {
+        body.style.display = 'block';
+        indicator.textContent = '▼';
+      }
+    }
+
+    document.getElementById('refresh-btn').onclick = loadData;
+    
+    // Initial Load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadData();
+    });
+  </script>
+</body>
+</html>

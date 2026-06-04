@@ -1,0 +1,13 @@
+# Runtime dependencies (also declared in pyproject.toml)
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+httpx>=0.27.0
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+numpy>=1.26.0
+python-dotenv>=1.0.0
+structlog>=24.1.0
+protobuf>=5.0.0
+redis>=5.0.0
+requests>=2.31.0
+cryptography>=42.0.0
