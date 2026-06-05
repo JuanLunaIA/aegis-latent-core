@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Security Policy
 
 ## Supported Versions
@@ -94,7 +94,7 @@ As of v2.3.0, the LSM guard runs in **advisory mode**: missing AppArmor or SELin
 | 2.2.0 | `/docs` and `/redoc` exposed unconditionally in all deployment modes | Medium |
 | 2.2.0 | `prev_hash` always pointed to the genesis node due to wrong `ORDER BY` direction in `list_nodes()` | Critical |
 | 2.2.0 | Concurrent `BackgroundTask` writes could fork the audit chain (no chain lock) | Critical |
-=======
+
 # Política de seguridad
 
 ## Versiones soportadas
@@ -122,4 +122,3 @@ Seguimos divulgación coordinada. Los reportes pueden acreditarse en el changelo
 - Define siempre `AEGIS_API_KEYS` en producción; no uses `AEGIS_AUTH_DISABLED`.
 - No versiones `.env`, claves PEM ni el archivo `*.wal.jsonl` con datos reales.
 - Restringe el acceso a `/v1/audit/*` con claves de solo lectura (`AEGIS_AUDIT_API_KEYS`).
->>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
