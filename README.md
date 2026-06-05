@@ -16,11 +16,8 @@
 [![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
 [![License: AGPLv3 / Commercial](https://img.shields.io/badge/License-AGPLv3%20%7C%20Commercial-blue.svg)](COMMERCIAL.md)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-<<<<<<< HEAD
 [![Version](https://img.shields.io/badge/version-2.3.0-green.svg)](CHANGELOG.md)
-=======
 [![Version](https://img.shields.io/badge/version-2.2.0-green.svg)](CHANGELOG.md)
->>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
 
@@ -87,15 +84,15 @@ Note: when the Rust extension is installed, the Merkle Mountain Range (MMR) oper
 
 ---
 
-<<<<<<< HEAD
+
 ## Multi-Provider Support
 
 Aegis ships a provider adapter layer that lets you switch upstreams with a single environment variable. Your application sends standard OpenAI-format requests and receives OpenAI-format responses regardless of the backend.
-=======
+
 ## Multi-Provider Support (v2.2.0)
 
 Aegis v2.2.0 adds a provider adapter layer. Switch providers with a single environment variable — your application sends standard OpenAI-format requests and receives OpenAI-format responses regardless of the backend.
->>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
+
 
 ### Supported Providers
 
@@ -368,18 +365,15 @@ ruff check aegis/ aegis_server/
 
 # Type check
 mypy aegis/ aegis_server/
-<<<<<<< HEAD
 
 # Optional: build Rust extension (significant throughput improvement)
 python -m pip install maturin
 cd aegis_rust_v2 && maturin develop --release && cd -
-=======
->>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
 ```
 
 ---
 
-<<<<<<< HEAD
+
 ## Tools: Forensics Visualizer
 
 `tools/visualizer/` ships a local dashboard for inspecting the repository state and audit chain without standing up a full deployment.
@@ -402,7 +396,7 @@ The dashboard (`tools/visualizer/static/index.html`) shows:
 
 The visualizer is a **local development tool only**. Never expose it to public networks.
 
-=======
+
 ## Development (extended)
 
 Below is an opinionated dev setup and quick verification steps (Rust + Python):
@@ -422,18 +416,15 @@ cargo test --manifest-path aegis_rust_v2/Cargo.toml --lib --quiet || true
 pytest tests/test_providers.py -q -k "not slow" --maxfail=1 || true
 ```
 
->>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
+
 ---
 
 ## Docker
 
 ```bash
 # Build
-<<<<<<< HEAD
 docker build -t aegis-latent-core:2.3.0 .
-=======
 docker build -t aegis-latent-core:2.2.0 .
->>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
 
 # Run with Anthropic
 docker run -p 8080:8080 \
@@ -441,11 +432,8 @@ docker run -p 8080:8080 \
   -e AEGIS_BACKEND_API_KEY=sk-ant-xxx \
   -e AEGIS_API_KEYS=your-proxy-key \
   -e AEGIS_SIGNING_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))') \
-<<<<<<< HEAD
   aegis-latent-core:2.3.0
-=======
   aegis-latent-core:2.2.0
->>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
 ```
 
 ---
@@ -454,11 +442,10 @@ docker run -p 8080:8080 \
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history.
 
-<<<<<<< HEAD
+
 **v2.3.0** (2026-06-04) — Operational hardening: 3 blocker fixes (LSM guard crash, ResponseAnalyzer threshold decoupling, mTLS never wired), explicit 401/403 upstream logging, deep `/health` and `/ready` endpoints, Forensics Visualizer tool.
 
-=======
->>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
+
 **v2.2.0** (2026-06-02) — Multi-provider support + 7 bug fixes (2 chain-of-custody blockers, Shannon entropy correction, MMR integration, dedicated signing key, TTL rate limiter, docs security hardening).
 
 ---
@@ -508,8 +495,5 @@ python -c 'from aegis.core.mmr import mmr_manager; print(mmr_manager.get_root_ha
 ## License
 
 [AGPLv3](LICENSE) for open-source use · Commercial license available for proprietary deployments. See [COMMERCIAL.md](COMMERCIAL.md).
-<<<<<<< HEAD
 
 For vulnerability reporting and deployment security guidance, see [SECURITY.md](SECURITY.md).
-=======
->>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
