@@ -321,11 +321,9 @@ curl http://localhost:8080/v1/audit/integrity
 
 Aegis computes **position-averaged Shannon entropy** for every response:
 
-```
-H = (1/T) × Σ_{t=1}^{T} [ -Σ_{k=1}^{K} p_{t,k} × log₂(p_{t,k}) ]
-```
+$$H = (1/T) × Σ_{t=1}^{T} [ -Σ_{k=1}^{K} p_{t,k} × log₂(p_{t,k}) ]$$
 
-Where `p_{t,k}` = softmax of top-K token logprobs at position `t`.
+Where $$p_{t,k}$$ = softmax of top-K token logprobs at position $$t$$.
 
 - High entropy (> threshold) → model is uncertain, potentially hallucinating
 - Low entropy → model is confident
