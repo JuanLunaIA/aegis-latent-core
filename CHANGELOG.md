@@ -4,6 +4,7 @@ All notable changes to `aegis-latent-core` are documented here.
 
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Each release section includes: Added, Changed, Fixed, Security and Migration notes when relevant.
 
+<<<<<<< HEAD
 Quick upgrade notes — v2.3.0:
 
 - No breaking changes from v2.2.0. Drop-in replacement.
@@ -41,6 +42,9 @@ Quick upgrade notes — v2.3.0:
 - uvicorn TLS listener now respects `AEGIS_SSL_CERTFILE`, `AEGIS_SSL_KEYFILE`, `AEGIS_SSL_CA_CERTS`, and enforces `ssl_cert_reqs=CERT_REQUIRED` when `AEGIS_MTLS_REQUIRED=true`.
 
 
+=======
+Quick upgrade notes — v2.2.0:
+>>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
 
 - Ensure `AEGIS_SIGNING_KEY` is set in production (HMAC-SHA256). If unset, node signing falls back to an ephemeral Ed25519 key and `legal_admissibility` may be reduced.
 - If you implemented a custom StorageProvider, add `get_latest_node()` implementing `ORDER BY seq DESC LIMIT 1` to avoid prev_hash regressions.

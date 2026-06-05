@@ -4,7 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aegis-latent-core"
+<<<<<<< HEAD
 version = "2.3.0"
+=======
+version = "2.2.0"
+>>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
 description = "Forensic telemetry proxy and Merkle audit chain for LLM inference pipelines"
 readme = "README.md"
 license = { text = "AGPL-3.0-only" }

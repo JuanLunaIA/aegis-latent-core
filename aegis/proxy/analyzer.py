@@ -60,6 +60,7 @@ class ResponseAnalysis:
 
 
 def _logprobs_to_numpy(top_logprobs: list) -> np.ndarray:
+<<<<<<< HEAD
     """Convert a list of TopLogprob objects or raw dicts to a normalised probability array.
 
     Handles both Pydantic model instances (``t.logprob``) and raw dict payloads
@@ -75,6 +76,12 @@ def _logprobs_to_numpy(top_logprobs: list) -> np.ndarray:
         else:
             lp_values.append(float(t.logprob))
     lp = np.array(lp_values, dtype=np.float64)
+=======
+    """Convert a list of TopLogprob objects to a normalised probability array."""
+    if not top_logprobs:
+        return np.array([1.0])
+    lp = np.array([t.logprob for t in top_logprobs], dtype=np.float64)
+>>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
     lp -= np.max(lp)
     probs = np.exp(lp)
     s = probs.sum()
@@ -163,11 +170,16 @@ class ResponseAnalyzer:
                 sampling_params=params,
             )
 
+<<<<<<< HEAD
         # --- DATA LEAK DETECTION ---
         full_text = "".join([
             tok.get("token", "") if isinstance(tok, dict) else tok.token
             for tok in content
         ])
+=======
+        # --- DATA LEAK DETECTION (SISTEMA INEXPUGNABLE) ---
+        full_text = "".join([tok.token for tok in content])
+>>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
         from aegis.core.leak_detector import DataLeakDetector
 
         leak_detector = DataLeakDetector()

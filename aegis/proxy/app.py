@@ -473,7 +473,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     "healthy": cache_healthy,
                 },
                 "provider": provider_name,
+<<<<<<< HEAD
                 "version": "2.3.0",
+=======
+                "version": "2.2.1",
+>>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
             },
         )
 
@@ -525,6 +529,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         analyzer = state.get_analyzer(session_id)
 
+<<<<<<< HEAD
         if not hasattr(state, "forwarder") or state.forwarder is None:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -532,6 +537,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                        "Ensure the server lifespan completed before sending requests.",
             )
 
+=======
+>>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
         if cfg.force_logprobs and state.forwarder.provider.supports_logprobs and not body.get("logprobs", False):
             body["logprobs"] = True
             body["top_logprobs"] = cfg.top_logprobs
@@ -618,12 +625,15 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         _apply_request_entropy_guard(request, body, state)
 
+<<<<<<< HEAD
         if not hasattr(state, "forwarder") or state.forwarder is None:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Proxy not ready: forwarder has not been initialized.",
             )
 
+=======
+>>>>>>> c11319c9d5522df98ed3727694afe7eacd82bee0
         session_id = request.headers.get("x-session-id", str(uuid.uuid4()))
         request_id = str(uuid.uuid4())
 
