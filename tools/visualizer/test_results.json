@@ -1,0 +1,21 @@
+{
+  "static_checks": {
+    "pip_check": "ok",
+    "ruff": "missing",
+    "mypy": "missing",
+    "bandit": "missing",
+    "pip_audit": "missing"
+  },
+  "pytest": {
+    "status": "ok",
+    "summary": "Ran targeted unit tests (tests/test_mmr.py) in isolated venv. Local run executed with coverage addopts disabled to avoid global fail-under.",
+    "tests_run": 4,
+    "passed": 4,
+    "warnings": 1
+  },
+  "rust_tests": {
+    "status": "skipped",
+    "summary": "Local toolchain probe: cc or cargo missing; build skipped. CI workflow will attempt maturin/cargo compilation.",
+    "log_excerpt": []
+  }
+}
