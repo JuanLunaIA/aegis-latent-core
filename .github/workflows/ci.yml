@@ -1,0 +1,242 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  release:
+    types: [published]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  CARGO_TERM_COLOR: always
+
+jobs:
+  license-check:
+    name: License Headers
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Verify AGPLv3 / Commercial headers
+        run: |
+          python scripts/apply_license_headers.py
+          if ! git diff --quiet; then
+            echo "::error::Missing or outdated license headers. Run: python scripts/apply_license_headers.py"
+            git diff --stat
+            exit 1
+          fi
+
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install tooling
+        run: pip install ruff
+      - name: Ruff lint (runtime packages)
+        run: |
+          ruff check \
+            aegis \
+            aegis_server \
+            integrations \
+            tests
+      - name: Ruff format check
+        run: ruff format --check aegis aegis_server integrations tests
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install package (editable) + mypy
+        run: pip install -e ".[dev]"
+      - name: Mypy (CI profile — proxy + core runtime modules)
+        run: |
+          mypy --config-file=mypy-ci.ini \
+            aegis/config.py \
+            aegis/auth/apikey.py \
+            aegis/core/mmr.py \
+            aegis/core/crypto_audit.py \
+            aegis/core/forensic.py \
+            aegis/core/ratelimiter.py \
+            aegis/core/normalization.py \
+            aegis/core/session_manager.py \
+            aegis/core/moe_monitor.py \
+            aegis/core/leak_detector.py \
+            aegis/core/seccomp_guard.py \
+            aegis/core/lsm_guard.py \
+            aegis/core/math_utils.py \
+            aegis/core/telemetry.py \
+            aegis/proxy/waf.py \
+            aegis/proxy/schemas.py \
+            aegis/proxy/forwarder.py
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install package (editable) with dev extras
+        run: pip install -e ".[dev]"
+      - name: Run test suite with coverage gate
+        run: |
+          pytest tests/ -v \
+            --cov=aegis \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=65
+      - name: Upload coverage
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+
+  rust:
+    name: Rust Extension
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install maturin
+        run: pip install maturin
+      - name: Cargo test (aegis_rust_v2)
+        working-directory: aegis_rust_v2
+        env:
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+        run: cargo test --release
+      - name: Build Python wheel (smoke)
+        working-directory: aegis_rust_v2
+        env:
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+        run: maturin build --release
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install package and scanners
+        run: |
+          pip install -e ".[dev]"
+          pip install pip-audit
+      - name: Bandit SAST
+        run: bandit -r aegis/ aegis_server/ -c pyproject.toml -lll
+      - name: Dependency audit (runtime requirements)
+        run: pip-audit -r requirements.txt
+
+  helm-lint:
+    name: Helm Lint
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+      - run: helm lint deploy/helm/
+
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'release'
+    needs: [test, security]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: sbom.spdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+
+  docker:
+    name: Docker Build & Push
+    runs-on: ubuntu-22.04
+    needs: [lint, typecheck, test, security, rust, helm-lint]
+    if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image (keyless, Sigstore)
+        if: github.event_name != 'pull_request'
+        run: |
+          cosign sign --yes \
+            ghcr.io/${{ github.repository }}@${{ steps.build.outputs.digest }}

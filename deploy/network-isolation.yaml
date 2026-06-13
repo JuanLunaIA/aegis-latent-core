@@ -1,0 +1,47 @@
+# Aegis Network Isolation Profile
+# This configuration defines the strict egress and ingress rules for the Aegis Proxy.
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: aegis-proxy-isolation
+  namespace: aegis
+spec:
+  podSelector:
+    matchLabels:
+      app: aegis-proxy
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 1. Allow authenticated traffic from the API Gateway/Load Balancer only
+  - from:
+    - podSelector:
+        matchLabels:
+            app: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  # 2. Allow traffic ONLY to the upstream LLM Backend
+  - to:
+    - ipBlock:
+        cidr: 10.0.1.0/24 # Assuming LLM Backend is in this subnet
+    ports:
+    - protocol: TCP
+      port: 11434
+  # 3. Allow DNS resolution for the backend URL
+  - to:
+    - ports:
+      - protocol: UDP
+        port: 53
+      - protocol: TCP
+        port: 53
+  # 4. Allow telemetry export to the secure audit sink
+  - to:
+    - podSelector:
+        matchLabels:
+            app: aegis-audit-sink
+    ports:
+    - protocol: TCP
+      port: 443
