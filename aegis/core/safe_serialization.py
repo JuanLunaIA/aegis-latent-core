@@ -5,13 +5,17 @@ guarded ``pickle`` loader that enforces allowed types and basic structural
 validation. It is a pragmatic compromise: when pickle is unavoidable,
 require signed artifacts and strict type checks.
 """
+
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
 
 import json
-import pickle
 import logging
+import pickle
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +37,7 @@ def safe_load_json(path: str | Path) -> Any:
         return json.load(fh)
 
 
-def _validate_allowed(obj: Any, allowed: Tuple[type, ...]) -> bool:
+def _validate_allowed(obj: Any, allowed: tuple[type, ...]) -> bool:
     """Recursively validate that obj only contains allowed primitive types.
 
     This is intentionally conservative. Complex objects should be serialized
@@ -44,7 +48,9 @@ def _validate_allowed(obj: Any, allowed: Tuple[type, ...]) -> bool:
     if isinstance(obj, list):
         return all(_validate_allowed(i, allowed) for i in obj)
     if isinstance(obj, dict):
-        return all(isinstance(k, (str, int)) and _validate_allowed(v, allowed) for k, v in obj.items())
+        return all(
+            isinstance(k, (str, int)) and _validate_allowed(v, allowed) for k, v in obj.items()
+        )
     return False
 
 
@@ -52,7 +58,15 @@ class RestrictedUnpickler(pickle.Unpickler):
     def __init__(self, *args, allowed_classes: set[str] | None = None, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.allowed_classes = allowed_classes or {
-            "dict", "list", "str", "int", "float", "bool", "NoneType", "bytearray", "bytes"
+            "dict",
+            "list",
+            "str",
+            "int",
+            "float",
+            "bool",
+            "NoneType",
+            "bytearray",
+            "bytes",
         }
 
     def find_class(self, module: str, name: str) -> Any:
@@ -77,8 +91,5 @@ def safe_pickle_load(path: str | Path, allowed_types: Iterable[type] | None = No
         obj = unpickler.load()
 
     if not _validate_allowed(obj, allowed):
-        raise pickle.UnpicklingError(
-            "Pickle payload contains disallowed types after load"
-        )
+        raise pickle.UnpicklingError("Pickle payload contains disallowed types after load")
     return obj
-

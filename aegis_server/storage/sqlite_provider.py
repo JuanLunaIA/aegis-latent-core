@@ -236,9 +236,7 @@ class SQLiteStorageProvider(StorageProvider):
                     pass
             return raw
         except Exception as exc:
-            raise RuntimeError(
-                f"SQLiteStorageProvider.get_latest_node failed: {exc}"
-            ) from exc
+            raise RuntimeError(f"SQLiteStorageProvider.get_latest_node failed: {exc}") from exc
 
     async def write_node(
         self,

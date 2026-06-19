@@ -34,7 +34,7 @@ def test_safe_pickle_load_rejects_forbidden_global(tmp_path: Path) -> None:
     with path.open("wb") as fh:
         pickle.dump(_EvilPickleClass(), fh)
 
-    with pytest.raises(Exception):
+    with pytest.raises(pickle.UnpicklingError):
         safe_pickle_load(path)
 
 
@@ -43,5 +43,5 @@ def test_safe_pickle_load_rejects_nested_disallowed_type(tmp_path: Path) -> None
     with path.open("wb") as fh:
         pickle.dump({"items": [1, 2, object()]}, fh)
 
-    with pytest.raises(Exception):
+    with pytest.raises(pickle.UnpicklingError):
         safe_pickle_load(path)

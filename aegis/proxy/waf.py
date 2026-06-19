@@ -77,12 +77,12 @@ class AegisWAF:
         self._guard: Any = None
         try:
             from aegis.core.adversarial_filter import LLMGuardLocal
+
             self._guard = LLMGuardLocal()
             logger.debug("AegisWAF: LLMGuardLocal (layer 2) active")
         except ImportError:
             logger.warning(
-                "AegisWAF: aegis.core.adversarial_filter not available; "
-                "running layer-1 only."
+                "AegisWAF: aegis.core.adversarial_filter not available; running layer-1 only."
             )
 
     def inspect_payload(self, body: Any) -> WAFResult:

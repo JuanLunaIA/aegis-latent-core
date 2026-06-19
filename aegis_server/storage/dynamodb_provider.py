@@ -254,9 +254,7 @@ class DynamoDBStorageProvider(StorageProvider):
                 return None
             return self._item_to_dict(items[0])
         except Exception as exc:
-            raise RuntimeError(
-                f"DynamoDBStorageProvider.get_latest_node failed: {exc}"
-            ) from exc
+            raise RuntimeError(f"DynamoDBStorageProvider.get_latest_node failed: {exc}") from exc
 
     async def get_node(self, node_hash: str) -> dict[str, Any] | None:
         """

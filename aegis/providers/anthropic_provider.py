@@ -33,6 +33,7 @@ References:
   https://docs.anthropic.com/en/api/messages
   https://docs.anthropic.com/en/api/messages-streaming
 """
+
 from __future__ import annotations
 
 import json
@@ -344,7 +345,9 @@ class AnthropicAdapter(ProviderAdapter):
                 model = msg.get("model", original_model)
                 # Emit the role chunk.
                 yield _make_openai_chunk(
-                    chunk_id, model, created,
+                    chunk_id,
+                    model,
+                    created,
                     delta={"role": "assistant", "content": ""},
                 )
                 role_emitted = True
@@ -353,7 +356,9 @@ class AnthropicAdapter(ProviderAdapter):
                 # Emit role chunk if message_start was somehow missed.
                 if not role_emitted:
                     yield _make_openai_chunk(
-                        chunk_id, model, created,
+                        chunk_id,
+                        model,
+                        created,
                         delta={"role": "assistant", "content": ""},
                     )
                     role_emitted = True
@@ -364,7 +369,9 @@ class AnthropicAdapter(ProviderAdapter):
                     text = delta.get("text", "")
                     if text:
                         yield _make_openai_chunk(
-                            chunk_id, model, created,
+                            chunk_id,
+                            model,
+                            created,
                             delta={"content": text},
                         )
                 elif delta.get("type") == "input_json_delta":
@@ -372,7 +379,9 @@ class AnthropicAdapter(ProviderAdapter):
                     partial = delta.get("partial_json", "")
                     if partial:
                         yield _make_openai_chunk(
-                            chunk_id, model, created,
+                            chunk_id,
+                            model,
+                            created,
                             delta={"content": partial},
                         )
 
@@ -382,7 +391,9 @@ class AnthropicAdapter(ProviderAdapter):
                 if stop_reason:
                     finish_reason = _STOP_REASON_MAP.get(stop_reason, "stop")
                     yield _make_openai_chunk(
-                        chunk_id, model, created,
+                        chunk_id,
+                        model,
+                        created,
                         delta={},
                         finish_reason=finish_reason,
                     )
@@ -400,7 +411,9 @@ class AnthropicAdapter(ProviderAdapter):
                 )
                 # Emit a minimal finish chunk so the client isn't left hanging.
                 yield _make_openai_chunk(
-                    chunk_id, model, created,
+                    chunk_id,
+                    model,
+                    created,
                     delta={},
                     finish_reason="stop",
                 )

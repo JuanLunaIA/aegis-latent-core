@@ -3,6 +3,9 @@
 Generate a JSON summary of the repository: files, Python functions/classes, Rust functions, counts and an optional test_results snapshot.
 Intended for the lightweight visualizer dashboard.
 """
+
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
 import ast
 import json

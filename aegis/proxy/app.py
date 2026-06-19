@@ -117,7 +117,9 @@ class _BoundedAnalyzerCache:
         silently ignoring AegisSettings.kl_alert_threshold and siblings.
     """
 
-    def __init__(self, maxsize: int = _MAX_ANALYZER_SESSIONS, cfg: AegisSettings | None = None) -> None:
+    def __init__(
+        self, maxsize: int = _MAX_ANALYZER_SESSIONS, cfg: AegisSettings | None = None
+    ) -> None:
         self._maxsize = maxsize
         self._cfg = cfg
         self._cache: OrderedDict[str, ResponseAnalyzer] = OrderedDict()
@@ -273,6 +275,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     _signing_key = cfg.signing_key
     if not _signing_key and not cfg.auth_disabled:
         import logging as _log
+
         _log.getLogger(__name__).warning(
             "AEGIS_SIGNING_KEY is not set. "
             "The audit chain will use an empty signing key — signatures are NOT cryptographically valid. "
@@ -370,6 +373,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         forwarder_cfg = cfg.model_copy(update={"backend_api_key": backend_key})
 
         from aegis.providers import build_provider
+
         provider = build_provider(
             cfg.provider,
             openrouter_site_url=cfg.openrouter_site_url,
@@ -490,8 +494,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         httpx client is open.  Returns 503 before that window (edge case in
         slow-start environments).
         """
-        forwarder_ready = getattr(state, "forwarder", None) is not None and \
-                          state.forwarder._client is not None
+        forwarder_ready = (
+            getattr(state, "forwarder", None) is not None and state.forwarder._client is not None
+        )
         status_code = 200 if forwarder_ready else 503
         return JSONResponse(
             status_code=status_code,
@@ -534,9 +539,13 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Proxy not ready: forwarder has not been initialized. "
-                       "Ensure the server lifespan completed before sending requests.",
+                "Ensure the server lifespan completed before sending requests.",
             )
-        if cfg.force_logprobs and state.forwarder.provider.supports_logprobs and not body.get("logprobs", False):
+        if (
+            cfg.force_logprobs
+            and state.forwarder.provider.supports_logprobs
+            and not body.get("logprobs", False)
+        ):
             body["logprobs"] = True
             body["top_logprobs"] = cfg.top_logprobs
 

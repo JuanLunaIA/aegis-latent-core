@@ -51,9 +51,8 @@ class InMemoryRateLimiter:
 
         try:
             from cachetools import TTLCache  # type: ignore[import-untyped]
-            self._buckets: dict[str, tuple[float, float]] = TTLCache(
-                maxsize=200_000, ttl=ttl
-            )
+
+            self._buckets: dict[str, tuple[float, float]] = TTLCache(maxsize=200_000, ttl=ttl)
             logger.debug("InMemoryRateLimiter: cachetools TTLCache active (ttl=%.0fs)", ttl)
         except ImportError:
             if not InMemoryRateLimiter._WARN_ONCE:

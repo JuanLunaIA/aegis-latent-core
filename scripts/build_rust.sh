@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 set -euo pipefail
 # Reproducible helper to build aegis_rust_v2 using maturin in an isolated venv.
 # Usage: ./scripts/build_rust.sh [python-executable]

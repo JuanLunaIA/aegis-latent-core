@@ -3,6 +3,9 @@
 Run repository forensic checks: pattern search, unsafe API usage, basic Python syntax checks
 and attempt to compile the Rust extension capturing errors. Outputs a JSON report.
 """
+
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
 
 import json

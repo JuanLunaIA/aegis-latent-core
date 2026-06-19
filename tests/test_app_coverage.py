@@ -5,22 +5,19 @@ Covers: RequestSmugglingProtectionMiddleware (all 3 rejection branches),
         auth middleware rejections, health 503, ready probe, lifespan paths.
 """
 
-from __future__ import annotations
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
-import asyncio
-import os
-import tempfile
-from unittest.mock import AsyncMock, MagicMock, patch
+from __future__ import annotations
 
 import httpx
 import pytest
-from fastapi.testclient import TestClient
 
 from aegis.config import AegisSettings
 from aegis.proxy.app import create_app
 
-
 # ── fixtures ──────────────────────────────────────────────────────────────────
+
 
 def _settings(wal_path: str, **overrides) -> AegisSettings:
     base = dict(
@@ -51,6 +48,7 @@ def _close_app_ledger(app) -> None:
 
 
 # ── RequestSmugglingProtectionMiddleware ──────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_smuggling_double_content_length_rejected(tmp_wal):
@@ -119,6 +117,7 @@ async def test_normal_request_passes_smuggling_middleware(tmp_wal):
 
 
 # ── /health endpoint ──────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_health_returns_schema_fields(tmp_wal):
@@ -206,6 +205,7 @@ async def test_health_503_when_cache_high_eviction(tmp_wal):
 
 # ── /ready endpoint ───────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_ready_without_lifespan_returns_valid(tmp_wal):
     """Without lifespan the forwarder is None → /ready returns 200 or 503."""
@@ -222,6 +222,7 @@ async def test_ready_without_lifespan_returns_valid(tmp_wal):
 
 
 # ── auth middleware ───────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_chat_endpoint_rejects_missing_auth(tmp_wal):
@@ -280,6 +281,7 @@ async def test_auth_disabled_bypasses_key_check(tmp_wal):
 
 # ── _BoundedAnalyzerCache — eviction_rate / size ─────────────────────────────
 
+
 def test_bounded_cache_eviction_tracking(tmp_path):
     from aegis.proxy.app import _BoundedAnalyzerCache
 
@@ -308,8 +310,8 @@ def test_bounded_cache_lru_removes_oldest(tmp_path):
     cfg = AegisSettings(backend_api_key="k", wal_path=wal_path)
     cache = _BoundedAnalyzerCache(maxsize=2, cfg=cfg)
 
-    a1 = cache.get("a")
-    a2 = cache.get("b")
+    cache.get("a")
+    cache.get("b")
     # Access "a" again to make it MRU
     cache.get("a")
     # Adding "c" should evict "b" (LRU)

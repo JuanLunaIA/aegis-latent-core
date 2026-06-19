@@ -164,10 +164,9 @@ class ResponseAnalyzer:
             )
 
         # --- DATA LEAK DETECTION ---
-        full_text = "".join([
-            tok.get("token", "") if isinstance(tok, dict) else tok.token
-            for tok in content
-        ])
+        full_text = "".join(
+            [tok.get("token", "") if isinstance(tok, dict) else tok.token for tok in content]
+        )
         from aegis.core.leak_detector import DataLeakDetector
 
         leak_detector = DataLeakDetector()

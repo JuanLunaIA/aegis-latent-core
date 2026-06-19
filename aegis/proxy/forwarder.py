@@ -23,6 +23,7 @@ before yielding, so callers always receive OpenAI-format SSE tuples.
 Providers that already stream in OpenAI format (OpenAI, OpenRouter, Gemini)
 pass through unchanged.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -83,10 +84,7 @@ class LLMForwarder:
     # ── lifecycle ─────────────────────────────────────────────────────────
 
     async def start(self) -> None:
-        base_url = (
-            self._provider.base_url_override
-            or self._settings.backend_url_str
-        )
+        base_url = self._provider.base_url_override or self._settings.backend_url_str
         headers = self._provider.build_headers(self._settings.backend_api_key)
         timeout = httpx.Timeout(
             self._settings.backend_timeout_seconds,
@@ -170,7 +168,8 @@ class LLMForwarder:
         the raw provider response bytes back before returning.
         """
         provider_path, provider_body = self._provider.translate_request(
-            path, body,
+            path,
+            body,
             model_override=self._settings.provider_model or None,
         )
 
@@ -240,7 +239,8 @@ class LLMForwarder:
         assert self._client is not None, "LLMForwarder.start() was not called"
 
         provider_path, provider_body = self._provider.translate_request(
-            path, body,
+            path,
+            body,
             model_override=self._settings.provider_model or None,
         )
 
@@ -250,9 +250,7 @@ class LLMForwarder:
             ):
                 yield item
         else:
-            async for item in self._stream_passthrough(
-                provider_path, provider_body, extra_headers
-            ):
+            async for item in self._stream_passthrough(provider_path, provider_body, extra_headers):
                 yield item
 
     # ── internal stream helpers ───────────────────────────────────────────
