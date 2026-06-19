@@ -9,7 +9,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AnyHttpUrl, Field, field_validator
+from pydantic import AnyHttpUrl, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -283,6 +283,26 @@ class AegisSettings(BaseSettings):
         if v_upper not in allowed:
             raise ValueError(f"log_level must be one of {allowed}")
         return v_upper
+
+    @model_validator(mode="after")
+    def _enforce_auth_posture(self) -> AegisSettings:
+        """Refuse to disable authentication outside debug mode.
+
+        The ``debug_mode`` field documents that auth cannot be silently disabled
+        in production. This makes that promise enforceable: ``auth_disabled`` is
+        only honoured when ``debug_mode`` is also set. Without this check a stray
+        ``AEGIS_AUTH_DISABLED=true`` in a production environment would open both
+        the proxy and the ``/v1/audit/*`` endpoints with no credential check —
+        a silent, config-only privilege escalation that no code path guards.
+        """
+        if self.auth_disabled and not self.debug_mode:
+            raise ValueError(
+                "auth_disabled=True requires debug_mode=True. Refusing to start "
+                "with authentication disabled outside debug mode. Set "
+                "AEGIS_DEBUG_MODE=true for local development, or remove "
+                "AEGIS_AUTH_DISABLED and configure AEGIS_API_KEYS for production."
+            )
+        return self
 
     def get_api_keys(self) -> frozenset[str]:
         if not self.api_keys:

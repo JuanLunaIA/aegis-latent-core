@@ -35,6 +35,20 @@ from aegis.proxy.waf import AegisWAF
 logger = logging.getLogger(__name__)
 _ALERT_BUFFER_SIZE = 10_000
 
+# Strong references to fire-and-forget commit tasks. asyncio only holds a weak
+# reference to tasks created with create_task; without this set a task can be
+# garbage-collected mid-flight, silently dropping an audit commit. Tasks remove
+# themselves via add_done_callback when they finish.
+_BACKGROUND_TASKS: set[asyncio.Task[Any]] = set()
+
+
+def _spawn_background(coro: Any) -> asyncio.Task[Any]:
+    """Schedule *coro* as a tracked background task that survives GC."""
+    task = asyncio.create_task(coro)
+    _BACKGROUND_TASKS.add(task)
+    task.add_done_callback(_BACKGROUND_TASKS.discard)
+    return task
+
 # FIX-APP-01: Maximum concurrent analyzer instances.
 # Mirrors the cap in SessionLifecycleManager to prevent unbounded memory growth
 # when callers omit the x-session-id header (UUID-per-request path).
@@ -580,36 +594,48 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             async def _stream_chat() -> AsyncIterator[bytes]:
                 accumulated: list = []
                 upstream_done = False
-                async for raw, parsed in state.forwarder.stream_sse("/v1/chat/completions", body):
-                    if raw.strip() == b"data: [DONE]":
-                        upstream_done = True
+                try:
+                    async for raw, parsed in state.forwarder.stream_sse(
+                        "/v1/chat/completions", body
+                    ):
+                        if raw.strip() == b"data: [DONE]":
+                            upstream_done = True
+                            yield b"data: [DONE]\n\n"
+                            continue
+                        if raw.startswith(b"data:"):
+                            yield raw if raw.endswith(b"\n") else raw + b"\n"
+                        elif raw.strip():
+                            yield b"data: " + raw + b"\n"
+
+                        if parsed:
+                            lp = parsed.get("choices", [{}])[0].get("logprobs")
+                            if lp and lp.get("content"):
+                                accumulated.extend(lp["content"])
+
+                    if not upstream_done:
                         yield b"data: [DONE]\n\n"
-                        continue
-                    if raw.startswith(b"data:"):
-                        yield raw if raw.endswith(b"\n") else raw + b"\n"
-                    elif raw.strip():
-                        yield b"data: " + raw + b"\n"
-
-                    if parsed:
-                        lp = parsed.get("choices", [{}])[0].get("logprobs")
-                        if lp and lp.get("content"):
-                            accumulated.extend(lp["content"])
-
-                if not upstream_done:
-                    yield b"data: [DONE]\n\n"
-
-                logprobs = (
-                    _extract_logprobs({"choices": [{"logprobs": {"content": accumulated}}]})
-                    if accumulated
-                    else None
-                )
-                analysis = analyzer.analyze(
-                    request_id=request_id,
-                    model=body.get("model", "unknown"),
-                    logprobs_data=logprobs,
-                    sampling_params={"temperature": body.get("temperature")},
-                )
-                await _commit_and_alert(request_id, session_id, analysis, raw_body)
+                finally:
+                    # Commit the audit node even when the client disconnects
+                    # mid-stream: asyncio raises GeneratorExit/CancelledError at
+                    # the yield above, so any post-loop commit would be skipped,
+                    # leaving partially-delivered responses out of the audit
+                    # chain. The commit covers exactly what was accumulated.
+                    # Scheduled via _spawn_background so it survives cancellation
+                    # of this generator's task on disconnect.
+                    logprobs = (
+                        _extract_logprobs({"choices": [{"logprobs": {"content": accumulated}}]})
+                        if accumulated
+                        else None
+                    )
+                    analysis = analyzer.analyze(
+                        request_id=request_id,
+                        model=body.get("model", "unknown"),
+                        logprobs_data=logprobs,
+                        sampling_params={"temperature": body.get("temperature")},
+                    )
+                    _spawn_background(
+                        _commit_and_alert(request_id, session_id, analysis, raw_body)
+                    )
 
             return StreamingResponse(_stream_chat(), media_type="text/event-stream")
 
@@ -625,7 +651,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             sampling_params={"temperature": body.get("temperature")},
         )
 
-        asyncio.create_task(_commit_and_alert(request_id, session_id, analysis, raw_body))
+        _spawn_background(_commit_and_alert(request_id, session_id, analysis, raw_body))
 
         resp = Response(content=upstream.content, status_code=200)
         resp.headers.update(
@@ -682,7 +708,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             logprobs_data=None,
             sampling_params={"endpoint": "completions", "model": body.get("model")},
         )
-        asyncio.create_task(_commit_and_alert(request_id, session_id, analysis, raw_body))
+        _spawn_background(_commit_and_alert(request_id, session_id, analysis, raw_body))
 
         resp = Response(content=upstream.content, status_code=200)
         resp.headers["X-Aegis-Request-ID"] = request_id

@@ -99,3 +99,99 @@ def test_ed25519_sign_unique_per_call():
     # Different ephemeral keys → different public keys and different signatures
     assert pub1 != pub2
     assert sig1 != sig2
+
+
+# ── #2 SIGNATURE COVERAGE: prev_hash is cryptographically bound ───────────────
+
+_AUDIT_KEY = "unit-test-signing-key-do-not-use-in-prod"
+
+
+def test_signed_payload_covers_prev_hash():
+    """Changing only prev_hash must change the signed payload (and thus HMAC)."""
+    from aegis.core.crypto_audit import _build_signed_payload
+
+    a = _build_signed_payload("aa" * 32, "mr", "rq", "rs")
+    b = _build_signed_payload("bb" * 32, "mr", "rq", "rs")
+    assert a != b
+
+
+def test_node_reorder_detected_by_signature(tmp_path):
+    """A reordered chain with consistent prev_hash links must STILL fail.
+
+    Regression for the reordering gap: when the signature covered merkle_root
+    alone, an adversary could swap node order and rewrite prev_hash to match,
+    and verify_integrity passed. Binding prev_hash into the signed payload makes
+    the per-node signature reject any prev_hash it was not computed for.
+    """
+    import dataclasses
+
+    from aegis.core.crypto_audit import CryptographicAuditLedger
+
+    wal = str(tmp_path / "reorder.wal.jsonl")
+    ledger = CryptographicAuditLedger(wal, signing_key=_AUDIT_KEY)
+    try:
+        node_a = ledger.commit_state("A", 1.0, b"payload-A")
+        node_b = ledger.commit_state("B", 1.0, b"payload-B")
+        assert node_b.signature_scheme == "hmac-sha256"
+        assert ledger.verify_integrity()[0] is True
+
+        # Forge a reordered chain: B first (prev=genesis), then A (prev=B.node_hash).
+        # Signatures and merkle_roots are carried over untouched.
+        genesis = "0" * 64
+        b_first = dataclasses.replace(node_b, prev_hash=genesis)
+        a_second = dataclasses.replace(node_a, prev_hash=b_first.node_hash)
+
+        ledger.chain.clear()
+        ledger.chain.append(b_first)
+        ledger.chain.append(a_second)
+
+        is_valid, idx = ledger.verify_integrity()
+        assert is_valid is False
+        # The forged first node's signature was computed for a different
+        # prev_hash → caught at index 0.
+        assert idx == 0
+    finally:
+        ledger.close()
+
+
+# ── #7 WAL hardening: owner-only permissions ──────────────────────────────────
+
+
+def test_wal_file_mode_is_owner_only(tmp_path):
+    """The WAL must be created with 0o600 (no group/other access)."""
+    import os
+    import stat
+
+    from aegis.core.crypto_audit import CryptographicAuditLedger
+
+    wal = str(tmp_path / "perms.wal.jsonl")
+    ledger = CryptographicAuditLedger(wal, signing_key=_AUDIT_KEY)
+    try:
+        ledger.commit_state("s0", 1.0, b"payload")
+        mode = stat.S_IMODE(os.stat(wal).st_mode)
+        # No bits set for group (0o070) or other (0o007).
+        assert mode & 0o077 == 0, f"WAL mode too permissive: {oct(mode)}"
+    finally:
+        ledger.close()
+
+
+# ── #6 AUTH posture: auth_disabled only honoured in debug mode ────────────────
+
+
+def test_auth_disabled_requires_debug_mode():
+    """auth_disabled=True without debug_mode must be rejected at config time."""
+    import pytest
+
+    from aegis.config import AegisSettings
+
+    with pytest.raises(ValueError, match="debug_mode"):
+        AegisSettings(auth_disabled=True, debug_mode=False)
+
+
+def test_auth_disabled_allowed_in_debug_mode():
+    """auth_disabled=True is permitted when debug_mode=True (local dev)."""
+    from aegis.config import AegisSettings
+
+    cfg = AegisSettings(auth_disabled=True, debug_mode=True)
+    assert cfg.auth_disabled is True
+    assert cfg.debug_mode is True

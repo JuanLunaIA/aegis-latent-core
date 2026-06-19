@@ -262,7 +262,8 @@ async def test_chat_endpoint_rejects_invalid_key(tmp_wal):
 @pytest.mark.asyncio
 async def test_auth_disabled_bypasses_key_check(tmp_wal):
     """auth_disabled=True → no 401 even without Authorization header."""
-    app = create_app(_settings(tmp_wal, auth_disabled=True))
+    # auth_disabled is only honoured in debug mode (see _enforce_auth_posture).
+    app = create_app(_settings(tmp_wal, auth_disabled=True, debug_mode=True))
     try:
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -275,6 +276,62 @@ async def test_auth_disabled_bypasses_key_check(tmp_wal):
         # Auth is disabled so we must NOT get 401.
         # We may get 422 (validation), 500 (no forwarder in lifespan), or 200.
         assert resp.status_code != 401
+    finally:
+        _close_app_ledger(app)
+
+
+# ── #4 SSE streaming: audit commit survives client disconnect ─────────────────
+
+
+@pytest.mark.asyncio
+async def test_sse_commit_on_client_disconnect(tmp_wal):
+    """A client that disconnects mid-stream must still produce an audit node.
+
+    The commit lives in the streaming generator's ``finally`` block, so it runs
+    even when asyncio cancels the generator on disconnect. Without it, partially
+    delivered streams would never enter the audit chain.
+    """
+    import asyncio
+    from unittest.mock import MagicMock
+
+    app = create_app(_settings(tmp_wal))
+
+    async def fake_stream(_path, _body):
+        # Emit many chunks with yield points so the consumer can disconnect
+        # before the stream is exhausted.
+        for _ in range(200):
+            yield b'data: {"choices":[{"delta":{"content":"x"}}]}\n', {"choices": [{}]}
+            await asyncio.sleep(0)
+
+    mock_fwd = MagicMock()
+    mock_fwd.stream_sse = MagicMock(side_effect=fake_stream)
+    mock_fwd.provider = MagicMock(supports_logprobs=False)
+    app.state.aegis.forwarder = mock_fwd
+
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            async with client.stream(
+                "POST",
+                "/v1/chat/completions",
+                json={
+                    "model": "m",
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "stream": True,
+                },
+                headers={"Authorization": "Bearer sk-valid"},
+            ) as resp:
+                assert resp.status_code == 200
+                async for _chunk in resp.aiter_bytes():
+                    break  # disconnect after the first chunk
+
+        # Allow the background commit task scheduled in finally to run.
+        for _ in range(20):
+            if len(app.state.aegis.ledger.chain) >= 1:
+                break
+            await asyncio.sleep(0.05)
+        assert len(app.state.aegis.ledger.chain) >= 1
     finally:
         _close_app_ledger(app)
 
