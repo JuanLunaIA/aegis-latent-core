@@ -9,7 +9,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AnyHttpUrl, Field, field_validator
+from pydantic import AnyHttpUrl, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -250,6 +250,42 @@ class AegisSettings(BaseSettings):
         description="Comma-separated CORS allowed origins. Empty = no CORS headers.",
     )
 
+    # ── Reliability: circuit breaker ──────────────────────────────────────
+    circuit_breaker_failure_threshold: int = Field(
+        default=5,
+        ge=1,
+        le=100,
+        description=(
+            "Consecutive upstream failures before the circuit opens. "
+            "While OPEN all requests return 503 immediately (fail-fast). "
+            "After circuit_breaker_recovery_timeout seconds one probe is allowed."
+        ),
+    )
+    circuit_breaker_recovery_timeout: float = Field(
+        default=30.0,
+        ge=1.0,
+        le=600.0,
+        description="Seconds the circuit stays OPEN before allowing a recovery probe.",
+    )
+    circuit_breaker_success_threshold: int = Field(
+        default=2,
+        ge=1,
+        le=20,
+        description="Consecutive probe successes in HALF_OPEN required to re-close the circuit.",
+    )
+
+    # ── Privacy / PII redaction ────────────────────────────────────────────
+    pii_redact_tenant_id: bool = Field(
+        default=False,
+        description=(
+            "When True, replace tenant_id (session/user identifier) in the WAL with "
+            "a one-way SHA-256 prefix before committing to the audit chain. "
+            "Enables GDPR/CCPA compliance for deployments where session IDs are "
+            "considered personal data. Does not affect in-flight analysis — only "
+            "the durable WAL record. Cannot be reversed without the original ID."
+        ),
+    )
+
     # ── Alerting ──────────────────────────────────────────────────────────
     webhook_url: str = Field(
         default="",
@@ -283,6 +319,26 @@ class AegisSettings(BaseSettings):
         if v_upper not in allowed:
             raise ValueError(f"log_level must be one of {allowed}")
         return v_upper
+
+    @model_validator(mode="after")
+    def _enforce_auth_posture(self) -> AegisSettings:
+        """Refuse to disable authentication outside debug mode.
+
+        The ``debug_mode`` field documents that auth cannot be silently disabled
+        in production. This makes that promise enforceable: ``auth_disabled`` is
+        only honoured when ``debug_mode`` is also set. Without this check a stray
+        ``AEGIS_AUTH_DISABLED=true`` in a production environment would open both
+        the proxy and the ``/v1/audit/*`` endpoints with no credential check —
+        a silent, config-only privilege escalation that no code path guards.
+        """
+        if self.auth_disabled and not self.debug_mode:
+            raise ValueError(
+                "auth_disabled=True requires debug_mode=True. Refusing to start "
+                "with authentication disabled outside debug mode. Set "
+                "AEGIS_DEBUG_MODE=true for local development, or remove "
+                "AEGIS_AUTH_DISABLED and configure AEGIS_API_KEYS for production."
+            )
+        return self
 
     def get_api_keys(self) -> frozenset[str]:
         if not self.api_keys:

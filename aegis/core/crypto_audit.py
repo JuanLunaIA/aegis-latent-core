@@ -113,9 +113,18 @@ class AuditNode:
 
     @property
     def node_hash(self) -> str:
-        """SHA-256 over canonical chain fields — deterministic, tamper-evident."""
+        """SHA-256 over canonical chain fields — deterministic, tamper-evident.
+
+        ``prev_hash`` is the FIRST field so that ``node_hash`` is a true
+        chain accumulator: each node's hash commits to its predecessor's hash.
+        Editing ``prev_hash`` in storage therefore changes ``node_hash``, which
+        breaks the ``node[i].prev_hash == node[i-1].node_hash`` linkage checked
+        in ``verify_integrity`` — closing the node-reordering gap that existed
+        when ``prev_hash`` was excluded from the hashed material.
+        """
         content = "|".join(
             [
+                self.prev_hash,
                 self.state_id,
                 f"{self.timestamp:.9f}",
                 str(self.entropy),
@@ -155,6 +164,28 @@ class AuditNode:
 
 
 # ── Signing helpers ───────────────────────────────────────────────────────────
+
+
+def _build_signed_payload(
+    prev_hash: str,
+    merkle_root: str,
+    request_hash: str,
+    response_hash: str,
+) -> bytes:
+    """Canonical bytes covered by a node's signature.
+
+    The signature binds chain linkage (``prev_hash``) AND content
+    (``request_hash`` / ``response_hash``) together with the ``merkle_root``.
+
+    Mechanism (why this is necessary): ``verify_integrity`` recomputes the HMAC
+    over the *stored* fields and compares it to the stored signature. Signing
+    ``merkle_root`` alone left ``prev_hash`` cryptographically unbound — an
+    adversary with WAL write access could reorder nodes and rewrite each
+    ``prev_hash`` to the new predecessor's ``node_hash`` while the per-node
+    signatures (over an untouched ``merkle_root``) still verified. Including
+    ``prev_hash`` here makes any such edit invalidate the signature.
+    """
+    return "|".join([prev_hash, merkle_root, request_hash, response_hash]).encode()
 
 
 def _hmac_sign(signing_key: str, data: bytes) -> str:
@@ -307,8 +338,16 @@ class CryptographicAuditLedger:
             timestamp = time.time()
             merkle_root = self._mmr.add_leaf(leaf)
 
-            # Sign the merkle root
-            signature, pub_key_hex, scheme, is_fallback = self._sign(merkle_root.encode())
+            # Sign over prev_hash + merkle_root + request/response hashes so the
+            # signature binds chain linkage, not merkle_root alone (see
+            # _build_signed_payload).
+            signed_payload = _build_signed_payload(
+                prev_hash=prev_hash,
+                merkle_root=merkle_root,
+                request_hash=req_hash,
+                response_hash=resp_hash,
+            )
+            signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
 
             node = AuditNode(
                 state_id=state_id,
@@ -394,9 +433,15 @@ class CryptographicAuditLedger:
                 return False, i
 
             if self._signing_key and node.signature_scheme == "hmac-sha256":
+                payload = _build_signed_payload(
+                    prev_hash=node.prev_hash,
+                    merkle_root=node.merkle_root,
+                    request_hash=node.request_hash,
+                    response_hash=node.response_hash,
+                )
                 if not _hmac_verify(
                     self._signing_key,
-                    node.merkle_root.encode(),
+                    payload,
                     node.signature,
                 ):
                     logger.error("Integrity violation: node %d HMAC signature invalid", i)
@@ -441,7 +486,20 @@ class CryptographicAuditLedger:
             return
         try:
             os.makedirs(os.path.dirname(os.path.abspath(self.persistence_path)), exist_ok=True)
-            self._wal_handle = open(self.persistence_path, "a")  # noqa: SIM115
+            # Create with owner-only permissions (0o600): the WAL holds forensic
+            # audit metadata (tenant_id, model, request/response hashes, sampling
+            # params). umask-default modes can leave it group/other-readable.
+            fd = os.open(
+                self.persistence_path,
+                os.O_WRONLY | os.O_CREAT | os.O_APPEND,
+                0o600,
+            )
+            # Tighten a pre-existing WAL whose mode predates this hardening.
+            try:
+                os.chmod(self.persistence_path, 0o600)
+            except OSError:
+                pass
+            self._wal_handle = os.fdopen(fd, "a")
             logger.debug("WAL handle opened: %s", self.persistence_path)
         except OSError as exc:
             logger.error(
@@ -488,7 +546,14 @@ class CryptographicAuditLedger:
                 os.makedirs(os.path.dirname(os.path.abspath(self.persistence_path)), exist_ok=True)
             except OSError:
                 pass
-            with open(self.persistence_path, "a") as f:
+            # Owner-only perms here too (mirrors _open_wal); the fallback path
+            # must not widen the WAL's mode.
+            fd = os.open(
+                self.persistence_path,
+                os.O_WRONLY | os.O_CREAT | os.O_APPEND,
+                0o600,
+            )
+            with os.fdopen(fd, "a") as f:
                 f.write(line)
                 f.flush()
                 os.fsync(f.fileno())

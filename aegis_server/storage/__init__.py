@@ -15,15 +15,15 @@ Public API::
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from aegis_server.storage.base import IntegrityReport, StorageNode, StorageProvider
-from aegis_server.storage.dynamodb_provider import DynamoDBStorageProvider
-from aegis_server.storage.postgres_provider import PostgreSQLStorageProvider
-from aegis_server.storage.sqlite_provider import SQLiteStorageProvider
 
 if TYPE_CHECKING:
     from aegis_server.config import EnterpriseSettings
+    from aegis_server.storage.dynamodb_provider import DynamoDBStorageProvider
+    from aegis_server.storage.postgres_provider import PostgreSQLStorageProvider
+    from aegis_server.storage.sqlite_provider import SQLiteStorageProvider
 
 __all__ = [
     "StorageProvider",
@@ -34,6 +34,24 @@ __all__ = [
     "DynamoDBStorageProvider",
     "get_provider",
 ]
+
+# Lazy provider re-exports (PEP 562): each backend pulls in an optional extra
+# (aioboto3 for DynamoDB, asyncpg for Postgres). Importing the package must not
+# require every extra — only the backend actually accessed is imported.
+_LAZY_PROVIDERS = {
+    "SQLiteStorageProvider": "aegis_server.storage.sqlite_provider",
+    "PostgreSQLStorageProvider": "aegis_server.storage.postgres_provider",
+    "DynamoDBStorageProvider": "aegis_server.storage.dynamodb_provider",
+}
+
+
+def __getattr__(name: str) -> Any:
+    module_path = _LAZY_PROVIDERS.get(name)
+    if module_path is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    import importlib
+
+    return getattr(importlib.import_module(module_path), name)
 
 
 def get_provider(settings: EnterpriseSettings) -> StorageProvider:
@@ -53,9 +71,13 @@ def get_provider(settings: EnterpriseSettings) -> StorageProvider:
     backend = settings.storage_provider.lower()
 
     if backend == "sqlite":
+        from aegis_server.storage.sqlite_provider import SQLiteStorageProvider
+
         return SQLiteStorageProvider(db_path=settings.sqlite_path)
 
     if backend == "postgres":
+        from aegis_server.storage.postgres_provider import PostgreSQLStorageProvider
+
         return PostgreSQLStorageProvider(
             dsn=settings.postgres_dsn,
             min_size=settings.postgres_min_pool_size,
@@ -63,6 +85,8 @@ def get_provider(settings: EnterpriseSettings) -> StorageProvider:
         )
 
     if backend == "dynamodb":
+        from aegis_server.storage.dynamodb_provider import DynamoDBStorageProvider
+
         return DynamoDBStorageProvider(
             table_name=settings.dynamodb_table,
             region=settings.dynamodb_region,

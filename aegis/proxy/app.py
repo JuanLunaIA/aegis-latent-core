@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
+import time
 import uuid
 from collections import OrderedDict
 from collections.abc import AsyncIterator
@@ -20,6 +22,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import aegis
 from aegis.auth.apikey import AuditKeyAuth, ProxyKeyAuth
 from aegis.config import AegisSettings, get_settings
+from aegis.core import observability
+from aegis.core.circuit_breaker import CircuitOpenError
 from aegis.core.crypto_audit import CryptographicAuditLedger
 from aegis.core.normalization import canonical_normalize
 from aegis.core.ratelimiter import create_rate_limiter
@@ -34,6 +38,27 @@ from aegis.proxy.waf import AegisWAF
 
 logger = logging.getLogger(__name__)
 _ALERT_BUFFER_SIZE = 10_000
+
+# Strong references to fire-and-forget commit tasks. asyncio only holds a weak
+# reference to tasks created with create_task; without this set a task can be
+# garbage-collected mid-flight, silently dropping an audit commit. Tasks remove
+# themselves via add_done_callback when they finish.
+_BACKGROUND_TASKS: set[asyncio.Task[Any]] = set()
+
+
+def _spawn_background(coro: Any) -> asyncio.Task[Any]:
+    """Schedule *coro* as a tracked background task that survives GC."""
+    task = asyncio.create_task(coro)
+    _BACKGROUND_TASKS.add(task)
+    observability.AUDIT_PENDING_COMMITS.set(len(_BACKGROUND_TASKS))
+
+    def _on_done(t: asyncio.Task[Any]) -> None:
+        _BACKGROUND_TASKS.discard(t)
+        observability.AUDIT_PENDING_COMMITS.set(len(_BACKGROUND_TASKS))
+
+    task.add_done_callback(_on_done)
+    return task
+
 
 # FIX-APP-01: Maximum concurrent analyzer instances.
 # Mirrors the cap in SessionLifecycleManager to prevent unbounded memory growth
@@ -316,6 +341,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             level=getattr(logging, cfg.log_level),
             format="%(asctime)s %(levelname)s %(name)s — %(message)s",
         )
+        observability.setup_otel(service_name="aegis-proxy")
 
         guard = None
         try:
@@ -442,9 +468,42 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     app.add_middleware(RequestSmugglingProtectionMiddleware)
     app.include_router(build_audit_router(state.ledger, state.audit_auth), prefix="/v1/audit")
 
+    if observability.prometheus_available():
+        from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
+        @app.get("/metrics", include_in_schema=False)
+        async def metrics() -> Response:
+            """Prometheus metrics endpoint. Available when prometheus-client is installed."""
+            return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
     async def _commit_and_alert(
-        rid: str, sid: str, analysis: ResponseAnalysis, raw_body: bytes
+        rid: str,
+        sid: str,
+        analysis: ResponseAnalysis,
+        raw_body: bytes,
+        request_start: float = 0.0,
     ) -> None:
+        """Commit one audit node and fire alerts.
+
+        Fail-open policy: audit storage failures are logged as ERROR and
+        counted (aegis_audit_commit_errors_total) but do NOT propagate to
+        the caller. The proxy continues serving. Callers must monitor the
+        error counter; /health reflects ledger._fault_state for degraded
+        posture detection.
+
+        Privacy: when cfg.pii_redact_tenant_id is True the session/user
+        identifier is replaced with its SHA-256 prefix before being written
+        to the WAL. This makes the WAL GDPR-pseudonymous for tenant IDs.
+        """
+        # PII redaction: replace tenant_id with a one-way hash prefix when
+        # the operator has enabled it. The full session_id is retained in
+        # memory for analysis; only the durable WAL record is pseudonymous.
+        if cfg.pii_redact_tenant_id:
+            audit_sid = hashlib.sha256(sid.encode()).hexdigest()[:16]
+        else:
+            audit_sid = sid
+
+        commit_start = time.perf_counter()
         try:
             # Run the synchronous ledger commit (which calls os.fsync) in a
             # thread pool so the event loop is not stalled during disk I/O.
@@ -454,13 +513,23 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 state_id=rid,
                 entropy=analysis.mean_entropy,
                 payload=raw_body[:65536],
-                tenant_id=sid,
+                tenant_id=audit_sid,
                 sampling_params=analysis.sampling_params,
             )
+            commit_elapsed = time.perf_counter() - commit_start
+            observability.AUDIT_COMMIT_DURATION.observe(commit_elapsed)
+            observability.AUDIT_CHAIN_NODES.set(len(state.ledger.chain))
+            if request_start > 0.0:
+                observability.AUDIT_COMMIT_LAG.observe(time.perf_counter() - request_start)
             for alert in analysis.alerts:
                 await state.alert_store.append(alert)
         except Exception as exc:
-            logger.error("Failed to commit analysis to ledger: %s", exc)
+            observability.AUDIT_COMMIT_ERRORS.inc()
+            logger.error(
+                "Audit commit failed (fail-open: proxy continues serving). "
+                "Monitor aegis_audit_commit_errors_total and /health. Error: %s",
+                exc,
+            )
 
     @app.get("/health")
     async def health() -> JSONResponse:
@@ -534,14 +603,20 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         request: Request,
         _key: Annotated[str, Depends(validate_proxy_auth)],
     ):
+        request_start = time.perf_counter()
         raw_body = await request.body()
         try:
             body = canonical_normalize(json.loads(raw_body))
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=400, detail="Invalid JSON") from exc
 
-        waf_result = state.waf.inspect_payload(body)
+        with observability.record_span("aegis.waf.check") as sp:
+            waf_result = state.waf.inspect_payload(body)
+            if sp:
+                sp.set_attribute("waf.allowed", str(waf_result.allowed))
         if not waf_result.allowed:
+            layer = "layer1" if "Layer-1" in (waf_result.reason or "") else "layer2"
+            observability.WAF_BLOCKS.labels(layer=layer).inc()
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Payload rejected by WAF: {waf_result.reason}",
@@ -554,6 +629,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         request_id = str(uuid.uuid4())
 
         if not await state.ratelimiter.check_limit(session_id):
+            observability.RATELIMIT_REJECTIONS.inc()
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Rate limit exceeded for this session",
@@ -580,41 +656,74 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             async def _stream_chat() -> AsyncIterator[bytes]:
                 accumulated: list = []
                 upstream_done = False
-                async for raw, parsed in state.forwarder.stream_sse("/v1/chat/completions", body):
-                    if raw.strip() == b"data: [DONE]":
-                        upstream_done = True
+                try:
+                    async for raw, parsed in state.forwarder.stream_sse(
+                        "/v1/chat/completions", body
+                    ):
+                        if raw.strip() == b"data: [DONE]":
+                            upstream_done = True
+                            yield b"data: [DONE]\n\n"
+                            continue
+                        if raw.startswith(b"data:"):
+                            yield raw if raw.endswith(b"\n") else raw + b"\n"
+                        elif raw.strip():
+                            yield b"data: " + raw + b"\n"
+
+                        if parsed:
+                            lp = parsed.get("choices", [{}])[0].get("logprobs")
+                            if lp and lp.get("content"):
+                                accumulated.extend(lp["content"])
+
+                    if not upstream_done:
                         yield b"data: [DONE]\n\n"
-                        continue
-                    if raw.startswith(b"data:"):
-                        yield raw if raw.endswith(b"\n") else raw + b"\n"
-                    elif raw.strip():
-                        yield b"data: " + raw + b"\n"
-
-                    if parsed:
-                        lp = parsed.get("choices", [{}])[0].get("logprobs")
-                        if lp and lp.get("content"):
-                            accumulated.extend(lp["content"])
-
-                if not upstream_done:
-                    yield b"data: [DONE]\n\n"
-
-                logprobs = (
-                    _extract_logprobs({"choices": [{"logprobs": {"content": accumulated}}]})
-                    if accumulated
-                    else None
-                )
-                analysis = analyzer.analyze(
-                    request_id=request_id,
-                    model=body.get("model", "unknown"),
-                    logprobs_data=logprobs,
-                    sampling_params={"temperature": body.get("temperature")},
-                )
-                await _commit_and_alert(request_id, session_id, analysis, raw_body)
+                finally:
+                    # Commit the audit node even when the client disconnects
+                    # mid-stream: asyncio raises GeneratorExit/CancelledError at
+                    # the yield above, so any post-loop commit would be skipped,
+                    # leaving partially-delivered responses out of the audit
+                    # chain. The commit covers exactly what was accumulated.
+                    # Scheduled via _spawn_background so it survives cancellation
+                    # of this generator's task on disconnect.
+                    logprobs = (
+                        _extract_logprobs({"choices": [{"logprobs": {"content": accumulated}}]})
+                        if accumulated
+                        else None
+                    )
+                    analysis = analyzer.analyze(
+                        request_id=request_id,
+                        model=body.get("model", "unknown"),
+                        logprobs_data=logprobs,
+                        sampling_params={"temperature": body.get("temperature")},
+                    )
+                    _spawn_background(
+                        _commit_and_alert(request_id, session_id, analysis, raw_body, request_start)
+                    )
 
             return StreamingResponse(_stream_chat(), media_type="text/event-stream")
 
-        upstream = await state.forwarder.forward_json("/v1/chat/completions", body)
+        forward_timer = observability.StageTimer()
+        try:
+            with observability.record_span(
+                "aegis.forward", provider=cfg.provider, endpoint="chat.completions"
+            ):
+                upstream = await state.forwarder.forward_json("/v1/chat/completions", body)
+        except CircuitOpenError as exc:
+            observability.FORWARD_ERRORS.labels(stage="circuit_open").inc()
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Upstream temporarily unavailable (circuit breaker OPEN)",
+            ) from exc
+        except Exception:
+            observability.FORWARD_ERRORS.labels(stage="network").inc()
+            raise
+        forward_timer.record("forward")
+
         if upstream.status_code != 200:
+            observability.REQUEST_TOTAL.labels(
+                method="POST",
+                endpoint="chat_completions",
+                status_class=f"{upstream.status_code // 100}xx",
+            ).inc()
             return Response(content=upstream.content, status_code=upstream.status_code)
 
         resp_json = upstream.json()
@@ -625,8 +734,21 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             sampling_params={"temperature": body.get("temperature")},
         )
 
-        asyncio.create_task(_commit_and_alert(request_id, session_id, analysis, raw_body))
+        _spawn_background(
+            _commit_and_alert(request_id, session_id, analysis, raw_body, request_start)
+        )
 
+        observability.REQUEST_TOTAL.labels(
+            method="POST", endpoint="chat_completions", status_class="2xx"
+        ).inc()
+        # Total end-to-end latency (client-visible). Background commit is NOT
+        # included here — it runs after the response is returned, proving the
+        # "zero forensic latency" claim is measurable via separate metrics.
+        observability.REQUEST_DURATION.labels(stage="total").observe(
+            time.perf_counter() - request_start
+        )
+
+        trace_id = observability.current_trace_id()
         resp = Response(content=upstream.content, status_code=200)
         resp.headers.update(
             {
@@ -635,6 +757,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 "X-Aegis-Alert-Count": str(len(analysis.alerts)),
             }
         )
+        if trace_id:
+            resp.headers["X-Trace-ID"] = trace_id
         return resp
 
     @app.post("/v1/completions")
@@ -671,7 +795,15 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 detail="Rate limit exceeded for this session",
             )
 
-        upstream = await state.forwarder.forward_json("/v1/completions", body)
+        completions_start = time.perf_counter()
+        try:
+            upstream = await state.forwarder.forward_json("/v1/completions", body)
+        except CircuitOpenError as exc:
+            observability.FORWARD_ERRORS.labels(stage="circuit_open").inc()
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Upstream temporarily unavailable (circuit breaker OPEN)",
+            ) from exc
         if upstream.status_code != 200:
             return Response(content=upstream.content, status_code=upstream.status_code)
 
@@ -682,7 +814,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             logprobs_data=None,
             sampling_params={"endpoint": "completions", "model": body.get("model")},
         )
-        asyncio.create_task(_commit_and_alert(request_id, session_id, analysis, raw_body))
+        _spawn_background(
+            _commit_and_alert(request_id, session_id, analysis, raw_body, completions_start)
+        )
 
         resp = Response(content=upstream.content, status_code=200)
         resp.headers["X-Aegis-Request-ID"] = request_id

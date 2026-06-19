@@ -328,6 +328,7 @@ class TestAuthDisabled:
     def test_no_key_needed_when_disabled(self, tmp_path):
         settings = _make_settings(
             auth_disabled=True,
+            debug_mode=True,  # auth_disabled is only honoured in debug mode
             wal_path=str(tmp_path / "test.wal.jsonl"),
         )
         with patch("aegis.proxy.app.LLMForwarder") as mock_fwd_cls:
