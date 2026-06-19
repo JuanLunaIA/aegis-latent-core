@@ -221,11 +221,35 @@ rust-lld: error: undefined symbol: PyErr_SetString
 error: could not compile `aegis_rust` (lib test) due to 1 previous error; 8 warnings emitted
 ```
 
-**Fix:** Use `maturin develop` (builds and installs the `.so` into the active venv) or:
-```bash
-PYO3_PYTHON=python3 RUSTFLAGS="-L $(python3 -c 'import sysconfig; print(sysconfig.get_config_var(\"LIBDIR\"))')" \
-  cargo test --manifest-path aegis_rust_v2/Cargo.toml --lib
-```
+**Root cause:** `Cargo.toml:13` enables `pyo3 = { features = ["extension-module"] }`.
+Per the PyO3 FAQ, `extension-module` **disables linking to libpython**, which is correct
+for building the `.so` (the symbols are resolved by the host interpreter at import time)
+but breaks any standalone binary or test executable. Adding `-L .../LIBDIR` alone does not
+help — it exposes the directory but never requests `-lpython` nor disables the feature, so
+the same undefined symbols remain.
+
+**Fix (supported paths):**
+
+1. **Preferred — `maturin develop`:** builds the extension and installs the `.so` into the
+   active venv; the Python-level tests in `tests/test_rust_extension.py` then exercise it.
+   ```bash
+   maturin develop --manifest-path aegis_rust_v2/Cargo.toml
+   pytest tests/test_rust_extension.py
+   ```
+
+2. **Native `cargo test`** — only works if `extension-module` is feature-gated so it is
+   off during tests. Declare it as an opt-in feature in `Cargo.toml`:
+   ```toml
+   [features]
+   extension-module = ["pyo3/extension-module"]
+   # pyo3 base dep WITHOUT the extension-module feature:
+   # pyo3 = { version = "0.24.1" }
+   ```
+   then build the `.so` with `--features extension-module` and run tests without it:
+   ```bash
+   cargo test --manifest-path aegis_rust_v2/Cargo.toml --lib   # no extension-module
+   ```
+   (Optionally link `auto-initialize` so the test harness starts an interpreter.)
 
 ### Deprecation warnings (8, non-fatal)
 
