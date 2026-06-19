@@ -83,7 +83,7 @@ pip install -e ".[storage-sqlite]"
 python -m examples.demo
 ```
 
-Expected: `RESULTADO: 5/5 verificaciones OK — demo exitosa.` (exit code 0).
+Expected: `RESULT: 5/5 checks OK — demo successful.` (exit code 0).
 See [`examples/README.md`](examples/README.md) for what each step proves.
 
 ### 1. Run it against a real provider
@@ -229,13 +229,9 @@ The authoritative matrix is
 | SOC2/HIPAA sealed, re-verifiable export | **Proven** | `examples/demo.py` step 5; `aegis_server/compliance/exporter.py` |
 | "Zero forensic latency" (no client I/O wait) | **Proven** | commit runs after the response return |
 | Hot-path scheduling overhead | **Measured: 77 µs p50 / 132 µs p99** | [BENCHMARKS.md](docs/BENCHMARKS.md) |
-| Rust extension "significant performance gains" | **Unverified** | speedup `UNKNOWN` until `maturin develop --release`; [BENCHMARKS.md](docs/BENCHMARKS.md) |
+| Rust extension "significant performance gains" | **Measured: avg 2.87× / max 3.14×** | `maturin build --release` + `python -m benchmarks.bench_mmr`; [BENCHMARKS.md](docs/BENCHMARKS.md) |
 | Anthropic/Gemini token-level entropy | **Partial** | char-level fallback; [CLAIMS_VERIFICATION.md L1](docs/audit/CLAIMS_VERIFICATION.md) |
 | mTLS upstream identity assertion | **Partial** | certs applied, identity not asserted per-request; [L2](docs/audit/CLAIMS_VERIFICATION.md) |
-
-We do **not** quote a Rust speedup number, because the extension was not compiled
-in our measurement environment. Build it and re-run `python -m benchmarks.bench_mmr`
-to obtain a real ratio.
 
 ---
 
@@ -267,8 +263,8 @@ cd aegis_rust_v2 && maturin develop --release && cd -
 python -m benchmarks.bench_mmr   # produces the real Rust-vs-Python speedup
 ```
 
-> The speedup ratio is currently **unmeasured** in this repo — the benchmark
-> above is what fills it in. See [docs/RUST_BUILD.md](docs/RUST_BUILD.md).
+> Measured speedup: **avg 2.87×, max 3.14×** across N=100..100,000 leaves
+> (k=5 trials, best-of-k). See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) §Claim 2.
 
 ---
 

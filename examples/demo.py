@@ -3,14 +3,13 @@
 """
 examples/demo.py — Aegis end-to-end reproducible demo.
 
-Levanta Aegis en proceso (sin tocar ningún proveedor LLM real: usa un upstream
-mock OpenAI-compatible), manda requests a través del proxy, muestra el audit
-chain creciendo nodo a nodo, verifica la integridad criptográfica, demuestra la
-detección de manipulación (tamper-evidence), y exporta un bundle de compliance
-SOC2/HIPAA sellado y re-verificable.
+Boots Aegis in-process (no real LLM provider: uses an in-process
+OpenAI-compatible mock upstream), sends requests through the proxy, shows the
+audit chain growing node by node, verifies cryptographic integrity, demonstrates
+tamper-detection, and exports a sealed SOC2/HIPAA compliance bundle.
 
-Todo corre en un único proceso, sin red externa ni claves reales, para que un
-evaluador pueda ejecutarlo y "ver" el valor en menos de un minuto:
+Everything runs in a single process, with no external network and no real
+credentials, so an evaluator can run it and see the value in under one minute:
 
     pip install -e ".[storage-sqlite]"
     python -m examples.demo
@@ -52,7 +51,7 @@ _AUDIT_KEY = "demo-audit-readonly-key"
 _TENANT = "demo-tenant"
 
 
-# ── Helpers de presentación (prose en español, datos técnicos en inglés) ─────
+# ── Presentation helpers ──────────────────────────────────────────────────────
 
 
 def _hr() -> None:
@@ -62,7 +61,7 @@ def _hr() -> None:
 def _step(n: int, title: str) -> None:
     print()
     _hr()
-    print(f"  PASO {n} — {title}")
+    print(f"  STEP {n} — {title}")
     _hr()
 
 
@@ -75,20 +74,20 @@ def _fail(msg: str) -> None:
 
 
 def _free_port() -> int:
-    """Reserva un puerto TCP libre en loopback y lo devuelve."""
+    """Return a free TCP port on loopback."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
         return int(s.getsockname()[1])
 
 
-# ── Upstream LLM mock (OpenAI-compatible, con logprobs para entropía) ────────
+# ── Upstream LLM mock (OpenAI-compatible with logprobs for entropy) ──────────
 
 
 def _build_mock_upstream() -> FastAPI:
     """
-    Upstream mínimo que imita la respuesta de /v1/chat/completions de OpenAI,
-    incluyendo `logprobs` para que el analizador de entropía de Aegis tenga
-    señal real que medir (no solo el fallback a nivel de carácter).
+    Minimal upstream that mimics OpenAI /v1/chat/completions, including
+    `logprobs` so Aegis's entropy analyzer has a real signal (not just the
+    character-level fallback).
     """
     app = FastAPI(title="mock-openai-upstream")
 
@@ -99,7 +98,7 @@ def _build_mock_upstream() -> FastAPI:
     @app.post("/v1/chat/completions")
     async def chat(body: dict[str, Any]) -> JSONResponse:
         content = "Aegis demo response: the audit chain is append-only."
-        # logprobs sintéticos pero bien formados (formato OpenAI top_logprobs).
+        # Synthetic but well-formed logprobs (OpenAI top_logprobs format).
         token_logprobs = [
             {
                 "token": tok,
@@ -136,14 +135,14 @@ def _build_mock_upstream() -> FastAPI:
     return app
 
 
-# ── Arranque de servidores uvicorn en threads (lifespan real) ────────────────
+# ── uvicorn servers in daemon threads (full lifespan) ────────────────────────
 
 
 class _ThreadedServer:
     """
-    Corre una app ASGI con uvicorn en un thread daemon, ejecutando su lifespan
-    completo (a diferencia de ASGITransport, que lo omite). Esencial para que el
-    cliente httpx del forwarder y el ledger se inicialicen como en producción.
+    Runs an ASGI app with uvicorn in a daemon thread, executing its full
+    lifespan (unlike ASGITransport, which skips it). Required so the forwarder's
+    httpx client and the ledger initialize exactly as in production.
     """
 
     def __init__(self, app: Any, port: int) -> None:
@@ -167,13 +166,13 @@ class _ThreadedServer:
 
 def _build_aegis_app(backend_port: int) -> FastAPI:
     """
-    Construye la app del proxy Aegis apuntada al upstream mock. La configuración
-    se inyecta por variables de entorno antes de leer AegisSettings.
+    Build the Aegis proxy app pointed at the mock upstream. Configuration is
+    injected via environment variables before AegisSettings is instantiated.
     """
     import os
 
-    # WAL aislado por corrida: evita cargar nodos de ejecuciones previas (que
-    # fueron firmados con OTRA clave HMAC y romperían la verificación de la cadena).
+    # Isolated WAL per run: avoids loading nodes from previous runs that were
+    # signed with a different HMAC key, which would break chain verification.
     wal_path = Path(tempfile.mkdtemp(prefix="aegis_demo_wal_")) / "aegis.wal.jsonl"
 
     os.environ.update(
@@ -184,13 +183,13 @@ def _build_aegis_app(backend_port: int) -> FastAPI:
             "AEGIS_WAL_PATH": str(wal_path),
             "AEGIS_API_KEYS": _PROXY_KEY,
             "AEGIS_AUDIT_API_KEYS": _AUDIT_KEY,
-            # Clave HMAC dedicada → legal_admissibility = "High".
+            # Dedicated HMAC key → legal_admissibility = "High".
             "AEGIS_SIGNING_KEY": secrets.token_hex(32),
             "AEGIS_DEBUG_MODE": "false",
             "AEGIS_FORCE_LOGPROBS": "true",
-            # Esta demo corre in-process: declaramos el entorno como sandbox para
-            # saltar la aplicación real de seccomp/LSM (hardening de producción que
-            # no aplica a un proceso efímero de demostración).
+            # Demo runs in-process: declare sandbox to skip real seccomp/LSM
+            # enforcement (production hardening that doesn't apply to an
+            # ephemeral demo process).
             "HERMES_SANDBOX": "true",
         }
     )
@@ -201,16 +200,16 @@ def _build_aegis_app(backend_port: int) -> FastAPI:
     return create_proxy_app(AegisSettings())
 
 
-# ── Compliance export (usa el motor real ComplianceExporter) ─────────────────
+# ── Compliance export (uses the real ComplianceExporter engine) ───────────────
 
 
 async def _export_compliance(chain: list[Any]) -> bool:
     """
-    Mapea los AuditNode del proxy a un StorageProvider SQLite y produce un bundle
-    de compliance sellado con HMAC, luego lo re-verifica de forma independiente.
+    Maps the proxy's AuditNodes to a SQLite StorageProvider, produces an
+    HMAC-sealed compliance bundle, then independently re-verifies it.
 
-    {P} chain no vacío, cada nodo expone node_hash/merkle_root/signature.
-    {Q} devuelve True sii el bundle se escribió y su firma re-verifica.
+    {P} chain is non-empty; each node exposes node_hash/merkle_root/signature.
+    {Q} returns True iff the bundle was written and its signature re-verifies.
     """
     import datetime
 
@@ -271,13 +270,13 @@ async def _export_compliance(chain: list[Any]) -> bool:
         await storage.close()
 
 
-# ── Tamper-evidence (ledger independiente, no corrompe la cadena exportada) ──
+# ── Tamper-evidence (independent ledger — does not corrupt the exported chain) ─
 
 
 def _demo_tamper_evidence() -> bool:
     """
-    Demuestra que editar un solo campo de un nodo rompe la verificación. Usa un
-    ledger fresco para no afectar la cadena que se exporta en el paso anterior.
+    Shows that editing a single field of any node breaks verification. Uses a
+    fresh ledger so it does not affect the chain exported in the previous step.
     """
     from aegis.core.crypto_audit import CryptographicAuditLedger
 
@@ -289,29 +288,29 @@ def _demo_tamper_evidence() -> bool:
 
         ok_before, _ = ledger.verify_integrity()
         if not ok_before:
-            _fail("la cadena no verificó antes de manipularla")
+            _fail("chain did not verify before tampering")
             return False
 
-        # Manipular el state_id del nodo 1 → cambia su node_hash → rompe el enlace.
+        # Mutate state_id of node 1 → changes its node_hash → breaks the link.
         ledger.chain[1].state_id = "TAMPERED"
         ok_after, idx = ledger.verify_integrity()
 
         if (not ok_after) and idx == 1:
-            _ok(f"verify_integrity() detectó la manipulación en index={idx}")
+            _ok(f"verify_integrity() detected tampering at index={idx}")
             return True
-        _fail(f"la manipulación no se detectó como se esperaba (ok={ok_after}, idx={idx})")
+        _fail(f"tampering was not detected as expected (ok={ok_after}, idx={idx})")
         return False
     finally:
         ledger.close()
 
 
-# ── Orquestación ──────────────────────────────────────────────────────────────
+# ── Orchestration ─────────────────────────────────────────────────────────────
 
 
 def main() -> int:
     print()
-    print("  AEGIS LATENT CORE — DEMO REPRODUCIBLE END-TO-END")
-    print("  (upstream mock en proceso · sin red externa · sin claves reales)")
+    print("  AEGIS LATENT CORE — REPRODUCIBLE END-TO-END DEMO")
+    print("  (in-process mock upstream · no external network · no real credentials)")
 
     backend_port = _free_port()
     proxy_port = _free_port()
@@ -323,8 +322,8 @@ def main() -> int:
     results: list[bool] = []
 
     try:
-        # ── PASO 1: levantar Aegis + upstream ──────────────────────────────
-        _step(1, "Levantar Aegis y el upstream mock")
+        # ── STEP 1: boot Aegis + mock upstream ────────────────────────────
+        _step(1, "Boot Aegis and the mock upstream")
         mock.start()
         proxy.start()
         base = f"http://127.0.0.1:{proxy_port}"
@@ -334,8 +333,8 @@ def main() -> int:
             results.append(up)
             (_ok if up else _fail)(f"GET /health → {health.status_code}")
 
-            # ── PASO 2: mandar requests y ver la cadena crecer ─────────────
-            _step(2, "Mandar requests y observar el audit chain creciendo")
+            # ── STEP 2: send requests and watch the chain grow ─────────────
+            _step(2, "Send requests and observe the audit chain growing")
             for i in range(_N_REQUESTS):
                 resp = client.post(
                     f"{base}/v1/chat/completions",
@@ -355,8 +354,8 @@ def main() -> int:
             else:
                 results.append(True)
 
-            # ── PASO 3: verificar integridad por el endpoint ───────────────
-            _step(3, "Verificar la integridad criptográfica de la cadena")
+            # ── STEP 3: verify chain integrity via the endpoint ───────────
+            _step(3, "Verify cryptographic integrity of the chain")
             integ = client.get(
                 f"{base}/v1/audit/integrity",
                 headers={"Authorization": f"Bearer {_AUDIT_KEY}"},
@@ -367,41 +366,41 @@ def main() -> int:
                 f"GET /v1/audit/integrity → valid={valid} · node_count={integ.get('node_count')}"
             )
 
-            # ── PASO 5 (export usa la cadena en memoria del proxy) ─────────
+            # ── STEP 5 (export reads the in-memory chain from the proxy) ──
             chain = list(aegis_app.state.aegis.ledger.chain)
 
-        # ── PASO 4: tamper-evidence ────────────────────────────────────────
-        _step(4, "Demostrar tamper-evidence (manipular un nodo rompe la cadena)")
+        # ── STEP 4: tamper-evidence ────────────────────────────────────────
+        _step(4, "Demonstrate tamper-evidence (mutating a node breaks the chain)")
         results.append(_demo_tamper_evidence())
 
-        # ── PASO 5: exportar compliance ────────────────────────────────────
-        _step(5, "Exportar un bundle de compliance SOC2/HIPAA sellado")
+        # ── STEP 5: export compliance bundle ──────────────────────────────
+        _step(5, "Export a sealed SOC2/HIPAA compliance bundle")
         results.append(asyncio.run(_export_compliance(chain)))
 
     finally:
         proxy.stop()
         mock.stop()
 
-    # ── Resumen ────────────────────────────────────────────────────────────
+    # ── Summary ────────────────────────────────────────────────────────────
     print()
     _hr()
     passed = sum(1 for r in results if r)
     total = len(results)
     if passed == total:
-        print(f"  RESULTADO: {passed}/{total} verificaciones OK — demo exitosa.")
+        print(f"  RESULT: {passed}/{total} checks OK — demo successful.")
         _hr()
         return 0
-    print(f"  RESULTADO: {passed}/{total} verificaciones OK — hubo fallos.")
+    print(f"  RESULT: {passed}/{total} checks OK — failures detected.")
     _hr()
     return 1
 
 
 def _wait_for_node_count(client: httpx.Client, base: str, *, expected: int, timeout: float) -> int:
     """
-    Espera hasta que el commit en background haya agregado `expected` nodos.
+    Poll until the background commit has appended `expected` nodes.
 
-    Invariante del loop: el commit corre vía asyncio.create_task DESPUÉS de
-    devolver la respuesta, así que el conteo es eventualmente consistente.
+    Loop invariant: the commit runs via asyncio.create_task AFTER the response
+    is returned, so the node count is eventually consistent.
     """
     deadline = time.monotonic() + timeout
     last = -1

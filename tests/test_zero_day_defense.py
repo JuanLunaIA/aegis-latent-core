@@ -10,7 +10,7 @@ from aegis.core.telemetry import LogitEntropyMonitor
 
 class TestZeroDayDefense(unittest.TestCase):
     def setUp(self) -> None:
-        # Configuración de monitor con límites estrictos (Producción)
+        # Monitor with strict production limits
         self.entropy_monitor = LogitEntropyMonitor(ema_alpha=0.1)
         self.moe_monitor = MoERoutingMonitor(
             gate_threshold=0.5, activation_bound=1.5, min_experts=4
@@ -18,8 +18,8 @@ class TestZeroDayDefense(unittest.TestCase):
 
     def test_zero_day_latent_footprint_detection(self) -> None:
         """
-        Simula un ataque Zero-Day que evade filtros de texto pero
-        provoca una anomalía en el espacio latente.
+        Simulates a Zero-Day attack that evades text filters but
+        leaves an anomaly in the latent space.
         """
         # 1. ESTADO NOMINAL
         normal_logits = np.random.randn(1000)
@@ -32,16 +32,16 @@ class TestZeroDayDefense(unittest.TestCase):
         self.assertFalse(moe_normal.detected, f"False positive in nominal state: {moe_normal.note}")
         print(f"\n[NOMINAL] Entropy: {h_normal:.4f}, MoE Status: {moe_normal.flag}")
 
-        # 2. ESTADO ZERO-DAY (Simulación de Inyección Exitosa)
-        # Logits colapsados: entropía mínima ( la señal más clara de inyección forzada)
+        # 2. ZERO-DAY STATE (simulated successful injection)
+        # Collapsed logits: minimum entropy (clearest signal of forced injection)
         zero_day_logits = np.random.randn(1000)
         zero_day_logits[42] = 100.0
 
-        # Ruteo anómalo: Activación agregada masiva.
-        # Usamos normas altas para simular la "energía" de un ataque de inyección
-        # que activa múltiples rutas expertas simultáneamente.
+        # Anomalous routing: massive aggregate activation.
+        # High norms simulate the "energy" of an injection attack that
+        # activates multiple expert paths simultaneously.
         zero_day_gates = np.array([0.26, 0.24, 0.25, 0.25])
-        zero_day_norms = np.array([5.0, 5.0, 5.0, 5.0])  # <--- Simulamos alta activación
+        zero_day_norms = np.array([5.0, 5.0, 5.0, 5.0])  # simulated high activation
 
         h_attack = self.entropy_monitor.compute_shannon_entropy(zero_day_logits)
         moe_attack = self.moe_monitor.detect_entanglement(zero_day_gates, zero_day_norms)
@@ -49,11 +49,11 @@ class TestZeroDayDefense(unittest.TestCase):
         print(f"[ATTACK] Entropy: {h_attack:.4f}, MoE Status: {moe_attack.flag}")
         print(f"[ATTACK] Note: {moe_attack.note}")
 
-        # Verificaciones de defensa
-        # A. El colapso de entropía es un indicador primario
+        # Defense assertions
+        # A. Entropy collapse is a primary indicator
         self.assertLess(h_attack, h_normal * 0.1)
 
-        # B. El monitor MoE debe detectar el entrelazamiento
+        # B. The MoE monitor must detect entanglement
         self.assertTrue(moe_attack.detected, "Zero-Day evaded MoE Entanglement detection")
         self.assertEqual(moe_attack.flag, "ENTANGLEMENT_DETECTED")
 
