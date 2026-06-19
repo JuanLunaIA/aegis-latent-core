@@ -186,6 +186,9 @@ class _AppState:
     proxy_auth: ProxyKeyAuth
     audit_auth: AuditKeyAuth
     settings: AegisSettings
+    # mTLS authentication handler; None when mTLS is not configured.
+    # Checked by dependencies.py via getattr(state, "mtls_auth", None).
+    mtls_auth: Any
     # FIX-APP-02: entropy guard helpers instantiated once at startup,
     # not on every request (was: per-request allocation in hot path).
     _entropy_taint_engine: Any
@@ -266,6 +269,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
     state = _AppState()
     state.settings = cfg
+    state.mtls_auth = None  # populated in lifespan when mtls_required or ssl_ca_certs is set
     # FIX-APP-01: bounded LRU cache instead of unbounded plain dict.
     # FIX-BLOCKER-02: cfg injected so ResponseAnalyzer reads thresholds from config.
     state.analyzers = _BoundedAnalyzerCache(maxsize=_MAX_ANALYZER_SESSIONS, cfg=cfg)
@@ -385,6 +389,23 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         state.forwarder = LLMForwarder(forwarder_cfg, provider=provider)
         await state.forwarder.start()
         state.sessions = SessionLifecycleManager(max_sessions=4_096)
+
+        # I-05: wire mTLS identity validation when the operator enables it.
+        # Without this block state.mtls_auth stays None and the mTLS code path
+        # in dependencies.py is silently skipped, making mtls_required a no-op.
+        if cfg.mtls_required or cfg.ssl_ca_certs:
+            try:
+                from aegis.core.identity import SpiffeIdentityManager
+                from aegis.proxy.mtls import mTLSAuth
+
+                state.mtls_auth = mTLSAuth(SpiffeIdentityManager())
+                logger.info("mTLS authentication enabled (SPIFFE via SPIRE agent).")
+            except Exception as exc:
+                logger.warning("mTLS initialization failed: %s", exc)
+                if cfg.mtls_required:
+                    raise RuntimeError(
+                        "mtls_required=True but mTLS could not be initialized"
+                    ) from exc
 
         app.state.aegis = state
         yield

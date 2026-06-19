@@ -50,6 +50,11 @@ from aegis_server.storage.base import IntegrityReport, StorageProvider
 
 logger = logging.getLogger(__name__)
 
+# SQLite busy-timeout: how long to wait for a write lock before raising
+# OperationalError. 30 s is generous for local-disk WAL but prevents a
+# stalled writer from hanging the process indefinitely (I-03).
+_SQLITE_LOCK_TIMEOUT = 30.0
+
 _CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS audit_nodes (
     node_id       TEXT NOT NULL,
@@ -178,7 +183,7 @@ class SQLiteStorageProvider(StorageProvider):
         os.makedirs(parent, exist_ok=True)
 
         try:
-            async with aiosqlite.connect(self._db_path) as db:
+            async with aiosqlite.connect(self._db_path, timeout=_SQLITE_LOCK_TIMEOUT) as db:
                 # WAL mode must be set before any other operations
                 for pragma in _WAL_PRAGMAS:
                     await db.execute(pragma)
@@ -220,7 +225,7 @@ class SQLiteStorageProvider(StorageProvider):
         if not self._initialized:
             raise RuntimeError("SQLiteStorageProvider.initialize() was not called")
         try:
-            async with aiosqlite.connect(self._db_path) as db:
+            async with aiosqlite.connect(self._db_path, timeout=_SQLITE_LOCK_TIMEOUT) as db:
                 db.row_factory = aiosqlite.Row
                 for pragma in _WAL_PRAGMAS:
                     await db.execute(pragma)
@@ -269,7 +274,7 @@ class SQLiteStorageProvider(StorageProvider):
 
         async with self._chain_lock:
             try:
-                async with aiosqlite.connect(self._db_path) as db:
+                async with aiosqlite.connect(self._db_path, timeout=_SQLITE_LOCK_TIMEOUT) as db:
                     for pragma in _WAL_PRAGMAS:
                         await db.execute(pragma)
                     await db.execute(
@@ -309,7 +314,7 @@ class SQLiteStorageProvider(StorageProvider):
             raise RuntimeError("SQLiteStorageProvider.initialize() was not called")
 
         try:
-            async with aiosqlite.connect(self._db_path) as db:
+            async with aiosqlite.connect(self._db_path, timeout=_SQLITE_LOCK_TIMEOUT) as db:
                 for pragma in _WAL_PRAGMAS:
                     await db.execute(pragma)
                 db.row_factory = aiosqlite.Row
@@ -344,7 +349,7 @@ class SQLiteStorageProvider(StorageProvider):
         offset = self._validate_offset(offset)
 
         try:
-            async with aiosqlite.connect(self._db_path) as db:
+            async with aiosqlite.connect(self._db_path, timeout=_SQLITE_LOCK_TIMEOUT) as db:
                 for pragma in _WAL_PRAGMAS:
                     await db.execute(pragma)
                 db.row_factory = aiosqlite.Row
@@ -372,7 +377,7 @@ class SQLiteStorageProvider(StorageProvider):
             raise RuntimeError("SQLiteStorageProvider.initialize() was not called")
 
         try:
-            async with aiosqlite.connect(self._db_path) as db:
+            async with aiosqlite.connect(self._db_path, timeout=_SQLITE_LOCK_TIMEOUT) as db:
                 for pragma in _WAL_PRAGMAS:
                     await db.execute(pragma)
                 db.row_factory = aiosqlite.Row
