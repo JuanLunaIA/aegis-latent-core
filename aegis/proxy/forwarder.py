@@ -39,6 +39,7 @@ from typing import Any
 import httpx
 
 from aegis.config import AegisSettings
+from aegis.core.circuit_breaker import CircuitBreaker
 from aegis.providers.base import ProviderAdapter
 from aegis.providers.openai_provider import OpenAIAdapter
 
@@ -76,6 +77,12 @@ class LLMForwarder:
         self._provider: ProviderAdapter = provider or OpenAIAdapter()
         self._rust_forwarder: Any = None
         self._client: httpx.AsyncClient | None = None
+        self._circuit_breaker = CircuitBreaker(
+            name=settings.provider,
+            failure_threshold=settings.circuit_breaker_failure_threshold,
+            recovery_timeout=settings.circuit_breaker_recovery_timeout,
+            success_threshold=settings.circuit_breaker_success_threshold,
+        )
 
     @property
     def provider(self) -> ProviderAdapter:
@@ -167,6 +174,10 @@ class LLMForwarder:
         The adapter translates path + body before sending, and translates
         the raw provider response bytes back before returning.
         """
+        # Circuit breaker: fail-fast when upstream is known to be down.
+        # CircuitOpenError propagates to the caller (app.py) which returns 503.
+        self._circuit_breaker.check()
+
         provider_path, provider_body = self._provider.translate_request(
             path,
             body,
@@ -175,19 +186,29 @@ class LLMForwarder:
 
         if HAS_RUST and self._rust_forwarder and self._provider.name == "openai":
             loop = asyncio.get_running_loop()
-            return await loop.run_in_executor(
-                None,
-                self._rust_forwarder.forward_json_sync,
-                provider_path,
-                provider_body,
-            )
+            try:
+                result = await loop.run_in_executor(
+                    None,
+                    self._rust_forwarder.forward_json_sync,
+                    provider_path,
+                    provider_body,
+                )
+                self._circuit_breaker.record_success()
+                return result
+            except Exception:
+                self._circuit_breaker.record_failure()
+                raise
 
         assert self._client is not None, "LLMForwarder.start() was not called"
-        raw_resp = await self._client.post(
-            provider_path,
-            json=provider_body,
-            headers=extra_headers,
-        )
+        try:
+            raw_resp = await self._client.post(
+                provider_path,
+                json=provider_body,
+                headers=extra_headers,
+            )
+        except (httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError):
+            self._circuit_breaker.record_failure()
+            raise
 
         # FIX-MAJOR: surface 401/403 upstream errors explicitly.
         # Previously these were silently forwarded, making it impossible to
@@ -205,6 +226,12 @@ class LLMForwarder:
                 provider_path,
                 self._provider.name,
             )
+
+        # 5xx responses from upstream count as failures for circuit-breaker purposes.
+        if raw_resp.status_code >= 500:
+            self._circuit_breaker.record_failure()
+        else:
+            self._circuit_breaker.record_success()
 
         if self._provider.name == "openai":
             return raw_resp
@@ -238,6 +265,9 @@ class LLMForwarder:
         """
         assert self._client is not None, "LLMForwarder.start() was not called"
 
+        # Circuit breaker check before initiating the stream.
+        self._circuit_breaker.check()
+
         provider_path, provider_body = self._provider.translate_request(
             path,
             body,
@@ -262,8 +292,19 @@ class LLMForwarder:
         extra_headers: dict[str, str] | None,
     ) -> AsyncIterator[tuple[bytes, Any]]:
         """Passthrough for providers that already stream in OpenAI SSE format."""
-        async with self._client.stream("POST", path, json=body, headers=extra_headers) as resp:
-            resp.raise_for_status()
+        try:
+            stream_ctx = self._client.stream("POST", path, json=body, headers=extra_headers)
+        except (httpx.ConnectError, httpx.TimeoutException):
+            self._circuit_breaker.record_failure()
+            raise
+        async with stream_ctx as resp:
+            try:
+                resp.raise_for_status()
+            except httpx.HTTPStatusError:
+                if resp.status_code >= 500:
+                    self._circuit_breaker.record_failure()
+                raise
+            self._circuit_breaker.record_success()
             async for raw_line in resp.aiter_lines():
                 line = raw_line.strip()
                 if not line:

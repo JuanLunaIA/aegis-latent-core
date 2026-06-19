@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
@@ -61,16 +62,56 @@ class AegisWAF:
         # FIX-WAF-01: Any match here is an unconditional block.
         # These patterns cover direct prompt-injection primitives; there is no
         # legitimate use case for "system override" or "DAN mode" in production.
+        #
+        # Bypass hardening: all text is NFKC-normalized before pattern matching
+        # (see _normalize_text). This collapses Unicode lookalike characters
+        # (full-width letters, homoglyphs) to their ASCII equivalents so patterns
+        # cannot be evaded by substituting Unicode variants.
+        #
+        # Patterns use flexible spacing/word-boundaries to catch common evasions:
+        # - Inserted words: "ignore ALL previous instructions"
+        # - Abbreviation spacing: "D.A.N.", "D A N"
+        # - Synonym pivots: "reveal"/"show"/"output" the system prompt
         self._critical_patterns: list[re.Pattern[str]] = [
-            re.compile(r"(ignore previous instructions|disregard all previous)", re.IGNORECASE),
+            # Instruction override (inserted-word variants caught by .*? bridge)
             re.compile(
-                r"(you are now an unrestricted|system override|bypass filters)", re.IGNORECASE
+                r"ignore\b.{0,20}?\bprevious\b.{0,20}?\binstructions?",
+                re.IGNORECASE | re.DOTALL,
             ),
-            re.compile(r"(DAN mode|jailbreak|do anything now)", re.IGNORECASE),
             re.compile(
-                r"(print the system prompt|what is your initial instruction)", re.IGNORECASE
+                r"disregard\b.{0,20}?\b(all\b.{0,20}?\b)?previous",
+                re.IGNORECASE | re.DOTALL,
             ),
-            re.compile(r"(\{\{.*?\}\})", re.IGNORECASE),  # Template injection
+            # Unrestricted-AI / system-override variants
+            re.compile(
+                r"(you\s+are\s+now\s+an?\s+unrestricted|system[\s\-_]*override|bypass[\s\-_]*filters?)",
+                re.IGNORECASE,
+            ),
+            # DAN / jailbreak — catches D.A.N., D A N, DAN-mode, dan_mode
+            re.compile(
+                r"D[\.\s\-_]*A[\.\s\-_]*N[\.\s\-_]*(mode|prompt)?|jailbreak|do\s+anything\s+now",
+                re.IGNORECASE,
+            ),
+            # System-prompt exfiltration — synonyms: print/reveal/show/output/tell me
+            re.compile(
+                r"(print|reveal|show|output|tell\s+me|give\s+me|display)\b.{0,30}?"
+                r"\bsystem\s+(prompt|instruction|directive)",
+                re.IGNORECASE | re.DOTALL,
+            ),
+            re.compile(
+                r"(what|tell\s+me|show\s+me|give\s+me|say)\b.{0,30}?\b"
+                r"(your|the)\b.{0,20}?\b"
+                r"(initial|original|real|true|hidden)\b.{0,20}?\b(instructions?|prompt|directive)",
+                re.IGNORECASE | re.DOTALL,
+            ),
+            # Act-as / persona-injection
+            re.compile(
+                r"act\s+as\b.{0,30}?\b(unrestricted|uncensored|different|another)\b.{0,20}?\b"
+                r"(AI|model|assistant|bot|LLM)",
+                re.IGNORECASE | re.DOTALL,
+            ),
+            # Template injection: {{ }} and full-width Unicode variants (after NFKC norm)
+            re.compile(r"\{\{.*?\}\}", re.IGNORECASE | re.DOTALL),
         ]
 
         # Layer 2: LLMGuardLocal (weighted multi-signal scoring).
@@ -145,11 +186,34 @@ class AegisWAF:
             return any(self._is_too_deep(i, depth + 1) for i in data)
         return False
 
+    @staticmethod
+    def _normalize_text(text: str) -> str:
+        """NFKC-normalize and strip zero-width characters before pattern matching.
+
+        NFKC collapses compatibility variants (full-width letters, fraction
+        ligatures, circled letters) to their canonical ASCII forms. Without
+        this, a payload with `ｉｇｎｏｒｅ ｐｒｅｖｉｏｕｓ ｉｎｓｔｒｕｃｔｉｏｎｓ`
+        (U+FF49 etc.) would bypass all string-literal patterns.
+
+        Zero-width joiners / non-joiners and soft-hyphens are stripped first
+        because NFKC preserves them and they fragment word matches.
+        """
+        # Strip zero-width and invisible Unicode characters
+        _ZW_CHARS = (
+            "​‌‍‎‏"  # zero-width space/non-joiner/joiner/LRM/RLM
+            "­"  # soft hyphen
+            "﻿"  # BOM / zero-width no-break space
+        )
+        for ch in _ZW_CHARS:
+            text = text.replace(ch, "")
+        return unicodedata.normalize("NFKC", text)
+
     def _scan_content(self, data: Any) -> list[str]:
         matches: list[str] = []
         if isinstance(data, str):
+            normalized = self._normalize_text(data)
             for pat in self._critical_patterns:
-                if pat.search(data):
+                if pat.search(normalized):
                     matches.append(pat.pattern[:40])
         elif isinstance(data, dict):
             for v in data.values():

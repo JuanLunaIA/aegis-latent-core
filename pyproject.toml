@@ -66,7 +66,11 @@ gpu   = ["torch>=2.0.0"]
 vllm  = ["vllm>=0.4.0", "torch>=2.0.0"]
 hf    = ["transformers>=4.40.0", "torch>=2.0.0"]
 # ── Observability ────────────────────────────────────────────────────────────
-metrics = ["prometheus-fastapi-instrumentator>=6.1.0"]
+metrics = ["prometheus-fastapi-instrumentator>=6.1.0", "prometheus-client>=0.20.0"]
+otel = [
+    "opentelemetry-sdk>=1.24.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.24.0",
+]
 # ── Post-quantum cryptography ─────────────────────────────────────────────────
 pqc = ["oqs-python>=0.10.0"]
 # ── Rate limiter ─────────────────────────────────────────────────────────────
@@ -86,7 +90,7 @@ dev = [
 ]
 # ── Full install (all optional extras) ───────────────────────────────────────
 all = [
-    "aegis-latent-core[storage-all,vault,gpu,metrics,pqc,dev]",
+    "aegis-latent-core[storage-all,vault,gpu,metrics,otel,pqc,dev]",
 ]
 
 [project.scripts]

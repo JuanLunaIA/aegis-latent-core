@@ -250,6 +250,42 @@ class AegisSettings(BaseSettings):
         description="Comma-separated CORS allowed origins. Empty = no CORS headers.",
     )
 
+    # ── Reliability: circuit breaker ──────────────────────────────────────
+    circuit_breaker_failure_threshold: int = Field(
+        default=5,
+        ge=1,
+        le=100,
+        description=(
+            "Consecutive upstream failures before the circuit opens. "
+            "While OPEN all requests return 503 immediately (fail-fast). "
+            "After circuit_breaker_recovery_timeout seconds one probe is allowed."
+        ),
+    )
+    circuit_breaker_recovery_timeout: float = Field(
+        default=30.0,
+        ge=1.0,
+        le=600.0,
+        description="Seconds the circuit stays OPEN before allowing a recovery probe.",
+    )
+    circuit_breaker_success_threshold: int = Field(
+        default=2,
+        ge=1,
+        le=20,
+        description="Consecutive probe successes in HALF_OPEN required to re-close the circuit.",
+    )
+
+    # ── Privacy / PII redaction ────────────────────────────────────────────
+    pii_redact_tenant_id: bool = Field(
+        default=False,
+        description=(
+            "When True, replace tenant_id (session/user identifier) in the WAL with "
+            "a one-way SHA-256 prefix before committing to the audit chain. "
+            "Enables GDPR/CCPA compliance for deployments where session IDs are "
+            "considered personal data. Does not affect in-flight analysis — only "
+            "the durable WAL record. Cannot be reversed without the original ID."
+        ),
+    )
+
     # ── Alerting ──────────────────────────────────────────────────────────
     webhook_url: str = Field(
         default="",
