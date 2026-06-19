@@ -57,36 +57,20 @@ def test_distributed_ratelimiter_no_warn_on_rediss(caplog):
 
 
 # ── I-03: SQLite lock timeout constant ───────────────────────────────────────
-#
-# sqlite_provider.py depends on aioboto3/asyncpg (optional extras) via the
-# package __init__. We verify the constant via AST to avoid a hard dependency
-# on those extras in the dev environment.
-
-
-def _sqlite_provider_constant(name: str):
-    """Extract a module-level constant value from sqlite_provider.py via AST."""
-    import ast
-    from pathlib import Path
-
-    src = Path(__file__).parent.parent / "aegis_server" / "storage" / "sqlite_provider.py"
-    tree = ast.parse(src.read_text())
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == name:
-                    if isinstance(node.value, ast.Constant):
-                        return node.value.value
-    return None
 
 
 def test_sqlite_lock_timeout_constant_value():
-    """_SQLITE_LOCK_TIMEOUT must be exactly 30.0 seconds in source."""
-    assert _sqlite_provider_constant("_SQLITE_LOCK_TIMEOUT") == 30.0
+    """_SQLITE_LOCK_TIMEOUT must be exactly 30.0 seconds."""
+    from aegis_server.storage import sqlite_provider
+
+    assert sqlite_provider._SQLITE_LOCK_TIMEOUT == 30.0
 
 
 def test_sqlite_lock_timeout_constant_present():
-    """_SQLITE_LOCK_TIMEOUT must be defined in sqlite_provider.py."""
-    assert _sqlite_provider_constant("_SQLITE_LOCK_TIMEOUT") is not None
+    """_SQLITE_LOCK_TIMEOUT must be defined in sqlite_provider."""
+    from aegis_server.storage import sqlite_provider
+
+    assert hasattr(sqlite_provider, "_SQLITE_LOCK_TIMEOUT")
 
 
 # ── I-08: Ed25519 ephemeral key zeroization ──────────────────────────────────
