@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import math
+import random
 import statistics
 import time
 from typing import Any
@@ -89,6 +90,10 @@ async def _bench_create_task_overhead(n: int = 5_000) -> list[float]:
     Measure asyncio.create_task() scheduling overhead in isolation.
     Each iteration: t0 → create_task() → t1. Task is then awaited (not counted).
     Returns n latency samples in seconds.
+
+    Design note: awaiting immediately after each create_task() isolates the pure
+    scheduling cost with no background-task contention. Part 2 (WAF+HTTP with
+    drain_interval) captures the sequential-contention scenario.
     """
     samples: list[float] = []
     for _ in range(n):
@@ -170,7 +175,18 @@ def _pct(samples: list[float], p: float) -> float:
 
 
 def _welch_t_test(a: list[float], b: list[float]) -> tuple[float, float]:
+    """
+    Two-sample significance test (Welch statistic, normal-approximation p-value).
+
+    P-value uses math.erfc (standard normal CDF), not the exact t-distribution.
+    For n >= 30 per sample the normal approximation error is < 0.1 percentage
+    points (df >> 30 → t-distribution converges to Z). At n=2000 the error is
+    negligible. If exact p-values are required at small n, replace erfc with
+    a proper t-CDF (e.g. scipy.stats.t.sf).
+    """
     n_a, n_b = len(a), len(b)
+    if n_a < 2 or n_b < 2:
+        return 0.0, 1.0
     mean_a, mean_b = statistics.mean(a), statistics.mean(b)
     var_a, var_b = statistics.variance(a), statistics.variance(b)
     denom = var_a / n_a + var_b / n_b
@@ -184,9 +200,12 @@ def _welch_t_test(a: list[float], b: list[float]) -> tuple[float, float]:
 
 def _cohen_d(a: list[float], b: list[float]) -> float:
     n_a, n_b = len(a), len(b)
-    pooled_var = ((n_a - 1) * statistics.variance(a) + (n_b - 1) * statistics.variance(b)) / (
-        n_a + n_b - 2
-    )
+    if n_a < 2 or n_b < 2:
+        return 0.0
+    denom = n_a + n_b - 2
+    if denom <= 0:
+        return 0.0
+    pooled_var = ((n_a - 1) * statistics.variance(a) + (n_b - 1) * statistics.variance(b)) / denom
     std = math.sqrt(pooled_var) if pooled_var > 0 else 0.0
     return (statistics.mean(a) - statistics.mean(b)) / std if std else 0.0
 
@@ -249,11 +268,25 @@ async def run_benchmark(n_warmup: int = 200, n_measure: int = 2_000) -> dict[str
     app_with_bg = _build_app(spawn_background=True)
     app_no_bg = _build_app(spawn_background=False)
 
-    print("  [1/2] Measuring WITH_BG ...")
-    samples_with = await _measure_condition(app_with_bg, n_warmup, n_measure)
+    # Randomize order to reduce temporal bias (CPU frequency scaling, GC, OS load).
+    conditions: list[tuple[str, FastAPI]] = [
+        ("WITH_BG", app_with_bg),
+        ("NO_BG", app_no_bg),
+    ]
+    random.shuffle(conditions)
 
-    print("  [2/2] Measuring NO_BG ...")
-    samples_none = await _measure_condition(app_no_bg, n_warmup, n_measure)
+    samples_with: list[float] = []
+    samples_none: list[float] = []
+    for idx, (label, app) in enumerate(conditions, start=1):
+        print(f"  [{idx}/2] Measuring {label} ...")
+        samples = await _measure_condition(app, n_warmup, n_measure)
+        if label == "WITH_BG":
+            samples_with = samples
+        else:
+            samples_none = samples
+
+    assert samples_with, "WITH_BG condition not measured"
+    assert samples_none, "NO_BG condition not measured"
 
     t_stat, p_value = _welch_t_test(samples_with, samples_none)
     d = _cohen_d(samples_with, samples_none)
