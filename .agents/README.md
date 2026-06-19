@@ -3,11 +3,11 @@ Focused system prompts for domain-specific Claude Code sessions.
 
 ## Usage
 ```bash
-# Claude Code — activar agente específico
-claude --system-prompt .agents/backend-fastapi.md
+# Claude Code — activar agente específico (carga el archivo como system prompt)
+claude --system-prompt "$(cat .agents/backend-fastapi.md)"
 
 # O en CLAUDE.md de un subdirectorio específico
-echo "Load agent: $(cat .agents/backend-fastapi.md)" > src/api/CLAUDE.md
+cat .agents/backend-fastapi.md > src/api/CLAUDE.md
 ```
 
 ## Agent Index
