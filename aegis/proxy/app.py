@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+import aegis
 from aegis.auth.apikey import AuditKeyAuth, ProxyKeyAuth
 from aegis.config import AegisSettings, get_settings
 from aegis.core.crypto_audit import CryptographicAuditLedger
@@ -399,7 +400,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             "Forensic telemetry proxy for LLM inference pipelines. "
             "OpenAI-compatible drop-in with Merkle chain-of-custody."
         ),
-        version="2.3.0",
+        version=aegis.__version__,
         docs_url="/docs" if cfg.debug_mode else None,
         redoc_url="/redoc" if cfg.debug_mode else None,
         openapi_url="/openapi.json" if cfg.debug_mode else None,
@@ -424,7 +425,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         rid: str, sid: str, analysis: ResponseAnalysis, raw_body: bytes
     ) -> None:
         try:
-            state.ledger.commit_state(
+            # Run the synchronous ledger commit (which calls os.fsync) in a
+            # thread pool so the event loop is not stalled during disk I/O.
+            # The ledger's internal threading.Lock makes this thread-safe.
+            await asyncio.to_thread(
+                state.ledger.commit_state,
                 state_id=rid,
                 entropy=analysis.mean_entropy,
                 payload=raw_body[:65536],
@@ -482,7 +487,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     "healthy": cache_healthy,
                 },
                 "provider": provider_name,
-                "version": "2.3.0",
+                "version": aegis.__version__,
             },
         )
 

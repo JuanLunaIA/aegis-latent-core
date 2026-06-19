@@ -88,7 +88,7 @@ class VaultManager:
             headers = {"X-Vault-Token": self._token} if self._token else {}
             url = f"{self.vault_url}/v1/{path}"
 
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(5.0)) as client:
                 resp = await client.get(url, headers=headers)
                 if resp.status_code != 200:
                     logger.error(
@@ -115,5 +115,5 @@ class VaultManager:
             return None
 
     async def _async_auth_request(self, payload: dict) -> httpx.Response:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(5.0)) as client:
             return await client.post(f"{self.vault_url}/v1/auth/approle/login", json=payload)
