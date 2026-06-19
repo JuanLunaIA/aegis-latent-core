@@ -258,8 +258,11 @@ Building the PyO3 extension swaps in a native MMR/forwarder/PQC implementation.
 The Python path remains the verified reference and proof generator.
 
 ```bash
-python -m pip install maturin
-cd aegis_rust_v2 && maturin develop --release && cd -
+python -m pip install maturin patchelf
+cd aegis_rust_v2
+maturin build --release
+pip install target/wheels/aegis_rust-*.whl
+cd -
 python -m benchmarks.bench_mmr   # produces the real Rust-vs-Python speedup
 ```
 
