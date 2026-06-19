@@ -176,6 +176,9 @@ def _ed25519_sign(data: bytes) -> tuple[str, str, str]:
     priv = ed25519.Ed25519PrivateKey.generate()
     pub = priv.public_key()
     sig = priv.sign(data)
+    # Explicit del drops the reference immediately, triggering OpenSSL's
+    # OPENSSL_cleanse on the private key bytes before this frame returns (I-08).
+    del priv
     return sig.hex(), pub.public_bytes_raw().hex(), "ed25519-fallback"
 
 
@@ -374,7 +377,9 @@ class CryptographicAuditLedger:
                 logger.error(
                     "Integrity violation: node %d in-memory tamper detected "
                     "(creation_hash=%s…, current_hash=%s…)",
-                    i, creation_hash[:16], node.node_hash[:16],
+                    i,
+                    creation_hash[:16],
+                    node.node_hash[:16],
                 )
                 return False, i
 
@@ -435,15 +440,14 @@ class CryptographicAuditLedger:
         if self._wal_handle is not None:
             return
         try:
-            os.makedirs(
-                os.path.dirname(os.path.abspath(self.persistence_path)), exist_ok=True
-            )
+            os.makedirs(os.path.dirname(os.path.abspath(self.persistence_path)), exist_ok=True)
             self._wal_handle = open(self.persistence_path, "a")  # noqa: SIM115
             logger.debug("WAL handle opened: %s", self.persistence_path)
         except OSError as exc:
             logger.error(
                 "Failed to open WAL at %s: %s — writes will fall back to per-commit open()",
-                self.persistence_path, exc,
+                self.persistence_path,
+                exc,
             )
 
     def _sign(self, data: bytes) -> tuple[str, str, str, bool]:
@@ -481,9 +485,7 @@ class CryptographicAuditLedger:
         else:
             # Safety fallback: _open_wal() failed at init time.
             try:
-                os.makedirs(
-                    os.path.dirname(os.path.abspath(self.persistence_path)), exist_ok=True
-                )
+                os.makedirs(os.path.dirname(os.path.abspath(self.persistence_path)), exist_ok=True)
             except OSError:
                 pass
             with open(self.persistence_path, "a") as f:

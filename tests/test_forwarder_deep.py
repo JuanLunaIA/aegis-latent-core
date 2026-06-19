@@ -5,22 +5,24 @@ Covers: start/stop lifecycle, mTLS paths, 401/403 explicit logging,
 non-OpenAI provider translation, SSE passthrough, SSE with translation.
 """
 
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+
 from __future__ import annotations
 
 import json
-from typing import AsyncIterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
 
 from aegis.config import AegisSettings
-from aegis.proxy.forwarder import LLMForwarder
 from aegis.providers.anthropic_provider import AnthropicAdapter
 from aegis.providers.openai_provider import OpenAIAdapter
-
+from aegis.proxy.forwarder import LLMForwarder
 
 # ── helpers ──────────────────────────────────────────────────────────────────
+
 
 def _settings(**overrides) -> AegisSettings:
     base = dict(
@@ -35,11 +37,13 @@ def _settings(**overrides) -> AegisSettings:
 
 def _make_response(status: int = 200, body: dict | None = None) -> httpx.Response:
     content = json.dumps(body or {"id": "r1", "choices": []}).encode()
-    return httpx.Response(status_code=status, content=content,
-                          headers={"content-type": "application/json"})
+    return httpx.Response(
+        status_code=status, content=content, headers={"content-type": "application/json"}
+    )
 
 
 # ── lifecycle ─────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_start_creates_client():
@@ -55,7 +59,7 @@ async def test_start_creates_client():
 async def test_stop_idempotent():
     """stop() with no client should not raise."""
     fwd = LLMForwarder(settings=_settings())
-    await fwd.stop()   # never started — must not raise
+    await fwd.stop()  # never started — must not raise
 
 
 @pytest.mark.asyncio
@@ -69,9 +73,10 @@ async def test_start_with_ssl_ca_certs(tmp_path):
     captured: dict = {}
 
     class _FakeClient:
-        def __init__(self_, *args, **kwargs):
+        def __init__(self, *args, **kwargs):
             captured.update(kwargs)
-        async def aclose(self_):
+
+        async def aclose(self):
             pass
 
     with patch("aegis.proxy.forwarder.httpx.AsyncClient", _FakeClient):
@@ -87,11 +92,13 @@ async def test_start_mtls_required_with_certs(tmp_path):
     key = tmp_path / "client.key"
     cert.write_text("fake-cert")
     key.write_text("fake-key")
-    fwd = LLMForwarder(settings=_settings(
-        mtls_required=True,
-        ssl_certfile=str(cert),
-        ssl_keyfile=str(key),
-    ))
+    fwd = LLMForwarder(
+        settings=_settings(
+            mtls_required=True,
+            ssl_certfile=str(cert),
+            ssl_keyfile=str(key),
+        )
+    )
     # start() should NOT raise — it builds the client with cert paths
     # (httpx validates certs on first connect, not on construction)
     with patch("httpx.AsyncClient.__init__", return_value=None) as mock_init:
@@ -105,6 +112,7 @@ async def test_start_mtls_required_with_certs(tmp_path):
 @pytest.mark.asyncio
 async def test_start_mtls_required_missing_certs_logs_warning(caplog):
     import logging
+
     fwd = LLMForwarder(settings=_settings(mtls_required=True))
     with caplog.at_level(logging.WARNING, logger="aegis.proxy.forwarder"):
         await fwd.start()
@@ -113,6 +121,7 @@ async def test_start_mtls_required_missing_certs_logs_warning(caplog):
 
 
 # ── forward_json ──────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_forward_json_200_openai():
@@ -128,11 +137,12 @@ async def test_forward_json_200_openai():
 @pytest.mark.asyncio
 async def test_forward_json_401_logs_error(caplog):
     import logging
+
     fwd = LLMForwarder(settings=_settings(), provider=OpenAIAdapter())
     mock_client = AsyncMock()
-    mock_client.post = AsyncMock(return_value=_make_response(
-        401, {"error": {"message": "Incorrect API key"}}
-    ))
+    mock_client.post = AsyncMock(
+        return_value=_make_response(401, {"error": {"message": "Incorrect API key"}})
+    )
     fwd._client = mock_client
 
     with caplog.at_level(logging.ERROR, logger="aegis.proxy.forwarder"):
@@ -145,6 +155,7 @@ async def test_forward_json_401_logs_error(caplog):
 @pytest.mark.asyncio
 async def test_forward_json_403_logs_error(caplog):
     import logging
+
     fwd = LLMForwarder(settings=_settings(), provider=OpenAIAdapter())
     mock_client = AsyncMock()
     mock_client.post = AsyncMock(return_value=_make_response(403, {"error": "forbidden"}))
@@ -164,16 +175,18 @@ async def test_forward_json_non_openai_translates_response():
     fwd = LLMForwarder(settings=_settings(provider="anthropic"), provider=adapter)
 
     # Minimal Anthropic API response
-    anthropic_body = json.dumps({
-        "id": "msg_01XFDUDYJgAACzvnptvVoYEL",
-        "type": "message",
-        "role": "assistant",
-        "content": [{"type": "text", "text": "Hello!"}],
-        "model": "claude-3-haiku-20240307",
-        "stop_reason": "end_turn",
-        "stop_sequence": None,
-        "usage": {"input_tokens": 10, "output_tokens": 5},
-    }).encode()
+    anthropic_body = json.dumps(
+        {
+            "id": "msg_01XFDUDYJgAACzvnptvVoYEL",
+            "type": "message",
+            "role": "assistant",
+            "content": [{"type": "text", "text": "Hello!"}],
+            "model": "claude-3-haiku-20240307",
+            "stop_reason": "end_turn",
+            "stop_sequence": None,
+            "usage": {"input_tokens": 10, "output_tokens": 5},
+        }
+    ).encode()
 
     mock_resp = httpx.Response(
         status_code=200,
@@ -204,13 +217,14 @@ async def test_forward_json_assert_not_started():
 
 # ── stream_sse ────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_stream_sse_passthrough_yields_chunks():
     """OpenAI provider streams are passed through without translation."""
     fwd = LLMForwarder(settings=_settings(), provider=OpenAIAdapter())
 
     sse_lines = [
-        "data: {\"id\":\"r1\",\"choices\":[{\"delta\":{\"content\":\"Hi\"}}]}",
+        'data: {"id":"r1","choices":[{"delta":{"content":"Hi"}}]}',
         "data: [DONE]",
     ]
 
@@ -219,19 +233,26 @@ async def test_stream_sse_passthrough_yields_chunks():
             async def aiter_lines(self):
                 for line in sse_lines:
                     yield line
+
             def raise_for_status(self):
                 pass
-        from contextlib import asynccontextmanager
+
         return _FakeResp()
 
     # Patch the stream context manager
     import unittest.mock as mock
 
     mock_stream_ctx = mock.MagicMock()
-    mock_stream_ctx.__aenter__ = AsyncMock(return_value=type("R", (), {
-        "aiter_lines": lambda self: _aiter(sse_lines),
-        "raise_for_status": lambda self: None,
-    })())
+    mock_stream_ctx.__aenter__ = AsyncMock(
+        return_value=type(
+            "R",
+            (),
+            {
+                "aiter_lines": lambda self: _aiter(sse_lines),
+                "raise_for_status": lambda self: None,
+            },
+        )()
+    )
     mock_stream_ctx.__aexit__ = AsyncMock(return_value=False)
 
     async def _aiter(items):
@@ -243,7 +264,9 @@ async def test_stream_sse_passthrough_yields_chunks():
     fwd._client = mock_client
 
     chunks = []
-    async for raw, parsed in fwd.stream_sse("/v1/chat/completions", {"model": "gpt-4o", "messages": [], "stream": True}):
+    async for raw, parsed in fwd.stream_sse(
+        "/v1/chat/completions", {"model": "gpt-4o", "messages": [], "stream": True}
+    ):
         chunks.append((raw, parsed))
         if raw == b"data: [DONE]\n":
             break
@@ -258,12 +281,17 @@ async def test_stream_sse_passthrough_yields_chunks():
 @pytest.mark.asyncio
 async def test_stream_sse_assert_not_started():
     fwd = LLMForwarder(settings=_settings())
-    with pytest.raises(AssertionError, match="start"):
+
+    async def _consume():
         async for _ in fwd.stream_sse("/v1/chat/completions", {"model": "gpt-4o", "messages": []}):
             break
 
+    with pytest.raises(AssertionError, match="start"):
+        await _consume()
+
 
 # ── provider property ─────────────────────────────────────────────────────────
+
 
 def test_provider_property():
     adapter = OpenAIAdapter()

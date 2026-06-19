@@ -10,6 +10,7 @@ Coverage targets (v2.2.0):
   - GeminiAdapter:    unsupported param stripping, base_url override
   - build_provider:   factory happy-path + unknown name rejection
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -23,8 +24,8 @@ from aegis.providers.anthropic_provider import AnthropicAdapter, _normalize_mess
 from aegis.providers.gemini_provider import GeminiAdapter
 from aegis.providers.openai_provider import OpenAIAdapter, OpenRouterAdapter
 
-
 # ── AnthropicAdapter — request translation ───────────────────────────────────
+
 
 class TestAnthropicRequestTranslation:
     def setup_method(self):
@@ -43,7 +44,7 @@ class TestAnthropicRequestTranslation:
             "model": "claude-opus-4-5",
             "messages": [
                 {"role": "system", "content": "Be concise."},
-                {"role": "user",   "content": "Hello"},
+                {"role": "user", "content": "Hello"},
             ],
         }
         _, out = self.adapter.translate_request("/v1/chat/completions", body)
@@ -56,7 +57,7 @@ class TestAnthropicRequestTranslation:
             "messages": [
                 {"role": "system", "content": "Part one."},
                 {"role": "system", "content": "Part two."},
-                {"role": "user",   "content": "Hi"},
+                {"role": "user", "content": "Hi"},
             ],
         }
         _, out = self.adapter.translate_request("/v1/chat/completions", body)
@@ -127,21 +128,26 @@ class TestAnthropicRequestTranslation:
 
 # ── AnthropicAdapter — response translation ──────────────────────────────────
 
+
 class TestAnthropicResponseTranslation:
     def setup_method(self):
         self.adapter = AnthropicAdapter()
 
-    def _make_anthropic_response(self, text: str = "Hello!", stop_reason: str = "end_turn") -> bytes:
-        return json.dumps({
-            "id": "msg_abc123",
-            "type": "message",
-            "role": "assistant",
-            "content": [{"type": "text", "text": text}],
-            "model": "claude-opus-4-5",
-            "stop_reason": stop_reason,
-            "stop_sequence": None,
-            "usage": {"input_tokens": 10, "output_tokens": 5},
-        }).encode()
+    def _make_anthropic_response(
+        self, text: str = "Hello!", stop_reason: str = "end_turn"
+    ) -> bytes:
+        return json.dumps(
+            {
+                "id": "msg_abc123",
+                "type": "message",
+                "role": "assistant",
+                "content": [{"type": "text", "text": text}],
+                "model": "claude-opus-4-5",
+                "stop_reason": stop_reason,
+                "stop_sequence": None,
+                "usage": {"input_tokens": 10, "output_tokens": 5},
+            }
+        ).encode()
 
     def test_content_lifted_to_choices(self):
         raw = self._make_anthropic_response("Hello!")
@@ -182,10 +188,12 @@ class TestAnthropicResponseTranslation:
         assert out["choices"][0]["logprobs"] is None
 
     def test_error_response_wrapped(self):
-        error_resp = json.dumps({
-            "type": "error",
-            "error": {"type": "authentication_error", "message": "Invalid API key"},
-        }).encode()
+        error_resp = json.dumps(
+            {
+                "type": "error",
+                "error": {"type": "authentication_error", "message": "Invalid API key"},
+            }
+        ).encode()
         out = json.loads(self.adapter.translate_response(error_resp, "claude-opus-4-5"))
         assert "error" in out
         assert "Invalid API key" in out["error"]["message"]
@@ -197,6 +205,7 @@ class TestAnthropicResponseTranslation:
 
 
 # ── AnthropicAdapter — streaming translation ─────────────────────────────────
+
 
 class TestAnthropicStreamTranslation:
     def setup_method(self):
@@ -228,12 +237,19 @@ class TestAnthropicStreamTranslation:
 
     def test_role_chunk_emitted_on_message_start(self):
         events = [
-            {"type": "message_start", "message": {
-                "id": "msg_xyz", "type": "message", "role": "assistant",
-                "content": [], "model": "claude-opus-4-5",
-                "stop_reason": None, "stop_sequence": None,
-                "usage": {"input_tokens": 5, "output_tokens": 1},
-            }},
+            {
+                "type": "message_start",
+                "message": {
+                    "id": "msg_xyz",
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [],
+                    "model": "claude-opus-4-5",
+                    "stop_reason": None,
+                    "stop_sequence": None,
+                    "usage": {"input_tokens": 5, "output_tokens": 1},
+                },
+            },
             {"type": "message_stop"},
         ]
         chunks = self._run(self._collect(*events))
@@ -241,18 +257,40 @@ class TestAnthropicStreamTranslation:
 
     def test_content_delta_forwarded(self):
         events = [
-            {"type": "message_start", "message": {
-                "id": "msg_xyz", "type": "message", "role": "assistant",
-                "content": [], "model": "claude-opus-4-5",
-                "stop_reason": None, "stop_sequence": None,
-                "usage": {"input_tokens": 5, "output_tokens": 1},
-            }},
-            {"type": "content_block_start",  "index": 0, "content_block": {"type": "text", "text": ""}},
-            {"type": "content_block_delta",   "index": 0, "delta": {"type": "text_delta", "text": "Hello"}},
-            {"type": "content_block_delta",   "index": 0, "delta": {"type": "text_delta", "text": "!"}},
-            {"type": "content_block_stop",    "index": 0},
-            {"type": "message_delta",  "delta": {"stop_reason": "end_turn", "stop_sequence": None},
-             "usage": {"output_tokens": 2}},
+            {
+                "type": "message_start",
+                "message": {
+                    "id": "msg_xyz",
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [],
+                    "model": "claude-opus-4-5",
+                    "stop_reason": None,
+                    "stop_sequence": None,
+                    "usage": {"input_tokens": 5, "output_tokens": 1},
+                },
+            },
+            {
+                "type": "content_block_start",
+                "index": 0,
+                "content_block": {"type": "text", "text": ""},
+            },
+            {
+                "type": "content_block_delta",
+                "index": 0,
+                "delta": {"type": "text_delta", "text": "Hello"},
+            },
+            {
+                "type": "content_block_delta",
+                "index": 0,
+                "delta": {"type": "text_delta", "text": "!"},
+            },
+            {"type": "content_block_stop", "index": 0},
+            {
+                "type": "message_delta",
+                "delta": {"stop_reason": "end_turn", "stop_sequence": None},
+                "usage": {"output_tokens": 2},
+            },
             {"type": "message_stop"},
         ]
         chunks = self._run(self._collect(*events))
@@ -265,13 +303,24 @@ class TestAnthropicStreamTranslation:
 
     def test_finish_reason_on_message_delta(self):
         events = [
-            {"type": "message_start", "message": {
-                "id": "msg_xyz", "type": "message", "role": "assistant",
-                "content": [], "model": "claude-opus-4-5",
-                "stop_reason": None, "stop_sequence": None,
-                "usage": {"input_tokens": 5, "output_tokens": 1},
-            }},
-            {"type": "message_delta", "delta": {"stop_reason": "end_turn"}, "usage": {"output_tokens": 5}},
+            {
+                "type": "message_start",
+                "message": {
+                    "id": "msg_xyz",
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [],
+                    "model": "claude-opus-4-5",
+                    "stop_reason": None,
+                    "stop_sequence": None,
+                    "usage": {"input_tokens": 5, "output_tokens": 1},
+                },
+            },
+            {
+                "type": "message_delta",
+                "delta": {"stop_reason": "end_turn"},
+                "usage": {"output_tokens": 5},
+            },
             {"type": "message_stop"},
         ]
         chunks = self._run(self._collect(*events))
@@ -281,12 +330,19 @@ class TestAnthropicStreamTranslation:
 
     def test_done_on_message_stop(self):
         events = [
-            {"type": "message_start", "message": {
-                "id": "msg_xyz", "type": "message", "role": "assistant",
-                "content": [], "model": "claude-opus-4-5",
-                "stop_reason": None, "stop_sequence": None,
-                "usage": {"input_tokens": 5, "output_tokens": 1},
-            }},
+            {
+                "type": "message_start",
+                "message": {
+                    "id": "msg_xyz",
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [],
+                    "model": "claude-opus-4-5",
+                    "stop_reason": None,
+                    "stop_sequence": None,
+                    "usage": {"input_tokens": 5, "output_tokens": 1},
+                },
+            },
             {"type": "message_stop"},
         ]
 
@@ -306,12 +362,19 @@ class TestAnthropicStreamTranslation:
 
     def test_object_type_is_chunk(self):
         events = [
-            {"type": "message_start", "message": {
-                "id": "msg_xyz", "type": "message", "role": "assistant",
-                "content": [], "model": "claude-opus-4-5",
-                "stop_reason": None, "stop_sequence": None,
-                "usage": {"input_tokens": 5, "output_tokens": 1},
-            }},
+            {
+                "type": "message_start",
+                "message": {
+                    "id": "msg_xyz",
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [],
+                    "model": "claude-opus-4-5",
+                    "stop_reason": None,
+                    "stop_sequence": None,
+                    "usage": {"input_tokens": 5, "output_tokens": 1},
+                },
+            },
             {"type": "message_stop"},
         ]
         chunks = self._run(self._collect(*events))
@@ -320,6 +383,7 @@ class TestAnthropicStreamTranslation:
 
 
 # ── OpenAIAdapter ─────────────────────────────────────────────────────────────
+
 
 class TestOpenAIAdapter:
     def setup_method(self):
@@ -357,6 +421,7 @@ class TestOpenAIAdapter:
 
 # ── OpenRouterAdapter ─────────────────────────────────────────────────────────
 
+
 class TestOpenRouterAdapter:
     def test_base_url_set(self):
         adapter = OpenRouterAdapter()
@@ -389,6 +454,7 @@ class TestOpenRouterAdapter:
 
 
 # ── GeminiAdapter ─────────────────────────────────────────────────────────────
+
 
 class TestGeminiAdapter:
     def setup_method(self):
@@ -427,6 +493,7 @@ class TestGeminiAdapter:
 
 # ── build_provider factory ────────────────────────────────────────────────────
 
+
 class TestBuildProvider:
     def test_openai(self):
         p = build_provider("openai")
@@ -463,6 +530,7 @@ class TestBuildProvider:
 
 
 # ── _normalize_message_content ────────────────────────────────────────────────
+
 
 class TestNormalizeMessageContent:
     def test_string_passthrough(self):

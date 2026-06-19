@@ -279,9 +279,7 @@ class PostgreSQLStorageProvider(StorageProvider):
                     pass
             return raw
         except Exception as exc:
-            raise RuntimeError(
-                f"PostgreSQLStorageProvider.get_latest_node failed: {exc}"
-            ) from exc
+            raise RuntimeError(f"PostgreSQLStorageProvider.get_latest_node failed: {exc}") from exc
 
     async def get_node(self, node_hash: str) -> dict[str, Any] | None:
         """

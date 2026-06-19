@@ -73,7 +73,10 @@ async def test_ledger_integration_via_proxy():
                 transport=httpx.ASGITransport(app=app), base_url="http://test"
             ) as client:
                 payload = {"messages": [{"role": "user", "content": "Hello, Aegis!"}]}
-                headers = {"Authorization": "Bearer test-proxy-key", "x-session-id": "integration-session"}
+                headers = {
+                    "Authorization": "Bearer test-proxy-key",
+                    "x-session-id": "integration-session",
+                }
 
                 response = await client.post("/v1/chat/completions", json=payload, headers=headers)
 

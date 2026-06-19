@@ -5,8 +5,11 @@ validate that the rust_integration helpers are well-behaved (no exceptions,
 returning expected types) whether or not the Rust extension is installed.
 """
 
-from aegis.core.mmr import MerkleMountainRange, mmr_manager
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+
 from aegis.core import rust_integration
+from aegis.core.mmr import MerkleMountainRange, mmr_manager
 
 
 def test_merkle_add_and_inclusion():
@@ -15,7 +18,8 @@ def test_merkle_add_and_inclusion():
     assert m.get_root_hash() == "0" * 64
 
     root1 = m.add_leaf(b"hello")
-    assert isinstance(root1, str) and len(root1) == 64
+    assert isinstance(root1, str)
+    assert len(root1) == 64
 
     root2 = m.add_leaf(b"world")
     assert root2 != root1
@@ -46,7 +50,8 @@ def test_mmr_manager_interface():
     assert hasattr(mmr_manager, "get_root_hash")
 
     r = mmr_manager.get_root_hash()
-    assert isinstance(r, str) and len(r) == 64
+    assert isinstance(r, str)
+    assert len(r) == 64
 
 
 def test_rust_integration_no_crash():
@@ -57,8 +62,8 @@ def test_rust_integration_no_crash():
     kp = rust_integration.generate_pqc_keypair()
     assert (kp is None) or isinstance(kp, (bytes, bytearray))
 
-    rf = rust_integration.new_rust_forwarder("https://example", "key")
-    # rf may be None or a foreign-object; ensure call doesn't raise.
+    rust_integration.new_rust_forwarder("https://example", "key")
+    # Call above must not raise; return value (None or foreign object) is unused.
 
     sig_ok = rust_integration.verify_pqc_signature(b"hi", b"", b"")
     assert isinstance(sig_ok, bool)

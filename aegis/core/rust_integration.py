@@ -4,12 +4,16 @@ This module centralises runtime detection of the Rust extension and exposes
 lightweight helpers that other modules can import without raising on import
 if the Rust extension is not installed.
 """
+
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
 
 from typing import Any
 
 try:
     import aegis_rust  # type: ignore
+
     _HAS_RUST = True
 except Exception:
     _HAS_RUST = False
@@ -20,7 +24,12 @@ def has_rust() -> bool:
     return _HAS_RUST
 
 
-def new_rust_forwarder(base_url: str, api_key: str, timeout_seconds: int | None = None, connect_timeout_seconds: int | None = None) -> Any | None:
+def new_rust_forwarder(
+    base_url: str,
+    api_key: str,
+    timeout_seconds: int | None = None,
+    connect_timeout_seconds: int | None = None,
+) -> Any | None:
     """Create and return a RustForwarder instance when available, or None.
 
     The returned object is a PyO3 bound object exposing the same convenience
@@ -30,7 +39,9 @@ def new_rust_forwarder(base_url: str, api_key: str, timeout_seconds: int | None 
         return None
     try:
         # RustForwarder.new may raise on invalid args; surface the exception to caller
-        return aegis_rust.RustForwarder.new(base_url, api_key, timeout_seconds, connect_timeout_seconds)
+        return aegis_rust.RustForwarder.new(
+            base_url, api_key, timeout_seconds, connect_timeout_seconds
+        )
     except Exception:
         return None
 

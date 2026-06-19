@@ -51,9 +51,8 @@ class InMemoryRateLimiter:
 
         try:
             from cachetools import TTLCache  # type: ignore[import-untyped]
-            self._buckets: dict[str, tuple[float, float]] = TTLCache(
-                maxsize=200_000, ttl=ttl
-            )
+
+            self._buckets: dict[str, tuple[float, float]] = TTLCache(maxsize=200_000, ttl=ttl)
             logger.debug("InMemoryRateLimiter: cachetools TTLCache active (ttl=%.0fs)", ttl)
         except ImportError:
             if not InMemoryRateLimiter._WARN_ONCE:
@@ -90,6 +89,12 @@ class DistributedRateLimiter:
         requests_per_minute: int = 60,
         burst: int = 10,
     ) -> None:
+        # Warn when using plaintext Redis against a remote host; use rediss:// for TLS.
+        if redis_url.startswith("redis://") and not redis_url.startswith("redis://localhost"):
+            logger.warning(
+                "DistributedRateLimiter: Redis URL uses plaintext (redis://) with a "
+                "non-localhost host. Use rediss:// to enable TLS for remote Redis connections."
+            )
         self.redis = redis.from_url(redis_url, decode_responses=True)
         self.rate = requests_per_minute / 60.0
         self.burst = float(burst)

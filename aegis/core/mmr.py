@@ -183,9 +183,7 @@ class MerkleMountainRange:
         current_count = self._leaf_count
 
         if old_count < 0 or old_count > current_count:
-            raise ValueError(
-                f"old_count={old_count} out of valid range [0, {current_count}]"
-            )
+            raise ValueError(f"old_count={old_count} out of valid range [0, {current_count}]")
 
         current_root = self.get_root_hash()
 
@@ -209,9 +207,7 @@ class MerkleMountainRange:
 
         # Validate the old_root matches what we reconstruct
         if old_peaks:
-            reconstructed_old_root = hashlib.sha256(
-                "".join(old_peaks).encode()
-            ).hexdigest()
+            reconstructed_old_root = hashlib.sha256("".join(old_peaks).encode()).hexdigest()
             if reconstructed_old_root != old_root:
                 # The provided old_root doesn't match our reconstruction.
                 # The proof is still valid (we return the peaks), but the
@@ -220,7 +216,8 @@ class MerkleMountainRange:
                     "get_consistency_proof: old_root mismatch "
                     "(provided=%s…, reconstructed=%s…); "
                     "peaks may have been computed with different ordering",
-                    old_root[:16], reconstructed_old_root[:16],
+                    old_root[:16],
+                    reconstructed_old_root[:16],
                 )
 
         return current_root, old_peaks
@@ -261,9 +258,8 @@ class MerkleMountainRange:
                     right = replay_peaks.pop()
                     left = replay_peaks.pop()
                     # Find the parent node in our node list
-                    for candidate in self.nodes[idx + 1:]:
-                        if (candidate.left == left.index
-                                and candidate.right == right.index):
+                    for candidate in self.nodes[idx + 1 :]:
+                        if candidate.left == left.index and candidate.right == right.index:
                             replay_peaks.append(candidate)
                             break
 
@@ -308,7 +304,9 @@ try:
             def get_inclusion_proof(self, leaf_index: int):
                 return self._py.get_inclusion_proof(leaf_index)
 
-            def verify_inclusion(self, leaf_data: bytes, leaf_index: int, proof: list[tuple[str, str]], root: str) -> bool:
+            def verify_inclusion(
+                self, leaf_data: bytes, leaf_index: int, proof: list[tuple[str, str]], root: str
+            ) -> bool:
                 return self._py.verify_inclusion(leaf_data, leaf_index, proof, root)
 
             def get_consistency_proof(self, old_root: str, old_count: int):
@@ -320,4 +318,3 @@ try:
 except Exception:
     # Any import/initialisation error should fall back to the pure-Python impl.
     mmr_manager = MerkleMountainRange()
-

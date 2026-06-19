@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aegis-latent-core"
-version = "2.3.0"
+version = "2.4.0"
 description = "Forensic telemetry proxy and Merkle audit chain for LLM inference pipelines"
 readme = "README.md"
 license = { text = "AGPL-3.0-only" }
@@ -43,6 +43,8 @@ dependencies = [
     # Rate-limiter TTL eviction (MEDIUM-01 fix). Soft dependency — graceful
     # fallback to plain dict with a one-time warning when not installed.
     "cachetools>=5.3.0",
+    # Security floor for transitive dep (PYSEC-2026-215 / CVE-2026-45409).
+    "idna>=3.15",
 ]
 
 [project.optional-dependencies]

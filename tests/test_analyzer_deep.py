@@ -9,6 +9,9 @@ KL/JS divergence comparisons between consecutive tokens always operate on
 same-sized distributions and never raise a ValueError.
 """
 
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+
 from __future__ import annotations
 
 import math
@@ -16,16 +19,14 @@ import time
 from unittest.mock import patch
 
 import numpy as np
-import pytest
 
 from aegis.proxy.analyzer import (
-    ResponseAnalyzer,
-    ResponseAnalysis,
-    _logprobs_to_numpy,
     _MIN_TOKENS_FOR_ANALYSIS,
+    ResponseAnalysis,
+    ResponseAnalyzer,
+    _logprobs_to_numpy,
 )
 from aegis.proxy.schemas import ChoiceLogprobs, TokenLogprob, TopLogprob
-
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -56,19 +57,22 @@ def _logprobs_obj(tokens: list[TokenLogprob]) -> ChoiceLogprobs:
 
 
 def _analyze(ra, tokens, request_id="req-1", model="gpt-4o") -> ResponseAnalysis:
-    return ra.analyze(request_id=request_id, model=model,
-                      logprobs_data=_logprobs_obj(tokens))
+    return ra.analyze(request_id=request_id, model=model, logprobs_data=_logprobs_obj(tokens))
 
 
 def _no_leak_patch():
     """Context: DataLeakDetector returns clean."""
     from aegis.core import leak_detector as ld
+
     class _Clean:
-        def is_leaking(self, t): return False, ""
+        def is_leaking(self, t):
+            return False, ""
+
     return patch.object(ld, "DataLeakDetector", _Clean)
 
 
 # ── _logprobs_to_numpy ────────────────────────────────────────────────────────
+
 
 def test_logprobs_to_numpy_empty():
     arr = _logprobs_to_numpy([])
@@ -77,8 +81,10 @@ def test_logprobs_to_numpy_empty():
 
 
 def test_logprobs_to_numpy_objects_normalize():
-    tops = [TopLogprob(token="a", logprob=-1.0),
-            TopLogprob(token="b", logprob=-2.0)]
+    tops = [
+        TopLogprob(token="a", logprob=-1.0),  # noqa: S106
+        TopLogprob(token="b", logprob=-2.0),  # noqa: S106
+    ]
     arr = _logprobs_to_numpy(tops)
     assert abs(arr.sum() - 1.0) < 1e-6
     assert arr[0] > arr[1]  # lower logprob → lower probability
@@ -99,10 +105,13 @@ def test_logprobs_to_numpy_all_equal():
 
 # ── early return ─────────────────────────────────────────────────────────────
 
+
 def test_analyze_none_returns_empty():
     ra = ResponseAnalyzer(session_id="s1")
     r = ra.analyze("req-0", "gpt-4o", None)
-    assert r.tokens == [] and r.alerts == [] and r.mean_entropy == 0.0
+    assert r.tokens == []
+    assert r.alerts == []
+    assert r.mean_entropy == 0.0
 
 
 def test_analyze_below_min_tokens_returns_empty():
@@ -120,9 +129,11 @@ def test_analyze_empty_content():
 
 # ── clean run ────────────────────────────────────────────────────────────────
 
+
 def test_analyze_clean_no_alerts():
-    ra = ResponseAnalyzer(session_id="s-clean", kl_threshold=100.0,
-                          js_threshold=100.0, entropy_alert_drop_bits=100.0)
+    ra = ResponseAnalyzer(
+        session_id="s-clean", kl_threshold=100.0, js_threshold=100.0, entropy_alert_drop_bits=100.0
+    )
     tokens = [_uniform_tok(f"w{i}") for i in range(5)]
     with _no_leak_patch():
         r = _analyze(ra, tokens)
@@ -142,10 +153,12 @@ def test_analyze_stats_consistency():
 
 # ── KL_SPIKE / JS_SPIKE alerts ────────────────────────────────────────────────
 
+
 def test_analyze_kl_spike_low_threshold():
     """Very low kl_threshold → KL spike alert on any distribution shift."""
-    ra = ResponseAnalyzer(session_id="s-kl", kl_threshold=0.001,
-                          js_threshold=0.001, entropy_alert_drop_bits=100.0)
+    ra = ResponseAnalyzer(
+        session_id="s-kl", kl_threshold=0.001, js_threshold=0.001, entropy_alert_drop_bits=100.0
+    )
     uniform = [_uniform_tok(f"w{i}") for i in range(3)]
     peaked = [_peaked_tok("X")]
     with _no_leak_patch():
@@ -156,8 +169,12 @@ def test_analyze_kl_spike_low_threshold():
 
 def test_analyze_no_spike_when_threshold_high():
     """High thresholds suppress all KL/JS alerts for normal traffic."""
-    ra = ResponseAnalyzer(session_id="s-no-kl", kl_threshold=1_000.0,
-                          js_threshold=1_000.0, entropy_alert_drop_bits=1_000.0)
+    ra = ResponseAnalyzer(
+        session_id="s-no-kl",
+        kl_threshold=1_000.0,
+        js_threshold=1_000.0,
+        entropy_alert_drop_bits=1_000.0,
+    )
     tokens = [_uniform_tok(f"w{i}") for i in range(4)] + [_peaked_tok("Z")]
     with _no_leak_patch():
         r = _analyze(ra, tokens)
@@ -166,10 +183,12 @@ def test_analyze_no_spike_when_threshold_high():
 
 # ── ENTROPY_COLLAPSE ──────────────────────────────────────────────────────────
 
+
 def test_analyze_entropy_collapse_detected():
     """Entropy drop > threshold after baseline is set."""
-    ra = ResponseAnalyzer(session_id="s-ec", kl_threshold=1_000.0,
-                          js_threshold=1_000.0, entropy_alert_drop_bits=0.01)
+    ra = ResponseAnalyzer(
+        session_id="s-ec", kl_threshold=1_000.0, js_threshold=1_000.0, entropy_alert_drop_bits=0.01
+    )
     baseline = [_uniform_tok(f"b{i}") for i in range(3)]
     with _no_leak_patch():
         _analyze(ra, baseline, request_id="req-baseline")
@@ -191,10 +210,14 @@ def test_analyze_entropy_collapse_baseline_set_on_first_call():
 
 # ── DATA_LEAK ────────────────────────────────────────────────────────────────
 
+
 def test_analyze_data_leak_generates_critical_alert():
     from aegis.core import leak_detector as ld
+
     class _Leaky:
-        def is_leaking(self, t): return True, "SSN pattern"
+        def is_leaking(self, t):
+            return True, "SSN pattern"
+
     with patch.object(ld, "DataLeakDetector", _Leaky):
         ra = ResponseAnalyzer(session_id="s-leak")
         tokens = [_uniform_tok(f"w{i}") for i in range(5)]
@@ -213,6 +236,7 @@ def test_analyze_no_leak_when_clean():
 
 
 # ── dict-format tokens (JSON deserialization path) ────────────────────────────
+
 
 def test_analyze_dict_token_format():
     """Analyzer handles raw dict tokens from JSON deserialization."""
@@ -264,15 +288,18 @@ def test_analyze_list_of_dict_logprobs():
 
 # ── threshold wiring ──────────────────────────────────────────────────────────
 
+
 def test_custom_thresholds_stored():
-    ra = ResponseAnalyzer(session_id="s-t", kl_threshold=9.9,
-                          js_threshold=0.99, entropy_alert_drop_bits=5.0)
+    ra = ResponseAnalyzer(
+        session_id="s-t", kl_threshold=9.9, js_threshold=0.99, entropy_alert_drop_bits=5.0
+    )
     assert ra.kl_threshold == 9.9
     assert ra.js_threshold == 0.99
     assert ra.entropy_alert_drop_bits == 5.0
 
 
 # ── multi-request accumulation ────────────────────────────────────────────────
+
 
 def test_analyzer_state_accumulates():
     ra = ResponseAnalyzer(session_id="s-multi")
@@ -285,13 +312,63 @@ def test_analyzer_state_accumulates():
 
 # ── ResponseAnalysis fields ───────────────────────────────────────────────────
 
+
 def test_response_analysis_fields():
     ra = ResponseAnalyzer(session_id="s-fields")
     with _no_leak_patch():
-        r = _analyze(ra, [_uniform_tok(f"w{i}") for i in range(5)],
-                     request_id="req-x", model="claude-3")
+        r = _analyze(
+            ra, [_uniform_tok(f"w{i}") for i in range(5)], request_id="req-x", model="claude-3"
+        )
     assert r.session_id == "s-fields"
     assert r.request_id == "req-x"
     assert r.model == "claude-3"
-    assert isinstance(r.timestamp, float) and r.timestamp <= time.time()
+    assert isinstance(r.timestamp, float)
+    assert r.timestamp <= time.time()
     assert isinstance(r.sampling_params, dict)
+
+
+# ── no-logprobs warning (I-07) ────────────────────────────────────────────────
+
+
+def test_no_logprobs_warning_fires_once_per_model(caplog):
+    """_WARNED_NO_LOGPROBS tracks which models triggered the debug message."""
+    import logging
+
+    from aegis.proxy import analyzer as analyzer_mod
+
+    # Ensure a clean slate for this model name.
+    unique_model = "test-model-warn-once"
+    analyzer_mod._WARNED_NO_LOGPROBS.discard(unique_model)
+
+    ra = ResponseAnalyzer(session_id="s-warn")
+
+    class _EmptyLogprobs:
+        content = []  # empty → triggers early return with non-None logprobs_data
+
+    with caplog.at_level(logging.DEBUG, logger="aegis.proxy.analyzer"):
+        # First call: should add model to _WARNED_NO_LOGPROBS
+        ra.analyze("req-w1", unique_model, _EmptyLogprobs())
+        assert unique_model in analyzer_mod._WARNED_NO_LOGPROBS
+
+        # Second call: model already in set — no duplicate log
+        prev_count = sum(1 for r in caplog.records if unique_model in r.message)
+        ra.analyze("req-w2", unique_model, _EmptyLogprobs())
+        new_count = sum(1 for r in caplog.records if unique_model in r.message)
+        assert new_count == prev_count  # no additional log entry
+
+    # Cleanup
+    analyzer_mod._WARNED_NO_LOGPROBS.discard(unique_model)
+
+
+def test_no_logprobs_warning_skipped_when_logprobs_none():
+    """When logprobs_data is None (not empty object), no warning is issued."""
+    from aegis.proxy import analyzer as analyzer_mod
+
+    unique_model = "test-model-none-input"
+    analyzer_mod._WARNED_NO_LOGPROBS.discard(unique_model)
+
+    ra = ResponseAnalyzer(session_id="s-none-lp")
+    ra.analyze("req-none", unique_model, None)
+
+    # logprobs_data=None should NOT add model to the warning set
+    assert unique_model not in analyzer_mod._WARNED_NO_LOGPROBS

@@ -2,9 +2,8 @@
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -15,10 +14,8 @@ from aegis.core.identity import SpiffeIdentityManager
 
 def _build_test_certificate(spiffe_id: str) -> bytes:
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    subject = issuer = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, "aegis-test")]
-    )
-    now = datetime.now(timezone.utc)
+    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "aegis-test")])
+    now = datetime.now(UTC)
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)
@@ -28,9 +25,7 @@ def _build_test_certificate(spiffe_id: str) -> bytes:
         .not_valid_before(now - timedelta(minutes=1))
         .not_valid_after(now + timedelta(hours=1))
         .add_extension(
-            x509.SubjectAlternativeName(
-                [x509.UniformResourceIdentifier(spiffe_id)]
-            ),
+            x509.SubjectAlternativeName([x509.UniformResourceIdentifier(spiffe_id)]),
             critical=False,
         )
         .sign(key, hashes.SHA256())
@@ -58,10 +53,8 @@ def test_extract_spiffe_id_from_san() -> None:
 
 def test_extract_spiffe_id_returns_none_without_san() -> None:
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    subject = issuer = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, "no-san")]
-    )
-    now = datetime.now(timezone.utc)
+    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "no-san")])
+    now = datetime.now(UTC)
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)

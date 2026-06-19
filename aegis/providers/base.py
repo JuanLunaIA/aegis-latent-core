@@ -21,6 +21,7 @@ server-sent-events format:
     data: <json>\n\n
     data: [DONE]\n\n
 """
+
 from __future__ import annotations
 
 import abc

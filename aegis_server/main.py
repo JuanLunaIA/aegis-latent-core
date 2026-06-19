@@ -193,6 +193,7 @@ async def lifespan(app: FastAPI):
     # SHA-256 surrogate.  The MMR is in-memory and rebuilt on restart;
     # future work: persist peaks to storage for cross-restart continuity.
     from aegis.core.mmr import MerkleMountainRange
+
     app.state.mmr = MerkleMountainRange()
     logger.info("MerkleMountainRange initialised (in-memory, MAJOR-02 fix).")
 
@@ -511,7 +512,8 @@ async def _run_forensic_analytics(
         except Exception as exc:
             logger.warning(
                 "request_id=%s: MMR.add_leaf failed (%s); falling back to SHA-256 surrogate",
-                request_id, exc,
+                request_id,
+                exc,
             )
             merkle_root = hashlib.sha256(
                 (request_hash + response_hash + timestamp).encode()

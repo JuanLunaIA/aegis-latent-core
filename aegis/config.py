@@ -263,9 +263,7 @@ class AegisSettings(BaseSettings):
         allowed = {"openai", "anthropic", "gemini", "openrouter"}
         v_lower = v.strip().lower()
         if v_lower not in allowed:
-            raise ValueError(
-                f"AEGIS_PROVIDER must be one of {sorted(allowed)}, got {v!r}"
-            )
+            raise ValueError(f"AEGIS_PROVIDER must be one of {sorted(allowed)}, got {v!r}")
         return v_lower
 
     @field_validator("rate_limit_backend")

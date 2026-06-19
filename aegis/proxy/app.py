@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+import aegis
 from aegis.auth.apikey import AuditKeyAuth, ProxyKeyAuth
 from aegis.config import AegisSettings, get_settings
 from aegis.core.crypto_audit import CryptographicAuditLedger
@@ -117,7 +118,9 @@ class _BoundedAnalyzerCache:
         silently ignoring AegisSettings.kl_alert_threshold and siblings.
     """
 
-    def __init__(self, maxsize: int = _MAX_ANALYZER_SESSIONS, cfg: AegisSettings | None = None) -> None:
+    def __init__(
+        self, maxsize: int = _MAX_ANALYZER_SESSIONS, cfg: AegisSettings | None = None
+    ) -> None:
         self._maxsize = maxsize
         self._cfg = cfg
         self._cache: OrderedDict[str, ResponseAnalyzer] = OrderedDict()
@@ -183,6 +186,9 @@ class _AppState:
     proxy_auth: ProxyKeyAuth
     audit_auth: AuditKeyAuth
     settings: AegisSettings
+    # mTLS authentication handler; None when mTLS is not configured.
+    # Checked by dependencies.py via getattr(state, "mtls_auth", None).
+    mtls_auth: Any
     # FIX-APP-02: entropy guard helpers instantiated once at startup,
     # not on every request (was: per-request allocation in hot path).
     _entropy_taint_engine: Any
@@ -263,6 +269,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
     state = _AppState()
     state.settings = cfg
+    state.mtls_auth = None  # populated in lifespan when mtls_required or ssl_ca_certs is set
     # FIX-APP-01: bounded LRU cache instead of unbounded plain dict.
     # FIX-BLOCKER-02: cfg injected so ResponseAnalyzer reads thresholds from config.
     state.analyzers = _BoundedAnalyzerCache(maxsize=_MAX_ANALYZER_SESSIONS, cfg=cfg)
@@ -273,6 +280,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     _signing_key = cfg.signing_key
     if not _signing_key and not cfg.auth_disabled:
         import logging as _log
+
         _log.getLogger(__name__).warning(
             "AEGIS_SIGNING_KEY is not set. "
             "The audit chain will use an empty signing key — signatures are NOT cryptographically valid. "
@@ -370,6 +378,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         forwarder_cfg = cfg.model_copy(update={"backend_api_key": backend_key})
 
         from aegis.providers import build_provider
+
         provider = build_provider(
             cfg.provider,
             openrouter_site_url=cfg.openrouter_site_url,
@@ -380,6 +389,23 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         state.forwarder = LLMForwarder(forwarder_cfg, provider=provider)
         await state.forwarder.start()
         state.sessions = SessionLifecycleManager(max_sessions=4_096)
+
+        # I-05: wire mTLS identity validation when the operator enables it.
+        # Without this block state.mtls_auth stays None and the mTLS code path
+        # in dependencies.py is silently skipped, making mtls_required a no-op.
+        if cfg.mtls_required or cfg.ssl_ca_certs:
+            try:
+                from aegis.core.identity import SpiffeIdentityManager
+                from aegis.proxy.mtls import mTLSAuth
+
+                state.mtls_auth = mTLSAuth(SpiffeIdentityManager())
+                logger.info("mTLS authentication enabled (SPIFFE via SPIRE agent).")
+            except Exception as exc:
+                logger.warning("mTLS initialization failed: %s", exc)
+                if cfg.mtls_required:
+                    raise RuntimeError(
+                        "mtls_required=True but mTLS could not be initialized"
+                    ) from exc
 
         app.state.aegis = state
         yield
@@ -395,7 +421,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             "Forensic telemetry proxy for LLM inference pipelines. "
             "OpenAI-compatible drop-in with Merkle chain-of-custody."
         ),
-        version="2.3.0",
+        version=aegis.__version__,
         docs_url="/docs" if cfg.debug_mode else None,
         redoc_url="/redoc" if cfg.debug_mode else None,
         openapi_url="/openapi.json" if cfg.debug_mode else None,
@@ -420,7 +446,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         rid: str, sid: str, analysis: ResponseAnalysis, raw_body: bytes
     ) -> None:
         try:
-            state.ledger.commit_state(
+            # Run the synchronous ledger commit (which calls os.fsync) in a
+            # thread pool so the event loop is not stalled during disk I/O.
+            # The ledger's internal threading.Lock makes this thread-safe.
+            await asyncio.to_thread(
+                state.ledger.commit_state,
                 state_id=rid,
                 entropy=analysis.mean_entropy,
                 payload=raw_body[:65536],
@@ -478,7 +508,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     "healthy": cache_healthy,
                 },
                 "provider": provider_name,
-                "version": "2.3.0",
+                "version": aegis.__version__,
             },
         )
 
@@ -490,8 +520,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         httpx client is open.  Returns 503 before that window (edge case in
         slow-start environments).
         """
-        forwarder_ready = getattr(state, "forwarder", None) is not None and \
-                          state.forwarder._client is not None
+        forwarder_ready = (
+            getattr(state, "forwarder", None) is not None and state.forwarder._client is not None
+        )
         status_code = 200 if forwarder_ready else 503
         return JSONResponse(
             status_code=status_code,
@@ -534,9 +565,13 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Proxy not ready: forwarder has not been initialized. "
-                       "Ensure the server lifespan completed before sending requests.",
+                "Ensure the server lifespan completed before sending requests.",
             )
-        if cfg.force_logprobs and state.forwarder.provider.supports_logprobs and not body.get("logprobs", False):
+        if (
+            cfg.force_logprobs
+            and state.forwarder.provider.supports_logprobs
+            and not body.get("logprobs", False)
+        ):
             body["logprobs"] = True
             body["top_logprobs"] = cfg.top_logprobs
 

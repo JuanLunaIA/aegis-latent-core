@@ -11,6 +11,7 @@ import logging
 import socket
 import time
 from dataclasses import dataclass
+from datetime import UTC
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +85,7 @@ class SpiffeIdentityManager:
         if not peer_svid:
             return False
         try:
-            from datetime import datetime, timezone
+            from datetime import datetime
 
             from cryptography import x509
             from cryptography.hazmat.backends import default_backend
@@ -94,7 +95,7 @@ class SpiffeIdentityManager:
             else:
                 cert = x509.load_der_x509_certificate(peer_svid, default_backend())
 
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             if cert.not_valid_before_utc > now or cert.not_valid_after_utc < now:
                 logger.warning("SPIFFE peer certificate is expired or not yet valid")
                 return False

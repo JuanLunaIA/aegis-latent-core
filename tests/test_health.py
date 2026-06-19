@@ -15,6 +15,7 @@ from aegis.proxy.app import create_app
 async def test_health_endpoint():
     with tempfile.TemporaryDirectory() as tmpdir:
         import os
+
         wal_path = os.path.join(tmpdir, "health_test.wal")
         settings = AegisSettings(
             backend_api_key="test-backend-key", wal_path=wal_path, waf_strict_mode=False

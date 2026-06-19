@@ -2,6 +2,9 @@
 """
 Triage unsafe API usage and generate remediation suggestions.
 """
+
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from pathlib import Path
 import re
 ROOT = Path(__file__).resolve().parents[2]

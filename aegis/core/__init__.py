@@ -6,9 +6,11 @@ and attributes are lazily loaded when accessed.
 """
 
 # Lightweight, lazily-importing package initializer.
+import logging
 from importlib import import_module
-from types import ModuleType
 from typing import Any
+
+_logger = logging.getLogger(__name__)
 
 # Primary submodules that compose aegis.core. These are imported on demand.
 _SUBMODULES = [
@@ -44,9 +46,10 @@ def __getattr__(name: str) -> Any:
     for sub in _SUBMODULES:
         try:
             mod = import_module(f"{__name__}.{sub}")
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
             # If a submodule fails to import because of missing heavy deps,
             # skip it; callers will get an AttributeError below if nothing found.
+            _logger.debug("aegis.core: skipping submodule %r: %s", sub, exc)
             continue
         if hasattr(mod, name):
             val = getattr(mod, name)

@@ -106,3 +106,15 @@ docker-compose.override.yml
 # ── Cursor / agent artifacts (local only) ─────────────────────────────────────
 .cursor/
 .agent/
+
+# ── Claude Code project tooling (internal — not for public distribution) ──────
+# These files are useful locally but contain internal instructions and configs
+# that should not be exposed in public repositories.
+# To stop tracking already-committed files: git rm --cached -r .claude/ docs/audit/
+.claude/
+docs/audit/
+
+# ── AI-session artifacts ───────────────────────────────────────────────────────
+# Runtime artifacts produced by Claude Code sessions
+*.claude-session
+.claude-context/

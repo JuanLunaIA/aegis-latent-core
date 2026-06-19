@@ -402,7 +402,6 @@ class TestCryptographicAuditLedger(unittest.TestCase):
         finally:
             os.unlink(path)
 
-
     def test_thread_safety_under_concurrent_writes(self) -> None:
         ledger = self.create_ledger(self.temp_path)
         num_threads = 4

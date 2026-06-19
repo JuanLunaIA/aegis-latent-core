@@ -24,12 +24,13 @@ For models that need a base URL override (Anthropic, Gemini):
 To use a custom or self-hosted OpenAI-compatible endpoint (vLLM, Ollama, etc.):
   set ``AEGIS_PROVIDER=openai`` and ``AEGIS_BACKEND_URL=http://your-host:port``.
 """
+
 from __future__ import annotations
 
 import logging
 
-from aegis.providers.base import ProviderAdapter
 from aegis.providers.anthropic_provider import AnthropicAdapter
+from aegis.providers.base import ProviderAdapter
 from aegis.providers.gemini_provider import GeminiAdapter
 from aegis.providers.openai_provider import OpenAIAdapter, OpenRouterAdapter
 
@@ -91,9 +92,7 @@ def build_provider(
     """
     normalized = name.strip().lower()
     if normalized not in _PROVIDER_REGISTRY:
-        raise ValueError(
-            f"Unknown provider {name!r}. Valid options: {sorted(PROVIDER_NAMES)}"
-        )
+        raise ValueError(f"Unknown provider {name!r}. Valid options: {sorted(PROVIDER_NAMES)}")
 
     if normalized == "openrouter":
         adapter = OpenRouterAdapter(
