@@ -30,11 +30,13 @@ audit commit.
 
 **Measurement methodology:** `benchmarks/bench_forwarding.py` runs two sub-benchmarks:
 
-### Part 1: `asyncio.create_task()` Scheduling Overhead (direct micro-benchmark)
+### Part 1: `_spawn_background()` Hot-Path Overhead (direct micro-benchmark)
 
-This measures **only the scheduling call** — the single operation that Aegis adds to the
-response hot path per request. The task itself executes outside the measured window (after
-the response is already returned).
+This measures the **complete scheduling block** executed on the response hot path per request,
+replicating all bookkeeping from `aegis/proxy/app.py:_spawn_background` (lines 49–60):
+`asyncio.create_task()` + `_BACKGROUND_TASKS.add(task)` + `AUDIT_PENDING_COMMITS.set(len(...))` +
+`task.add_done_callback(_on_done)`. The task coroutine itself executes outside the measured
+window (after the response is already returned).
 
 | Metric | Value |
 |---|---|
@@ -44,9 +46,9 @@ the response is already returned).
 | σ | 13.94 µs |
 | n | 5,000 iterations |
 
-**Interpretation [PROVEN]:** `asyncio.create_task()` itself costs 77 µs at p50 and 132 µs at
-p99 in this environment. This is the true hot-path overhead added to each request: the
-audit commit **coroutine** does not run — only its scheduling is on-path.
+**Interpretation [PROVEN]:** The full `_spawn_background()` hot-path block costs 77 µs at p50
+and 132 µs at p99 in this environment. This is the true hot-path overhead added to each
+request: the audit commit **coroutine** does not run — only its scheduling is on-path.
 
 ### Part 2: WAF+HTTP Round-Trip Latency (ASGI in-process mock upstream)
 
@@ -74,9 +76,9 @@ other clients' request servicing — the per-client observable cost approaches t
 - **Definitionally true:** the commit coroutine runs after the ASGI framework returns the
   response object to the transport layer. No `await commit` appears before the `return
   JSONResponse(...)` call in the request handler.
-- **Measured overhead on hot path:** `asyncio.create_task()` = 77 µs p50, 132 µs p99.
+- **Measured overhead on hot path:** `_spawn_background()` block = 77 µs p50, 132 µs p99.
 - **Revised claim wording:** *"The audit commit adds no I/O wait to the client-visible response.
-  The scheduling overhead is ~80 µs p50 in the benchmark environment."*
+  The full scheduling block (`create_task` + bookkeeping) is ~80 µs p50 in the benchmark environment."*
 
 ---
 

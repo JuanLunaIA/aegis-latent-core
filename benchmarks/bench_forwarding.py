@@ -85,23 +85,44 @@ async def _noop_commit() -> None:
 # ── Part 1: Direct scheduling overhead micro-benchmark ───────────────────────
 
 
-async def _bench_create_task_overhead(n: int = 5_000) -> list[float]:
+async def _bench_spawn_background_overhead(n: int = 5_000) -> list[float]:
     """
-    Measure asyncio.create_task() scheduling overhead in isolation.
-    Each iteration: t0 → create_task() → t1. Task is then awaited (not counted).
-    Returns n latency samples in seconds.
+    Measure the full _spawn_background() hot-path overhead per request.
 
-    Design note: awaiting immediately after each create_task() isolates the pure
-    scheduling cost with no background-task contention. Part 2 (WAF+HTTP with
-    drain_interval) captures the sequential-contention scenario.
+    Replicates all bookkeeping from aegis/proxy/app.py:_spawn_background (lines 49-60):
+      asyncio.create_task()
+      _BACKGROUND_TASKS.add(task)
+      AUDIT_PENDING_COMMITS.set(len(_BACKGROUND_TASKS))   ← gauge update
+      task.add_done_callback(_on_done)
+
+    This is the actual per-request overhead on the proxy response path — not just
+    raw create_task(). The done-callback removes the task from the set and updates
+    the gauge; both operations execute AFTER the response is returned, so they are
+    NOT measured here (they run on a future event-loop iteration).
+
+    Returns n latency samples in seconds. Task is awaited after each timing window
+    (not counted) to prevent accumulation.
     """
+    _pending: set[asyncio.Task[None]] = set()
+
+    def _gauge_set(_val: int) -> None:
+        pass  # noop: replicates observability.AUDIT_PENDING_COMMITS.set()
+
     samples: list[float] = []
     for _ in range(n):
         t0 = time.perf_counter()
-        task = asyncio.create_task(_noop_commit())
+        task: asyncio.Task[None] = asyncio.create_task(_noop_commit())
+        _pending.add(task)
+        _gauge_set(len(_pending))
+
+        def _on_done(t: asyncio.Task[None], _p: set = _pending) -> None:  # type: ignore[assignment]
+            _p.discard(t)
+            _gauge_set(len(_p))
+
+        task.add_done_callback(_on_done)
         t1 = time.perf_counter()
         samples.append(t1 - t0)
-        await task  # drain before next iteration (not counted in elapsed)
+        await task  # drain; not counted in elapsed
     return samples
 
 
@@ -112,12 +133,20 @@ def _build_app(spawn_background: bool) -> FastAPI:
     """
     Minimal proxy-equivalent FastAPI app for WAF+HTTP benchmarking.
     Both conditions run identical code paths (WAF, JSON parse/serialise).
-    The only variable is asyncio.create_task() presence.
+    The only variable is the _spawn_background() equivalent block.
+
+    WITH_BG replicates ALL bookkeeping from aegis/proxy/app.py:_spawn_background:
+      create_task + set.add + gauge.set + add_done_callback
+    so that the measured latency matches the real proxy hot path.
     """
     from aegis.proxy.waf import AegisWAF
 
     app = FastAPI()
     waf = AegisWAF(strict_mode=True)
+    _pending: set[asyncio.Task[None]] = set()
+
+    def _gauge_set(_v: int) -> None:
+        pass
 
     @app.post("/v1/chat/completions")
     async def chat_completions(request: Request) -> JSONResponse:
@@ -129,7 +158,15 @@ def _build_app(spawn_background: bool) -> FastAPI:
                 content={"error": {"message": result.reason, "type": "waf_block"}},
             )
         if spawn_background:
-            asyncio.create_task(_noop_commit())
+            task: asyncio.Task[None] = asyncio.create_task(_noop_commit())
+            _pending.add(task)
+            _gauge_set(len(_pending))
+
+            def _on_done(t: asyncio.Task[None]) -> None:
+                _pending.discard(t)
+                _gauge_set(len(_pending))
+
+            task.add_done_callback(_on_done)
         return JSONResponse(content=_MOCK_BODY)
 
     return app
@@ -231,31 +268,31 @@ async def run_benchmark(n_warmup: int = 200, n_measure: int = 2_000) -> dict[str
     print("FORWARDING LATENCY BENCHMARK — zero forensic latency validation")
     print(sep)
 
-    # ── Part 1: direct create_task overhead ──────────────────────────────────
+    # ── Part 1: _spawn_background hot-path overhead ──────────────────────────
     print()
-    print("PART 1: asyncio.create_task() scheduling overhead (direct micro-benchmark)")
-    print("  Measures only the scheduling call — task executes outside measured window")
+    print("PART 1: _spawn_background() hot-path overhead (direct micro-benchmark)")
+    print("  Measures full scheduling block: create_task + set.add + gauge.set + add_done_callback")
     print()
     n_task = 5_000
-    task_samples = await _bench_create_task_overhead(n_task)
+    task_samples = await _bench_spawn_background_overhead(n_task)
     task_p50_us = _pct(task_samples, 50) * 1_000_000
     task_p99_us = _pct(task_samples, 99) * 1_000_000
     task_mean_us = statistics.mean(task_samples) * 1_000_000
     task_std_us = statistics.stdev(task_samples) * 1_000_000
     print(
-        f"  asyncio.create_task()  "
+        f"  _spawn_background()  "
         f"p50={task_p50_us:.2f}µs  p99={task_p99_us:.2f}µs  "
         f"mean={task_mean_us:.2f}µs  σ={task_std_us:.2f}µs  n={n_task}"
     )
     print()
     if task_p99_us < 100:
         print(
-            f"  [PROVEN] asyncio.create_task() p99 < 100 µs ({task_p99_us:.2f} µs). "
+            f"  [PROVEN] _spawn_background() p99 < 100 µs ({task_p99_us:.2f} µs). "
             "Scheduling overhead is negligible on the response hot path."
         )
     else:
         print(
-            f"  [INFERENCE] asyncio.create_task() p99 = {task_p99_us:.2f} µs. "
+            f"  [INFERENCE] _spawn_background() p99 = {task_p99_us:.2f} µs. "
             "Higher than expected — investigate event loop contention."
         )
 
@@ -321,7 +358,7 @@ async def run_benchmark(n_warmup: int = 200, n_measure: int = 2_000) -> dict[str
     print(f"  Verdict: {http_verdict}")
 
     return {
-        "create_task_overhead": {
+        "spawn_background_overhead": {
             "p50_us": task_p50_us,
             "p99_us": task_p99_us,
             "mean_us": task_mean_us,

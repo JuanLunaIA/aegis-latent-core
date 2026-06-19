@@ -63,12 +63,13 @@ def _bench_python(n_leaves: int, k: int) -> dict[str, float]:
     Benchmark Python MerkleMountainRange.add_leaf for n_leaves leaves, k trials.
     Returns min/mean/max throughput (leaves/second) and min latency per leaf (µs).
     """
+    leaves = [_leaf(i) for i in range(n_leaves)]  # precompute — not MMR work
     throughputs: list[float] = []
     for _ in range(k):
         mmr = MerkleMountainRange()
         t0 = time.perf_counter()
-        for i in range(n_leaves):
-            mmr.add_leaf(_leaf(i))
+        for leaf in leaves:
+            mmr.add_leaf(leaf)
         _ = mmr.get_root_hash()
         elapsed = time.perf_counter() - t0
         throughputs.append(n_leaves / elapsed)
@@ -89,12 +90,13 @@ def _bench_rust(n_leaves: int, k: int) -> dict[str, float] | None:
     if not _HAS_RUST:
         return None
 
+    leaves = [_leaf(i) for i in range(n_leaves)]  # precompute — not MMR work
     throughputs: list[float] = []
     for _ in range(k):
         acc = aegis_rust.MmrAccumulator()
         t0 = time.perf_counter()
-        for i in range(n_leaves):
-            acc.add_leaf(_leaf(i))
+        for leaf in leaves:
+            acc.add_leaf(leaf)
         _ = acc.get_root_hash()
         elapsed = time.perf_counter() - t0
         throughputs.append(n_leaves / elapsed)
