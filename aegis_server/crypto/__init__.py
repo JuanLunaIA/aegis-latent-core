@@ -13,13 +13,13 @@ Public API::
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from aegis_server.crypto.base import LocalHMACSigner, SignerProvider
-from aegis_server.crypto.vault_signer import VaultSigner
 
 if TYPE_CHECKING:
     from aegis_server.config import EnterpriseSettings
+    from aegis_server.crypto.vault_signer import VaultSigner
 
 __all__ = [
     "SignerProvider",
@@ -27,6 +27,25 @@ __all__ = [
     "VaultSigner",
     "get_signer",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    """
+    Lazy attribute access for optional, heavy-dependency signers.
+
+    ``VaultSigner`` pulls in ``hvac`` (HashiCorp Vault client), which is an
+    optional extra (``aegis-latent-core[vault]``). Importing it eagerly at
+    package level would make the entire ``aegis_server.crypto`` package — and
+    therefore the HMAC-only compliance path — fail to import when ``hvac`` is
+    not installed. Resolving it on first access keeps the LocalHMACSigner path
+    dependency-free. X→Y because Z: a module-level ``import`` runs at package
+    init; ``__getattr__`` defers the import until the symbol is actually used.
+    """
+    if name == "VaultSigner":
+        from aegis_server.crypto.vault_signer import VaultSigner
+
+        return VaultSigner
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def get_signer(settings: EnterpriseSettings) -> SignerProvider:
@@ -50,6 +69,8 @@ def get_signer(settings: EnterpriseSettings) -> SignerProvider:
     backend = settings.signer_provider.lower()
 
     if backend == "vault":
+        from aegis_server.crypto.vault_signer import VaultSigner
+
         return VaultSigner(
             vault_url=settings.vault_url,
             transit_key=settings.vault_transit_key,

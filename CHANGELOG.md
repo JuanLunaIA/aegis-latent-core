@@ -11,6 +11,56 @@ Quick upgrade notes — v2.3.0:
 - If you were relying on the LSM guard crashing on startup to block non-hardened deployments, set `AEGIS_STRICT_MODE=true` and enforce LSM externally (`aa-status`, `getenforce`) before starting.
 - New `/health` response schema: `{"status", "ledger": {...}, "analyzer_cache": {...}, "provider", "version"}`. Update any health-check assertions.
 
+## [2.4.0] — 2026-06-19
+
+Honesty & verifiability pass: every public claim now maps to code, an audit
+document, or a measured benchmark. No breaking changes from v2.3.0.
+
+### Added
+
+- **Reproducible end-to-end demo** — `examples/demo.py` (+ `examples/README.md`)
+  boots the proxy in-process against a mock OpenAI-compatible upstream, sends
+  requests, shows the audit chain growing node-by-node, verifies integrity,
+  demonstrates tamper-detection, and exports a sealed SOC2/HIPAA compliance
+  bundle that re-verifies independently. No provider key or network required;
+  exits non-zero on any failed assertion (`python -m examples.demo`).
+- **Claims verification matrix** — `docs/audit/CLAIMS_VERIFICATION.md` maps each
+  README claim to its evidence with epistemic tags ([PROVEN]/[MEASURED]/
+  [PARTIAL]/[SPECULATIVE]).
+- **Measure-first benchmark harness** — `benchmarks/bench_forwarding.py`,
+  `benchmarks/bench_mmr.py`, and `docs/BENCHMARKS.md` with hardware spec,
+  reproduce commands, and measured values (no invented numbers).
+- **Risk-prioritized test coverage** — branch coverage for
+  `aegis/core/crypto_audit.py` and `aegis/core/mmr.py`, Hypothesis property tests
+  for MMR invariants (append-only, proof soundness, determinism), and provider
+  contract tests.
+
+### Changed
+
+- **README rewritten for accuracy** — structure: problem → how → quickstart →
+  architecture → claims-with-evidence → compliance. Removed unverified
+  "significant performance gains" wording for the Rust extension (speedup is
+  `UNKNOWN` until `maturin develop --release` is run); the "zero forensic latency"
+  claim now cites the measured hot-path scheduling overhead (77 µs p50 /
+  132 µs p99). Gemini logprob column corrected to char-level fallback.
+- **`DEPLOYMENT_GUIDE.md` rewritten** as a real production guide driven by the
+  STRIDE threat model: secure config, topologies, an explicit "what NOT to do"
+  anti-pattern table, persistence/custody, and a go-live checklist.
+- **Forensics visualizer** (`tools/visualizer/static/index.html`) — explicit
+  loading/error/empty/success states with skeletons (no layout shift), full
+  keyboard accessibility (ARIA tabs, accessible collapsibles, `aria-live`
+  regions), and `prefers-reduced-motion` support.
+- `pyproject.toml` version bumped `2.3.0` → `2.4.0`.
+
+### Fixed
+
+- **`aegis_server.crypto` import no longer requires `hvac`** — `VaultSigner` is
+  now lazy-imported via module `__getattr__`, so the HMAC-only compliance export
+  path (`LocalHMACSigner` + `ComplianceExporter`) works on a base
+  `[storage-sqlite]` install without the optional `vault` extra. Previously the
+  eager `import hvac` at package level broke the entire compliance path when the
+  extra was absent.
+
 ## [2.3.0] — 2026-06-04
 
 ### Fixed

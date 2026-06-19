@@ -3,12 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aegis Latent Core v2.3.0 - Visualizer &amp; Forensics</title>
-  <!-- Google Fonts -->
+  <title>Aegis Latent Core — Visualizer &amp; Forensics</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Mermaid.js -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   <style>
     :root {
@@ -24,13 +22,10 @@
       --accent-amber: #f59e0b;
       --accent-purple: #8b5cf6;
       --shadow-color: rgba(0, 0, 0, 0.4);
+      --focus-ring: #93c5fd;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background-color: var(--bg-color);
@@ -43,29 +38,32 @@
       background-attachment: fixed;
     }
 
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--card-border);
-      backdrop-filter: blur(8px);
+    /* Visible keyboard focus everywhere (a11y). */
+    :focus-visible {
+      outline: 2px solid var(--focus-ring);
+      outline-offset: 2px;
+      border-radius: 6px;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    /* Screen-reader-only utility. */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
     }
+
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 24px; padding-bottom: 16px;
+      border-bottom: 1px solid var(--card-border); backdrop-filter: blur(8px);
+      gap: 16px; flex-wrap: wrap;
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
 
     .logo-glow {
-      width: 14px;
-      height: 14px;
-      background-color: var(--accent-cyan);
-      border-radius: 50%;
-      box-shadow: 0 0 10px var(--accent-cyan);
-      animation: pulse-glow 2s infinite ease-in-out;
+      width: 14px; height: 14px; background-color: var(--accent-cyan);
+      border-radius: 50%; box-shadow: 0 0 10px var(--accent-cyan);
+      animation: pulse-glow 2s infinite ease-in-out; flex: none;
     }
 
     @keyframes pulse-glow {
@@ -74,361 +72,136 @@
     }
 
     h1 {
-      font-size: 1.8rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
+      font-size: 1.8rem; font-weight: 700; letter-spacing: -0.5px;
       background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
 
-    .subtitle {
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-
-    .actions-bar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .subtitle { font-size: 0.9rem; color: var(--text-muted); margin-top: 4px; }
+    .actions-bar { display: flex; align-items: center; gap: 12px; }
 
     button {
       background: linear-gradient(135deg, var(--accent-blue) 0%, #1d4ed8 100%);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 0.9rem;
-      font-weight: 500;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s ease;
+      color: white; border: none; padding: 10px 20px; border-radius: 8px;
+      font-family: inherit; font-size: 0.9rem; font-weight: 500; cursor: pointer;
+      display: flex; align-items: center; gap: 8px; transition: all 0.2s ease;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
-
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
-    }
-
-    button:active {
-      transform: translateY(1px);
-    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4); }
+    button:active { transform: translateY(1px); }
+    button[disabled] { opacity: 0.6; cursor: progress; transform: none; }
 
     .status-badge {
-      padding: 6px 12px;
-      border-radius: 9999px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      background-color: rgba(16, 185, 129, 0.1);
-      color: var(--accent-green);
+      padding: 6px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600;
+      background-color: rgba(16, 185, 129, 0.1); color: var(--accent-green);
       border: 1px solid rgba(16, 185, 129, 0.2);
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      display: flex; align-items: center; gap: 6px;
     }
-
+    .status-badge[data-state="error"] {
+      background-color: rgba(239, 68, 68, 0.1); color: var(--accent-red);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+    .status-badge[data-state="loading"] {
+      background-color: rgba(245, 158, 11, 0.1); color: var(--accent-amber);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
     .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background-color: var(--accent-green);
-      box-shadow: 0 0 8px var(--accent-green);
+      width: 8px; height: 8px; border-radius: 50%;
+      background-color: currentColor; box-shadow: 0 0 8px currentColor;
     }
 
-    /* Grid Layout */
     .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px; margin-bottom: 24px;
     }
 
     .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 18px;
-      box-shadow: 0 10px 15px -3px var(--shadow-color);
-      backdrop-filter: blur(12px);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      overflow: hidden;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 12px; padding: 18px; box-shadow: 0 10px 15px -3px var(--shadow-color);
+      backdrop-filter: blur(12px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative; overflow: hidden;
     }
+    .card:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.15); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
 
-    .card:hover {
-      transform: translateY(-2px);
-      border-color: rgba(255, 255, 255, 0.15);
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-    }
+    .card-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 500; }
+    /* Reserved heights prevent layout shift between skeleton → value. */
+    .card-value { font-size: 1.6rem; font-weight: 700; margin-top: 8px; font-family: 'JetBrains Mono', monospace; min-height: 2rem; }
+    .card-meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 6px; min-height: 1.2rem; display: flex; align-items: center; gap: 4px; }
+    .card-accent { position: absolute; top: 0; left: 0; width: 4px; height: 100%; background-color: var(--accent-blue); }
 
-    .card-label {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
+    .dashboard-layout { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+    @media (max-width: 1024px) { .dashboard-layout { grid-template-columns: 1fr; } }
 
-    .card-value {
-      font-size: 1.6rem;
-      font-weight: 700;
-      margin-top: 8px;
-      font-family: 'JetBrains Mono', monospace;
-    }
+    .panel { display: flex; flex-direction: column; gap: 20px; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 12px; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
+    .panel-title { font-size: 1.1rem; font-weight: 600; color: white; }
 
-    .card-meta {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin-top: 6px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
+    .tabs-nav { display: flex; gap: 8px; background: rgba(0, 0, 0, 0.2); padding: 3px; border-radius: 8px; }
+    .tab-btn { background: transparent; box-shadow: none; color: var(--text-muted); padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 500; }
+    .tab-btn:hover { transform: none; box-shadow: none; color: white; }
+    .tab-btn[aria-selected="true"] { background: rgba(255, 255, 255, 0.08); color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
-    .card-accent {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 4px;
-      height: 100%;
-      background-color: var(--accent-blue);
-    }
+    .diagram-container { background: rgba(0, 0, 0, 0.15); border-radius: 8px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.03); display: flex; justify-content: center; overflow-x: auto; min-height: 240px; }
+    .mermaid { background: transparent !important; width: 100%; }
 
-    /* Columns Layout */
-    .dashboard-layout {
-      display: grid;
-      grid-template-columns: 1.2fr 1fr;
-      gap: 20px;
-    }
+    pre { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; background: rgba(0, 0, 0, 0.3); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.03); color: #e5e7eb; overflow-x: auto; max-height: 250px; }
 
-    @media (max-width: 1024px) {
-      .dashboard-layout {
-        grid-template-columns: 1fr;
-      }
-    }
+    .forensic-list { display: flex; flex-direction: column; gap: 10px; }
+    .forensic-category { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; overflow: hidden; transition: all 0.2s ease; }
+    .forensic-category:hover { border-color: rgba(255, 255, 255, 0.08); }
+    .forensic-header { padding: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; width: 100%; background: transparent; box-shadow: none; color: var(--text-main); border-radius: 0; }
+    .forensic-header:hover { background: rgba(255, 255, 255, 0.03); transform: none; box-shadow: none; }
+    .forensic-title { font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .category-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 9999px; font-weight: 700; }
+    .badge-alert { background-color: rgba(239, 68, 68, 0.1); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.2); }
+    .badge-warn { background-color: rgba(245, 158, 11, 0.1); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.2); }
+    .badge-info { background-color: rgba(59, 130, 246, 0.1); color: var(--accent-blue); border: 1px solid rgba(59, 130, 246, 0.2); }
+    .forensic-body { padding: 0 12px 12px 12px; border-top: 1px solid rgba(255, 255, 255, 0.03); background: rgba(0, 0, 0, 0.2); }
+    .forensic-body[hidden] { display: none; }
+    .file-item { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; padding: 6px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.02); color: var(--text-muted); word-break: break-all; }
+    .file-item:last-child { border-bottom: none; }
+    .chevron { font-size: 0.8rem; color: var(--text-muted); transition: transform 0.2s ease; }
+    [aria-expanded="true"] .chevron { transform: rotate(90deg); }
 
-    .panel {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
+    /* ── Four explicit data states for any region ──────────────────────────── */
+    .state { display: none; }
+    [data-state="loading"] .state-loading,
+    [data-state="error"] .state-error,
+    [data-state="empty"] .state-empty,
+    [data-state="success"] .state-success { display: block; }
 
-    .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      padding-bottom: 12px;
-      margin-bottom: 12px;
-    }
-
-    .panel-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: white;
-    }
-
-    /* Tabs Control */
-    .tabs-nav {
-      display: flex;
-      gap: 8px;
-      background: rgba(0, 0, 0, 0.2);
-      padding: 3px;
-      border-radius: 8px;
-    }
-
-    .tab-btn {
-      background: transparent;
-      box-shadow: none;
-      color: var(--text-muted);
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      font-weight: 500;
-    }
-
-    .tab-btn:hover {
-      transform: none;
-      box-shadow: none;
-      color: white;
-    }
-
-    .tab-btn.active {
-      background: rgba(255, 255, 255, 0.08);
-      color: white;
-    }
-
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    /* Mermaid diagrams container */
-    .diagram-container {
-      background: rgba(0, 0, 0, 0.15);
-      border-radius: 8px;
-      padding: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.03);
-      display: flex;
-      justify-content: center;
-      overflow-x: auto;
-    }
-
-    .mermaid {
-      background: transparent !important;
-      width: 100%;
-    }
-
-    /* Codeblock styling */
-    pre {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      background: rgba(0, 0, 0, 0.3);
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.03);
-      color: #e5e7eb;
-      overflow-x: auto;
-      max-height: 250px;
-    }
-
-    /* Forensics Security Scan panel */
-    .forensic-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .forensic-category {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      border-radius: 8px;
-      overflow: hidden;
-      transition: all 0.2s ease;
-    }
-
-    .forensic-category:hover {
-      border-color: rgba(255, 255, 255, 0.08);
-    }
-
-    .forensic-header {
-      padding: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .forensic-header:hover {
-      background: rgba(255, 255, 255, 0.03);
-    }
-
-    .forensic-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .category-badge {
-      font-size: 0.75rem;
-      padding: 2px 8px;
-      border-radius: 9999px;
-      font-weight: 700;
-    }
-
-    .badge-alert {
-      background-color: rgba(239, 68, 68, 0.1);
-      color: var(--accent-red);
-      border: 1px solid rgba(239, 68, 68, 0.2);
-    }
-
-    .badge-warn {
-      background-color: rgba(245, 158, 11, 0.1);
-      color: var(--accent-amber);
-      border: 1px solid rgba(245, 158, 11, 0.2);
-    }
-
-    .badge-info {
-      background-color: rgba(59, 130, 246, 0.1);
-      color: var(--accent-blue);
-      border: 1px solid rgba(59, 130, 246, 0.2);
-    }
-
-    .forensic-body {
-      padding: 0 12px 12px 12px;
-      border-top: 1px solid rgba(255, 255, 255, 0.03);
-      background: rgba(0, 0, 0, 0.2);
-      display: none;
-    }
-
-    .forensic-body.expanded {
-      display: block;
-    }
-
-    .file-item {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      padding: 6px 8px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.02);
-      color: var(--text-muted);
-      word-break: break-all;
-    }
-
-    .file-item:last-child {
-      border-bottom: none;
-    }
-
-    /* Skeleton Loading State */
     .skeleton {
       animation: pulse-skeleton 1.5s infinite ease-in-out;
-      background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.05) 75%);
-      background-size: 200% 100%;
-      border-radius: 4px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.10) 50%, rgba(255, 255, 255, 0.05) 75%);
+      background-size: 200% 100%; border-radius: 4px;
     }
+    .skeleton-line { height: 1.4rem; margin-bottom: 8px; }
+    .skeleton-line.short { width: 50%; }
+    .skeleton-line.tiny { width: 35%; height: 0.9rem; }
+    @keyframes pulse-skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-    @keyframes pulse-skeleton {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
+    .empty-note { text-align: center; color: var(--accent-green); padding: 40px 12px; font-size: 0.9rem; }
+    .error-note { color: var(--accent-red); padding: 16px; font-size: 0.9rem; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; }
 
-    /* Error banner styling */
     .error-banner {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.2);
-      color: var(--accent-red);
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
-      display: none;
+      background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2);
+      color: var(--accent-red); padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem;
     }
+    .error-banner[hidden] { display: none; }
 
-    /* Spinner */
     .spinner {
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      border-radius: 50%;
-      border-top: 2px solid white;
-      width: 14px;
-      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 50%;
+      border-top: 2px solid white; width: 14px; height: 14px;
       animation: spin 1s linear infinite;
-      display: none;
     }
+    .spinner[hidden] { display: none; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    /* Respect reduced-motion preference (a11y). */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
     }
   </style>
 </head>
@@ -437,69 +210,85 @@
   <header>
     <div>
       <div class="brand">
-        <div class="logo-glow"></div>
+        <div class="logo-glow" aria-hidden="true"></div>
         <h1>AEGIS LATENT CORE</h1>
       </div>
-      <p class="subtitle">Inference Governance &amp; Forensic Telemetry Dashboard &mdash; v2.3.0</p>
+      <p class="subtitle">Inference Governance &amp; Forensic Telemetry Dashboard</p>
     </div>
     <div class="actions-bar">
-      <div class="status-badge">
-        <div class="status-dot"></div>
-        <span id="sys-status">HEALTHY</span>
+      <div class="status-badge" id="status-badge" data-state="loading" role="status" aria-live="polite">
+        <div class="status-dot" aria-hidden="true"></div>
+        <span id="sys-status">Loading…</span>
       </div>
-      <button id="refresh-btn">
-        <div class="spinner" id="refresh-spinner"></div>
+      <button id="refresh-btn" type="button" aria-label="Refresh dashboard data">
+        <div class="spinner" id="refresh-spinner" hidden aria-hidden="true"></div>
         <span>Refresh Dashboard</span>
       </button>
     </div>
   </header>
 
-  <div class="error-banner" id="error-box"></div>
+  <div class="error-banner" id="error-box" role="alert" aria-live="assertive" hidden></div>
 
   <!-- Metrics Grid -->
-  <div class="metrics-grid">
+  <main>
+  <section class="metrics-grid" id="metrics" data-state="loading" aria-label="Repository metrics" aria-busy="true">
     <div class="card">
       <div class="card-accent" style="background-color: var(--accent-blue)"></div>
       <div class="card-label">Git HEAD</div>
-      <div class="card-value" id="val-git-head">-</div>
+      <div class="card-value">
+        <span class="state state-loading skeleton skeleton-line short" aria-hidden="true">&nbsp;</span>
+        <span class="state state-success" id="val-git-head"></span>
+        <span class="state state-error" style="font-size:1rem;color:var(--accent-red)">unavailable</span>
+      </div>
       <div class="card-meta">Current commit snapshot</div>
     </div>
     <div class="card">
       <div class="card-accent" style="background-color: var(--accent-cyan)"></div>
       <div class="card-label">Repository Core</div>
-      <div class="card-value" id="val-files-count">-</div>
+      <div class="card-value">
+        <span class="state state-loading skeleton skeleton-line short" aria-hidden="true">&nbsp;</span>
+        <span class="state state-success" id="val-files-count"></span>
+        <span class="state state-error" style="font-size:1rem;color:var(--accent-red)">unavailable</span>
+      </div>
       <div class="card-meta" id="val-files-meta">Python / Rust files</div>
     </div>
     <div class="card">
       <div class="card-accent" style="background-color: var(--accent-green)" id="pytest-accent"></div>
       <div class="card-label">Pytest Telemetry</div>
-      <div class="card-value" id="val-pytest-status">-</div>
+      <div class="card-value">
+        <span class="state state-loading skeleton skeleton-line short" aria-hidden="true">&nbsp;</span>
+        <span class="state state-success" id="val-pytest-status"></span>
+        <span class="state state-error" style="font-size:1rem;color:var(--accent-red)">unavailable</span>
+      </div>
       <div class="card-meta" id="val-pytest-meta">Targeted test runs</div>
     </div>
     <div class="card">
       <div class="card-accent" style="background-color: var(--accent-amber)" id="rust-accent"></div>
       <div class="card-label">Rust Extension</div>
-      <div class="card-value" id="val-rust-status">-</div>
+      <div class="card-value">
+        <span class="state state-loading skeleton skeleton-line short" aria-hidden="true">&nbsp;</span>
+        <span class="state state-success" id="val-rust-status"></span>
+        <span class="state state-error" style="font-size:1rem;color:var(--accent-red)">unavailable</span>
+      </div>
       <div class="card-meta" id="val-rust-meta">Maturin compilation</div>
     </div>
-  </div>
+  </section>
 
-  <!-- Main Layout -->
   <div class="dashboard-layout">
-    
+
     <!-- Left Column: Diagrams & Nodes -->
     <div class="panel">
       <div class="card" style="flex: 1">
         <div class="panel-header">
-          <div class="panel-title">System Visualization</div>
-          <div class="tabs-nav">
-            <button class="tab-btn active" onclick="switchTab('tab-architecture', this)">Architecture</button>
-            <button class="tab-btn" onclick="switchTab('tab-lifecycle', this)">Lifecycle</button>
+          <div class="panel-title" id="sysviz-title">System Visualization</div>
+          <div class="tabs-nav" role="tablist" aria-labelledby="sysviz-title">
+            <button class="tab-btn" id="tab-arch-btn" role="tab" aria-selected="true" aria-controls="tab-architecture" type="button">Architecture</button>
+            <button class="tab-btn" id="tab-life-btn" role="tab" aria-selected="false" aria-controls="tab-lifecycle" tabindex="-1" type="button">Lifecycle</button>
           </div>
         </div>
 
-        <div id="tab-architecture" class="tab-content active">
-          <div class="diagram-container">
+        <div id="tab-architecture" class="tab-content active" role="tabpanel" aria-labelledby="tab-arch-btn">
+          <div class="diagram-container" role="img" aria-label="Architecture diagram: client to Aegis proxy to LLM providers, with forensics branching to MMR and audit ledger">
             <div class="mermaid" id="mer-arch">
               flowchart TB
                 Client["Client / App"] --> Proxy["AEGIS Proxy"]
@@ -507,7 +296,6 @@
                 Proxy --> Forensics["Merkle / Audit / Entropy"]
                 Forensics --> MMR["MMR (Rust Acceleration)"]
                 Forensics --> Ledger["Audit Ledger (Python Fallback)"]
-                
                 style Client fill:#1e293b,stroke:#475569,stroke-width:1px,color:#f8fafc
                 style Proxy fill:#1e1b4b,stroke:#4338ca,stroke-width:2px,color:#e0e7ff
                 style Upstream fill:#1c1917,stroke:#44403c,stroke-width:1px,color:#f5f5f4
@@ -518,8 +306,8 @@
           </div>
         </div>
 
-        <div id="tab-lifecycle" class="tab-content">
-          <div class="diagram-container">
+        <div id="tab-lifecycle" class="tab-content" role="tabpanel" aria-labelledby="tab-life-btn" hidden>
+          <div class="diagram-container" role="img" aria-label="Request lifecycle sequence: client to proxy to provider, response returned before background forensics commit">
             <div class="mermaid" id="mer-life">
               sequenceDiagram
                 autonumber
@@ -527,7 +315,6 @@
                 participant Proxy as Aegis Proxy
                 participant Provider as Upstream Provider
                 participant Forensics as Telemetry Forensics
-                
                 Client->>Proxy: Chat Completion request (OpenAI Format)
                 Note over Proxy: Check WAF rules & Rate Limits
                 Proxy->>Provider: Translate payload & forward
@@ -549,17 +336,14 @@
           Every inference request constructs a cryptographically linked, signed node in the ledger.
         </p>
         <pre><code class="language-json">{
-  "node_id": "sha256(merkle_root || signature)",
+  "node_hash": "sha256(prev_hash || ... || signature)",
   "prev_hash": "sha256(previous_node_fields)",
   "merkle_root": "mmr.get_root_hash()",
-  "signature": "hmac_sha256(AEGIS_SIGNING_KEY, merkle_root)",
+  "signature": "hmac_sha256(AEGIS_SIGNING_KEY, prev|root|req|resp)",
   "timestamp": 1700000000.123,
   "entropy": 3.142,
   "model": "gpt-4o",
-  "usage": {
-    "prompt_tokens": 120,
-    "completion_tokens": 45
-  }
+  "usage": { "prompt_tokens": 120, "completion_tokens": 45 }
 }</code></pre>
       </div>
     </div>
@@ -575,173 +359,175 @@
           Results from the local repo static security scanner. Matches highlight credentials, excessive privileges, or potential vulnerabilities.
         </p>
 
-        <div class="forensic-list" id="forensics-container">
-          <!-- Dynamically populated -->
-          <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
-            Loading forensics data...
+        <div id="forensics-region" data-state="loading" aria-live="polite" aria-busy="true">
+          <!-- Loading -->
+          <div class="state state-loading" aria-hidden="true">
+            <div class="skeleton skeleton-line"></div>
+            <div class="skeleton skeleton-line short"></div>
+            <div class="skeleton skeleton-line"></div>
+            <div class="skeleton skeleton-line tiny"></div>
+          </div>
+          <!-- Error -->
+          <div class="state state-error">
+            <div class="error-note" id="forensics-error">Could not load the forensic report.</div>
+          </div>
+          <!-- Empty -->
+          <div class="state state-empty">
+            <div class="empty-note">✓ No static security matches found.</div>
+          </div>
+          <!-- Success -->
+          <div class="state state-success">
+            <div class="forensic-list" id="forensics-container"></div>
           </div>
         </div>
       </div>
     </div>
 
   </div>
+  </main>
 
   <script>
     mermaid.initialize({
       startOnLoad: false,
       theme: 'dark',
-      themeVariables: {
-        background: '#0b0f19',
-        primaryColor: '#1e293b',
-        primaryTextColor: '#f3f4f6',
-        lineColor: '#374151'
-      }
+      themeVariables: { background: '#0b0f19', primaryColor: '#1e293b', primaryTextColor: '#f3f4f6', lineColor: '#374151' }
     });
 
-    function switchTab(tabId, btn) {
-      // Hide all contents
-      document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
+    const $ = (id) => document.getElementById(id);
+
+    function setState(el, state) { el.setAttribute('data-state', state); el.setAttribute('aria-busy', String(state === 'loading')); }
+
+    function setSystemStatus(state, label) {
+      const badge = $('status-badge');
+      badge.setAttribute('data-state', state);
+      $('sys-status').textContent = label;
+    }
+
+    // ── Accessible tabs ───────────────────────────────────────────────────
+    const tabButtons = [$('tab-arch-btn'), $('tab-life-btn')];
+    function activateTab(btn) {
+      tabButtons.forEach((b) => {
+        const selected = b === btn;
+        b.setAttribute('aria-selected', String(selected));
+        b.tabIndex = selected ? 0 : -1;
+        const panel = $(b.getAttribute('aria-controls'));
+        panel.classList.toggle('active', selected);
+        panel.hidden = !selected;
       });
-      // Deactivate all buttons
-      document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.remove('active');
-      });
-      // Show targeted content & activate button
-      document.getElementById(tabId).classList.add('active');
-      btn.classList.add('active');
-      
-      // Re-initialize mermaid for the tab
       mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+    }
+    tabButtons.forEach((btn, i) => {
+      btn.addEventListener('click', () => activateTab(btn));
+      btn.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const next = tabButtons[(i + (e.key === 'ArrowRight' ? 1 : tabButtons.length - 1)) % tabButtons.length];
+          next.focus(); activateTab(next);
+        }
+      });
+    });
+
+    // ── Accessible collapsible (keyboard + ARIA) ──────────────────────────
+    function toggleForensicBody(header) {
+      const body = header.nextElementSibling;
+      const expanded = header.getAttribute('aria-expanded') === 'true';
+      header.setAttribute('aria-expanded', String(!expanded));
+      body.hidden = expanded;
     }
 
     async function loadData() {
-      const spinner = document.getElementById('refresh-spinner');
-      const errBox = document.getElementById('error-box');
-      spinner.style.display = 'inline-block';
-      errBox.style.display = 'none';
+      const btn = $('refresh-btn');
+      const spinner = $('refresh-spinner');
+      const errBox = $('error-box');
+      btn.disabled = true; spinner.hidden = false;
+      errBox.hidden = true;
+      setSystemStatus('loading', 'Loading…');
+      setState($('metrics'), 'loading');
+      setState($('forensics-region'), 'loading');
 
       try {
-        // Fetch API Summary
         const summaryRes = await fetch('/api/summary');
         if (!summaryRes.ok) throw new Error(`Summary API returned ${summaryRes.status}`);
         const summary = await summaryRes.json();
 
-        // Populate Summary Cards
-        document.getElementById('val-git-head').textContent = summary.git_head || 'n/a';
-        document.getElementById('val-files-count').textContent = 
-          `${(summary.counts.python_files || 0) + (summary.counts.rust_files || 0)}`;
-        document.getElementById('val-files-meta').textContent = 
-          `${summary.counts.python_files || 0} Python · ${summary.counts.rust_files || 0} Rust files`;
+        $('val-git-head').textContent = summary.git_head || 'n/a';
+        const py = summary.counts?.python_files || 0;
+        const rs = summary.counts?.rust_files || 0;
+        $('val-files-count').textContent = `${py + rs}`;
+        $('val-files-meta').textContent = `${py} Python · ${rs} Rust files`;
 
-        // Pytest Card
         const pt = summary.test_results?.pytest || {};
         const ptStatus = pt.status || 'unknown';
-        const ptPassed = pt.passed || 0;
-        const ptRun = pt.tests_run || 0;
-        document.getElementById('val-pytest-status').textContent = ptStatus.toUpperCase();
-        document.getElementById('val-pytest-meta').textContent = `${ptPassed}/${ptRun} tests passed`;
-        
-        const ptAccent = document.getElementById('pytest-accent');
-        if (ptStatus === 'ok') {
-          ptAccent.style.backgroundColor = 'var(--accent-green)';
-        } else if (ptStatus === 'failed') {
-          ptAccent.style.backgroundColor = 'var(--accent-red)';
-        } else {
-          ptAccent.style.backgroundColor = 'var(--accent-amber)';
-        }
+        $('val-pytest-status').textContent = ptStatus.toUpperCase();
+        $('val-pytest-meta').textContent = `${pt.passed || 0}/${pt.tests_run || 0} tests passed`;
+        $('pytest-accent').style.backgroundColor =
+          ptStatus === 'ok' ? 'var(--accent-green)' : ptStatus === 'failed' ? 'var(--accent-red)' : 'var(--accent-amber)';
 
-        // Rust compilation card
         const rb = summary.test_results?.rust_tests || summary.rust_build || {};
         const rbStatus = rb.status || 'unknown';
-        document.getElementById('val-rust-status').textContent = rbStatus.toUpperCase();
-        document.getElementById('val-rust-meta').textContent = rb.summary || 'Build report status';
-        
-        const rustAccent = document.getElementById('rust-accent');
-        if (rbStatus === 'done' || rbStatus === 'ok') {
-          rustAccent.style.backgroundColor = 'var(--accent-green)';
-        } else if (rbStatus === 'failed') {
-          rustAccent.style.backgroundColor = 'var(--accent-red)';
-        } else {
-          rustAccent.style.backgroundColor = 'var(--accent-amber)';
-        }
+        $('val-rust-status').textContent = rbStatus.toUpperCase();
+        $('val-rust-meta').textContent = rb.summary || 'Build report status';
+        $('rust-accent').style.backgroundColor =
+          (rbStatus === 'done' || rbStatus === 'ok') ? 'var(--accent-green)' : rbStatus === 'failed' ? 'var(--accent-red)' : 'var(--accent-amber)';
 
-        // Fetch Forensic Report
+        setState($('metrics'), 'success');
+
+        // ── Forensics ──────────────────────────────────────────────────
         const forensicRes = await fetch('/api/forensic_report');
         if (!forensicRes.ok) throw new Error(`Forensics API returned ${forensicRes.status}`);
         const forensic = await forensicRes.json();
 
-        // Populate Forensic lists
-        const container = document.getElementById('forensics-container');
+        const container = $('forensics-container');
         container.innerHTML = '';
-
         const categories = forensic.patterns || {};
-        const keys = Object.keys(categories);
-        
-        if (keys.length === 0) {
-          container.innerHTML = `<div style="text-align: center; color: var(--accent-green); padding: 40px 0;">✓ No static security matches found.</div>`;
-        } else {
-          keys.forEach(key => {
-            const files = categories[key] || [];
-            if (files.length === 0) return; // skip empty pattern matches
+        const nonEmpty = Object.keys(categories).filter((k) => (categories[k] || []).length > 0);
 
-            const catDiv = document.createElement('div');
-            catDiv.className = 'forensic-category';
-            
-            // Format category title
+        if (nonEmpty.length === 0) {
+          setState($('forensics-region'), 'empty');
+        } else {
+          nonEmpty.forEach((key, idx) => {
+            const files = categories[key];
+            const bodyId = `forensic-body-${idx}`;
             const prettyTitle = key.replace(/_/g, ' ');
             const isCritical = ['private_key', 'openai_key_like', 'password'].includes(key);
             const badgeClass = isCritical ? 'badge-alert' : 'badge-warn';
-            
+
+            const catDiv = document.createElement('div');
+            catDiv.className = 'forensic-category';
             catDiv.innerHTML = `
-              <div class="forensic-header" onclick="toggleForensicBody(this)">
-                <div class="forensic-title">
+              <button class="forensic-header" type="button" aria-expanded="false" aria-controls="${bodyId}">
+                <span class="forensic-title">
                   <span>${prettyTitle}</span>
                   <span class="category-badge ${badgeClass}">${files.length} matches</span>
-                </div>
-                <span style="font-size: 0.8rem; color: var(--text-muted)">▶</span>
-              </div>
-              <div class="forensic-body">
-                ${files.map(f => `<div class="file-item">${f}</div>`).join('')}
-              </div>
-            `;
+                </span>
+                <span class="chevron" aria-hidden="true">▶</span>
+              </button>
+              <div class="forensic-body" id="${bodyId}" hidden>
+                ${files.map((f) => `<div class="file-item">${f}</div>`).join('')}
+              </div>`;
             container.appendChild(catDiv);
+            catDiv.querySelector('.forensic-header').addEventListener('click', (e) => toggleForensicBody(e.currentTarget));
           });
+          setState($('forensics-region'), 'success');
         }
-        document.getElementById('forensic-time').textContent = `Last scanned: ${new Date().toLocaleTimeString()}`;
+        $('forensic-time').textContent = `Last scanned: ${new Date().toLocaleTimeString()}`;
 
+        setSystemStatus('success', 'HEALTHY');
       } catch (err) {
         errBox.textContent = `Error loading dashboard metrics: ${err.message}`;
-        errBox.style.display = 'block';
-        document.getElementById('sys-status').textContent = 'ERROR';
-        document.getElementById('sys-status').parentElement.style.borderColor = 'rgba(239, 68, 68, 0.2)';
-        document.getElementById('sys-status').parentElement.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-        document.getElementById('sys-status').previousElementSibling.style.backgroundColor = 'var(--accent-red)';
-        document.getElementById('sys-status').previousElementSibling.style.boxShadow = '0 0 8px var(--accent-red)';
+        errBox.hidden = false;
+        setState($('metrics'), 'error');
+        setState($('forensics-region'), 'error');
+        $('forensics-error').textContent = err.message;
+        setSystemStatus('error', 'ERROR');
       } finally {
-        spinner.style.display = 'none';
+        btn.disabled = false; spinner.hidden = true;
         mermaid.init(undefined, document.querySelectorAll('.mermaid'));
       }
     }
 
-    function toggleForensicBody(header) {
-      const body = header.nextElementSibling;
-      const indicator = header.querySelector('span:last-child');
-      if (body.style.display === 'block') {
-        body.style.display = 'none';
-        indicator.textContent = '▶';
-      } else {
-        body.style.display = 'block';
-        indicator.textContent = '▼';
-      }
-    }
-
-    document.getElementById('refresh-btn').onclick = loadData;
-    
-    // Initial Load
-    window.addEventListener('DOMContentLoaded', () => {
-      loadData();
-    });
+    $('refresh-btn').addEventListener('click', loadData);
+    window.addEventListener('DOMContentLoaded', loadData);
   </script>
 </body>
 </html>

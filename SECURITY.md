@@ -5,7 +5,8 @@
 
 | Version | Supported          |
 | :------ | :----------------- |
-| 2.3.x   | ✅ Active           |
+| 2.4.x   | ✅ Active           |
+| 2.3.x   | ⚠️ Security patches only |
 | 2.2.x   | ⚠️ Security patches only |
 | 2.1.x   | ❌ End of life      |
 | 2.0.x   | ❌ End of life      |
@@ -88,6 +89,7 @@ As of v2.3.0, the LSM guard runs in **advisory mode**: missing AppArmor or SELin
 
 | Version | Fix | Severity |
 | :------ | :-- | :------- |
+| 2.4.0 | `aegis_server.crypto` eagerly imported `hvac` at package level, breaking the HMAC-only compliance export path on installs without the optional `vault` extra; `VaultSigner` is now lazy-imported | Low |
 | 2.3.0 | mTLS settings were defined in `AegisSettings` but never applied to the uvicorn listener or the upstream `httpx` client | High |
 | 2.3.0 | `ResponseAnalyzer` thresholds were hardcoded, ignoring `AegisSettings`; alerting could not be tuned at runtime | Medium |
 | 2.2.0 | Audit chain signing key derived from the first sorted API key; unannounced rotation silently invalidated the chain | High |
