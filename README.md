@@ -6,19 +6,16 @@
 
 <img width="3300" height="2550" alt="Aegis Latent Core - Visualizer   Forensics_page-0001" src="https://github.com/user-attachments/assets/ae17f0df-e5c6-4e91-ac72-14d9e12b3cab" />
 
+### The inference governance layer for production LLM deployments.
 
-### The open-source inference governance layer every production LLM deployment needs.
-
-**Drop-in OpenAI-compatible proxy · Multi-provider (OpenAI · Anthropic · Gemini · OpenRouter) · Cryptographic Merkle audit chain · Real-time entropy forensics · SOC2 / HIPAA compliance exports · Zero infrastructure changes**
+**Drop-in OpenAI-compatible proxy · Multi-provider (OpenAI · Anthropic · Gemini · OpenRouter) · Cryptographic Merkle audit chain · Entropy/KL forensics · SOC2 / HIPAA compliance exports · Zero application changes**
 
 <br/>
 
 [![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
 [![License: AGPLv3 / Commercial](https://img.shields.io/badge/License-AGPLv3%20%7C%20Commercial-blue.svg)](COMMERCIAL.md)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Version](https://img.shields.io/badge/version-2.3.0-green.svg)](CHANGELOG.md)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
+[![Version](https://img.shields.io/badge/version-2.4.0-green.svg)](CHANGELOG.md)
 
 <br/>
 
@@ -26,206 +23,142 @@
 
 ---
 
-## What is Aegis?
+## The problem
 
-Aegis sits between your application and any LLM provider. It intercepts every request and response to build a **cryptographically verifiable, tamper-evident audit chain** — without adding latency to your users.
+If you run an LLM in production — especially under SOC2, HIPAA, or any regulated
+workload — you need to answer two questions at any later date:
+
+1. **"What exactly did the model receive and return on request X?"**
+2. **"Can you *prove* that record wasn't altered after the fact?"**
+
+Application logs answer neither: they are mutable, unsigned, and trivially
+reordered. Aegis sits between your app and any LLM provider and turns every
+request/response into a **cryptographically linked, tamper-evident audit node** —
+without changing your application and without adding I/O latency to the user.
 
 ```mermaid
 flowchart LR
-  Client["Your App"]
+  Client["Your App<br/>(OpenAI SDK)"]
   Proxy["AEGIS Proxy"]
   Upstream["OpenAI / Anthropic / Gemini / OpenRouter / vLLM"]
-  Forensics["Merkle Chain<br/>Entropy Analysis<br/>Audit Log<br/>Compliance Export"]
-  Client --> Proxy --> Upstream
-  Proxy --> Forensics
+  Forensics["Merkle audit chain<br/>Entropy / KL forensics<br/>Signed WAL<br/>Compliance export"]
+  Client -->|"OpenAI format"| Proxy -->|"translated"| Upstream
+  Proxy -.->|"off the hot path"| Forensics
 ```
-
-
-One `AEGIS_PROVIDER=` line in your `.env` switches the upstream. Your application code doesn't change.
 
 ---
 
-## Quick Start
+## How it works
+
+| Step | What happens | On the request hot path? |
+|---|---|---|
+| 1 | Auth (constant-time key check) | yes |
+| 2 | WAF: hard-block critical injection patterns + weighted scoring | yes |
+| 3 | Rate limit (token bucket; memory or Redis) | yes |
+| 4 | Provider adapter translates request → upstream format | yes |
+| 5 | Forward to upstream LLM; translate response back to OpenAI format | yes |
+| 6 | **Return response to client** | — |
+| 7 | Entropy/KL analysis + sign + append Merkle node + WAL write | **no — scheduled after the return** |
+
+Step 7 runs in a background task created *after* the response is returned, so the
+audit commit adds **no I/O wait** to the client. The only cost on the hot path is
+the scheduling call itself — measured at **77 µs p50 / 132 µs p99** in our
+environment ([BENCHMARKS.md](docs/BENCHMARKS.md)).
+
+---
+
+## Quick start (< 5 minutes)
+
+### 0. See it work end-to-end first (no provider key needed)
+
+The fastest way to evaluate Aegis: a self-contained demo that boots the proxy
+against an in-process mock upstream, sends requests, shows the audit chain
+growing, verifies integrity, demonstrates tamper-detection, and exports a sealed
+compliance bundle — all in one command.
 
 ```bash
 git clone https://github.com/JuanLunaIA/aegis-latent-core
 cd aegis-latent-core
 pip install -e ".[storage-sqlite]"
+python -m examples.demo
+```
+
+Expected: `RESULTADO: 5/5 verificaciones OK — demo exitosa.` (exit code 0).
+See [`examples/README.md`](examples/README.md) for what each step proves.
+
+### 1. Run it against a real provider
+
+```bash
 cp .env.example .env
-# Edit .env — set AEGIS_PROVIDER and AEGIS_BACKEND_API_KEY
+# Edit .env: set AEGIS_PROVIDER, AEGIS_BACKEND_API_KEY, AEGIS_API_KEYS,
+# and a dedicated AEGIS_SIGNING_KEY (see below).
 uvicorn aegis.proxy.app:create_proxy_app --factory --port 8080
 ```
 
-Point your OpenAI SDK at `http://localhost:8080` and you're done:
+Point your existing OpenAI SDK at the proxy — nothing else changes:
 
 ```python
 from openai import OpenAI
+
 client = OpenAI(base_url="http://localhost:8080/v1", api_key="your-proxy-key")
-response = client.chat.completions.create(
+resp = client.chat.completions.create(
     model="gpt-4o",
     messages=[{"role": "user", "content": "Hello!"}],
 )
 ```
 
-### Optional: Build & enable Rust extension (recommended for high throughput)
-
-Building the Rust PyO3 extension (aegis_rust) yields significant performance gains for forwarding, MMR and PQC operations:
+### 2. Verify the audit chain
 
 ```bash
-# From repo root
-python -m pip install maturin
-cd aegis_rust_v2 && maturin develop --release && cd -
+curl -H "Authorization: Bearer your-audit-key" \
+     http://localhost:8080/v1/audit/integrity
+# → {"valid": true, "node_count": N, ...}
 ```
 
-After successful build, `import aegis_rust` will return the optimized module used by the proxy (Rust-forwarder, MMR and PQC are exposed). If building is not possible, the Python fallback remains fully functional.
-
-Note: when the Rust extension is installed, the Merkle Mountain Range (MMR) operations and PQC functions automatically use the Rust implementation for significantly higher throughput; the Python implementation is retained as a verified fallback for proofs and verification.
-
----
-
-
-## Multi-Provider Support (v2.2.0)
-
-Aegis v2.2.0 adds a provider adapter layer. Switch providers with a single environment variable — your application sends standard OpenAI-format requests and receives OpenAI-format responses regardless of the backend.
-
-
-### Supported Providers
-
-| Provider | `AEGIS_PROVIDER=` | Auth | Streaming | Logprobs |
-|---|---|---|---|---|
-| OpenAI | `openai` | `Authorization: Bearer` | ✅ passthrough | ✅ |
-| Anthropic Claude | `anthropic` | `x-api-key` | ✅ translated | ❌ (char entropy fallback) |
-| Google Gemini | `gemini` | `Authorization: Bearer` | ✅ passthrough | ✅ partial |
-| OpenRouter | `openrouter` | `Authorization: Bearer` | ✅ passthrough | ✅ |
-| Any OpenAI-compat | `openai` | `Authorization: Bearer` | ✅ passthrough | ✅ |
-
-### Configuration Examples
-
-**OpenAI (default)**
-```env
-AEGIS_PROVIDER=openai
-AEGIS_BACKEND_API_KEY=sk-your-openai-key
-```
-
-**Anthropic Claude**
-```env
-AEGIS_PROVIDER=anthropic
-AEGIS_BACKEND_API_KEY=sk-ant-your-anthropic-key
-# Optional: pin the upstream model
-AEGIS_PROVIDER_MODEL=claude-opus-4-5
-```
-
-**Google Gemini**
-```env
-AEGIS_PROVIDER=gemini
-AEGIS_BACKEND_API_KEY=your-gemini-api-key
-AEGIS_PROVIDER_MODEL=gemini-2.0-flash
-```
-
-**OpenRouter** — 300+ models behind one key
-```env
-AEGIS_PROVIDER=openrouter
-AEGIS_BACKEND_API_KEY=sk-or-your-openrouter-key
-AEGIS_OPENROUTER_SITE_URL=https://yourapp.com
-AEGIS_OPENROUTER_SITE_NAME=YourApp
-# Route to any OpenRouter model:
-AEGIS_PROVIDER_MODEL=meta-llama/llama-3.1-70b-instruct
-```
-
-**Local / self-hosted (vLLM, Ollama, LM Studio)**
-```env
-AEGIS_PROVIDER=openai
-AEGIS_BACKEND_URL=http://localhost:11434   # Ollama
-AEGIS_BACKEND_API_KEY=                    # empty for local
-AEGIS_PROVIDER_MODEL=llama3.2:3b
-```
-
-### How Translation Works (Anthropic)
-
-Aegis translates transparently — your app always sends/receives OpenAI format:
-
-```
-Client (OpenAI format)                Aegis                 Anthropic API
-─────────────────────────────────────────────────────────────────────────
-POST /v1/chat/completions   ──►   translate_request   ──►   POST /v1/messages
-  {"model": "claude-opus-4-5",          │                     {"model": "...",
-   "messages": [                         │                      "system": "...",
-     {"role": "system", ...},            │                      "messages": [...],
-     {"role": "user", ...}               │                      "max_tokens": 4096}
-   ]}                                    │
-                                         │
-{"choices": [{"message":        ◄──   translate_response  ◄──  {"content": [...],
-  {"role": "assistant",                  │                       "stop_reason": ...}
-   "content": "..."}}]}                  │
-
-# Streaming: Anthropic SSE events → OpenAI chunks (transparent)
-data: {"type":"content_block_delta"} → data: {"choices":[{"delta":{"content":"..."}}]}
-```
-
----
-
-## Installation
-
-### Minimal (SQLite storage, single-provider)
-```bash
-pip install "aegis-latent-core[storage-sqlite]"
-```
-
-### With specific storage backends
-```bash
-pip install "aegis-latent-core[storage-sqlite]"    # SQLite (default, zero config)
-pip install "aegis-latent-core[storage-postgres]"  # PostgreSQL
-pip install "aegis-latent-core[storage-dynamodb]"  # AWS DynamoDB
-pip install "aegis-latent-core[storage-all]"       # All backends
-```
-
-### With optional features
-```bash
-pip install "aegis-latent-core[storage-sqlite,vault,metrics]"
-# vault   = HashiCorp Vault Transit signing
-# metrics = Prometheus /metrics endpoint
-# pqc     = Post-quantum CRYSTALS-Dilithium signatures
-```
-
-### Development
-```bash
-pip install "aegis-latent-core[storage-sqlite,dev]"
-```
-
----
-
-## Configuration Reference
-
-All settings are environment variables (or `.env` file). See `.env.example` for a full annotated template.
-
-### Core Settings
-
-| Variable | Default | Description |
-|---|---|---|
-| `AEGIS_PROVIDER` | `openai` | Provider adapter: `openai`, `anthropic`, `gemini`, `openrouter` |
-| `AEGIS_PROVIDER_MODEL` | `""` | Override upstream model name (optional) |
-| `AEGIS_BACKEND_URL` | `http://localhost:11434` | Upstream URL (ignored for providers with fixed base URL) |
-| `AEGIS_BACKEND_API_KEY` | `""` | API key for the upstream provider |
-| `AEGIS_API_KEYS` | `""` | Comma-separated keys for proxy client auth |
-| `AEGIS_SIGNING_KEY` | `""` | **Dedicated** HMAC-SHA256 key for Merkle chain signing |
-| `AEGIS_DEBUG_MODE` | `false` | Enables `/docs`, `/redoc` (local dev only) |
-| `AEGIS_FORCE_LOGPROBS` | `false` | Inject `logprobs=true` into requests (OpenAI-compat only) |
-| `AEGIS_HOST` | `0.0.0.0` | Bind address |
-| `AEGIS_PORT` | `8080` | Listen port |
-
-### Provider-Specific Settings
-
-| Variable | Provider | Description |
-|---|---|---|
-| `AEGIS_OPENROUTER_SITE_URL` | openrouter | HTTP-Referer for OpenRouter analytics |
-| `AEGIS_OPENROUTER_SITE_NAME` | openrouter | X-Title for OpenRouter analytics |
-| `AEGIS_ANTHROPIC_API_VERSION` | anthropic | `anthropic-version` header (default: `2023-06-01`) |
-
-### Generate a Signing Key
+### Generate a signing key
 
 ```bash
 python -c 'import secrets; print(secrets.token_hex(32))'
-# → 7f3a9b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a
+```
+
+> An empty `AEGIS_SIGNING_KEY` makes audit nodes fall back to ephemeral Ed25519,
+> which downgrades `legal_admissibility` to `"Compromised"`. Always set a
+> dedicated key in production — see [SECURITY.md](SECURITY.md).
+
+---
+
+## Multi-provider support
+
+Switch the upstream with one environment variable. Your app always speaks
+OpenAI format; Aegis translates transparently.
+
+| Provider | `AEGIS_PROVIDER=` | Auth | Streaming | Logprobs for entropy |
+|---|---|---|---|---|
+| OpenAI | `openai` | `Authorization: Bearer` | ✅ passthrough | ✅ token-level |
+| Anthropic Claude | `anthropic` | `x-api-key` | ✅ translated (SSE) | ❌ char-level fallback |
+| Google Gemini | `gemini` | `Authorization: Bearer` | ✅ translated | ❌ char-level fallback |
+| OpenRouter | `openrouter` | `Authorization: Bearer` | ✅ passthrough | ✅ token-level |
+| Any OpenAI-compat (vLLM, Ollama, LM Studio) | `openai` | `Authorization: Bearer` | ✅ passthrough | ✅ token-level |
+
+> Anthropic and Gemini APIs do **not** expose token logprobs, so entropy
+> forensics fall back to character-level analysis for those providers
+> ([claim L1](docs/audit/CLAIMS_VERIFICATION.md)).
+
+```env
+# Anthropic
+AEGIS_PROVIDER=anthropic
+AEGIS_BACKEND_API_KEY=sk-ant-your-key
+AEGIS_PROVIDER_MODEL=claude-opus-4-5
+
+# OpenRouter (300+ models behind one key)
+AEGIS_PROVIDER=openrouter
+AEGIS_BACKEND_API_KEY=sk-or-your-key
+AEGIS_PROVIDER_MODEL=meta-llama/llama-3.1-70b-instruct
+
+# Local / self-hosted
+AEGIS_PROVIDER=openai
+AEGIS_BACKEND_URL=http://localhost:11434   # Ollama
+AEGIS_PROVIDER_MODEL=llama3.2:3b
 ```
 
 ---
@@ -234,102 +167,79 @@ python -c 'import secrets; print(secrets.token_hex(32))'
 
 ```mermaid
 flowchart TB
-  subgraph ProxyLayer["aegis (proxy)"]
-    Providers["providers (ProviderAdapter layer)"]
-    ProxyApp["proxy.app (FastAPI)"]
-    Forwarder["forwarder (HTTP client)"]
-    WAF["waf (prompt-injection)"]
-    Providers --> ProxyApp
-    ProxyApp --> Forwarder
-    ProxyApp --> WAF
-  end
-
-  subgraph Core["aegis (core)"]
-    MMR["mmr (Merkle Mountain Range)"]
-    Crypto["crypto_audit (Audit Ledger)"]
-    Rate["ratelimiter"]
-    Config["config (Pydantic)"]
-    ProxyApp --> Crypto
-    ProxyApp --> MMR
-    ProxyApp --> Rate
-    Crypto --> MMR
-  end
-
-  subgraph Enterprise["aegis_server (enterprise)"]
-    Main["main (FastAPI Enterprise)"]
-    Storage["storage providers (sqlite/postgres/dynamodb)"]
-    Compliance["compliance exporter (SOC2/HIPAA)"]
-    Main --> Storage
-    Main --> Compliance
-  end
-
   Client["Client / Your App"] --> ProxyApp
-  ProxyApp --> Upstream["OpenAI / Anthropic / Gemini / OpenRouter / vLLM"]
+  subgraph Proxy["aegis (proxy)"]
+    ProxyApp["proxy.app (FastAPI)"]
+    WAF["waf (prompt-injection)"]
+    Providers["providers (adapter layer)"]
+    Forwarder["forwarder (HTTP client)"]
+    ProxyApp --> WAF
+    ProxyApp --> Providers --> Forwarder
+  end
+  subgraph Core["aegis (core)"]
+    Crypto["crypto_audit (signed ledger)"]
+    MMR["mmr (Merkle Mountain Range)"]
+    Rate["ratelimiter"]
+    ProxyApp --> Crypto --> MMR
+    ProxyApp --> Rate
+  end
+  subgraph Enterprise["aegis_server (enterprise)"]
+    Storage["storage (sqlite / postgres / dynamodb)"]
+    Compliance["compliance exporter (SOC2/HIPAA)"]
+  end
+  Forwarder --> Upstream["OpenAI / Anthropic / Gemini / OpenRouter / vLLM"]
+  Crypto -.-> Storage --> Compliance
 ```
 
-
-### Request Lifecycle
-
-```
-1. Client sends OpenAI-format POST /v1/chat/completions
-2. WAF inspects payload for prompt injection patterns
-3. Rate limiter checks session quota (token bucket, TTL-evicted)
-4. Provider adapter translates request to upstream format
-5. Forwarder sends to upstream LLM (OpenAI / Anthropic / Gemini / OpenRouter)
-6. Provider adapter translates response back to OpenAI format
-7. Response returned to client immediately — ZERO forensic latency
-8. BackgroundTask runs off-path:
-   a. Parse response, extract logprobs (or fall back to char entropy)
-   b. Compute position-averaged Shannon entropy H = (1/T) Σ -Σ p_{t,k} log₂ p_{t,k}
-   c. get_latest_node() for correct prev_hash (chain_lock held)
-   d. MerkleMountainRange.add_leaf(request_hash || response_hash || ts)
-   e. Sign merkle_root via HMAC-SHA256 with AEGIS_SIGNING_KEY
-   f. write_node() under chain_lock — prevents concurrent chain forks
-```
-
----
-
-## Audit Chain
-
-Every request produces a cryptographically linked audit node:
+An audit node (HMAC path):
 
 ```json
 {
-  "node_id": "sha256(merkle_root || signature)",
+  "node_hash": "sha256(prev_hash || state_id || ts || ... || signature || ...)",
   "prev_hash": "sha256(...previous node...)",
-  "merkle_root": "mmr.add_leaf(request_hash || response_hash || timestamp)",
-  "signature": "hmac_sha256(AEGIS_SIGNING_KEY, merkle_root)",
+  "merkle_root": "mmr.add_leaf(request_hash || response_hash)",
+  "signature": "hmac_sha256(AEGIS_SIGNING_KEY, prev_hash|root|req|resp)",
+  "signature_scheme": "hmac-sha256",
   "entropy": 3.142,
-  "model": "claude-opus-4-5",
-  "usage": {"prompt_tokens": 150, "completion_tokens": 42}
+  "model": "claude-opus-4-5"
 }
 ```
 
-The chain is verified with:
-```bash
-curl http://localhost:8080/v1/audit/integrity
-```
+`prev_hash` is the **first** hashed field of `node_hash`, so reordering nodes in
+storage breaks the chain and is caught by `verify_integrity()` — the property
+that makes the chain tamper-*evident*, not just append-only.
+
+For the full request trace, lock map, and trust boundaries, see
+[`docs/audit/STATE.md`](docs/audit/STATE.md). For deployment, see
+[`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md).
 
 ---
 
-## Entropy Forensics
+## Claims, with evidence
 
-Aegis computes **position-averaged Shannon entropy** for every response:
+Every claim below links to code, an audit document, or a measured benchmark.
+The authoritative matrix is
+[`docs/audit/CLAIMS_VERIFICATION.md`](docs/audit/CLAIMS_VERIFICATION.md).
 
-$$H = \frac{1}{T} \sum_{t=1}^{T} \left[ -\sum_{k=1}^{K} p_{t,k} \log_2(p_{t,k}) \right]$$
+| Claim | Status | Evidence |
+|---|---|---|
+| Tamper-evident audit chain | **Proven** | reorder attack caught by `tests/test_security_fixes.py`; [SECURITY_AUDIT.md §2](docs/audit/SECURITY_AUDIT.md) |
+| No chain fork under concurrency | **Proven** | 100×50 concurrency burst test; [SECURITY_AUDIT.md §1,§3](docs/audit/SECURITY_AUDIT.md) |
+| SSE commit survives disconnect | **Proven** | [SECURITY_AUDIT.md §4](docs/audit/SECURITY_AUDIT.md) |
+| SOC2/HIPAA sealed, re-verifiable export | **Proven** | `examples/demo.py` step 5; `aegis_server/compliance/exporter.py` |
+| "Zero forensic latency" (no client I/O wait) | **Proven** | commit runs after the response return |
+| Hot-path scheduling overhead | **Measured: 77 µs p50 / 132 µs p99** | [BENCHMARKS.md](docs/BENCHMARKS.md) |
+| Rust extension "significant performance gains" | **Unverified** | speedup `UNKNOWN` until `maturin develop --release`; [BENCHMARKS.md](docs/BENCHMARKS.md) |
+| Anthropic/Gemini token-level entropy | **Partial** | char-level fallback; [CLAIMS_VERIFICATION.md L1](docs/audit/CLAIMS_VERIFICATION.md) |
+| mTLS upstream identity assertion | **Partial** | certs applied, identity not asserted per-request; [L2](docs/audit/CLAIMS_VERIFICATION.md) |
 
-Where $$p_{t,k}$$ = softmax of top-K token logprobs at position $$t$$.
-
-
-- High entropy (> threshold) → model is uncertain, potentially hallucinating
-- Low entropy → model is confident
-- For Anthropic/Gemini (no logprobs): falls back to character-level entropy
-
-Configure the alert threshold with `AEGIS_ENTROPY_ALERT_THRESHOLD_BITS`.
+We do **not** quote a Rust speedup number, because the extension was not compiled
+in our measurement environment. Build it and re-run `python -m benchmarks.bench_mmr`
+to obtain a real ratio.
 
 ---
 
-## Compliance Export
+## Compliance export
 
 ```bash
 curl -X POST http://localhost:8080/v1/enterprise/compliance/export \
@@ -338,154 +248,78 @@ curl -X POST http://localhost:8080/v1/enterprise/compliance/export \
   -d '{"format": "soc2", "start_ts": "2026-01-01T00:00:00Z", "end_ts": "2026-12-31T23:59:59Z"}'
 ```
 
-Produces a sealed, SHA-256-hashed bundle with full chain-of-custody.
+Produces a UTF-8 JSON bundle sealed with a SHA-256 `chain_hash` and a
+`bundle_signature` over it (HMAC-SHA256 or Vault Transit). An external auditor
+re-verifies it independently with `ComplianceExporter.verify_bundle()` — no
+access to your running system required. The `examples/demo.py` script exercises
+this exact path (write nodes → seal bundle → re-verify signature & hash).
+
+---
+
+## Optional: Rust extension
+
+Building the PyO3 extension swaps in a native MMR/forwarder/PQC implementation.
+The Python path remains the verified reference and proof generator.
+
+```bash
+python -m pip install maturin
+cd aegis_rust_v2 && maturin develop --release && cd -
+python -m benchmarks.bench_mmr   # produces the real Rust-vs-Python speedup
+```
+
+> The speedup ratio is currently **unmeasured** in this repo — the benchmark
+> above is what fills it in. See [docs/RUST_BUILD.md](docs/RUST_BUILD.md).
 
 ---
 
 ## Development
 
 ```bash
-# Install dev dependencies
 pip install -e ".[storage-sqlite,dev]"
 
-# Run tests
-pytest tests/ --override-ini="addopts=" -v
+pytest tests/ --override-ini="addopts=" -q   # test suite
+ruff check aegis/ aegis_server/              # lint
+mypy aegis/ aegis_server/                    # type check
+python -m examples.demo                      # end-to-end smoke
 
-# Run only provider tests
-pytest tests/test_providers.py -v --override-ini="addopts="
-
-# Lint
-ruff check aegis/ aegis_server/
-
-# Type check
-mypy aegis/ aegis_server/
-
-# Optional: build Rust extension (significant throughput improvement)
-python -m pip install maturin
-cd aegis_rust_v2 && maturin develop --release && cd -
-```
-
----
-
-
-## Tools: Forensics Visualizer
-
-`tools/visualizer/` ships a local dashboard for inspecting the repository state and audit chain without standing up a full deployment.
-
-```bash
-cd tools/visualizer
-pip install -r requirements.txt
+# Forensics visualizer (LOCAL DEV TOOL ONLY — never expose publicly)
+cd tools/visualizer && pip install -r requirements.txt
 python -m uvicorn app:app --host 127.0.0.1 --port 8888
-# Open http://127.0.0.1:8888
 ```
-
-The dashboard (`tools/visualizer/static/index.html`) shows:
-
-- **Git HEAD** and Python / Rust file count
-- **Pytest telemetry** — pass/fail count pulled from the last run
-- **Rust extension build status** — maturin compilation result
-- **System Visualization** — Architecture and lifecycle Mermaid diagrams (tabbed)
-- **Audit Ledger Node Layout** — JSON schema of a signed chain node
-- **Static Security Forensics Scan** — pattern matches for credentials, excessive privileges, and potential vulnerabilities pulled from `/api/forensic_report`
-
-The visualizer is a **local development tool only**. Never expose it to public networks.
-
-
-## Development (extended)
-
-Below is an opinionated dev setup and quick verification steps (Rust + Python):
-
-```bash
-# Create virtualenv + install dev deps
-python -m venv .venv && source .venv/bin/activate
-pip install -U pip
-pip install -e ".[storage-sqlite,dev]"
-
-# Build Rust extension
-python -m pip install maturin
-cd aegis_rust_v2 && maturin develop --release && cd -
-
-# Short verifications
-cargo test --manifest-path aegis_rust_v2/Cargo.toml --lib --quiet || true
-pytest tests/test_providers.py -q -k "not slow" --maxfail=1 || true
-```
-
 
 ---
 
 ## Docker
 
 ```bash
-# Build
-docker build -t aegis-latent-core:2.3.0 .
-
-# Run with Anthropic
+docker build -t aegis-latent-core:2.4.0 .
 docker run -p 8080:8080 \
   -e AEGIS_PROVIDER=anthropic \
   -e AEGIS_BACKEND_API_KEY=sk-ant-xxx \
   -e AEGIS_API_KEYS=your-proxy-key \
   -e AEGIS_SIGNING_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))') \
-  aegis-latent-core:2.3.0
+  aegis-latent-core:2.4.0
 ```
 
 ---
 
-## Changelog
+## Documentation
 
-See [CHANGELOG.md](CHANGELOG.md) for the full history.
-
-
-**v2.3.0** (2026-06-04) — Operational hardening: 3 blocker fixes (LSM guard crash, ResponseAnalyzer threshold decoupling, mTLS never wired), explicit 401/403 upstream logging, deep `/health` and `/ready` endpoints, Forensics Visualizer tool.
-
-
-**v2.2.0** (2026-06-02) — Multi-provider support + 7 bug fixes (2 chain-of-custody blockers, Shannon entropy correction, MMR integration, dedicated signing key, TTL rate limiter, docs security hardening).
+| Document | What it covers |
+|---|---|
+| [examples/README.md](examples/README.md) | The reproducible end-to-end demo |
+| [docs/BENCHMARKS.md](docs/BENCHMARKS.md) | Measured latency & throughput, reproduce commands |
+| [docs/audit/CLAIMS_VERIFICATION.md](docs/audit/CLAIMS_VERIFICATION.md) | Every claim ↔ its evidence |
+| [docs/audit/STATE.md](docs/audit/STATE.md) | Full code audit: lifecycle, locks, trust boundaries |
+| [docs/audit/SECURITY_AUDIT.md](docs/audit/SECURITY_AUDIT.md) | Audit-chain security verification & fixes |
+| [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) | Production deployment & threat model |
+| [SECURITY.md](SECURITY.md) | Hardening checklist & vulnerability reporting |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
 
 ---
-
-## MMR internals
-
-Aegis uses a Merkle Mountain Range (MMR) to support fast append-only audit chains. The Python implementation provides verified correctness and proof reconstruction while the optional Rust implementation (aegis_rust.MmrAccumulator) is used for high-throughput add_leaf/get_root operations. The system keeps a Python replica for proof generation and verification.
-
-```mermaid
-flowchart LR
-  subgraph MMR["Merkle Mountain Range"]
-    Leaf1[Leaf: request_hash] --> NodeA((internal))
-    Leaf2 --> NodeA
-    NodeA --> Peak1((peak))
-    Peak1 --> Root((mmr_root))
-  end
-```
-
-Sequence:
-
-```mermaid
-sequenceDiagram
-  participant Proxy
-  participant Forensics
-  participant MMR
-  participant Rust
-  Proxy->>Forensics: enqueue commit (request,response,ts)
-  Forensics->>MMR: add_leaf(data)
-  alt rust available
-    MMR->>Rust: rust.add_leaf(data) -- fast path
-    Rust-->>MMR: root_hash
-  else fallback
-    MMR->>Python: python.add_leaf(data) -- reference path
-  end
-  Forensics->>Storage: persist signed node
-```
-
-How to verify (developer):
-
-```bash
-# Verify integrity endpoint
-curl -sS http://localhost:8080/v1/audit/integrity | jq .
-# Inspect latest merkle root
-python -c 'from aegis.core.mmr import mmr_manager; print(mmr_manager.get_root_hash())'
-```
 
 ## License
 
-[AGPLv3](LICENSE) for open-source use · Commercial license available for proprietary deployments. See [COMMERCIAL.md](COMMERCIAL.md).
-
-For vulnerability reporting and deployment security guidance, see [SECURITY.md](SECURITY.md).
+[AGPLv3](LICENSE) for open-source use · Commercial license available for
+proprietary deployments ([COMMERCIAL.md](COMMERCIAL.md)).
+Vulnerability reporting & deployment hardening: [SECURITY.md](SECURITY.md).
