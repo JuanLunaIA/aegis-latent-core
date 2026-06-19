@@ -59,6 +59,7 @@ def _spawn_background(coro: Any) -> asyncio.Task[Any]:
     task.add_done_callback(_on_done)
     return task
 
+
 # FIX-APP-01: Maximum concurrent analyzer instances.
 # Mirrors the cap in SessionLifecycleManager to prevent unbounded memory growth
 # when callers omit the x-session-id header (UUID-per-request path).
@@ -695,9 +696,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                         sampling_params={"temperature": body.get("temperature")},
                     )
                     _spawn_background(
-                        _commit_and_alert(
-                            request_id, session_id, analysis, raw_body, request_start
-                        )
+                        _commit_and_alert(request_id, session_id, analysis, raw_body, request_start)
                     )
 
             return StreamingResponse(_stream_chat(), media_type="text/event-stream")

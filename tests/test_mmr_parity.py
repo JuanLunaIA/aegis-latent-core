@@ -49,8 +49,7 @@ def test_rust_python_root_parity(leaf_count: int) -> None:
         py_root = py.add_leaf(leaf)
         ru_root = ru.add_leaf(leaf)
         assert py_root == ru_root, (
-            f"MMR root divergence at leaf {i} (count={i + 1}): "
-            f"python={py_root} rust={ru_root}"
+            f"MMR root divergence at leaf {i} (count={i + 1}): python={py_root} rust={ru_root}"
         )
 
 

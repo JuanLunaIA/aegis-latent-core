@@ -36,7 +36,8 @@ def test_distributed_ratelimiter_no_warn_on_localhost(caplog):
         rl.DistributedRateLimiter(redis_url="redis://localhost:6379")
 
     tls_warns = [
-        r for r in caplog.records
+        r
+        for r in caplog.records
         if r.levelno == logging.WARNING and ("plaintext" in r.message or "TLS" in r.message)
     ]
     assert tls_warns == []
@@ -50,8 +51,7 @@ def test_distributed_ratelimiter_no_warn_on_rediss(caplog):
         rl.DistributedRateLimiter(redis_url="rediss://10.0.0.5:6380")
 
     tls_warns = [
-        r for r in caplog.records
-        if r.levelno == logging.WARNING and "plaintext" in r.message
+        r for r in caplog.records if r.levelno == logging.WARNING and "plaintext" in r.message
     ]
     assert tls_warns == []
 

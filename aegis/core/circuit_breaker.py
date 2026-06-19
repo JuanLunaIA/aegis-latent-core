@@ -21,6 +21,7 @@ Mechanism: consecutive_failures tracks "is the upstream currently broken?"
 capped to one per recovery_timeout seconds rather than one per request.
 Half-open limits blast radius from a flapping upstream.
 """
+
 from __future__ import annotations
 
 import logging

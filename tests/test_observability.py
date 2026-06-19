@@ -175,7 +175,6 @@ async def test_commit_and_alert_records_duration(tmp_path):
     """_commit_and_alert must observe AUDIT_COMMIT_DURATION after a successful commit."""
     observed: list[float] = []
 
-
     from aegis.config import AegisSettings
     from aegis.proxy.app import create_app
 

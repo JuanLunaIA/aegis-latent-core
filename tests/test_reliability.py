@@ -138,11 +138,13 @@ def test_wal_corruption_recovery_partial_chain(tmp_path):
     # Inject a corrupted line in the middle of the WAL.
     with open(wal, "a") as f:
         f.write("NOT_VALID_JSON\n")
-        f.write('{"state_id":"s2","timestamp":1.0,"entropy":1.0,"tenant_id":"t",'
-                '"sampling_params":{},"prev_hash":"0"*64,"merkle_root":"x",'
-                '"signature":"y","signature_scheme":"hmac-sha256","public_key":"",'
-                '"request_hash":"rh","response_hash":"","model":"m","endpoint":"e",'
-                '"token_trail_count":0,"is_fallback":false}\n')
+        f.write(
+            '{"state_id":"s2","timestamp":1.0,"entropy":1.0,"tenant_id":"t",'
+            '"sampling_params":{},"prev_hash":"0"*64,"merkle_root":"x",'
+            '"signature":"y","signature_scheme":"hmac-sha256","public_key":"",'
+            '"request_hash":"rh","response_hash":"","model":"m","endpoint":"e",'
+            '"token_trail_count":0,"is_fallback":false}\n'
+        )
 
     # Re-open the ledger — it must not crash.
     ledger2 = CryptographicAuditLedger(wal, signing_key=signing_key)

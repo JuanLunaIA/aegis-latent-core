@@ -30,6 +30,7 @@ proves (or refutes) the "zero forensic latency" isolation claim.
 AUDIT_COMMIT_LAG adds queue-wait time, giving the full end-to-end delay
 between a request arriving and its record being durably committed.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -175,9 +176,7 @@ def setup_otel(service_name: str = "aegis-proxy") -> None:
             from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
             from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-            provider.add_span_processor(
-                BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint))
-            )
+            provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint)))
         except ImportError:
             pass  # OTLP exporter not installed — spans created but not exported
     _otel_trace.set_tracer_provider(provider)
