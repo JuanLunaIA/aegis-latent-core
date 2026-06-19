@@ -198,11 +198,17 @@ class AegisWAF:
         Zero-width joiners / non-joiners and soft-hyphens are stripped first
         because NFKC preserves them and they fragment word matches.
         """
-        # Strip zero-width and invisible Unicode characters
+        # Strip zero-width and invisible Unicode characters.
+        # Explicit escape sequences prevent B613 TrojanSource (bidirectional literals
+        # embedded in source look identical to other characters in most editors).
         _ZW_CHARS = (
-            "​‌‍‎‏"  # zero-width space/non-joiner/joiner/LRM/RLM
-            "­"  # soft hyphen
-            "﻿"  # BOM / zero-width no-break space
+            "\u200b"  # U+200B zero-width space
+            "\u200c"  # U+200C zero-width non-joiner
+            "\u200d"  # U+200D zero-width joiner
+            "\u200e"  # U+200E left-to-right mark
+            "\u200f"  # U+200F right-to-left mark
+            "\u00ad"  # U+00AD soft hyphen
+            "\ufeff"  # U+FEFF BOM / zero-width no-break space
         )
         for ch in _ZW_CHARS:
             text = text.replace(ch, "")
