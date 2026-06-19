@@ -114,7 +114,7 @@ else:
     # No-op stubs — identical API surface so callers never branch on _PROM.
     # All methods are silent no-ops; the proxy runs identically when
     # prometheus_client is not installed.
-    class _NoopMetric:  # type: ignore[no-redef]
+    class _NoopMetric:  # noqa: F811
         def labels(self, **_kw: Any) -> _NoopMetric:
             return self
 

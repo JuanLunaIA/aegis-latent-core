@@ -194,7 +194,7 @@ class LLMForwarder:
                     provider_body,
                 )
                 self._circuit_breaker.record_success()
-                return result
+                return result  # type: ignore[no-any-return]
             except Exception:
                 self._circuit_breaker.record_failure()
                 raise

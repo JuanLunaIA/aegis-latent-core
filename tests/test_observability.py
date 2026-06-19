@@ -16,15 +16,14 @@ Covers:
 
 from __future__ import annotations
 
-import asyncio
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from aegis.core.observability import (
-    AUDIT_COMMIT_DURATION,
     AUDIT_CHAIN_NODES,
+    AUDIT_COMMIT_DURATION,
     REQUEST_DURATION,
     StageTimer,
     current_trace_id,
@@ -32,7 +31,6 @@ from aegis.core.observability import (
     record_span,
     setup_otel,
 )
-
 
 # ── Module import / no-op stubs ───────────────────────────────────────────────
 
@@ -95,7 +93,7 @@ def test_stage_timer_record_calls_observe(monkeypatch):
     observed: list[tuple[str, float]] = []
 
     class _FakeHist:
-        def labels(self, stage: str) -> "_FakeHist":
+        def labels(self, stage: str) -> _FakeHist:
             self._stage = stage
             return self
 
@@ -139,7 +137,6 @@ def test_record_span_context_manager_no_raises():
 @pytest.mark.asyncio
 async def test_metrics_endpoint_registered_when_prometheus_available(tmp_path):
     """When prometheus_client is installed, /metrics must return 200."""
-    import importlib
 
     import httpx
 
@@ -178,7 +175,6 @@ async def test_commit_and_alert_records_duration(tmp_path):
     """_commit_and_alert must observe AUDIT_COMMIT_DURATION after a successful commit."""
     observed: list[float] = []
 
-    from unittest.mock import AsyncMock, MagicMock, patch
 
     from aegis.config import AegisSettings
     from aegis.proxy.app import create_app

@@ -23,14 +23,12 @@ Covers:
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import time
 
 import pytest
 
 from aegis.core.circuit_breaker import CircuitBreaker, CircuitOpenError
-
 
 # ── CircuitBreaker state machine ──────────────────────────────────────────────
 
@@ -166,7 +164,7 @@ async def test_commit_and_alert_fail_open(tmp_path):
 
     The fail-open policy: audit failures are logged + counted, proxy keeps serving.
     """
-    from unittest.mock import AsyncMock, MagicMock, patch
+    from unittest.mock import AsyncMock, MagicMock
 
     import httpx
 
@@ -227,9 +225,7 @@ async def test_commit_and_alert_fail_open(tmp_path):
 
 def test_pii_redact_tenant_id_hashes_session(tmp_path):
     """With pii_redact_tenant_id=True the WAL must not contain the raw session_id."""
-    import json
 
-    from aegis.config import AegisSettings
     from aegis.core.crypto_audit import CryptographicAuditLedger
 
     wal = str(tmp_path / "pii.wal.jsonl")
