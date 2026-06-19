@@ -325,3 +325,50 @@ def test_response_analysis_fields():
     assert isinstance(r.timestamp, float)
     assert r.timestamp <= time.time()
     assert isinstance(r.sampling_params, dict)
+
+
+# ── no-logprobs warning (I-07) ────────────────────────────────────────────────
+
+
+def test_no_logprobs_warning_fires_once_per_model(caplog):
+    """_WARNED_NO_LOGPROBS tracks which models triggered the debug message."""
+    import logging
+
+    from aegis.proxy import analyzer as analyzer_mod
+
+    # Ensure a clean slate for this model name.
+    unique_model = "test-model-warn-once"
+    analyzer_mod._WARNED_NO_LOGPROBS.discard(unique_model)
+
+    ra = ResponseAnalyzer(session_id="s-warn")
+
+    class _EmptyLogprobs:
+        content = []  # empty → triggers early return with non-None logprobs_data
+
+    with caplog.at_level(logging.DEBUG, logger="aegis.proxy.analyzer"):
+        # First call: should add model to _WARNED_NO_LOGPROBS
+        ra.analyze("req-w1", unique_model, _EmptyLogprobs())
+        assert unique_model in analyzer_mod._WARNED_NO_LOGPROBS
+
+        # Second call: model already in set — no duplicate log
+        prev_count = sum(1 for r in caplog.records if unique_model in r.message)
+        ra.analyze("req-w2", unique_model, _EmptyLogprobs())
+        new_count = sum(1 for r in caplog.records if unique_model in r.message)
+        assert new_count == prev_count  # no additional log entry
+
+    # Cleanup
+    analyzer_mod._WARNED_NO_LOGPROBS.discard(unique_model)
+
+
+def test_no_logprobs_warning_skipped_when_logprobs_none():
+    """When logprobs_data is None (not empty object), no warning is issued."""
+    from aegis.proxy import analyzer as analyzer_mod
+
+    unique_model = "test-model-none-input"
+    analyzer_mod._WARNED_NO_LOGPROBS.discard(unique_model)
+
+    ra = ResponseAnalyzer(session_id="s-none-lp")
+    ra.analyze("req-none", unique_model, None)
+
+    # logprobs_data=None should NOT add model to the warning set
+    assert unique_model not in analyzer_mod._WARNED_NO_LOGPROBS
