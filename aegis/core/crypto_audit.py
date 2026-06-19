@@ -176,6 +176,9 @@ def _ed25519_sign(data: bytes) -> tuple[str, str, str]:
     priv = ed25519.Ed25519PrivateKey.generate()
     pub = priv.public_key()
     sig = priv.sign(data)
+    # Explicit del drops the reference immediately, triggering OpenSSL's
+    # OPENSSL_cleanse on the private key bytes before this frame returns (I-08).
+    del priv
     return sig.hex(), pub.public_bytes_raw().hex(), "ed25519-fallback"
 
 

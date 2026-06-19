@@ -25,6 +25,9 @@ from aegis.proxy.schemas import AlertOut, ChoiceLogprobs
 logger = logging.getLogger(__name__)
 
 _MIN_TOKENS_FOR_ANALYSIS = 3  # skip single-token responses
+# Track which model names have already been warned about missing logprobs so the
+# message appears once per process lifetime instead of on every request (I-07).
+_WARNED_NO_LOGPROBS: set[str] = set()
 
 
 @dataclass
@@ -150,6 +153,17 @@ class ResponseAnalyzer:
             content = logprobs_data.content
 
         if not content or len(content) < _MIN_TOKENS_FOR_ANALYSIS:
+            # Providers such as Anthropic and Gemini do not expose per-token
+            # logprobs in their API responses, so entropy analysis is skipped.
+            # Log once per model so operators are aware of the gap (I-07).
+            if logprobs_data is not None and model not in _WARNED_NO_LOGPROBS:
+                _WARNED_NO_LOGPROBS.add(model)
+                logger.debug(
+                    "analyzer: no logprobs available for model=%r — entropy analysis skipped. "
+                    "Enable logprobs in the request or use an OpenAI-compatible provider that "
+                    "returns top_logprobs to activate token-level entropy monitoring.",
+                    model,
+                )
             return ResponseAnalysis(
                 session_id=self.session_id,
                 request_id=request_id,
