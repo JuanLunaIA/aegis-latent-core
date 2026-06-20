@@ -243,13 +243,14 @@
     .toast { position: fixed; bottom: 22px; right: 22px; z-index: 100; background: var(--panel-solid); border: 1px solid var(--border-strong); color: var(--text); padding: 12px 16px; border-radius: 10px; box-shadow: 0 16px 30px -12px rgba(0,0,0,0.6); font-size: 0.84rem; transform: translateY(20px); opacity: 0; transition: all .3s; pointer-events: none; }
     .toast.show { transform: none; opacity: 1; }
 
+    .scrim { display: none; }
     .mobile-only { display: none; }
     @media (max-width: 880px) {
       .app { grid-template-columns: 1fr; }
       .sidebar { position: fixed; left: 0; top: 0; width: 248px; transform: translateX(-100%); transition: transform .25s; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
       .app.nav-open .sidebar { transform: none; }
       .mobile-only { display: grid; }
-      .scrim { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 25; opacity: 0; pointer-events: none; transition: opacity .25s; }
+      .scrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 25; opacity: 0; pointer-events: none; transition: opacity .25s; }
       .app.nav-open .scrim { opacity: 1; pointer-events: auto; }
     }
 
@@ -357,17 +358,21 @@
   };
 
   /* ----------------------------- Pages ----------------------------- */
+  // NOTE: PAGES drives the sidebar nav. Keep each `sec` group contiguous so
+  // buildNav() emits one header per section. After editing this array (or any
+  // markup/CSS in this file), regenerate the screenshot gallery so it stays in
+  // sync: `python tools/visualizer/generate_samples.py`.
   const PAGES = [
     { id:'overview',     title:'Overview',        sub:'Real-time governance & forensic telemetry', icon:'grid', sec:'Operations' },
     { id:'performance',  title:'Performance',     sub:'Latency, throughput & acceleration',        icon:'gauge', sec:'Operations' },
+    { id:'providers',    title:'Providers',       sub:'Multi-provider routing & token economics',  icon:'plug', sec:'Operations' },
+    { id:'health',       title:'System Health',   sub:'Component status & security posture',        icon:'heart', sec:'Operations' },
     { id:'audit',        title:'Audit Chain',     sub:'Merkle chain-of-custody & node explorer',   icon:'link', sec:'Forensics' },
     { id:'forensics',    title:'Forensics',       sub:'Entropy / KL analysis & security scan',     icon:'scan', sec:'Forensics' },
     { id:'waf',          title:'WAF & Limits',    sub:'Prompt-injection defense & rate limiting',  icon:'shield', sec:'Forensics' },
-    { id:'providers',    title:'Providers',       sub:'Multi-provider routing & token economics',  icon:'plug', sec:'Operations' },
     { id:'compliance',   title:'Compliance',      sub:'SOC2 / HIPAA sealed export bundles',        icon:'doc', sec:'Governance' },
     { id:'architecture', title:'Architecture',    sub:'System topology & request lifecycle',       icon:'flow', sec:'Governance' },
     { id:'code',         title:'Code Map',        sub:'Python / Rust symbol explorer',             icon:'code', sec:'Governance' },
-    { id:'health',       title:'System Health',   sub:'Component status & security posture',        icon:'heart', sec:'Operations' },
   ];
 
   const ICONS = {
