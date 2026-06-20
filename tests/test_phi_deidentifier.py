@@ -279,26 +279,31 @@ class TestProxyIntegration:
 
         state = self._make_state(enabled=False)
         body = {"messages": [{"role": "user", "content": "SSN: 123-45-6789"}]}
-        result = _apply_phi_scrub_request(body, state)
+        result, scrubbed, method = _apply_phi_scrub_request(body, state)
         assert result is body  # same object — no copy
+        assert scrubbed is False
+        assert method == ""
 
     def test_request_scrub_enabled_redacts_phi(self):
         from aegis.proxy.app import _apply_phi_scrub_request
 
         state = self._make_state(enabled=True)
         body = {"messages": [{"role": "user", "content": "My SSN is 987-65-4321"}]}
-        result = _apply_phi_scrub_request(body, state)
+        result, scrubbed, method = _apply_phi_scrub_request(body, state)
         assert "987-65-4321" not in result["messages"][0]["content"]
         assert "[REDACTED:SSN]" in result["messages"][0]["content"]
+        assert scrubbed is True
+        assert method == "safe_harbor_regex"
 
     def test_request_scrub_no_phi_returns_same_body(self):
         from aegis.proxy.app import _apply_phi_scrub_request
 
         state = self._make_state(enabled=True)
         body = {"messages": [{"role": "user", "content": "Hello, how are you?"}]}
-        result = _apply_phi_scrub_request(body, state)
+        result, scrubbed, method = _apply_phi_scrub_request(body, state)
         # No PHI → body dict is returned as-is (no copy allocation)
         assert result is body
+        assert scrubbed is False
 
     def test_response_scrub_disabled_returns_same_object(self):
         from aegis.proxy.app import _apply_phi_scrub_response

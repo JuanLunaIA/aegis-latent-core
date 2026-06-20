@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-20 (tests: 1165 passed, 95.30% coverage).
+> **Last verified against codebase:** 2026-06-20 (tests: 1177 passed, 95.33% coverage).
 
 ---
 
@@ -105,7 +105,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] WAL stored at 0o600 (owner-only), audit payload treated as sensitive at rest
 - [x] Sealed compliance bundle with `chain_hash` for chain-of-custody assertions
 - [x] Real-time PHI de-identification on the hot request/response path (NIST SP 800-188 Safe Harbor method): regex engine covering 18 HIPAA Safe Harbor identifier categories (name, DOB, SSN, MRN, phone, email, URL, IP address, ZIP, VIN, device ID, NPI, health plan ID, license, biometric references, etc.). Enabled via `AEGIS_PHI_DEIDENTIFY=true`. Scrubs request messages before forwarding and response content before returning. (`aegis/core/phi_deidentifier.py`; `pytest tests/test_phi_deidentifier.py`)
-- [ ] PHI scrubbing confirmation field per audit node (`phi_scrubbed: bool`, `scrub_method: str`)
+- [x] PHI scrubbing confirmation field per audit node (`phi_scrubbed: bool`, `scrub_method: str`)
 - [ ] Differential privacy noise injection for aggregate analytics queries (`epsilon`, `delta` parameters)
 - [ ] Field-level encryption for PHI within audit node `payload` bytes (AES-256-GCM, per-tenant DEK)
 - [ ] De-identification audit trail: which entities were scrubbed, confidence scores, scrub timestamps
@@ -315,11 +315,11 @@ is not committed to `docs/BENCHMARKS.md`.
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
 | Defense & Government | 18 | 28 | ~39% |
-| Healthcare & Life Sciences | 10 | 24 | ~30% |
+| Healthcare & Life Sciences | 11 | 24 | ~31% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 9 | 23 | ~28% |
 | Advanced Forensics & WAF | 15 | 26 | ~38% |
-| **Total** | **63** | **122** | **~34%** |
+| **Total** | **64** | **122** | **~34%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,17 +328,18 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. PHI scrubbing confirmation field per audit node (`phi_scrubbed: bool`, `scrub_method: str`) — closes Domain 2.1 audit trail gap.
-2. Helm chart with production-grade defaults — unblocks enterprise Kubernetes deployments (Domain 4.4).
-3. 21 CFR Part 11 electronic signature annotations (Domain 2.2 follow-on).
-4. mTLS client certificate authentication with CAC/PIV card via PKCS#11 slot (Domain 1.2).
-5. Conversation graph crescendo analysis — detect constraint erosion across full session (Domain 5.1 follow-on).
+1. Helm chart with production-grade defaults — unblocks enterprise Kubernetes deployments (Domain 4.4).
+2. 21 CFR Part 11 electronic signature annotations (Domain 2.2 follow-on).
+3. mTLS client certificate authentication with CAC/PIV card via PKCS#11 slot (Domain 1.2).
+4. Conversation graph crescendo analysis — detect constraint erosion across full session (Domain 5.1 follow-on).
+5. Differential privacy noise injection for aggregate analytics queries (Domain 2.1).
 
 > **Done:** WAL segment rotation & archival (Domain 3.3) — completed 2026-06-20.
 > **Done:** Real-time PHI de-identification, NIST SP 800-188 Safe Harbor (Domain 2.1) — completed 2026-06-20.
 > **Done:** HSM/PKCS#11 signing integration with RSA-PSS and ECDSA-SHA256 (Domain 1.1) — completed 2026-06-20.
 > **Done:** Multi-turn behavioral WAF session state machine (Domain 5.1) — completed 2026-06-20.
 > **Done:** WAL backup and restore with integrity re-verification, Annex 11 §7.1 (Domain 2.2) — completed 2026-06-20.
+> **Done:** PHI scrubbing confirmation field per audit node (`phi_scrubbed`, `scrub_method`) (Domain 2.1) — completed 2026-06-20.
 
 ---
 

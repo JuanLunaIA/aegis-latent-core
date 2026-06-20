@@ -285,25 +285,25 @@ def _apply_request_entropy_guard(request: Request, body: dict, state: _AppState)
     body["_sanitized_payload"] = sanitized.value
 
 
-def _apply_phi_scrub_request(body: dict, state: _AppState) -> dict:
+def _apply_phi_scrub_request(body: dict, state: _AppState) -> tuple[dict, bool, str]:
     """Scrub PHI from request message content when phi_deidentify is enabled.
 
-    Returns a (possibly modified) body dict.  The original dict is not mutated;
-    a shallow copy is returned only when scrubbing actually fires.
+    Returns ``(body, phi_scrubbed, scrub_method)``.  The original dict is not
+    mutated; a shallow copy is returned only when scrubbing actually fires.
     """
     scrubber = state._phi_scrubber
     if scrubber is None:
-        return body
+        return body, False, ""
     messages = body.get("messages")
     if not messages:
-        return body
+        return body, False, ""
     scrubbed_msgs, hits = scrubber.scrub_messages(messages)
     if hits:
         logger.debug("PHI scrubbed from request (%d entities): %s", sum(hits.values()), hits)
         new_body = dict(body)
         new_body["messages"] = scrubbed_msgs
-        return new_body
-    return body
+        return new_body, True, "safe_harbor_regex"
+    return body, False, ""
 
 
 def _apply_phi_scrub_response(resp_json: dict, state: _AppState) -> dict:
@@ -596,6 +596,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         analysis: ResponseAnalysis,
         raw_body: bytes,
         request_start: float = 0.0,
+        phi_scrubbed: bool = False,
+        scrub_method: str = "",
     ) -> None:
         """Commit one audit node and fire alerts.
 
@@ -629,6 +631,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 payload=raw_body[:65536],
                 tenant_id=audit_sid,
                 sampling_params=analysis.sampling_params,
+                phi_scrubbed=phi_scrubbed,
+                scrub_method=scrub_method,
             )
             commit_elapsed = time.perf_counter() - commit_start
             observability.AUDIT_COMMIT_DURATION.observe(commit_elapsed)
@@ -742,7 +746,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         # PHI de-identification on the hot request path (NIST SP 800-188 Safe Harbor).
         # Scrubs 18 HIPAA identifier categories from message content before forwarding.
         # raw_body (used for audit) retains the original; body is the scrubbed copy.
-        body = _apply_phi_scrub_request(body, state)
+        body, _phi_scrubbed, _scrub_method = _apply_phi_scrub_request(body, state)
 
         session_id = request.headers.get("x-session-id") or body.get("user") or str(uuid.uuid4())
         request_id = str(uuid.uuid4())
@@ -831,7 +835,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                         sampling_params={"temperature": body.get("temperature")},
                     )
                     _spawn_background(
-                        _commit_and_alert(request_id, session_id, analysis, raw_body, request_start)
+                        _commit_and_alert(
+                            request_id, session_id, analysis, raw_body, request_start,
+                            phi_scrubbed=_phi_scrubbed, scrub_method=_scrub_method,
+                        )
                     )
 
             return StreamingResponse(_stream_chat(), media_type="text/event-stream")
@@ -872,7 +879,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
 
         _spawn_background(
-            _commit_and_alert(request_id, session_id, analysis, raw_body, request_start)
+            _commit_and_alert(
+                request_id, session_id, analysis, raw_body, request_start,
+                phi_scrubbed=_phi_scrubbed, scrub_method=_scrub_method,
+            )
         )
 
         observability.REQUEST_TOTAL.labels(

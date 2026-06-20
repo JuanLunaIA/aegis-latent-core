@@ -103,6 +103,8 @@ class AuditNode:
     endpoint: str
     token_trail_count: int
     is_fallback: bool = False
+    phi_scrubbed: bool = False
+    scrub_method: str = ""
 
     def __post_init__(self) -> None:
         self.__creation_hash__: str = self.node_hash
@@ -155,6 +157,8 @@ class AuditNode:
             "endpoint": "unknown",
             "token_trail_count": 0,
             "is_fallback": False,
+            "phi_scrubbed": False,
+            "scrub_method": "",
         }
         # Remove legacy field if present
         data.pop("payload", None)
@@ -309,6 +313,8 @@ class CryptographicAuditLedger:
         token_trail: list[dict[str, Any]] | None = None,
         usage: dict[str, Any] | None = None,
         sampling_params: dict[str, Any] | None = None,
+        phi_scrubbed: bool = False,
+        scrub_method: str = "",
     ) -> AuditNode:
         """Commit a full forensic record (request + response) to the chain.
 
@@ -387,6 +393,8 @@ class CryptographicAuditLedger:
                 endpoint=endpoint,
                 token_trail_count=len(token_trail or []),
                 is_fallback=is_fallback,
+                phi_scrubbed=phi_scrubbed,
+                scrub_method=scrub_method,
             )
 
             self._persist_node(node)
@@ -400,6 +408,8 @@ class CryptographicAuditLedger:
         payload: bytes,
         tenant_id: str = "default",
         sampling_params: dict[str, Any] | None = None,
+        phi_scrubbed: bool = False,
+        scrub_method: str = "",
     ) -> AuditNode:
         """Backward-compatible API used by app.py (request-only commit).
 
@@ -415,6 +425,8 @@ class CryptographicAuditLedger:
             model=str(params.get("model", "unknown")),
             endpoint=str(params.get("endpoint", "chat.completions")),
             sampling_params=params,
+            phi_scrubbed=phi_scrubbed,
+            scrub_method=scrub_method,
         )
 
     def verify_integrity(self) -> tuple[bool, int | None]:
