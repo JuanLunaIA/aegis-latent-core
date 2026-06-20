@@ -17,11 +17,18 @@ Usage::
     # result.text  → "Call me at [REDACTED:PHONE] or [REDACTED:EMAIL]"
     # result.hits  → {"PHONE": 1, "EMAIL": 1}
     # result.method → "safe_harbor_regex"
+
+    # De-identification audit trail (entity hits + confidence + timestamp)
+    result, audit = scrubber.scrub_with_audit("Patient DOB 1990-01-01, SSN 123-45-6789")
+    # audit.entity_hits       → {"DATE": 1, "SSN": 1}
+    # audit.confidence_scores → {"DATE": 0.88, "SSN": 0.99}
+    # audit.timestamp_iso     → "2026-06-20T12:34:56.000000+00:00"
 """
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import NamedTuple
 
 
@@ -150,6 +157,55 @@ _SAFE_HARBOR_PATTERNS: list[_Pattern] = [
 ]
 
 
+# Per-category confidence scores for the regex-based Safe Harbor scrubber.
+# Values reflect how likely a regex match is a true PHI entity vs false positive.
+_CONFIDENCE: dict[str, float] = {
+    "SSN": 0.99,           # NNN-NN-NNNN is highly specific
+    "EMAIL": 0.99,         # user@domain.tld is unambiguous
+    "URL": 0.98,           # http(s):// prefix is unambiguous
+    "IP_ADDRESS": 0.97,    # four-octet or IPv6 form
+    "NPI": 0.95,           # requires "NPI" prefix → low false-positive rate
+    "MRN": 0.95,           # requires "MRN" / "Medical Record" prefix
+    "BIOMETRIC": 0.95,     # keyword-anchored
+    "HEALTH_PLAN_ID": 0.88,
+    "ACCOUNT": 0.92,       # credit-card format (Luhn not checked)
+    "PHONE": 0.90,         # 10-digit forms; area codes not validated
+    "LICENSE": 0.85,       # prefixed but alphanumeric body is loose
+    "DEVICE_ID": 0.85,     # S/N prefix but wide character range
+    "DATE": 0.88,          # month/day/year forms; year-only excluded
+    "ADDRESS": 0.85,       # street-type suffix heuristic
+    "NAME": 0.80,          # title prefix heuristic; some false positives
+    "VIN": 0.80,           # any 17-char alphanumeric
+    "ZIP": 0.75,           # 5-digit number; frequent false positives
+}
+
+
+@dataclass
+class ScrubAuditRecord:
+    """Structured de-identification audit trail for a single scrub operation.
+
+    Records which PHI categories were detected, how many of each, the
+    scrubber's confidence in each category, and the UTC timestamp when
+    the scrub was performed.  Does NOT record the actual redacted values —
+    only the category metadata — so the audit record itself contains no PHI.
+    """
+
+    timestamp_iso: str
+    entity_hits: dict[str, int] = field(default_factory=dict)
+    confidence_scores: dict[str, float] = field(default_factory=dict)
+    method: str = "safe_harbor_regex"
+    total_redactions: int = 0
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "timestamp_iso": self.timestamp_iso,
+            "entity_hits": self.entity_hits,
+            "confidence_scores": self.confidence_scores,
+            "method": self.method,
+            "total_redactions": self.total_redactions,
+        }
+
+
 @dataclass
 class ScrubResult:
     """Result of a PHI scrub operation."""
@@ -191,7 +247,7 @@ class PHIDeidentifier:
         hits: dict[str, int] = {}
         current = text
         for label, rx in self._compiled:
-            def _replace(m: re.Match, _label: str = label) -> str:  # noqa: E731
+            def _replace(m: re.Match[str], _label: str = label) -> str:  # noqa: E731
                 hits[_label] = hits.get(_label, 0) + 1
                 return f"[REDACTED:{_label}]"
 
@@ -199,14 +255,39 @@ class PHIDeidentifier:
 
         return ScrubResult(text=current, hits=hits)
 
-    def scrub_messages(self, messages: list[dict]) -> tuple[list[dict], dict[str, int]]:
+    def scrub_with_audit(self, text: str) -> tuple[ScrubResult, ScrubAuditRecord]:
+        """Scrub PHI from *text* and return a result with a structured audit record.
+
+        Returns
+        -------
+        tuple[ScrubResult, ScrubAuditRecord]
+            The scrubbed result and an audit record containing the entity
+            categories detected, hit counts, confidence scores, and a UTC
+            timestamp.  The audit record contains NO PHI values — only
+            category metadata.
+        """
+        result = self.scrub(text)
+        confidence_scores = {
+            label: _CONFIDENCE.get(label, 0.80)
+            for label in result.hits
+        }
+        audit = ScrubAuditRecord(
+            timestamp_iso=datetime.now(tz=UTC).isoformat(),
+            entity_hits=dict(result.hits),
+            confidence_scores=confidence_scores,
+            method=result.method,
+            total_redactions=result.total_hits,
+        )
+        return result, audit
+
+    def scrub_messages(self, messages: list[dict[str, object]]) -> tuple[list[dict[str, object]], dict[str, int]]:
         """Scrub PHI from the ``content`` field of each message dict (in-place copy).
 
         Returns a new list of message dicts (originals are not mutated) and
         a merged hit counter across all messages.
         """
         total_hits: dict[str, int] = {}
-        scrubbed: list[dict] = []
+        scrubbed: list[dict[str, object]] = []
         for msg in messages:
             content = msg.get("content")
             if isinstance(content, str) and content:
