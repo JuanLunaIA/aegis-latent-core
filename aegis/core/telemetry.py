@@ -15,6 +15,31 @@ import numpy as np
 
 from aegis.core.math_utils import log_softmax, normalize_logits
 
+# Finite stand-in for log(0) when padding a shorter distribution to match a
+# longer one.  Using -inf would be mathematically natural but math_utils'
+# log_softmax/normalize_logits reject non-finite inputs.  exp(_PAD_LOGIT - max)
+# underflows to exactly 0.0 in float64, so the padded slots carry zero
+# probability mass (and register as "saturated") while keeping every array
+# finite.  X→Y because consecutive response tokens almost always expose
+# different ``top_logprobs`` counts, so KL/JS over them MUST tolerate ragged
+# lengths or the entire sequence-drift path raises and 500s the proxy.
+_PAD_LOGIT: float = -1e30
+
+
+def _pad_to_common_length(
+    p_logits: np.ndarray, q_logits: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Right-pad the shorter logit array with ``_PAD_LOGIT`` so both match.
+
+    Returns the inputs unchanged when shapes already agree.
+    """
+    if p_logits.shape == q_logits.shape:
+        return p_logits, q_logits
+    max_len = max(len(p_logits), len(q_logits))
+    p_logits = np.pad(p_logits, (0, max_len - len(p_logits)), constant_values=_PAD_LOGIT)
+    q_logits = np.pad(q_logits, (0, max_len - len(q_logits)), constant_values=_PAD_LOGIT)
+    return p_logits, q_logits
+
 
 @dataclass(frozen=True)
 class KLResult:
@@ -106,11 +131,9 @@ class LogitEntropyMonitor:
         return float(np.var(list(self.history)))
 
     def compute_kl_divergence(self, p_logits: np.ndarray, q_logits: np.ndarray) -> KLResult:
-        if p_logits.shape != q_logits.shape:
-            # Handle vocab size mismatch by padding smaller distribution
-            max_len = max(len(p_logits), len(q_logits))
-            p_logits = np.pad(p_logits, (0, max_len - len(p_logits)), constant_values=-np.inf)
-            q_logits = np.pad(q_logits, (0, max_len - len(q_logits)), constant_values=-np.inf)
+        # Handle vocab size mismatch by padding the smaller distribution with a
+        # finite stand-in for log(0) (see _PAD_LOGIT) so log_softmax accepts it.
+        p_logits, q_logits = _pad_to_common_length(p_logits, q_logits)
 
         log_p = log_softmax(p_logits)
         log_q = log_softmax(q_logits)
@@ -131,6 +154,10 @@ class LogitEntropyMonitor:
         )
 
     def compute_js_divergence(self, p_logits: np.ndarray, q_logits: np.ndarray) -> float:
+        # Ragged consecutive-token distributions must be aligned before the
+        # element-wise mixture m = 0.5*(p+q); otherwise numpy raises on the
+        # shape mismatch and the sequence-drift path 500s the proxy.
+        p_logits, q_logits = _pad_to_common_length(p_logits, q_logits)
         p = normalize_logits(p_logits)
         q = normalize_logits(q_logits)
         m = 0.5 * (p + q)
