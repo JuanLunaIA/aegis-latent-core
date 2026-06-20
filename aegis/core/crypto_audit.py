@@ -54,6 +54,7 @@ import numpy as np
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from aegis.core.forensic import build_merkle_leaf, sha256_hex
+from aegis.core.hsm import HSMSigningBackend, HSMUnavailableError
 from aegis.core.mmr import MerkleMountainRange
 
 logger = logging.getLogger(__name__)
@@ -102,6 +103,11 @@ class AuditNode:
     endpoint: str
     token_trail_count: int
     is_fallback: bool = False
+    phi_scrubbed: bool = False
+    scrub_method: str = ""
+    # 21 CFR Part 11 §11.50 electronic signature annotation fields
+    signer_name: str = ""
+    signature_meaning: str = ""
 
     def __post_init__(self) -> None:
         self.__creation_hash__: str = self.node_hash
@@ -154,6 +160,10 @@ class AuditNode:
             "endpoint": "unknown",
             "token_trail_count": 0,
             "is_fallback": False,
+            "phi_scrubbed": False,
+            "scrub_method": "",
+            "signer_name": "",
+            "signature_meaning": "",
         }
         # Remove legacy field if present
         data.pop("payload", None)
@@ -256,9 +266,11 @@ class CryptographicAuditLedger:
         max_wal_bytes: int = 0,
         # Backward-compat alias accepted but ignored (old API used async_mode)
         async_mode: bool = False,
+        hsm_backend: HSMSigningBackend | None = None,
     ) -> None:
         self.persistence_path = persistence_path
         self._signing_key = signing_key
+        self._hsm_backend = hsm_backend
         self.max_memory_nodes = max_memory_nodes
         self.max_forensic_bytes = max_forensic_bytes
         self.max_wal_bytes = max_wal_bytes
@@ -306,6 +318,10 @@ class CryptographicAuditLedger:
         token_trail: list[dict[str, Any]] | None = None,
         usage: dict[str, Any] | None = None,
         sampling_params: dict[str, Any] | None = None,
+        phi_scrubbed: bool = False,
+        scrub_method: str = "",
+        signer_name: str = "",
+        signature_meaning: str = "",
     ) -> AuditNode:
         """Commit a full forensic record (request + response) to the chain.
 
@@ -384,6 +400,10 @@ class CryptographicAuditLedger:
                 endpoint=endpoint,
                 token_trail_count=len(token_trail or []),
                 is_fallback=is_fallback,
+                phi_scrubbed=phi_scrubbed,
+                scrub_method=scrub_method,
+                signer_name=signer_name,
+                signature_meaning=signature_meaning,
             )
 
             self._persist_node(node)
@@ -397,6 +417,10 @@ class CryptographicAuditLedger:
         payload: bytes,
         tenant_id: str = "default",
         sampling_params: dict[str, Any] | None = None,
+        phi_scrubbed: bool = False,
+        scrub_method: str = "",
+        signer_name: str = "",
+        signature_meaning: str = "",
     ) -> AuditNode:
         """Backward-compatible API used by app.py (request-only commit).
 
@@ -412,6 +436,10 @@ class CryptographicAuditLedger:
             model=str(params.get("model", "unknown")),
             endpoint=str(params.get("endpoint", "chat.completions")),
             sampling_params=params,
+            phi_scrubbed=phi_scrubbed,
+            scrub_method=scrub_method,
+            signer_name=signer_name,
+            signature_meaning=signature_meaning,
         )
 
     def verify_integrity(self) -> tuple[bool, int | None]:
@@ -466,6 +494,43 @@ class CryptographicAuditLedger:
                     return False, i
 
         return True, None
+
+    def export_part11_signatures(self) -> list[dict[str, Any]]:
+        """Return 21 CFR Part 11 §11.50-compliant signature records for all nodes.
+
+        Each record includes the three mandatory Part 11 fields:
+        - ``signer_name``      — printed name of the signer
+        - ``signature_meaning``— human-readable meaning (authored/reviewed/approved)
+        - ``timestamp_iso``    — date and time when the signature was executed (UTC ISO-8601)
+
+        Plus cryptographic binding fields that link the annotation to the node:
+        - ``node_hash``        — SHA-256 chain accumulator (tamper-evident binding)
+        - ``signature``        — hex-encoded cryptographic signature
+        - ``signature_scheme`` — signing algorithm used
+        - ``state_id``         — unique node identifier
+
+        Records with no signer_name are included with empty strings so that
+        every chain node is represented in the export.
+        """
+        from datetime import UTC, datetime  # noqa: PLC0415
+
+        with self._lock:
+            chain_list = list(self.chain)
+
+        records: list[dict[str, Any]] = []
+        for node in chain_list:
+            records.append(
+                {
+                    "state_id": node.state_id,
+                    "signer_name": node.signer_name,
+                    "signature_meaning": node.signature_meaning,
+                    "timestamp_iso": datetime.fromtimestamp(node.timestamp, tz=UTC).isoformat(),
+                    "node_hash": node.node_hash,
+                    "signature": node.signature,
+                    "signature_scheme": node.signature_scheme,
+                }
+            )
+        return records
 
     def close(self) -> None:
         with self._lock:
@@ -605,25 +670,36 @@ class CryptographicAuditLedger:
     def _sign(self, data: bytes) -> tuple[str, str, str, bool]:
         """Sign ``data``. Returns (signature_hex, pubkey_hex, scheme, is_fallback).
 
-        Rust path: aegis_rust.generate_pqc_keypair() -> PqcKeypair;
-                   keypair.sign(data) -> bytes; keypair.public_key -> bytes.
-        HMAC path: self._signing_key used directly.
-        Ed25519 fallback: per-node ephemeral key (non-verifiable across restarts).
+        Priority order (highest security first):
+        1. HSM/PKCS#11: key never leaves token boundary.
+        2. PQC ML-DSA via Rust extension (FIPS 204 post-quantum signing).
+        3. HMAC-SHA256: fast, verifiable, requires signing_key in memory.
+        4. Ed25519 ephemeral fallback: non-verifiable across restarts.
         """
+        # ── 1. HSM/PKCS#11 path ───────────────────────────────────────────
+        if self._hsm_backend and self._hsm_backend.available:
+            try:
+                sig_bytes, pub_hex, scheme = self._hsm_backend.sign(data)
+                return sig_bytes.hex(), pub_hex, scheme, False
+            except HSMUnavailableError as exc:
+                logger.warning("HSM signing failed (%s); falling back to next tier", exc)
+
+        # ── 2. Rust PQC ML-DSA path ───────────────────────────────────────
         if RUST_AVAILABLE:
             try:
                 keypair = aegis_rust.generate_pqc_keypair()  # type: ignore[name-defined]
-                sig_bytes: bytes = bytes(keypair.sign(data))
+                sig_bytes = bytes(keypair.sign(data))
                 pub_bytes: bytes = bytes(keypair.public_key)
                 return sig_bytes.hex(), pub_bytes.hex(), "pqc-ml-dsa", False
             except Exception as exc:
                 logger.warning("aegis_rust PQC sign failed (%s); falling back", exc)
 
+        # ── 3. HMAC-SHA256 path ───────────────────────────────────────────
         if self._signing_key:
             sig = _hmac_sign(self._signing_key, data)
             return sig, "", "hmac-sha256", False
 
-        # Last resort: per-node ephemeral Ed25519 (non-verifiable across restarts)
+        # ── 4. Ed25519 ephemeral fallback ─────────────────────────────────
         sig_hex, pub_hex, scheme = _ed25519_sign(data)
         return sig_hex, pub_hex, scheme, True
 

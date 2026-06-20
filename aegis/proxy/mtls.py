@@ -12,9 +12,12 @@ import logging
 
 from fastapi import HTTPException, Request, status
 
+from aegis.core.cac_piv import CACPIVCertError, CACPIVVerifier
 from aegis.core.identity import SpiffeIdentityManager
 
 logger = logging.getLogger(__name__)
+
+_cac_piv_verifier = CACPIVVerifier()
 
 
 class mTLSAuth:
@@ -73,3 +76,61 @@ class mTLSAuth:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal error during mTLS validation.",
             ) from e
+
+
+class CACPIVAuth:
+    """mTLS authentication for DoD CAC and GSA PIV client certificates.
+
+    Reads the PEM-encoded client certificate from the ``X-Forwarded-Client-Cert``
+    header set by the TLS terminator (Envoy / Nginx) and delegates to
+    :class:`~aegis.core.cac_piv.CACPIVVerifier` to check the certificate policy
+    OIDs and extract the EDIPI (CAC) or UUID (PIV-I).
+
+    The PKCS#11 interaction (private key stays on the smart card, hardware token
+    signs the TLS challenge) happens entirely on the client side before the
+    request reaches this middleware.
+    """
+
+    def __init__(self, verifier: CACPIVVerifier | None = None) -> None:
+        self._verifier = verifier or _cac_piv_verifier
+
+    async def validate_request(self, request: Request) -> str:
+        """Extract, parse, and validate the client CAC/PIV certificate.
+
+        Returns
+        -------
+        str
+            The verified identity: EDIPI (DoD CAC) or UUID (PIV-I / GSA PIV).
+
+        Raises
+        ------
+        HTTPException
+            401 when no certificate header is present.
+            403 when the certificate fails CAC/PIV policy checks.
+        """
+        pem_header = request.headers.get("X-Forwarded-Client-Cert")
+        if not pem_header:
+            logger.warning("CAC/PIV: No client certificate forwarded by TLS terminator.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="CAC/PIV client certificate required (X-Forwarded-Client-Cert missing).",
+            )
+
+        try:
+            cert = self._verifier.parse_pem(pem_header.encode())
+            identity = self._verifier.verify(cert)
+        except CACPIVCertError as exc:
+            logger.warning("CAC/PIV: Certificate rejected — %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"CAC/PIV certificate rejected: {exc}",
+            ) from exc
+        except Exception as exc:
+            logger.exception("CAC/PIV: Unexpected error parsing certificate: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal error during CAC/PIV certificate validation.",
+            ) from exc
+
+        logger.info("CAC/PIV: Authenticated identity=%s", identity)
+        return identity

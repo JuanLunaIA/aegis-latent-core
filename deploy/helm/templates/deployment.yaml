@@ -21,6 +21,8 @@ spec:
       labels:
         {{- include "aegis-latent-core.selectorLabels" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ include "aegis-latent-core.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -56,6 +58,14 @@ spec:
               value: {{ .Values.aegis.workers | quote }}
             - name: AEGIS_WAL_PATH
               value: {{ .Values.persistence.mountPath }}/aegis.wal.jsonl
+            - name: AEGIS_PHI_DEIDENTIFY
+              value: {{ .Values.aegis.phiDeidentify | quote }}
+            - name: AEGIS_WAF_SESSION_WINDOW
+              value: {{ .Values.aegis.wafSessionWindow | quote }}
+            - name: AEGIS_WAF_SESSION_CUMULATIVE_THRESHOLD
+              value: {{ .Values.aegis.wafSessionCumulativeThreshold | quote }}
+            - name: AEGIS_WAF_SESSION_CRESCENDO_TURNS
+              value: {{ .Values.aegis.wafSessionCrescendoTurns | quote }}
             {{- if .Values.aegis.existingSecret }}
             - name: AEGIS_BACKEND_API_KEY
               valueFrom:
@@ -73,6 +83,12 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.aegis.existingSecret }}
                   key: AEGIS_AUDIT_API_KEYS
+                  optional: true
+            - name: AEGIS_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aegis.existingSecret }}
+                  key: {{ .Values.aegis.signingKeySecretKey }}
                   optional: true
             {{- end }}
           livenessProbe:
@@ -96,6 +112,17 @@ spec:
           {{- end }}
         - name: tmp
           emptyDir: {}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- range .Values.topologySpreadConstraints }}
+        - maxSkew: {{ .maxSkew }}
+          topologyKey: {{ .topologyKey | quote }}
+          whenUnsatisfiable: {{ .whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              {{- include "aegis-latent-core.selectorLabels" $ | nindent 14 }}
+        {{- end }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

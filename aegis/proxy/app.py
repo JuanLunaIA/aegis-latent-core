@@ -26,10 +26,13 @@ from aegis.config import AegisSettings, get_settings
 from aegis.core import observability
 from aegis.core.circuit_breaker import CircuitOpenError
 from aegis.core.crypto_audit import CryptographicAuditLedger
+from aegis.core.hsm import HSMSigningBackend
 from aegis.core.normalization import canonical_normalize
+from aegis.core.phi_deidentifier import PHIDeidentifier
 from aegis.core.ratelimiter import create_rate_limiter
 from aegis.core.secrets import VaultManager
 from aegis.core.session_manager import SessionLifecycleManager
+from aegis.core.waf_session import WAFSessionTracker
 from aegis.proxy.analyzer import ResponseAnalysis, ResponseAnalyzer
 from aegis.proxy.audit_api import build_audit_router
 from aegis.proxy.dependencies import validate_proxy_auth
@@ -220,6 +223,10 @@ class _AppState:
     _entropy_taint_engine: Any
     _entropy_analyzer: Any
     _entropy_segmenter: Any
+    # PHI de-identification scrubber (None when phi_deidentify=False).
+    _phi_scrubber: PHIDeidentifier | None
+    # Multi-turn behavioral WAF session tracker (Domain 5.1).
+    waf_session_tracker: WAFSessionTracker
 
     def get_analyzer(self, session_id: str) -> ResponseAnalyzer:
         return self.analyzers.get(session_id)
@@ -278,6 +285,64 @@ def _apply_request_entropy_guard(request: Request, body: dict, state: _AppState)
     body["_sanitized_payload"] = sanitized.value
 
 
+def _apply_phi_scrub_request(body: dict, state: _AppState) -> tuple[dict, bool, str]:
+    """Scrub PHI from request message content when phi_deidentify is enabled.
+
+    Returns ``(body, phi_scrubbed, scrub_method)``.  The original dict is not
+    mutated; a shallow copy is returned only when scrubbing actually fires.
+    """
+    scrubber = state._phi_scrubber
+    if scrubber is None:
+        return body, False, ""
+    messages = body.get("messages")
+    if not messages:
+        return body, False, ""
+    scrubbed_msgs, hits = scrubber.scrub_messages(messages)
+    if hits:
+        logger.debug("PHI scrubbed from request (%d entities): %s", sum(hits.values()), hits)
+        new_body = dict(body)
+        new_body["messages"] = scrubbed_msgs
+        return new_body, True, "safe_harbor_regex"
+    return body, False, ""
+
+
+def _apply_phi_scrub_response(resp_json: dict, state: _AppState) -> dict:
+    """Scrub PHI from response choices[].message.content when phi_deidentify is enabled.
+
+    Returns a (possibly modified) response dict.  The original is not mutated.
+    """
+    scrubber = state._phi_scrubber
+    if scrubber is None:
+        return resp_json
+    choices = resp_json.get("choices")
+    if not choices:
+        return resp_json
+    modified = False
+    new_choices = []
+    for choice in choices:
+        msg = choice.get("message") if isinstance(choice, dict) else None
+        if msg and isinstance(msg.get("content"), str):
+            result = scrubber.scrub(msg["content"])
+            if result.phi_detected:
+                logger.debug(
+                    "PHI scrubbed from response (%d entities): %s",
+                    result.total_hits,
+                    result.hits,
+                )
+                new_choice = dict(choice)
+                new_choice["message"] = dict(msg)
+                new_choice["message"]["content"] = result.text
+                new_choices.append(new_choice)
+                modified = True
+                continue
+        new_choices.append(choice)
+    if modified:
+        new_resp = dict(resp_json)
+        new_resp["choices"] = new_choices
+        return new_resp
+    return resp_json
+
+
 def _extract_logprobs(resp_json: dict) -> list:
     try:
         return resp_json.get("choices", [])[0].get("logprobs", {}).get("content", [])
@@ -303,6 +368,33 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     state.proxy_auth = ProxyKeyAuth(cfg)
     state.audit_auth = AuditKeyAuth(cfg)
     state.waf = AegisWAF(strict_mode=cfg.waf_strict_mode)
+    state.waf_session_tracker = WAFSessionTracker(
+        max_sessions=4_096,
+        window=cfg.waf_session_window,
+        cumulative_threshold=cfg.waf_session_cumulative_threshold,
+        crescendo_turns=cfg.waf_session_crescendo_turns,
+    )
+    state._phi_scrubber = PHIDeidentifier() if cfg.phi_deidentify else None
+
+    # HSM/PKCS#11 signing backend (optional; degrades gracefully when unavailable).
+    _hsm_backend: HSMSigningBackend | None = None
+    if cfg.pkcs11_library_path:
+        _hsm_backend = HSMSigningBackend(
+            library_path=cfg.pkcs11_library_path,
+            slot_id=cfg.pkcs11_slot_id,
+            pin=cfg.pkcs11_pin,
+            key_label=cfg.pkcs11_key_label,
+            token_label=cfg.pkcs11_token_label,
+        )
+        if _hsm_backend.available:
+            logger.info("HSM/PKCS#11 signing enabled (library=%s)", cfg.pkcs11_library_path)
+        else:
+            logger.warning(
+                "HSM/PKCS#11 library configured (%s) but backend not available; "
+                "falling back to HMAC-SHA256 signing.",
+                cfg.pkcs11_library_path,
+            )
+
     _signing_key = cfg.signing_key
     if not _signing_key and not cfg.auth_disabled:
         import logging as _log
@@ -317,6 +409,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         signing_key=_signing_key,
         max_memory_nodes=cfg.max_memory_nodes,
         max_wal_bytes=cfg.max_wal_bytes,
+        hsm_backend=_hsm_backend,
     )
     state.ratelimiter = create_rate_limiter(cfg)
 
@@ -459,6 +552,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         await state.ratelimiter.close()
         state.sessions.close()
         state.ledger.close()
+        if _hsm_backend is not None:
+            _hsm_backend.close()
 
     app = FastAPI(
         title="Aegis Latent Core",
@@ -501,6 +596,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         analysis: ResponseAnalysis,
         raw_body: bytes,
         request_start: float = 0.0,
+        phi_scrubbed: bool = False,
+        scrub_method: str = "",
+        signer_name: str = "",
+        signature_meaning: str = "",
     ) -> None:
         """Commit one audit node and fire alerts.
 
@@ -534,6 +633,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 payload=raw_body[:65536],
                 tenant_id=audit_sid,
                 sampling_params=analysis.sampling_params,
+                phi_scrubbed=phi_scrubbed,
+                scrub_method=scrub_method,
+                signer_name=signer_name,
+                signature_meaning=signature_meaning,
             )
             commit_elapsed = time.perf_counter() - commit_start
             observability.AUDIT_COMMIT_DURATION.observe(commit_elapsed)
@@ -644,8 +747,29 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         # FIX-APP-02: pass state instead of cfg so the function uses the cached singletons.
         _apply_request_entropy_guard(request, body, state)
 
+        # PHI de-identification on the hot request path (NIST SP 800-188 Safe Harbor).
+        # Scrubs 18 HIPAA identifier categories from message content before forwarding.
+        # raw_body (used for audit) retains the original; body is the scrubbed copy.
+        body, _phi_scrubbed, _scrub_method = _apply_phi_scrub_request(body, state)
+
         session_id = request.headers.get("x-session-id") or body.get("user") or str(uuid.uuid4())
         request_id = str(uuid.uuid4())
+
+        # Multi-turn behavioral WAF check (Domain 5.1): accumulate per-session WAF
+        # scores and detect escalation patterns (cumulative score / crescendo attack).
+        # Runs only on requests that passed the per-turn WAF check above.
+        session_waf = state.waf_session_tracker.record_and_check(
+            session_id=session_id,
+            score=waf_result.score,
+            allowed=waf_result.allowed,
+            reason=waf_result.reason or "",
+        )
+        if session_waf.escalated:
+            observability.WAF_BLOCKS.labels(layer="session").inc()
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Behavioral WAF: {session_waf.reason}",
+            )
 
         if not await state.ratelimiter.check_limit(session_id):
             observability.RATELIMIT_REJECTIONS.inc()
@@ -715,7 +839,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                         sampling_params={"temperature": body.get("temperature")},
                     )
                     _spawn_background(
-                        _commit_and_alert(request_id, session_id, analysis, raw_body, request_start)
+                        _commit_and_alert(
+                            request_id, session_id, analysis, raw_body, request_start,
+                            phi_scrubbed=_phi_scrubbed, scrub_method=_scrub_method,
+                            signer_name=session_id, signature_meaning="authored",
+                        )
                     )
 
             return StreamingResponse(_stream_chat(), media_type="text/event-stream")
@@ -746,6 +874,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return Response(content=upstream.content, status_code=upstream.status_code)
 
         resp_json = upstream.json()
+        # PHI de-identification on the hot response path: scrub before returning to client.
+        resp_json = _apply_phi_scrub_response(resp_json, state)
         analysis = analyzer.analyze(
             request_id=request_id,
             model=body.get("model", "unknown"),
@@ -754,7 +884,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
 
         _spawn_background(
-            _commit_and_alert(request_id, session_id, analysis, raw_body, request_start)
+            _commit_and_alert(
+                request_id, session_id, analysis, raw_body, request_start,
+                phi_scrubbed=_phi_scrubbed, scrub_method=_scrub_method,
+                signer_name=session_id, signature_meaning="authored",
+            )
         )
 
         observability.REQUEST_TOTAL.labels(
@@ -768,7 +902,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
 
         trace_id = observability.current_trace_id()
-        resp = Response(content=upstream.content, status_code=200)
+        resp_content = json.dumps(resp_json).encode() if state._phi_scrubber else upstream.content
+        resp = Response(content=resp_content, status_code=200)
         resp.headers.update(
             {
                 "X-Aegis-Request-ID": request_id,
@@ -807,6 +942,19 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
         session_id = request.headers.get("x-session-id", str(uuid.uuid4()))
         request_id = str(uuid.uuid4())
+
+        session_waf = state.waf_session_tracker.record_and_check(
+            session_id=session_id,
+            score=waf_result.score,
+            allowed=waf_result.allowed,
+            reason=waf_result.reason or "",
+        )
+        if session_waf.escalated:
+            observability.WAF_BLOCKS.labels(layer="session").inc()
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Behavioral WAF: {session_waf.reason}",
+            )
 
         if not await state.ratelimiter.check_limit(session_id):
             raise HTTPException(

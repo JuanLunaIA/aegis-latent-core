@@ -3,6 +3,13 @@
 
 replicaCount: 2
 
+# ── Service account ───────────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+  automountServiceAccountToken: false
+
 image:
   repository: ghcr.io/juanlunia/aegis-latent-core
   pullPolicy: IfNotPresent
@@ -22,6 +29,8 @@ aegis:
   #   --from-literal=AEGIS_API_KEYS=sk-aegis-1,sk-aegis-2 \
   #   --from-literal=AEGIS_AUDIT_API_KEYS=sk-audit-1
   existingSecret: "aegis-keys"
+  # Key within existingSecret holding AEGIS_SIGNING_KEY (HMAC-SHA256 audit signing)
+  signingKeySecretKey: "AEGIS_SIGNING_KEY"
   forceLogprobs: "true"
   logLevel: "INFO"
   klAlertThreshold: "2.0"
@@ -29,6 +38,10 @@ aegis:
   entropyAlertThresholdBits: "1.0"
   webhookUrl: ""
   workers: "2"
+  phiDeidentify: "false"
+  wafSessionWindow: "10"
+  wafSessionCumulativeThreshold: "2.0"
+  wafSessionCrescendoTurns: "3"
 
 # ── WAL persistence ───────────────────────────────────────────────────────────
 persistence:
@@ -78,6 +91,7 @@ autoscaling:
   minReplicas: 2
   maxReplicas: 10
   targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
 
 # ── Security context ──────────────────────────────────────────────────────────
 podSecurityContext:
@@ -115,6 +129,17 @@ readinessProbe:
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
+
+# ── Topology spread (multi-AZ HA) ─────────────────────────────────────────────
+# Spread pods across availability zones and nodes so a single-zone or single-node
+# failure cannot take the service offline.  Set to [] to disable.
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: DoNotSchedule
 
 nodeSelector: {}
 tolerations: []

@@ -165,7 +165,6 @@ omit = [
     "aegis/core/formal_proofs.py",
     "aegis/core/formal_specs.py",
     "aegis/core/fuzzing_harness.py",
-    "aegis/core/hsm.py",
     "aegis/core/identity.py",
     "aegis/core/kernel_hardener.py",
     "aegis/core/memory.py",
