@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-20 (tests: 1146 passed, 95.64% coverage).
+> **Last verified against codebase:** 2026-06-20 (tests: 1165 passed, 95.30% coverage).
 
 ---
 
@@ -121,7 +121,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] `audit_trail_version` schema field for migration traceability (Annex 11 §4.8)
 - [ ] System clock integrity assertion: NTP sync status logged at startup + per-node clock drift check
 - [ ] Audit viewer UI with filter by tenant, time range, event type (required for 21 CFR Part 11 retrieval)
-- [ ] Backup and restore with integrity re-verification (Annex 11 §7.1)
+- [x] Backup and restore with integrity re-verification (Annex 11 §7.1): `WALBackupManager` in `aegis/core/wal_backup.py` — timestamped backup snapshots with manifest, integrity-verified copy before completing, safe restore with pre-restore backup and post-restore verification; 19 tests
 
 #### 2.3 GxP Validation & IQ/OQ/PQ
 
@@ -315,11 +315,11 @@ is not committed to `docs/BENCHMARKS.md`.
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
 | Defense & Government | 18 | 28 | ~39% |
-| Healthcare & Life Sciences | 9 | 24 | ~27% |
+| Healthcare & Life Sciences | 10 | 24 | ~30% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 9 | 23 | ~28% |
 | Advanced Forensics & WAF | 15 | 26 | ~38% |
-| **Total** | **62** | **122** | **~34%** |
+| **Total** | **63** | **122** | **~34%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,9 +328,9 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. Helm chart with production-grade defaults — unblocks enterprise Kubernetes deployments (Domain 4.4).
-2. Backup and restore with integrity re-verification — operational durability for regulated audit trails (Domain 2.2).
-3. PHI scrubbing confirmation field per audit node (`phi_scrubbed: bool`, `scrub_method: str`) — closes Domain 2.1 audit trail gap (Domain 2.1).
+1. PHI scrubbing confirmation field per audit node (`phi_scrubbed: bool`, `scrub_method: str`) — closes Domain 2.1 audit trail gap.
+2. Helm chart with production-grade defaults — unblocks enterprise Kubernetes deployments (Domain 4.4).
+3. 21 CFR Part 11 electronic signature annotations (Domain 2.2 follow-on).
 4. mTLS client certificate authentication with CAC/PIV card via PKCS#11 slot (Domain 1.2).
 5. Conversation graph crescendo analysis — detect constraint erosion across full session (Domain 5.1 follow-on).
 
@@ -338,6 +338,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** Real-time PHI de-identification, NIST SP 800-188 Safe Harbor (Domain 2.1) — completed 2026-06-20.
 > **Done:** HSM/PKCS#11 signing integration with RSA-PSS and ECDSA-SHA256 (Domain 1.1) — completed 2026-06-20.
 > **Done:** Multi-turn behavioral WAF session state machine (Domain 5.1) — completed 2026-06-20.
+> **Done:** WAL backup and restore with integrity re-verification, Annex 11 §7.1 (Domain 2.2) — completed 2026-06-20.
 
 ---
 
