@@ -5,38 +5,20 @@
 from __future__ import annotations
 
 import json
-import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# ── Mock aioboto3 / boto3 / botocore before importing ────────────────────────
-
-class _ClientError(Exception):
-    def __init__(self, code="TestError", msg="test"):
-        self.response = {"Error": {"Code": code, "Message": msg}}
-        super().__init__(msg)
-
-if "aioboto3" not in sys.modules:
-    sys.modules["aioboto3"] = MagicMock()
-if "boto3" not in sys.modules:
-    sys.modules["boto3"] = MagicMock()
-if "boto3.dynamodb" not in sys.modules:
-    sys.modules["boto3.dynamodb"] = MagicMock()
-if "boto3.dynamodb.conditions" not in sys.modules:
-    _cond_mod = MagicMock()
-    _cond_mod.Key = MagicMock(return_value=MagicMock())
-    _cond_mod.Attr = MagicMock(return_value=MagicMock())
-    sys.modules["boto3.dynamodb.conditions"] = _cond_mod
-if "botocore" not in sys.modules:
-    sys.modules["botocore"] = MagicMock()
-if "botocore.exceptions" not in sys.modules:
-    _botocore_exc = MagicMock()
-    _botocore_exc.ClientError = _ClientError
-    sys.modules["botocore.exceptions"] = _botocore_exc
+# ── Optional-backend stubs (aioboto3/boto3/botocore) are installed globally by
+# tests/conftest.py before any test module is collected, which guarantees
+# botocore.exceptions.ClientError is a real exception class shared across every
+# test module regardless of collection order. Reuse that exact class as
+# _ClientError so the provider's `except ClientError` matches what these tests
+# raise — defining a separate local class here would reintroduce an
+# order-dependent identity mismatch.
+from botocore.exceptions import ClientError as _ClientError  # noqa: E402
 
 from aegis_server.storage.dynamodb_provider import DynamoDBStorageProvider  # noqa: E402
-
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -58,10 +40,12 @@ def _make_table_mock(items=None, last_key=None):
     # put_item, get_item, query
     table.put_item = AsyncMock(return_value={})
     table.get_item = AsyncMock(return_value={"Item": None})
-    table.query = AsyncMock(return_value={
-        "Items": items or [],
-        "LastEvaluatedKey": last_key,
-    })
+    table.query = AsyncMock(
+        return_value={
+            "Items": items or [],
+            "LastEvaluatedKey": last_key,
+        }
+    )
     return table
 
 
@@ -71,9 +55,10 @@ def _make_resource_ctx(table_mock):
     resource.Table = AsyncMock(return_value=table_mock)
 
     class _Ctx:
-        async def __aenter__(self_):
+        async def __aenter__(self):
             return resource
-        async def __aexit__(self_, *args):
+
+        async def __aexit__(self, *args):
             pass
 
     return _Ctx()
@@ -86,9 +71,10 @@ def _make_client_ctx():
     client.get_waiter = MagicMock(return_value=AsyncMock())
 
     class _Ctx:
-        async def __aenter__(self_):
+        async def __aenter__(self):
             return client
-        async def __aexit__(self_, *args):
+
+        async def __aexit__(self, *args):
             pass
 
     return _Ctx(), client
@@ -189,9 +175,14 @@ async def test_write_node_uninitialized_raises():
     p = _make_provider()
     with pytest.raises(RuntimeError, match="initialize"):
         await p.write_node(
-            node_id="n", timestamp="t", node_data={},
-            request_hash="r", response_hash="s",
-            merkle_root="m", signature="sig", client_id="c",
+            node_id="n",
+            timestamp="t",
+            node_data={},
+            request_hash="r",
+            response_hash="s",
+            merkle_root="m",
+            signature="sig",
+            client_id="c",
         )
 
 
@@ -203,9 +194,14 @@ async def test_write_node_success():
 
     with patch.object(p, "_get_resource", return_value=resource_ctx):
         await p.write_node(
-            node_id="n1", timestamp="2024-01-01", node_data={"k": "v"},
-            request_hash="r", response_hash="s",
-            merkle_root="m", signature="sig", client_id="c",
+            node_id="n1",
+            timestamp="2024-01-01",
+            node_data={"k": "v"},
+            request_hash="r",
+            response_hash="s",
+            merkle_root="m",
+            signature="sig",
+            client_id="c",
         )
 
     table.put_item.assert_called_once()
@@ -220,9 +216,14 @@ async def test_write_node_conditional_check_is_noop():
 
     with patch.object(p, "_get_resource", return_value=resource_ctx):
         await p.write_node(
-            node_id="dup", timestamp="t", node_data={},
-            request_hash="r", response_hash="s",
-            merkle_root="m", signature="sig", client_id="c",
+            node_id="dup",
+            timestamp="t",
+            node_data={},
+            request_hash="r",
+            response_hash="s",
+            merkle_root="m",
+            signature="sig",
+            client_id="c",
         )
     # no exception raised
 
@@ -237,9 +238,14 @@ async def test_write_node_other_client_error_raises():
     with patch.object(p, "_get_resource", return_value=resource_ctx):
         with pytest.raises(RuntimeError, match="write_node failed"):
             await p.write_node(
-                node_id="n", timestamp="t", node_data={},
-                request_hash="r", response_hash="s",
-                merkle_root="m", signature="sig", client_id="c",
+                node_id="n",
+                timestamp="t",
+                node_data={},
+                request_hash="r",
+                response_hash="s",
+                merkle_root="m",
+                signature="sig",
+                client_id="c",
             )
 
 
@@ -268,12 +274,14 @@ async def test_get_latest_node_empty_returns_none():
 @pytest.mark.asyncio
 async def test_get_latest_node_returns_item():
     p = _make_initialized_provider()
-    items = [{
-        "node_id": "abc",
-        "partition_key": "ALL",
-        "timestamp": "2024-01-01",
-        "node_data": json.dumps({"prev_hash": "0" * 64}),
-    }]
+    items = [
+        {
+            "node_id": "abc",
+            "partition_key": "ALL",
+            "timestamp": "2024-01-01",
+            "node_data": json.dumps({"prev_hash": "0" * 64}),
+        }
+    ]
     table = _make_table_mock(items=items)
     resource_ctx = _make_resource_ctx(table)
 
@@ -367,10 +375,7 @@ async def test_list_nodes_negative_offset_raises():
 @pytest.mark.asyncio
 async def test_list_nodes_no_filter_returns_items():
     p = _make_initialized_provider()
-    items = [
-        {"node_id": f"n{i}", "partition_key": "ALL", "node_data": "{}"}
-        for i in range(3)
-    ]
+    items = [{"node_id": f"n{i}", "partition_key": "ALL", "node_data": "{}"} for i in range(3)]
     table = _make_table_mock(items=items, last_key=None)
     resource_ctx = _make_resource_ctx(table)
 
