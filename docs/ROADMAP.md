@@ -234,7 +234,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] `GET /health` and `GET /ready` liveness/readiness probes
 - [x] Graceful shutdown: uvicorn lifespan context manager
 - [ ] Kubernetes operator: `AegisProxy` CRD with automatic rolling update, canary traffic splitting, HPA by `aegis_request_latency_p99`
-- [ ] Helm chart with production-grade defaults (PodDisruptionBudget, topologySpreadConstraints, resource limits)
+- [x] Helm chart with production-grade defaults (PodDisruptionBudget, topologySpreadConstraints, resource limits)
 - [ ] Zero-downtime rolling deploy: WAL leader lease hand-off protocol during pod replacement
 - [ ] Circuit breaker per upstream provider (e.g., `tenacity` with per-host breaker state in DashMap)
 - [ ] Chaos engineering test suite: `pytest-chaos` or Toxiproxy integration for WAL write failure, Redis failure, upstream timeout scenarios
@@ -317,9 +317,9 @@ is not committed to `docs/BENCHMARKS.md`.
 | Defense & Government | 18 | 28 | ~39% |
 | Healthcare & Life Sciences | 11 | 24 | ~31% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
-| Enterprise Hyperscale & HA | 9 | 23 | ~28% |
+| Enterprise Hyperscale & HA | 10 | 23 | ~30% |
 | Advanced Forensics & WAF | 15 | 26 | ~38% |
-| **Total** | **64** | **122** | **~34%** |
+| **Total** | **65** | **122** | **~35%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,8 +328,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. Helm chart with production-grade defaults — unblocks enterprise Kubernetes deployments (Domain 4.4).
-2. 21 CFR Part 11 electronic signature annotations (Domain 2.2 follow-on).
+1. 21 CFR Part 11 electronic signature annotations (Domain 2.2 follow-on).
 3. mTLS client certificate authentication with CAC/PIV card via PKCS#11 slot (Domain 1.2).
 4. Conversation graph crescendo analysis — detect constraint erosion across full session (Domain 5.1 follow-on).
 5. Differential privacy noise injection for aggregate analytics queries (Domain 2.1).
@@ -340,6 +339,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** Multi-turn behavioral WAF session state machine (Domain 5.1) — completed 2026-06-20.
 > **Done:** WAL backup and restore with integrity re-verification, Annex 11 §7.1 (Domain 2.2) — completed 2026-06-20.
 > **Done:** PHI scrubbing confirmation field per audit node (`phi_scrubbed`, `scrub_method`) (Domain 2.1) — completed 2026-06-20.
+> **Done:** Helm chart production-grade defaults: topologySpreadConstraints, HPA, ServiceAccount (Domain 4.4) — completed 2026-06-20.
 
 ---
 
