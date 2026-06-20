@@ -161,7 +161,7 @@ sequenceDiagram
     participant A as Aegis Proxy
     participant U as Upstream LLM
 
-    C->>A: POST /v1/chat/completions<br/>Authorization: Bearer &lt;key&gt;
+    C->>A: "POST /v1/chat/completions\nAuthorization: Bearer <key>"
 
     Note over A: Auth: hmac.compare_digest()
     Note over A: WAF Layer 1: Aho-Corasick pre-filter
@@ -175,7 +175,7 @@ sequenceDiagram
     Note over A: Provider adapter: translate response format
     Note over A: _spawn_background(): asyncio.create_task()
 
-    A-->>C: OpenAI-format response ← client unblocked here
+    A-->>C: "OpenAI-format response ← client unblocked here"
 
     Note over A: Background task runs after response returned
 ```
