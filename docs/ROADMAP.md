@@ -253,7 +253,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Shannon entropy anomaly detection per token
 - [x] KL/JS divergence from baseline distribution
 - [x] Multi-turn behavioral jailbreak detection: `WAFSessionState` state machine in `aegis/core/waf_session.py` tracks cumulative WAF scores and consecutive soft-hit (crescendo) patterns across a configurable sliding window; integrated into both `/v1/chat/completions` and `/v1/completions` handlers
-- [ ] Conversation graph analysis: detect "crescendo" attack (gradual constraint erosion over session)
+- [x] Conversation graph analysis: detect "crescendo" attack (gradual constraint erosion over session)
 - [ ] Cross-session correlation: detect coordinated multi-account attacks sharing jailbreak templates
 - [ ] Semantic similarity clustering: flag requests within cosine distance threshold of known jailbreak embeddings
 - [ ] Adversarial suffix detection: gradient-based suffix patterns (GCG, AutoDAN) via fixed signature set
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 12 | 24 | ~33% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
-| Advanced Forensics & WAF | 15 | 26 | ~38% |
-| **Total** | **67** | **122** | **~55%** |
+| Advanced Forensics & WAF | 16 | 26 | ~62% |
+| **Total** | **68** | **122** | **~56%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,10 +328,10 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. Conversation graph crescendo analysis — detect constraint erosion across full session (Domain 5.1 follow-on).
-2. Differential privacy noise injection for aggregate analytics queries (Domain 2.1).
-3. LDAP/Active Directory integration for multi-factor identity assertion (Domain 1.2).
-4. Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation (Domain 1.2).
+1. Differential privacy noise injection for aggregate analytics queries (Domain 2.1).
+2. LDAP/Active Directory integration for multi-factor identity assertion (Domain 1.2).
+3. Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation (Domain 1.2).
+4. Prompt injection resistance scoring — ML classifier for indirect injection (Domain 5.1).
 
 > **Done:** WAL segment rotation & archival (Domain 3.3) — completed 2026-06-20.
 > **Done:** Real-time PHI de-identification, NIST SP 800-188 Safe Harbor (Domain 2.1) — completed 2026-06-20.
@@ -342,6 +342,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** Helm chart production-grade defaults: topologySpreadConstraints, HPA, ServiceAccount (Domain 4.4) — completed 2026-06-20.
 > **Done:** 21 CFR Part 11 electronic signature annotations: signer_name, signature_meaning, Part 11 manifest export (Domain 2.2) — completed 2026-06-20.
 > **Done:** mTLS CAC/PIV client certificate authentication — DoD CAC (DoDI 8520.02) and GSA PIV (NIST SP 800-73-4) policy OID verification, EDIPI and UUID identity extraction, `CACPIVAuth` middleware, `cac_piv_required` config flag (Domain 1.2) — completed 2026-06-20.
+> **Done:** Conversation graph crescendo analysis — `ConversationGraphTracker` with monotone entropy decline detection and baseline drift detection; combined WAF+entropy signal; LRU session registry (Domain 5.1 follow-on) — completed 2026-06-20.
 
 ---
 
