@@ -237,6 +237,14 @@ class CryptographicAuditLedger:
         Sliding-window deque size. Oldest nodes are evicted when the cap is hit.
     max_forensic_bytes : int
         Maximum bytes of request/response stored in the Merkle leaf envelope.
+    max_wal_bytes : int
+        When > 0, the active WAL is rotated into an immutable archived segment
+        once it reaches this many bytes; a fresh active WAL is then opened. 0
+        (the default) disables rotation, preserving the single-file behaviour.
+        Archived segments are named ``<persistence_path>.NNNNNN`` (zero-padded,
+        ascending), keep 0o600 permissions, and are replayed in order on
+        startup. Rotation NEVER drops nodes: the full append-only audit chain is
+        always reconstructable across every segment.
     """
 
     def __init__(
@@ -245,6 +253,7 @@ class CryptographicAuditLedger:
         signing_key: str = "",
         max_memory_nodes: int = 100_000,
         max_forensic_bytes: int = _DEFAULT_MAX_FORENSIC_BYTES,
+        max_wal_bytes: int = 0,
         # Backward-compat alias accepted but ignored (old API used async_mode)
         async_mode: bool = False,
     ) -> None:
@@ -252,9 +261,11 @@ class CryptographicAuditLedger:
         self._signing_key = signing_key
         self.max_memory_nodes = max_memory_nodes
         self.max_forensic_bytes = max_forensic_bytes
+        self.max_wal_bytes = max_wal_bytes
         self.chain: deque[AuditNode] = deque(maxlen=max_memory_nodes)
         self._lock = Lock()
         self._wal_handle = None
+        self._wal_bytes = 0
         self._fault_state: str = "healthy"
         self._mmr = MerkleMountainRange()
         self._load_from_wal()
@@ -273,6 +284,12 @@ class CryptographicAuditLedger:
         if any(n.is_fallback for n in self.chain):
             return "Compromised"
         return "High"
+
+    @property
+    def archived_segments(self) -> list[str]:
+        """Paths of rotated, immutable WAL archive segments (oldest first)."""
+        with self._lock:
+            return self._segment_paths()
 
     # ── Core API ───────────────────────────────────────────────────────────
 
@@ -501,6 +518,12 @@ class CryptographicAuditLedger:
             except OSError:
                 pass
             self._wal_handle = os.fdopen(fd, "a")
+            # Track the on-disk size of the active segment so rotation can be
+            # triggered without an fstat() on every write.
+            try:
+                self._wal_bytes = os.path.getsize(self.persistence_path)
+            except OSError:
+                self._wal_bytes = 0
             logger.debug("WAL handle opened: %s", self.persistence_path)
         except OSError as exc:
             logger.error(
@@ -508,6 +531,76 @@ class CryptographicAuditLedger:
                 self.persistence_path,
                 exc,
             )
+
+    def _segment_paths(self) -> list[str]:
+        """Return archived WAL segment paths in ascending sequence order.
+
+        Segments are immutable forensic archives produced by rotation, named
+        ``<persistence_path>.NNNNNN`` (zero-padded sequence). The active WAL
+        itself (no numeric suffix) is never included.
+        """
+        prefix = os.path.basename(self.persistence_path) + "."
+        directory = os.path.dirname(os.path.abspath(self.persistence_path))
+        segments: list[tuple[int, str]] = []
+        try:
+            names = os.listdir(directory)
+        except OSError:
+            return []
+        for name in names:
+            if not name.startswith(prefix):
+                continue
+            suffix = name[len(prefix):]
+            if suffix.isdigit():
+                segments.append((int(suffix), os.path.join(directory, name)))
+        segments.sort(key=lambda t: t[0])
+        return [p for _, p in segments]
+
+    def _next_segment_seq(self) -> int:
+        """Next archive sequence number (1-based, monotonically increasing)."""
+        existing = self._segment_paths()
+        if not existing:
+            return 1
+        return int(existing[-1].rsplit(".", 1)[1]) + 1
+
+    def _rotate_wal(self) -> None:
+        """Archive the active WAL into an immutable segment and open a fresh one.
+
+        Must be called under ``self._lock``. Forensic invariant: rotation never
+        drops nodes — every committed record is preserved in an archived
+        segment (0o600) and replayed on the next startup. Failures degrade
+        gracefully: the ledger keeps writing to the current/active WAL.
+        """
+        # Flush + fsync + close so the segment is fully durable before rename.
+        if self._wal_handle is not None:
+            try:
+                self._wal_handle.flush()
+                os.fsync(self._wal_handle.fileno())
+            except OSError:
+                pass
+            self._wal_handle.close()
+            self._wal_handle = None
+
+        if not os.path.exists(self.persistence_path):
+            self._wal_bytes = 0
+            self._open_wal()
+            return
+
+        seq = self._next_segment_seq()
+        segment_path = f"{self.persistence_path}.{seq:06d}"
+        try:
+            os.rename(self.persistence_path, segment_path)
+            try:
+                os.chmod(segment_path, 0o600)
+            except OSError:
+                pass
+            logger.info("Rotated WAL into archived segment %s", segment_path)
+        except OSError as exc:
+            logger.error("WAL rotation failed (%s) — continuing on active WAL", exc)
+            self._open_wal()
+            return
+
+        self._wal_bytes = 0
+        self._open_wal()
 
     def _sign(self, data: bytes) -> tuple[str, str, str, bool]:
         """Sign ``data``. Returns (signature_hex, pubkey_hex, scheme, is_fallback).
@@ -537,10 +630,12 @@ class CryptographicAuditLedger:
     def _persist_node(self, node: AuditNode) -> None:
         """Append node as a JSON line to the WAL. Must be called under self._lock."""
         line = json.dumps(node.to_dict(), separators=(",", ":")) + "\n"
+        nbytes = len(line.encode("utf-8"))
         if self._wal_handle is not None:
             self._wal_handle.write(line)
             self._wal_handle.flush()
             os.fsync(self._wal_handle.fileno())
+            self._wal_bytes += nbytes
         else:
             # Safety fallback: _open_wal() failed at init time.
             try:
@@ -558,28 +653,54 @@ class CryptographicAuditLedger:
                 f.write(line)
                 f.flush()
                 os.fsync(f.fileno())
+            try:
+                self._wal_bytes = os.path.getsize(self.persistence_path)
+            except OSError:
+                self._wal_bytes += nbytes
+
+        # Rotate AFTER the node is durably written: the just-written record is
+        # safely inside the segment that gets archived, so no node is ever in
+        # flight during the rename.
+        if self.max_wal_bytes > 0 and self._wal_bytes >= self.max_wal_bytes:
+            self._rotate_wal()
 
     def _load_from_wal(self) -> None:
-        if not os.path.exists(self.persistence_path):
+        # Replay archived segments (oldest first) then the active WAL so the
+        # full chain is reconstructed across any number of rotations.
+        files = self._segment_paths()
+        if os.path.exists(self.persistence_path):
+            files.append(self.persistence_path)
+
+        if not files:
             logger.info("No WAL found at %s — starting fresh.", self.persistence_path)
             return
 
-        logger.info("Reconstructing ledger from %s", self.persistence_path)
         count = 0
-        with open(self.persistence_path) as f:
-            for lineno, raw in enumerate(f, 1):
-                raw = raw.strip()
-                if not raw:
-                    continue
-                try:
-                    data = json.loads(raw)
-                    node = AuditNode.from_dict(data)
-                    self.chain.append(node)
-                    count += 1
-                except (json.JSONDecodeError, TypeError, KeyError) as exc:
-                    logger.error("WAL line %d corrupt (%s) — stopping reconstruction.", lineno, exc)
-                    self._fault_state = "wal_corrupt"
-                    break
+        stop = False
+        for path in files:
+            logger.info("Reconstructing ledger from %s", path)
+            with open(path) as f:
+                for lineno, raw in enumerate(f, 1):
+                    raw = raw.strip()
+                    if not raw:
+                        continue
+                    try:
+                        data = json.loads(raw)
+                        node = AuditNode.from_dict(data)
+                        self.chain.append(node)
+                        count += 1
+                    except (json.JSONDecodeError, TypeError, KeyError) as exc:
+                        logger.error(
+                            "WAL %s line %d corrupt (%s) — stopping reconstruction.",
+                            path,
+                            lineno,
+                            exc,
+                        )
+                        self._fault_state = "wal_corrupt"
+                        stop = True
+                        break
+            if stop:
+                break
 
         logger.info("Reconstructed %d nodes from WAL.", count)
 

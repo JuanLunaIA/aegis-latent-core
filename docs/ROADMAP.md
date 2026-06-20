@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-20 (tests: 1050 passed, 96.72% coverage).
+> **Last verified against codebase:** 2026-06-20 (tests: 1056 passed, 96.30% coverage).
 
 ---
 
@@ -178,7 +178,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Gossip-based WAL synchronization between edge nodes (e.g., `memberlist` / `SWIM` protocol in Rust)
 - [ ] Conflict-free replicated data type (CRDT) for distributed audit node ordering without a central coordinator
 - [ ] Offline-first merge: deterministic conflict resolution when two edge nodes have diverged WALs
-- [ ] WAL segment compaction and archival (currently unbounded append; no rotation/compaction)
+- [x] WAL segment rotation & archival: size-bounded active WAL rotates into immutable, owner-only (0o600) archived segments (`<wal_path>.NNNNNN`); the full chain is replayed across all segments on startup and rotation never drops nodes. Configurable via `AEGIS_MAX_WAL_BYTES` (`aegis/core/crypto_audit.py`; `pytest tests/test_wal_rotation.py`)
 - [ ] Intermittent-connectivity mode: WAL queues indefinitely; backpressure signals upstream when queue depth exceeds threshold
 
 #### 3.4 OT Network Isolation
@@ -316,10 +316,10 @@ is not committed to `docs/BENCHMARKS.md`.
 |---|---|---|---|
 | Defense & Government | 17 | 28 | ~38% |
 | Healthcare & Life Sciences | 8 | 24 | ~25% |
-| Industrial Automation & OT | 10 | 22 | ~31% |
+| Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 9 | 23 | ~28% |
 | Advanced Forensics & WAF | 14 | 26 | ~35% |
-| **Total** | **58** | **123** | **~32%** |
+| **Total** | **59** | **122** | **~33%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,11 +328,13 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. WAL segment rotation/compaction — prevents unbounded disk growth in production (Domain 3.3).
-2. Real-time PHI de-identification on the hot path — unlocks HIPAA regulated customers (Domain 2.1).
-3. HSM/PKCS#11 signing — unlocks FedRAMP and DoD authorization paths (Domain 1.1).
-4. Multi-turn session behavioral WAF state — closes the most critical remaining threat class (Domain 5.1).
-5. Helm chart with production-grade defaults — unblocks enterprise Kubernetes deployments (Domain 4.4).
+1. Real-time PHI de-identification on the hot path — unlocks HIPAA regulated customers (Domain 2.1).
+2. HSM/PKCS#11 signing — unlocks FedRAMP and DoD authorization paths (Domain 1.1).
+3. Multi-turn session behavioral WAF state — closes the most critical remaining threat class (Domain 5.1).
+4. Helm chart with production-grade defaults — unblocks enterprise Kubernetes deployments (Domain 4.4).
+5. Backup and restore with integrity re-verification — operational durability for regulated audit trails (Domain 2.2).
+
+> **Done:** WAL segment rotation & archival (Domain 3.3) — completed 2026-06-20.
 
 ---
 
