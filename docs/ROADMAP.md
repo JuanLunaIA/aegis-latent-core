@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-20 (tests: 1177 passed, 95.33% coverage).
+> **Last verified against codebase:** 2026-06-20 (tests: 1192 passed, 95.32% coverage).
 
 ---
 
@@ -116,7 +116,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Immutable append-only audit chain with tamper detection via `verify_integrity()`
 - [x] Per-node `timestamp` (float, UTC) and `state_id` (UUID-based) for chronological ordering
 - [x] Hash chain linkage prevents retroactive insertion
-- [ ] 21 CFR Part 11 compliant electronic signature: human-readable meaning annotation ("approved", "reviewed", "authored"), printed name + date in signature manifest
+- [x] 21 CFR Part 11 compliant electronic signature: human-readable meaning annotation ("approved", "reviewed", "authored"), printed name + date in signature manifest
 - [ ] Audit trail lock-out: once a node is sealed it cannot be deleted (WORM enforcement at storage layer)
 - [ ] `audit_trail_version` schema field for migration traceability (Annex 11 §4.8)
 - [ ] System clock integrity assertion: NTP sync status logged at startup + per-node clock drift check
@@ -315,11 +315,11 @@ is not committed to `docs/BENCHMARKS.md`.
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
 | Defense & Government | 18 | 28 | ~39% |
-| Healthcare & Life Sciences | 11 | 24 | ~31% |
+| Healthcare & Life Sciences | 12 | 24 | ~33% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
 | Advanced Forensics & WAF | 15 | 26 | ~38% |
-| **Total** | **65** | **122** | **~35%** |
+| **Total** | **66** | **122** | **~35%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,7 +328,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. 21 CFR Part 11 electronic signature annotations (Domain 2.2 follow-on).
+1. mTLS client certificate authentication with CAC/PIV card via PKCS#11 slot (Domain 1.2).
 3. mTLS client certificate authentication with CAC/PIV card via PKCS#11 slot (Domain 1.2).
 4. Conversation graph crescendo analysis — detect constraint erosion across full session (Domain 5.1 follow-on).
 5. Differential privacy noise injection for aggregate analytics queries (Domain 2.1).
@@ -340,6 +340,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** WAL backup and restore with integrity re-verification, Annex 11 §7.1 (Domain 2.2) — completed 2026-06-20.
 > **Done:** PHI scrubbing confirmation field per audit node (`phi_scrubbed`, `scrub_method`) (Domain 2.1) — completed 2026-06-20.
 > **Done:** Helm chart production-grade defaults: topologySpreadConstraints, HPA, ServiceAccount (Domain 4.4) — completed 2026-06-20.
+> **Done:** 21 CFR Part 11 electronic signature annotations: signer_name, signature_meaning, Part 11 manifest export (Domain 2.2) — completed 2026-06-20.
 
 ---
 

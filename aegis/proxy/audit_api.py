@@ -114,4 +114,18 @@ def build_audit_router(
         """Return distinct tenant IDs present in the current memory window."""
         return sorted({n.tenant_id for n in ledger.chain})
 
+    @router.get("/export/part11", response_model=list[dict])
+    async def export_part11(
+        _key: Annotated[str, Depends(validate_audit_auth)],
+    ) -> list[dict]:
+        """Export 21 CFR Part 11 §11.50 electronic signature records.
+
+        Returns one record per chain node containing the three mandatory
+        Part 11 annotation fields (signer_name, signature_meaning,
+        timestamp_iso) plus cryptographic binding (node_hash, signature,
+        signature_scheme) required to link the human-readable annotation to
+        the tamper-evident audit chain.
+        """
+        return ledger.export_part11_signatures()
+
     return router

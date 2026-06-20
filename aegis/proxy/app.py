@@ -598,6 +598,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         request_start: float = 0.0,
         phi_scrubbed: bool = False,
         scrub_method: str = "",
+        signer_name: str = "",
+        signature_meaning: str = "",
     ) -> None:
         """Commit one audit node and fire alerts.
 
@@ -633,6 +635,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 sampling_params=analysis.sampling_params,
                 phi_scrubbed=phi_scrubbed,
                 scrub_method=scrub_method,
+                signer_name=signer_name,
+                signature_meaning=signature_meaning,
             )
             commit_elapsed = time.perf_counter() - commit_start
             observability.AUDIT_COMMIT_DURATION.observe(commit_elapsed)
@@ -838,6 +842,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                         _commit_and_alert(
                             request_id, session_id, analysis, raw_body, request_start,
                             phi_scrubbed=_phi_scrubbed, scrub_method=_scrub_method,
+                            signer_name=session_id, signature_meaning="authored",
                         )
                     )
 
@@ -882,6 +887,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             _commit_and_alert(
                 request_id, session_id, analysis, raw_body, request_start,
                 phi_scrubbed=_phi_scrubbed, scrub_method=_scrub_method,
+                signer_name=session_id, signature_meaning="authored",
             )
         )
 

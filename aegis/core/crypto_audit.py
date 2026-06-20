@@ -105,6 +105,9 @@ class AuditNode:
     is_fallback: bool = False
     phi_scrubbed: bool = False
     scrub_method: str = ""
+    # 21 CFR Part 11 §11.50 electronic signature annotation fields
+    signer_name: str = ""
+    signature_meaning: str = ""
 
     def __post_init__(self) -> None:
         self.__creation_hash__: str = self.node_hash
@@ -159,6 +162,8 @@ class AuditNode:
             "is_fallback": False,
             "phi_scrubbed": False,
             "scrub_method": "",
+            "signer_name": "",
+            "signature_meaning": "",
         }
         # Remove legacy field if present
         data.pop("payload", None)
@@ -315,6 +320,8 @@ class CryptographicAuditLedger:
         sampling_params: dict[str, Any] | None = None,
         phi_scrubbed: bool = False,
         scrub_method: str = "",
+        signer_name: str = "",
+        signature_meaning: str = "",
     ) -> AuditNode:
         """Commit a full forensic record (request + response) to the chain.
 
@@ -395,6 +402,8 @@ class CryptographicAuditLedger:
                 is_fallback=is_fallback,
                 phi_scrubbed=phi_scrubbed,
                 scrub_method=scrub_method,
+                signer_name=signer_name,
+                signature_meaning=signature_meaning,
             )
 
             self._persist_node(node)
@@ -410,6 +419,8 @@ class CryptographicAuditLedger:
         sampling_params: dict[str, Any] | None = None,
         phi_scrubbed: bool = False,
         scrub_method: str = "",
+        signer_name: str = "",
+        signature_meaning: str = "",
     ) -> AuditNode:
         """Backward-compatible API used by app.py (request-only commit).
 
@@ -427,6 +438,8 @@ class CryptographicAuditLedger:
             sampling_params=params,
             phi_scrubbed=phi_scrubbed,
             scrub_method=scrub_method,
+            signer_name=signer_name,
+            signature_meaning=signature_meaning,
         )
 
     def verify_integrity(self) -> tuple[bool, int | None]:
@@ -481,6 +494,43 @@ class CryptographicAuditLedger:
                     return False, i
 
         return True, None
+
+    def export_part11_signatures(self) -> list[dict[str, Any]]:
+        """Return 21 CFR Part 11 §11.50-compliant signature records for all nodes.
+
+        Each record includes the three mandatory Part 11 fields:
+        - ``signer_name``      — printed name of the signer
+        - ``signature_meaning``— human-readable meaning (authored/reviewed/approved)
+        - ``timestamp_iso``    — date and time when the signature was executed (UTC ISO-8601)
+
+        Plus cryptographic binding fields that link the annotation to the node:
+        - ``node_hash``        — SHA-256 chain accumulator (tamper-evident binding)
+        - ``signature``        — hex-encoded cryptographic signature
+        - ``signature_scheme`` — signing algorithm used
+        - ``state_id``         — unique node identifier
+
+        Records with no signer_name are included with empty strings so that
+        every chain node is represented in the export.
+        """
+        from datetime import UTC, datetime  # noqa: PLC0415
+
+        with self._lock:
+            chain_list = list(self.chain)
+
+        records: list[dict[str, Any]] = []
+        for node in chain_list:
+            records.append(
+                {
+                    "state_id": node.state_id,
+                    "signer_name": node.signer_name,
+                    "signature_meaning": node.signature_meaning,
+                    "timestamp_iso": datetime.fromtimestamp(node.timestamp, tz=UTC).isoformat(),
+                    "node_hash": node.node_hash,
+                    "signature": node.signature,
+                    "signature_scheme": node.signature_scheme,
+                }
+            )
+        return records
 
     def close(self) -> None:
         with self._lock:
