@@ -354,6 +354,10 @@
   };
 
   /* ----------------------------- Pages ----------------------------- */
+  // NOTE: PAGES drives the sidebar nav. Keep each `sec` group contiguous so
+  // buildNav() emits one header per section. After editing this array (or any
+  // markup/CSS in this file), regenerate the screenshot gallery so it stays in
+  // sync: `python tools/visualizer/generate_samples.py`.
   const PAGES = [
     { id:'overview',     title:'Overview',        sub:'Real-time governance & forensic telemetry', icon:'grid', sec:'Operations' },
     { id:'performance',  title:'Performance',     sub:'Latency, throughput & acceleration',        icon:'gauge', sec:'Operations' },
