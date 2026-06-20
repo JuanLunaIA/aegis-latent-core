@@ -202,12 +202,31 @@ class TestLogitEntropyMonitor(unittest.TestCase):
         self.assertFalse(result.saturated)
         self.assertEqual(result.saturated_token_count, 0)
 
-    def test_kl_shape_mismatch_raises(self) -> None:
-        with pytest.raises(ValueError):
-            self.monitor.compute_kl_divergence(
-                np.array([1.0, 2.0]),
-                np.array([1.0, 2.0, 3.0]),
-            )
+    def test_kl_shape_mismatch_pads_and_saturates(self) -> None:
+        """Ragged distributions are right-padded, not rejected.
+
+        Consecutive response tokens routinely expose different ``top_logprobs``
+        counts, so KL over them must align lengths gracefully (padding the
+        shorter side with a finite stand-in for log(0)) instead of raising —
+        otherwise the proxy's sequence-drift path would 500 on real traffic.
+        The padded slot of the reference distribution ``q`` carries zero
+        probability mass and registers as saturated.
+        """
+        # q (reference) is the shorter array → its padded slot underflows to 0.
+        result = self.monitor.compute_kl_divergence(
+            np.array([1.0, 2.0, 3.0]),
+            np.array([1.0, 2.0]),
+        )
+        self.assertTrue(math.isfinite(result.value))
+        self.assertTrue(result.saturated)
+        self.assertGreater(result.saturated_token_count, 0)
+
+        # Reverse direction (p shorter) must also compute without raising.
+        result_rev = self.monitor.compute_kl_divergence(
+            np.array([1.0, 2.0]),
+            np.array([1.0, 2.0, 3.0]),
+        )
+        self.assertTrue(math.isfinite(result_rev.value))
 
     def test_js_divergence_bounded(self) -> None:
         """D_JS ∈ [0, 1] for any inputs."""

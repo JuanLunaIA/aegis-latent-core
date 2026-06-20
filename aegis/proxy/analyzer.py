@@ -62,6 +62,21 @@ class ResponseAnalysis:
         return len(self.alerts) > 0
 
 
+_TOKEN_ENTRY_KEYS = ("top_logprobs", "logprob", "token")
+
+
+def _looks_like_token_entry(item: object) -> bool:
+    """Return True when ``item`` is a per-token logprob entry (not a wrapper).
+
+    A token entry exposes ``top_logprobs``/``logprob``/``token`` directly, whereas
+    a ChoiceLogprobs wrapper exposes ``content``.  Used to distinguish the raw
+    per-token array from a ``[ChoiceLogprobs]`` list during extraction.
+    """
+    if isinstance(item, dict):
+        return any(k in item for k in _TOKEN_ENTRY_KEYS)
+    return any(hasattr(item, k) for k in _TOKEN_ENTRY_KEYS)
+
+
 def _logprobs_to_numpy(top_logprobs: list) -> np.ndarray:
     """Convert a list of TopLogprob objects or raw dicts to a normalised probability array.
 
@@ -81,7 +96,7 @@ def _logprobs_to_numpy(top_logprobs: list) -> np.ndarray:
     lp -= np.max(lp)
     probs = np.exp(lp)
     s = probs.sum()
-    if s == 0.0:
+    if s == 0.0:  # pragma: no cover - unreachable: max-shift forces exp(0)=1.0, so s>=1.0
         return np.ones(len(probs)) / len(probs)
     return probs / s
 
@@ -142,13 +157,28 @@ class ResponseAnalyzer:
         entropies: list[float] = []
 
         # --- Extraction ---
+        # Two shapes reach this method:
+        #   (a) a ChoiceLogprobs object / [ChoiceLogprobs] whose first element
+        #       carries the per-token array under ``.content``; and
+        #   (b) the per-token array itself ([{token, logprob, top_logprobs}, …]),
+        #       which is what ``app._extract_logprobs()`` yields after it has
+        #       already unwrapped ``choices[0].logprobs.content``.
+        # Detect (a) first; fall back to (b) when the first element is itself a
+        # token entry. Without the (b) branch, token-level entropy/KL analysis —
+        # and therefore every alert — silently no-ops for the proxy's own data
+        # flow (X→Y because the first token dict has no "content" key, so
+        # ``content`` stays None and the method returns an empty analysis).
         content = None
         if isinstance(logprobs_data, list) and len(logprobs_data) > 0:
             first_item = logprobs_data[0]
             if isinstance(first_item, dict):
                 content = first_item.get("content")
+                if content is None and _looks_like_token_entry(first_item):
+                    content = logprobs_data
             else:
                 content = getattr(first_item, "content", None)
+                if content is None and _looks_like_token_entry(first_item):
+                    content = logprobs_data
         elif hasattr(logprobs_data, "content"):
             content = logprobs_data.content
 

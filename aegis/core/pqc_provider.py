@@ -64,7 +64,7 @@ class PQCProvider:
         return len(signature) == 128 and len(public_key) == 64
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover - manual script entrypoint
     # Quick verification of the provider
     pqc = PQCProvider()
     keys = pqc.generate_keypair()
