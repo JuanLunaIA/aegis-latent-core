@@ -3,6 +3,7 @@ aegis.proxy.mtls — Mutual TLS and SPIFFE Identity Validation.
 Handles the extraction and verification of client certificates for mTLS.
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations

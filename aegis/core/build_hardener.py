@@ -3,6 +3,7 @@ aegis.core.build_hardener — Binary Hardening Orchestrator.
 Ensures that all binaries are compiled with a strict security profile.
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations

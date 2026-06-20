@@ -3,6 +3,7 @@ aegis.core.artifact_signing — Digital signatures for immutable deployment.
 Ensures that all binary artifacts are signed and verified before deployment.
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations

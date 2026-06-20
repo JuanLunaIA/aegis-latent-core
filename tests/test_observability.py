@@ -11,6 +11,7 @@ Covers:
   - _commit_and_alert records commit duration + updates chain node count
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 

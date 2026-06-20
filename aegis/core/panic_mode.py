@@ -4,6 +4,7 @@ Implements a high-priority 'Kill Switch' to wipe sensitive data and halt
 the system upon detection of a critical security breach.
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations

@@ -3,6 +3,7 @@ aegis.core.taint_analysis — Dynamic Taint Analysis for LLM Request Pipelines.
 Tracks the flow of untrusted user input to prevent injection and data exfiltration.
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 import logging

@@ -3,6 +3,7 @@ aegis.core.leak_detector — Data Exfiltration Detection via Entropy.
 Detects potential leaks of API keys, private keys, or encrypted blobs in LLM outputs.
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations

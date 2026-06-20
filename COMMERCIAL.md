@@ -1,6 +1,21 @@
+<!--
+Copyright (c) 2026 Juan Luna. All rights reserved.
+Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+-->
+
 # Aegis Latent Core — Commercial Licensing & Enterprise Offerings
 
 Aegis Latent Core is dual-licensed: AGPLv3 (open-source) and a Commercial License for closed-source deployments and enterprise needs.
+
+## Intellectual property & ownership
+
+- **Sole copyright holder.** Aegis Latent Core is the original work of **Juan Luna** (`juan.c.luna04@gmail.com`), who holds sole copyright in the project. See `NOTICE` and `AUTHORS`.
+- **Exclusive right to commercialize.** As the copyright holder, Juan Luna reserves the exclusive right to license the software under proprietary commercial terms, to sublicense it, and to sell it as part of closed-source or managed offerings. The AGPLv3 grant to the public does not diminish this right.
+- **Why dual licensing works.** The AGPLv3's copyleft and section 13 network-use clause require anyone who modifies and offers the software over a network to release their corresponding source under AGPLv3. Organizations that cannot or will not meet that obligation must obtain a commercial license. This is what funds continued development.
+- **Contributions are license-aligned.** All contributions are accepted under the DCO + CLA in `CONTRIBUTING.md`, which grants Juan Luna a perpetual, irrevocable, worldwide, royalty-free, sublicensable license to relicense contributed code under both the AGPLv3 and commercial terms. Contributors retain ownership of their own contributions; the maintainer retains sole copyright in the project as a whole.
+- **No third-party code in-tree.** External dependencies are fetched at build time by pip and cargo and remain under their own licenses; they are not redistributed in this source tree.
+- **Trademark.** The "Aegis Latent Core" name and logo are not licensed under the AGPLv3 and may not be used to imply endorsement without written permission.
 
 ## Quick summary
 

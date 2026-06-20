@@ -1,3 +1,4 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """Tests for aegis_server.crypto and aegis_server.storage factory functions."""
