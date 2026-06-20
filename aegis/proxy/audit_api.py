@@ -14,6 +14,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
+from aegis.core.dp_analytics import DPAggregator
 from aegis.proxy.dependencies import validate_audit_auth
 from aegis.proxy.schemas import AuditNodeOut, IntegrityReport
 
@@ -127,5 +128,42 @@ def build_audit_router(
         the tamper-evident audit chain.
         """
         return ledger.export_part11_signatures()
+
+    @router.get("/analytics/dp", response_model=dict)
+    async def dp_analytics(
+        _key: Annotated[str, Depends(validate_audit_auth)],
+        epsilon: Annotated[float, Query(gt=0.0, le=100.0)] = 1.0,
+    ) -> dict:
+        """Return differentially-private aggregate statistics over the audit chain.
+
+        Applies the Laplace mechanism (ε-DP) to numeric aggregates — node count,
+        mean entropy, entropy variance, PHI-scrubbed count, and per-tenant
+        counts — so individual session fingerprints cannot be reverse-engineered
+        from published statistics.
+
+        Parameters
+        ----------
+        epsilon:
+            Privacy budget (ε).  Smaller values give stronger privacy guarantees
+            but inject more noise.  Default 1.0 (standard DP budget).
+
+        Returns
+        -------
+        dict
+            JSON object with fields: epsilon, delta, mechanism, node_count,
+            mean_entropy, entropy_variance, phi_scrubbed_count, tenant_counts.
+        """
+        agg = DPAggregator(epsilon=epsilon, delta=0.0)
+        report = agg.compute(list(ledger.chain))
+        return {
+            "epsilon": report.epsilon,
+            "delta": report.delta,
+            "mechanism": report.mechanism,
+            "node_count": report.node_count,
+            "mean_entropy": report.mean_entropy,
+            "entropy_variance": report.entropy_variance,
+            "phi_scrubbed_count": report.phi_scrubbed_count,
+            "tenant_counts": report.tenant_counts,
+        }
 
     return router
