@@ -1,30 +1,70 @@
 [package]
 name = "aegis_rust"
-version = "2.0.0"
+version = "3.0.0"
 edition = "2021"
-description = "PyO3 extension: HTTP forwarder, MMR, ML-DSA PQC for AEGIS Latent Core"
+description = "Tier-4 Rust core: zero-copy forwarder, Aho-Corasick WAF, BLAKE3 audit chain, mmap WAL, lock-free rate limiter & session store, ML-DSA PQC signing"
 license = "AGPL-3.0-only"
 
 [lib]
 name = "aegis_rust"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = { version = "0.24.1", features = ["extension-module"] }
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "native-tls"] }
+# Python bindings
+pyo3 = { version = "0.24.1", features = ["extension-module", "abi3-py311"] }
+
+# Async runtime — powers connection-pooled HTTP forwarder
+tokio = { version = "1", features = ["full"] }
+
+# Async HTTP client with persistent connection pool (replaces reqwest::blocking)
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "native-tls", "http2"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+# Fast multi-pattern WAF (SIMD Aho-Corasick — replaces Python re module)
+aho-corasick = { version = "1", features = ["std"] }
+
+# BLAKE3 hashing — ~4 GB/s SIMD vs ~350 MB/s SHA-256
+blake3 = "1"
+
+# Lock-free MPSC ring buffer for audit events
+crossbeam-queue = "0.3"
+
+# Sharded concurrent hash map — replaces OrderedDict + RLock
+dashmap = "6"
+
+# Memory-mapped WAL — replaces line-delimited JSON + os.fsync()
+memmap2 = "0.9"
+
+# CRC32 for WAL frame integrity
+crc32fast = "1"
+
+# Low-contention Mutex for mmap WAL writes
+parking_lot = "0.12"
+
+# Post-quantum signing (ML-DSA-65 / FIPS 204)
+pqcrypto-mldsa = "0.1"
+pqcrypto-traits = "0.3"
+
+# Legacy crypto (retained for backward compat + HMAC signing)
 sha2 = "0.10"
 hmac = "0.12"
 hex = "0.4"
 subtle = "2"
 zeroize = { version = "1", features = ["derive"] }
-pqcrypto-mldsa = "0.1"
-pqcrypto-traits = "0.3"
+
+# HTTP types for response construction
+http = "1"
 
 [dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread"] }
 wiremock = "0.6"
-tokio = { version = "1", features = ["rt", "macros"] }
+tempfile = "3"
 
 [profile.release]
-lto = true
+lto = "fat"
 codegen-units = 1
+opt-level = 3
+strip = true
