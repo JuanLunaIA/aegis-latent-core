@@ -54,7 +54,6 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from aegis.core.forensic import build_merkle_leaf, sha256_hex
 from aegis.core.mmr import MerkleMountainRange
-from aegis.core.rust_integration import new_rust_wal
 
 logger = logging.getLogger(__name__)
 
@@ -257,23 +256,12 @@ class CryptographicAuditLedger:
         self._wal_handle = None
         self._fault_state: str = "healthy"
         self._mmr = MerkleMountainRange()
-
-        # Tier-4: mmap WAL — replaces os.fsync() on the hot write path.
-        # Path convention: <persistence_path>.mmf (memory-mapped frames file).
-        # When available, _persist_node writes here (~2 µs) instead of
-        # calling os.fsync() (~200 µs).  Python text WAL is retained as a
-        # readable mirror (written without fsync for human inspection).
-        self._rust_wal: Any | None = None
-        self._rust_wal_path: str = persistence_path + ".mmf"
-
         self._load_from_wal()
         # FIX-CAL-01: open the WAL handle eagerly after reconstruction.
         # Previously the handle was only opened in __enter__ (context-manager
         # path).  In app.py the ledger is used directly, so _wal_handle was
         # always None and _persist_node opened+closed a new fd on every write.
         self._open_wal()
-        # Open mmap WAL after Python WAL is ready (guarantees path exists).
-        self._open_rust_wal()
 
     # ── Public properties ──────────────────────────────────────────────────
 
@@ -471,8 +459,6 @@ class CryptographicAuditLedger:
                     pass
                 self._wal_handle.close()
                 self._wal_handle = None
-            # Rust WAL is closed by the OS when the mmap is dropped (Python GC).
-            self._rust_wal = None
 
     # ── Context manager ────────────────────────────────────────────────────
 
@@ -487,26 +473,6 @@ class CryptographicAuditLedger:
         self.close()
 
     # ── Private helpers ────────────────────────────────────────────────────
-
-    def _open_rust_wal(self) -> None:
-        """Open the mmap WAL (Tier-4 fast write path).  Idempotent."""
-        if self._rust_wal is not None:
-            return
-        try:
-            os.makedirs(
-                os.path.dirname(os.path.abspath(self._rust_wal_path)), exist_ok=True
-            )
-            self._rust_wal = new_rust_wal(self._rust_wal_path)
-            if self._rust_wal is not None:
-                logger.debug(
-                    "RustWal opened: %s (capacity=%d MiB)",
-                    self._rust_wal_path,
-                    self._rust_wal.capacity() // (1024 * 1024),
-                )
-        except Exception as exc:
-            logger.warning(
-                "RustWal init failed (%s) — falling back to Python fsync WAL", exc
-            )
 
     def _open_wal(self) -> None:
         """Open the WAL append handle if not already open.
@@ -568,36 +534,8 @@ class CryptographicAuditLedger:
         return sig_hex, pub_hex, scheme, True
 
     def _persist_node(self, node: AuditNode) -> None:
-        """Append node as a JSON record to the WAL. Must be called under self._lock.
-
-        Fast path (Rust mmap WAL available):
-            1. Write JSON frame to Rust mmap WAL — durable via flush_range/msync.
-               Latency: ~2–5 µs (NVMe) vs 80–200 µs for os.fsync().
-            2. Mirror to Python text WAL without fsync (for human readability).
-               This write is NOT the durable copy when Rust WAL is active.
-
-        Fallback (Python-only path):
-            Existing os.fsync() behaviour — unchanged from v2.4.
-        """
-        payload = json.dumps(node.to_dict(), separators=(",", ":"))
-        line = payload + "\n"
-
-        # ── Tier-4 fast path: Rust mmap WAL ──────────────────────────────
-        if self._rust_wal is not None:
-            try:
-                self._rust_wal.append(payload)
-                # Mirror to Python WAL for readability — no fsync needed here
-                # because the Rust WAL has already flushed durably.
-                if self._wal_handle is not None:
-                    self._wal_handle.write(line)
-                    self._wal_handle.flush()
-                return
-            except Exception as exc:
-                logger.error(
-                    "RustWal append failed (%s); falling back to Python fsync WAL", exc
-                )
-
-        # ── Legacy Python fsync path ──────────────────────────────────────
+        """Append node as a JSON line to the WAL. Must be called under self._lock."""
+        line = json.dumps(node.to_dict(), separators=(",", ":")) + "\n"
         if self._wal_handle is not None:
             self._wal_handle.write(line)
             self._wal_handle.flush()
@@ -621,46 +559,6 @@ class CryptographicAuditLedger:
                 os.fsync(f.fileno())
 
     def _load_from_wal(self) -> None:
-        """Reconstruct the in-memory chain from the most complete WAL available.
-
-        Priority:
-          1. Rust mmap WAL (`persistence_path + ".mmf"`) — used when aegis_rust
-             is compiled and the file exists.  Frames are CRC32-verified.
-          2. Python text WAL (`persistence_path`) — line-delimited JSON fallback.
-        """
-        # ── Try Rust mmap WAL first ───────────────────────────────────────
-        if os.path.exists(self._rust_wal_path):
-            rust_wal = new_rust_wal(self._rust_wal_path)
-            if rust_wal is not None and rust_wal.write_pos() > 0:
-                logger.info("Reconstructing ledger from Rust mmap WAL: %s", self._rust_wal_path)
-                try:
-                    records = rust_wal.read_all()
-                    seen_ids: set[str] = set()
-                    count = 0
-                    for record in records:
-                        try:
-                            data = json.loads(record)
-                            node = AuditNode.from_dict(data)
-                            if node.state_id not in seen_ids:
-                                self.chain.append(node)
-                                seen_ids.add(node.state_id)
-                                count += 1
-                        except (json.JSONDecodeError, TypeError, KeyError) as exc:
-                            logger.error(
-                                "Rust WAL frame corrupt (%s) — stopping reconstruction.", exc
-                            )
-                            self._fault_state = "wal_corrupt"
-                            break
-                    logger.info("Reconstructed %d nodes from Rust mmap WAL.", count)
-                    # Retain open Rust WAL for subsequent writes.
-                    self._rust_wal = rust_wal
-                    return
-                except Exception as exc:
-                    logger.warning(
-                        "Rust mmap WAL reconstruction failed (%s); trying Python WAL", exc
-                    )
-
-        # ── Python text WAL fallback ──────────────────────────────────────
         if not os.path.exists(self.persistence_path):
             logger.info("No WAL found at %s — starting fresh.", self.persistence_path)
             return

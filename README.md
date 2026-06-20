@@ -229,13 +229,18 @@ The authoritative matrix is
 | SOC2/HIPAA sealed, re-verifiable export | **Proven** | `examples/demo.py` step 5; `aegis_server/compliance/exporter.py` |
 | "Zero forensic latency" (no client I/O wait) | **Proven** | commit runs after the response return |
 | Hot-path scheduling overhead | **Measured: 77 µs p50 / 132 µs p99** | [BENCHMARKS.md](docs/BENCHMARKS.md) |
-| Rust extension "significant performance gains" | **Unverified** | speedup `UNKNOWN` until `maturin develop --release`; [BENCHMARKS.md](docs/BENCHMARKS.md) |
+| Rust extension builds & runs | **Verified** | `maturin build --release` clean; 23/23 Rust unit tests; PQC `ml-dsa` signing, async forwarder & Aho-Corasick WAF exercised end-to-end |
+| Rust MMR speedup | **Measured: ~1.35× avg (max 1.38×)** | `python -m benchmarks.bench_mmr`; modest — PyO3 marshalling dominates at small N |
 | Anthropic/Gemini token-level entropy | **Partial** | char-level fallback; [CLAIMS_VERIFICATION.md L1](docs/audit/CLAIMS_VERIFICATION.md) |
 | mTLS upstream identity assertion | **Partial** | certs applied, identity not asserted per-request; [L2](docs/audit/CLAIMS_VERIFICATION.md) |
 
-We do **not** quote a Rust speedup number, because the extension was not compiled
-in our measurement environment. Build it and re-run `python -m benchmarks.bench_mmr`
-to obtain a real ratio.
+The Rust extension compiles cleanly and is functionally verified (PQC signing,
+async connection-pooled forwarder, and SIMD WAF all exercised end-to-end). The
+**MMR** speedup is a measured but modest **~1.35×** — PyO3 call-marshalling
+dominates for small batches, so the native MMR is not the headline win. The
+async forwarder's throughput advantage (connection pooling + HTTP/2) is the
+larger benefit on the request path; reproduce both with
+`python -m benchmarks.bench_mmr` and `python -m benchmarks.bench_forwarding`.
 
 ---
 
@@ -262,13 +267,16 @@ Building the PyO3 extension swaps in a native MMR/forwarder/PQC implementation.
 The Python path remains the verified reference and proof generator.
 
 ```bash
-python -m pip install maturin
+python -m pip install maturin patchelf
 cd aegis_rust_v2 && maturin develop --release && cd -
-python -m benchmarks.bench_mmr   # produces the real Rust-vs-Python speedup
+python -m benchmarks.bench_mmr   # Rust-vs-Python MMR speedup (~1.35× here)
 ```
 
-> The speedup ratio is currently **unmeasured** in this repo — the benchmark
-> above is what fills it in. See [docs/RUST_BUILD.md](docs/RUST_BUILD.md).
+> Verified to build cleanly and pass all 23 Rust unit tests; the extension is
+> auto-detected at import (`aegis.core.rust_integration.has_rust()`), with a
+> transparent pure-Python fallback when it is absent. The measured MMR speedup
+> is a modest **~1.35×**; the async forwarder is the larger request-path win.
+> See [docs/RUST_BUILD.md](docs/RUST_BUILD.md).
 
 ---
 

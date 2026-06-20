@@ -40,13 +40,35 @@ fn rt() -> &'static tokio::runtime::Runtime {
         let workers = std::thread::available_parallelism()
             .map(|n| n.get())
             .unwrap_or(4);
+        // Worker threads are spawned eagerly when the runtime is built. We keep
+        // the blocking pool tiny (1) because the async hickory DNS resolver
+        // removes the usual per-request spawn_blocking calls; warming the
+        // runtime before the seccomp filter is applied means no clone() is
+        // needed at steady state. See seccomp_guard.py for the matching policy.
         tokio::runtime::Builder::new_multi_thread()
             .worker_threads(workers)
+            .max_blocking_threads(1)
             .enable_all()
             .thread_name("aegis-io")
             .build()
             .expect("aegis-rust: Tokio runtime init failed")
     })
+}
+
+/// Force-initialize the global Tokio runtime (spawning all worker threads) and
+/// exercise the async machinery once. MUST be called before the process applies
+/// a seccomp filter that forbids clone()/clone3(), so that all thread creation
+/// happens while those syscalls are still permitted.
+#[pyfunction]
+pub fn warmup_runtime() -> usize {
+    let runtime = rt();
+    // Run a trivial async task so the reactor/timer drivers are fully started.
+    runtime.block_on(async {
+        tokio::time::sleep(Duration::from_millis(0)).await;
+    });
+    std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4)
 }
 
 const DEFAULT_TIMEOUT_SECS: u64 = 120;
@@ -87,6 +109,8 @@ impl RustForwarder {
             .pool_idle_timeout(Duration::from_secs(POOL_IDLE_TIMEOUT_SECS))
             .pool_max_idle_per_host(POOL_MAX_IDLE_PER_HOST)
             .http2_adaptive_window(true)
+            // Async DNS (no blocking-pool thread spawn) — see warmup_runtime().
+            .hickory_dns(true)
             .build()
             .map_err(|e| {
                 PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(

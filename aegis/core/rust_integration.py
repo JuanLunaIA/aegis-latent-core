@@ -70,6 +70,28 @@ def new_rust_forwarder(
         return None
 
 
+def warmup_rust_runtime() -> bool:
+    """Eagerly spawn the global Tokio runtime's worker threads.
+
+    MUST be called before the process installs a seccomp filter that forbids
+    ``clone``/``clone3``.  The async forwarder's runtime spawns its worker pool
+    on first use; warming it up-front guarantees all thread creation happens
+    while those syscalls are still permitted, so the steady-state request path
+    needs no thread spawning (and the sandbox can stay strict).
+
+    Returns True if the runtime was warmed, False when Rust is unavailable.
+    """
+    if not _HAS_RUST:
+        return False
+    try:
+        workers = aegis_rust.warmup_runtime()
+        logger.info("aegis_rust Tokio runtime warmed (%s worker threads)", workers)
+        return True
+    except Exception as e:
+        logger.warning("Rust runtime warmup failed: %s", e)
+        return False
+
+
 # ── Tier 2: Aho-Corasick WAF ─────────────────────────────────────────────────
 
 

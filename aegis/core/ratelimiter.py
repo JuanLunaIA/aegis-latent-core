@@ -154,26 +154,25 @@ class DistributedRateLimiter:
         await self.redis.aclose()
 
 
-class RustBackedRateLimiter:
+class RustBackedRateLimiter(InMemoryRateLimiter):
     """Tier-4 lock-free rate limiter backed by aegis_rust.RustRateLimiter.
 
     The Rust implementation uses an atomic CAS token bucket per tenant stored
     in a DashMap (sharded RwLock).  Check latency: ~50 ns vs ~5 µs for the
     Python asyncio.Lock variant.
 
-    API is identical to `InMemoryRateLimiter` for transparent substitution.
+    Subclasses ``InMemoryRateLimiter`` so that it is a drop-in substitute
+    (``isinstance(x, InMemoryRateLimiter)`` holds) and the parent's pure-Python
+    token bucket serves as the automatic fallback when the Rust extension is
+    not compiled or fails to initialise.
     """
 
     def __init__(self, requests_per_minute: int = 60, burst: int = 10) -> None:
-        self._rpm = requests_per_minute
-        self._burst = burst
-        # Rust limiter: capacity = burst, refill_rate = rpm/60 tokens/sec
+        # Parent sets up the Python token bucket used as the fallback path.
+        super().__init__(requests_per_minute=requests_per_minute, burst=burst)
+        # Rust limiter: capacity = burst, refill_rate = rpm/60 tokens/sec.
         refill_per_sec = max(1, round(requests_per_minute / 60))
         self._rust: Any = new_rust_rate_limiter(burst, refill_per_sec)
-        # Python fallback if Rust init failed
-        self._fallback: InMemoryRateLimiter | None = (
-            None if self._rust is not None else InMemoryRateLimiter(requests_per_minute, burst)
-        )
         logger.debug(
             "RustBackedRateLimiter: burst=%d rpm=%d rust=%s",
             burst,
@@ -184,12 +183,8 @@ class RustBackedRateLimiter:
     async def check_limit(self, key: str) -> bool:
         if self._rust is not None:
             return bool(self._rust.check_and_consume(key))
-        assert self._fallback is not None
-        return await self._fallback.check_limit(key)
-
-    async def close(self) -> None:
-        if self._fallback is not None:
-            await self._fallback.close()
+        # Fall back to the inherited pure-Python token bucket.
+        return await super().check_limit(key)
 
     def evict_stale(self, max_age_secs: int = 3600) -> int:
         """Evict idle buckets — call from a background maintenance task."""

@@ -28,7 +28,7 @@ mod wal;
 mod waf;
 
 use audit::AuditRingBuffer;
-use forwarder::RustForwarder;
+use forwarder::{warmup_runtime, RustForwarder};
 use hasher::{hash_audit_payload, hash_blake3, hash_sha256_fast, keyed_hash_blake3, keyed_hash_blake3_bytes};
 use ledger::{blake3_hash, blake3_keyed_hash, hash_sha256, hmac_sign};
 use mmr::MmrAccumulator;
@@ -86,6 +86,7 @@ fn aegis_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // ── Tier 1: Async HTTP forwarder ──────────────────────────────────────
     m.add_class::<RustForwarder>()?;
     m.add_class::<HttpResponse>()?;
+    m.add_function(wrap_pyfunction!(warmup_runtime, m)?)?;
 
     // ── Tier 2: Aho-Corasick WAF ─────────────────────────────────────────
     m.add_class::<RustWaf>()?;
