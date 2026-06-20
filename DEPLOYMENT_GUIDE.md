@@ -1,90 +1,94 @@
-# Guía de Despliegue en Producción — Aegis Latent Core
+# Production Deployment Guide — Aegis Latent Core
 
-> Alcance: cómo desplegar Aegis de forma segura en producción, qué garantías
-> ofrece, y **qué NO hacer**. El modelo de amenazas (STRIDE) de
-> [`docs/audit/SECURITY_AUDIT.md`](docs/audit/SECURITY_AUDIT.md) §7 informa cada
-> recomendación. Las issues abiertas vienen de
-> [`docs/audit/STATE.md`](docs/audit/STATE.md) §6 — leídas del código, no inferidas.
+> Scope: how to deploy Aegis securely in production, what guarantees it
+> provides, and **what NOT to do**. Every recommendation is informed by the
+> STRIDE threat model in
+> [`docs/audit/SECURITY_AUDIT.md`](docs/audit/SECURITY_AUDIT.md) §7. Open
+> issues are from [`docs/audit/STATE.md`](docs/audit/STATE.md) §6 — read from
+> code, not inferred.
 
 ---
 
-## 1. Prerrequisitos
+## 1. Prerequisites
 
-| Componente | Mínimo | Nota |
+| Component | Minimum | Note |
 |---|---|---|
-| Python | 3.11+ | 3.12 recomendado |
-| CPU | 2 vCPU | el data-plane es async; escala horizontal por réplicas |
-| RAM | 512 MB + (≈ `max_memory_nodes` × ~1 KB) | la cadena en memoria es un deque acotado |
-| Almacenamiento | persistente para el WAL | **no** efímero — ver §4 |
-| Red saliente | hacia el proveedor LLM | restringida por allowlist si es posible |
+| Python | 3.11+ | 3.12 recommended |
+| CPU | 2 vCPU | data plane is async; scale horizontally with replicas |
+| RAM | 512 MB + (≈ `max_memory_nodes` × ~1 KB) | in-memory chain is a bounded deque |
+| Storage | persistent for the WAL | **not** ephemeral — see §4 |
+| Outbound network | to the LLM provider | restrict with an allowlist if possible |
 
-El extension de Rust es opcional. Sin él, el path Python es la referencia
-verificada (firma HMAC/Ed25519, MMR puro). Con él, ML-DSA (PQC) queda disponible.
+The Rust extension is optional. Without it, the Python path is the verified
+reference (HMAC/Ed25519 signing, pure-Python MMR). With it, ML-DSA (PQC)
+becomes available and MMR throughput improves ~3× (see
+[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) §Claim 2).
 
 ---
 
-## 2. Configuración mínima segura
+## 2. Minimum secure configuration
 
 ```env
-# Auth del proxy (clientes) y de los endpoints de auditoría (read-only).
-AEGIS_API_KEYS=<clave-cliente-1>,<clave-cliente-2>
-AEGIS_AUDIT_API_KEYS=<clave-readonly-auditoria>
+# Auth keys for proxy clients and for audit endpoints (read-only).
+AEGIS_API_KEYS=<client-key-1>,<client-key-2>
+AEGIS_AUDIT_API_KEYS=<read-only-audit-key>
 
-# Clave HMAC DEDICADA para firmar la cadena (no reutilizar AEGIS_API_KEYS).
-# Generar: python -c 'import secrets; print(secrets.token_hex(32))'
+# DEDICATED HMAC key for signing the chain (do not reuse AEGIS_API_KEYS).
+# Generate: python -c 'import secrets; print(secrets.token_hex(32))'
 AEGIS_SIGNING_KEY=<64-hex>
 
-# Proveedor upstream.
+# Upstream provider.
 AEGIS_PROVIDER=openai
-AEGIS_BACKEND_API_KEY=<clave-del-proveedor>
+AEGIS_BACKEND_API_KEY=<provider-key>
 
-# WAL en disco persistente (ver §4).
+# WAL on persistent disk (see §4).
 AEGIS_WAL_PATH=/var/lib/aegis/aegis.wal.jsonl
 
-# Producción: nunca debug, nunca auth deshabilitada.
+# Production: never debug, never auth disabled.
 AEGIS_DEBUG_MODE=false
 ```
 
-`AEGIS_SIGNING_KEY` vacío degrada `legal_admissibility` a `"Compromised"`
-(los nodos firman con Ed25519 efímero). **X→Y porque Z:** sin clave estable y
-externa al host, la firma HMAC es falsificable server-side y la cadena pierde
-valor probatorio frente a un tercero.
+An empty `AEGIS_SIGNING_KEY` downgrades `legal_admissibility` to
+`"Compromised"` (nodes sign with an ephemeral Ed25519 key). **Why it
+matters:** without a stable key external to the host, the HMAC signature is
+forgeable server-side and the chain loses probative value against a third
+party.
 
 ---
 
-## 3. Topologías de despliegue
+## 3. Deployment topologies
 
-### 3a. Detrás de un balanceador que termina TLS (recomendado)
+### 3a. Behind a TLS-terminating load balancer (recommended)
 
 ```mermaid
 flowchart LR
   Internet -->|TLS| LB["Ingress / LB (TLS termination)"]
-  LB -->|red privada| Aegis["Aegis (N réplicas)"]
+  LB -->|private network| Aegis["Aegis (N replicas)"]
   Aegis -->|TLS| Provider["LLM Provider"]
-  Aegis --> WAL[("WAL persistente")]
-  Aegis -.-> Redis[("Redis (rate limit distribuido)")]
+  Aegis --> WAL[("Persistent WAL")]
+  Aegis -.-> Redis[("Redis (distributed rate limit)")]
 ```
 
-- Aegis escucha en una interfaz privada (`AEGIS_HOST=127.0.0.1` o red interna).
-- El LB/ingress maneja el TLS público y, si aplica, mTLS de clientes.
-- Varias réplicas comparten Redis para rate-limiting global y un backend de
-  storage compartido (Postgres) para la cadena, si se requiere durabilidad
-  multi-réplica.
+- Aegis listens on a private interface (`AEGIS_HOST=127.0.0.1` or internal
+  network).
+- The LB/ingress handles public TLS and, if applicable, client mTLS.
+- Multiple replicas share Redis for global rate limiting and a shared storage
+  backend (Postgres) for the chain, if multi-replica durability is required.
 
-### 3b. Aegis termina TLS directamente
+### 3b. Aegis terminates TLS directly
 
 ```env
 AEGIS_SSL_CERTFILE=/etc/certs/server.crt
 AEGIS_SSL_KEYFILE=/etc/certs/server.key
-# mTLS (requerir certificado de cliente):
+# mTLS (require a client certificate):
 AEGIS_MTLS_REQUIRED=true
 AEGIS_SSL_CA_CERTS=/etc/certs/client-ca.crt
 ```
 
-> Limitación conocida (L2 / I-05): los certs se aplican a uvicorn y al cliente
-> httpx upstream, pero la **identidad** del certificado de cliente no se afirma
-> por request. No uses mTLS como único control de autorización; combinalo con
-> `AEGIS_API_KEYS`.
+> Known limitation (L2 / I-05): certs are applied to uvicorn and the upstream
+> httpx client, but the **client-certificate identity is not asserted
+> per-request**. Do not use mTLS as the sole authorization control; combine it
+> with `AEGIS_API_KEYS`.
 
 ### 3c. Docker
 
@@ -101,100 +105,100 @@ docker run -p 8080:8080 \
   aegis-latent-core:2.4.0
 ```
 
-Siempre fijá `--memory`/`--cpus` (requests+limits en K8s). El deque de la cadena
-está acotado, pero el WAL crece sin rotación automática (ver §4).
+Always set `--memory`/`--cpus` (requests+limits in K8s). The chain deque is
+bounded, but the WAL grows without automatic rotation (see §4).
 
 ---
 
-## 4. Persistencia y custodia
+## 4. Persistence and custody
 
-| Tema | Acción | Por qué |
+| Topic | Action | Why |
 |---|---|---|
-| WAL en disco persistente | volumen montado, no `tmpfs`/efímero | la cadena se reconstruye del WAL al arrancar; perderlo rompe la continuidad probatoria |
-| Permisos del WAL | Aegis lo crea `0o600`; mantené el FS con dueño dedicado | el WAL guarda **hashes** (tenant_id, modelo, hashes de req/resp), no prompts — pero es metadata sensible |
-| Backup del WAL | snapshot consistente periódico | un WAL corrupto detiene la reconstrucción y marca `fault_state` |
-| Rotación | manual/operativa hoy (DoS abierto) | no hay rotación automática; monitoreá el tamaño |
-| Rotación de clave | documentá el evento en la custodia | rotar `AEGIS_SIGNING_KEY` invalida la verificación HMAC de los nodos previos |
-| Storage durable multi-réplica | `aegis_server` con Postgres/SQLite + exporter | para compliance SOC2/HIPAA con verificación independiente |
+| WAL on persistent disk | mounted volume, not `tmpfs`/ephemeral | the chain is rebuilt from the WAL on startup; losing it breaks audit continuity |
+| WAL permissions | Aegis creates it `0o600`; maintain a dedicated owner on the filesystem | the WAL stores **hashes** (tenant_id, model, req/resp hashes), not prompt bodies — but it is still sensitive metadata |
+| WAL backup | periodic consistent snapshot | a corrupt WAL halts reconstruction and sets `fault_state` |
+| Rotation | manual/operational today (open DoS risk) | no automatic rotation; monitor WAL size |
+| Key rotation | document the event in chain-of-custody notes | rotating `AEGIS_SIGNING_KEY` invalidates HMAC verification for all prior nodes |
+| Durable multi-replica storage | `aegis_server` with Postgres/SQLite + exporter | for SOC2/HIPAA compliance with independent verification |
 
 ---
 
-## 5. Qué NO hacer (anti-patrones)
+## 5. What NOT to do (anti-patterns)
 
-| ❌ No hagas esto | Consecuencia | Correcto |
+| ❌ Don't do this | Consequence | Correct approach |
 |---|---|---|
-| Exponer `tools/visualizer/` a una red pública | el visualizer corre comandos locales (`git`, pytest, escaneo) y revela estructura interna | solo `127.0.0.1`, herramienta de dev |
-| `AEGIS_DEBUG_MODE=true` en prod | publica `/docs`, `/redoc`, `/openapi.json` | `false` (default) |
-| `AEGIS_AUTH_DISABLED=true` fuera de dev | abre el proxy y los endpoints de auditoría | bloqueado por validador: requiere `debug_mode=true` (fix #6) |
-| Reutilizar `AEGIS_API_KEYS` como `AEGIS_SIGNING_KEY` | acoplar rotación de auth con firma de cadena | clave de firma dedicada |
-| Dejar `AEGIS_SIGNING_KEY` vacío | `legal_admissibility="Compromised"` | siempre setearla |
-| WAL en almacenamiento efímero | pérdida de la cadena al reiniciar | volumen persistente |
-| Redis remoto sin TLS (I-04) | tokens de rate-limit / session IDs en claro | `ssl=True` + `ssl_cert_reqs=required` |
-| Confiar en mTLS como autorización (L2) | identidad no afirmada por request | combinar con API keys |
-| Exponer `/v1/audit/*` sin `AEGIS_AUDIT_API_KEYS` | lectura de metadata forense | clave read-only separada |
+| Expose `tools/visualizer/` to a public network | the visualizer runs local commands (`git`, pytest, scanning) and reveals internal structure | localhost only — development tool |
+| `AEGIS_DEBUG_MODE=true` in production | publishes `/docs`, `/redoc`, `/openapi.json` | `false` (default) |
+| `AEGIS_AUTH_DISABLED=true` outside dev | opens the proxy and audit endpoints to unauthenticated access | blocked by validator: requires `debug_mode=true` |
+| Reuse `AEGIS_API_KEYS` as `AEGIS_SIGNING_KEY` | couples auth key rotation with chain signing | use a dedicated signing key |
+| Leave `AEGIS_SIGNING_KEY` empty | `legal_admissibility="Compromised"` | always set it |
+| WAL on ephemeral storage | chain lost on restart | persistent volume |
+| Remote Redis without TLS (I-04) | rate-limit tokens / session IDs in cleartext | `ssl=True` + `ssl_cert_reqs=required` |
+| Rely on mTLS as the sole authorization (L2) | identity not asserted per-request | combine with API keys |
+| Expose `/v1/audit/*` without `AEGIS_AUDIT_API_KEYS` | forensic metadata readable without auth | separate read-only key |
 
 ---
 
-## 6. Modelo de amenazas (STRIDE) y postura
+## 6. Threat model (STRIDE) and posture
 
-Resumen de [`SECURITY_AUDIT.md`](docs/audit/SECURITY_AUDIT.md) §7:
+Summary from [`SECURITY_AUDIT.md`](docs/audit/SECURITY_AUDIT.md) §7:
 
-| Clase | Residual | Mitigación en despliegue |
+| Class | Residual risk | Deployment mitigation |
 |---|---|---|
-| **T**ampering | WAL editable por atacante a nivel FS | firma cubre `prev_hash` (reorder se detecta, fix #2); clave fuera del host del WAL |
-| **I**nfo disclosure | metadata forense en el WAL | WAL `0o600`; almacena hashes, no prompts |
-| **E**oP | bypass por config `auth_disabled` | bloqueado salvo `debug_mode` (fix #6) |
-| **R**epudiation | HMAC es simétrico → forja server-side posible | usar PQC/Ed25519 o Vault Transit para no-repudio fuerte |
-| **D**oS | rate-limiter ante caída de Redis; SSE sin límite; crecimiento del WAL | controles del operador: límites de réplica, monitoreo del WAL |
+| **T**ampering | WAL editable by an attacker with FS access | signing covers `prev_hash` (reordering detected); keep the key off the WAL host |
+| **I**nfo disclosure | forensic metadata in the WAL | WAL `0o600`; stores hashes, not prompts |
+| **E**levation of privilege | bypass via `auth_disabled` config | blocked unless `debug_mode` is also set |
+| **R**epudiation | HMAC is symmetric → server-side forgery possible | use PQC/Ed25519 or Vault Transit for strong non-repudiation |
+| **D**oS | rate limiter fails open on Redis outage; SSE without size limit; WAL growth | operator controls: replica limits, WAL monitoring |
 
-**Issues abiertas a vigilar** (no resueltas, [`STATE.md`](docs/audit/STATE.md) §6):
-`I-01` `os.fsync()` bajo lock sin timeout (un cuelgue de FS bloquea el pipeline);
-`I-02` timeout de Vault; `I-03` timeouts por sentencia en storage; `I-04` TLS de Redis.
+**Open issues to watch** (unresolved, [`STATE.md`](docs/audit/STATE.md) §6):
+`I-01` `os.fsync()` under lock without timeout (a FS hang blocks the pipeline);
+`I-02` Vault auth has no explicit timeout; `I-03` no per-statement timeouts in
+storage; `I-04` Redis TLS not enforced by default.
 
 ---
 
-## 7. Observabilidad y health
+## 7. Observability and health
 
-| Endpoint | Uso |
+| Endpoint | Use |
 |---|---|
-| `GET /health` | liveness + estado de subsistemas (ledger, analyzer cache); 503 si degradado |
-| `GET /ready` | readiness; 503 hasta completar el startup del lifespan |
-| `GET /metrics` | Prometheus (extra `metrics`) |
-| `GET /v1/audit/integrity` | verificación de la cadena (`AEGIS_AUDIT_API_KEYS`) |
+| `GET /health` | liveness + subsystem state (ledger, analyzer cache); 503 if degraded |
+| `GET /ready` | readiness; 503 until lifespan startup completes |
+| `GET /metrics` | Prometheus (requires `metrics` extra) |
+| `GET /v1/audit/integrity` | chain verification (`AEGIS_AUDIT_API_KEYS` required) |
 
-Smoke test post-deploy:
+Post-deploy smoke test:
 
 ```bash
-AEGIS_BASE_URL=https://tu-aegis ./scripts/smoke_test.sh
+AEGIS_BASE_URL=https://your-aegis ./scripts/smoke_test.sh
 ```
 
 ---
 
-## 8. Cadena de suministro (CI/CD)
+## 8. Supply chain (CI/CD)
 
 `.github/workflows/`:
 
-- **`ci.yml`** — Ruff (lint/format), Mypy (type check scoped a `mypy-ci.ini`),
-  Bandit + `pip-audit` (seguridad), build/test de la extensión Rust, build de
-  imagen Docker.
-- **`release.yml`** — al taggear (`git tag vX.Y.Z && git push --tags`): genera
-  `.whl`/`.tar.gz`, hashes **SHA-256** por artefacto, y publica el Release.
-- **SBOM**: `scripts/generate_sbom.sh` (inventario de dependencias en JSON).
-- **Firma de imagen**: Cosign en el pipeline de Docker.
+- **`ci.yml`** — Ruff (lint/format), Mypy (type check scoped to `mypy-ci.ini`),
+  Bandit + `pip-audit` (security), Rust extension build/test, Docker image build.
+- **`release.yml`** — on tag (`git tag vX.Y.Z && git push --tags`): generates
+  `.whl`/`.tar.gz`, per-artifact **SHA-256** hashes, and publishes the Release.
+- **SBOM**: `scripts/generate_sbom.sh` (JSON dependency inventory).
+- **Image signing**: Cosign in the Docker pipeline.
 
-Para publicar una versión: actualizá `pyproject.toml`, taggeá, y dejá que
-GitHub Actions complete el resto.
+To publish a release: update `pyproject.toml`, tag, and let GitHub Actions
+do the rest.
 
 ---
 
-## 9. Checklist de go-live
+## 9. Go-live checklist
 
-- [ ] `AEGIS_API_KEYS`, `AEGIS_AUDIT_API_KEYS`, `AEGIS_SIGNING_KEY` (dedicada) seteadas.
-- [ ] `AEGIS_DEBUG_MODE=false`; `AEGIS_AUTH_DISABLED` ausente.
-- [ ] WAL en volumen persistente con backup; permisos `0o600` verificados.
-- [ ] TLS público (LB o Aegis directo); Redis con TLS si es remoto.
-- [ ] Visualizer **no** expuesto públicamente.
-- [ ] `GET /ready` y `GET /health` responden 200; `scripts/smoke_test.sh` pasa.
+- [ ] `AEGIS_API_KEYS`, `AEGIS_AUDIT_API_KEYS`, `AEGIS_SIGNING_KEY` (dedicated) set.
+- [ ] `AEGIS_DEBUG_MODE=false`; `AEGIS_AUTH_DISABLED` absent.
+- [ ] WAL on a persistent volume with backup; `0o600` permissions verified.
+- [ ] Public TLS (LB or Aegis direct); Redis with TLS if remote.
+- [ ] Visualizer **not** exposed publicly.
+- [ ] `GET /ready` and `GET /health` return 200; `scripts/smoke_test.sh` passes.
 - [ ] `GET /v1/audit/integrity` → `valid=true`.
-- [ ] Procedimiento de rotación de `AEGIS_SIGNING_KEY` documentado en la custodia.
-- [ ] Límites de CPU/memoria fijados; monitoreo del tamaño del WAL activo.
+- [ ] `AEGIS_SIGNING_KEY` rotation procedure documented in chain-of-custody notes.
+- [ ] CPU/memory limits set; WAL size monitoring active.

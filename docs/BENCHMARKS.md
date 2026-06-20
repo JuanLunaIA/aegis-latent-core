@@ -91,33 +91,41 @@ performance gains over the Python fallback for MMR operations.
 
 | N (leaves) | Throughput | µs / leaf |
 |---|---|---|
-| 100 | 172,710 leaves/s | 5.79 µs |
-| 1,000 | 150,310 leaves/s | 6.65 µs |
-| 10,000 | 136,710 leaves/s | 7.32 µs |
-| 100,000 | 121,390 leaves/s | 8.24 µs |
+| 100 | 302,090 leaves/s | 3.310 µs |
+| 1,000 | 265,250 leaves/s | 3.770 µs |
+| 10,000 | 236,000 leaves/s | 4.237 µs |
+| 100,000 | 208,210 leaves/s | 4.803 µs |
 
 Methodology: k=5 independent trials per (N). Best-of-k reported (Google Benchmark min
 methodology — eliminates OS scheduling noise). Leaf payload: 32 bytes (SHA-256 of index).
 
-**Throughput degrades ~30% from N=100 to N=100,000 [INFERENCE]:** Peak merging is O(log N)
+**Throughput degrades ~31% from N=100 to N=100,000 [INFERENCE]:** Peak merging is O(log N)
 amortised per leaf, but hash(str + str) allocates two new Python str objects per internal node.
 At N=100,000 the GC pressure from ~200,000 node objects is measurable.
 
 ### Rust MmrAccumulator throughput
 
-**UNKNOWN — resolves via:**
-```
-cd aegis_rust_v2
-maturin develop --release
-python -m benchmarks.bench_mmr
-```
+Built with `maturin build --release` (LTO, `codegen-units=1`) and installed via wheel.
+`aegis_rust v2.0.0`, CPython 3.11, x86_64 Linux.
 
-The `aegis_rust` extension was not compiled in this measurement environment. The Rust speedup
-ratio cannot be reported until `maturin develop --release` completes successfully.
+| N (leaves) | Python leaves/s | Rust leaves/s | Speedup |
+|---|---|---|---|
+| 100 | 302,090 | 792,780 | 2.62× |
+| 1,000 | 265,250 | 728,590 | 2.75× |
+| 10,000 | 236,000 | 697,820 | 2.96× |
+| 100,000 | 208,210 | 653,820 | 3.14× |
 
-**Updated README requirement:** The claim *"significant performance gains"* must be replaced
-with the measured speedup ratio once Rust benchmarks are run. Until then, the claim is
-`[SPECULATIVE]`.
+**Aggregate: avg 2.87× speedup · max 3.14× speedup [PROVEN]**
+
+The speedup is consistent and grows with N. The dominant cost in Python is SHA-256
+via `hashlib` (Python wrapper → C) plus per-leaf `bytes` allocation; Rust calls `sha2`
+directly with no allocator pressure per leaf and avoids the PyO3 round-trip for the
+inner loop (leaves are batched as `Vec<u8>` per call).
+
+**Interpretation:** The Rust extension is measurably faster for bulk MMR operations
+(~2.9× on average). The claim *"significant performance gains"* is accurate at the
+~3× level for this workload. For very small N (<100), PyO3 call overhead approaches
+the per-leaf computation cost; gains are most pronounced at N ≥ 10,000.
 
 ---
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
-# Prueba rápida contra un AEGIS en ejecución (puerto 8080 por defecto).
-# Uso:  ./scripts/smoke_test.sh
-# Requiere: curl, jq (opcional)
+# Quick smoke test against a running AEGIS instance (default port 8080).
+# Usage:  ./scripts/smoke_test.sh
+# Requires: curl, jq (optional)
 
 set -euo pipefail
 
@@ -20,7 +20,7 @@ curl -sf "${BASE_URL}/v1/audit/health" \
   -H "Authorization: Bearer ${AUDIT_KEY}"
 echo
 
-echo "==> Chat (puede fallar si el backend LLM no está disponible)"
+echo "==> Chat (may fail if the LLM backend is not running)"
 if curl -sf "${BASE_URL}/v1/chat/completions" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
@@ -29,8 +29,8 @@ if curl -sf "${BASE_URL}/v1/chat/completions" \
   echo "Chat OK"
   command -v jq >/dev/null && jq -r '.choices[0].message.content // .error.message // .' /tmp/aegis_smoke.json
 else
-  echo "Chat falló (¿Ollama/backend levantado y modelo existente?)"
+  echo "Chat failed (is Ollama/backend running with the requested model?)"
   exit 1
 fi
 
-echo "==> Smoke test completado"
+echo "==> Smoke test complete"

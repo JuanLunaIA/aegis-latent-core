@@ -26,7 +26,7 @@ each step:
 Expected final line:
 
 ```
-RESULTADO: 5/5 verificaciones OK — demo exitosa.
+RESULT: 5/5 checks OK — demo successful.
 ```
 
 ### Notes
