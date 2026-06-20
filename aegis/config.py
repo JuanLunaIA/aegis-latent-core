@@ -146,6 +146,15 @@ class AegisSettings(BaseSettings):
         default=False,
         description="If True, the server will require and verify a client certificate.",
     )
+    cac_piv_required: bool = Field(
+        default=False,
+        description=(
+            "When True, mTLS client certificates must carry a recognized DoD CAC or GSA PIV "
+            "certificate policy OID (DoDI 8520.02 / NIST SP 800-73-4 / GSA FPKI) and the "
+            "Client Authentication EKU.  EDIPI (CAC) or UUID (PIV-I) is extracted and logged. "
+            "Requires ssl_ca_certs to be configured for proper chain validation."
+        ),
+    )
 
     # ── Storage ───────────────────────────────────────────────────────────
     wal_path: Path = Field(

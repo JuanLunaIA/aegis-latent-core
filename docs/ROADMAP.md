@@ -48,7 +48,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] `auth_disabled=True` gated behind `debug_mode=True` (prevents production bypass)
 - [x] Per-tenant isolation via `tenant_id` in every audit node
 - [x] Vault/AppRole secret management integration (`hvac>=2.1.0`)
-- [ ] mTLS client certificate authentication with CAC/PIV card (DoD Common Access Card) via PKCS#11 slot
+- [x] mTLS client certificate authentication with CAC/PIV card (DoD Common Access Card) via PKCS#11 slot
 - [ ] LDAP/Active Directory integration for multi-factor identity assertion
 - [ ] Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation
 - [ ] Attribute-Based Access Control (ABAC) for IL5/IL6 data compartmentalization
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
-| Defense & Government | 18 | 28 | ~39% |
+| Defense & Government | 19 | 28 | ~43% |
 | Healthcare & Life Sciences | 12 | 24 | ~33% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
 | Advanced Forensics & WAF | 15 | 26 | ~38% |
-| **Total** | **66** | **122** | **~35%** |
+| **Total** | **67** | **122** | **~55%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,10 +328,10 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. mTLS client certificate authentication with CAC/PIV card via PKCS#11 slot (Domain 1.2).
-3. mTLS client certificate authentication with CAC/PIV card via PKCS#11 slot (Domain 1.2).
-4. Conversation graph crescendo analysis — detect constraint erosion across full session (Domain 5.1 follow-on).
-5. Differential privacy noise injection for aggregate analytics queries (Domain 2.1).
+1. Conversation graph crescendo analysis — detect constraint erosion across full session (Domain 5.1 follow-on).
+2. Differential privacy noise injection for aggregate analytics queries (Domain 2.1).
+3. LDAP/Active Directory integration for multi-factor identity assertion (Domain 1.2).
+4. Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation (Domain 1.2).
 
 > **Done:** WAL segment rotation & archival (Domain 3.3) — completed 2026-06-20.
 > **Done:** Real-time PHI de-identification, NIST SP 800-188 Safe Harbor (Domain 2.1) — completed 2026-06-20.
@@ -341,6 +341,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** PHI scrubbing confirmation field per audit node (`phi_scrubbed`, `scrub_method`) (Domain 2.1) — completed 2026-06-20.
 > **Done:** Helm chart production-grade defaults: topologySpreadConstraints, HPA, ServiceAccount (Domain 4.4) — completed 2026-06-20.
 > **Done:** 21 CFR Part 11 electronic signature annotations: signer_name, signature_meaning, Part 11 manifest export (Domain 2.2) — completed 2026-06-20.
+> **Done:** mTLS CAC/PIV client certificate authentication — DoD CAC (DoDI 8520.02) and GSA PIV (NIST SP 800-73-4) policy OID verification, EDIPI and UUID identity extraction, `CACPIVAuth` middleware, `cac_piv_required` config flag (Domain 1.2) — completed 2026-06-20.
 
 ---
 
