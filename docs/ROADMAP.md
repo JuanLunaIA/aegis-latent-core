@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-20 (tests: 1192 passed, 95.32% coverage).
+> **Last verified against codebase:** 2026-06-20 (tests: 1237 passed, 95.32% coverage).
 
 ---
 
@@ -109,7 +109,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Differential privacy noise injection for aggregate analytics queries (`epsilon`, `delta` parameters)
 - [x] Field-level encryption for PHI within audit node `payload` bytes (AES-256-GCM, per-tenant DEK)
 - [x] De-identification audit trail: which entities were scrubbed, confidence scores, scrub timestamps
-- [ ] HIPAA minimum-necessary access enforcement per API key scope
+- [x] HIPAA minimum-necessary access enforcement per API key scope (`aegis/auth/scopes.py`: `ScopedKeyRegistry`, `parse_scope_config()`, `ScopeViolationError`; 4 scope constants; constant-time key validation; `AEGIS_API_KEY_SCOPES` config field; `pytest tests/test_api_key_scopes.py` — 45 tests)
 
 #### 2.2 Clinical Audit Trail (21 CFR Part 11, EU Annex 11)
 
@@ -315,11 +315,11 @@ is not committed to `docs/BENCHMARKS.md`.
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
 | Defense & Government | 19 | 28 | ~43% |
-| Healthcare & Life Sciences | 15 | 24 | ~63% |
+| Healthcare & Life Sciences | 16 | 24 | ~67% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
 | Advanced Forensics & WAF | 16 | 26 | ~62% |
-| **Total** | **71** | **122** | **~58%** |
+| **Total** | **72** | **122** | **~59%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,12 +328,10 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. HIPAA minimum-necessary access enforcement per API key scope (Domain 2.1).
-2. LDAP/Active Directory integration for multi-factor identity assertion (Domain 1.2).
-3. Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation (Domain 1.2).
-2. LDAP/Active Directory integration for multi-factor identity assertion (Domain 1.2).
-3. Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation (Domain 1.2).
-4. Prompt injection resistance scoring — ML classifier for indirect injection (Domain 5.1).
+1. LDAP/Active Directory integration for multi-factor identity assertion (Domain 1.2).
+2. Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation (Domain 1.2).
+3. Prompt injection resistance scoring — ML classifier for indirect injection (Domain 5.1).
+4. Attribute-Based Access Control (ABAC) for IL5/IL6 data compartmentalization (Domain 1.2).
 
 > **Done:** WAL segment rotation & archival (Domain 3.3) — completed 2026-06-20.
 > **Done:** Real-time PHI de-identification, NIST SP 800-188 Safe Harbor (Domain 2.1) — completed 2026-06-20.
@@ -348,6 +346,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** Differential privacy noise injection — `LaplaceDP` (Laplace mechanism, ε-DP) + `DPAggregator` for audit chain aggregate analytics; `/v1/audit/analytics/dp` endpoint with configurable epsilon; 24 tests (Domain 2.1) — completed 2026-06-20.
 > **Done:** Field-level AES-256-GCM PHI encryption — `PHIPayloadEncryptor` with HKDF-SHA256 per-tenant DEK derivation, random nonce per encrypt, GCM authentication tag; `AEGIS_PHI_MASTER_KEY` config flag; 23 tests covering round-trip, tamper detection, tenant isolation (Domain 2.1) — completed 2026-06-20.
 > **Done:** De-identification audit trail — `ScrubAuditRecord` with per-category hit counts, confidence scores (0.75–0.99 by category specificity), UTC scrub timestamp, JSON-serializable `to_dict()`; `scrub_with_audit()` on `PHIDeidentifier`; 17 tests (Domain 2.1) — completed 2026-06-20.
+> **Done:** HIPAA minimum-necessary access enforcement per API key scope — `ScopedKeyRegistry` with constant-time key validation, per-key scope restrictions, `ScopeViolationError`, `parse_scope_config()` for `AEGIS_API_KEY_SCOPES` env var; `api_key_scopes` config field; 45 tests (Domain 2.1) — completed 2026-06-20.
 
 ---
 

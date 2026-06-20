@@ -119,6 +119,17 @@ class AegisSettings(BaseSettings):
         default=False,
         description="Set True only for local development. Never in production.",
     )
+    api_key_scopes: str = Field(
+        default="",
+        description=(
+            "Semicolon-separated HIPAA minimum-necessary scope restrictions per API key. "
+            "Format: 'key1:scope1,scope2;key2:scope3'. "
+            "Valid scopes: proxy:completions, audit:read, audit:export, audit:analytics. "
+            "Keys not listed here receive all scopes (backward-compatible default). "
+            "Example: 'read-only-key:audit:read;export-key:audit:read,audit:export'. "
+            "Set via AEGIS_API_KEY_SCOPES environment variable."
+        ),
+    )
     signing_key: str = Field(
         default="",
         description=(
