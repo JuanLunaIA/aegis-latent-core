@@ -124,14 +124,18 @@ def test_node_reorder_detected_by_signature(tmp_path):
     the per-node signature reject any prev_hash it was not computed for.
     """
     import dataclasses
+    from unittest.mock import patch
 
     from aegis.core.crypto_audit import CryptographicAuditLedger
 
     wal = str(tmp_path / "reorder.wal.jsonl")
-    ledger = CryptographicAuditLedger(wal, signing_key=_AUDIT_KEY)
+    # Force HMAC signing so verify_integrity() can detect the reorder via HMAC mismatch.
+    with patch("aegis.core.crypto_audit.RUST_AVAILABLE", False):
+        ledger = CryptographicAuditLedger(wal, signing_key=_AUDIT_KEY)
     try:
-        node_a = ledger.commit_state("A", 1.0, b"payload-A")
-        node_b = ledger.commit_state("B", 1.0, b"payload-B")
+        with patch("aegis.core.crypto_audit.RUST_AVAILABLE", False):
+            node_a = ledger.commit_state("A", 1.0, b"payload-A")
+            node_b = ledger.commit_state("B", 1.0, b"payload-B")
         assert node_b.signature_scheme == "hmac-sha256"
         assert ledger.verify_integrity()[0] is True
 

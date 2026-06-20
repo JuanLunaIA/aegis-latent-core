@@ -53,11 +53,12 @@ def test_legal_admissibility_compromised_when_fallback_node(tmp_path):
     Act:     commit one record.
     Assert:  is_fallback=True → legal_admissibility == "Compromised".
     """
-    ledger = CryptographicAuditLedger(str(tmp_path / "wal.jsonl"), signing_key="")
-    node = ledger.commit_forensic(state_id="x1", request_bytes=b"payload")
-    assert node.is_fallback is True
-    assert ledger.legal_admissibility == "Compromised"
-    ledger.close()
+    with patch("aegis.core.crypto_audit.RUST_AVAILABLE", False):
+        ledger = CryptographicAuditLedger(str(tmp_path / "wal.jsonl"), signing_key="")
+        node = ledger.commit_forensic(state_id="x1", request_bytes=b"payload")
+        assert node.is_fallback is True
+        assert ledger.legal_admissibility == "Compromised"
+        ledger.close()
 
 
 def test_legal_admissibility_high_with_signing_key(tmp_path):
@@ -301,19 +302,20 @@ def test_verify_integrity_detects_prev_hash_mismatch(tmp_path):
 
 def test_verify_integrity_detects_hmac_mismatch(tmp_path):
     """
-    Arrange: commit with signing key, then alter the signature.
+    Arrange: commit with signing key and no Rust (forces HMAC), then alter the signature.
     Act:     verify_integrity() with same signing key.
     Assert:  (False, 0).
     """
-    ledger = CryptographicAuditLedger(str(tmp_path / "wal.jsonl"), signing_key="secret")
-    ledger.commit_forensic(state_id="sig-test", request_bytes=b"req")
-    node = ledger.chain[0]
-    node.signature = "00" * 32  # corrupt
-    node.__creation_hash__ = node.node_hash  # reset so tamper check passes
-    ok, idx = ledger.verify_integrity()
-    assert ok is False
-    assert idx == 0
-    ledger.close()
+    with patch("aegis.core.crypto_audit.RUST_AVAILABLE", False):
+        ledger = CryptographicAuditLedger(str(tmp_path / "wal.jsonl"), signing_key="secret")
+        ledger.commit_forensic(state_id="sig-test", request_bytes=b"req")
+        node = ledger.chain[0]
+        node.signature = "00" * 32  # corrupt
+        node.__creation_hash__ = node.node_hash  # reset so tamper check passes
+        ok, idx = ledger.verify_integrity()
+        assert ok is False
+        assert idx == 0
+        ledger.close()
 
 
 # ── _build_signed_payload and HMAC helpers ────────────────────────────────────
