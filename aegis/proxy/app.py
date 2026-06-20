@@ -316,6 +316,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         persistence_path=str(cfg.wal_path),
         signing_key=_signing_key,
         max_memory_nodes=cfg.max_memory_nodes,
+        max_wal_bytes=cfg.max_wal_bytes,
     )
     state.ratelimiter = create_rate_limiter(cfg)
 

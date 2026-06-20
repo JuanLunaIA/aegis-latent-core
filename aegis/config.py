@@ -157,6 +157,17 @@ class AegisSettings(BaseSettings):
         ge=1_000,
         description="In-memory Merkle chain cap (deque sliding window).",
     )
+    max_wal_bytes: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Rotate the active WAL into an archived, immutable segment once it "
+            "reaches this many bytes. 0 disables rotation (single unbounded WAL). "
+            "Archived segments (named '<wal_path>.NNNNNN', mode 0o600) are "
+            "retained for forensic completeness and replayed on startup; the "
+            "audit chain is never truncated."
+        ),
+    )
 
     # ── Telemetry ─────────────────────────────────────────────────────────
     force_logprobs: bool = Field(
