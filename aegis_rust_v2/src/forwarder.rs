@@ -218,7 +218,13 @@ fn python_obj_to_bytes(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<Vec<u
 }
 
 fn normalize_base_url(url: &str) -> String {
-    url.trim_end_matches('/').to_string()
+    // Restore localhost→127.0.0.1 to avoid IPv6/host-resolution quirks and
+    // TLS CN/SAN mismatches in environments with non-standard /etc/hosts.
+    // Port-qualified form first to avoid double-replacing the host-only form.
+    url.replace("://localhost:", "://127.0.0.1:")
+        .replace("://localhost", "://127.0.0.1")
+        .trim_end_matches('/')
+        .to_string()
 }
 
 fn normalize_path(path: &str) -> String {

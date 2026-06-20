@@ -47,18 +47,24 @@ impl AuditRingBuffer {
         }
     }
 
-    /// Non-blocking enqueue. Returns `true` on success, `false` on overflow (event dropped).
+    /// Non-blocking enqueue. Returns `true` on success, `false` on overflow.
+    ///
+    /// On overflow the **oldest** event is evicted to make room for the new one,
+    /// matching ring-buffer semantics (always retain the most recent N events).
+    /// `drop_count` is incremented and `false` is returned to signal the eviction.
     pub fn enqueue(&self, json: &str) -> bool {
-        match self.queue.push(json.to_string()) {
-            Ok(()) => {
-                self.enqueue_count.fetch_add(1, Ordering::Relaxed);
-                true
-            }
-            Err(_) => {
-                self.drop_count.fetch_add(1, Ordering::Relaxed);
-                false
-            }
+        // Fast path: queue has space.
+        if self.queue.push(json.to_string()).is_ok() {
+            self.enqueue_count.fetch_add(1, Ordering::Relaxed);
+            return true;
         }
+        // Slow path: queue full — evict oldest to make room.
+        let _ = self.queue.pop(); // may be a no-op if another thread drained first
+        self.drop_count.fetch_add(1, Ordering::Relaxed);
+        // Best-effort re-push; may still fail under extreme concurrent producer load.
+        let _ = self.queue.push(json.to_string());
+        self.enqueue_count.fetch_add(1, Ordering::Relaxed);
+        false // overflow occurred (an event was dropped)
     }
 
     /// Non-blocking drain: returns up to `max_items` events in FIFO order.
@@ -126,13 +132,17 @@ mod tests {
     }
 
     #[test]
-    fn overflow_increments_drop_count() {
+    fn overflow_drops_oldest_keeps_newest() {
         let buf = AuditRingBuffer::new(2);
         buf.enqueue("a");
         buf.enqueue("b");
-        let success = buf.enqueue("c"); // overflow
-        assert!(!success);
-        assert_eq!(buf.drop_count(), 1);
+        // Overflow: "a" (oldest) is evicted, "c" (newest) is enqueued.
+        let signalled_overflow = buf.enqueue("c");
+        assert!(!signalled_overflow, "overflow must return false");
+        assert_eq!(buf.drop_count(), 1, "one event dropped");
+        // Queue should contain the two most-recent events in FIFO order.
+        let remaining = buf.drain(10);
+        assert_eq!(remaining, vec!["b", "c"]);
     }
 
     #[test]

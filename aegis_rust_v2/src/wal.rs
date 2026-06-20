@@ -134,9 +134,15 @@ impl RustWal {
             buf[8..].copy_from_slice(data);
 
             // Persist to storage — blocks until OS confirms durability.
-            mmap.flush_range(offset, frame).map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("RustWal flush: {e}"))
-            })?;
+            if let Err(e) = mmap.flush_range(offset, frame) {
+                // Roll back reservation so readers don't walk into a partial frame.
+                self.inner
+                    .write_pos
+                    .fetch_sub(frame as u64, Ordering::AcqRel);
+                return Err(PyErr::new::<pyo3::exceptions::PyIOError, _>(format!(
+                    "RustWal flush: {e}"
+                )));
+            }
         }
 
         Ok(offset as u64)
@@ -162,10 +168,12 @@ impl RustWal {
             let payload = &mmap[pos + FRAME_HEADER..pos + FRAME_HEADER + payload_len];
             let mut crc = Crc32Hasher::new();
             crc.update(payload);
-            if crc.finalize() == stored_crc {
-                if let Ok(s) = std::str::from_utf8(payload) {
-                    records.push(s.to_string());
-                }
+            if crc.finalize() != stored_crc {
+                // First CRC mismatch = torn write or end of valid log; stop here.
+                break;
+            }
+            if let Ok(s) = std::str::from_utf8(payload) {
+                records.push(s.to_string());
             }
 
             pos += FRAME_HEADER + payload_len;

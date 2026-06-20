@@ -21,52 +21,52 @@ use std::sync::{
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 
-fn now_micros() -> u64 {
+fn now_millis() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
-        .as_micros() as u64
+        .as_millis() as u64
 }
 
 struct BucketState {
     /// Token count × 1000 (millitoken units) to avoid floats in atomics.
     tokens_milli: AtomicI64,
-    /// Last refill time in microseconds.
-    last_refill_us: AtomicU64,
+    /// Last refill time in milliseconds.
+    last_refill_ms: AtomicU64,
 }
 
 impl BucketState {
     fn new(capacity_milli: i64) -> Self {
         Self {
             tokens_milli: AtomicI64::new(capacity_milli),
-            last_refill_us: AtomicU64::new(now_micros()),
+            last_refill_ms: AtomicU64::new(now_millis()),
         }
     }
 
     /// Try to consume `cost_milli` millitokens.
     ///
-    /// `refill_per_us`: millitokens added per microsecond =
-    ///     (tokens_per_second × 1000) / 1_000_000
-    ///     = tokens_per_second / 1000
+    /// `refill_per_ms`: millitokens added per millisecond.
+    /// Conversion: tokens/sec = millitokens/ms (1 token/sec × 1000 milli/token ÷ 1000 ms/sec).
+    /// So `refill_per_ms = refill_rate` (tokens/sec) — no scaling required.
     fn try_consume(
         &self,
         capacity_milli: i64,
-        refill_per_us: i64,
+        refill_per_ms: i64,
         cost_milli: i64,
     ) -> bool {
         // ── Refill phase ──────────────────────────────────────────────────
-        let now_us = now_micros();
-        let last = self.last_refill_us.load(Ordering::Relaxed);
-        let elapsed = now_us.saturating_sub(last) as i64;
+        let now_ms = now_millis();
+        let last = self.last_refill_ms.load(Ordering::Relaxed);
+        let elapsed = now_ms.saturating_sub(last) as i64;
 
-        if elapsed > 0 && refill_per_us > 0 {
+        if elapsed > 0 && refill_per_ms > 0 {
             // CAS: only one winner refills per time period.
             if self
-                .last_refill_us
-                .compare_exchange(last, now_us, Ordering::AcqRel, Ordering::Relaxed)
+                .last_refill_ms
+                .compare_exchange(last, now_ms, Ordering::AcqRel, Ordering::Relaxed)
                 .is_ok()
             {
-                let gain = elapsed.saturating_mul(refill_per_us);
+                let gain = elapsed.saturating_mul(refill_per_ms);
                 // Add gain and clamp to capacity.
                 let mut cur = self.tokens_milli.load(Ordering::Acquire);
                 loop {
@@ -111,7 +111,7 @@ impl BucketState {
 pub struct RustRateLimiter {
     buckets: Arc<DashMap<String, Arc<BucketState>>>,
     capacity_milli: i64,
-    refill_per_us: i64,
+    refill_per_ms: i64,
 }
 
 #[pymethods]
@@ -124,8 +124,9 @@ impl RustRateLimiter {
         RustRateLimiter {
             buckets: Arc::new(DashMap::new()),
             capacity_milli: (capacity as i64) * 1000,
-            // tokens/s → millitokens/µs = tokens/s * 1000 / 1_000_000 = tokens/s / 1000
-            refill_per_us: (refill_rate as i64).max(0),
+            // tokens/sec = millitokens/ms (identities cancel: ×1000 milli/token ÷ 1000 ms/sec).
+            // Direct assignment preserves correct refill speed for rates as low as 1 token/sec.
+            refill_per_ms: (refill_rate as i64).max(0),
         }
     }
 
@@ -138,16 +139,16 @@ impl RustRateLimiter {
                 .or_insert_with(|| Arc::new(BucketState::new(self.capacity_milli)))
                 .clone()
         };
-        bucket.try_consume(self.capacity_milli, self.refill_per_us, 1000)
+        bucket.try_consume(self.capacity_milli, self.refill_per_ms, 1000)
     }
 
     /// Evict buckets inactive for more than `max_age_secs` seconds.
     /// Call periodically (e.g. every 60 s) to prevent unbounded map growth.
     pub fn evict_stale(&self, max_age_secs: u64) -> usize {
-        let cutoff = now_micros().saturating_sub(max_age_secs * 1_000_000);
+        let cutoff = now_millis().saturating_sub(max_age_secs * 1_000);
         let before = self.buckets.len();
         self.buckets
-            .retain(|_, b| b.last_refill_us.load(Ordering::Relaxed) > cutoff);
+            .retain(|_, b| b.last_refill_ms.load(Ordering::Relaxed) > cutoff);
         before.saturating_sub(self.buckets.len())
     }
 
