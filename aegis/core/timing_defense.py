@@ -3,6 +3,7 @@ aegis.core.timing_defense — Side-Channel Timing Mitigation.
 Implements constant-time operations and deterministic padding to prevent timing leaks.
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations

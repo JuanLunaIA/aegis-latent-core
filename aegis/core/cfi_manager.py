@@ -3,6 +3,7 @@ aegis.core.cfi_manager — Control Flow Integrity (CFI) Verification.
 Ensures that binaries are compiled with CFI protections to prevent ROP/JOP attacks.
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations

@@ -1,0 +1,32 @@
+Aegis Latent Core
+Copyright (c) 2026 Juan Luna. All rights reserved.
+
+This product is the original work of Juan Luna <juan.c.luna04@gmail.com>, who is
+the sole copyright holder.
+
+It is dual-licensed:
+
+  1. Under the GNU Affero General Public License, version 3 (AGPLv3), the full
+     text of which is provided in the LICENSE file; OR
+
+  2. Under a separate Proprietary Commercial License for closed-source and
+     enterprise use, described in COMMERCIAL.md.
+
+You may choose either license. Use of this software under the AGPLv3 is subject
+to all obligations of that license, including the network-use source-disclosure
+requirement of section 13.
+
+Contributions to this project are accepted under the Developer Certificate of
+Origin and the Contributor License Agreement set out in CONTRIBUTING.md, which
+grant the copyright holder the right to continue offering the software under both
+licenses above.
+
+Third-party dependencies are NOT included in this source tree; they are retrieved
+at build time by their respective package managers (pip, cargo) and remain under
+their own licenses. This NOTICE covers only the original source of Aegis Latent
+Core.
+
+Trademark: "Aegis Latent Core" and the Aegis name and logo are used by Juan Luna
+to identify this project. No trademark rights are granted by the AGPLv3.
+
+For commercial licensing: juan.c.luna04@gmail.com

@@ -10,6 +10,7 @@ Usage (in your vLLM server startup script):
 Requires: vllm>=0.4.0, torch>=2.0
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations

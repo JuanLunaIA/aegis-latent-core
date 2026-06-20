@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 [build-system]
 requires = ["hatchling>=1.24"]
 build-backend = "hatchling.build"
@@ -9,7 +12,8 @@ description = "Forensic telemetry proxy and Merkle audit chain for LLM inference
 readme = "README.md"
 license = { text = "AGPL-3.0-only" }
 requires-python = ">=3.11"
-authors = [{ name = "Aegis Project" }]
+authors = [{ name = "Juan Luna", email = "juan.c.luna04@gmail.com" }]
+maintainers = [{ name = "Juan Luna", email = "juan.c.luna04@gmail.com" }]
 keywords = [
     "llm", "ai-safety", "forensics", "telemetry", "audit",
     "openai", "anthropic", "gemini", "openrouter", "proxy", "entropy", "merkle", "chain-of-custody",

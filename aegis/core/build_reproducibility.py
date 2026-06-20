@@ -4,6 +4,7 @@ Ensures that the same source code always produces the same binary hash,
 eliminating compiler-based backdoors and ensuring auditability.
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations

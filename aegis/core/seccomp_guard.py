@@ -3,6 +3,7 @@ aegis.core.seccomp_guard — Secure Computing (Seccomp-BPF) Enforcement.
 Robust implementation with lazy loading and sandbox-aware graceful degradation.
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 import ctypes
