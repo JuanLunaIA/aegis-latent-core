@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-20 (tests: 1125 passed, 95.62% coverage).
+> **Last verified against codebase:** 2026-06-20 (tests: 1146 passed, 95.64% coverage).
 
 ---
 
@@ -252,7 +252,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Payload depth guard (>10 nesting levels → block)
 - [x] Shannon entropy anomaly detection per token
 - [x] KL/JS divergence from baseline distribution
-- [ ] Multi-turn behavioral jailbreak detection: session-scoped state machine tracking escalation patterns across N turns (currently each request is stateless in WAF layer)
+- [x] Multi-turn behavioral jailbreak detection: `WAFSessionState` state machine in `aegis/core/waf_session.py` tracks cumulative WAF scores and consecutive soft-hit (crescendo) patterns across a configurable sliding window; integrated into both `/v1/chat/completions` and `/v1/completions` handlers
 - [ ] Conversation graph analysis: detect "crescendo" attack (gradual constraint erosion over session)
 - [ ] Cross-session correlation: detect coordinated multi-account attacks sharing jailbreak templates
 - [ ] Semantic similarity clustering: flag requests within cosine distance threshold of known jailbreak embeddings
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 9 | 24 | ~27% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 9 | 23 | ~28% |
-| Advanced Forensics & WAF | 14 | 26 | ~35% |
-| **Total** | **61** | **122** | **~34%** |
+| Advanced Forensics & WAF | 15 | 26 | ~38% |
+| **Total** | **62** | **122** | **~34%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,15 +328,16 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. Multi-turn session behavioral WAF state — closes the most critical remaining threat class (Domain 5.1).
-2. Helm chart with production-grade defaults — unblocks enterprise Kubernetes deployments (Domain 4.4).
-3. Backup and restore with integrity re-verification — operational durability for regulated audit trails (Domain 2.2).
-4. PHI scrubbing confirmation field per audit node (`phi_scrubbed: bool`, `scrub_method: str`) — closes Domain 2.1 audit trail gap (Domain 2.1).
-5. mTLS client certificate authentication with CAC/PIV card via PKCS#11 slot (Domain 1.2).
+1. Helm chart with production-grade defaults — unblocks enterprise Kubernetes deployments (Domain 4.4).
+2. Backup and restore with integrity re-verification — operational durability for regulated audit trails (Domain 2.2).
+3. PHI scrubbing confirmation field per audit node (`phi_scrubbed: bool`, `scrub_method: str`) — closes Domain 2.1 audit trail gap (Domain 2.1).
+4. mTLS client certificate authentication with CAC/PIV card via PKCS#11 slot (Domain 1.2).
+5. Conversation graph crescendo analysis — detect constraint erosion across full session (Domain 5.1 follow-on).
 
 > **Done:** WAL segment rotation & archival (Domain 3.3) — completed 2026-06-20.
 > **Done:** Real-time PHI de-identification, NIST SP 800-188 Safe Harbor (Domain 2.1) — completed 2026-06-20.
 > **Done:** HSM/PKCS#11 signing integration with RSA-PSS and ECDSA-SHA256 (Domain 1.1) — completed 2026-06-20.
+> **Done:** Multi-turn behavioral WAF session state machine (Domain 5.1) — completed 2026-06-20.
 
 ---
 

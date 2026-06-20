@@ -243,6 +243,33 @@ class AegisSettings(BaseSettings):
         default=True,
         description="Reject payloads that match known prompt-injection patterns.",
     )
+    waf_session_window: int = Field(
+        default=10,
+        ge=2,
+        le=100,
+        description=(
+            "Sliding-window size (number of recent turns) examined by the multi-turn "
+            "behavioral WAF.  Older turns are evicted automatically."
+        ),
+    )
+    waf_session_cumulative_threshold: float = Field(
+        default=2.0,
+        ge=0.1,
+        description=(
+            "Sum of per-turn WAF scores within the session window that triggers "
+            "a session-level block.  Score per turn is in [0, 1]; default 2.0 "
+            "requires at least two full-weight soft hits in the window."
+        ),
+    )
+    waf_session_crescendo_turns: int = Field(
+        default=3,
+        ge=2,
+        le=20,
+        description=(
+            "Number of consecutive turns each producing a non-zero WAF score "
+            "before a crescendo (gradual constraint erosion) block is triggered."
+        ),
+    )
 
     # ── Server ────────────────────────────────────────────────────────────
     debug_mode: bool = Field(

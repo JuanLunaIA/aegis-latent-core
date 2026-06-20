@@ -32,6 +32,7 @@ from aegis.core.phi_deidentifier import PHIDeidentifier
 from aegis.core.ratelimiter import create_rate_limiter
 from aegis.core.secrets import VaultManager
 from aegis.core.session_manager import SessionLifecycleManager
+from aegis.core.waf_session import WAFSessionTracker
 from aegis.proxy.analyzer import ResponseAnalysis, ResponseAnalyzer
 from aegis.proxy.audit_api import build_audit_router
 from aegis.proxy.dependencies import validate_proxy_auth
@@ -224,6 +225,8 @@ class _AppState:
     _entropy_segmenter: Any
     # PHI de-identification scrubber (None when phi_deidentify=False).
     _phi_scrubber: PHIDeidentifier | None
+    # Multi-turn behavioral WAF session tracker (Domain 5.1).
+    waf_session_tracker: WAFSessionTracker
 
     def get_analyzer(self, session_id: str) -> ResponseAnalyzer:
         return self.analyzers.get(session_id)
@@ -365,6 +368,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     state.proxy_auth = ProxyKeyAuth(cfg)
     state.audit_auth = AuditKeyAuth(cfg)
     state.waf = AegisWAF(strict_mode=cfg.waf_strict_mode)
+    state.waf_session_tracker = WAFSessionTracker(
+        max_sessions=4_096,
+        window=cfg.waf_session_window,
+        cumulative_threshold=cfg.waf_session_cumulative_threshold,
+        crescendo_turns=cfg.waf_session_crescendo_turns,
+    )
     state._phi_scrubber = PHIDeidentifier() if cfg.phi_deidentify else None
 
     # HSM/PKCS#11 signing backend (optional; degrades gracefully when unavailable).
@@ -738,6 +747,22 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         session_id = request.headers.get("x-session-id") or body.get("user") or str(uuid.uuid4())
         request_id = str(uuid.uuid4())
 
+        # Multi-turn behavioral WAF check (Domain 5.1): accumulate per-session WAF
+        # scores and detect escalation patterns (cumulative score / crescendo attack).
+        # Runs only on requests that passed the per-turn WAF check above.
+        session_waf = state.waf_session_tracker.record_and_check(
+            session_id=session_id,
+            score=waf_result.score,
+            allowed=waf_result.allowed,
+            reason=waf_result.reason or "",
+        )
+        if session_waf.escalated:
+            observability.WAF_BLOCKS.labels(layer="session").inc()
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Behavioral WAF: {session_waf.reason}",
+            )
+
         if not await state.ratelimiter.check_limit(session_id):
             observability.RATELIMIT_REJECTIONS.inc()
             raise HTTPException(
@@ -901,6 +926,19 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
         session_id = request.headers.get("x-session-id", str(uuid.uuid4()))
         request_id = str(uuid.uuid4())
+
+        session_waf = state.waf_session_tracker.record_and_check(
+            session_id=session_id,
+            score=waf_result.score,
+            allowed=waf_result.allowed,
+            reason=waf_result.reason or "",
+        )
+        if session_waf.escalated:
+            observability.WAF_BLOCKS.labels(layer="session").inc()
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Behavioral WAF: {session_waf.reason}",
+            )
 
         if not await state.ratelimiter.check_limit(session_id):
             raise HTTPException(
