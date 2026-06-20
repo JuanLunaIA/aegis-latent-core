@@ -146,6 +146,17 @@ class AegisSettings(BaseSettings):
         default=False,
         description="If True, the server will require and verify a client certificate.",
     )
+    phi_master_key: str = Field(
+        default="",
+        description=(
+            "Hex-encoded 32-byte master key for AES-256-GCM PHI payload encryption. "
+            "When set, audit node payload bytes are encrypted at rest under a per-tenant "
+            "HKDF-SHA256 DEK before being written to the WAL. "
+            "Generate with: python -c 'import secrets; print(secrets.token_hex(32))' "
+            "MUST be separate from AEGIS_SIGNING_KEY. Required when AEGIS_PHI_DEIDENTIFY=true "
+            "in HIPAA-regulated deployments."
+        ),
+    )
     cac_piv_required: bool = Field(
         default=False,
         description=(

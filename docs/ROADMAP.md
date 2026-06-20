@@ -107,7 +107,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Real-time PHI de-identification on the hot request/response path (NIST SP 800-188 Safe Harbor method): regex engine covering 18 HIPAA Safe Harbor identifier categories (name, DOB, SSN, MRN, phone, email, URL, IP address, ZIP, VIN, device ID, NPI, health plan ID, license, biometric references, etc.). Enabled via `AEGIS_PHI_DEIDENTIFY=true`. Scrubs request messages before forwarding and response content before returning. (`aegis/core/phi_deidentifier.py`; `pytest tests/test_phi_deidentifier.py`)
 - [x] PHI scrubbing confirmation field per audit node (`phi_scrubbed: bool`, `scrub_method: str`)
 - [x] Differential privacy noise injection for aggregate analytics queries (`epsilon`, `delta` parameters)
-- [ ] Field-level encryption for PHI within audit node `payload` bytes (AES-256-GCM, per-tenant DEK)
+- [x] Field-level encryption for PHI within audit node `payload` bytes (AES-256-GCM, per-tenant DEK)
 - [ ] De-identification audit trail: which entities were scrubbed, confidence scores, scrub timestamps
 - [ ] HIPAA minimum-necessary access enforcement per API key scope
 
@@ -315,11 +315,11 @@ is not committed to `docs/BENCHMARKS.md`.
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
 | Defense & Government | 19 | 28 | ~43% |
-| Healthcare & Life Sciences | 13 | 24 | ~54% |
+| Healthcare & Life Sciences | 14 | 24 | ~58% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
 | Advanced Forensics & WAF | 16 | 26 | ~62% |
-| **Total** | **69** | **122** | **~57%** |
+| **Total** | **70** | **122** | **~57%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,7 +328,8 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. Field-level encryption for PHI within audit node payload bytes (AES-256-GCM, per-tenant DEK) (Domain 2.1).
+1. De-identification audit trail: entities scrubbed, confidence scores, scrub timestamps (Domain 2.1).
+2. HIPAA minimum-necessary access enforcement per API key scope (Domain 2.1).
 2. LDAP/Active Directory integration for multi-factor identity assertion (Domain 1.2).
 3. Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation (Domain 1.2).
 4. Prompt injection resistance scoring — ML classifier for indirect injection (Domain 5.1).
@@ -344,6 +345,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** mTLS CAC/PIV client certificate authentication — DoD CAC (DoDI 8520.02) and GSA PIV (NIST SP 800-73-4) policy OID verification, EDIPI and UUID identity extraction, `CACPIVAuth` middleware, `cac_piv_required` config flag (Domain 1.2) — completed 2026-06-20.
 > **Done:** Conversation graph crescendo analysis — `ConversationGraphTracker` with monotone entropy decline detection and baseline drift detection; combined WAF+entropy signal; LRU session registry (Domain 5.1 follow-on) — completed 2026-06-20.
 > **Done:** Differential privacy noise injection — `LaplaceDP` (Laplace mechanism, ε-DP) + `DPAggregator` for audit chain aggregate analytics; `/v1/audit/analytics/dp` endpoint with configurable epsilon; 24 tests (Domain 2.1) — completed 2026-06-20.
+> **Done:** Field-level AES-256-GCM PHI encryption — `PHIPayloadEncryptor` with HKDF-SHA256 per-tenant DEK derivation, random nonce per encrypt, GCM authentication tag; `AEGIS_PHI_MASTER_KEY` config flag; 23 tests covering round-trip, tamper detection, tenant isolation (Domain 2.1) — completed 2026-06-20.
 
 ---
 
