@@ -26,6 +26,7 @@ from aegis.config import AegisSettings, get_settings
 from aegis.core import observability
 from aegis.core.circuit_breaker import CircuitOpenError
 from aegis.core.crypto_audit import CryptographicAuditLedger
+from aegis.core.hsm import HSMSigningBackend
 from aegis.core.normalization import canonical_normalize
 from aegis.core.phi_deidentifier import PHIDeidentifier
 from aegis.core.ratelimiter import create_rate_limiter
@@ -365,6 +366,26 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     state.audit_auth = AuditKeyAuth(cfg)
     state.waf = AegisWAF(strict_mode=cfg.waf_strict_mode)
     state._phi_scrubber = PHIDeidentifier() if cfg.phi_deidentify else None
+
+    # HSM/PKCS#11 signing backend (optional; degrades gracefully when unavailable).
+    _hsm_backend: HSMSigningBackend | None = None
+    if cfg.pkcs11_library_path:
+        _hsm_backend = HSMSigningBackend(
+            library_path=cfg.pkcs11_library_path,
+            slot_id=cfg.pkcs11_slot_id,
+            pin=cfg.pkcs11_pin,
+            key_label=cfg.pkcs11_key_label,
+            token_label=cfg.pkcs11_token_label,
+        )
+        if _hsm_backend.available:
+            logger.info("HSM/PKCS#11 signing enabled (library=%s)", cfg.pkcs11_library_path)
+        else:
+            logger.warning(
+                "HSM/PKCS#11 library configured (%s) but backend not available; "
+                "falling back to HMAC-SHA256 signing.",
+                cfg.pkcs11_library_path,
+            )
+
     _signing_key = cfg.signing_key
     if not _signing_key and not cfg.auth_disabled:
         import logging as _log
@@ -379,6 +400,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         signing_key=_signing_key,
         max_memory_nodes=cfg.max_memory_nodes,
         max_wal_bytes=cfg.max_wal_bytes,
+        hsm_backend=_hsm_backend,
     )
     state.ratelimiter = create_rate_limiter(cfg)
 
@@ -521,6 +543,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         await state.ratelimiter.close()
         state.sessions.close()
         state.ledger.close()
+        if _hsm_backend is not None:
+            _hsm_backend.close()
 
     app = FastAPI(
         title="Aegis Latent Core",

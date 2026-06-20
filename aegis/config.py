@@ -262,6 +262,42 @@ class AegisSettings(BaseSettings):
         description="Comma-separated CORS allowed origins. Empty = no CORS headers.",
     )
 
+    # ── HSM / PKCS#11 signing ─────────────────────────────────────────────
+    pkcs11_library_path: str = Field(
+        default="",
+        description=(
+            "Filesystem path to the PKCS#11 shared library. Empty string disables HSM signing. "
+            "Examples: /usr/lib/softhsm/libsofthsm2.so (SoftHSM2), "
+            "/opt/cloudhsm/lib/libcloudhsm_pkcs11.so (AWS CloudHSM). "
+            "Requires python-pkcs11 to be installed (pip install python-pkcs11). "
+            "When configured, audit nodes are signed by the HSM-resident key instead of the "
+            "in-memory AEGIS_SIGNING_KEY; the private key NEVER enters application memory."
+        ),
+    )
+    pkcs11_slot_id: int = Field(
+        default=0,
+        ge=0,
+        description="PKCS#11 slot index (0-based). Ignored when AEGIS_PKCS11_TOKEN_LABEL is set.",
+    )
+    pkcs11_pin: str = Field(
+        default="",
+        description=(
+            "PKCS#11 User PIN for C_Login. Provide via environment variable "
+            "AEGIS_PKCS11_PIN or Vault; never hard-code in config files."
+        ),
+    )
+    pkcs11_key_label: str = Field(
+        default="aegis-signing-key",
+        description="CKA_LABEL of the private signing key stored in the PKCS#11 token.",
+    )
+    pkcs11_token_label: str = Field(
+        default="",
+        description=(
+            "When non-empty, resolve the slot by token label rather than pkcs11_slot_id. "
+            "Useful when slot numbering is dynamic (e.g. AWS CloudHSM)."
+        ),
+    )
+
     # ── Reliability: circuit breaker ──────────────────────────────────────
     circuit_breaker_failure_threshold: int = Field(
         default=5,

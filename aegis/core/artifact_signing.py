@@ -38,11 +38,13 @@ class ArtifactSigner:
         self._hsm = None
 
         if signing_key is None:
+            import os
+
             from aegis.core.hsm import HSMManager
 
+            hsm_pin = os.environ.get("AEGIS_PKCS11_PIN", "")
             self._hsm = HSMManager()
-            # In production, slot and pin would come from a secure vault/env
-            self._hsm.open_session(slot_id=1, pin="FIPS_SECURE_PIN_2026")
+            self._hsm.open_session(slot_id=1, pin=hsm_pin)
 
     def sign_artifact(self, artifact_path: str, version: str) -> ArtifactMetadata:
         """Signs a binary artifact and returns its metadata."""

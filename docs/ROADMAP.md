@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-20 (tests: 1105 passed, 96.35% coverage).
+> **Last verified against codebase:** 2026-06-20 (tests: 1125 passed, 95.62% coverage).
 
 ---
 
@@ -36,7 +36,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] BLAKE3 SIMD hashing in Rust extension (audit chain integrity, ~4 GB/s)
 - [x] SHA-256 tamper-evident hash chain: `node_hash[i] = SHA256(prev_hash ‖ state_id ‖ timestamp ‖ entropy ‖ tenant_id ‖ merkle_root ‖ signature ‖ request_hash ‖ response_hash)`
 - [x] `zeroize` derive on Rust signing key structs (memory scrubbing on drop)
-- [ ] HSM/PKCS#11 signing integration (e.g., `python-pkcs11`, `opensc`, Thales Luna / AWS CloudHSM): `aegis/core/hsm.py` is a stub excluded from coverage
+- [x] HSM/PKCS#11 signing integration (e.g., `python-pkcs11`, `opensc`, Thales Luna / AWS CloudHSM): `aegis/core/hsm.py` implements `HSMSigningBackend` with RSA-PSS and ECDSA-SHA256; graceful fallback when library absent; integrated into `CryptographicAuditLedger` signing priority chain
 - [ ] FIPS 140-3 Level 3 validated module boundary (currently uses upstream Rust crates, not a validated boundary)
 - [ ] NSA Suite B / CNSA 2.0 algorithm negotiation (P-384 ECDH, AES-256-GCM, SHA-384 where Suite B mandated)
 - [ ] Kyber-1024 (FIPS 203 ML-KEM) key encapsulation for session bootstrap
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
-| Defense & Government | 17 | 28 | ~38% |
+| Defense & Government | 18 | 28 | ~39% |
 | Healthcare & Life Sciences | 9 | 24 | ~27% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 9 | 23 | ~28% |
 | Advanced Forensics & WAF | 14 | 26 | ~35% |
-| **Total** | **60** | **122** | **~33%** |
+| **Total** | **61** | **122** | **~34%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,14 +328,15 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. HSM/PKCS#11 signing — unlocks FedRAMP and DoD authorization paths (Domain 1.1).
-2. Multi-turn session behavioral WAF state — closes the most critical remaining threat class (Domain 5.1).
-3. Helm chart with production-grade defaults — unblocks enterprise Kubernetes deployments (Domain 4.4).
-4. Backup and restore with integrity re-verification — operational durability for regulated audit trails (Domain 2.2).
-5. PHI scrubbing confirmation field per audit node (`phi_scrubbed: bool`, `scrub_method: str`) — closes Domain 2.1 audit trail gap (Domain 2.1).
+1. Multi-turn session behavioral WAF state — closes the most critical remaining threat class (Domain 5.1).
+2. Helm chart with production-grade defaults — unblocks enterprise Kubernetes deployments (Domain 4.4).
+3. Backup and restore with integrity re-verification — operational durability for regulated audit trails (Domain 2.2).
+4. PHI scrubbing confirmation field per audit node (`phi_scrubbed: bool`, `scrub_method: str`) — closes Domain 2.1 audit trail gap (Domain 2.1).
+5. mTLS client certificate authentication with CAC/PIV card via PKCS#11 slot (Domain 1.2).
 
 > **Done:** WAL segment rotation & archival (Domain 3.3) — completed 2026-06-20.
 > **Done:** Real-time PHI de-identification, NIST SP 800-188 Safe Harbor (Domain 2.1) — completed 2026-06-20.
+> **Done:** HSM/PKCS#11 signing integration with RSA-PSS and ECDSA-SHA256 (Domain 1.1) — completed 2026-06-20.
 
 ---
 

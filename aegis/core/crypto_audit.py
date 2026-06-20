@@ -54,6 +54,7 @@ import numpy as np
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from aegis.core.forensic import build_merkle_leaf, sha256_hex
+from aegis.core.hsm import HSMSigningBackend, HSMUnavailableError
 from aegis.core.mmr import MerkleMountainRange
 
 logger = logging.getLogger(__name__)
@@ -256,9 +257,11 @@ class CryptographicAuditLedger:
         max_wal_bytes: int = 0,
         # Backward-compat alias accepted but ignored (old API used async_mode)
         async_mode: bool = False,
+        hsm_backend: HSMSigningBackend | None = None,
     ) -> None:
         self.persistence_path = persistence_path
         self._signing_key = signing_key
+        self._hsm_backend = hsm_backend
         self.max_memory_nodes = max_memory_nodes
         self.max_forensic_bytes = max_forensic_bytes
         self.max_wal_bytes = max_wal_bytes
@@ -605,25 +608,36 @@ class CryptographicAuditLedger:
     def _sign(self, data: bytes) -> tuple[str, str, str, bool]:
         """Sign ``data``. Returns (signature_hex, pubkey_hex, scheme, is_fallback).
 
-        Rust path: aegis_rust.generate_pqc_keypair() -> PqcKeypair;
-                   keypair.sign(data) -> bytes; keypair.public_key -> bytes.
-        HMAC path: self._signing_key used directly.
-        Ed25519 fallback: per-node ephemeral key (non-verifiable across restarts).
+        Priority order (highest security first):
+        1. HSM/PKCS#11: key never leaves token boundary.
+        2. PQC ML-DSA via Rust extension (FIPS 204 post-quantum signing).
+        3. HMAC-SHA256: fast, verifiable, requires signing_key in memory.
+        4. Ed25519 ephemeral fallback: non-verifiable across restarts.
         """
+        # ── 1. HSM/PKCS#11 path ───────────────────────────────────────────
+        if self._hsm_backend and self._hsm_backend.available:
+            try:
+                sig_bytes, pub_hex, scheme = self._hsm_backend.sign(data)
+                return sig_bytes.hex(), pub_hex, scheme, False
+            except HSMUnavailableError as exc:
+                logger.warning("HSM signing failed (%s); falling back to next tier", exc)
+
+        # ── 2. Rust PQC ML-DSA path ───────────────────────────────────────
         if RUST_AVAILABLE:
             try:
                 keypair = aegis_rust.generate_pqc_keypair()  # type: ignore[name-defined]
-                sig_bytes: bytes = bytes(keypair.sign(data))
+                sig_bytes = bytes(keypair.sign(data))
                 pub_bytes: bytes = bytes(keypair.public_key)
                 return sig_bytes.hex(), pub_bytes.hex(), "pqc-ml-dsa", False
             except Exception as exc:
                 logger.warning("aegis_rust PQC sign failed (%s); falling back", exc)
 
+        # ── 3. HMAC-SHA256 path ───────────────────────────────────────────
         if self._signing_key:
             sig = _hmac_sign(self._signing_key, data)
             return sig, "", "hmac-sha256", False
 
-        # Last resort: per-node ephemeral Ed25519 (non-verifiable across restarts)
+        # ── 4. Ed25519 ephemeral fallback ─────────────────────────────────
         sig_hex, pub_hex, scheme = _ed25519_sign(data)
         return sig_hex, pub_hex, scheme, True
 
