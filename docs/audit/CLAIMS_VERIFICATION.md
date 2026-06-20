@@ -44,8 +44,8 @@ Linux 6.18.5, Python 3.11.15. Reproduce with the commands in that file.
 |---|-------|---------|----------------|
 | P1 | "Zero forensic latency" — the audit commit adds **no I/O wait** to the client response | `[PROVEN]` | The commit coroutine is scheduled via `asyncio.create_task()` and runs **after** `return JSONResponse(...)`. No `await commit` precedes the return. |
 | P2 | Hot-path scheduling overhead of the background commit | `[MEASURED]` | `_spawn_background()` block = **77.56 µs p50 / 131.52 µs p99** (n=5,000). This is the full bookkeeping cost on the response path; the commit itself runs off-path. |
-| P3 | Python MMR throughput | `[MEASURED]` | 172.7k leaves/s @ N=100 → 121.4k leaves/s @ N=100,000 (best-of-k=5). |
-| P4 | Rust extension "significant performance gains" over Python | `[SPECULATIVE]` | **UNKNOWN — resolves via** `cd aegis_rust_v2 && maturin develop --release && python -m benchmarks.bench_mmr`. The extension was not compiled in the measurement environment; no speedup ratio may be quoted until then. |
+| P3 | Python MMR throughput | `[MEASURED]` | 302.1k leaves/s @ N=100 → 208.2k leaves/s @ N=100,000 (best-of-k=5). |
+| P4 | Rust extension "significant performance gains" over Python | `[MEASURED]` | **avg 2.87× · max 3.14×** across N=100..100,000. Built with `maturin build --release` (LTO). See `docs/BENCHMARKS.md` §Claim 2. |
 
 ---
 

@@ -19,10 +19,10 @@ class TestStealthAttack(unittest.TestCase):
 
     def test_ema_poisoning_and_stealth_moe(self) -> None:
         """
-        Simula un ataque de sigilo:
-          1. Envenena la EMA lentamente.
-          2. Mantiene la activación MoE justo debajo del límite absoluto.
-          3. Mantiene la entropía en niveles 'naturales'.
+        Simulates a stealth attack:
+          1. Slowly poisons the EMA.
+          2. Keeps MoE activation just below the absolute bound.
+          3. Keeps entropy at 'natural' levels.
 
         FIX BUG-03: The original test asserted assertFalse(detected) to document
         a known evasion gap.  After introducing the distributed_entanglement path
@@ -40,7 +40,7 @@ class TestStealthAttack(unittest.TestCase):
         The assertFalse was a regression anchor for the old (incomplete) code.
         The correct assertion is assertTrue: the stealth pattern IS now detected.
         """
-        # --- PASO 1: ENVENENAMIENTO DE EMA ---
+        # --- STEP 1: EMA POISONING ---
         for _ in range(50):
             logits = np.random.randn(1000)
             logits[0] += 1.0
@@ -48,9 +48,9 @@ class TestStealthAttack(unittest.TestCase):
             self.entropy_monitor.update_ema(h)
 
         ema_poisoned = self.entropy_monitor.current_ema
-        print(f"\n[EMA] Valor envenenado: {ema_poisoned:.4f}")
+        print(f"\n[EMA] Poisoned value: {ema_poisoned:.4f}")
 
-        # --- PASO 2: ATAQUE DE SIGILO (Stealth) ---
+        # --- STEP 2: STEALTH ATTACK ---
         stealth_logits = np.random.randn(1000)
         stealth_logits[0] += 2.0
 

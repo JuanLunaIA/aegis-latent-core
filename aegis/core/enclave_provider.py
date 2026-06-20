@@ -80,7 +80,7 @@ class EnclavePQCProvider:
             raise RuntimeError("Enclave not initialized.")
 
         logger.info("Generating remote attestation quote...")
-        # SIMS: la quote contiene el hash del código (MRENCLAVE) y el estado
+        # SIMS: the quote contains the code hash (MRENCLAVE) and state
         quote = hashlib.sha256(f"MRENCLAVE:{self.enclave_id}".encode()).digest()
         return EnclaveAttestation(
             quote=quote,
