@@ -4,7 +4,8 @@
 
 # Aegis Latent Core
 
-<img width="3300" height="2550" alt="Aegis Latent Core - Visualizer   Forensics_page-0001" src="https://github.com/user-attachments/assets/ae17f0df-e5c6-4e91-ac72-14d9e12b3cab" />
+<img width="2339" height="1653" alt="4dae6a3fad6944a09ce99e7f0d50c368IJUgMfv4FgbVnmfd-0" src="https://github.com/user-attachments/assets/ac25aa80-6b4b-4fe0-aeda-4c46a5bc5e98" />
+
 
 ### The inference governance layer for production LLM deployments.
 
