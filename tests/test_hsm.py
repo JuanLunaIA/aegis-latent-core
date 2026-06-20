@@ -11,12 +11,9 @@ object graph (lib → token → session → key objects).
 from __future__ import annotations
 
 import sys
-from types import ModuleType
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ── PKCS#11 mock helpers ──────────────────────────────────────────────────────
 
@@ -111,7 +108,7 @@ def _make_slot(token: MagicMock) -> MagicMock:
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 
-@pytest.fixture()
+@pytest.fixture
 def pkcs11_rsa_env():
     """Inject a mock pkcs11 module with an RSA signing key."""
     priv, pub = _make_rsa_key("aegis-signing-key", signature=b"mock-rsa-signature")
@@ -130,7 +127,7 @@ def pkcs11_rsa_env():
         yield pkcs11_mod, priv, pub, session
 
 
-@pytest.fixture()
+@pytest.fixture
 def pkcs11_ec_env():
     """Inject a mock pkcs11 module with an EC signing key."""
     priv, pub = _make_ec_key("aegis-signing-key", signature=b"mock-ec-signature")
@@ -161,7 +158,6 @@ class TestHSMSigningBackendUnavailable:
         # Temporarily hide pkcs11 from sys.modules so the import guard fires
         saved = sys.modules.pop("pkcs11", None)
         try:
-            from importlib import reload
             import aegis.core.hsm as hsm_mod
             # Patch _PKCS11_AVAILABLE to False to simulate missing library
             with patch.object(hsm_mod, "_PKCS11_AVAILABLE", False):
@@ -172,9 +168,8 @@ class TestHSMSigningBackendUnavailable:
                 sys.modules["pkcs11"] = saved
 
     def test_sign_raises_when_unavailable(self):
-        from aegis.core.hsm import HSMSigningBackend, HSMUnavailableError
-
         import aegis.core.hsm as hsm_mod
+        from aegis.core.hsm import HSMSigningBackend, HSMUnavailableError
         with patch.object(hsm_mod, "_PKCS11_AVAILABLE", False):
             backend = HSMSigningBackend(library_path="/nonexistent.so")
             with pytest.raises(HSMUnavailableError):

@@ -41,17 +41,13 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # Lazy import guard: pkcs11 requires CFFI / libffi at load time.
 try:
-    import pkcs11  # type: ignore[import]
-    import pkcs11.util.rsa  # type: ignore[import]
+    import pkcs11  # noqa: F401
 
     _PKCS11_AVAILABLE = True
 except ImportError:
@@ -100,8 +96,8 @@ class HSMSigningBackend:
         self._key_label = key_label
         self._token_label = token_label
         self._lock = threading.Lock()
-        self._lib = None
-        self._session = None
+        self._lib: Any = None
+        self._session: Any = None
         self._available = False
         self._scheme: str = ""
 
@@ -224,68 +220,68 @@ class HSMSigningBackend:
             raise HSMUnavailableError(f"Unsupported HSM key type: {key_type}")
 
     def _sign_rsa(
-        self, session: object, priv_key: object, data: bytes, _pkcs11: object
+        self, session: Any, priv_key: Any, data: bytes, _pkcs11: Any
     ) -> tuple[bytes, str, str]:
         """RSA-PSS signing with SHA-256 / MGF1-SHA-256 / salt=32."""
         import pkcs11.mechanisms as _mech  # noqa: PLC0415
 
-        mechanism = _pkcs11.Mechanism.SHA256_RSA_PKCS_PSS  # type: ignore[union-attr]
+        mechanism = _pkcs11.Mechanism.SHA256_RSA_PKCS_PSS
         params = _mech.RSA_PKCS_PSS_PARAMS(
-            hashAlg=_pkcs11.Mechanism.SHA256,  # type: ignore[union-attr]
-            mgf=_pkcs11.MGF.SHA256,  # type: ignore[union-attr]
+            hashAlg=_pkcs11.Mechanism.SHA256,
+            mgf=_pkcs11.MGF.SHA256,
             sLen=32,
         )
-        sig_bytes: bytes = priv_key.sign(data, mechanism=mechanism, mechanism_param=params)  # type: ignore[union-attr]
+        sig_bytes: bytes = priv_key.sign(data, mechanism=mechanism, mechanism_param=params)
 
         pub_hex = self._export_rsa_public_key(session, _pkcs11)
         return sig_bytes, pub_hex, "pkcs11-rsa-pss-sha256"
 
     def _sign_ec(
-        self, session: object, priv_key: object, data: bytes, _pkcs11: object
+        self, session: Any, priv_key: Any, data: bytes, _pkcs11: Any
     ) -> tuple[bytes, str, str]:
         """ECDSA with SHA-256 (CKM_ECDSA_SHA256)."""
-        sig_bytes: bytes = priv_key.sign(data, mechanism=_pkcs11.Mechanism.ECDSA_SHA256)  # type: ignore[union-attr]
+        sig_bytes: bytes = priv_key.sign(data, mechanism=_pkcs11.Mechanism.ECDSA_SHA256)
 
         pub_hex = self._export_ec_public_key(session, _pkcs11)
         return sig_bytes, pub_hex, "pkcs11-ecdsa-sha256"
 
-    def _export_rsa_public_key(self, session: object, _pkcs11: object) -> str:
+    def _export_rsa_public_key(self, session: Any, _pkcs11: Any) -> str:
         """Return hex-encoded SPKI DER of the RSA public key, or '' on failure."""
         try:
             import pkcs11.util.rsa as _rsa_util  # noqa: PLC0415
 
             pub_keys = list(
-                session.get_objects(  # type: ignore[union-attr]
+                session.get_objects(
                     {
-                        _pkcs11.Attribute.CLASS: _pkcs11.ObjectClass.PUBLIC_KEY,  # type: ignore[union-attr]
-                        _pkcs11.Attribute.LABEL: self._key_label,  # type: ignore[union-attr]
+                        _pkcs11.Attribute.CLASS: _pkcs11.ObjectClass.PUBLIC_KEY,
+                        _pkcs11.Attribute.LABEL: self._key_label,
                     }
                 )
             )
             if not pub_keys:
                 return ""
             der = _rsa_util.encode_rsa_public_key(pub_keys[0])
-            return der.hex()
+            return str(der.hex())
         except Exception:
             return ""
 
-    def _export_ec_public_key(self, session: object, _pkcs11: object) -> str:
+    def _export_ec_public_key(self, session: Any, _pkcs11: Any) -> str:
         """Return hex-encoded EC public key point, or '' on failure."""
         try:
             import pkcs11.util.ec as _ec_util  # noqa: PLC0415
 
             pub_keys = list(
-                session.get_objects(  # type: ignore[union-attr]
+                session.get_objects(
                     {
-                        _pkcs11.Attribute.CLASS: _pkcs11.ObjectClass.PUBLIC_KEY,  # type: ignore[union-attr]
-                        _pkcs11.Attribute.LABEL: self._key_label,  # type: ignore[union-attr]
+                        _pkcs11.Attribute.CLASS: _pkcs11.ObjectClass.PUBLIC_KEY,
+                        _pkcs11.Attribute.LABEL: self._key_label,
                     }
                 )
             )
             if not pub_keys:
                 return ""
             der = _ec_util.encode_ec_public_key(pub_keys[0])
-            return der.hex()
+            return str(der.hex())
         except Exception:
             return ""
 
