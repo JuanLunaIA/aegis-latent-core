@@ -49,6 +49,113 @@ async def forensic_report():
     return JSONResponse(content=data)
 
 
+def _build_metrics() -> dict:
+    """Repo-derived, honest metrics for the dashboard control plane.
+
+    This endpoint reports only what can be measured from the working tree
+    (code symbol counts, providers, test snapshot, git/version). Runtime
+    inference telemetry (throughput, latency, audit nodes) is intentionally
+    absent here — the dashboard renders explicit "connect telemetry" states
+    or a clearly-badged demo stream rather than fabricating numbers.
+    """
+    summary = generate_summary_dict()
+
+    def _is_src(rel: str) -> bool:
+        return (
+            (rel.startswith("aegis/") or rel.startswith("aegis_server/"))
+            and ".venv" not in rel
+            and "site-packages" not in rel
+        )
+
+    py = summary.get("python", {})
+    rs = summary.get("rust", {})
+
+    py_fn = py_cls = 0
+    top_modules = []
+    for rel, info in py.items():
+        if not _is_src(rel) or not isinstance(info, dict):
+            continue
+        f = len(info.get("functions", []) or [])
+        c = len(info.get("classes", []) or [])
+        py_fn += f
+        py_cls += c
+        if f or c:
+            top_modules.append({"path": rel, "functions": f, "classes": c})
+
+    rust_fn = 0
+    for rel, info in rs.items():
+        if ".venv" in rel or "/target/" in rel or not isinstance(info, dict):
+            continue
+        rust_fn += len(info.get("functions", []) or [])
+
+    top_modules.sort(key=lambda m: m["functions"] + m["classes"], reverse=True)
+
+    # Read project version from pyproject if available.
+    version = "unknown"
+    pp = PROJECT_DIR / "pyproject.toml"
+    if pp.exists():
+        try:
+            for line in pp.read_text(encoding="utf-8").splitlines():
+                s = line.strip()
+                if s.startswith("version") and "=" in s:
+                    version = s.split("=", 1)[1].strip().strip('"').strip("'")
+                    break
+        except Exception:
+            pass
+
+    # Discover configured provider adapters from the providers package.
+    providers = []
+    prov_dir = PROJECT_DIR / "aegis" / "providers"
+    if prov_dir.exists():
+        for p in sorted(prov_dir.glob("*_provider.py")):
+            providers.append(p.stem.replace("_provider", ""))
+    if not providers:
+        providers = ["openai", "anthropic", "gemini", "openrouter"]
+
+    forensic = {}
+    fpath = PROJECT_DIR / "tools" / "forensic" / "report.json"
+    if fpath.exists():
+        try:
+            forensic = json.loads(fpath.read_text(encoding="utf-8"))
+        except Exception:
+            forensic = {}
+
+    return {
+        "meta": {
+            "project": summary.get("project"),
+            "git_head": summary.get("git_head"),
+            "version": version,
+        },
+        "code": {
+            "python_files": sum(1 for r in py if _is_src(r)),
+            "rust_files": sum(1 for r in rs if ".venv" not in r and "/target/" not in r),
+            "py_functions": py_fn,
+            "py_classes": py_cls,
+            "rust_functions": rust_fn,
+            "top_modules": top_modules[:40],
+        },
+        "providers": providers,
+        "tests": summary.get("test_results", {}),
+        "forensics": {
+            "rust_build": forensic.get("rust_build", {}),
+            "python_syntax": forensic.get("python_syntax", []),
+        },
+        "runtime": None,
+    }
+
+
+@app.get("/api/metrics")
+async def metrics():
+    try:
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor() as pool:
+            data = await loop.run_in_executor(pool, _build_metrics)
+        return JSONResponse(content=data)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": "failed to build metrics", "exception": str(e)})
+
+
 @app.get("/")
 async def index():
     return FileResponse(str(VIS_DIR / "static" / "index.html"))
+
