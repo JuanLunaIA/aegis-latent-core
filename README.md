@@ -230,21 +230,6 @@ The authoritative matrix is
 | SOC2/HIPAA sealed, re-verifiable export | **Proven** | `examples/demo.py` step 5; `aegis_server/compliance/exporter.py` |
 | "Zero forensic latency" (no client I/O wait) | **Proven** | commit runs after the response return |
 | Hot-path scheduling overhead | **Measured: 77 µs p50 / 132 µs p99** | [BENCHMARKS.md](docs/BENCHMARKS.md) |
-| Rust extension builds & runs | **Verified** | `maturin build --release` clean; 23/23 Rust unit tests; PQC `ml-dsa` signing, async forwarder & Aho-Corasick WAF exercised end-to-end |
-| Rust MMR speedup | **Measured: ~1.35× avg (max 1.38×)** | `python -m benchmarks.bench_mmr`; modest — PyO3 marshalling dominates at small N |
-| Anthropic/Gemini token-level entropy | **Partial** | char-level fallback; [CLAIMS_VERIFICATION.md L1](docs/audit/CLAIMS_VERIFICATION.md) |
-| mTLS upstream identity assertion | **Partial** | certs applied, identity not asserted per-request; [L2](docs/audit/CLAIMS_VERIFICATION.md) |
-
-The Rust extension compiles cleanly and is functionally verified (PQC signing,
-async connection-pooled forwarder, and SIMD WAF all exercised end-to-end). The
-**MMR** speedup is a measured but modest **~1.35×** — PyO3 call-marshalling
-dominates for small batches, so the native MMR is not the headline win. The
-async forwarder's throughput advantage (connection pooling + HTTP/2) is the
-larger benefit on the request path; reproduce both with
-`python -m benchmarks.bench_mmr` and `python -m benchmarks.bench_forwarding`.
-
-| Claim | Status | Evidence |
-|---|---|---|
 | Rust extension "significant performance gains" | **Measured: avg 2.87× / max 3.14×** | `maturin build --release` + `python -m benchmarks.bench_mmr`; [BENCHMARKS.md](docs/BENCHMARKS.md) |
 | Anthropic/Gemini token-level entropy | **Partial** | char-level fallback; [CLAIMS_VERIFICATION.md L1](docs/audit/CLAIMS_VERIFICATION.md) |
 | mTLS upstream identity assertion | **Partial** | certs applied, identity not asserted per-request; [L2](docs/audit/CLAIMS_VERIFICATION.md) |
