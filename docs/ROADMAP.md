@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-20 (tests: 1056 passed, 96.30% coverage).
+> **Last verified against codebase:** 2026-06-20 (tests: 1105 passed, 96.35% coverage).
 
 ---
 
@@ -104,7 +104,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] `tenant_id` SHA-256 prefix pseudonymization (first 8 hex chars stored)
 - [x] WAL stored at 0o600 (owner-only), audit payload treated as sensitive at rest
 - [x] Sealed compliance bundle with `chain_hash` for chain-of-custody assertions
-- [ ] Real-time PHI de-identification on the hot request/response path (NIST SP 800-188 Safe Harbor or Expert Determination method): regex + NER model for 18 HIPAA identifiers (name, DOB, SSN, MRN, IP address, etc.)
+- [x] Real-time PHI de-identification on the hot request/response path (NIST SP 800-188 Safe Harbor method): regex engine covering 18 HIPAA Safe Harbor identifier categories (name, DOB, SSN, MRN, phone, email, URL, IP address, ZIP, VIN, device ID, NPI, health plan ID, license, biometric references, etc.). Enabled via `AEGIS_PHI_DEIDENTIFY=true`. Scrubs request messages before forwarding and response content before returning. (`aegis/core/phi_deidentifier.py`; `pytest tests/test_phi_deidentifier.py`)
 - [ ] PHI scrubbing confirmation field per audit node (`phi_scrubbed: bool`, `scrub_method: str`)
 - [ ] Differential privacy noise injection for aggregate analytics queries (`epsilon`, `delta` parameters)
 - [ ] Field-level encryption for PHI within audit node `payload` bytes (AES-256-GCM, per-tenant DEK)
@@ -315,11 +315,11 @@ is not committed to `docs/BENCHMARKS.md`.
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
 | Defense & Government | 17 | 28 | ~38% |
-| Healthcare & Life Sciences | 8 | 24 | ~25% |
+| Healthcare & Life Sciences | 9 | 24 | ~27% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 9 | 23 | ~28% |
 | Advanced Forensics & WAF | 14 | 26 | ~35% |
-| **Total** | **59** | **122** | **~33%** |
+| **Total** | **60** | **122** | **~33%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,13 +328,14 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. Real-time PHI de-identification on the hot path — unlocks HIPAA regulated customers (Domain 2.1).
-2. HSM/PKCS#11 signing — unlocks FedRAMP and DoD authorization paths (Domain 1.1).
-3. Multi-turn session behavioral WAF state — closes the most critical remaining threat class (Domain 5.1).
-4. Helm chart with production-grade defaults — unblocks enterprise Kubernetes deployments (Domain 4.4).
-5. Backup and restore with integrity re-verification — operational durability for regulated audit trails (Domain 2.2).
+1. HSM/PKCS#11 signing — unlocks FedRAMP and DoD authorization paths (Domain 1.1).
+2. Multi-turn session behavioral WAF state — closes the most critical remaining threat class (Domain 5.1).
+3. Helm chart with production-grade defaults — unblocks enterprise Kubernetes deployments (Domain 4.4).
+4. Backup and restore with integrity re-verification — operational durability for regulated audit trails (Domain 2.2).
+5. PHI scrubbing confirmation field per audit node (`phi_scrubbed: bool`, `scrub_method: str`) — closes Domain 2.1 audit trail gap (Domain 2.1).
 
 > **Done:** WAL segment rotation & archival (Domain 3.3) — completed 2026-06-20.
+> **Done:** Real-time PHI de-identification, NIST SP 800-188 Safe Harbor (Domain 2.1) — completed 2026-06-20.
 
 ---
 

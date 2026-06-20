@@ -27,6 +27,7 @@ from aegis.core import observability
 from aegis.core.circuit_breaker import CircuitOpenError
 from aegis.core.crypto_audit import CryptographicAuditLedger
 from aegis.core.normalization import canonical_normalize
+from aegis.core.phi_deidentifier import PHIDeidentifier
 from aegis.core.ratelimiter import create_rate_limiter
 from aegis.core.secrets import VaultManager
 from aegis.core.session_manager import SessionLifecycleManager
@@ -220,6 +221,8 @@ class _AppState:
     _entropy_taint_engine: Any
     _entropy_analyzer: Any
     _entropy_segmenter: Any
+    # PHI de-identification scrubber (None when phi_deidentify=False).
+    _phi_scrubber: PHIDeidentifier | None
 
     def get_analyzer(self, session_id: str) -> ResponseAnalyzer:
         return self.analyzers.get(session_id)
@@ -278,6 +281,64 @@ def _apply_request_entropy_guard(request: Request, body: dict, state: _AppState)
     body["_sanitized_payload"] = sanitized.value
 
 
+def _apply_phi_scrub_request(body: dict, state: _AppState) -> dict:
+    """Scrub PHI from request message content when phi_deidentify is enabled.
+
+    Returns a (possibly modified) body dict.  The original dict is not mutated;
+    a shallow copy is returned only when scrubbing actually fires.
+    """
+    scrubber = state._phi_scrubber
+    if scrubber is None:
+        return body
+    messages = body.get("messages")
+    if not messages:
+        return body
+    scrubbed_msgs, hits = scrubber.scrub_messages(messages)
+    if hits:
+        logger.debug("PHI scrubbed from request (%d entities): %s", sum(hits.values()), hits)
+        new_body = dict(body)
+        new_body["messages"] = scrubbed_msgs
+        return new_body
+    return body
+
+
+def _apply_phi_scrub_response(resp_json: dict, state: _AppState) -> dict:
+    """Scrub PHI from response choices[].message.content when phi_deidentify is enabled.
+
+    Returns a (possibly modified) response dict.  The original is not mutated.
+    """
+    scrubber = state._phi_scrubber
+    if scrubber is None:
+        return resp_json
+    choices = resp_json.get("choices")
+    if not choices:
+        return resp_json
+    modified = False
+    new_choices = []
+    for choice in choices:
+        msg = choice.get("message") if isinstance(choice, dict) else None
+        if msg and isinstance(msg.get("content"), str):
+            result = scrubber.scrub(msg["content"])
+            if result.phi_detected:
+                logger.debug(
+                    "PHI scrubbed from response (%d entities): %s",
+                    result.total_hits,
+                    result.hits,
+                )
+                new_choice = dict(choice)
+                new_choice["message"] = dict(msg)
+                new_choice["message"]["content"] = result.text
+                new_choices.append(new_choice)
+                modified = True
+                continue
+        new_choices.append(choice)
+    if modified:
+        new_resp = dict(resp_json)
+        new_resp["choices"] = new_choices
+        return new_resp
+    return resp_json
+
+
 def _extract_logprobs(resp_json: dict) -> list:
     try:
         return resp_json.get("choices", [])[0].get("logprobs", {}).get("content", [])
@@ -303,6 +364,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     state.proxy_auth = ProxyKeyAuth(cfg)
     state.audit_auth = AuditKeyAuth(cfg)
     state.waf = AegisWAF(strict_mode=cfg.waf_strict_mode)
+    state._phi_scrubber = PHIDeidentifier() if cfg.phi_deidentify else None
     _signing_key = cfg.signing_key
     if not _signing_key and not cfg.auth_disabled:
         import logging as _log
@@ -644,6 +706,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         # FIX-APP-02: pass state instead of cfg so the function uses the cached singletons.
         _apply_request_entropy_guard(request, body, state)
 
+        # PHI de-identification on the hot request path (NIST SP 800-188 Safe Harbor).
+        # Scrubs 18 HIPAA identifier categories from message content before forwarding.
+        # raw_body (used for audit) retains the original; body is the scrubbed copy.
+        body = _apply_phi_scrub_request(body, state)
+
         session_id = request.headers.get("x-session-id") or body.get("user") or str(uuid.uuid4())
         request_id = str(uuid.uuid4())
 
@@ -746,6 +813,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return Response(content=upstream.content, status_code=upstream.status_code)
 
         resp_json = upstream.json()
+        # PHI de-identification on the hot response path: scrub before returning to client.
+        resp_json = _apply_phi_scrub_response(resp_json, state)
         analysis = analyzer.analyze(
             request_id=request_id,
             model=body.get("model", "unknown"),
@@ -768,7 +837,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
 
         trace_id = observability.current_trace_id()
-        resp = Response(content=upstream.content, status_code=200)
+        resp_content = json.dumps(resp_json).encode() if state._phi_scrubber else upstream.content
+        resp = Response(content=resp_content, status_code=200)
         resp.headers.update(
             {
                 "X-Aegis-Request-ID": request_id,

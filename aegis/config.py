@@ -287,6 +287,16 @@ class AegisSettings(BaseSettings):
     )
 
     # ── Privacy / PII redaction ────────────────────────────────────────────
+    phi_deidentify: bool = Field(
+        default=False,
+        description=(
+            "When True, apply real-time PHI de-identification (NIST SP 800-188 Safe Harbor) "
+            "to request message content before forwarding to the upstream LLM, and to response "
+            "content before returning to the client. Scrubs 18 HIPAA identifier categories via "
+            "regex (names, DOB, SSN, MRN, phone, email, IP, URL, etc.). Does not require an "
+            "NLP model. Enable for HIPAA-regulated deployments."
+        ),
+    )
     pii_redact_tenant_id: bool = Field(
         default=False,
         description=(
