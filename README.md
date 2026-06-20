@@ -224,7 +224,7 @@ graph LR
     C -->|"Authenticated POST /v1/*\nWAF applied to body"| P
     P -->|"HTTPS · TLS"| U
     U -->|"Response"| P
-    P -->|"Sealed compliance bundle\nvia /v1/audit/export"| AU
+    P -->|"Sealed compliance bundle\nvia aegis_server export API"| AU
     P -->|"Append-only · 0o600"| W
 ```
 
@@ -352,7 +352,7 @@ Seccomp gracefully degrades in environments that block nested BPF (many containe
 | **Rust extension absent** | `ImportError` at startup | All 7 tiers fall back to Python; full functionality; lower performance | Compile extension with `maturin develop --release` |
 | **Upstream circuit breaker open** | `CircuitOpenError` raised | 503 returned; `/health` shows provider status; auto-recovery after `circuit_breaker_recovery_timeout` | Upstream recovers; Aegis auto-recovers after success threshold |
 | **Rate limit exceeded** | Per-tenant token bucket empty | 429 with `Retry-After` header | Bucket refills at `rate_limit_threshold` rpm |
-| **Audit chain integrity failure** | `verify_integrity()` returns False | 409 on `/v1/audit/verify`; broken nodes listed; proxy continues operating | Investigate WAL for tampering; archive and rotate |
+| **Audit chain integrity failure** | `verify_integrity()` returns False | `GET /v1/audit/integrity` returns `valid=false` with `error_index`; proxy continues operating | Investigate WAL for tampering; archive and rotate |
 | **Seccomp filter install failure** | Warning logged | Proxy continues; seccomp not active | Check kernel version and container runtime capabilities |
 | **Analyzer cache eviction pressure** | `eviction_rate > 0.30` in `/health` | Older sessions evicted from LRU | Increase `MAX_ANALYZER_SESSIONS` in source (default 4096); no env override yet |
 
@@ -370,15 +370,15 @@ The `_spawn_background()` block — the only audit-related work executed before 
 
 | Metric | Value |
 |--------|-------|
-| p50 | **77.56 µs** |
-| p99 | **131.52 µs** |
-| mean | 83.38 µs |
-| σ | 13.94 µs |
+| p50 | **2.43 µs** |
+| p99 | **6.78 µs** |
+| mean | 2.59 µs |
+| σ | 1.66 µs |
 | n | 5,000 |
 
-This measures `asyncio.create_task()` + `_BACKGROUND_TASKS.add()` + `AUDIT_PENDING_COMMITS.set()` + `task.add_done_callback()`. The audit commit coroutine executes outside this window.
+This measures `asyncio.create_task()` + `_BACKGROUND_TASKS.add()` + gauge update + `task.add_done_callback()`. The audit commit coroutine executes outside this window.
 
-**Revised claim** (from `docs/BENCHMARKS.md`): *"The audit commit adds no I/O wait to the client-visible response. The scheduling block costs ~80 µs p50 in the benchmark environment."*
+**Claim:** *"The audit commit adds no I/O wait to the client-visible response. The full scheduling block costs ~2.4 µs p50 in this environment."*
 
 ### Measured: End-to-End Proxy Latency (Mock Upstream, 0 ms network)
 
@@ -386,21 +386,21 @@ Full client-visible latency through WAF + HTTP stack with an in-process mock ups
 
 | Condition | p50 | p95 | p99 |
 |-----------|-----|-----|-----|
-| With background task (`create_task` active) | 0.957 ms | 1.109 ms | 1.209 ms |
-| Without background task (floor latency) | 0.723 ms | 0.807 ms | 0.946 ms |
-| Δ (overhead of task scheduling) | +234 µs | +302 µs | +263 µs |
+| With background task (`create_task` active) | 0.300 ms | 0.397 ms | 0.491 ms |
+| Without background task (floor latency) | 0.290 ms | 0.383 ms | 0.483 ms |
+| Δ (overhead of task scheduling) | +10 µs | +14 µs | +8 µs |
 
-The Δ reflects scheduling variance in a sequential single-client benchmark. Under concurrent production traffic, background tasks from multiple requests interleave, and per-client overhead approaches the Part 1 value (~80 µs scheduling block only).
+Δp50 of ~10 µs is statistically significant (Welch t=1.96, p=0.050, Cohen's d=0.062 — negligible effect size). Under concurrent production traffic the per-client observable overhead approaches the Part 1 scheduling value (~2.4 µs).
 
 ### Measured: MMR Throughput (Rust vs Python)
 
 | N leaves | Python (leaves/s) | Rust (leaves/s) | Speedup |
 |----------|------------------|-----------------|---------|
-| 100 | 302,090 | 792,780 | 2.62× |
-| 1,000 | 265,250 | 728,590 | 2.75× |
-| 10,000 | 236,000 | 697,820 | 2.96× |
-| 100,000 | 208,210 | 653,820 | 3.14× |
-| **Average** | — | — | **2.87×** |
+| 100 | 332,460 | 958,510 | 2.88× |
+| 1,000 | 292,050 | 814,000 | 2.79× |
+| 10,000 | 250,650 | 760,260 | 3.03× |
+| 100,000 | 212,180 | 709,240 | 3.34× |
+| **Average** | — | — | **3.01×** |
 
 Methodology: 5 independent trials per N; best-of-5 reported (eliminates OS scheduling noise). Leaf payload: 32 bytes (SHA-256 of index). Rust built with `maturin --release` (LTO, `codegen-units=1`).
 
@@ -440,9 +440,9 @@ Every claim Aegis makes is classified below. No unclassified claims appear in th
 |-------|--------|----------|-----------|
 | Tamper-evident hash chain | **Proven** | Code: `crypto_audit.py:_compute_node_hash()` + `verify_integrity()` | `pytest tests/test_security_fixes.py` |
 | Audit commit adds no I/O wait | **Proven** | Code: `app.py` — `return JSONResponse(...)` before `create_task()` | Code inspection; `pytest tests/test_proxy.py` |
-| Scheduling block ~80 µs p50 | **Measured** | `docs/BENCHMARKS.md` Part 1; n=5,000; env documented | `python -m benchmarks.bench_forwarding` |
-| End-to-end latency <1.2ms p99 (mock upstream) | **Measured** | `docs/BENCHMARKS.md` Part 2; n=2,000; single-client sequential | `python -m benchmarks.bench_forwarding` |
-| MMR Rust speedup ~2.87× avg | **Measured** | `docs/BENCHMARKS.md`; n=5 trials × 4 sizes; hardware documented | `python -m benchmarks.bench_mmr` |
+| Scheduling block ~2.4 µs p50 | **Measured** | `docs/BENCHMARKS.md` Part 1; n=5,000; env documented | `python -m benchmarks.bench_forwarding` |
+| End-to-end latency <0.5ms p99 (mock upstream) | **Measured** | `docs/BENCHMARKS.md` Part 2; n=2,000; single-client sequential | `python -m benchmarks.bench_forwarding` |
+| MMR Rust speedup ~3.01× avg | **Measured** | `docs/BENCHMARKS.md`; n=5 trials × 4 sizes; hardware documented | `python -m benchmarks.bench_mmr` |
 | NFKC + zero-width strip before WAF | **Proven** | Code: `waf.py:_normalize()` | `pytest tests/test_waf*.py` |
 | Constant-time key comparison | **Proven** | Code: `hmac.compare_digest()` in all auth code paths | Code inspection |
 | WAL permissions 0o600 | **Proven** | Code: `crypto_audit.py:_open_wal()` — `os.chmod(path, 0o600)` | `stat $WAL_PATH` |
@@ -765,9 +765,10 @@ curl -sf http://localhost:8080/health | python -m json.tool
 # 2. Readiness check
 curl -sf http://localhost:8080/ready
 
-# 3. Verify audit chain is clean
+# 3. Verify audit subsystem is clean
 curl -sf -H "Authorization: Bearer $AUDIT_KEY" \
-  http://localhost:8080/v1/audit/status | python -m json.tool
+  http://localhost:8080/v1/audit/health | python -m json.tool
+# Expect: {"status":"ok","node_count":0,"legal_admissibility":"High","fault_state":"healthy"}
 
 # 4. Send one test request
 curl -s -X POST http://localhost:8080/v1/chat/completions \
@@ -777,8 +778,8 @@ curl -s -X POST http://localhost:8080/v1/chat/completions \
 
 # 5. Verify the node committed and chain is intact
 curl -sf -H "Authorization: Bearer $AUDIT_KEY" \
-  http://localhost:8080/v1/audit/verify | python -m json.tool
-# Expect: {"integrity": "ok", "nodes_checked": 1}
+  http://localhost:8080/v1/audit/integrity | python -m json.tool
+# Expect: {"valid":true,"error_index":null,"node_count":1,"tail_hash":"...","legal_admissibility":"High"}
 
 # 6. Check WAL permissions
 stat -c "%a %U" "$AEGIS_WAL_PATH"
@@ -862,52 +863,63 @@ uvicorn tools.visualizer.app:app --reload --port 8081
 
 ## Compliance Exports
 
+Compliance export is handled by `aegis_server`, a separate process from the proxy. The proxy (`aegis/proxy/app.py`) manages the live audit chain; `aegis_server` manages durable storage and sealed bundle generation.
+
+### Architecture
+
+```
+Proxy (port 8080)          ←→  clients / LLM traffic
+aegis_server (port 8090)   ←→  audit storage (SQLite/Postgres) + compliance export API
+```
+
 ### Generating a Sealed Bundle
 
 ```bash
-# Export all audit nodes for a time range
-curl -H "Authorization: Bearer $AUDIT_KEY" \
-  "http://localhost:8080/v1/audit/export?from=2024-01-01T00:00:00Z&to=2024-01-31T23:59:59Z" \
+# Export all audit nodes for a time range (aegis_server, not the proxy)
+curl -s -X POST http://localhost:8090/v1/enterprise/compliance/export \
+  -H "Authorization: Bearer $AUDIT_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"from_ts":"2024-01-01T00:00:00Z","to_ts":"2024-01-31T23:59:59Z"}' \
   > bundle_jan2024.json
 
 # Export scoped to one tenant
-curl -H "Authorization: Bearer $AUDIT_KEY" \
-  "http://localhost:8080/v1/audit/export?from=...&to=...&tenant_id=org-xyz" \
+curl -s -X POST http://localhost:8090/v1/enterprise/compliance/export \
+  -H "Authorization: Bearer $AUDIT_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"from_ts":"2024-01-01T00:00:00Z","to_ts":"2024-01-31T23:59:59Z","tenant_id":"org-xyz"}' \
   > bundle_org_xyz.json
 ```
 
 ### Bundle Format
 
+The bundle written by `ComplianceExporter` contains:
+
 ```json
 {
-  "export_id": "ae-2024-01-31-abc123",
+  "export_id": "db8479ab-588f-44c2-b7c3-556a7a5ebcff",
   "generated_at": "2024-01-31T23:59:59Z",
-  "format_version": "1.0",
-  "audit_chain": [ ... ],
-  "verification": {
-    "chain_hash": "sha256:<hex>",
-    "bundle_signature": "<hmac-sha256-hex>",
-    "signer_scheme": "hmac-sha256",
-    "integrity_report": {
-      "nodes_checked": 4821,
-      "broken_links": 0,
-      "status": "ok"
-    }
-  }
+  "nodes": 4821,
+  "chain_hash": "3fdee3a6c0cc3033...",
+  "signer_scheme": "hmac-sha256",
+  "integrity": true,
+  "audit_chain": [ ... ]
 }
 ```
 
-### Offline Re-verification (No Running Proxy Required)
+### Offline Re-verification
 
-```bash
-python -m aegis.core.verify_bundle bundle_jan2024.json --signing-key "$SIGNING_KEY"
-# [PASS] chain_hash matches
-# [PASS] bundle_signature valid
-# [PASS] 4821 nodes: hash linkage intact, 0 broken links
-# Verification complete: tamper-evident record confirmed.
+The demo (`examples/demo.py`) shows the full workflow programmatically:
+
+```python
+from aegis_server.compliance.exporter import ComplianceExporter, ExportParams
+
+exporter = ComplianceExporter(storage=storage, signer=signer, export_dir="./exports")
+result = await exporter.export(ExportParams(from_offset=0, limit=10_000))
+# result.integrity == True
+# result.chain_hash matches SHA256 of the canonical chain JSON
 ```
 
-An external auditor with the signing key (or ML-DSA public keys stored in each node) can verify the bundle without access to the running system.
+An auditor with the `AEGIS_SIGNING_KEY` (or the ML-DSA public keys stored per-node) can re-derive `chain_hash` from the bundle and re-verify the HMAC signature without access to the running system.
 
 ---
 
