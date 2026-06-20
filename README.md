@@ -3,7 +3,8 @@
 # Aegis Latent Core
 
 
-<img width="3300" height="2550" alt="Aegis Latent Core — Mission Control dashboard" src="https://github.com/user-attachments/assets/ae17f0df-e5c6-4e91-ac72-14d9e12b3cab" />
+<img width="2339" height="1653" alt="4dae6a3fad6944a09ce99e7f0d50c368IJUgMfv4FgbVnmfd-0" src="https://github.com/user-attachments/assets/66ba1ad2-6301-48b7-bfc3-c6f2227aecd2" />
+
 
 **Drop-in OpenAI-compatible inference governance proxy with cryptographically-signed, tamper-evident forensic audit chains. Zero application changes required.**
 
