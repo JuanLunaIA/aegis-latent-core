@@ -79,6 +79,31 @@ class SeccompGuard:
             "poll",
             "select",
             "getpeername",
+            # ── Async Rust forwarder (Tokio runtime) steady-state syscalls ──
+            # Thread creation (clone/clone3) is deliberately NOT allowed: the
+            # Tokio worker pool is warmed before this filter is installed (see
+            # app.py lifespan + forwarder::warmup_runtime), and the async
+            # hickory DNS resolver removes the per-request blocking-pool spawn.
+            # These cover the request hot path only — socket option tuning,
+            # non-blocking fd flags, TLS entropy, the epoll/eventfd reactor,
+            # allocator hints, and CPU-topology probing.
+            "getrandom",          # native-tls / OpenSSL handshake entropy
+            "setsockopt",         # TCP_NODELAY, SO_KEEPALIVE on new sockets
+            "getsockopt",         # connect() error retrieval (SO_ERROR)
+            "getsockname",        # local socket introspection
+            "fcntl",              # set O_NONBLOCK on async sockets
+            "eventfd2",           # Tokio I/O driver wakeups
+            "epoll_create",       # reactor (older libc path; create1 also allowed)
+            "madvise",            # allocator / mmap region hints
+            "mremap",             # allocator growth
+            "sched_getaffinity",  # available_parallelism() CPU probe
+            "sched_yield",        # Tokio cooperative scheduling
+            "rseq",               # glibc restartable sequences (thread init)
+            "prctl",              # Tokio worker thread naming (PR_SET_NAME)
+            "rt_sigprocmask",     # per-thread signal mask setup
+            "sigaltstack",        # Rust thread signal-stack setup
+            "clock_nanosleep",    # Tokio timer driver
+            "restart_syscall",    # kernel-resumed syscalls after signal
         },
         forbidden_syscalls={
             "execve",

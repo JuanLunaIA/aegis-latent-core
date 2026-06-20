@@ -343,23 +343,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
         observability.setup_otel(service_name="aegis-proxy")
 
-        guard = None
-        try:
-            from aegis.core.seccomp_guard import SeccompGuard
-
-            guard = SeccompGuard()
-            if not guard.apply_filter():
-                if not guard.is_sandbox:
-                    raise RuntimeError(
-                        "CRITICAL: Seccomp enforcement failed in non-sandbox environment."
-                    )
-                logger.warning(
-                    "Seccomp filter could not be applied (degraded mode - sandbox detected)"
-                )
-        except Exception as exc:
-            if guard is not None and not guard.is_sandbox:
-                raise RuntimeError(f"CRITICAL: Seccomp initialization failed: {exc}") from exc
-            logger.warning("Seccomp enforcement skipped: %s", exc)
+        # NOTE: the seccomp filter is applied LAST in this startup sequence
+        # (just before `yield`), NOT here.  The async Rust forwarder's Tokio
+        # runtime must spawn its worker threads and load the TLS trust store
+        # while clone()/openat() are still permitted; once every subsystem has
+        # initialised its threads and file descriptors we lock the process down.
+        # See the "Seccomp lockdown" block below and seccomp_guard.py.
 
         # FIX-BLOCKER-01: LSM guard runs in advisory mode — a missing or
         # inactive LSM profile is logged as a WARNING, never a fatal error.
@@ -432,6 +421,34 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     raise RuntimeError(
                         "mtls_required=True but mTLS could not be initialized"
                     ) from exc
+
+        # ── Seccomp lockdown (applied LAST, after all subsystems init) ──────
+        # Warm the Rust async runtime so its worker pool exists before we forbid
+        # clone()/clone3(); then apply the strict syscall filter.  At this point
+        # the forwarder's threads, the WAL file descriptors, and the TLS trust
+        # store are all initialised, so the steady-state request path needs no
+        # thread/process creation or new file opens.
+        from aegis.core.rust_integration import warmup_rust_runtime
+
+        warmup_rust_runtime()
+
+        guard = None
+        try:
+            from aegis.core.seccomp_guard import SeccompGuard
+
+            guard = SeccompGuard()
+            if not guard.apply_filter():
+                if not guard.is_sandbox:
+                    raise RuntimeError(
+                        "CRITICAL: Seccomp enforcement failed in non-sandbox environment."
+                    )
+                logger.warning(
+                    "Seccomp filter could not be applied (degraded mode - sandbox detected)"
+                )
+        except Exception as exc:
+            if guard is not None and not guard.is_sandbox:
+                raise RuntimeError(f"CRITICAL: Seccomp initialization failed: {exc}") from exc
+            logger.warning("Seccomp enforcement skipped: %s", exc)
 
         app.state.aegis = state
         yield

@@ -93,6 +93,7 @@ Cargo.lock
 # ── Aegis runtime data ────────────────────────────────────────────────────────
 *.wal.jsonl
 aegis.wal.jsonl
+*.mmf
 data/
 logs/
 *.db
