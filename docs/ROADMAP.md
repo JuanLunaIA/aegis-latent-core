@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 3529 passed, 3 skipped, 95%+ coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 3570 passed, 3 skipped, 95%+ coverage).
 
 ---
 
@@ -179,7 +179,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Conflict-free replicated data type (CRDT) for distributed audit node ordering without a central coordinator
 - [ ] Offline-first merge: deterministic conflict resolution when two edge nodes have diverged WALs
 - [x] WAL segment rotation & archival: size-bounded active WAL rotates into immutable, owner-only (0o600) archived segments (`<wal_path>.NNNNNN`); the full chain is replayed across all segments on startup and rotation never drops nodes. Configurable via `AEGIS_MAX_WAL_BYTES` (`aegis/core/crypto_audit.py`; `pytest tests/test_wal_rotation.py`)
-- [ ] Intermittent-connectivity mode: WAL queues indefinitely; backpressure signals upstream when queue depth exceeds threshold
+- [x] Intermittent-connectivity mode: WAL queues indefinitely; backpressure signals upstream when queue depth exceeds threshold (`aegis/core/intermittent_connectivity.py`: `WALBackpressureMonitor` inspects active WAL + rotated segments for entry count and byte size; `BackpressureStatus` with `active`, `entry_count`, `size_bytes`, `signal_reasons`, `to_dict()`; `aegis_wal_backpressure_active` Prometheus Gauge; `AEGIS_WAL_BACKPRESSURE_THRESHOLD` / `AEGIS_WAL_BACKPRESSURE_BYTES` env vars; 41 tests in `tests/test_intermittent_connectivity.py`)
 
 #### 3.4 OT Network Isolation
 
@@ -316,10 +316,10 @@ is not committed to `docs/BENCHMARKS.md`.
 |---|---|---|---|
 | Defense & Government | 28 | 28 | ~100% |
 | Healthcare & Life Sciences | 24 | 24 | ~100% |
-| Industrial Automation & OT | 17 | 21 | ~81% |
+| Industrial Automation & OT | 18 | 21 | ~86% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
 | Advanced Forensics & WAF | 34 | 27 | ~100% |
-| **Total** | **117** | **123** | **~95%** |
+| **Total** | **118** | **123** | **~96%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
