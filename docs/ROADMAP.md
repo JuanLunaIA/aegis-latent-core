@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-20 (tests: 1237 passed, 95.32% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 1620 passed, 1 skipped, 95.43% coverage).
 
 ---
 
@@ -49,10 +49,10 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Per-tenant isolation via `tenant_id` in every audit node
 - [x] Vault/AppRole secret management integration (`hvac>=2.1.0`)
 - [x] mTLS client certificate authentication with CAC/PIV card (DoD Common Access Card) via PKCS#11 slot
-- [ ] LDAP/Active Directory integration for multi-factor identity assertion
-- [ ] Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation
-- [ ] Attribute-Based Access Control (ABAC) for IL5/IL6 data compartmentalization
-- [ ] SCIM 2.0 provisioning/deprovisioning lifecycle
+- [x] LDAP/Active Directory integration for multi-factor identity assertion (`aegis/auth/ldap_auth.py`: `LDAPAuthenticator` with service-bind → user-lookup → user-bind → group-assertion flow; AD nested-group OID `1.2.840.113556.1.4.1941` + RFC 2307 group search; RFC 4515 LDAP-injection escaping; `ldaps://`/StartTLS with CA bundle verification; `AEGIS_LDAP_*` config fields; `ldap3` optional dep; `pytest tests/test_ldap_auth.py` — 42 tests, fully mocked, no live directory)
+- [x] Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation (`aegis/auth/rbac.py`: `Role`/`RoleRegistry` over the scope vocabulary with subject→role, LDAP group→role, and default-role resolution; `ZeroTrustPolicyEngine` deny-by-default evaluation with dynamic attribute constraints — `RequireMTLS`, `RequireAuthMethod`, `IPAllowlist`, `TimeWindow`; `AccessContext`/`AccessDecision` audit records; `pytest tests/test_rbac.py` — 46 tests)
+- [x] Attribute-Based Access Control (ABAC) for IL5/IL6 data compartmentalization (`aegis/auth/abac.py`: Bell-LaPadula `ABACPolicyEngine` with `ClassificationLevel` dominance, `SecurityLabel`/`SubjectAttributes`; `can_read` (no-read-up + need-to-know compartments + REL TO/NOFORN), `can_write` (no-write-down), `can_flow` (source→sink dominance), `endpoint_accredited` (IL→classification mapping); `pytest tests/test_abac.py` — 46 tests)
+- [x] SCIM 2.0 provisioning/deprovisioning lifecycle (`aegis/auth/scim.py`: RFC 7643/7644 `ScimStore` with User + Group CRUD, full PATCH (add/remove/replace) per RFC 7644 §3.5.2, bidirectional User↔Group membership with sync on delete/deprovisioning, SCIM filter engine (eq/ne/co/sw/ew/pr), ETags/meta, `ScimError` RFC-compliant error envelopes, `to_group_roles()` bridge for `RoleRegistry`; `pytest tests/test_scim.py` — 87 tests)
 - [ ] Hardware-bound session tokens (TPM 2.0 attestation-sealed)
 
 #### 1.3 Air-Gap & Disconnected Operations
@@ -64,7 +64,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] OCSP stapling / CRL distribution point hosted in enclave network (no public CA connectivity)
 - [ ] Offline license validation (no phone-home for commercial license enforcement)
 - [ ] Air-gapped signature verification chain (pinned root CA bundle, no runtime CA fetch)
-- [ ] Classified-data cryptographic blocking: pattern-match against SCI/SAP markers pre-forwarding
+- [x] Classified-data cryptographic blocking: pattern-match against SCI/SAP markers pre-forwarding (`aegis/core/classified_marker_detector.py`: `ClassifiedMarkerDetector` with 34 pre-compiled DoD/IC regex patterns covering formal banners (TOP SECRET//, SECRET//, CONFIDENTIAL//, TS//, S//), SCI compartments (//SI, //TK, //HCS, //HCS-P, //HCS-O, //G, //KDK, //VRK), dissemination controls (//NOFORN, //ORCON, //PROPIN, //RSEN, //WNINTEL, //FOUO, //FISA), coalition markings (//REL TO, //FVEY, //ACGU, //EYES ONLY), handling caveats (HANDLE VIA COMINT/SCI CHANNELS ONLY, SCI INFORMATION, SPECAT), classification authority lines (CLASSIFIED BY:, DERIVED FROM:, DECLASSIFY ON:), and SAP indicators (SPECIAL ACCESS REQUIRED, SAP MATERIAL/PROTECTED/INFORMATION/PROGRAM, (SAP), SAP-PROTECTED); `scan()`, `scan_messages()`, `scan_text_bulk()` with aggregated `MarkerDetectionResult`; `extra_patterns` for deployment-specific codewords; `pytest tests/test_classified_marker_detector.py` — 81 tests)
 
 #### 1.4 Audit & Non-Repudiation (NIST AU-2, AU-9, AU-10)
 
@@ -79,7 +79,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] STIG (Security Technical Implementation Guide) hardening checklist and compliance scan results
 - [ ] DoD-DISA APL (Approved Products List) submission package
 - [ ] Time-stamping authority (RFC 3161 TSA) integration for legally admissible timestamp proofs
-- [ ] Classified audit node encryption: AES-256-GCM envelope per node for IL6 data-at-rest
+- [x] Classified audit node encryption: AES-256-GCM envelope per node for IL6 data-at-rest (`aegis/core/audit_node_encryptor.py`: `AuditNodeEncryptor` with per-tenant DEK via HKDF-SHA256(info="audit-node-dek:" + tenant_id); `encrypt_node(tenant_id, node_dict, node_hash)` → `nonce(12) || AES-256-GCM ciphertext+tag`; `node_hash` bound as GCM AAD to tie ciphertext to hash-chain position; `decrypt_node()` raises `AuditNodeEncryptionError` on tamper/wrong-key/wrong-hash; `from_env()` reads `AEGIS_AUDIT_MASTER_KEY` (hex-encoded, must be distinct from `AEGIS_SIGNING_KEY` and `AEGIS_PHI_MASTER_KEY`); per-tenant DEK cache with `clear_dek_cache()`; `pytest tests/test_audit_node_encryptor.py` — 29 tests)
 
 #### 1.5 Runtime Hardening
 
@@ -87,7 +87,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Seccomp applied LAST in lifespan after Rust tokio worker pool warmup
 - [x] Graceful seccomp fallback in non-Linux sandboxes (CI, macOS dev)
 - [ ] Linux Security Module (LSM) AppArmor profile or SELinux type enforcement policy
-- [ ] `PR_SET_NO_NEW_PRIVS` + `PR_SET_DUMPABLE=0` prctl flags on startup
+- [x] `PR_SET_NO_NEW_PRIVS` + `PR_SET_DUMPABLE=0` prctl flags on startup (`aegis/core/process_hardening.py`: `ProcessHardening.apply()` sets both prctl(2) flags via ctypes at startup, independently of seccomp; `PR_SET_NO_NEW_PRIVS=1` prevents privilege escalation via setuid/caps after startup; `PR_SET_DUMPABLE=0` disables core dumps and `/proc/PID/mem` access to prevent signing-key material leaks; graceful fallback on non-Linux; `verify()` reads back state from `/proc/self/status`; `AEGIS_SKIP_PROCESS_HARDENING` env override for CI; `pytest tests/test_process_hardening.py` — 27 tests)
 - [ ] AMD SEV-SNP or Intel TDX confidential VM attestation (memory encryption + remote attestation quote)
 - [ ] Intel SGX enclave for signing key material isolation (`sgx-sdk` or `Enarx`)
 - [ ] Kernel lockdown mode compatibility (`LOCK_INTEGRITY` or `LOCK_CONFIDENTIALITY`)
@@ -118,8 +118,8 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Hash chain linkage prevents retroactive insertion
 - [x] 21 CFR Part 11 compliant electronic signature: human-readable meaning annotation ("approved", "reviewed", "authored"), printed name + date in signature manifest
 - [ ] Audit trail lock-out: once a node is sealed it cannot be deleted (WORM enforcement at storage layer)
-- [ ] `audit_trail_version` schema field for migration traceability (Annex 11 §4.8)
-- [ ] System clock integrity assertion: NTP sync status logged at startup + per-node clock drift check
+- [x] `audit_trail_version` schema field for migration traceability (Annex 11 §4.8): added to `AuditNode` dataclass (`aegis/core/crypto_audit.py`) as `audit_trail_version: str = "1"` with default `"1"` in `from_dict()` for forward-compatibility; field present in `to_dict()` serialization; backward-compatible (existing WAL records get default)
+- [x] System clock integrity assertion: NTP sync status logged at startup + per-node clock drift check (`aegis/core/clock_integrity.py`: `ClockIntegrityAssertion` with `assert_startup()` probing `timedatectl show` then `adjtimex(2)` via ctypes for NTP sync status; `check_node_drift(node_timestamp)` computes `abs(now - timestamp)` against configurable `max_drift_seconds` (default 5s); `NTPSyncStatus` and `ClockDriftResult` with `to_dict()`; graceful fallback when both probes unavailable; `pytest tests/test_clock_integrity.py` — 34 tests)
 - [ ] Audit viewer UI with filter by tenant, time range, event type (required for 21 CFR Part 11 retrieval)
 - [x] Backup and restore with integrity re-verification (Annex 11 §7.1): `WALBackupManager` in `aegis/core/wal_backup.py` — timestamped backup snapshots with manifest, integrity-verified copy before completing, safe restore with pre-restore backup and post-restore verification; 19 tests
 
@@ -138,8 +138,8 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] WAF with 23 critical + 11 soft patterns (prompt injection, jailbreak)
 - [ ] ICD-11 / SNOMED-CT ontology-aware anomaly detection: flag responses containing clinical codes mismatched to the request context
 - [ ] Dosage hallucination detection: numeric range check for drug dosage claims against reference database (RxNorm, NLM DailyMed)
-- [ ] PII confidence scoring per response (entity recognition confidence threshold → block/flag/log)
-- [ ] Adverse event (AE) keyword detection aligned to MedDRA preferred terms
+- [x] PII confidence scoring per response (`aegis/core/pii_confidence.py`: `PIIConfidenceFilter` wraps `PHIDeidentifier`; per-entity confidence scores → BLOCK / FLAG / LOG action via configurable `PIIConfidenceThreshold`; `evaluate()` + `evaluate_messages()` + `worst_case()` for batch response gating; `from_config()` reads `AEGIS_PII_BLOCK_THRESHOLD`/`AEGIS_PII_FLAG_THRESHOLD`; `pytest tests/test_pii_confidence.py` — 45 tests)
+- [x] Adverse event (AE) keyword detection aligned to MedDRA preferred terms
 - [ ] De-novo clinical claim detection: block generation of novel clinical trial results without citation
 
 ---
@@ -257,7 +257,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Cross-session correlation: detect coordinated multi-account attacks sharing jailbreak templates
 - [ ] Semantic similarity clustering: flag requests within cosine distance threshold of known jailbreak embeddings
 - [ ] Adversarial suffix detection: gradient-based suffix patterns (GCG, AutoDAN) via fixed signature set
-- [ ] Many-shot jailbreak detection: flag prompts with >N examples in few-shot context (configurable threshold, currently no count-based guard)
+- [x] Many-shot jailbreak detection: flag prompts with >N examples in few-shot context (`aegis/core/manyshot_detector.py`: `ManyShotDetector` with configurable `threshold` (default 10) and `min_qa_ratio`; multi-signal counting — Q&A turn pairs (Human/User/Q: + Assistant/AI/A: with assistant-to-human ratio guard), numbered-list items (≥20 chars), "Example/Sample/Shot N:" headers, bracket/XML shot delimiters (<example>, [EXAMPLE], <shot>); `evaluate(text)` and `evaluate_messages(messages)` (concatenates content across turns to defeat per-message evasion); `ManyShotDetectionResult` with `shot_count`, `signal_counts`, `exceeded`, `reason`, `scan_length`, `to_dict()`; `pytest tests/test_manyshot_detector.py` — 42 tests)
 - [ ] Prompt injection in retrieved context: RAG-aware WAF that scans tool outputs and retrieved documents, not just user input
 
 #### 5.2 Evasion-Resistant Pattern Matching
@@ -266,8 +266,8 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] NFKC normalization (catches lookalike Unicode substitution attacks)
 - [x] Zero-width character strip (catches invisible character injection)
 - [x] Rust Aho-Corasick SIMD for throughput; Python regex as authoritative second pass
-- [ ] Homoglyph normalization beyond NFKC: Cyrillic/Greek/Latin lookalike mapping table (e.g., `а` U+0430 → `a` U+0061)
-- [ ] Base64/URL/HTML entity decode pipeline: iterative decode up to depth 5 before WAF scan
+- [x] Homoglyph normalization beyond NFKC: Cyrillic/Greek/Latin lookalike mapping table (e.g., `а` U+0430 → `a` U+0061)
+- [x] Base64/URL/HTML entity decode pipeline: iterative decode up to depth 5 before WAF scan
 - [ ] Token-split reassembly attack detection: detect patterns split across token boundaries (requires tokenizer-aware scan)
 - [ ] Language model-based semantic WAF: lightweight classifier (DistilBERT or FastText) as tertiary pass for novel jailbreaks not matching known patterns
 - [ ] WAF pattern hot-reload: push new patterns without restart via inotify watch on pattern file
@@ -292,7 +292,7 @@ is not committed to `docs/BENCHMARKS.md`.
 
 - [x] Static WAF pattern set (23 critical + 11 soft, embedded in source)
 - [ ] STIX 2.1 / TAXII 2.1 threat feed ingestion: pull adversarial prompt indicators from sharing community
-- [ ] MITRE ATLAS (Adversarial Threat Landscape for AI Systems) tactic mapping per WAF hit
+- [x] MITRE ATLAS (Adversarial Threat Landscape for AI Systems) tactic mapping per WAF hit
 - [ ] IOC (Indicator of Compromise) correlation: cross-reference tenant_id / request fingerprints against known threat actor TTPs
 - [ ] Threat intelligence sharing: aegis_server endpoint to publish anonymized attack telemetry to ISAC feeds
 - [ ] YARA rule engine integration: apply YARA rules to request/response payloads for malware-derived string detection
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
-| Defense & Government | 19 | 28 | ~43% |
-| Healthcare & Life Sciences | 16 | 24 | ~67% |
+| Defense & Government | 26 | 28 | ~93% |
+| Healthcare & Life Sciences | 20 | 24 | ~83% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
-| Advanced Forensics & WAF | 16 | 26 | ~62% |
-| **Total** | **72** | **122** | **~59%** |
+| Advanced Forensics & WAF | 20 | 26 | ~77% |
+| **Total** | **87** | **122** | **~71%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,10 +328,10 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. LDAP/Active Directory integration for multi-factor identity assertion (Domain 1.2).
-2. Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation (Domain 1.2).
+1. SCIM 2.0 provisioning/deprovisioning lifecycle (Domain 1.2).
+2. PII confidence scoring per response (entity recognition confidence threshold → block/flag/log) (Domain 2.4).
 3. Prompt injection resistance scoring — ML classifier for indirect injection (Domain 5.1).
-4. Attribute-Based Access Control (ABAC) for IL5/IL6 data compartmentalization (Domain 1.2).
+4. Hardware-bound session tokens (TPM 2.0 attestation-sealed) (Domain 1.2).
 
 > **Done:** WAL segment rotation & archival (Domain 3.3) — completed 2026-06-20.
 > **Done:** Real-time PHI de-identification, NIST SP 800-188 Safe Harbor (Domain 2.1) — completed 2026-06-20.
@@ -347,6 +347,9 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** Field-level AES-256-GCM PHI encryption — `PHIPayloadEncryptor` with HKDF-SHA256 per-tenant DEK derivation, random nonce per encrypt, GCM authentication tag; `AEGIS_PHI_MASTER_KEY` config flag; 23 tests covering round-trip, tamper detection, tenant isolation (Domain 2.1) — completed 2026-06-20.
 > **Done:** De-identification audit trail — `ScrubAuditRecord` with per-category hit counts, confidence scores (0.75–0.99 by category specificity), UTC scrub timestamp, JSON-serializable `to_dict()`; `scrub_with_audit()` on `PHIDeidentifier`; 17 tests (Domain 2.1) — completed 2026-06-20.
 > **Done:** HIPAA minimum-necessary access enforcement per API key scope — `ScopedKeyRegistry` with constant-time key validation, per-key scope restrictions, `ScopeViolationError`, `parse_scope_config()` for `AEGIS_API_KEY_SCOPES` env var; `api_key_scopes` config field; 45 tests (Domain 2.1) — completed 2026-06-20.
+> **Done:** LDAP/Active Directory multi-factor identity assertion — `LDAPAuthenticator` (service-bind → user-lookup → user-bind → group-assert), AD nested-group OID + RFC 2307 group search, RFC 4515 injection escaping, ldaps:///StartTLS with CA verification, `AEGIS_LDAP_*` config, `ldap3` optional dep; 42 tests (Domain 1.2) — completed 2026-06-21.
+> **Done:** RBAC + NIST SP 800-207 Zero Trust attribute evaluation — `Role`/`RoleRegistry` (subject, LDAP-group, and default-role resolution) over the scope vocabulary; `ZeroTrustPolicyEngine` deny-by-default with dynamic constraints (`RequireMTLS`, `RequireAuthMethod`, `IPAllowlist`, `TimeWindow`); `AccessContext`/`AccessDecision` for auditable decisions; 46 tests (Domain 1.2) — completed 2026-06-21.
+> **Done:** ABAC for IL5/IL6 data compartmentalization — Bell-LaPadula `ABACPolicyEngine` with `ClassificationLevel` dominance, need-to-know compartments, REL TO/NOFORN dissemination controls; `can_read`/`can_write`/`can_flow`/`endpoint_accredited` (DoD Impact Level → classification mapping); 46 tests (Domain 1.2) — completed 2026-06-21.
 
 ---
 

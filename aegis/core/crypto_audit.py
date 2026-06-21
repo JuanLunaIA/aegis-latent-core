@@ -108,6 +108,8 @@ class AuditNode:
     # 21 CFR Part 11 §11.50 electronic signature annotation fields
     signer_name: str = ""
     signature_meaning: str = ""
+    # EU Annex 11 §4.8 migration traceability
+    audit_trail_version: str = "1"
 
     def __post_init__(self) -> None:
         self.__creation_hash__: str = self.node_hash
@@ -164,6 +166,7 @@ class AuditNode:
             "scrub_method": "",
             "signer_name": "",
             "signature_meaning": "",
+            "audit_trail_version": "1",
         }
         # Remove legacy field if present
         data.pop("payload", None)
