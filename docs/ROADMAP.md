@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 2527 passed, 1 skipped, 95.32% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 2568 passed, 1 skipped, 95.38% coverage).
 
 ---
 
@@ -272,7 +272,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Language model-based semantic WAF: lightweight classifier (DistilBERT or FastText) as tertiary pass for novel jailbreaks not matching known patterns
 - [x] WAF pattern hot-reload: push new patterns without restart via inotify watch on pattern file (`aegis/core/waf_hot_reload.py`: `WAFHotReloader`, `WAFPatternSet`, `load_pattern_file`, `WAFPatternFileError`; uses Linux inotify via `ctypes` with `select()` timeout loop; falls back to mtime-poll on non-Linux or inotify init failure; JSON pattern file schema with `version`, `critical`, `soft` arrays; `AegisWAF.enable_hot_reload(path, poll_interval_s)` for zero-downtime atomic pattern swap; 38 tests in `tests/test_waf_hot_reload.py`)
 - [x] WAF shadow mode: log would-be blocks without enforcing, for rule tuning without production risk (`aegis/proxy/waf.py`: `shadow_mode=False` parameter on `AegisWAF`; when `True`, runs the full Rust+Layer-1+Layer-2 detection pipeline but suppresses enforcement — returns `WAFResult(allowed=True, shadow_blocked=True, reason=<detection_reason>, score=<score>)` and emits a `WARNING` log; `WAFResult` gets new `shadow_blocked: bool = False` field; internal `_run_detection()` always returns an enforcement decision; 14 new tests in `TestWAFShadowMode`)
-- [ ] Differential fuzzing harness: `hypothesis`-driven WAF bypass attempt generation (currently `aegis/core/fuzzing_harness.py` is a stub excluded from coverage)
+- [x] Differential fuzzing harness: `hypothesis`-driven WAF bypass attempt generation (`aegis/core/waf_fuzzing.py`: `WAFDifferentialFuzzer` with 11 `EvasionTransform` variants — original, base64, uppercase, lowercase, alternating case, homoglyph substitution (Cyrillic/Greek/Latin table), zero-width injection, full-width Unicode, extra whitespace, underscore/hyphen space replacement; `apply_transform()`, `FuzzVariant`, `FuzzReport` with `block_rate` and per-transform stats; `hypothesis_strategy()` composite strategy for property-based tests; `tests/test_waf_hypothesis.py`: 41 tests including 5 `@given` property tests verifying WAF never crashes, score ∈ [0,1], shadow mode invariants on 200+ examples; evasion-resistance assertions that full-width, uppercase, and extra-whitespace variants of known seeds are still blocked)
 
 #### 5.3 ISO/IEC 27037 Digital Forensic Export
 
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 11 | 23 | ~48% |
-| Advanced Forensics & WAF | 26 | 26 | ~100% |
-| **Total** | **96** | **122** | **~79%** |
+| Advanced Forensics & WAF | 27 | 27 | ~100% |
+| **Total** | **97** | **123** | **~79%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
