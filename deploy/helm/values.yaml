@@ -144,3 +144,23 @@ topologySpreadConstraints:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# ── Prometheus SLO burn-rate alerting ─────────────────────────────────────────
+# Requires the Prometheus Operator (kube-prometheus-stack or standalone).
+# Generates a PrometheusRule CRD with 8 alerts (4 windows × 2 SLOs).
+prometheus:
+  sloAlerting:
+    enabled: false
+    evaluationInterval: "30s"
+    runbookBaseUrl: "https://github.com/JuanLunaIA/aegis-latent-core/blob/main/docs/runbooks"
+    additionalLabels: {}
+
+    # Availability SLO: 99.9% of requests return non-5xx status
+    availability:
+      sloTarget: 0.999
+      errorBudgetFraction: 0.001   # 1 - sloTarget
+
+    # Latency SLO: 99% of requests complete in < 500ms (end-to-end)
+    latency:
+      sloTarget: 0.990
+      errorBudgetFraction: 0.010   # 1 - sloTarget

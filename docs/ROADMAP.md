@@ -238,7 +238,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Zero-downtime rolling deploy: WAL leader lease hand-off protocol during pod replacement
 - [x] Circuit breaker per upstream provider (`aegis/core/circuit_breaker.py`: `CircuitBreaker` with CLOSED → OPEN → HALF_OPEN state machine; `failure_threshold` consecutive failures open the circuit; `recovery_timeout` before a single probe is allowed; `success_threshold` consecutive probe successes re-close; thread-safe via `threading.Lock`; `CircuitOpenError` for fail-fast 503 responses; Prometheus metric emission on state transitions; integrated in `LLMForwarder` via `circuit_breaker_failure_threshold` / `circuit_breaker_recovery_timeout` / `circuit_breaker_success_threshold` config fields; 37 tests in `tests/test_circuit_breaker.py`)
 - [x] Chaos engineering test suite: `tests/test_chaos.py` — 20 tests covering WAL disk-full / truncated-write / missing-file scenarios; Redis `ConnectionError` and hang under `asyncio.wait_for`; upstream `httpx.TimeoutException` / `ConnectError`; circuit breaker OPEN → HALF_OPEN → CLOSED recovery; concurrent 50-goroutine ledger commit stability; no external dependencies (all scenarios via monkeypatching)
-- [ ] SLO burn-rate alerting: PrometheusRule manifests for 1h/6h/24h/72h burn-rate windows
+- [x] SLO burn-rate alerting: `aegis/core/slo_alerting.py` (`SLOConfig`, `SLOBurnRateWindow`, `generate_prometheus_rule()`, `validate_burn_rate_threshold()`); `deploy/helm/templates/prometheusrule.yaml` PrometheusRule CRD template for the Prometheus Operator; `prometheus.sloAlerting` Helm values section; 8 alerts (1h/6h/24h/72h × availability+latency); critical severity for ≥14.4×/6× windows, warning for ≥3×/1×; all thresholds mathematically validated against 30-day error budget; 65 tests in `tests/test_slo_alerting.py`
 
 ---
 
@@ -317,9 +317,9 @@ is not committed to `docs/BENCHMARKS.md`.
 | Defense & Government | 27 | 28 | ~96% |
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
 | Industrial Automation & OT | 15 | 21 | ~71% |
-| Enterprise Hyperscale & HA | 13 | 23 | ~57% |
+| Enterprise Hyperscale & HA | 14 | 23 | ~61% |
 | Advanced Forensics & WAF | 30 | 27 | ~100% |
-| **Total** | **106** | **123** | **~86%** |
+| **Total** | **107** | **123** | **~87%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -355,6 +355,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** RAG-aware prompt injection scanner — `RAGInjectionScanner` with 7 signal categories (direct jailbreak, context-frame escape, role boundary injection, ChatML token injection, LLM-addressed instructions, whitespace padding, lateral exfiltration); `scan_document()`, `scan_tool_result()`, `scan_messages()` covering OpenAI tool/function roles and Anthropic tool_result blocks; 112 tests (Domain 5.1) — completed 2026-06-21.
 > **Done:** WAF shadow mode — `shadow_mode=True` on `AegisWAF` runs full detection pipeline but suppresses enforcement; `WAFResult.shadow_blocked` field; `_run_detection()` internal method; `WARNING` log on every suppressed block; 14 tests (Domain 5.2) — completed 2026-06-21.
 > **Done:** Legal admissibility attestation field — `LegalAdmissibility` StrEnum (`Admissible`/`Conditional`/`Compromised`); `build_evidence_package()` accepts `legal_admissibility_override` + `legal_admissibility_justification` for per-bundle override of chain-level value; both fields covered by SHA-256 integrity seal; 23 tests in `TestLegalAdmissibilityEnum`+`TestLegalAdmissibilityOverride` (Domain 5.3) — completed 2026-06-21.
+> **Done:** SLO burn-rate alerting — `aegis/core/slo_alerting.py` with `SLOConfig`/`SLOBurnRateWindow`/`generate_prometheus_rule()`/`validate_burn_rate_threshold()`; `deploy/helm/templates/prometheusrule.yaml` PrometheusRule CRD; `prometheus.sloAlerting` Helm values; 8 alerts (1h/6h/24h/72h × availability+latency SLOs); critical/warning severity mapping; 65 tests (Domain 4.4) — completed 2026-06-21.
 
 ---
 

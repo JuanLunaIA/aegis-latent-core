@@ -1,0 +1,254 @@
+{{- if .Values.prometheus.sloAlerting.enabled }}
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+#
+# PrometheusRule CRD for Aegis SLO burn-rate alerting.
+# Requires the Prometheus Operator (kube-prometheus-stack or standalone operator).
+#
+# Multi-window, multi-burn-rate alert pattern from Google SRE Workbook Ch. 5.
+# Four window pairs per SLO (availability + latency):
+#   1h/5m   → burn ≥ 14.4× → critical (2% of monthly budget in 1h)
+#   6h/30m  → burn ≥ 6×    → critical (5% of monthly budget in 6h)
+#   24h/2h  → burn ≥ 3×    → warning  (10% of monthly budget in 24h)
+#   72h/6h  → burn ≥ 1×    → warning  (100% of monthly budget in 72h)
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "aegis-latent-core.fullname" . }}-slo-burn-rate
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aegis-latent-core.labels" . | nindent 4 }}
+    {{- with .Values.prometheus.sloAlerting.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: aegis.slo.burn-rate
+      interval: {{ .Values.prometheus.sloAlerting.evaluationInterval | default "30s" }}
+      rules:
+
+        # ── Availability SLO (99.9%) ────────────────────────────────────────────
+        # Error budget: 0.1% of requests (43.8 minutes/month)
+        # Error rate metric: fraction of 4xx+5xx responses
+
+        - alert: AegisSLOAvailabilityBurnRate1H
+          expr: |
+            (
+              sum(rate(aegis_requests_total{status_class=~"4xx|5xx"}[1h]))
+              / sum(rate(aegis_requests_total[1h]))
+              > {{ mulf .Values.prometheus.sloAlerting.availability.errorBudgetFraction 14.4 }}
+            ) and (
+              sum(rate(aegis_requests_total{status_class=~"4xx|5xx"}[5m]))
+              / sum(rate(aegis_requests_total[5m]))
+              > {{ mulf .Values.prometheus.sloAlerting.availability.errorBudgetFraction 14.4 }}
+            )
+          for: 5m
+          labels:
+            severity: critical
+            slo: availability
+            long_window: 1h
+            short_window: 5m
+            service: aegis-proxy
+          annotations:
+            summary: "Aegis availability SLO: critical burn rate (1h window)"
+            description: >-
+              Aegis proxy is consuming its availability error budget at ≥14.4×
+              the sustainable rate over the last 1h (confirmed over 5m).
+              At this rate 2% of the monthly budget will be exhausted in 1 hour.
+            runbook_url: "{{ .Values.prometheus.sloAlerting.runbookBaseUrl }}/availability.md"
+
+        - alert: AegisSLOAvailabilityBurnRate6H
+          expr: |
+            (
+              sum(rate(aegis_requests_total{status_class=~"4xx|5xx"}[6h]))
+              / sum(rate(aegis_requests_total[6h]))
+              > {{ mulf .Values.prometheus.sloAlerting.availability.errorBudgetFraction 6.0 }}
+            ) and (
+              sum(rate(aegis_requests_total{status_class=~"4xx|5xx"}[30m]))
+              / sum(rate(aegis_requests_total[30m]))
+              > {{ mulf .Values.prometheus.sloAlerting.availability.errorBudgetFraction 6.0 }}
+            )
+          for: 30m
+          labels:
+            severity: critical
+            slo: availability
+            long_window: 6h
+            short_window: 30m
+            service: aegis-proxy
+          annotations:
+            summary: "Aegis availability SLO: high burn rate (6h window)"
+            description: >-
+              Aegis proxy is consuming its availability error budget at ≥6×
+              the sustainable rate over the last 6h (confirmed over 30m).
+              At this rate 5% of the monthly budget will be exhausted in 6 hours.
+            runbook_url: "{{ .Values.prometheus.sloAlerting.runbookBaseUrl }}/availability.md"
+
+        - alert: AegisSLOAvailabilityBurnRate24H
+          expr: |
+            (
+              sum(rate(aegis_requests_total{status_class=~"4xx|5xx"}[24h]))
+              / sum(rate(aegis_requests_total[24h]))
+              > {{ mulf .Values.prometheus.sloAlerting.availability.errorBudgetFraction 3.0 }}
+            ) and (
+              sum(rate(aegis_requests_total{status_class=~"4xx|5xx"}[2h]))
+              / sum(rate(aegis_requests_total[2h]))
+              > {{ mulf .Values.prometheus.sloAlerting.availability.errorBudgetFraction 3.0 }}
+            )
+          for: 2h
+          labels:
+            severity: warning
+            slo: availability
+            long_window: 24h
+            short_window: 2h
+            service: aegis-proxy
+          annotations:
+            summary: "Aegis availability SLO: elevated burn rate (24h window)"
+            description: >-
+              Aegis proxy is consuming its availability error budget at ≥3×
+              the sustainable rate over the last 24h (confirmed over 2h).
+              At this rate 10% of the monthly budget will be exhausted in 24 hours.
+            runbook_url: "{{ .Values.prometheus.sloAlerting.runbookBaseUrl }}/availability.md"
+
+        - alert: AegisSLOAvailabilityBurnRate72H
+          expr: |
+            (
+              sum(rate(aegis_requests_total{status_class=~"4xx|5xx"}[72h]))
+              / sum(rate(aegis_requests_total[72h]))
+              > {{ mulf .Values.prometheus.sloAlerting.availability.errorBudgetFraction 1.0 }}
+            ) and (
+              sum(rate(aegis_requests_total{status_class=~"4xx|5xx"}[6h]))
+              / sum(rate(aegis_requests_total[6h]))
+              > {{ mulf .Values.prometheus.sloAlerting.availability.errorBudgetFraction 1.0 }}
+            )
+          for: 6h
+          labels:
+            severity: warning
+            slo: availability
+            long_window: 72h
+            short_window: 6h
+            service: aegis-proxy
+          annotations:
+            summary: "Aegis availability SLO: slow burn rate (72h window)"
+            description: >-
+              Aegis proxy is consuming its availability error budget at ≥1×
+              the sustainable rate over the last 72h (confirmed over 6h).
+              The monthly error budget will be exhausted at the current rate.
+            runbook_url: "{{ .Values.prometheus.sloAlerting.runbookBaseUrl }}/availability.md"
+
+        # ── Latency SLO (99% of requests < 500ms) ──────────────────────────────
+        # Error budget: 1% of requests (7.2 hours/month)
+        # Error rate metric: fraction of requests exceeding 500ms p99 target
+
+        - alert: AegisSLOLatencyBurnRate1H
+          expr: |
+            (
+              1 - (
+                sum(rate(aegis_request_duration_seconds_bucket{stage="total",le="0.5"}[1h]))
+                / sum(rate(aegis_request_duration_seconds_count{stage="total"}[1h]))
+              ) > {{ mulf .Values.prometheus.sloAlerting.latency.errorBudgetFraction 14.4 }}
+            ) and (
+              1 - (
+                sum(rate(aegis_request_duration_seconds_bucket{stage="total",le="0.5"}[5m]))
+                / sum(rate(aegis_request_duration_seconds_count{stage="total"}[5m]))
+              ) > {{ mulf .Values.prometheus.sloAlerting.latency.errorBudgetFraction 14.4 }}
+            )
+          for: 5m
+          labels:
+            severity: critical
+            slo: latency
+            long_window: 1h
+            short_window: 5m
+            service: aegis-proxy
+          annotations:
+            summary: "Aegis latency SLO: critical burn rate (1h window)"
+            description: >-
+              More than {{ mulf .Values.prometheus.sloAlerting.latency.errorBudgetFraction 14.4 | toString }}
+              of Aegis requests are exceeding the 500ms latency target over the last 1h.
+              2% of the monthly latency budget will be exhausted in 1 hour at this rate.
+            runbook_url: "{{ .Values.prometheus.sloAlerting.runbookBaseUrl }}/latency.md"
+
+        - alert: AegisSLOLatencyBurnRate6H
+          expr: |
+            (
+              1 - (
+                sum(rate(aegis_request_duration_seconds_bucket{stage="total",le="0.5"}[6h]))
+                / sum(rate(aegis_request_duration_seconds_count{stage="total"}[6h]))
+              ) > {{ mulf .Values.prometheus.sloAlerting.latency.errorBudgetFraction 6.0 }}
+            ) and (
+              1 - (
+                sum(rate(aegis_request_duration_seconds_bucket{stage="total",le="0.5"}[30m]))
+                / sum(rate(aegis_request_duration_seconds_count{stage="total"}[30m]))
+              ) > {{ mulf .Values.prometheus.sloAlerting.latency.errorBudgetFraction 6.0 }}
+            )
+          for: 30m
+          labels:
+            severity: critical
+            slo: latency
+            long_window: 6h
+            short_window: 30m
+            service: aegis-proxy
+          annotations:
+            summary: "Aegis latency SLO: high burn rate (6h window)"
+            description: >-
+              More than {{ mulf .Values.prometheus.sloAlerting.latency.errorBudgetFraction 6.0 | toString }}
+              of Aegis requests are exceeding the 500ms latency target over the last 6h.
+              5% of the monthly latency budget will be exhausted in 6 hours at this rate.
+            runbook_url: "{{ .Values.prometheus.sloAlerting.runbookBaseUrl }}/latency.md"
+
+        - alert: AegisSLOLatencyBurnRate24H
+          expr: |
+            (
+              1 - (
+                sum(rate(aegis_request_duration_seconds_bucket{stage="total",le="0.5"}[24h]))
+                / sum(rate(aegis_request_duration_seconds_count{stage="total"}[24h]))
+              ) > {{ mulf .Values.prometheus.sloAlerting.latency.errorBudgetFraction 3.0 }}
+            ) and (
+              1 - (
+                sum(rate(aegis_request_duration_seconds_bucket{stage="total",le="0.5"}[2h]))
+                / sum(rate(aegis_request_duration_seconds_count{stage="total"}[2h]))
+              ) > {{ mulf .Values.prometheus.sloAlerting.latency.errorBudgetFraction 3.0 }}
+            )
+          for: 2h
+          labels:
+            severity: warning
+            slo: latency
+            long_window: 24h
+            short_window: 2h
+            service: aegis-proxy
+          annotations:
+            summary: "Aegis latency SLO: elevated burn rate (24h window)"
+            description: >-
+              More than {{ mulf .Values.prometheus.sloAlerting.latency.errorBudgetFraction 3.0 | toString }}
+              of Aegis requests are exceeding the 500ms latency target over the last 24h.
+              10% of the monthly latency budget will be exhausted in 24 hours at this rate.
+            runbook_url: "{{ .Values.prometheus.sloAlerting.runbookBaseUrl }}/latency.md"
+
+        - alert: AegisSLOLatencyBurnRate72H
+          expr: |
+            (
+              1 - (
+                sum(rate(aegis_request_duration_seconds_bucket{stage="total",le="0.5"}[72h]))
+                / sum(rate(aegis_request_duration_seconds_count{stage="total"}[72h]))
+              ) > {{ mulf .Values.prometheus.sloAlerting.latency.errorBudgetFraction 1.0 }}
+            ) and (
+              1 - (
+                sum(rate(aegis_request_duration_seconds_bucket{stage="total",le="0.5"}[6h]))
+                / sum(rate(aegis_request_duration_seconds_count{stage="total"}[6h]))
+              ) > {{ mulf .Values.prometheus.sloAlerting.latency.errorBudgetFraction 1.0 }}
+            )
+          for: 6h
+          labels:
+            severity: warning
+            slo: latency
+            long_window: 72h
+            short_window: 6h
+            service: aegis-proxy
+          annotations:
+            summary: "Aegis latency SLO: slow burn rate (72h window)"
+            description: >-
+              More than {{ mulf .Values.prometheus.sloAlerting.latency.errorBudgetFraction 1.0 | toString }}
+              of Aegis requests are exceeding the 500ms latency target over the last 72h.
+              The monthly latency budget will be exhausted at the current rate.
+            runbook_url: "{{ .Values.prometheus.sloAlerting.runbookBaseUrl }}/latency.md"
+{{- end }}
