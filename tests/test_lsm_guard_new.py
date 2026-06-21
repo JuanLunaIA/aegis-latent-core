@@ -41,15 +41,19 @@ def test_detect_sandbox_hermes_marker_present():
 
 
 def test_is_sandbox_property_false():
-    with patch.object(LSMGuard, "_detect_sandbox", return_value=False), \
-         patch.object(LSMGuard, "verify_confinement", return_value=False):
+    with (
+        patch.object(LSMGuard, "_detect_sandbox", return_value=False),
+        patch.object(LSMGuard, "verify_confinement", return_value=False),
+    ):
         guard = LSMGuard()
     assert guard.is_sandbox is False
 
 
 def test_is_sandbox_property_true():
-    with patch.object(LSMGuard, "_detect_sandbox", return_value=True), \
-         patch.object(LSMGuard, "verify_confinement", return_value=False):
+    with (
+        patch.object(LSMGuard, "_detect_sandbox", return_value=True),
+        patch.object(LSMGuard, "verify_confinement", return_value=False),
+    ):
         guard = LSMGuard()
     assert guard.is_sandbox is True
 
@@ -124,9 +128,11 @@ def test_check_apparmor_exception_returns_false():
 
 
 def test_verify_confinement_selinux_active():
-    with patch.object(LSMGuard, "_detect_sandbox", return_value=False), \
-         patch.object(LSMGuard, "_check_selinux", return_value=True), \
-         patch.object(LSMGuard, "_check_apparmor", return_value=False):
+    with (
+        patch.object(LSMGuard, "_detect_sandbox", return_value=False),
+        patch.object(LSMGuard, "_check_selinux", return_value=True),
+        patch.object(LSMGuard, "_check_apparmor", return_value=False),
+    ):
         guard = LSMGuard()
         # verify_confinement() was called in __init__; _is_confined is set
         assert guard._is_confined is True
@@ -135,26 +141,32 @@ def test_verify_confinement_selinux_active():
 
 
 def test_verify_confinement_apparmor_active():
-    with patch.object(LSMGuard, "_detect_sandbox", return_value=False), \
-         patch.object(LSMGuard, "_check_selinux", return_value=False), \
-         patch.object(LSMGuard, "_check_apparmor", return_value=True):
+    with (
+        patch.object(LSMGuard, "_detect_sandbox", return_value=False),
+        patch.object(LSMGuard, "_check_selinux", return_value=False),
+        patch.object(LSMGuard, "_check_apparmor", return_value=True),
+    ):
         guard = LSMGuard()
         assert guard._is_confined is True
         assert guard.verify_confinement() is True
 
 
 def test_verify_confinement_no_lsm():
-    with patch.object(LSMGuard, "_detect_sandbox", return_value=False), \
-         patch.object(LSMGuard, "_check_selinux", return_value=False), \
-         patch.object(LSMGuard, "_check_apparmor", return_value=False):
+    with (
+        patch.object(LSMGuard, "_detect_sandbox", return_value=False),
+        patch.object(LSMGuard, "_check_selinux", return_value=False),
+        patch.object(LSMGuard, "_check_apparmor", return_value=False),
+    ):
         guard = LSMGuard()
         assert guard._is_confined is False
         assert guard.verify_confinement() is False
 
 
 def test_verify_confinement_exception_returns_false():
-    with patch.object(LSMGuard, "_detect_sandbox", return_value=False), \
-         patch.object(LSMGuard, "_check_selinux", side_effect=Exception("kaboom")):
+    with (
+        patch.object(LSMGuard, "_detect_sandbox", return_value=False),
+        patch.object(LSMGuard, "_check_selinux", side_effect=Exception("kaboom")),
+    ):
         guard = LSMGuard()
         assert guard._is_confined is False
 
@@ -163,16 +175,20 @@ def test_verify_confinement_exception_returns_false():
 
 
 def test_get_confinement_status_confined():
-    with patch.object(LSMGuard, "_detect_sandbox", return_value=False), \
-         patch.object(LSMGuard, "_check_selinux", return_value=True), \
-         patch.object(LSMGuard, "_check_apparmor", return_value=False):
+    with (
+        patch.object(LSMGuard, "_detect_sandbox", return_value=False),
+        patch.object(LSMGuard, "_check_selinux", return_value=True),
+        patch.object(LSMGuard, "_check_apparmor", return_value=False),
+    ):
         guard = LSMGuard()
     assert guard.get_confinement_status() == "CONFINED"
 
 
 def test_get_confinement_status_unconfined():
-    with patch.object(LSMGuard, "_detect_sandbox", return_value=False), \
-         patch.object(LSMGuard, "_check_selinux", return_value=False), \
-         patch.object(LSMGuard, "_check_apparmor", return_value=False):
+    with (
+        patch.object(LSMGuard, "_detect_sandbox", return_value=False),
+        patch.object(LSMGuard, "_check_selinux", return_value=False),
+        patch.object(LSMGuard, "_check_apparmor", return_value=False),
+    ):
         guard = LSMGuard()
     assert guard.get_confinement_status() == "UNCONFINED"

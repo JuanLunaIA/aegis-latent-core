@@ -61,6 +61,7 @@ class WAFResult:
     allowed: bool
     reason: str | None = None
     score: float = 0.0
+    shadow_blocked: bool = False
 
 
 class AegisWAF:
@@ -71,8 +72,9 @@ class AegisWAF:
     Layer 2: LLMGuardLocal weighted signal scoring (from adversarial_filter).
     """
 
-    def __init__(self, strict_mode: bool = True) -> None:
+    def __init__(self, strict_mode: bool = True, shadow_mode: bool = False) -> None:
         self.strict_mode = strict_mode
+        self.shadow_mode = shadow_mode
 
         # Tier-4 Rust pre-filter: Aho-Corasick SIMD scan (~250 ns per prompt).
         # Activated when the aegis_rust extension is compiled and importable.
@@ -145,7 +147,7 @@ class AegisWAF:
         try:
             from aegis.core.adversarial_filter import LLMGuardLocal
 
-            self._guard = LLMGuardLocal()
+            self._guard = LLMGuardLocal()  # type: ignore[no-untyped-call]
             logger.debug("AegisWAF: LLMGuardLocal (layer 2) active")
         except ImportError:
             logger.warning(
@@ -153,11 +155,32 @@ class AegisWAF:
             )
 
     def inspect_payload(self, body: Any) -> WAFResult:
-        """
-        Run both WAF layers against the request body.
+        """Run both WAF layers against the request body.
 
-        Returns WAFResult(allowed=False, ...) on any detection.
+        In normal mode returns ``WAFResult(allowed=False, …)`` on any
+        detection.  In shadow mode (``shadow_mode=True``) the same detection
+        pipeline runs but the block is suppressed: the result is
+        ``WAFResult(allowed=True, shadow_blocked=True, …)`` so that traffic
+        is never interrupted while blocked payloads are still logged for rule
+        tuning.
         """
+        result = self._run_detection(body)
+        if self.shadow_mode and not result.allowed:
+            logger.warning(
+                "WAF shadow mode — would-be block suppressed: %s (score=%.2f)",
+                result.reason,
+                result.score,
+            )
+            return WAFResult(
+                allowed=True,
+                reason=result.reason,
+                score=result.score,
+                shadow_blocked=True,
+            )
+        return result
+
+    def _run_detection(self, body: Any) -> WAFResult:
+        """Internal detection pipeline; always returns an enforcement decision."""
         # ── Tier-4: Rust Aho-Corasick pre-filter ─────────────────────
         # Fast exact-pattern scan before Python regex loop.
         # Only short-circuits on definite block; Python layers are authoritative.
@@ -201,21 +224,59 @@ class AegisWAF:
             text = self._extract_text(body)
             if text:
                 try:
-                    result = self._guard.analyze_input(text)
-                    if result.is_malicious:
+                    guard_result = self._guard.analyze_input(text)
+                    if guard_result.is_malicious:
                         return WAFResult(
                             allowed=False,
                             reason=(
-                                f"Layer-2 adversarial signal: {result.threat_type} "
-                                f"(confidence={result.confidence:.2f})"
+                                f"Layer-2 adversarial signal: {guard_result.threat_type} "
+                                f"(confidence={guard_result.confidence:.2f})"
                             ),
-                            score=result.confidence,
+                            score=guard_result.confidence,
                         )
                 except Exception as exc:
                     # Never let WAF errors block a legitimate request
                     logger.debug("AegisWAF layer-2 error (non-fatal): %s", exc)
 
         return WAFResult(allowed=True)
+
+    def enable_hot_reload(
+        self,
+        path: str,
+        poll_interval_s: float = 1.0,
+    ) -> Any:
+        """Start watching *path* for WAF pattern changes; reload without restart.
+
+        The returned :class:`~aegis.core.waf_hot_reload.WAFHotReloader` is a
+        daemon thread; call ``.stop()`` to shut it down cleanly.
+
+        Parameters
+        ----------
+        path:
+            Path to a JSON WAF pattern file
+            (see :mod:`aegis.core.waf_hot_reload` for the schema).
+        poll_interval_s:
+            mtime-poll/select timeout in seconds.  Only relevant when inotify
+            is unavailable.
+
+        Returns
+        -------
+        WAFHotReloader
+            The running reloader instance.
+        """
+        from aegis.core.waf_hot_reload import WAFHotReloader, WAFPatternSet
+
+        def _on_reload(ps: WAFPatternSet) -> None:
+            self._critical_patterns = ps.critical
+            logger.info(
+                "AegisWAF: hot-reloaded %d critical patterns from %s",
+                len(ps.critical),
+                path,
+            )
+
+        reloader: Any = WAFHotReloader(path, on_reload=_on_reload, poll_interval_s=poll_interval_s)
+        reloader.start()
+        return reloader
 
     # ── helpers ───────────────────────────────────────────────────────
 

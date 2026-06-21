@@ -138,9 +138,11 @@ def test_lifespan_storage_initialize_failure():
 def test_create_app_with_cors_origins():
     """When cors_origins is set, CORS middleware is added."""
     s = _make_settings(cors_origins="http://localhost:3000,http://example.com")
-    with patch("aegis_server.main.get_settings", return_value=s), \
-         patch("aegis_server.main.get_provider", return_value=_make_storage()), \
-         patch("aegis_server.main.get_signer", return_value=_make_signer()):
+    with (
+        patch("aegis_server.main.get_settings", return_value=s),
+        patch("aegis_server.main.get_provider", return_value=_make_storage()),
+        patch("aegis_server.main.get_signer", return_value=_make_signer()),
+    ):
         app = create_app(settings=s)
     cors_classes = [getattr(m, "cls", None) for m in app.user_middleware]
     assert any("CORS" in (c.__name__ if c else "") for c in cors_classes)
@@ -151,9 +153,11 @@ def test_create_app_debug_mode_exposes_docs():
     s = _make_settings()
     s_debug = MagicMock(wraps=s)
     s_debug.debug_mode = True
-    with patch("aegis_server.main.get_settings", return_value=s_debug), \
-         patch("aegis_server.main.get_provider", return_value=_make_storage()), \
-         patch("aegis_server.main.get_signer", return_value=_make_signer()):
+    with (
+        patch("aegis_server.main.get_settings", return_value=s_debug),
+        patch("aegis_server.main.get_provider", return_value=_make_storage()),
+        patch("aegis_server.main.get_signer", return_value=_make_signer()),
+    ):
         app = create_app(settings=s_debug)
     assert app.docs_url == "/docs"
 
@@ -161,9 +165,11 @@ def test_create_app_debug_mode_exposes_docs():
 def test_create_app_no_debug_hides_docs():
     """Without debug mode, docs_url is None (secure default)."""
     s = _make_settings()
-    with patch("aegis_server.main.get_settings", return_value=s), \
-         patch("aegis_server.main.get_provider", return_value=_make_storage()), \
-         patch("aegis_server.main.get_signer", return_value=_make_signer()):
+    with (
+        patch("aegis_server.main.get_settings", return_value=s),
+        patch("aegis_server.main.get_provider", return_value=_make_storage()),
+        patch("aegis_server.main.get_signer", return_value=_make_signer()),
+    ):
         app = create_app(settings=s)
     assert app.docs_url is None
 
@@ -488,25 +494,29 @@ async def test_run_forensic_analytics_basic():
     signer = _make_signer()
 
     req_bytes = json.dumps({"model": "gpt-4", "messages": []}).encode()
-    resp_bytes = json.dumps({
-        "id": "cmpl-1",
-        "choices": [{
-            "message": {"content": "hello"},
-            "logprobs": {
-                "content": [
-                    {
-                        "token": "hello",
-                        "logprob": -0.5,
-                        "top_logprobs": [
-                            {"token": "hello", "logprob": -0.5},
-                            {"token": "world", "logprob": -1.2},
-                        ],
-                    }
-                ]
-            }
-        }],
-        "usage": {"prompt_tokens": 10, "completion_tokens": 1},
-    }).encode()
+    resp_bytes = json.dumps(
+        {
+            "id": "cmpl-1",
+            "choices": [
+                {
+                    "message": {"content": "hello"},
+                    "logprobs": {
+                        "content": [
+                            {
+                                "token": "hello",
+                                "logprob": -0.5,
+                                "top_logprobs": [
+                                    {"token": "hello", "logprob": -0.5},
+                                    {"token": "world", "logprob": -1.2},
+                                ],
+                            }
+                        ]
+                    },
+                }
+            ],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 1},
+        }
+    ).encode()
 
     await _run_forensic_analytics(
         request_id="req-001",
@@ -702,19 +712,23 @@ async def test_run_forensic_analytics_single_logprob_deterministic():
     storage = _make_storage()
     signer = _make_signer()
 
-    resp = json.dumps({
-        "choices": [{
-            "logprobs": {
-                "content": [
-                    {
-                        "token": "hi",
-                        "logprob": -0.1,
-                        "top_logprobs": [{"token": "hi", "logprob": -0.1}],
+    resp = json.dumps(
+        {
+            "choices": [
+                {
+                    "logprobs": {
+                        "content": [
+                            {
+                                "token": "hi",
+                                "logprob": -0.1,
+                                "top_logprobs": [{"token": "hi", "logprob": -0.1}],
+                            }
+                        ]
                     }
-                ]
-            }
-        }]
-    }).encode()
+                }
+            ]
+        }
+    ).encode()
 
     await _run_forensic_analytics(
         request_id="req-009",
@@ -1021,19 +1035,30 @@ async def test_run_forensic_analytics_logprob_extraction_exception():
 async def test_run_forensic_analytics_entropy_exception():
     """When np.mean raises, entropy calculation exception is caught (lines 483-484)."""
     import numpy as np
+
     storage = _make_storage()
     signer = _make_signer()
 
-    resp = json.dumps({
-        "choices": [{
-            "logprobs": {
-                "content": [{"token": "hello", "logprob": -0.5, "top_logprobs": [
-                    {"token": "hello", "logprob": -0.5},
-                    {"token": "world", "logprob": -1.2},
-                ]}]
-            }
-        }]
-    }).encode()
+    resp = json.dumps(
+        {
+            "choices": [
+                {
+                    "logprobs": {
+                        "content": [
+                            {
+                                "token": "hello",
+                                "logprob": -0.5,
+                                "top_logprobs": [
+                                    {"token": "hello", "logprob": -0.5},
+                                    {"token": "world", "logprob": -1.2},
+                                ],
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    ).encode()
 
     with patch("aegis_server.main.np.mean", side_effect=RuntimeError("numpy error")):
         await _run_forensic_analytics(

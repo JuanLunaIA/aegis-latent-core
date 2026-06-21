@@ -17,6 +17,7 @@ import pytest
 def test_getattr_known_submodule_directly():
     """Calling __getattr__('mmr') directly exercises lines 41-43."""
     import aegis.core as core
+
     # Call __getattr__ directly to bypass globals() cache
     mod = core.__getattr__("mmr")
     assert mod is not None
@@ -26,6 +27,7 @@ def test_getattr_known_submodule_directly():
 def test_getattr_known_submodule_crypto_audit():
     """__getattr__('crypto_audit') exercises lines 41-43 for a different submodule."""
     import aegis.core as core
+
     mod = core.__getattr__("crypto_audit")
     assert mod is not None
 
@@ -70,6 +72,7 @@ def test_getattr_submodule_all_raise_then_attribute_error():
 
 def test_dir_includes_submodule_names():
     import aegis.core as core
+
     d = core.__dir__()
     assert "mmr" in d
     assert "crypto_audit" in d

@@ -73,6 +73,7 @@ class LLMForwarder:
         self,
         settings: AegisSettings,
         provider: ProviderAdapter | None = None,
+        egress_guard: Any = None,
     ) -> None:
         self._settings = settings
         self._provider: ProviderAdapter = provider or OpenAIAdapter()
@@ -84,6 +85,7 @@ class LLMForwarder:
             recovery_timeout=settings.circuit_breaker_recovery_timeout,
             success_threshold=settings.circuit_breaker_success_threshold,
         )
+        self._egress_guard = egress_guard
 
     @property
     def provider(self) -> ProviderAdapter:
@@ -175,6 +177,10 @@ class LLMForwarder:
         The adapter translates path + body before sending, and translates
         the raw provider response bytes back before returning.
         """
+        # Airgap egress guard: block if upstream host is not in allowlist.
+        if self._egress_guard is not None:
+            self._egress_guard.check(self._settings.backend_url_str)
+
         # Circuit breaker: fail-fast when upstream is known to be down.
         # CircuitOpenError propagates to the caller (app.py) which returns 503.
         self._circuit_breaker.check()
@@ -265,6 +271,10 @@ class LLMForwarder:
             are the *translated* OpenAI SSE bytes, not the raw provider bytes.
         """
         assert self._client is not None, "LLMForwarder.start() was not called"
+
+        # Airgap egress guard: block if upstream host is not in allowlist.
+        if self._egress_guard is not None:
+            self._egress_guard.check(self._settings.backend_url_str)
 
         # Circuit breaker check before initiating the stream.
         self._circuit_breaker.check()

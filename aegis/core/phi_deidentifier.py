@@ -24,6 +24,7 @@ Usage::
     # audit.confidence_scores → {"DATE": 0.88, "SSN": 0.99}
     # audit.timestamp_iso     → "2026-06-20T12:34:56.000000+00:00"
 """
+
 from __future__ import annotations
 
 import re
@@ -160,23 +161,23 @@ _SAFE_HARBOR_PATTERNS: list[_Pattern] = [
 # Per-category confidence scores for the regex-based Safe Harbor scrubber.
 # Values reflect how likely a regex match is a true PHI entity vs false positive.
 _CONFIDENCE: dict[str, float] = {
-    "SSN": 0.99,           # NNN-NN-NNNN is highly specific
-    "EMAIL": 0.99,         # user@domain.tld is unambiguous
-    "URL": 0.98,           # http(s):// prefix is unambiguous
-    "IP_ADDRESS": 0.97,    # four-octet or IPv6 form
-    "NPI": 0.95,           # requires "NPI" prefix → low false-positive rate
-    "MRN": 0.95,           # requires "MRN" / "Medical Record" prefix
-    "BIOMETRIC": 0.95,     # keyword-anchored
+    "SSN": 0.99,  # NNN-NN-NNNN is highly specific
+    "EMAIL": 0.99,  # user@domain.tld is unambiguous
+    "URL": 0.98,  # http(s):// prefix is unambiguous
+    "IP_ADDRESS": 0.97,  # four-octet or IPv6 form
+    "NPI": 0.95,  # requires "NPI" prefix → low false-positive rate
+    "MRN": 0.95,  # requires "MRN" / "Medical Record" prefix
+    "BIOMETRIC": 0.95,  # keyword-anchored
     "HEALTH_PLAN_ID": 0.88,
-    "ACCOUNT": 0.92,       # credit-card format (Luhn not checked)
-    "PHONE": 0.90,         # 10-digit forms; area codes not validated
-    "LICENSE": 0.85,       # prefixed but alphanumeric body is loose
-    "DEVICE_ID": 0.85,     # S/N prefix but wide character range
-    "DATE": 0.88,          # month/day/year forms; year-only excluded
-    "ADDRESS": 0.85,       # street-type suffix heuristic
-    "NAME": 0.80,          # title prefix heuristic; some false positives
-    "VIN": 0.80,           # any 17-char alphanumeric
-    "ZIP": 0.75,           # 5-digit number; frequent false positives
+    "ACCOUNT": 0.92,  # credit-card format (Luhn not checked)
+    "PHONE": 0.90,  # 10-digit forms; area codes not validated
+    "LICENSE": 0.85,  # prefixed but alphanumeric body is loose
+    "DEVICE_ID": 0.85,  # S/N prefix but wide character range
+    "DATE": 0.88,  # month/day/year forms; year-only excluded
+    "ADDRESS": 0.85,  # street-type suffix heuristic
+    "NAME": 0.80,  # title prefix heuristic; some false positives
+    "VIN": 0.80,  # any 17-char alphanumeric
+    "ZIP": 0.75,  # 5-digit number; frequent false positives
 }
 
 
@@ -247,6 +248,7 @@ class PHIDeidentifier:
         hits: dict[str, int] = {}
         current = text
         for label, rx in self._compiled:
+
             def _replace(m: re.Match[str], _label: str = label) -> str:  # noqa: E731
                 hits[_label] = hits.get(_label, 0) + 1
                 return f"[REDACTED:{_label}]"
@@ -267,10 +269,7 @@ class PHIDeidentifier:
             category metadata.
         """
         result = self.scrub(text)
-        confidence_scores = {
-            label: _CONFIDENCE.get(label, 0.80)
-            for label in result.hits
-        }
+        confidence_scores = {label: _CONFIDENCE.get(label, 0.80) for label in result.hits}
         audit = ScrubAuditRecord(
             timestamp_iso=datetime.now(tz=UTC).isoformat(),
             entity_hits=dict(result.hits),
@@ -280,7 +279,9 @@ class PHIDeidentifier:
         )
         return result, audit
 
-    def scrub_messages(self, messages: list[dict[str, object]]) -> tuple[list[dict[str, object]], dict[str, int]]:
+    def scrub_messages(
+        self, messages: list[dict[str, object]]
+    ) -> tuple[list[dict[str, object]], dict[str, int]]:
         """Scrub PHI from the ``content`` field of each message dict (in-place copy).
 
         Returns a new list of message dicts (originals are not mutated) and

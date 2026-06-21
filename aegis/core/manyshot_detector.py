@@ -167,10 +167,7 @@ class ManyShotDetector:
                 f"(threshold={self.threshold}); signals={counts}"
             )
         elif shot_count > 0:
-            reason = (
-                f"{shot_count} few-shot examples detected "
-                f"(below threshold={self.threshold})"
-            )
+            reason = f"{shot_count} few-shot examples detected (below threshold={self.threshold})"
         else:
             reason = "no many-shot patterns detected"
 
@@ -183,9 +180,7 @@ class ManyShotDetector:
             scan_length=len(text),
         )
 
-    def evaluate_messages(
-        self, messages: list[dict[str, object]]
-    ) -> ManyShotDetectionResult:
+    def evaluate_messages(self, messages: list[dict[str, object]]) -> ManyShotDetectionResult:
         """Evaluate a list of chat message dicts by concatenating all content.
 
         Concatenation matters: an attacker may spread examples across multiple

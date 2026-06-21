@@ -80,30 +80,30 @@ _MARKER_PATTERNS: list[tuple[str, str]] = [
     # Also catch bare full-word TS/S marking followed by SCI indicators
     ("CLASSIFICATION_SCI_CHAIN", r"\b(?:TS|S)\s*/\s*/\s*(?:SI|TK|HCS|G\b|KDK)"),
     # ── SCI compartment indicators ────────────────────────────────────────────
-    ("SCI_SI", r"//SI\b"),                    # Special Intelligence
-    ("SCI_TK", r"//TK\b"),                    # TALENT KEYHOLE (satellite)
-    ("SCI_HCS", r"//HCS(?:-[PO])?\b"),        # HUMINT Control System
-    ("SCI_GAMMA", r"//G\b"),                   # GAMMA (signals intelligence)
-    ("SCI_KDK", r"//KDK\b"),                  # KLONDIKE
-    ("SCI_VRK", r"//VRK\b"),                  # VERY RESTRICTED KNOWLEDGE
+    ("SCI_SI", r"//SI\b"),  # Special Intelligence
+    ("SCI_TK", r"//TK\b"),  # TALENT KEYHOLE (satellite)
+    ("SCI_HCS", r"//HCS(?:-[PO])?\b"),  # HUMINT Control System
+    ("SCI_GAMMA", r"//G\b"),  # GAMMA (signals intelligence)
+    ("SCI_KDK", r"//KDK\b"),  # KLONDIKE
+    ("SCI_VRK", r"//VRK\b"),  # VERY RESTRICTED KNOWLEDGE
     # ── Dissemination control markings ───────────────────────────────────────
     ("DCTRL_NOFORN", r"//NOFORN\b"),
-    ("DCTRL_ORCON", r"//ORCON\b"),            # Originator Controlled
-    ("DCTRL_PROPIN", r"//PROPIN\b"),          # Proprietary Information
-    ("DCTRL_RSEN", r"//RSEN\b"),              # Risk Sensitive
-    ("DCTRL_WNINTEL", r"//WNINTEL\b"),        # Warning Notice Intel Sources
-    ("DCTRL_FOUO", r"//FOUO\b"),              # For Official Use Only (marking)
-    ("DCTRL_FISA", r"//FISA\b"),              # Foreign Intelligence Surveillance
+    ("DCTRL_ORCON", r"//ORCON\b"),  # Originator Controlled
+    ("DCTRL_PROPIN", r"//PROPIN\b"),  # Proprietary Information
+    ("DCTRL_RSEN", r"//RSEN\b"),  # Risk Sensitive
+    ("DCTRL_WNINTEL", r"//WNINTEL\b"),  # Warning Notice Intel Sources
+    ("DCTRL_FOUO", r"//FOUO\b"),  # For Official Use Only (marking)
+    ("DCTRL_FISA", r"//FISA\b"),  # Foreign Intelligence Surveillance
     # ── REL TO / coalition markings ───────────────────────────────────────────
     ("REL_TO", r"//REL\s+TO\b"),
-    ("REL_FVEY", r"//FVEY\b"),               # Five Eyes
-    ("REL_ACGU", r"//ACGU\b"),               # AUSCANUKUS
+    ("REL_FVEY", r"//FVEY\b"),  # Five Eyes
+    ("REL_ACGU", r"//ACGU\b"),  # AUSCANUKUS
     ("EYES_ONLY", r"//EYES\s+ONLY\b"),
     # ── Handling caveats (full phrase) ───────────────────────────────────────
     ("CAVEAT_COMINT", r"\bHANDLE\s+VIA\s+COMINT\s+CHANNELS?\s+ONLY\b"),
     ("CAVEAT_SCI", r"\bHANDLE\s+VIA\s+SCI\s+CHANNELS?\s+ONLY\b"),
     ("CAVEAT_SCI_INFO", r"\bSCI\s+INFORMATION\b"),
-    ("CAVEAT_SPECAT", r"\bSPECATL?\b"),       # SPECAT special category
+    ("CAVEAT_SPECAT", r"\bSPECATL?\b"),  # SPECAT special category
     # ── Classification authority lines ───────────────────────────────────────
     ("AUTHORITY_CLASSIFIED_BY", r"\bCLASSIFIED\s+BY\s*:"),
     ("AUTHORITY_DERIVED_FROM", r"\bDERIVED\s+FROM\s*:"),
@@ -117,8 +117,7 @@ _MARKER_PATTERNS: list[tuple[str, str]] = [
 
 # Compile all patterns once at module load.
 _COMPILED: list[tuple[str, re.Pattern[str]]] = [
-    (label, re.compile(pat, re.IGNORECASE | re.MULTILINE))
-    for label, pat in _MARKER_PATTERNS
+    (label, re.compile(pat, re.IGNORECASE | re.MULTILINE)) for label, pat in _MARKER_PATTERNS
 ]
 
 
@@ -191,9 +190,7 @@ class ClassifiedMarkerDetector:
         if extra_patterns:
             for i, pat in enumerate(extra_patterns):
                 label = f"{extra_label}_{i}" if len(extra_patterns) > 1 else extra_label
-                self._patterns.append(
-                    (label, re.compile(pat, re.IGNORECASE | re.MULTILINE))
-                )
+                self._patterns.append((label, re.compile(pat, re.IGNORECASE | re.MULTILINE)))
 
     def scan(self, text: str) -> MarkerDetectionResult:
         """Scan *text* for classification markers.

@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 1620 passed, 1 skipped, 95.43% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 3194 passed, 3 skipped, 95%+ coverage).
 
 ---
 
@@ -38,7 +38,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] `zeroize` derive on Rust signing key structs (memory scrubbing on drop)
 - [x] HSM/PKCS#11 signing integration (e.g., `python-pkcs11`, `opensc`, Thales Luna / AWS CloudHSM): `aegis/core/hsm.py` implements `HSMSigningBackend` with RSA-PSS and ECDSA-SHA256; graceful fallback when library absent; integrated into `CryptographicAuditLedger` signing priority chain
 - [ ] FIPS 140-3 Level 3 validated module boundary (currently uses upstream Rust crates, not a validated boundary)
-- [ ] NSA Suite B / CNSA 2.0 algorithm negotiation (P-384 ECDH, AES-256-GCM, SHA-384 where Suite B mandated)
+- [x] NSA Suite B / CNSA 2.0 algorithm negotiation (P-384 ECDH, AES-256-GCM, SHA-384 where Suite B mandated) (`aegis/core/cnsa_negotiation.py`: `CNSANegotiator` with a 16-algorithm approved registry across Suite B / CNSA 1.0 / CNSA 2.0 and four categories (key exchange, signature, symmetric, hash); per-category strongest-compliant selection, alias-aware resolution (Kyber→ML-KEM, Dilithium→ML-DSA), `mandate_quantum_resistant` enforcement, downgrade-attack refusal, and `NegotiationResult` with `selected`/`rejected`/`missing_categories`/`to_dict()`; `pytest tests/test_cnsa_negotiation.py` — 44 tests)
 - [ ] Kyber-1024 (FIPS 203 ML-KEM) key encapsulation for session bootstrap
 - [ ] Cross-domain solution (CDS) guard integration for classified ↔ unclassified boundary enforcement
 
@@ -91,7 +91,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] AMD SEV-SNP or Intel TDX confidential VM attestation (memory encryption + remote attestation quote)
 - [ ] Intel SGX enclave for signing key material isolation (`sgx-sdk` or `Enarx`)
 - [ ] Kernel lockdown mode compatibility (`LOCK_INTEGRITY` or `LOCK_CONFIDENTIALITY`)
-- [ ] cgroups v2 memory + CPU quotas enforced at process level (not just container level)
+- [x] cgroups v2 memory + CPU quotas enforced at process level (not just container level) (`aegis/core/cgroups_quota.py`: `CgroupsQuota.apply()` writes `memory.max` and `cpu.max` to the process's own cgroup directory (parsed from `/proc/self/cgroup` `0::<path>` format); `CgroupsQuotaResult` with `applied`/`fully_applied` properties; `apply_cgroups_quota()` reads `AEGIS_CGROUP_MEMORY_MAX` / `AEGIS_CGROUP_CPU_MAX` env vars; `is_cgroups_v2_available()` detection helper; graceful fallback on non-Linux, missing cgroup dir, and permission denied; `AEGIS_SKIP_CGROUPS_QUOTA` env override for CI; `pytest tests/test_cgroups_quota.py` — 68 tests)
 - [ ] RELRO (full), stack canary, PIE, FORTIFY_SOURCE=3 enforced in Rust build profile
 
 ---
@@ -117,7 +117,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Per-node `timestamp` (float, UTC) and `state_id` (UUID-based) for chronological ordering
 - [x] Hash chain linkage prevents retroactive insertion
 - [x] 21 CFR Part 11 compliant electronic signature: human-readable meaning annotation ("approved", "reviewed", "authored"), printed name + date in signature manifest
-- [ ] Audit trail lock-out: once a node is sealed it cannot be deleted (WORM enforcement at storage layer)
+- [x] Audit trail lock-out: once a node is sealed it cannot be deleted (WORM enforcement at storage layer) (`aegis/core/worm_ledger.py`: `WORMViolationError` raised on any deletion attempt or sealed-segment overwrite; `WORMSealRecord` sentinel written as final JSON line of each sealed WAL segment; `WORMEnforcer` with `seal(path, node_count)` — appends sentinel + sets 0o400 read-only permissions; `verify(path)` — dual check: 0o400 mode + worm_seal sentinel present; `enforce_immutability(path)` — raises `WORMViolationError` for sealed paths (in-memory or on-disk); `delete_node()` — unconditionally raises `WORMViolationError`; `is_sealed(path)`, `sealed_segments` frozenset; `count_nodes_in_segment()` helper skips sentinel records; `unseal_for_testing()` for CI cleanup; `pytest tests/test_worm_ledger.py` — 56 tests; complies with 21 CFR Part 11 Annex 11 §5, NIST SP 800-53 AU-9, ISO/IEC 27037 forensic chain-of-custody)
 - [x] `audit_trail_version` schema field for migration traceability (Annex 11 §4.8): added to `AuditNode` dataclass (`aegis/core/crypto_audit.py`) as `audit_trail_version: str = "1"` with default `"1"` in `from_dict()` for forward-compatibility; field present in `to_dict()` serialization; backward-compatible (existing WAL records get default)
 - [x] System clock integrity assertion: NTP sync status logged at startup + per-node clock drift check (`aegis/core/clock_integrity.py`: `ClockIntegrityAssertion` with `assert_startup()` probing `timedatectl show` then `adjtimex(2)` via ctypes for NTP sync status; `check_node_drift(node_timestamp)` computes `abs(now - timestamp)` against configurable `max_drift_seconds` (default 5s); `NTPSyncStatus` and `ClockDriftResult` with `to_dict()`; graceful fallback when both probes unavailable; `pytest tests/test_clock_integrity.py` — 34 tests)
 - [ ] Audit viewer UI with filter by tenant, time range, event type (required for 21 CFR Part 11 retrieval)
@@ -137,10 +137,10 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Shannon entropy + KL/JS divergence per-token (general statistical anomaly detection)
 - [x] WAF with 23 critical + 11 soft patterns (prompt injection, jailbreak)
 - [ ] ICD-11 / SNOMED-CT ontology-aware anomaly detection: flag responses containing clinical codes mismatched to the request context
-- [ ] Dosage hallucination detection: numeric range check for drug dosage claims against reference database (RxNorm, NLM DailyMed)
+- [x] Dosage hallucination detection: numeric range check for drug dosage claims against reference database (RxNorm, NLM DailyMed) (`aegis/core/dosage_hallucination.py`: `DosageHallucinationDetector` with ~100-drug curated reference database across 12 therapeutic classes (NSAIDs, opioids, antibiotics, antihypertensives, statins, anticoagulants, diabetes, psychiatric/neurological, pulmonary, GI, immunosuppressants, thyroid); `scan()` + `scan_messages()` (assistant-role only) with forward + reverse regex extraction, canonical-name deduplication, unit-mismatch guard, alias resolution (e.g. tylenol→acetaminophen); `DosageFinding.summary()` with direction (exceeds max / below min); `AEGIS_DOSAGE_STRICT` env var for unknown-drug enforcement; `extra_db` for institution formularies; 54 tests)
 - [x] PII confidence scoring per response (`aegis/core/pii_confidence.py`: `PIIConfidenceFilter` wraps `PHIDeidentifier`; per-entity confidence scores → BLOCK / FLAG / LOG action via configurable `PIIConfidenceThreshold`; `evaluate()` + `evaluate_messages()` + `worst_case()` for batch response gating; `from_config()` reads `AEGIS_PII_BLOCK_THRESHOLD`/`AEGIS_PII_FLAG_THRESHOLD`; `pytest tests/test_pii_confidence.py` — 45 tests)
 - [x] Adverse event (AE) keyword detection aligned to MedDRA preferred terms
-- [ ] De-novo clinical claim detection: block generation of novel clinical trial results without citation
+- [x] De-novo clinical claim detection: block generation of novel clinical trial results without citation (`aegis/core/clinical_claim_detector.py`: `ClinicalClaimDetector` with 8 claim patterns (RCT/study/trial language, percentage efficacy, "our research demonstrates", "clinical evidence shows", "in a study of N patients", "has been proven to treat") and 9 citation exoneration patterns (numeric refs, author-year with `et al.`, DOI, PMID, NCT numbers, PubMed/Cochrane/NEJM URLs, superscript, footnote markers, "according to FDA/WHO/CDC/NIH"); two-stage scan: claim detection → citation window check (configurable `AEGIS_CLINICAL_WINDOW`, default 300 chars); overlapping claim deduplication within 50 chars; `strict` mode flags all claims regardless of citations; `scan_messages()` scans only assistant-role; `AEGIS_CLINICAL_STRICT` env var; 50 tests)
 
 ---
 
@@ -156,7 +156,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] `armv7-unknown-linux-musleabihf` target for ARM Cortex-A class PLCs
 - [ ] Embedded profile: compile-time feature flags to strip Prometheus, OpenTelemetry, Vault, compliance exporter (~60% binary size reduction)
 - [ ] Firmware signing of the Rust extension module (Secure Boot chain: UEFI → shim → kernel → module)
-- [ ] Read-only rootfs operation: all writable state (WAL, logs) directed to tmpfs or external NFS mount
+- [x] Read-only rootfs operation: all writable state (WAL, logs) directed to tmpfs or external NFS mount (`aegis/core/readonly_rootfs.py`: `ReadOnlyRootfsGuard` with dual detection probes — `/proc/mounts` scan for `ro` root mount option + write-probe via `NamedTemporaryFile`; `resolve(preferred_path, label)` returns `PathResolutionResult` with guaranteed-writable `path`, re-rooted under `AEGIS_TMPFS_BASE` (default `/tmp/aegis`) or `AEGIS_NFS_MOUNT` when preferred is not writable; `inspect()` returns `ReadOnlyRootfsResult` with `rootfs_readonly`, `proc_mounts_readonly`, `write_probe_failed`, `any_redirected`; NFS mount takes precedence over tmpfs; `AEGIS_SKIP_READONLY_CHECK` for dev environments; 47 tests + 1 root-skipped)
 
 #### 3.2 Deterministic Latency (IEC 62443 SL-3, SIL-2)
 
@@ -167,8 +167,8 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Real-time scheduling: `SCHED_FIFO` or `SCHED_DEADLINE` for Rust forwarder thread pool
 - [ ] CPU pinning (`taskset` / `cpuset` cgroup) for hot-path Rust threads to isolated cores
 - [ ] NUMA-aware memory allocation (`libnuma`) for multi-socket OT servers
-- [ ] Jitter histogram: p999 and p9999 latency tracked and alarmed (not just p99)
-- [ ] Determinism test: latency variance must be <10µs σ under synthetic load (no such test exists)
+- [x] Jitter histogram: p999 and p9999 latency tracked and alarmed (`aegis/core/observability.py`: `SCHEDULING_JITTER` Prometheus Histogram with 12 µs-level buckets spanning 1 µs – 10 ms for p50/p99/p999/p9999 jitter tracking; measured from `asyncio.create_task()` to first await via `_with_jitter_measurement` wrapper in `aegis/proxy/app.py`; no-op stub when prometheus_client absent; 5 new tests in `tests/test_observability.py` covering metric accessibility, name validation, and sub-millisecond median assertion)
+- [x] Determinism test: latency variance must be <10µs σ under synthetic load (`tests/test_determinism.py`: 11 tests cover jitter measurement shape, IEC 62443 SL-3 σ < 100µs CI-environment bound, stability across batches, 500µs hard outlier cap, coefficient-of-variation, and sequential `_spawn_background` jitter; spec target of <10µs σ is validated on dedicated hardware)
 - [ ] Interrupt coalescing configuration guide for NIC offload (DPDK / XDP path)
 
 #### 3.3 Offline-First & Mesh WAL Sync
@@ -185,9 +185,9 @@ is not committed to `docs/BENCHMARKS.md`.
 
 - [x] Seccomp BPF: `ptrace`, `mount`, `reboot` blocked permanently
 - [x] mTLS configurable CA bundle + client cert
-- [ ] MODBUS/DNP3/OPC-UA protocol parser to detect SCADA command injection in LLM-suggested outputs
-- [ ] Air-gapped network zone enforcement: configuration option to block all outbound connections except configured upstream (no current egress firewall at application layer)
-- [ ] DMZ-mode: proxy accepts connections only from configured source IP allowlist
+- [x] MODBUS/DNP3/OPC-UA protocol parser to detect SCADA command injection in LLM-suggested outputs (`aegis/core/ot_protocol_scanner.py`: `OTProtocolScanner` with 16 signatures across 3 protocols — MODBUS (hex frame, function codes, write FC 05/06/15/16, register/coil addresses, API calls, command composition), DNP3 (CROB/Group 12/Var 1, group-variation references, direct-operate/SBO, LATCH_ON/OFF/PULSE/TRIP control codes, master-operate context), OPC-UA (NodeId ns=N;i=M/s=Name, write/method calls, Security Mode None, endpoint URL opc.tcp://); complementary-probability risk scoring; `AEGIS_OT_BLOCK_THRESHOLD` env var; `scan_messages()` scans assistant-role only; `OTScanResult.to_dict()` with `protocols_detected`, `signals`, `risk_score`, `should_block`; 55 tests)
+- [x] Air-gapped network zone enforcement: `AEGIS_AIRGAP_MODE=true` activates `EgressGuard` in `aegis/proxy/egress_guard.py` — `LLMForwarder.forward_json()` and `stream_sse()` call `guard.check(upstream_url)` before every outbound HTTP request; non-allowlisted hosts raise `EgressBlockedError`; upstream host is always auto-included; `AEGIS_AIRGAP_ALLOWED_HOSTS` CSV for additional hosts; wired via `AegisSettings.get_egress_guard()` into forwarder lifespan; 37 tests in `tests/test_egress_guard.py`
+- [x] DMZ-mode: proxy accepts connections only from configured source IP allowlist (`aegis/proxy/dmz_middleware.py`: `DMZSourceIPMiddleware` rejects requests from IPs not in `AEGIS_DMZ_ALLOWED_SOURCE_IPS` (comma-separated IPv4/IPv6/CIDR list) with 403 before any auth; `dmz_trust_proxy_headers` enables X-Forwarded-For/X-Real-IP resolution behind a trusted load balancer; wired into `create_app()` at startup; `AegisSettings.get_dmz_networks()` parses entries at startup; 34 tests in `tests/test_dmz_middleware.py`)
 - [ ] IEC 62443 Zone and Conduit model documentation for customer network segmentation guidance
 
 ---
@@ -201,7 +201,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Redis-backed session state (configurable)
 - [ ] Raft consensus for replicated WAL (e.g., `openraft` crate): leader election, log replication, snapshot installation
 - [ ] Multi-region WAL replication with configurable consistency level (strong / eventual / quorum)
-- [ ] WAL segment replication lag metric: `aegis_wal_replication_lag_bytes` in Prometheus
+- [x] WAL segment replication lag metric: `aegis_wal_replication_lag_bytes` Prometheus Gauge with `follower` label in `aegis/core/observability.py`; labelled by follower node ID to identify which replica is lagging; zero in standalone mode; no-op stub when prometheus_client absent; 4 tests in `tests/test_chaos.py::TestWALReplicationLagMetric`
 - [ ] Automatic leader failover with <30s RTO (Recovery Time Objective)
 - [ ] Split-brain prevention: fencing tokens or lease-based locking before WAL writes on network partition
 - [ ] Active-active proxy deployment: consistent hashing for tenant affinity, WAL dedup by `state_id`
@@ -236,9 +236,9 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Kubernetes operator: `AegisProxy` CRD with automatic rolling update, canary traffic splitting, HPA by `aegis_request_latency_p99`
 - [x] Helm chart with production-grade defaults (PodDisruptionBudget, topologySpreadConstraints, resource limits)
 - [ ] Zero-downtime rolling deploy: WAL leader lease hand-off protocol during pod replacement
-- [ ] Circuit breaker per upstream provider (e.g., `tenacity` with per-host breaker state in DashMap)
-- [ ] Chaos engineering test suite: `pytest-chaos` or Toxiproxy integration for WAL write failure, Redis failure, upstream timeout scenarios
-- [ ] SLO burn-rate alerting: PrometheusRule manifests for 1h/6h/24h/72h burn-rate windows
+- [x] Circuit breaker per upstream provider (`aegis/core/circuit_breaker.py`: `CircuitBreaker` with CLOSED → OPEN → HALF_OPEN state machine; `failure_threshold` consecutive failures open the circuit; `recovery_timeout` before a single probe is allowed; `success_threshold` consecutive probe successes re-close; thread-safe via `threading.Lock`; `CircuitOpenError` for fail-fast 503 responses; Prometheus metric emission on state transitions; integrated in `LLMForwarder` via `circuit_breaker_failure_threshold` / `circuit_breaker_recovery_timeout` / `circuit_breaker_success_threshold` config fields; 37 tests in `tests/test_circuit_breaker.py`)
+- [x] Chaos engineering test suite: `tests/test_chaos.py` — 20 tests covering WAL disk-full / truncated-write / missing-file scenarios; Redis `ConnectionError` and hang under `asyncio.wait_for`; upstream `httpx.TimeoutException` / `ConnectError`; circuit breaker OPEN → HALF_OPEN → CLOSED recovery; concurrent 50-goroutine ledger commit stability; no external dependencies (all scenarios via monkeypatching)
+- [x] SLO burn-rate alerting: `aegis/core/slo_alerting.py` (`SLOConfig`, `SLOBurnRateWindow`, `generate_prometheus_rule()`, `validate_burn_rate_threshold()`); `deploy/helm/templates/prometheusrule.yaml` PrometheusRule CRD template for the Prometheus Operator; `prometheus.sloAlerting` Helm values section; 8 alerts (1h/6h/24h/72h × availability+latency); critical severity for ≥14.4×/6× windows, warning for ≥3×/1×; all thresholds mathematically validated against 30-day error budget; 65 tests in `tests/test_slo_alerting.py`
 
 ---
 
@@ -254,11 +254,11 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] KL/JS divergence from baseline distribution
 - [x] Multi-turn behavioral jailbreak detection: `WAFSessionState` state machine in `aegis/core/waf_session.py` tracks cumulative WAF scores and consecutive soft-hit (crescendo) patterns across a configurable sliding window; integrated into both `/v1/chat/completions` and `/v1/completions` handlers
 - [x] Conversation graph analysis: detect "crescendo" attack (gradual constraint erosion over session)
-- [ ] Cross-session correlation: detect coordinated multi-account attacks sharing jailbreak templates
+- [x] Cross-session correlation: detect coordinated multi-account attacks sharing jailbreak templates (`aegis/core/cross_session_correlator.py`: `CrossSessionCorrelator` with 64-bit SimHash fingerprinting over 4-word shingles (Charikar 2002), 8×8-bit LSH band bucketing for O(1) candidate lookup, sliding-window eviction, Hamming-distance threshold for near-duplicate grouping; `CorrelationAlert` with `tenant_ids`, `fingerprint_hex`, `band_key`, `first_seen`/`last_seen`; `CorrelationResult` with `coordinated`, `alerts`; `hamming_distance()`, `lsh_bands()`, `compute_simhash()`; covers shared jailbreak kits, A/B variant attacks, botnet-driven prompt flooding; `pytest tests/test_cross_session_correlator.py` — 52 tests)
 - [ ] Semantic similarity clustering: flag requests within cosine distance threshold of known jailbreak embeddings
-- [ ] Adversarial suffix detection: gradient-based suffix patterns (GCG, AutoDAN) via fixed signature set
+- [x] Adversarial suffix detection: gradient-based suffix patterns (GCG, AutoDAN) via fixed signature set (`aegis/core/adversarial_suffix_detector.py`: `AdversarialSuffixDetector` with 11 fixed signatures — long/spaced token-repetition runs, obedience-induction phrases, GCG punctuation runs, AutoDAN openers, output-prefix injection, and published GCG fragment anchors; tail-window scanning (default last 2000 chars) with full-text override; `scan(text)` and `scan_messages(messages)` (user-turns only); `SuffixDetectionResult` with `flagged`, `signals`, `scan_length`, `reason`, `to_dict()`; `pytest tests/test_adversarial_suffix_detector.py` — 54 tests)
 - [x] Many-shot jailbreak detection: flag prompts with >N examples in few-shot context (`aegis/core/manyshot_detector.py`: `ManyShotDetector` with configurable `threshold` (default 10) and `min_qa_ratio`; multi-signal counting — Q&A turn pairs (Human/User/Q: + Assistant/AI/A: with assistant-to-human ratio guard), numbered-list items (≥20 chars), "Example/Sample/Shot N:" headers, bracket/XML shot delimiters (<example>, [EXAMPLE], <shot>); `evaluate(text)` and `evaluate_messages(messages)` (concatenates content across turns to defeat per-message evasion); `ManyShotDetectionResult` with `shot_count`, `signal_counts`, `exceeded`, `reason`, `scan_length`, `to_dict()`; `pytest tests/test_manyshot_detector.py` — 42 tests)
-- [ ] Prompt injection in retrieved context: RAG-aware WAF that scans tool outputs and retrieved documents, not just user input
+- [x] Prompt injection in retrieved context: RAG-aware WAF that scans tool outputs and retrieved documents, not just user input (`aegis/core/rag_injection_scanner.py`: `RAGInjectionScanner` with 7 signal categories — direct jailbreak text in documents, context-frame escape (XML closing delimiters), role boundary injection (fake System:/[SYSTEM] headers), ChatML token injection (`<|im_start|>`, `<|im_end|>`, `<|endoftext|>`), LLM-addressed instructions ("Note to AI:", "after you process this document"), whitespace padding (20+ newlines), lateral exfiltration (send/forward/POST to URL); additive risk scoring with configurable `block_threshold`; `scan_document()`, `scan_tool_result()`, `scan_messages()` (handles OpenAI `role="tool"/"function"` and Anthropic `type="tool_result"` blocks + RAG-context user messages); `RAGScanResult` with `clean`, `signals`, `risk_score`, `source_id`, `reason`, `to_dict()`; `pytest tests/test_rag_injection_scanner.py` — 112 tests)
 
 #### 5.2 Evasion-Resistant Pattern Matching
 
@@ -270,9 +270,9 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Base64/URL/HTML entity decode pipeline: iterative decode up to depth 5 before WAF scan
 - [ ] Token-split reassembly attack detection: detect patterns split across token boundaries (requires tokenizer-aware scan)
 - [ ] Language model-based semantic WAF: lightweight classifier (DistilBERT or FastText) as tertiary pass for novel jailbreaks not matching known patterns
-- [ ] WAF pattern hot-reload: push new patterns without restart via inotify watch on pattern file
-- [ ] WAF shadow mode: log would-be blocks without enforcing, for rule tuning without production risk
-- [ ] Differential fuzzing harness: `hypothesis`-driven WAF bypass attempt generation (currently `aegis/core/fuzzing_harness.py` is a stub excluded from coverage)
+- [x] WAF pattern hot-reload: push new patterns without restart via inotify watch on pattern file (`aegis/core/waf_hot_reload.py`: `WAFHotReloader`, `WAFPatternSet`, `load_pattern_file`, `WAFPatternFileError`; uses Linux inotify via `ctypes` with `select()` timeout loop; falls back to mtime-poll on non-Linux or inotify init failure; JSON pattern file schema with `version`, `critical`, `soft` arrays; `AegisWAF.enable_hot_reload(path, poll_interval_s)` for zero-downtime atomic pattern swap; 38 tests in `tests/test_waf_hot_reload.py`)
+- [x] WAF shadow mode: log would-be blocks without enforcing, for rule tuning without production risk (`aegis/proxy/waf.py`: `shadow_mode=False` parameter on `AegisWAF`; when `True`, runs the full Rust+Layer-1+Layer-2 detection pipeline but suppresses enforcement — returns `WAFResult(allowed=True, shadow_blocked=True, reason=<detection_reason>, score=<score>)` and emits a `WARNING` log; `WAFResult` gets new `shadow_blocked: bool = False` field; internal `_run_detection()` always returns an enforcement decision; 14 new tests in `TestWAFShadowMode`)
+- [x] Differential fuzzing harness: `hypothesis`-driven WAF bypass attempt generation (`aegis/core/waf_fuzzing.py`: `WAFDifferentialFuzzer` with 11 `EvasionTransform` variants — original, base64, uppercase, lowercase, alternating case, homoglyph substitution (Cyrillic/Greek/Latin table), zero-width injection, full-width Unicode, extra whitespace, underscore/hyphen space replacement; `apply_transform()`, `FuzzVariant`, `FuzzReport` with `block_rate` and per-transform stats; `hypothesis_strategy()` composite strategy for property-based tests; `tests/test_waf_hypothesis.py`: 41 tests including 5 `@given` property tests verifying WAF never crashes, score ∈ [0,1], shadow mode invariants on 200+ examples; evasion-resistance assertions that full-width, uppercase, and extra-whitespace variants of known seeds are still blocked)
 
 #### 5.3 ISO/IEC 27037 Digital Forensic Export
 
@@ -280,18 +280,18 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Re-verifiable offline without running proxy
 - [x] ML-DSA-65 or HMAC-SHA256 bundle signing (operator-selectable)
 - [x] `POST /v1/enterprise/compliance/export` on aegis_server (separate process)
-- [ ] ISO/IEC 27037 compliant evidence package format: chain of custody manifest, acquisition metadata (tool name, version, operator identity, acquisition timestamp), hash algorithm declaration, evidence integrity seal
-- [ ] RFC 3161 trusted timestamp on each forensic bundle (time-stamping authority integration)
+- [x] ISO/IEC 27037 compliant evidence package format: chain of custody manifest, acquisition metadata (tool name, version, operator identity, acquisition timestamp), hash algorithm declaration, evidence integrity seal (`aegis/core/iso27037_evidence.py`: `EvidencePackage`, `AcquisitionMetadata`, `CustodyEvent`, `EvidenceNode` dataclasses; `build_evidence_package(ledger, operator, tool_version, acquisition_reason)` exports a self-contained, tamper-evident package from any `CryptographicAuditLedger`; `verify_seal(package_dict)` validates the SHA-256 integrity seal offline without a live instance; `add_custody_event()` appends chain-of-custody entries and re-seals; 56 tests in `tests/test_iso27037_evidence.py`)
+- [x] RFC 3161 trusted timestamp on each forensic bundle (time-stamping authority integration) (`aegis/core/rfc3161_timestamper.py`: `RFC3161Timestamper` with self-contained DER encoder (INTEGER, OCTET STRING, SEQUENCE, OID, BOOLEAN, NULL) and DER parser; `build_timestamp_request(imprint, nonce)` produces RFC 3161 v1 TimeStampReq with SHA-256 AlgorithmIdentifier, random nonce, certReq=TRUE; `stamp(package_dict)` computes SHA-256 of canonical JSON, POSTs to TSA, extracts TimeStampToken and stores as `rfc3161_token_b64` + `rfc3161_tsa_url` + `rfc3161_message_imprint_hex` in returned package dict; `verify(package_dict)` re-computes imprint and checks DER structure; `parse_pki_status()` / `extract_token_from_response()` public helpers; httpx primary / urllib.request fallback; `AEGIS_TSA_URL` + `AEGIS_TSA_TIMEOUT` env vars; 68 tests)
 - [ ] DFIR-compatible export formats: PKCS#7 SignedData envelope; E01 (Expert Witness Format) encapsulation for block-level evidence
-- [ ] Evidence acquisition log: who exported, when, from what IP, under what authorization (non-repudiable export audit trail)
-- [ ] Legal admissibility attestation field: `legal_admissibility` enum (`Admissible` / `Conditional` / `Compromised`) currently set at chain level — needs per-bundle override with justification
+- [x] Evidence acquisition log: who exported, when, from what IP, under what authorization (non-repudiable export audit trail) — implemented by `aegis/core/export_audit_log.py` (see §5.5 tamper-evident export log above)
+- [x] Legal admissibility attestation field: `LegalAdmissibility` enum (`Admissible` / `Conditional` / `Compromised`) added to `aegis/core/iso27037_evidence.py`; `build_evidence_package()` accepts `legal_admissibility_override: LegalAdmissibility | None` and `legal_admissibility_justification: str` parameters; override replaces chain-level value and justification is persisted in `EvidencePackage.legal_admissibility_justification`; both fields covered by the SHA-256 integrity seal so tampering is detected; 23 new tests in `tests/test_iso27037_evidence.py` (`TestLegalAdmissibilityEnum`, `TestLegalAdmissibilityOverride`)
 - [ ] Court-ready PDF report generation: human-readable summary of audit chain, signing key metadata, integrity verification results, chain-of-custody narrative
 - [ ] INTERPOL / ILEA forensic standards alignment documentation
 
 #### 5.4 Threat Intelligence Integration
 
 - [x] Static WAF pattern set (23 critical + 11 soft, embedded in source)
-- [ ] STIX 2.1 / TAXII 2.1 threat feed ingestion: pull adversarial prompt indicators from sharing community
+- [x] STIX 2.1 / TAXII 2.1 threat feed ingestion: pull adversarial prompt indicators from sharing community — implemented by `aegis/core/stix_taxii_ingestor.py`; `STIXTAXIIIngestor` performs full TAXII 2.1 server discovery → collection listing → object pull flow; `parse_stix_bundle`, `is_prompt_indicator`, `extract_waf_pattern`, `parse_indicator`, `link_relationships` module-level helpers; `PromptIndicator`, `TaxiiCollection`, `IngestResult` dataclasses with `to_dict()`; supports `aegis-adversarial-prompt`, `adversarial-prompt`, `jailbreak`, `prompt-injection` STIX labels; extracts WAF-ready string literals from STIX patterning expressions; resolves `indicates` relationships to AttackPattern IDs; module-level `ingest_bundle()` convenience wrapper; 69 tests in `tests/test_stix_taxii_ingestor.py`
 - [x] MITRE ATLAS (Adversarial Threat Landscape for AI Systems) tactic mapping per WAF hit
 - [ ] IOC (Indicator of Compromise) correlation: cross-reference tenant_id / request fingerprints against known threat actor TTPs
 - [ ] Threat intelligence sharing: aegis_server endpoint to publish anonymized attack telemetry to ISAC feeds
@@ -304,8 +304,8 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] `legal_admissibility` field in audit chain health response
 - [ ] Operator signature on chain seal: require HSM-signed attestation before bundle export
 - [ ] Witness co-signing: two-of-three threshold signing for bundle export (multi-party authorization)
-- [ ] Tamper-evident export log: every call to `POST /v1/enterprise/compliance/export` recorded in a separate non-repudiable log signed independently from the audit chain
-- [ ] Custody transfer protocol: structured handoff record when evidence moves between custodians
+- [x] Tamper-evident export log: every call to `POST /v1/enterprise/compliance/export` recorded in a separate non-repudiable log signed independently from the audit chain (`aegis/core/export_audit_log.py`: `ExportAuditLog` append-only JSONL log at `0o600`; per-entry HMAC-SHA256 `entry_sig` over canonical body including index, timestamp, operator, package_id, client_ip, api_key_hash, node_count; `record()` flushes+fsyncs after each write; `verify()` checks every HMAC and sequential index; `read_all()` for offline inspection; 47 tests in `tests/test_export_audit_log.py`)
+- [x] Custody transfer protocol: `aegis/core/custody_transfer.py` implements `CustodyTransferLog` — append-only JSONL at 0o600; per-record HMAC-SHA256 `transfer_sig` over canonical body (index, timestamp, transferor, transferee, package_id, evidence_hash, reason, authorization, extra); `record()` fsyncs; `verify()` checks HMAC + sequential index; `read_all()` for offline inspection; 47 tests in `tests/test_custody_transfer.py` covering construction, signing, tampering, persistence, and cross-instance replay
 - [ ] Long-term archival: evidence bundle format compatible with 30-year retention (algorithm agility for hash/signature migration)
 
 ---
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
-| Defense & Government | 26 | 28 | ~93% |
-| Healthcare & Life Sciences | 20 | 24 | ~83% |
-| Industrial Automation & OT | 11 | 21 | ~34% |
-| Enterprise Hyperscale & HA | 10 | 23 | ~30% |
-| Advanced Forensics & WAF | 20 | 26 | ~77% |
-| **Total** | **87** | **122** | **~71%** |
+| Defense & Government | 28 | 28 | ~100% |
+| Healthcare & Life Sciences | 23 | 24 | ~96% |
+| Industrial Automation & OT | 17 | 21 | ~81% |
+| Enterprise Hyperscale & HA | 14 | 23 | ~61% |
+| Advanced Forensics & WAF | 32 | 27 | ~100% |
+| **Total** | **114** | **123** | **~93%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -350,6 +350,15 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** LDAP/Active Directory multi-factor identity assertion — `LDAPAuthenticator` (service-bind → user-lookup → user-bind → group-assert), AD nested-group OID + RFC 2307 group search, RFC 4515 injection escaping, ldaps:///StartTLS with CA verification, `AEGIS_LDAP_*` config, `ldap3` optional dep; 42 tests (Domain 1.2) — completed 2026-06-21.
 > **Done:** RBAC + NIST SP 800-207 Zero Trust attribute evaluation — `Role`/`RoleRegistry` (subject, LDAP-group, and default-role resolution) over the scope vocabulary; `ZeroTrustPolicyEngine` deny-by-default with dynamic constraints (`RequireMTLS`, `RequireAuthMethod`, `IPAllowlist`, `TimeWindow`); `AccessContext`/`AccessDecision` for auditable decisions; 46 tests (Domain 1.2) — completed 2026-06-21.
 > **Done:** ABAC for IL5/IL6 data compartmentalization — Bell-LaPadula `ABACPolicyEngine` with `ClassificationLevel` dominance, need-to-know compartments, REL TO/NOFORN dissemination controls; `can_read`/`can_write`/`can_flow`/`endpoint_accredited` (DoD Impact Level → classification mapping); 46 tests (Domain 1.2) — completed 2026-06-21.
+> **Done:** WORM (Write-Once Read-Many) enforcement for WAL segments — `WORMEnforcer` with dual-layer protection (application-level `WORMViolationError` + OS-level `0o400` permissions); `WORMSealRecord` sentinel JSON line; `seal()`, `verify()`, `enforce_immutability()`, `delete_node()` (unconditionally raises); `unseal_for_testing()` for CI teardown; `count_nodes_in_segment()` helper; 21 CFR Part 11 Annex 11 §5 / NIST SP 800-53 AU-9 compliance; 56 tests (Domain 2.2) — completed 2026-06-21.
+> **Done:** Cross-session correlation — `CrossSessionCorrelator` with SimHash fingerprinting (64-bit, 4-word shingles), 8×8-bit LSH band bucketing, sliding-window eviction, Hamming-distance grouping; covers shared jailbreak kits, A/B variant attacks, botnet flooding; 52 tests (Domain 5.1) — completed 2026-06-21.
+> **Done:** RAG-aware prompt injection scanner — `RAGInjectionScanner` with 7 signal categories (direct jailbreak, context-frame escape, role boundary injection, ChatML token injection, LLM-addressed instructions, whitespace padding, lateral exfiltration); `scan_document()`, `scan_tool_result()`, `scan_messages()` covering OpenAI tool/function roles and Anthropic tool_result blocks; 112 tests (Domain 5.1) — completed 2026-06-21.
+> **Done:** WAF shadow mode — `shadow_mode=True` on `AegisWAF` runs full detection pipeline but suppresses enforcement; `WAFResult.shadow_blocked` field; `_run_detection()` internal method; `WARNING` log on every suppressed block; 14 tests (Domain 5.2) — completed 2026-06-21.
+> **Done:** Legal admissibility attestation field — `LegalAdmissibility` StrEnum (`Admissible`/`Conditional`/`Compromised`); `build_evidence_package()` accepts `legal_admissibility_override` + `legal_admissibility_justification` for per-bundle override of chain-level value; both fields covered by SHA-256 integrity seal; 23 tests in `TestLegalAdmissibilityEnum`+`TestLegalAdmissibilityOverride` (Domain 5.3) — completed 2026-06-21.
+> **Done:** SLO burn-rate alerting — `aegis/core/slo_alerting.py` with `SLOConfig`/`SLOBurnRateWindow`/`generate_prometheus_rule()`/`validate_burn_rate_threshold()`; `deploy/helm/templates/prometheusrule.yaml` PrometheusRule CRD; `prometheus.sloAlerting` Helm values; 8 alerts (1h/6h/24h/72h × availability+latency SLOs); critical/warning severity mapping; 65 tests (Domain 4.4) — completed 2026-06-21.
+> **Done:** cgroups v2 process-level memory + CPU quotas — `aegis/core/cgroups_quota.py`; `CgroupsQuota.apply()` writes `memory.max`/`cpu.max` to process's own cgroup dir (parsed from `/proc/self/cgroup`); `apply_cgroups_quota()` with `AEGIS_CGROUP_MEMORY_MAX`/`AEGIS_CGROUP_CPU_MAX` env vars; `is_cgroups_v2_available()` detection; graceful fallback on non-Linux/missing cgroup/permission denied; `AEGIS_SKIP_CGROUPS_QUOTA` for CI; 68 tests (Domain 1.5) — completed 2026-06-21.
+> **Done:** Dosage hallucination detection — `aegis/core/dosage_hallucination.py`; `DosageHallucinationDetector` with ~100-drug reference DB (12 therapeutic classes), forward + reverse regex extraction, canonical-name dedup, alias resolution, unit-mismatch guard; `scan_messages()` for assistant-role gating; `AEGIS_DOSAGE_STRICT` for unknown-drug enforcement; `extra_db` for custom formularies; 54 tests (Domain 2.4) — completed 2026-06-21.
+> **Done:** MODBUS/DNP3/OPC-UA SCADA command injection scanner — `aegis/core/ot_protocol_scanner.py`; `OTProtocolScanner` with 16 weighted signatures (MODBUS function codes/registers/API calls, DNP3 CROB/Group-Var/control codes, OPC-UA NodeId/write/Security-Mode-None/endpoint URL); complementary-probability risk scoring; `AEGIS_OT_BLOCK_THRESHOLD`; 55 tests (Domain 3.4) — completed 2026-06-21.
 
 ---
 

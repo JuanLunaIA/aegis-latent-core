@@ -50,6 +50,7 @@ def _make_resource_ctx(table_mock):
     class _Ctx:
         async def __aenter__(self_):
             return resource
+
         async def __aexit__(self_, *args):
             pass
 

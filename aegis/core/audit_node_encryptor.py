@@ -67,8 +67,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
-_NONCE_SIZE = 12   # 96-bit (NIST SP 800-38D recommended)
-_KEY_SIZE = 32     # AES-256
+_NONCE_SIZE = 12  # 96-bit (NIST SP 800-38D recommended)
+_KEY_SIZE = 32  # AES-256
 _HKDF_HASH = hashes.SHA256()
 _HKDF_INFO_PREFIX = b"audit-node-dek:"
 
@@ -92,9 +92,7 @@ class AuditNodeEncryptor:
 
     def __init__(self, master_key: bytes, salt: bytes | None = None) -> None:
         if len(master_key) != _KEY_SIZE:
-            raise ValueError(
-                f"master_key must be exactly {_KEY_SIZE} bytes, got {len(master_key)}"
-            )
+            raise ValueError(f"master_key must be exactly {_KEY_SIZE} bytes, got {len(master_key)}")
         self._master_key = master_key
         self._salt = salt
         self._dek_cache: dict[str, bytes] = {}
@@ -199,13 +197,10 @@ class AuditNodeEncryptor:
         try:
             key = bytes.fromhex(raw)
         except ValueError as exc:
-            raise AuditNodeEncryptionError(
-                "AEGIS_AUDIT_MASTER_KEY is not valid hex."
-            ) from exc
+            raise AuditNodeEncryptionError("AEGIS_AUDIT_MASTER_KEY is not valid hex.") from exc
         if len(key) != _KEY_SIZE:
             raise AuditNodeEncryptionError(
-                f"AEGIS_AUDIT_MASTER_KEY must be 32 bytes (64 hex chars), "
-                f"got {len(key)} bytes."
+                f"AEGIS_AUDIT_MASTER_KEY must be 32 bytes (64 hex chars), got {len(key)} bytes."
             )
         return cls(master_key=key)
 

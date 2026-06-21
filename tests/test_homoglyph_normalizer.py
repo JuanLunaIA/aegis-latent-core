@@ -21,9 +21,7 @@ class TestTableIntegrity:
     def test_all_targets_are_ascii(self):
         n = HomoglyphNormalizer()
         for src_cp, dst in n._table.items():
-            assert dst.isascii(), (
-                f"U+{src_cp:04X} maps to non-ASCII {dst!r}"
-            )
+            assert dst.isascii(), f"U+{src_cp:04X} maps to non-ASCII {dst!r}"
 
     def test_mapping_count_matches_table_size(self):
         n = HomoglyphNormalizer()

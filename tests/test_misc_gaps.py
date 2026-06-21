@@ -20,18 +20,21 @@ import pytest
 
 def test_pack_float64_raises_for_inf():
     from aegis.core.math_utils import pack_float64
+
     with pytest.raises(ValueError, match="non-finite"):
         pack_float64(float("inf"))
 
 
 def test_pack_float64_raises_for_nan():
     from aegis.core.math_utils import pack_float64
+
     with pytest.raises(ValueError, match="non-finite"):
         pack_float64(float("nan"))
 
 
 def test_pack_float64_raises_for_neg_inf():
     from aegis.core.math_utils import pack_float64
+
     with pytest.raises(ValueError, match="non-finite"):
         pack_float64(float("-inf"))
 
@@ -41,6 +44,7 @@ def test_pack_float64_raises_for_neg_inf():
 
 def test_logsumexp_raises_for_empty():
     from aegis.core.math_utils import logsumexp
+
     with pytest.raises(ValueError, match="[Ee]mpty"):
         logsumexp(np.array([]))
 
@@ -50,12 +54,14 @@ def test_logsumexp_raises_for_empty():
 
 def test_log_softmax_raises_for_2d():
     from aegis.core.math_utils import log_softmax
+
     with pytest.raises(ValueError, match="1-D"):
         log_softmax(np.array([[1.0, 2.0], [3.0, 4.0]]))
 
 
 def test_log_softmax_raises_for_empty():
     from aegis.core.math_utils import log_softmax
+
     with pytest.raises(ValueError, match="1-D"):
         log_softmax(np.array([]))
 
@@ -65,6 +71,7 @@ def test_log_softmax_raises_for_empty():
 
 def test_calibrate_from_samples_sets_activation_bound():
     from aegis.core.moe_monitor import MoERoutingMonitor
+
     mon = MoERoutingMonitor()
     samples = [np.array([0.1, 0.9]), np.array([0.5, 0.5])]
     expert_norms = np.array([1.0, 2.0])
@@ -78,6 +85,7 @@ def test_calibrate_from_samples_sets_activation_bound():
 
 def test_moe_monitor_negative_activation_bound_raises():
     from aegis.core.moe_monitor import MoERoutingMonitor
+
     with pytest.raises(ValueError, match="activation_bound"):
         MoERoutingMonitor(activation_bound=-1.0)
 
@@ -87,6 +95,7 @@ def test_moe_monitor_negative_activation_bound_raises():
 
 def test_compute_routing_entropy_all_zeros_returns_nan():
     from aegis.core.moe_monitor import MoERoutingMonitor
+
     mon = MoERoutingMonitor()
     result = mon.compute_routing_entropy(np.array([0.0, 0.0, 0.0]))
     assert math.isnan(result)
@@ -97,6 +106,7 @@ def test_compute_routing_entropy_all_zeros_returns_nan():
 
 def test_detect_entanglement_invalid_gate_weights():
     from aegis.core.moe_monitor import MoERoutingMonitor
+
     mon = MoERoutingMonitor()
     result = mon.detect_entanglement(np.array([-0.1, 0.5, 0.6]))
     assert result.detected is True
@@ -108,6 +118,7 @@ def test_detect_entanglement_invalid_gate_weights():
 
 def test_detect_entanglement_all_zeros_catastrophic_routing():
     from aegis.core.moe_monitor import MoERoutingMonitor
+
     mon = MoERoutingMonitor()
     result = mon.detect_entanglement(np.array([0.0, 0.0, 0.0]))
     assert result.detected is True
@@ -119,6 +130,7 @@ def test_detect_entanglement_all_zeros_catastrophic_routing():
 
 def test_detect_entanglement_not_calibrated():
     from aegis.core.moe_monitor import MoERoutingMonitor
+
     mon = MoERoutingMonitor(activation_bound=None)
     result = mon.detect_entanglement(np.array([0.3, 0.4, 0.3]))
     assert result.flag == "NOT_CALIBRATED"
@@ -129,12 +141,14 @@ def test_detect_entanglement_not_calibrated():
 
 def test_core_getattr_known_submodule():
     import aegis.core as core
+
     mmr_mod = getattr(core, "mmr")
     assert mmr_mod is not None
 
 
 def test_core_getattr_unknown_raises():
     import aegis.core as core
+
     with pytest.raises(AttributeError):
         _ = core.nonexistent_attribute_xyz_99abc
 
@@ -144,6 +158,7 @@ def test_core_getattr_unknown_raises():
 
 def test_core_getattr_attribute_from_submodule():
     import aegis.core as core
+
     # Access a known attribute that lives in a submodule (not the submodule itself)
     # This triggers the search loop (lines 46-57)
     val = getattr(core, "MerkleMountainRange", None)
@@ -155,6 +170,7 @@ def test_core_getattr_attribute_from_submodule():
 
 def test_core_dir_includes_submodules():
     import aegis.core as core
+
     d = dir(core)
     assert "mmr" in d
 
@@ -164,6 +180,7 @@ def test_core_dir_includes_submodules():
 
 def test_lsm_guard_check_selinux_exception_path():
     from aegis.core.lsm_guard import LSMGuard
+
     guard = LSMGuard()
     with patch("subprocess.run", side_effect=Exception("unexpected")):
         result = guard._check_selinux()
@@ -176,6 +193,7 @@ def test_lsm_guard_check_selinux_exception_path():
 def test_timing_defense_exact_block_size_no_extra_padding():
     """When len(data) == block_size exactly, padding_len becomes 0 (line 45)."""
     from aegis.core.timing_defense import TimingDefense
+
     data = b"x" * 1024
     padded = TimingDefense.deterministic_padding(data, block_size=1024)
     # After padding + 4-byte length suffix, should be 1028 bytes
@@ -188,6 +206,7 @@ def test_timing_defense_exact_block_size_no_extra_padding():
 def test_find_class_allows_bytearray():
     """bytearray uses the GLOBAL opcode, so find_class is called → line 75."""
     from aegis.core.safe_serialization import RestrictedUnpickler
+
     original = bytearray(b"hello")
     buf = io.BytesIO(pickle.dumps(original))
     unpickler = RestrictedUnpickler(buf)
@@ -201,6 +220,7 @@ def test_find_class_allows_bytearray():
 def test_crypto_audit_makedirs_oserror_silenced(tmp_path):
     """When makedirs raises OSError during WAL _persist_node fallback (lines 547-548)."""
     from aegis.core.crypto_audit import CryptographicAuditLedger, AuditNode
+
     ledger = CryptographicAuditLedger(
         persistence_path=str(tmp_path / "test_ledger.wal"),
         signing_key="secretkey12345678901234567890123",
@@ -214,9 +234,11 @@ def test_crypto_audit_makedirs_oserror_silenced(tmp_path):
     mock_node = MagicMock()
     mock_node.to_dict.return_value = {"node_hash": "a" * 64, "state_id": "test"}
 
-    with patch("os.makedirs", side_effect=OSError("permission denied")), \
-         patch("os.open", return_value=3), \
-         patch("os.fdopen") as mock_fdopen:
+    with (
+        patch("os.makedirs", side_effect=OSError("permission denied")),
+        patch("os.open", return_value=3),
+        patch("os.fdopen") as mock_fdopen,
+    ):
         mock_file = MagicMock()
         mock_fdopen.return_value.__enter__ = MagicMock(return_value=mock_file)
         mock_fdopen.return_value.__exit__ = MagicMock(return_value=False)
@@ -232,6 +254,7 @@ def test_crypto_audit_makedirs_oserror_silenced(tmp_path):
 
 def test_pack_float64_returns_bytes_for_finite():
     from aegis.core.math_utils import pack_float64
+
     result = pack_float64(1.5)
     assert isinstance(result, bytes)
     assert len(result) == 8
@@ -242,6 +265,7 @@ def test_pack_float64_returns_bytes_for_finite():
 
 def test_compute_routing_entropy_invalid_shape_raises():
     from aegis.core.moe_monitor import MoERoutingMonitor
+
     mon = MoERoutingMonitor(min_experts=3)
     with pytest.raises(ValueError, match="Invalid gate_weights shape"):
         mon.compute_routing_entropy(np.array([0.5, 0.5]))  # < min_experts
@@ -253,6 +277,7 @@ def test_compute_routing_entropy_invalid_shape_raises():
 def test_timing_defense_double_blocksize_exact_multiple():
     """data=2*block_size → padding_len = block_size - 0 = block_size → 0 (line 45)."""
     from aegis.core.timing_defense import TimingDefense
+
     data = b"x" * 2048  # 2 * block_size=1024; 2048 > 1024 and 2048 % 1024 == 0
     padded = TimingDefense.deterministic_padding(data, block_size=1024)
     # padding_len becomes 0; only 4-byte length suffix appended
@@ -265,6 +290,7 @@ def test_timing_defense_double_blocksize_exact_multiple():
 def test_config_invalid_provider_raises():
     from aegis.config import AegisSettings
     import pydantic
+
     with pytest.raises((ValueError, pydantic.ValidationError)):
         AegisSettings(backend_api_key="sk-test", api_keys="k", provider="invalid_provider")
 
@@ -272,6 +298,7 @@ def test_config_invalid_provider_raises():
 def test_config_invalid_rate_limit_backend_raises():
     from aegis.config import AegisSettings
     import pydantic
+
     with pytest.raises((ValueError, pydantic.ValidationError)):
         AegisSettings(backend_api_key="sk-test", api_keys="k", rate_limit_backend="memcached")
 
@@ -279,6 +306,7 @@ def test_config_invalid_rate_limit_backend_raises():
 def test_config_invalid_log_level_raises():
     from aegis.config import AegisSettings
     import pydantic
+
     with pytest.raises((ValueError, pydantic.ValidationError)):
         AegisSettings(backend_api_key="sk-test", api_keys="k", log_level="VERBOSE")
 
@@ -288,6 +316,7 @@ def test_config_invalid_log_level_raises():
 
 def test_config_get_cors_origins_with_value():
     from aegis.config import AegisSettings
+
     s = AegisSettings(
         backend_api_key="sk-test",
         api_keys="k",
@@ -449,10 +478,13 @@ def test_setup_otel_otlp_import_error_silenced(monkeypatch):
     monkeypatch.setattr(obs, "_otel_trace", mock_trace, raising=False)
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4317")
 
-    with patch.dict(sys.modules, {
-        "opentelemetry.exporter.otlp.proto.grpc.trace_exporter": None,
-        "opentelemetry.sdk.trace.export": None,
-    }):
+    with patch.dict(
+        sys.modules,
+        {
+            "opentelemetry.exporter.otlp.proto.grpc.trace_exporter": None,
+            "opentelemetry.sdk.trace.export": None,
+        },
+    ):
         obs.setup_otel("test-service")
 
     mock_trace.set_tracer_provider.assert_called_once_with(mock_provider_instance)

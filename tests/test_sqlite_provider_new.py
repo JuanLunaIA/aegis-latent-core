@@ -165,7 +165,7 @@ async def test_list_nodes_returns_in_insertion_order(tmp_path):
     for i in range(5):
         await provider.write_node(
             node_id=f"node-{i:03d}",
-            timestamp=f"2025-01-0{i+1}T00:00:00Z",
+            timestamp=f"2025-01-0{i + 1}T00:00:00Z",
             node_data={"prev_hash": "0" * 64},
             request_hash=f"r{i}",
             response_hash=f"rs{i}",
@@ -189,7 +189,7 @@ async def test_list_nodes_limit_and_offset(tmp_path):
     for i in range(10):
         await provider.write_node(
             node_id=f"n{i:02d}",
-            timestamp=f"2025-01-{i+1:02d}T00:00:00Z",
+            timestamp=f"2025-01-{i + 1:02d}T00:00:00Z",
             node_data={"prev_hash": "0" * 64},
             request_hash=f"r{i}",
             response_hash=f"rs{i}",
@@ -215,7 +215,7 @@ async def test_list_nodes_tenant_filter(tmp_path):
     for i in range(3):
         await provider.write_node(
             node_id=f"t1-{i}",
-            timestamp=f"2025-01-0{i+1}T00:00:00Z",
+            timestamp=f"2025-01-0{i + 1}T00:00:00Z",
             node_data={"prev_hash": "0" * 64},
             request_hash=f"r{i}",
             response_hash=f"rs{i}",
@@ -226,7 +226,7 @@ async def test_list_nodes_tenant_filter(tmp_path):
     for i in range(2):
         await provider.write_node(
             node_id=f"t2-{i}",
-            timestamp=f"2025-01-0{i+4}T00:00:00Z",
+            timestamp=f"2025-01-0{i + 4}T00:00:00Z",
             node_data={"prev_hash": "0" * 64},
             request_hash=f"rx{i}",
             response_hash=f"rsx{i}",
@@ -349,9 +349,14 @@ async def test_write_node_without_initialize_raises(tmp_path):
     provider = SQLiteStorageProvider(str(tmp_path / "audit.db"))
     with pytest.raises(RuntimeError, match="initialize"):
         await provider.write_node(
-            node_id="x", timestamp="t", node_data={},
-            request_hash="r", response_hash="rs",
-            merkle_root="m", signature="s", client_id="c",
+            node_id="x",
+            timestamp="t",
+            node_data={},
+            request_hash="r",
+            response_hash="rs",
+            merkle_root="m",
+            signature="s",
+            client_id="c",
         )
 
 

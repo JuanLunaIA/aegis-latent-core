@@ -30,6 +30,7 @@ Backup layout::
 
 Security: backup files are created with 0o600 permissions (same as WAL).
 """
+
 from __future__ import annotations
 
 import json
@@ -224,9 +225,7 @@ class WALBackupManager:
             with open(manifest_path, encoding="utf-8") as f:
                 manifest = json.load(f)
 
-            backup_wal = os.path.join(
-                backup_path, os.path.basename(manifest["source_path"])
-            )
+            backup_wal = os.path.join(backup_path, os.path.basename(manifest["source_path"]))
             if not os.path.isfile(backup_wal):
                 return WALRestoreResult(
                     success=False,
@@ -351,7 +350,7 @@ class WALBackupManager:
         try:
             for name in os.listdir(directory):
                 if name.startswith(prefix):
-                    suffix = name[len(prefix):]
+                    suffix = name[len(prefix) :]
                     if suffix.isdigit():
                         segments.append((int(suffix), os.path.join(directory, name)))
         except OSError:

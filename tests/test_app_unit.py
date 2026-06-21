@@ -82,7 +82,12 @@ def test_bounded_analyzer_cache_no_cfg_creates_default_analyzer():
 def test_extract_payload_text_messages():
     from aegis.proxy.app import _extract_payload_text
 
-    body = {"messages": [{"role": "user", "content": "hello"}, {"role": "assistant", "content": "world"}]}
+    body = {
+        "messages": [
+            {"role": "user", "content": "hello"},
+            {"role": "assistant", "content": "world"},
+        ]
+    }
     result = _extract_payload_text(body)
     assert "hello" in result
     assert "world" in result

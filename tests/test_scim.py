@@ -119,7 +119,13 @@ class TestFilter:
         return [
             ScimUser(id="1", user_name="alice", display_name="Alice Smith", active=True),
             ScimUser(id="2", user_name="bob", display_name="Bob Jones", active=False),
-            ScimUser(id="3", user_name="carol", display_name="Carol White", active=True, external_id="ext-3"),
+            ScimUser(
+                id="3",
+                user_name="carol",
+                display_name="Carol White",
+                active=True,
+                external_id="ext-3",
+            ),
         ]
 
     def test_eq_username(self):
@@ -222,7 +228,9 @@ class TestScimStoreUserCRUD:
     def test_replace_user(self):
         s = ScimStore()
         u = s.create_user("alice", display_name="Alice")
-        updated = s.replace_user(u.id, user_name="alice", display_name="Alice Updated", active=False)
+        updated = s.replace_user(
+            u.id, user_name="alice", display_name="Alice Updated", active=False
+        )
         assert updated.active is False
         assert updated.display_name == "Alice Updated"
 
@@ -297,7 +305,9 @@ class TestScimStoreUserPatch:
     def test_patch_display_name(self):
         s = ScimStore()
         u = s.create_user("alice")
-        updated = s.patch_user(u.id, [ScimPatchOp(op="replace", path="displayName", value="Alice A.")])
+        updated = s.patch_user(
+            u.id, [ScimPatchOp(op="replace", path="displayName", value="Alice A.")]
+        )
         assert updated.display_name == "Alice A."
 
     def test_patch_external_id(self):
@@ -675,7 +685,9 @@ class TestProvisioningLifecycle:
         assert not patched.active
 
         # REPLACE: reactivate with new display name
-        replaced = s.replace_user(u.id, user_name="john.doe", display_name="John A. Doe", active=True)
+        replaced = s.replace_user(
+            u.id, user_name="john.doe", display_name="John A. Doe", active=True
+        )
         assert replaced.active is True
         assert replaced.display_name == "John A. Doe"
 

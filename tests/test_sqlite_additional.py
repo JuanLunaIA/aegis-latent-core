@@ -20,6 +20,7 @@ def _make_provider(db_path: str) -> SQLiteStorageProvider:
 
 async def _write(p: SQLiteStorageProvider, node_id: str, prev_hash: str) -> None:
     import datetime
+
     await p.write_node(
         node_id=node_id,
         timestamp=datetime.datetime.utcnow().isoformat(),

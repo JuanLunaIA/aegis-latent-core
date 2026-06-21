@@ -252,9 +252,7 @@ async def test_export_range_paginated_single_page(tmp_path):
     storage.list_nodes = AsyncMock(return_value=[{"n": i} for i in range(3)])
 
     exporter = ComplianceExporter(storage=storage, signer=signer, export_dir=str(tmp_path))
-    results = await exporter.export_range_paginated(
-        total_limit=3, page_size=10, tenant_id=None
-    )
+    results = await exporter.export_range_paginated(total_limit=3, page_size=10, tenant_id=None)
     assert len(results) == 1
     assert results[0].node_count == 3
 
@@ -270,9 +268,7 @@ async def test_export_range_paginated_exhausts_storage(tmp_path):
     storage.list_nodes = AsyncMock(return_value=[{"n": i} for i in range(5)])
 
     exporter = ComplianceExporter(storage=storage, signer=signer, export_dir=str(tmp_path))
-    results = await exporter.export_range_paginated(
-        total_limit=100, page_size=10, tenant_id=None
-    )
+    results = await exporter.export_range_paginated(total_limit=100, page_size=10, tenant_id=None)
     # Only one bundle since storage had fewer than page_size nodes
     assert len(results) == 1
 

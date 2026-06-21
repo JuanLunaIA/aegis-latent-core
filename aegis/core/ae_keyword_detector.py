@@ -297,12 +297,8 @@ class AEKeywordDetector:
 
         flagged = bool(terms_found)
         if flagged:
-            soc_summary = ", ".join(
-                f"{s}:{c}" for s, c in sorted(soc_counts.items())
-            )
-            reason = (
-                f"AE terms detected: {len(terms_found)} term(s) across SOCs [{soc_summary}]"
-            )
+            soc_summary = ", ".join(f"{s}:{c}" for s, c in sorted(soc_counts.items()))
+            reason = f"AE terms detected: {len(terms_found)} term(s) across SOCs [{soc_summary}]"
         else:
             reason = "no MedDRA AE terms detected"
 
@@ -314,9 +310,7 @@ class AEKeywordDetector:
             reason=reason,
         )
 
-    def scan_messages(
-        self, messages: list[dict[str, object]]
-    ) -> AEDetectionResult:
+    def scan_messages(self, messages: list[dict[str, object]]) -> AEDetectionResult:
         """Scan a list of chat message dicts for AE terms.
 
         Concatenates all assistant/tool message content before scanning so

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from pydantic import AnyHttpUrl, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -407,6 +408,50 @@ class AegisSettings(BaseSettings):
         default="",
         description="Comma-separated CORS allowed origins. Empty = no CORS headers.",
     )
+    dmz_allowed_source_ips: str = Field(
+        default="",
+        description=(
+            "DMZ-mode: comma-separated list of IPv4/IPv6 addresses or CIDR networks "
+            "that are allowed to reach the proxy. When non-empty, every request whose "
+            "client IP is not in the allowlist is rejected with 403 Forbidden before "
+            "any authentication is attempted. Supports exact addresses (e.g. 10.0.0.1) "
+            "and prefix notation (e.g. 10.0.0.0/24, ::1/128). Empty string (default) "
+            "disables DMZ mode — all source IPs are permitted. "
+            "Configure via AEGIS_DMZ_ALLOWED_SOURCE_IPS."
+        ),
+    )
+    dmz_trust_proxy_headers: bool = Field(
+        default=False,
+        description=(
+            "When True, DMZ-mode reads the real client IP from X-Forwarded-For or "
+            "X-Real-IP headers (trusted reverse-proxy scenario). "
+            "Never set this when the proxy is internet-facing — it allows IP spoofing. "
+            "Only enable behind a trusted load balancer or nginx ingress."
+        ),
+    )
+
+    # ── Air-gap egress enforcement ────────────────────────────────────────
+    airgap_mode: bool = Field(
+        default=False,
+        description=(
+            "When True, the proxy blocks all outbound HTTP connections except to hosts "
+            "listed in AEGIS_AIRGAP_ALLOWED_HOSTS plus the configured upstream backend. "
+            "Provides application-layer OT network zone enforcement "
+            "(IEC 62443 Zone and Conduit model). "
+            "Pair with kernel-level controls (nftables, network namespaces) for defense-in-depth. "
+            "Configure via AEGIS_AIRGAP_MODE."
+        ),
+    )
+    airgap_allowed_hosts: str = Field(
+        default="",
+        description=(
+            "Comma-separated list of allowed outbound hostnames or host:port pairs "
+            "when AEGIS_AIRGAP_MODE=true. The upstream backend host is always implicitly "
+            "allowed. Example: 'internal-llm.corp.example.com,10.0.0.5:8080'. "
+            "An empty value (with airgap_mode=true) only permits the upstream backend. "
+            "Configure via AEGIS_AIRGAP_ALLOWED_HOSTS."
+        ),
+    )
 
     # ── HSM / PKCS#11 signing ─────────────────────────────────────────────
     pkcs11_library_path: str = Field(
@@ -558,6 +603,36 @@ class AegisSettings(BaseSettings):
         if not self.cors_origins:
             return []
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    def get_dmz_networks(self) -> list[Any]:
+        """Parse AEGIS_DMZ_ALLOWED_SOURCE_IPS into ipaddress network objects."""
+        import ipaddress
+
+        if not self.dmz_allowed_source_ips:
+            return []
+        networks = []
+        for entry in self.dmz_allowed_source_ips.split(","):
+            entry = entry.strip()
+            if not entry:
+                continue
+            try:
+                # Accept bare IPs (treat as /32 or /128) or CIDR notation
+                networks.append(ipaddress.ip_network(entry, strict=False))
+            except ValueError as exc:
+                raise ValueError(
+                    f"AEGIS_DMZ_ALLOWED_SOURCE_IPS: invalid address or network {entry!r}: {exc}"
+                ) from exc
+        return networks
+
+    def get_egress_guard(self) -> Any:
+        """Build an EgressGuard from airgap_mode + airgap_allowed_hosts."""
+        from aegis.proxy.egress_guard import build_egress_guard
+
+        return build_egress_guard(
+            airgap_mode=self.airgap_mode,
+            allowed_hosts_csv=self.airgap_allowed_hosts,
+            upstream_url=self.backend_url_str,
+        )
 
     @property
     def backend_url_str(self) -> str:
