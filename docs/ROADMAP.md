@@ -292,7 +292,7 @@ is not committed to `docs/BENCHMARKS.md`.
 
 - [x] Static WAF pattern set (23 critical + 11 soft, embedded in source)
 - [ ] STIX 2.1 / TAXII 2.1 threat feed ingestion: pull adversarial prompt indicators from sharing community
-- [ ] MITRE ATLAS (Adversarial Threat Landscape for AI Systems) tactic mapping per WAF hit
+- [x] MITRE ATLAS (Adversarial Threat Landscape for AI Systems) tactic mapping per WAF hit
 - [ ] IOC (Indicator of Compromise) correlation: cross-reference tenant_id / request fingerprints against known threat actor TTPs
 - [ ] Threat intelligence sharing: aegis_server endpoint to publish anonymized attack telemetry to ISAC feeds
 - [ ] YARA rule engine integration: apply YARA rules to request/response payloads for malware-derived string detection
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 20 | 24 | ~83% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
-| Advanced Forensics & WAF | 19 | 26 | ~73% |
-| **Total** | **86** | **122** | **~70%** |
+| Advanced Forensics & WAF | 20 | 26 | ~77% |
+| **Total** | **87** | **122** | **~71%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
