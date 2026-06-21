@@ -989,10 +989,27 @@ An auditor with the `AEGIS_SIGNING_KEY` (or the ML-DSA public keys stored per-no
 
 ## Documentation Index
 
+### Technical Reference — the "system laws"
+
+These three documents are the authoritative, surgically-scoped references for each
+critical area. The README summarizes; **these define**.
+
+| Law | Document | Defines |
+|-----|----------|---------|
+| **Architecture** | [`docs/architecture/DEEP_DIVE.md`](docs/architecture/DEEP_DIVE.md) | Two-path execution, cryptographic chain & signing priority, Merkle Mountain Range, asynchronous WAL persistence & recovery, evidence/archival formats |
+| **Security** | [`docs/security/THREAT_MODEL.md`](docs/security/THREAT_MODEL.md) | Full STRIDE analysis, mTLS / CAC-PIV posture, secret-leakage invariants, explicit non-defenses |
+| **Performance** | [`docs/performance/SCALING_GUIDE.md`](docs/performance/SCALING_GUIDE.md) | Measured horizontal-scaling curve, workers-per-core guidance, WAL tuning, multi-replica sync, Redis-over-TLS |
+
+### Full index
+
 | Document | Audience | Contents |
 |----------|----------|---------|
 | **This README** | All | Architecture, security model, performance, deployment, operations |
+| [`docs/architecture/DEEP_DIVE.md`](docs/architecture/DEEP_DIVE.md) | Architects | Cryptographic flow, MMR, async persistence |
+| [`docs/security/THREAT_MODEL.md`](docs/security/THREAT_MODEL.md) | Security teams | STRIDE, mTLS, secret-leakage mitigation |
+| [`docs/performance/SCALING_GUIDE.md`](docs/performance/SCALING_GUIDE.md) | SRE / platform | Multi-replica sync, WAL tuning, Redis TLS |
 | [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) | Performance engineers | Measured latency and throughput with full methodology and hardware environment |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Stakeholders | Per-feature implementation status (single source of truth) |
 | [`docs/RUST_BUILD.md`](docs/RUST_BUILD.md) | Contributors | Rust extension build, features, FFI interface |
 | [`SECURITY.md`](SECURITY.md) | Security teams | Vulnerability reporting, key management policy |
 | [`COMMERCIAL.md`](COMMERCIAL.md) | Enterprise | Commercial license terms and support SLAs |
