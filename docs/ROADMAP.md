@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 3570 passed, 3 skipped, 95%+ coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 3619 passed, 3 skipped, 95%+ coverage).
 
 ---
 
@@ -293,7 +293,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Static WAF pattern set (23 critical + 11 soft, embedded in source)
 - [x] STIX 2.1 / TAXII 2.1 threat feed ingestion: pull adversarial prompt indicators from sharing community — implemented by `aegis/core/stix_taxii_ingestor.py`; `STIXTAXIIIngestor` performs full TAXII 2.1 server discovery → collection listing → object pull flow; `parse_stix_bundle`, `is_prompt_indicator`, `extract_waf_pattern`, `parse_indicator`, `link_relationships` module-level helpers; `PromptIndicator`, `TaxiiCollection`, `IngestResult` dataclasses with `to_dict()`; supports `aegis-adversarial-prompt`, `adversarial-prompt`, `jailbreak`, `prompt-injection` STIX labels; extracts WAF-ready string literals from STIX patterning expressions; resolves `indicates` relationships to AttackPattern IDs; module-level `ingest_bundle()` convenience wrapper; 69 tests in `tests/test_stix_taxii_ingestor.py`
 - [x] MITRE ATLAS (Adversarial Threat Landscape for AI Systems) tactic mapping per WAF hit
-- [ ] IOC (Indicator of Compromise) correlation: cross-reference tenant_id / request fingerprints against known threat actor TTPs
+- [x] IOC (Indicator of Compromise) correlation: cross-reference tenant_id / request fingerprints against known threat actor TTPs (`aegis/core/ioc_correlator.py`: `IOCCorrelator` with `ThreatIOC` registry; 64-bit SimHash fingerprinting (reuses `cross_session_correlator.compute_simhash`); Hamming-distance threshold matching; `add_ioc()` / `add_iocs()` / `clear()` / `match()` / `match_messages()`; `IOCMatch` and `IOCCorrelationResult` dataclasses with `to_dict()`; pattern text not retained after registration; SHA-256 `request_hash` for audit logging; 49 tests in `tests/test_ioc_correlator.py`)
 - [ ] Threat intelligence sharing: aegis_server endpoint to publish anonymized attack telemetry to ISAC feeds
 - [x] YARA rule engine integration: apply YARA rules to request/response payloads for malware-derived string detection — implemented by `aegis/core/yara_engine.py`; pure-Python YARA-subset engine (no native dependency); supports plain-text, regex, and hex string types; modifiers `nocase`, `fullword`; conditions `any of them`, `all of them`, `N of them`, `any of ($prefix*)`, boolean `and`/`or`, single `$name`, `true`/`false`; `parse_yara_rules()`, `_eval_condition()`; `YARAEngine(rules_text, load_builtin)` with `add_rules()` and `scan(str|bytes)`; 7 built-in adversarial-prompt rules (IgnorePreviousInstructions, DANJailbreak, SystemPromptExtraction, RoleplayEscape, PromptDelimiterInjection, AsciiObfuscation, ContextWindowManipulation); `MatchedString`, `YARAMatch`, `YARAScanResult` dataclasses with `to_dict()`; 118 tests in `tests/test_yara_engine.py`
 
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 24 | 24 | ~100% |
 | Industrial Automation & OT | 18 | 21 | ~86% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
-| Advanced Forensics & WAF | 34 | 27 | ~100% |
-| **Total** | **118** | **123** | **~96%** |
+| Advanced Forensics & WAF | 35 | 27 | ~100% |
+| **Total** | **119** | **123** | **~97%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
