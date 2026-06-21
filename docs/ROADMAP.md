@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 2218 passed, 1 skipped, 95.37% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 2270 passed, 1 skipped, 95.43% coverage).
 
 ---
 
@@ -254,7 +254,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] KL/JS divergence from baseline distribution
 - [x] Multi-turn behavioral jailbreak detection: `WAFSessionState` state machine in `aegis/core/waf_session.py` tracks cumulative WAF scores and consecutive soft-hit (crescendo) patterns across a configurable sliding window; integrated into both `/v1/chat/completions` and `/v1/completions` handlers
 - [x] Conversation graph analysis: detect "crescendo" attack (gradual constraint erosion over session)
-- [ ] Cross-session correlation: detect coordinated multi-account attacks sharing jailbreak templates
+- [x] Cross-session correlation: detect coordinated multi-account attacks sharing jailbreak templates (`aegis/core/cross_session_correlator.py`: `CrossSessionCorrelator` with 64-bit SimHash fingerprinting over 4-word shingles (Charikar 2002), 8×8-bit LSH band bucketing for O(1) candidate lookup, sliding-window eviction, Hamming-distance threshold for near-duplicate grouping; `CorrelationAlert` with `tenant_ids`, `fingerprint_hex`, `band_key`, `first_seen`/`last_seen`; `CorrelationResult` with `coordinated`, `alerts`; `hamming_distance()`, `lsh_bands()`, `compute_simhash()`; covers shared jailbreak kits, A/B variant attacks, botnet-driven prompt flooding; `pytest tests/test_cross_session_correlator.py` — 52 tests)
 - [ ] Semantic similarity clustering: flag requests within cosine distance threshold of known jailbreak embeddings
 - [x] Adversarial suffix detection: gradient-based suffix patterns (GCG, AutoDAN) via fixed signature set (`aegis/core/adversarial_suffix_detector.py`: `AdversarialSuffixDetector` with 11 fixed signatures — long/spaced token-repetition runs, obedience-induction phrases, GCG punctuation runs, AutoDAN openers, output-prefix injection, and published GCG fragment anchors; tail-window scanning (default last 2000 chars) with full-text override; `scan(text)` and `scan_messages(messages)` (user-turns only); `SuffixDetectionResult` with `flagged`, `signals`, `scan_length`, `reason`, `to_dict()`; `pytest tests/test_adversarial_suffix_detector.py` — 54 tests)
 - [x] Many-shot jailbreak detection: flag prompts with >N examples in few-shot context (`aegis/core/manyshot_detector.py`: `ManyShotDetector` with configurable `threshold` (default 10) and `min_qa_ratio`; multi-signal counting — Q&A turn pairs (Human/User/Q: + Assistant/AI/A: with assistant-to-human ratio guard), numbered-list items (≥20 chars), "Example/Sample/Shot N:" headers, bracket/XML shot delimiters (<example>, [EXAMPLE], <shot>); `evaluate(text)` and `evaluate_messages(messages)` (concatenates content across turns to defeat per-message evasion); `ManyShotDetectionResult` with `shot_count`, `signal_counts`, `exceeded`, `reason`, `scan_length`, `to_dict()`; `pytest tests/test_manyshot_detector.py` — 42 tests)
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
-| Advanced Forensics & WAF | 21 | 26 | ~81% |
-| **Total** | **90** | **122** | **~74%** |
+| Advanced Forensics & WAF | 22 | 26 | ~85% |
+| **Total** | **91** | **122** | **~75%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -350,6 +350,8 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** LDAP/Active Directory multi-factor identity assertion — `LDAPAuthenticator` (service-bind → user-lookup → user-bind → group-assert), AD nested-group OID + RFC 2307 group search, RFC 4515 injection escaping, ldaps:///StartTLS with CA verification, `AEGIS_LDAP_*` config, `ldap3` optional dep; 42 tests (Domain 1.2) — completed 2026-06-21.
 > **Done:** RBAC + NIST SP 800-207 Zero Trust attribute evaluation — `Role`/`RoleRegistry` (subject, LDAP-group, and default-role resolution) over the scope vocabulary; `ZeroTrustPolicyEngine` deny-by-default with dynamic constraints (`RequireMTLS`, `RequireAuthMethod`, `IPAllowlist`, `TimeWindow`); `AccessContext`/`AccessDecision` for auditable decisions; 46 tests (Domain 1.2) — completed 2026-06-21.
 > **Done:** ABAC for IL5/IL6 data compartmentalization — Bell-LaPadula `ABACPolicyEngine` with `ClassificationLevel` dominance, need-to-know compartments, REL TO/NOFORN dissemination controls; `can_read`/`can_write`/`can_flow`/`endpoint_accredited` (DoD Impact Level → classification mapping); 46 tests (Domain 1.2) — completed 2026-06-21.
+> **Done:** WORM (Write-Once Read-Many) enforcement for WAL segments — `WORMEnforcer` with dual-layer protection (application-level `WORMViolationError` + OS-level `0o400` permissions); `WORMSealRecord` sentinel JSON line; `seal()`, `verify()`, `enforce_immutability()`, `delete_node()` (unconditionally raises); `unseal_for_testing()` for CI teardown; `count_nodes_in_segment()` helper; 21 CFR Part 11 Annex 11 §5 / NIST SP 800-53 AU-9 compliance; 56 tests (Domain 2.2) — completed 2026-06-21.
+> **Done:** Cross-session correlation — `CrossSessionCorrelator` with SimHash fingerprinting (64-bit, 4-word shingles), 8×8-bit LSH band bucketing, sliding-window eviction, Hamming-distance grouping; covers shared jailbreak kits, A/B variant attacks, botnet flooding; 52 tests (Domain 5.1) — completed 2026-06-21.
 
 ---
 
