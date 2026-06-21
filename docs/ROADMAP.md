@@ -295,7 +295,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] MITRE ATLAS (Adversarial Threat Landscape for AI Systems) tactic mapping per WAF hit
 - [ ] IOC (Indicator of Compromise) correlation: cross-reference tenant_id / request fingerprints against known threat actor TTPs
 - [ ] Threat intelligence sharing: aegis_server endpoint to publish anonymized attack telemetry to ISAC feeds
-- [ ] YARA rule engine integration: apply YARA rules to request/response payloads for malware-derived string detection
+- [x] YARA rule engine integration: apply YARA rules to request/response payloads for malware-derived string detection — implemented by `aegis/core/yara_engine.py`; pure-Python YARA-subset engine (no native dependency); supports plain-text, regex, and hex string types; modifiers `nocase`, `fullword`; conditions `any of them`, `all of them`, `N of them`, `any of ($prefix*)`, boolean `and`/`or`, single `$name`, `true`/`false`; `parse_yara_rules()`, `_eval_condition()`; `YARAEngine(rules_text, load_builtin)` with `add_rules()` and `scan(str|bytes)`; 7 built-in adversarial-prompt rules (IgnorePreviousInstructions, DANJailbreak, SystemPromptExtraction, RoleplayEscape, PromptDelimiterInjection, AsciiObfuscation, ContextWindowManipulation); `MatchedString`, `YARAMatch`, `YARAScanResult` dataclasses with `to_dict()`; 118 tests in `tests/test_yara_engine.py`
 
 #### 5.5 Forensic Chain of Custody
 
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 23 | 24 | ~96% |
 | Industrial Automation & OT | 17 | 21 | ~81% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
-| Advanced Forensics & WAF | 32 | 27 | ~100% |
-| **Total** | **114** | **123** | **~93%** |
+| Advanced Forensics & WAF | 33 | 27 | ~100% |
+| **Total** | **115** | **123** | **~93%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
