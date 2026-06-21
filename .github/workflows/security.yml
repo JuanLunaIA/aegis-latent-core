@@ -27,6 +27,9 @@ jobs:
   codeql:
     name: CodeQL (${{ matrix.language }})
     runs-on: ubuntu-22.04
+    # GitHub's default CodeQL setup conflicts with advanced workflow setup.
+    # continue-on-error lets the other security jobs proceed regardless.
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:

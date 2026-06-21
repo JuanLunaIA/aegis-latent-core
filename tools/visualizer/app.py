@@ -26,6 +26,7 @@ VIS_DIR = APP_DIR / "tools" / "visualizer"
 app = FastAPI(title="Aegis Visualizer")
 app.mount("/static", StaticFiles(directory=str(VIS_DIR / "static")), name="static")
 
+
 @app.get("/api/summary")
 async def summary():
     try:
@@ -34,7 +35,9 @@ async def summary():
             data = await loop.run_in_executor(pool, generate_summary_dict)
         return JSONResponse(content=data)
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": "failed to generate summary", "exception": str(e)})
+        return JSONResponse(
+            status_code=500, content={"error": "failed to generate summary", "exception": str(e)}
+        )
 
 
 @app.get("/api/forensic_report")
@@ -46,7 +49,9 @@ async def forensic_report():
         with open(path, encoding="utf-8") as fh:
             data = json.load(fh)
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": "failed to read report", "exception": str(e)})
+        return JSONResponse(
+            status_code=500, content={"error": "failed to read report", "exception": str(e)}
+        )
     return JSONResponse(content=data)
 
 
@@ -153,7 +158,9 @@ async def metrics():
             data = await loop.run_in_executor(pool, _build_metrics)
         return JSONResponse(content=data)
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": "failed to build metrics", "exception": str(e)})
+        return JSONResponse(
+            status_code=500, content={"error": "failed to build metrics", "exception": str(e)}
+        )
 
 
 _MAX_SCAN_CHARS = 20000
@@ -195,10 +202,11 @@ async def threat_samples():
 
         return JSONResponse(content={"samples": sample_payloads()})
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": "failed to load samples", "exception": str(e)})
+        return JSONResponse(
+            status_code=500, content={"error": "failed to load samples", "exception": str(e)}
+        )
 
 
 @app.get("/")
 async def index():
     return FileResponse(str(VIS_DIR / "static" / "index.html"))
-

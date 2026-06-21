@@ -5,10 +5,7 @@
 
 from __future__ import annotations
 
-import pytest
-
 from aegis.core.leak_detector import DataLeakDetector
-
 
 # ── construction ───────────────────────────────────────────────────────────────
 

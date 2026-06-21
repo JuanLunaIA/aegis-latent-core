@@ -9,13 +9,19 @@ description = "Tier-4 Rust core: zero-copy forwarder, Aho-Corasick WAF, BLAKE3 a
 license = "AGPL-3.0-only"
 authors = ["Juan Luna <juan.c.luna04@gmail.com>"]
 
+[features]
+# Enable when building as a Python extension (.so/.pyd).
+# maturin passes --features extension-module automatically; cargo test omits it
+# so libpython is linked normally for the test binary.
+extension-module = ["pyo3/extension-module"]
+
 [lib]
 name = "aegis_rust"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # Python bindings
-pyo3 = { version = "0.24.1", features = ["extension-module", "abi3-py311"] }
+pyo3 = { version = "0.24.1", features = ["abi3-py311"] }
 
 # Async runtime — powers connection-pooled HTTP forwarder
 tokio = { version = "1", features = ["full"] }

@@ -5,20 +5,19 @@
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ── _AlertStore — append and recent (lines 109-111, 114-116) ─────────────────
 
 
 @pytest.mark.asyncio
 async def test_alert_store_append_and_recent():
+    import time as _time
+
     from aegis.proxy.app import _AlertStore
     from aegis.proxy.schemas import AlertOut
-    import time as _time
 
     store = _AlertStore(maxsize=10)
 
@@ -41,9 +40,10 @@ async def test_alert_store_append_and_recent():
 
 @pytest.mark.asyncio
 async def test_alert_store_recent_limits_results():
+    import time as _time
+
     from aegis.proxy.app import _AlertStore
     from aegis.proxy.schemas import AlertOut
-    import time as _time
 
     store = _AlertStore(maxsize=20)
     for i in range(10):
@@ -128,8 +128,8 @@ def test_extract_payload_text_non_dict_message():
 
 
 def test_create_proxy_app_alias(tmp_path):
-    from aegis.proxy.app import create_proxy_app
     from aegis.config import AegisSettings
+    from aegis.proxy.app import create_proxy_app
 
     cfg = AegisSettings(
         backend_api_key="sk-test",
@@ -173,9 +173,9 @@ def test_main_calls_uvicorn_run(monkeypatch):
 
 
 def test_main_with_ssl_certfile(monkeypatch, tmp_path):
+
     import aegis.proxy.app as app_mod
     from aegis.config import AegisSettings
-    from pathlib import Path
 
     cert_file = tmp_path / "cert.pem"
     cert_file.write_text("fake cert")
@@ -237,8 +237,9 @@ def test_main_with_mtls_required(monkeypatch, tmp_path):
 
 
 def test_apply_entropy_guard_no_guard_returns_early():
-    from aegis.proxy.app import _apply_request_entropy_guard
     from unittest.mock import MagicMock
+
+    from aegis.proxy.app import _apply_request_entropy_guard
 
     mock_state = MagicMock()
     mock_state.settings.request_entropy_guard = False
@@ -252,8 +253,9 @@ def test_apply_entropy_guard_no_guard_returns_early():
 
 
 def test_apply_entropy_guard_empty_payload_returns_early():
-    from aegis.proxy.app import _apply_request_entropy_guard
     from unittest.mock import MagicMock
+
+    from aegis.proxy.app import _apply_request_entropy_guard
 
     mock_state = MagicMock()
     mock_state.settings.request_entropy_guard = True
@@ -266,9 +268,9 @@ def test_apply_entropy_guard_empty_payload_returns_early():
 
 
 def test_apply_entropy_guard_allowed_payload_adds_sanitized():
-    from aegis.proxy.app import _apply_request_entropy_guard
     from unittest.mock import MagicMock
-    from fastapi import HTTPException
+
+    from aegis.proxy.app import _apply_request_entropy_guard
 
     mock_tainted = MagicMock()
     mock_tainted.value = "sanitized-text"
@@ -288,8 +290,9 @@ def test_apply_entropy_guard_allowed_payload_adds_sanitized():
 
 
 def test_apply_entropy_guard_disallowed_payload_raises_403():
-    from aegis.proxy.app import _apply_request_entropy_guard
     from fastapi import HTTPException
+
+    from aegis.proxy.app import _apply_request_entropy_guard
 
     mock_state = MagicMock()
     mock_state.settings.request_entropy_guard = True
@@ -307,8 +310,9 @@ def test_apply_entropy_guard_disallowed_payload_raises_403():
 
 
 def test_apply_entropy_guard_entropy_shift_raises_403():
-    from aegis.proxy.app import _apply_request_entropy_guard
     from fastapi import HTTPException
+
+    from aegis.proxy.app import _apply_request_entropy_guard
 
     mock_state = MagicMock()
     mock_state.settings.request_entropy_guard = True

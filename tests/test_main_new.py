@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import sys
-from contextlib import contextmanager, ExitStack
+from contextlib import ExitStack, contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -33,11 +33,10 @@ from starlette.testclient import TestClient  # noqa: E402
 
 from aegis_server.config import EnterpriseSettings  # noqa: E402
 from aegis_server.main import (  # noqa: E402
-    create_app,
-    _run_forensic_analytics,
     ComplianceExportRequest,
+    _run_forensic_analytics,
+    create_app,
 )
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -306,7 +305,7 @@ def test_audit_integrity_storage_error():
 
 def test_compliance_export_success(tmp_path):
     """POST /v1/enterprise/compliance/export returns 201."""
-    from aegis_server.compliance.exporter import ExportResult, ComplianceExporter
+    from aegis_server.compliance.exporter import ComplianceExporter, ExportResult
 
     export_file = tmp_path / "bundle.json"
     export_file.write_text('{"aegis_compliance_bundle": {"verification_manifest": {}}}')
@@ -453,7 +452,6 @@ def test_proxy_chat_completions_connection_error():
 
 def test_proxy_chat_completions_success():
     """Successful proxy returns upstream response."""
-    import httpx
 
     s = _make_settings()
     upstream_body = json.dumps({"id": "chatcmpl-1", "choices": []}).encode()
@@ -906,7 +904,6 @@ def test_proxy_auth_invalid_key_returns_403():
 
 def test_proxy_auth_valid_key_forwards():
     """Valid API key on proxy passes auth (line 327, _require_auth)."""
-    import httpx
 
     s = _make_settings(auth_disabled=False, api_keys="proxy-key-123")
     upstream_body = json.dumps({"id": "cid", "choices": []}).encode()
@@ -939,7 +936,6 @@ def test_proxy_auth_valid_key_forwards():
 
 def test_proxy_non_json_request_body():
     """Non-JSON request body → JSON parse fails gracefully (lines 851-852)."""
-    import httpx
 
     s = _make_settings()
     upstream_body = b"upstream response"
@@ -972,7 +968,6 @@ def test_proxy_non_json_request_body():
 
 def test_proxy_with_backend_api_key():
     """When backend_api_key is set, Authorization header is injected (line 867)."""
-    import httpx
 
     s = _make_settings(backend_api_key="sk-backend-key-secret")
     upstream_body = json.dumps({"id": "cid", "choices": []}).encode()
@@ -1034,7 +1029,6 @@ async def test_run_forensic_analytics_logprob_extraction_exception():
 @pytest.mark.asyncio
 async def test_run_forensic_analytics_entropy_exception():
     """When np.mean raises, entropy calculation exception is caught (lines 483-484)."""
-    import numpy as np
 
     storage = _make_storage()
     signer = _make_signer()

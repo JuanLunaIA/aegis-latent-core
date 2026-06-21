@@ -6,10 +6,8 @@
 from __future__ import annotations
 
 import pytest
-import pytest_asyncio
 
-from aegis_server.storage.sqlite_provider import SQLiteStorageProvider, _SQLITE_LOCK_TIMEOUT
-
+from aegis_server.storage.sqlite_provider import _SQLITE_LOCK_TIMEOUT, SQLiteStorageProvider
 
 # ── constants ─────────────────────────────────────────────────────────────────
 

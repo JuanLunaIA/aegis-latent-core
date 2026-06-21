@@ -14,7 +14,6 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-
 # ── math_utils — non-finite float (lines 46-48) ──────────────────────────────
 
 
@@ -142,7 +141,7 @@ def test_detect_entanglement_not_calibrated():
 def test_core_getattr_known_submodule():
     import aegis.core as core
 
-    mmr_mod = getattr(core, "mmr")
+    mmr_mod = core.mmr
     assert mmr_mod is not None
 
 
@@ -219,7 +218,7 @@ def test_find_class_allows_bytearray():
 
 def test_crypto_audit_makedirs_oserror_silenced(tmp_path):
     """When makedirs raises OSError during WAL _persist_node fallback (lines 547-548)."""
-    from aegis.core.crypto_audit import CryptographicAuditLedger, AuditNode
+    from aegis.core.crypto_audit import CryptographicAuditLedger
 
     ledger = CryptographicAuditLedger(
         persistence_path=str(tmp_path / "test_ledger.wal"),
@@ -288,24 +287,27 @@ def test_timing_defense_double_blocksize_exact_multiple():
 
 
 def test_config_invalid_provider_raises():
-    from aegis.config import AegisSettings
     import pydantic
+
+    from aegis.config import AegisSettings
 
     with pytest.raises((ValueError, pydantic.ValidationError)):
         AegisSettings(backend_api_key="sk-test", api_keys="k", provider="invalid_provider")
 
 
 def test_config_invalid_rate_limit_backend_raises():
-    from aegis.config import AegisSettings
     import pydantic
+
+    from aegis.config import AegisSettings
 
     with pytest.raises((ValueError, pydantic.ValidationError)):
         AegisSettings(backend_api_key="sk-test", api_keys="k", rate_limit_backend="memcached")
 
 
 def test_config_invalid_log_level_raises():
-    from aegis.config import AegisSettings
     import pydantic
+
+    from aegis.config import AegisSettings
 
     with pytest.raises((ValueError, pydantic.ValidationError)):
         AegisSettings(backend_api_key="sk-test", api_keys="k", log_level="VERBOSE")
@@ -331,9 +333,10 @@ def test_config_get_cors_origins_with_value():
 
 
 def test_response_analysis_has_alerts_property():
+    import time as _time
+
     from aegis.proxy.analyzer import ResponseAnalysis
     from aegis.proxy.schemas import AlertOut
-    import time as _time
 
     alert = AlertOut(
         session_id="s1",
@@ -378,8 +381,8 @@ def test_response_analysis_has_alerts_property():
 
 def test_analyzer_pydantic_logprobs_item_hits_line_151():
     """When logprobs_data[0] is a ChoiceLogprobs object (not dict), line 151 is reached."""
-    from aegis.proxy.schemas import ChoiceLogprobs, TokenLogprob, TopLogprob
     from aegis.proxy.analyzer import ResponseAnalyzer
+    from aegis.proxy.schemas import ChoiceLogprobs, TokenLogprob, TopLogprob
 
     tok = TokenLogprob(
         token="a",

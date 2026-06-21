@@ -13,14 +13,12 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from aegis_server.compliance.exporter import (
+    _MAX_EXPORT_NODES,
     ComplianceExporter,
     ExportParams,
     ExportResult,
-    _MAX_EXPORT_NODES,
 )
 from aegis_server.crypto.base import LocalHMACSigner
-from aegis_server.storage.sqlite_provider import SQLiteStorageProvider
-
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 

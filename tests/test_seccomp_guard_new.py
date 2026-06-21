@@ -6,11 +6,9 @@
 from __future__ import annotations
 
 import os
-import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from aegis.core.seccomp_guard import SCMP_ACT_ALLOW, SCMP_ACT_KILL, SeccompGuard, SyscallProfile
-
 
 # ── SyscallProfile dataclass ──────────────────────────────────────────────────
 

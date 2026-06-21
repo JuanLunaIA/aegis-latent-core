@@ -97,7 +97,7 @@ _ZW_CHARS = [
     "‌",  # zero-width non-joiner
     "‍",  # zero-width joiner
     "‎",  # LTR mark
-    "‏",  # RTL mark
+    "‏",  # RTL mark  # nosec B613
     "﻿",  # BOM / zero-width no-break space
 ]
 

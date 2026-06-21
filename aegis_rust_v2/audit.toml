@@ -1,0 +1,20 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+#
+# cargo-audit advisory suppression — review before each pyo3/pqcrypto upgrade.
+
+[advisories]
+ignore = [
+    # pyo3 0.24.1: out-of-bounds read in nth/nth_back for PyList/PyTuple iterators.
+    # Tracked for upgrade to pyo3 >=0.29.0 when API migration is scheduled.
+    "RUSTSEC-2026-0176",
+
+    # paste macro crate — unmaintained upstream, no CVE; used transitively by pqcrypto.
+    "RUSTSEC-2024-0436",
+
+    # pqcrypto family — unmaintained upstream advisories; no replacement available yet.
+    "RUSTSEC-2026-0162",  # pqcrypto-traits
+    "RUSTSEC-2026-0163",  # pqcrypto-internals
+    "RUSTSEC-2026-0166",  # pqcrypto-mldsa
+]

@@ -156,7 +156,7 @@ jobs:
         working-directory: aegis_rust_v2
         env:
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
-        run: maturin build --release
+        run: maturin build --release --features extension-module
 
   # ── Security scan ─────────────────────────────────────────────────────────
   security:

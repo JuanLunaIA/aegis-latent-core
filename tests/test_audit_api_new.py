@@ -6,16 +6,13 @@
 from __future__ import annotations
 
 import time
-from typing import Any
 from unittest.mock import MagicMock
 
 import httpx
 import pytest
 from fastapi import FastAPI
-from fastapi.security import HTTPAuthorizationCredentials
 
 from aegis.proxy.audit_api import build_audit_router
-
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -50,8 +47,6 @@ def _make_app(ledger) -> FastAPI:
     app = FastAPI()
 
     # Bypass auth: override validate_audit_auth to always return "test"
-    from aegis.proxy import dependencies as _dep
-    from unittest.mock import AsyncMock
 
     async def _noop_auth(request):
         return "test"

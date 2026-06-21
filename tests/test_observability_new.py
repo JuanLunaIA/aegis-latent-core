@@ -7,11 +7,7 @@ from __future__ import annotations
 
 import importlib
 import sys
-from contextlib import asynccontextmanager
 from unittest.mock import MagicMock, patch
-
-import pytest
-
 
 # ── Prometheus paths (lines 46, 52-109) ───────────────────────────────────────
 
@@ -111,8 +107,8 @@ def test_setup_otel_when_otel_enabled(monkeypatch):
 
 def test_setup_otel_with_endpoint(monkeypatch):
     """setup_otel() with OTEL endpoint env var set exercises BatchSpanProcessor path."""
+
     import aegis.core.observability as obs
-    import os
 
     mock_provider = MagicMock()
     mock_provider_instance = MagicMock()

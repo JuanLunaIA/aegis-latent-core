@@ -15,9 +15,11 @@ import re
 from pathlib import Path
 
 ROOT = Path.cwd()
+
+
 def analyze_python_file(path: Path):
     try:
-        src = path.read_text(encoding='utf-8')
+        src = path.read_text(encoding="utf-8")
         tree = ast.parse(src)
     except Exception as e:
         return {"error": str(e)}
@@ -35,7 +37,7 @@ def analyze_python_file(path: Path):
 
 def analyze_rust_file(path: Path):
     try:
-        text = path.read_text(encoding='utf-8')
+        text = path.read_text(encoding="utf-8")
     except Exception as e:
         return {"error": str(e)}
     fn_pattern = re.compile(r"(?m)^\s*(pub\s+)?fn\s+([a-zA-Z0-9_]+)")
@@ -46,7 +48,10 @@ def analyze_rust_file(path: Path):
 def git_head(root: Path):
     try:
         import subprocess
-        out = subprocess.check_output(["git","rev-parse","--short","HEAD"], cwd=root, text=True).strip()
+
+        out = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=root, text=True
+        ).strip()
         return out
     except Exception:
         return None
@@ -75,7 +80,7 @@ def generate_summary_dict():
     tr = ROOT / "tools" / "visualizer" / "test_results.json"
     if tr.exists():
         try:
-            result["test_results"] = json.loads(tr.read_text(encoding='utf-8'))
+            result["test_results"] = json.loads(tr.read_text(encoding="utf-8"))
         except Exception as e:
             result["test_results"] = {"error": str(e)}
     else:
@@ -83,8 +88,10 @@ def generate_summary_dict():
 
     return result
 
+
 def main():
     print(json.dumps(generate_summary_dict(), indent=2))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

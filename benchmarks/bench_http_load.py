@@ -156,9 +156,7 @@ async def run_load(
         result["server_cpu_utilization_pct"] = (
             round(100.0 * cpu_seconds / wall, 1) if wall > 0 else 0.0
         )
-        result["server_peak_rss_mib"] = (
-            round(max(rss_samples) / 1024.0, 1) if rss_samples else 0.0
-        )
+        result["server_peak_rss_mib"] = round(max(rss_samples) / 1024.0, 1) if rss_samples else 0.0
     return result
 
 
@@ -175,9 +173,7 @@ def main() -> None:
     if args.warmup > 0:
         asyncio.run(run_load(args.url, args.warmup, args.concurrency, None))
 
-    result = asyncio.run(
-        run_load(args.url, args.total, args.concurrency, args.server_pid)
-    )
+    result = asyncio.run(run_load(args.url, args.total, args.concurrency, args.server_pid))
     print(json.dumps(result, indent=2))
     if args.json_out:
         Path(args.json_out).write_text(json.dumps(result, indent=2))

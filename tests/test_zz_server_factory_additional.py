@@ -8,8 +8,6 @@ from __future__ import annotations
 import sys
 from unittest.mock import MagicMock
 
-import pytest
-
 # ── sys.modules stubs for optional backends ───────────────────────────────────
 
 # hvac stub (must be before import of vault_signer)

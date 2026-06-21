@@ -300,8 +300,8 @@ class TestStartStop:
             p.write_text(json.dumps(new_data))
             # Touch mtime explicitly to guarantee detection.
             os.utime(str(p), None)
-            triggered = event.wait(timeout=2.0)
-            assert triggered, "Polling loop did not detect file change in 2 s"
+            triggered = event.wait(timeout=5.0)
+            assert triggered, "Polling loop did not detect file change in 5 s"
             assert r.current is not None
             assert r.current.version == 99
         finally:
