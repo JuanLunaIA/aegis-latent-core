@@ -291,7 +291,7 @@ is not committed to `docs/BENCHMARKS.md`.
 #### 5.4 Threat Intelligence Integration
 
 - [x] Static WAF pattern set (23 critical + 11 soft, embedded in source)
-- [ ] STIX 2.1 / TAXII 2.1 threat feed ingestion: pull adversarial prompt indicators from sharing community
+- [x] STIX 2.1 / TAXII 2.1 threat feed ingestion: pull adversarial prompt indicators from sharing community — implemented by `aegis/core/stix_taxii_ingestor.py`; `STIXTAXIIIngestor` performs full TAXII 2.1 server discovery → collection listing → object pull flow; `parse_stix_bundle`, `is_prompt_indicator`, `extract_waf_pattern`, `parse_indicator`, `link_relationships` module-level helpers; `PromptIndicator`, `TaxiiCollection`, `IngestResult` dataclasses with `to_dict()`; supports `aegis-adversarial-prompt`, `adversarial-prompt`, `jailbreak`, `prompt-injection` STIX labels; extracts WAF-ready string literals from STIX patterning expressions; resolves `indicates` relationships to AttackPattern IDs; module-level `ingest_bundle()` convenience wrapper; 69 tests in `tests/test_stix_taxii_ingestor.py`
 - [x] MITRE ATLAS (Adversarial Threat Landscape for AI Systems) tactic mapping per WAF hit
 - [ ] IOC (Indicator of Compromise) correlation: cross-reference tenant_id / request fingerprints against known threat actor TTPs
 - [ ] Threat intelligence sharing: aegis_server endpoint to publish anonymized attack telemetry to ISAC feeds
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 23 | 24 | ~96% |
 | Industrial Automation & OT | 17 | 21 | ~81% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
-| Advanced Forensics & WAF | 31 | 27 | ~100% |
-| **Total** | **113** | **123** | **~92%** |
+| Advanced Forensics & WAF | 32 | 27 | ~100% |
+| **Total** | **114** | **123** | **~93%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
