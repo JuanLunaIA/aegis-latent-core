@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 3194 passed, 3 skipped, 95%+ coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 3529 passed, 3 skipped, 95%+ coverage).
 
 ---
 
@@ -136,7 +136,7 @@ is not committed to `docs/BENCHMARKS.md`.
 
 - [x] Shannon entropy + KL/JS divergence per-token (general statistical anomaly detection)
 - [x] WAF with 23 critical + 11 soft patterns (prompt injection, jailbreak)
-- [ ] ICD-11 / SNOMED-CT ontology-aware anomaly detection: flag responses containing clinical codes mismatched to the request context
+- [x] ICD-11 / SNOMED-CT ontology-aware anomaly detection: flag responses containing clinical codes mismatched to the request context (`aegis/core/icd_snomed_detector.py`: `ICDSNOMEDDetector` with `_ICD10_CHAPTER` / `_ICD11_CHAPTER` maps, 13-domain keyword-inference patterns, `_ICD10_RE` / `_ICD11_RE` / `_SNOMED_RE` regex extractors, `scan()` + `scan_messages()` + `extract_codes()`; `AEGIS_ICD_STRICT` env for strict mode; `pytest tests/test_icd_snomed_detector.py` — 95 tests)
 - [x] Dosage hallucination detection: numeric range check for drug dosage claims against reference database (RxNorm, NLM DailyMed) (`aegis/core/dosage_hallucination.py`: `DosageHallucinationDetector` with ~100-drug curated reference database across 12 therapeutic classes (NSAIDs, opioids, antibiotics, antihypertensives, statins, anticoagulants, diabetes, psychiatric/neurological, pulmonary, GI, immunosuppressants, thyroid); `scan()` + `scan_messages()` (assistant-role only) with forward + reverse regex extraction, canonical-name deduplication, unit-mismatch guard, alias resolution (e.g. tylenol→acetaminophen); `DosageFinding.summary()` with direction (exceeds max / below min); `AEGIS_DOSAGE_STRICT` env var for unknown-drug enforcement; `extra_db` for institution formularies; 54 tests)
 - [x] PII confidence scoring per response (`aegis/core/pii_confidence.py`: `PIIConfidenceFilter` wraps `PHIDeidentifier`; per-entity confidence scores → BLOCK / FLAG / LOG action via configurable `PIIConfidenceThreshold`; `evaluate()` + `evaluate_messages()` + `worst_case()` for batch response gating; `from_config()` reads `AEGIS_PII_BLOCK_THRESHOLD`/`AEGIS_PII_FLAG_THRESHOLD`; `pytest tests/test_pii_confidence.py` — 45 tests)
 - [x] Adverse event (AE) keyword detection aligned to MedDRA preferred terms
@@ -315,11 +315,11 @@ is not committed to `docs/BENCHMARKS.md`.
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
 | Defense & Government | 28 | 28 | ~100% |
-| Healthcare & Life Sciences | 23 | 24 | ~96% |
+| Healthcare & Life Sciences | 24 | 24 | ~100% |
 | Industrial Automation & OT | 17 | 21 | ~81% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
 | Advanced Forensics & WAF | 34 | 27 | ~100% |
-| **Total** | **116** | **123** | **~94%** |
+| **Total** | **117** | **123** | **~95%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
