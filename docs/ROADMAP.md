@@ -271,7 +271,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Token-split reassembly attack detection: detect patterns split across token boundaries (requires tokenizer-aware scan)
 - [ ] Language model-based semantic WAF: lightweight classifier (DistilBERT or FastText) as tertiary pass for novel jailbreaks not matching known patterns
 - [ ] WAF pattern hot-reload: push new patterns without restart via inotify watch on pattern file
-- [ ] WAF shadow mode: log would-be blocks without enforcing, for rule tuning without production risk
+- [x] WAF shadow mode: log would-be blocks without enforcing, for rule tuning without production risk (`aegis/proxy/waf.py`: `shadow_mode=False` parameter on `AegisWAF`; when `True`, runs the full Rust+Layer-1+Layer-2 detection pipeline but suppresses enforcement — returns `WAFResult(allowed=True, shadow_blocked=True, reason=<detection_reason>, score=<score>)` and emits a `WARNING` log; `WAFResult` gets new `shadow_blocked: bool = False` field; internal `_run_detection()` always returns an enforcement decision; 14 new tests in `TestWAFShadowMode`)
 - [ ] Differential fuzzing harness: `hypothesis`-driven WAF bypass attempt generation (currently `aegis/core/fuzzing_harness.py` is a stub excluded from coverage)
 
 #### 5.3 ISO/IEC 27037 Digital Forensic Export
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
-| Advanced Forensics & WAF | 23 | 26 | ~88% |
-| **Total** | **92** | **122** | **~75%** |
+| Advanced Forensics & WAF | 24 | 26 | ~92% |
+| **Total** | **93** | **122** | **~76%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -353,6 +353,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** WORM (Write-Once Read-Many) enforcement for WAL segments — `WORMEnforcer` with dual-layer protection (application-level `WORMViolationError` + OS-level `0o400` permissions); `WORMSealRecord` sentinel JSON line; `seal()`, `verify()`, `enforce_immutability()`, `delete_node()` (unconditionally raises); `unseal_for_testing()` for CI teardown; `count_nodes_in_segment()` helper; 21 CFR Part 11 Annex 11 §5 / NIST SP 800-53 AU-9 compliance; 56 tests (Domain 2.2) — completed 2026-06-21.
 > **Done:** Cross-session correlation — `CrossSessionCorrelator` with SimHash fingerprinting (64-bit, 4-word shingles), 8×8-bit LSH band bucketing, sliding-window eviction, Hamming-distance grouping; covers shared jailbreak kits, A/B variant attacks, botnet flooding; 52 tests (Domain 5.1) — completed 2026-06-21.
 > **Done:** RAG-aware prompt injection scanner — `RAGInjectionScanner` with 7 signal categories (direct jailbreak, context-frame escape, role boundary injection, ChatML token injection, LLM-addressed instructions, whitespace padding, lateral exfiltration); `scan_document()`, `scan_tool_result()`, `scan_messages()` covering OpenAI tool/function roles and Anthropic tool_result blocks; 112 tests (Domain 5.1) — completed 2026-06-21.
+> **Done:** WAF shadow mode — `shadow_mode=True` on `AegisWAF` runs full detection pipeline but suppresses enforcement; `WAFResult.shadow_blocked` field; `_run_detection()` internal method; `WARNING` log on every suppressed block; 14 tests (Domain 5.2) — completed 2026-06-21.
 
 ---
 
