@@ -140,6 +140,94 @@ class AegisSettings(BaseSettings):
         ),
     )
 
+    # ── LDAP / Active Directory ───────────────────────────────────────────────
+    ldap_url: str = Field(
+        default="",
+        description=(
+            "LDAP server URL for multi-factor identity assertion. "
+            "Use 'ldaps://' for direct TLS (recommended) or 'ldap://' with "
+            "AEGIS_LDAP_USE_START_TLS=true for StartTLS. "
+            "Example: ldaps://dc.corp.example.com:636. "
+            "Leave empty to disable LDAP authentication."
+        ),
+    )
+    ldap_base_dn: str = Field(
+        default="",
+        description=(
+            "LDAP base Distinguished Name for user and group searches. "
+            "Example: DC=corp,DC=example,DC=com"
+        ),
+    )
+    ldap_bind_dn: str = Field(
+        default="",
+        description=(
+            "Service-account DN for the initial directory search bind (least-privilege read). "
+            "Example: CN=svc-aegis,OU=ServiceAccounts,DC=corp,DC=example,DC=com. "
+            "Provide via AEGIS_LDAP_BIND_DN environment variable or Vault."
+        ),
+    )
+    ldap_bind_password: str = Field(
+        default="",
+        description=(
+            "Password for the LDAP service account. "
+            "Provide via AEGIS_LDAP_BIND_PASSWORD or Vault; never hard-code."
+        ),
+    )
+    ldap_user_search_filter: str = Field(
+        default="(|(sAMAccountName={username})(userPrincipalName={username}))",
+        description=(
+            "LDAP search filter template for user lookup. {username} is substituted "
+            "with the RFC 4515-escaped login name. "
+            "AD default covers sAMAccountName and UPN formats. "
+            "POSIX LDAP alternative: (uid={username})"
+        ),
+    )
+    ldap_user_search_base: str = Field(
+        default="",
+        description=(
+            "DN subtree for user searches. Defaults to ldap_base_dn when empty. "
+            "Example: OU=Users,DC=corp,DC=example,DC=com"
+        ),
+    )
+    ldap_required_groups: str = Field(
+        default="",
+        description=(
+            "Comma-separated CN or DN values of LDAP groups the authenticated user "
+            "must belong to (at least one). Empty string disables group check. "
+            "Example: AegisUsers,AegisAdmins"
+        ),
+    )
+    ldap_ad_mode: bool = Field(
+        default=True,
+        description=(
+            "Enable Active Directory extensions: nested group OID "
+            "(1.2.840.113556.1.4.1941), memberOf enumeration, sAMAccountName lookup. "
+            "Set False for plain RFC 4519 LDAP directories."
+        ),
+    )
+    ldap_use_start_tls: bool = Field(
+        default=False,
+        description="Upgrade plain ldap:// to TLS via StartTLS before bind.",
+    )
+    ldap_ca_certs_file: str = Field(
+        default="",
+        description=(
+            "Path to PEM CA bundle for LDAP TLS peer verification. "
+            "Empty string uses the system default trust store."
+        ),
+    )
+    ldap_timeout_seconds: float = Field(
+        default=10.0,
+        ge=1.0,
+        le=60.0,
+        description="Socket-level timeout (seconds) for LDAP connect and operations.",
+    )
+
+    def get_ldap_required_groups(self) -> frozenset[str]:
+        if not self.ldap_required_groups:
+            return frozenset()
+        return frozenset(g.strip() for g in self.ldap_required_groups.split(",") if g.strip())
+
     # ── mTLS / SSL Hardening ──────────────────────────────────────────────
     ssl_certfile: Path | None = Field(
         default=None,

@@ -61,6 +61,7 @@ storage-all = [
 ]
 # ── Signing / secrets ────────────────────────────────────────────────────────
 vault = ["hvac>=2.1.0"]
+ldap = ["ldap3>=2.9.1"]
 # ── Provider extras (no extra Python deps needed — all HTTP-based) ───────────
 # Install the relevant SDK for SDK-based integration (optional convenience).
 anthropic-sdk = ["anthropic>=0.25.0"]
