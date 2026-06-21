@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 1620 passed, 1 skipped, 95.43% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 2118 passed, 1 skipped, 95.46% coverage).
 
 ---
 
@@ -256,7 +256,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Conversation graph analysis: detect "crescendo" attack (gradual constraint erosion over session)
 - [ ] Cross-session correlation: detect coordinated multi-account attacks sharing jailbreak templates
 - [ ] Semantic similarity clustering: flag requests within cosine distance threshold of known jailbreak embeddings
-- [ ] Adversarial suffix detection: gradient-based suffix patterns (GCG, AutoDAN) via fixed signature set
+- [x] Adversarial suffix detection: gradient-based suffix patterns (GCG, AutoDAN) via fixed signature set (`aegis/core/adversarial_suffix_detector.py`: `AdversarialSuffixDetector` with 11 fixed signatures — long/spaced token-repetition runs, obedience-induction phrases, GCG punctuation runs, AutoDAN openers, output-prefix injection, and published GCG fragment anchors; tail-window scanning (default last 2000 chars) with full-text override; `scan(text)` and `scan_messages(messages)` (user-turns only); `SuffixDetectionResult` with `flagged`, `signals`, `scan_length`, `reason`, `to_dict()`; `pytest tests/test_adversarial_suffix_detector.py` — 54 tests)
 - [x] Many-shot jailbreak detection: flag prompts with >N examples in few-shot context (`aegis/core/manyshot_detector.py`: `ManyShotDetector` with configurable `threshold` (default 10) and `min_qa_ratio`; multi-signal counting — Q&A turn pairs (Human/User/Q: + Assistant/AI/A: with assistant-to-human ratio guard), numbered-list items (≥20 chars), "Example/Sample/Shot N:" headers, bracket/XML shot delimiters (<example>, [EXAMPLE], <shot>); `evaluate(text)` and `evaluate_messages(messages)` (concatenates content across turns to defeat per-message evasion); `ManyShotDetectionResult` with `shot_count`, `signal_counts`, `exceeded`, `reason`, `scan_length`, `to_dict()`; `pytest tests/test_manyshot_detector.py` — 42 tests)
 - [ ] Prompt injection in retrieved context: RAG-aware WAF that scans tool outputs and retrieved documents, not just user input
 
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 20 | 24 | ~83% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
-| Advanced Forensics & WAF | 20 | 26 | ~77% |
-| **Total** | **87** | **122** | **~71%** |
+| Advanced Forensics & WAF | 21 | 26 | ~81% |
+| **Total** | **88** | **122** | **~72%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
