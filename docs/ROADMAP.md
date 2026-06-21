@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 3079 passed, 2 skipped, 95%+ coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 3125 passed, 3 skipped, 95%+ coverage).
 
 ---
 
@@ -156,7 +156,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] `armv7-unknown-linux-musleabihf` target for ARM Cortex-A class PLCs
 - [ ] Embedded profile: compile-time feature flags to strip Prometheus, OpenTelemetry, Vault, compliance exporter (~60% binary size reduction)
 - [ ] Firmware signing of the Rust extension module (Secure Boot chain: UEFI → shim → kernel → module)
-- [ ] Read-only rootfs operation: all writable state (WAL, logs) directed to tmpfs or external NFS mount
+- [x] Read-only rootfs operation: all writable state (WAL, logs) directed to tmpfs or external NFS mount (`aegis/core/readonly_rootfs.py`: `ReadOnlyRootfsGuard` with dual detection probes — `/proc/mounts` scan for `ro` root mount option + write-probe via `NamedTemporaryFile`; `resolve(preferred_path, label)` returns `PathResolutionResult` with guaranteed-writable `path`, re-rooted under `AEGIS_TMPFS_BASE` (default `/tmp/aegis`) or `AEGIS_NFS_MOUNT` when preferred is not writable; `inspect()` returns `ReadOnlyRootfsResult` with `rootfs_readonly`, `proc_mounts_readonly`, `write_probe_failed`, `any_redirected`; NFS mount takes precedence over tmpfs; `AEGIS_SKIP_READONLY_CHECK` for dev environments; 47 tests + 1 root-skipped)
 
 #### 3.2 Deterministic Latency (IEC 62443 SL-3, SIL-2)
 
@@ -316,10 +316,10 @@ is not committed to `docs/BENCHMARKS.md`.
 |---|---|---|---|
 | Defense & Government | 28 | 28 | ~100% |
 | Healthcare & Life Sciences | 23 | 24 | ~96% |
-| Industrial Automation & OT | 16 | 21 | ~76% |
+| Industrial Automation & OT | 17 | 21 | ~81% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
 | Advanced Forensics & WAF | 30 | 27 | ~100% |
-| **Total** | **111** | **123** | **~90%** |
+| **Total** | **112** | **123** | **~91%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
