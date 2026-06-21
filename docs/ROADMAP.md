@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 2162 passed, 1 skipped, 95.50% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 2218 passed, 1 skipped, 95.37% coverage).
 
 ---
 
@@ -117,7 +117,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Per-node `timestamp` (float, UTC) and `state_id` (UUID-based) for chronological ordering
 - [x] Hash chain linkage prevents retroactive insertion
 - [x] 21 CFR Part 11 compliant electronic signature: human-readable meaning annotation ("approved", "reviewed", "authored"), printed name + date in signature manifest
-- [ ] Audit trail lock-out: once a node is sealed it cannot be deleted (WORM enforcement at storage layer)
+- [x] Audit trail lock-out: once a node is sealed it cannot be deleted (WORM enforcement at storage layer) (`aegis/core/worm_ledger.py`: `WORMViolationError` raised on any deletion attempt or sealed-segment overwrite; `WORMSealRecord` sentinel written as final JSON line of each sealed WAL segment; `WORMEnforcer` with `seal(path, node_count)` — appends sentinel + sets 0o400 read-only permissions; `verify(path)` — dual check: 0o400 mode + worm_seal sentinel present; `enforce_immutability(path)` — raises `WORMViolationError` for sealed paths (in-memory or on-disk); `delete_node()` — unconditionally raises `WORMViolationError`; `is_sealed(path)`, `sealed_segments` frozenset; `count_nodes_in_segment()` helper skips sentinel records; `unseal_for_testing()` for CI cleanup; `pytest tests/test_worm_ledger.py` — 56 tests; complies with 21 CFR Part 11 Annex 11 §5, NIST SP 800-53 AU-9, ISO/IEC 27037 forensic chain-of-custody)
 - [x] `audit_trail_version` schema field for migration traceability (Annex 11 §4.8): added to `AuditNode` dataclass (`aegis/core/crypto_audit.py`) as `audit_trail_version: str = "1"` with default `"1"` in `from_dict()` for forward-compatibility; field present in `to_dict()` serialization; backward-compatible (existing WAL records get default)
 - [x] System clock integrity assertion: NTP sync status logged at startup + per-node clock drift check (`aegis/core/clock_integrity.py`: `ClockIntegrityAssertion` with `assert_startup()` probing `timedatectl show` then `adjtimex(2)` via ctypes for NTP sync status; `check_node_drift(node_timestamp)` computes `abs(now - timestamp)` against configurable `max_drift_seconds` (default 5s); `NTPSyncStatus` and `ClockDriftResult` with `to_dict()`; graceful fallback when both probes unavailable; `pytest tests/test_clock_integrity.py` — 34 tests)
 - [ ] Audit viewer UI with filter by tenant, time range, event type (required for 21 CFR Part 11 retrieval)
@@ -315,11 +315,11 @@ is not committed to `docs/BENCHMARKS.md`.
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
 | Defense & Government | 27 | 28 | ~96% |
-| Healthcare & Life Sciences | 20 | 24 | ~83% |
+| Healthcare & Life Sciences | 21 | 24 | ~88% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
 | Advanced Forensics & WAF | 21 | 26 | ~81% |
-| **Total** | **89** | **122** | **~73%** |
+| **Total** | **90** | **122** | **~74%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
