@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 3125 passed, 3 skipped, 95%+ coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 3194 passed, 3 skipped, 95%+ coverage).
 
 ---
 
@@ -281,7 +281,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] ML-DSA-65 or HMAC-SHA256 bundle signing (operator-selectable)
 - [x] `POST /v1/enterprise/compliance/export` on aegis_server (separate process)
 - [x] ISO/IEC 27037 compliant evidence package format: chain of custody manifest, acquisition metadata (tool name, version, operator identity, acquisition timestamp), hash algorithm declaration, evidence integrity seal (`aegis/core/iso27037_evidence.py`: `EvidencePackage`, `AcquisitionMetadata`, `CustodyEvent`, `EvidenceNode` dataclasses; `build_evidence_package(ledger, operator, tool_version, acquisition_reason)` exports a self-contained, tamper-evident package from any `CryptographicAuditLedger`; `verify_seal(package_dict)` validates the SHA-256 integrity seal offline without a live instance; `add_custody_event()` appends chain-of-custody entries and re-seals; 56 tests in `tests/test_iso27037_evidence.py`)
-- [ ] RFC 3161 trusted timestamp on each forensic bundle (time-stamping authority integration)
+- [x] RFC 3161 trusted timestamp on each forensic bundle (time-stamping authority integration) (`aegis/core/rfc3161_timestamper.py`: `RFC3161Timestamper` with self-contained DER encoder (INTEGER, OCTET STRING, SEQUENCE, OID, BOOLEAN, NULL) and DER parser; `build_timestamp_request(imprint, nonce)` produces RFC 3161 v1 TimeStampReq with SHA-256 AlgorithmIdentifier, random nonce, certReq=TRUE; `stamp(package_dict)` computes SHA-256 of canonical JSON, POSTs to TSA, extracts TimeStampToken and stores as `rfc3161_token_b64` + `rfc3161_tsa_url` + `rfc3161_message_imprint_hex` in returned package dict; `verify(package_dict)` re-computes imprint and checks DER structure; `parse_pki_status()` / `extract_token_from_response()` public helpers; httpx primary / urllib.request fallback; `AEGIS_TSA_URL` + `AEGIS_TSA_TIMEOUT` env vars; 68 tests)
 - [ ] DFIR-compatible export formats: PKCS#7 SignedData envelope; E01 (Expert Witness Format) encapsulation for block-level evidence
 - [x] Evidence acquisition log: who exported, when, from what IP, under what authorization (non-repudiable export audit trail) — implemented by `aegis/core/export_audit_log.py` (see §5.5 tamper-evident export log above)
 - [x] Legal admissibility attestation field: `LegalAdmissibility` enum (`Admissible` / `Conditional` / `Compromised`) added to `aegis/core/iso27037_evidence.py`; `build_evidence_package()` accepts `legal_admissibility_override: LegalAdmissibility | None` and `legal_admissibility_justification: str` parameters; override replaces chain-level value and justification is persisted in `EvidencePackage.legal_admissibility_justification`; both fields covered by the SHA-256 integrity seal so tampering is detected; 23 new tests in `tests/test_iso27037_evidence.py` (`TestLegalAdmissibilityEnum`, `TestLegalAdmissibilityOverride`)
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 23 | 24 | ~96% |
 | Industrial Automation & OT | 17 | 21 | ~81% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
-| Advanced Forensics & WAF | 30 | 27 | ~100% |
-| **Total** | **112** | **123** | **~91%** |
+| Advanced Forensics & WAF | 31 | 27 | ~100% |
+| **Total** | **113** | **123** | **~92%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
