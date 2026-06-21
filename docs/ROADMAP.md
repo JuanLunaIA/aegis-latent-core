@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 2434 passed, 1 skipped, 95.25% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 2490 passed, 1 skipped, 95.32% coverage).
 
 ---
 
@@ -280,7 +280,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Re-verifiable offline without running proxy
 - [x] ML-DSA-65 or HMAC-SHA256 bundle signing (operator-selectable)
 - [x] `POST /v1/enterprise/compliance/export` on aegis_server (separate process)
-- [ ] ISO/IEC 27037 compliant evidence package format: chain of custody manifest, acquisition metadata (tool name, version, operator identity, acquisition timestamp), hash algorithm declaration, evidence integrity seal
+- [x] ISO/IEC 27037 compliant evidence package format: chain of custody manifest, acquisition metadata (tool name, version, operator identity, acquisition timestamp), hash algorithm declaration, evidence integrity seal (`aegis/core/iso27037_evidence.py`: `EvidencePackage`, `AcquisitionMetadata`, `CustodyEvent`, `EvidenceNode` dataclasses; `build_evidence_package(ledger, operator, tool_version, acquisition_reason)` exports a self-contained, tamper-evident package from any `CryptographicAuditLedger`; `verify_seal(package_dict)` validates the SHA-256 integrity seal offline without a live instance; `add_custody_event()` appends chain-of-custody entries and re-seals; 56 tests in `tests/test_iso27037_evidence.py`)
 - [ ] RFC 3161 trusted timestamp on each forensic bundle (time-stamping authority integration)
 - [ ] DFIR-compatible export formats: PKCS#7 SignedData envelope; E01 (Expert Witness Format) encapsulation for block-level evidence
 - [ ] Evidence acquisition log: who exported, when, from what IP, under what authorization (non-repudiable export audit trail)
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
-| Advanced Forensics & WAF | 25 | 26 | ~96% |
-| **Total** | **94** | **122** | **~77%** |
+| Advanced Forensics & WAF | 26 | 26 | ~100% |
+| **Total** | **95** | **122** | **~78%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
