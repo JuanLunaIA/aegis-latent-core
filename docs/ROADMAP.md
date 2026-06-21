@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 3619 passed, 3 skipped, 95%+ coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 3675 passed, 3 skipped, 95%+ coverage).
 
 ---
 
@@ -303,7 +303,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] `verify_integrity()` detects gaps, hash mismatches, reordering
 - [x] `legal_admissibility` field in audit chain health response
 - [x] Operator signature on chain seal: require HSM-signed attestation before bundle export — implemented by `aegis/core/operator_seal.py`; `OperatorSealGate` issues time-bounded `OperatorAttestation` objects signed with HMAC-SHA256 (AEGIS_SIGNING_KEY) or HSM-PKCS#11 when `HSMSigningBackend` is injected; `create_attestation(operator_id, package_id)`, `verify_attestation()` → `OperatorSealVerifyResult`, `gate_export(package_id, attestation)` raises `OperatorSealError` when attestation is invalid/expired/wrong-package; attestations are package-bound (or broad with package_id="") and expire after configurable window (AEGIS_OPERATOR_SEAL_VALIDITY, default 3600s); HSM fallback to HMAC-SHA256 on HSM error; 53 tests in `tests/test_operator_seal.py`
-- [ ] Witness co-signing: two-of-three threshold signing for bundle export (multi-party authorization)
+- [x] Witness co-signing: two-of-three threshold signing for bundle export (multi-party authorization) (`aegis/core/witness_cosign.py`: `WitnessCoSignGate` with configurable m-of-n threshold, per-witness HMAC-SHA256 key derivation `HMAC-SHA256(master_key, witness_id)`, time-bounded `WitnessSignature` with `package_id` binding, `sign()`/`verify_signature()`/`check_threshold()`/`gate_export()`; duplicate-witness deduplication; `AEGIS_SIGNING_KEY` + `AEGIS_WITNESS_VALIDITY` config; `pytest tests/test_witness_cosign.py` — 56 tests)
 - [x] Tamper-evident export log: every call to `POST /v1/enterprise/compliance/export` recorded in a separate non-repudiable log signed independently from the audit chain (`aegis/core/export_audit_log.py`: `ExportAuditLog` append-only JSONL log at `0o600`; per-entry HMAC-SHA256 `entry_sig` over canonical body including index, timestamp, operator, package_id, client_ip, api_key_hash, node_count; `record()` flushes+fsyncs after each write; `verify()` checks every HMAC and sequential index; `read_all()` for offline inspection; 47 tests in `tests/test_export_audit_log.py`)
 - [x] Custody transfer protocol: `aegis/core/custody_transfer.py` implements `CustodyTransferLog` — append-only JSONL at 0o600; per-record HMAC-SHA256 `transfer_sig` over canonical body (index, timestamp, transferor, transferee, package_id, evidence_hash, reason, authorization, extra); `record()` fsyncs; `verify()` checks HMAC + sequential index; `read_all()` for offline inspection; 47 tests in `tests/test_custody_transfer.py` covering construction, signing, tampering, persistence, and cross-instance replay
 - [ ] Long-term archival: evidence bundle format compatible with 30-year retention (algorithm agility for hash/signature migration)
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 24 | 24 | ~100% |
 | Industrial Automation & OT | 18 | 21 | ~86% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
-| Advanced Forensics & WAF | 35 | 27 | ~100% |
-| **Total** | **119** | **123** | **~97%** |
+| Advanced Forensics & WAF | 36 | 27 | ~100% |
+| **Total** | **120** | **123** | **~98%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -358,6 +358,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** SLO burn-rate alerting — `aegis/core/slo_alerting.py` with `SLOConfig`/`SLOBurnRateWindow`/`generate_prometheus_rule()`/`validate_burn_rate_threshold()`; `deploy/helm/templates/prometheusrule.yaml` PrometheusRule CRD; `prometheus.sloAlerting` Helm values; 8 alerts (1h/6h/24h/72h × availability+latency SLOs); critical/warning severity mapping; 65 tests (Domain 4.4) — completed 2026-06-21.
 > **Done:** cgroups v2 process-level memory + CPU quotas — `aegis/core/cgroups_quota.py`; `CgroupsQuota.apply()` writes `memory.max`/`cpu.max` to process's own cgroup dir (parsed from `/proc/self/cgroup`); `apply_cgroups_quota()` with `AEGIS_CGROUP_MEMORY_MAX`/`AEGIS_CGROUP_CPU_MAX` env vars; `is_cgroups_v2_available()` detection; graceful fallback on non-Linux/missing cgroup/permission denied; `AEGIS_SKIP_CGROUPS_QUOTA` for CI; 68 tests (Domain 1.5) — completed 2026-06-21.
 > **Done:** Dosage hallucination detection — `aegis/core/dosage_hallucination.py`; `DosageHallucinationDetector` with ~100-drug reference DB (12 therapeutic classes), forward + reverse regex extraction, canonical-name dedup, alias resolution, unit-mismatch guard; `scan_messages()` for assistant-role gating; `AEGIS_DOSAGE_STRICT` for unknown-drug enforcement; `extra_db` for custom formularies; 54 tests (Domain 2.4) — completed 2026-06-21.
+> **Done:** Witness co-signing: m-of-n threshold bundle export authorization — `WitnessCoSignGate` with per-witness HMAC-SHA256 key derivation, time-bounded package-bound signatures, duplicate-witness deduplication, `gate_export()` raise on threshold failure; `AEGIS_SIGNING_KEY` + `AEGIS_WITNESS_VALIDITY` config; 56 tests (Domain 5.5) — completed 2026-06-21.
 > **Done:** MODBUS/DNP3/OPC-UA SCADA command injection scanner — `aegis/core/ot_protocol_scanner.py`; `OTProtocolScanner` with 16 weighted signatures (MODBUS function codes/registers/API calls, DNP3 CROB/Group-Var/control codes, OPC-UA NodeId/write/Security-Mode-None/endpoint URL); complementary-probability risk scoring; `AEGIS_OT_BLOCK_THRESHOLD`; 55 tests (Domain 3.4) — completed 2026-06-21.
 
 ---
