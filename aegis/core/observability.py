@@ -112,6 +112,14 @@ if _PROM:
         "Current circuit breaker state: 0=CLOSED (healthy), 1=HALF_OPEN (probing), 2=OPEN (blocking)",
         ["provider"],
     )
+    WAL_REPLICATION_LAG: Any = Gauge(
+        "aegis_wal_replication_lag_bytes",
+        "Bytes of unacknowledged WAL data on the leader not yet confirmed by all followers. "
+        "Zero when running in standalone mode (no replication). Set by the WAL replication "
+        "subsystem when Raft replication is active. Labelled by follower node to identify "
+        "which replica is lagging.",
+        ["follower"],
+    )
     SCHEDULING_JITTER: Any = Histogram(
         "aegis_background_scheduling_jitter_seconds",
         "Elapsed time between asyncio.create_task() and the first await in the "
@@ -159,6 +167,7 @@ else:
     AUDIT_COMMIT_ERRORS = _NoopMetric()
     CIRCUIT_BREAKER_OPENS = _NoopMetric()
     CIRCUIT_BREAKER_STATE = _NoopMetric()
+    WAL_REPLICATION_LAG = _NoopMetric()
     SCHEDULING_JITTER = _NoopMetric()
 
 

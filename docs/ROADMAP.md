@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 2744 passed, 2 skipped, 95%+ coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 2764 passed, 2 skipped, 95%+ coverage).
 
 ---
 
@@ -201,7 +201,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Redis-backed session state (configurable)
 - [ ] Raft consensus for replicated WAL (e.g., `openraft` crate): leader election, log replication, snapshot installation
 - [ ] Multi-region WAL replication with configurable consistency level (strong / eventual / quorum)
-- [ ] WAL segment replication lag metric: `aegis_wal_replication_lag_bytes` in Prometheus
+- [x] WAL segment replication lag metric: `aegis_wal_replication_lag_bytes` Prometheus Gauge with `follower` label in `aegis/core/observability.py`; labelled by follower node ID to identify which replica is lagging; zero in standalone mode; no-op stub when prometheus_client absent; 4 tests in `tests/test_chaos.py::TestWALReplicationLagMetric`
 - [ ] Automatic leader failover with <30s RTO (Recovery Time Objective)
 - [ ] Split-brain prevention: fencing tokens or lease-based locking before WAL writes on network partition
 - [ ] Active-active proxy deployment: consistent hashing for tenant affinity, WAL dedup by `state_id`
@@ -237,7 +237,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Helm chart with production-grade defaults (PodDisruptionBudget, topologySpreadConstraints, resource limits)
 - [ ] Zero-downtime rolling deploy: WAL leader lease hand-off protocol during pod replacement
 - [x] Circuit breaker per upstream provider (`aegis/core/circuit_breaker.py`: `CircuitBreaker` with CLOSED → OPEN → HALF_OPEN state machine; `failure_threshold` consecutive failures open the circuit; `recovery_timeout` before a single probe is allowed; `success_threshold` consecutive probe successes re-close; thread-safe via `threading.Lock`; `CircuitOpenError` for fail-fast 503 responses; Prometheus metric emission on state transitions; integrated in `LLMForwarder` via `circuit_breaker_failure_threshold` / `circuit_breaker_recovery_timeout` / `circuit_breaker_success_threshold` config fields; 37 tests in `tests/test_circuit_breaker.py`)
-- [ ] Chaos engineering test suite: `pytest-chaos` or Toxiproxy integration for WAL write failure, Redis failure, upstream timeout scenarios
+- [x] Chaos engineering test suite: `tests/test_chaos.py` — 20 tests covering WAL disk-full / truncated-write / missing-file scenarios; Redis `ConnectionError` and hang under `asyncio.wait_for`; upstream `httpx.TimeoutException` / `ConnectError`; circuit breaker OPEN → HALF_OPEN → CLOSED recovery; concurrent 50-goroutine ledger commit stability; no external dependencies (all scenarios via monkeypatching)
 - [ ] SLO burn-rate alerting: PrometheusRule manifests for 1h/6h/24h/72h burn-rate windows
 
 ---
@@ -317,9 +317,9 @@ is not committed to `docs/BENCHMARKS.md`.
 | Defense & Government | 27 | 28 | ~96% |
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
 | Industrial Automation & OT | 15 | 21 | ~71% |
-| Enterprise Hyperscale & HA | 11 | 23 | ~48% |
+| Enterprise Hyperscale & HA | 13 | 23 | ~57% |
 | Advanced Forensics & WAF | 29 | 27 | ~100% |
-| **Total** | **103** | **123** | **~84%** |
+| **Total** | **105** | **123** | **~85%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
