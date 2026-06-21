@@ -504,7 +504,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             anthropic_api_version=cfg.anthropic_api_version,
         )
 
-        state.forwarder = LLMForwarder(forwarder_cfg, provider=provider)
+        egress_guard = cfg.get_egress_guard()
+        state.forwarder = LLMForwarder(forwarder_cfg, provider=provider, egress_guard=egress_guard)
         await state.forwarder.start()
         state.sessions = SessionLifecycleManager(max_sessions=4_096)
 

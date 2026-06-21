@@ -430,6 +430,29 @@ class AegisSettings(BaseSettings):
         ),
     )
 
+    # ── Air-gap egress enforcement ────────────────────────────────────────
+    airgap_mode: bool = Field(
+        default=False,
+        description=(
+            "When True, the proxy blocks all outbound HTTP connections except to hosts "
+            "listed in AEGIS_AIRGAP_ALLOWED_HOSTS plus the configured upstream backend. "
+            "Provides application-layer OT network zone enforcement "
+            "(IEC 62443 Zone and Conduit model). "
+            "Pair with kernel-level controls (nftables, network namespaces) for defense-in-depth. "
+            "Configure via AEGIS_AIRGAP_MODE."
+        ),
+    )
+    airgap_allowed_hosts: str = Field(
+        default="",
+        description=(
+            "Comma-separated list of allowed outbound hostnames or host:port pairs "
+            "when AEGIS_AIRGAP_MODE=true. The upstream backend host is always implicitly "
+            "allowed. Example: 'internal-llm.corp.example.com,10.0.0.5:8080'. "
+            "An empty value (with airgap_mode=true) only permits the upstream backend. "
+            "Configure via AEGIS_AIRGAP_ALLOWED_HOSTS."
+        ),
+    )
+
     # ── HSM / PKCS#11 signing ─────────────────────────────────────────────
     pkcs11_library_path: str = Field(
         default="",
@@ -600,6 +623,16 @@ class AegisSettings(BaseSettings):
                     f"AEGIS_DMZ_ALLOWED_SOURCE_IPS: invalid address or network {entry!r}: {exc}"
                 ) from exc
         return networks
+
+    def get_egress_guard(self) -> Any:
+        """Build an EgressGuard from airgap_mode + airgap_allowed_hosts."""
+        from aegis.proxy.egress_guard import build_egress_guard
+
+        return build_egress_guard(
+            airgap_mode=self.airgap_mode,
+            allowed_hosts_csv=self.airgap_allowed_hosts,
+            upstream_url=self.backend_url_str,
+        )
 
     @property
     def backend_url_str(self) -> str:

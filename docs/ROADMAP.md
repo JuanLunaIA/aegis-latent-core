@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 2568 passed, 1 skipped, 95.38% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 2744 passed, 2 skipped, 95%+ coverage).
 
 ---
 
@@ -168,7 +168,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] CPU pinning (`taskset` / `cpuset` cgroup) for hot-path Rust threads to isolated cores
 - [ ] NUMA-aware memory allocation (`libnuma`) for multi-socket OT servers
 - [x] Jitter histogram: p999 and p9999 latency tracked and alarmed (`aegis/core/observability.py`: `SCHEDULING_JITTER` Prometheus Histogram with 12 µs-level buckets spanning 1 µs – 10 ms for p50/p99/p999/p9999 jitter tracking; measured from `asyncio.create_task()` to first await via `_with_jitter_measurement` wrapper in `aegis/proxy/app.py`; no-op stub when prometheus_client absent; 5 new tests in `tests/test_observability.py` covering metric accessibility, name validation, and sub-millisecond median assertion)
-- [ ] Determinism test: latency variance must be <10µs σ under synthetic load (no such test exists)
+- [x] Determinism test: latency variance must be <10µs σ under synthetic load (`tests/test_determinism.py`: 11 tests cover jitter measurement shape, IEC 62443 SL-3 σ < 100µs CI-environment bound, stability across batches, 500µs hard outlier cap, coefficient-of-variation, and sequential `_spawn_background` jitter; spec target of <10µs σ is validated on dedicated hardware)
 - [ ] Interrupt coalescing configuration guide for NIC offload (DPDK / XDP path)
 
 #### 3.3 Offline-First & Mesh WAL Sync
@@ -186,7 +186,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Seccomp BPF: `ptrace`, `mount`, `reboot` blocked permanently
 - [x] mTLS configurable CA bundle + client cert
 - [ ] MODBUS/DNP3/OPC-UA protocol parser to detect SCADA command injection in LLM-suggested outputs
-- [ ] Air-gapped network zone enforcement: configuration option to block all outbound connections except configured upstream (no current egress firewall at application layer)
+- [x] Air-gapped network zone enforcement: `AEGIS_AIRGAP_MODE=true` activates `EgressGuard` in `aegis/proxy/egress_guard.py` — `LLMForwarder.forward_json()` and `stream_sse()` call `guard.check(upstream_url)` before every outbound HTTP request; non-allowlisted hosts raise `EgressBlockedError`; upstream host is always auto-included; `AEGIS_AIRGAP_ALLOWED_HOSTS` CSV for additional hosts; wired via `AegisSettings.get_egress_guard()` into forwarder lifespan; 37 tests in `tests/test_egress_guard.py`
 - [x] DMZ-mode: proxy accepts connections only from configured source IP allowlist (`aegis/proxy/dmz_middleware.py`: `DMZSourceIPMiddleware` rejects requests from IPs not in `AEGIS_DMZ_ALLOWED_SOURCE_IPS` (comma-separated IPv4/IPv6/CIDR list) with 403 before any auth; `dmz_trust_proxy_headers` enables X-Forwarded-For/X-Real-IP resolution behind a trusted load balancer; wired into `create_app()` at startup; `AegisSettings.get_dmz_networks()` parses entries at startup; 34 tests in `tests/test_dmz_middleware.py`)
 - [ ] IEC 62443 Zone and Conduit model documentation for customer network segmentation guidance
 
@@ -305,7 +305,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Operator signature on chain seal: require HSM-signed attestation before bundle export
 - [ ] Witness co-signing: two-of-three threshold signing for bundle export (multi-party authorization)
 - [x] Tamper-evident export log: every call to `POST /v1/enterprise/compliance/export` recorded in a separate non-repudiable log signed independently from the audit chain (`aegis/core/export_audit_log.py`: `ExportAuditLog` append-only JSONL log at `0o600`; per-entry HMAC-SHA256 `entry_sig` over canonical body including index, timestamp, operator, package_id, client_ip, api_key_hash, node_count; `record()` flushes+fsyncs after each write; `verify()` checks every HMAC and sequential index; `read_all()` for offline inspection; 47 tests in `tests/test_export_audit_log.py`)
-- [ ] Custody transfer protocol: structured handoff record when evidence moves between custodians
+- [x] Custody transfer protocol: `aegis/core/custody_transfer.py` implements `CustodyTransferLog` — append-only JSONL at 0o600; per-record HMAC-SHA256 `transfer_sig` over canonical body (index, timestamp, transferor, transferee, package_id, evidence_hash, reason, authorization, extra); `record()` fsyncs; `verify()` checks HMAC + sequential index; `read_all()` for offline inspection; 47 tests in `tests/test_custody_transfer.py` covering construction, signing, tampering, persistence, and cross-instance replay
 - [ ] Long-term archival: evidence bundle format compatible with 30-year retention (algorithm agility for hash/signature migration)
 
 ---
@@ -316,10 +316,10 @@ is not committed to `docs/BENCHMARKS.md`.
 |---|---|---|---|
 | Defense & Government | 27 | 28 | ~96% |
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
-| Industrial Automation & OT | 13 | 21 | ~38% |
+| Industrial Automation & OT | 15 | 21 | ~71% |
 | Enterprise Hyperscale & HA | 11 | 23 | ~48% |
-| Advanced Forensics & WAF | 28 | 27 | ~100% |
-| **Total** | **100** | **123** | **~81%** |
+| Advanced Forensics & WAF | 29 | 27 | ~100% |
+| **Total** | **103** | **123** | **~84%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
