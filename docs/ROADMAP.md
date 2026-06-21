@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 2118 passed, 1 skipped, 95.46% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 2162 passed, 1 skipped, 95.50% coverage).
 
 ---
 
@@ -38,7 +38,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] `zeroize` derive on Rust signing key structs (memory scrubbing on drop)
 - [x] HSM/PKCS#11 signing integration (e.g., `python-pkcs11`, `opensc`, Thales Luna / AWS CloudHSM): `aegis/core/hsm.py` implements `HSMSigningBackend` with RSA-PSS and ECDSA-SHA256; graceful fallback when library absent; integrated into `CryptographicAuditLedger` signing priority chain
 - [ ] FIPS 140-3 Level 3 validated module boundary (currently uses upstream Rust crates, not a validated boundary)
-- [ ] NSA Suite B / CNSA 2.0 algorithm negotiation (P-384 ECDH, AES-256-GCM, SHA-384 where Suite B mandated)
+- [x] NSA Suite B / CNSA 2.0 algorithm negotiation (P-384 ECDH, AES-256-GCM, SHA-384 where Suite B mandated) (`aegis/core/cnsa_negotiation.py`: `CNSANegotiator` with a 16-algorithm approved registry across Suite B / CNSA 1.0 / CNSA 2.0 and four categories (key exchange, signature, symmetric, hash); per-category strongest-compliant selection, alias-aware resolution (Kyber→ML-KEM, Dilithium→ML-DSA), `mandate_quantum_resistant` enforcement, downgrade-attack refusal, and `NegotiationResult` with `selected`/`rejected`/`missing_categories`/`to_dict()`; `pytest tests/test_cnsa_negotiation.py` — 44 tests)
 - [ ] Kyber-1024 (FIPS 203 ML-KEM) key encapsulation for session bootstrap
 - [ ] Cross-domain solution (CDS) guard integration for classified ↔ unclassified boundary enforcement
 
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
-| Defense & Government | 26 | 28 | ~93% |
+| Defense & Government | 27 | 28 | ~96% |
 | Healthcare & Life Sciences | 20 | 24 | ~83% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
 | Advanced Forensics & WAF | 21 | 26 | ~81% |
-| **Total** | **88** | **122** | **~72%** |
+| **Total** | **89** | **122** | **~73%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
