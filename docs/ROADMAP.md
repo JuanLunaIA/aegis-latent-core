@@ -78,7 +78,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Independent Evaluation Facility (ITSEF) test evidence package
 - [ ] STIG (Security Technical Implementation Guide) hardening checklist and compliance scan results
 - [ ] DoD-DISA APL (Approved Products List) submission package
-- [ ] Time-stamping authority (RFC 3161 TSA) integration for legally admissible timestamp proofs
+- [x] Time-stamping authority (RFC 3161 TSA) integration for legally admissible timestamp proofs (`aegis/core/rfc3161_timestamper.py`: `RFC3161Timestamper` with self-contained DER encoder/parser; `stamp(package_dict)` POSTs TimeStampReq to TSA and stores `rfc3161_token_b64`; `verify(package_dict)` re-validates; `AEGIS_TSA_URL` + `AEGIS_TSA_TIMEOUT` config; 68 tests)
 - [x] Classified audit node encryption: AES-256-GCM envelope per node for IL6 data-at-rest (`aegis/core/audit_node_encryptor.py`: `AuditNodeEncryptor` with per-tenant DEK via HKDF-SHA256(info="audit-node-dek:" + tenant_id); `encrypt_node(tenant_id, node_dict, node_hash)` → `nonce(12) || AES-256-GCM ciphertext+tag`; `node_hash` bound as GCM AAD to tie ciphertext to hash-chain position; `decrypt_node()` raises `AuditNodeEncryptionError` on tamper/wrong-key/wrong-hash; `from_env()` reads `AEGIS_AUDIT_MASTER_KEY` (hex-encoded, must be distinct from `AEGIS_SIGNING_KEY` and `AEGIS_PHI_MASTER_KEY`); per-tenant DEK cache with `clear_dek_cache()`; `pytest tests/test_audit_node_encryptor.py` — 29 tests)
 
 #### 1.5 Runtime Hardening
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
-| Defense & Government | 28 | 28 | ~100% |
+| Defense & Government | 29 | 28 | ~100% |
 | Healthcare & Life Sciences | 24 | 24 | ~100% |
 | Industrial Automation & OT | 18 | 21 | ~86% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
 | Advanced Forensics & WAF | 38 | 27 | ~100% |
-| **Total** | **122** | **123** | **~99%** |
+| **Total** | **123** | **123** | **~100%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
