@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 2270 passed, 1 skipped, 95.43% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 2382 passed, 1 skipped, 95.49% coverage).
 
 ---
 
@@ -258,7 +258,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Semantic similarity clustering: flag requests within cosine distance threshold of known jailbreak embeddings
 - [x] Adversarial suffix detection: gradient-based suffix patterns (GCG, AutoDAN) via fixed signature set (`aegis/core/adversarial_suffix_detector.py`: `AdversarialSuffixDetector` with 11 fixed signatures — long/spaced token-repetition runs, obedience-induction phrases, GCG punctuation runs, AutoDAN openers, output-prefix injection, and published GCG fragment anchors; tail-window scanning (default last 2000 chars) with full-text override; `scan(text)` and `scan_messages(messages)` (user-turns only); `SuffixDetectionResult` with `flagged`, `signals`, `scan_length`, `reason`, `to_dict()`; `pytest tests/test_adversarial_suffix_detector.py` — 54 tests)
 - [x] Many-shot jailbreak detection: flag prompts with >N examples in few-shot context (`aegis/core/manyshot_detector.py`: `ManyShotDetector` with configurable `threshold` (default 10) and `min_qa_ratio`; multi-signal counting — Q&A turn pairs (Human/User/Q: + Assistant/AI/A: with assistant-to-human ratio guard), numbered-list items (≥20 chars), "Example/Sample/Shot N:" headers, bracket/XML shot delimiters (<example>, [EXAMPLE], <shot>); `evaluate(text)` and `evaluate_messages(messages)` (concatenates content across turns to defeat per-message evasion); `ManyShotDetectionResult` with `shot_count`, `signal_counts`, `exceeded`, `reason`, `scan_length`, `to_dict()`; `pytest tests/test_manyshot_detector.py` — 42 tests)
-- [ ] Prompt injection in retrieved context: RAG-aware WAF that scans tool outputs and retrieved documents, not just user input
+- [x] Prompt injection in retrieved context: RAG-aware WAF that scans tool outputs and retrieved documents, not just user input (`aegis/core/rag_injection_scanner.py`: `RAGInjectionScanner` with 7 signal categories — direct jailbreak text in documents, context-frame escape (XML closing delimiters), role boundary injection (fake System:/[SYSTEM] headers), ChatML token injection (`<|im_start|>`, `<|im_end|>`, `<|endoftext|>`), LLM-addressed instructions ("Note to AI:", "after you process this document"), whitespace padding (20+ newlines), lateral exfiltration (send/forward/POST to URL); additive risk scoring with configurable `block_threshold`; `scan_document()`, `scan_tool_result()`, `scan_messages()` (handles OpenAI `role="tool"/"function"` and Anthropic `type="tool_result"` blocks + RAG-context user messages); `RAGScanResult` with `clean`, `signals`, `risk_score`, `source_id`, `reason`, `to_dict()`; `pytest tests/test_rag_injection_scanner.py` — 112 tests)
 
 #### 5.2 Evasion-Resistant Pattern Matching
 
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
-| Advanced Forensics & WAF | 22 | 26 | ~85% |
-| **Total** | **91** | **122** | **~75%** |
+| Advanced Forensics & WAF | 23 | 26 | ~88% |
+| **Total** | **92** | **122** | **~75%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -352,6 +352,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** ABAC for IL5/IL6 data compartmentalization — Bell-LaPadula `ABACPolicyEngine` with `ClassificationLevel` dominance, need-to-know compartments, REL TO/NOFORN dissemination controls; `can_read`/`can_write`/`can_flow`/`endpoint_accredited` (DoD Impact Level → classification mapping); 46 tests (Domain 1.2) — completed 2026-06-21.
 > **Done:** WORM (Write-Once Read-Many) enforcement for WAL segments — `WORMEnforcer` with dual-layer protection (application-level `WORMViolationError` + OS-level `0o400` permissions); `WORMSealRecord` sentinel JSON line; `seal()`, `verify()`, `enforce_immutability()`, `delete_node()` (unconditionally raises); `unseal_for_testing()` for CI teardown; `count_nodes_in_segment()` helper; 21 CFR Part 11 Annex 11 §5 / NIST SP 800-53 AU-9 compliance; 56 tests (Domain 2.2) — completed 2026-06-21.
 > **Done:** Cross-session correlation — `CrossSessionCorrelator` with SimHash fingerprinting (64-bit, 4-word shingles), 8×8-bit LSH band bucketing, sliding-window eviction, Hamming-distance grouping; covers shared jailbreak kits, A/B variant attacks, botnet flooding; 52 tests (Domain 5.1) — completed 2026-06-21.
+> **Done:** RAG-aware prompt injection scanner — `RAGInjectionScanner` with 7 signal categories (direct jailbreak, context-frame escape, role boundary injection, ChatML token injection, LLM-addressed instructions, whitespace padding, lateral exfiltration); `scan_document()`, `scan_tool_result()`, `scan_messages()` covering OpenAI tool/function roles and Anthropic tool_result blocks; 112 tests (Domain 5.1) — completed 2026-06-21.
 
 ---
 
