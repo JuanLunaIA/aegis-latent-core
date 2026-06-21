@@ -64,7 +64,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] OCSP stapling / CRL distribution point hosted in enclave network (no public CA connectivity)
 - [ ] Offline license validation (no phone-home for commercial license enforcement)
 - [ ] Air-gapped signature verification chain (pinned root CA bundle, no runtime CA fetch)
-- [ ] Classified-data cryptographic blocking: pattern-match against SCI/SAP markers pre-forwarding
+- [x] Classified-data cryptographic blocking: pattern-match against SCI/SAP markers pre-forwarding (`aegis/core/classified_marker_detector.py`: `ClassifiedMarkerDetector` with 34 pre-compiled DoD/IC regex patterns covering formal banners (TOP SECRET//, SECRET//, CONFIDENTIAL//, TS//, S//), SCI compartments (//SI, //TK, //HCS, //HCS-P, //HCS-O, //G, //KDK, //VRK), dissemination controls (//NOFORN, //ORCON, //PROPIN, //RSEN, //WNINTEL, //FOUO, //FISA), coalition markings (//REL TO, //FVEY, //ACGU, //EYES ONLY), handling caveats (HANDLE VIA COMINT/SCI CHANNELS ONLY, SCI INFORMATION, SPECAT), classification authority lines (CLASSIFIED BY:, DERIVED FROM:, DECLASSIFY ON:), and SAP indicators (SPECIAL ACCESS REQUIRED, SAP MATERIAL/PROTECTED/INFORMATION/PROGRAM, (SAP), SAP-PROTECTED); `scan()`, `scan_messages()`, `scan_text_bulk()` with aggregated `MarkerDetectionResult`; `extra_patterns` for deployment-specific codewords; `pytest tests/test_classified_marker_detector.py` — 81 tests)
 
 #### 1.4 Audit & Non-Repudiation (NIST AU-2, AU-9, AU-10)
 
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
-| Defense & Government | 23 | 28 | ~82% |
+| Defense & Government | 24 | 28 | ~86% |
 | Healthcare & Life Sciences | 17 | 24 | ~71% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
 | Advanced Forensics & WAF | 16 | 26 | ~62% |
-| **Total** | **77** | **122** | **~63%** |
+| **Total** | **78** | **122** | **~64%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
