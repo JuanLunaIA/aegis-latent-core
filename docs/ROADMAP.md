@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 2787 passed, 2 skipped, 95%+ coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 2920 passed, 2 skipped, 95%+ coverage).
 
 ---
 
@@ -91,7 +91,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] AMD SEV-SNP or Intel TDX confidential VM attestation (memory encryption + remote attestation quote)
 - [ ] Intel SGX enclave for signing key material isolation (`sgx-sdk` or `Enarx`)
 - [ ] Kernel lockdown mode compatibility (`LOCK_INTEGRITY` or `LOCK_CONFIDENTIALITY`)
-- [ ] cgroups v2 memory + CPU quotas enforced at process level (not just container level)
+- [x] cgroups v2 memory + CPU quotas enforced at process level (not just container level) (`aegis/core/cgroups_quota.py`: `CgroupsQuota.apply()` writes `memory.max` and `cpu.max` to the process's own cgroup directory (parsed from `/proc/self/cgroup` `0::<path>` format); `CgroupsQuotaResult` with `applied`/`fully_applied` properties; `apply_cgroups_quota()` reads `AEGIS_CGROUP_MEMORY_MAX` / `AEGIS_CGROUP_CPU_MAX` env vars; `is_cgroups_v2_available()` detection helper; graceful fallback on non-Linux, missing cgroup dir, and permission denied; `AEGIS_SKIP_CGROUPS_QUOTA` env override for CI; `pytest tests/test_cgroups_quota.py` — 68 tests)
 - [ ] RELRO (full), stack canary, PIE, FORTIFY_SOURCE=3 enforced in Rust build profile
 
 ---
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
-| Defense & Government | 27 | 28 | ~96% |
+| Defense & Government | 28 | 28 | ~100% |
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
 | Industrial Automation & OT | 15 | 21 | ~71% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
 | Advanced Forensics & WAF | 30 | 27 | ~100% |
-| **Total** | **107** | **123** | **~87%** |
+| **Total** | **108** | **123** | **~88%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -356,6 +356,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** WAF shadow mode — `shadow_mode=True` on `AegisWAF` runs full detection pipeline but suppresses enforcement; `WAFResult.shadow_blocked` field; `_run_detection()` internal method; `WARNING` log on every suppressed block; 14 tests (Domain 5.2) — completed 2026-06-21.
 > **Done:** Legal admissibility attestation field — `LegalAdmissibility` StrEnum (`Admissible`/`Conditional`/`Compromised`); `build_evidence_package()` accepts `legal_admissibility_override` + `legal_admissibility_justification` for per-bundle override of chain-level value; both fields covered by SHA-256 integrity seal; 23 tests in `TestLegalAdmissibilityEnum`+`TestLegalAdmissibilityOverride` (Domain 5.3) — completed 2026-06-21.
 > **Done:** SLO burn-rate alerting — `aegis/core/slo_alerting.py` with `SLOConfig`/`SLOBurnRateWindow`/`generate_prometheus_rule()`/`validate_burn_rate_threshold()`; `deploy/helm/templates/prometheusrule.yaml` PrometheusRule CRD; `prometheus.sloAlerting` Helm values; 8 alerts (1h/6h/24h/72h × availability+latency SLOs); critical/warning severity mapping; 65 tests (Domain 4.4) — completed 2026-06-21.
+> **Done:** cgroups v2 process-level memory + CPU quotas — `aegis/core/cgroups_quota.py`; `CgroupsQuota.apply()` writes `memory.max`/`cpu.max` to process's own cgroup dir (parsed from `/proc/self/cgroup`); `apply_cgroups_quota()` with `AEGIS_CGROUP_MEMORY_MAX`/`AEGIS_CGROUP_CPU_MAX` env vars; `is_cgroups_v2_available()` detection; graceful fallback on non-Linux/missing cgroup/permission denied; `AEGIS_SKIP_CGROUPS_QUOTA` for CI; 68 tests (Domain 1.5) — completed 2026-06-21.
 
 ---
 
