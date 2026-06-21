@@ -87,7 +87,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Seccomp applied LAST in lifespan after Rust tokio worker pool warmup
 - [x] Graceful seccomp fallback in non-Linux sandboxes (CI, macOS dev)
 - [ ] Linux Security Module (LSM) AppArmor profile or SELinux type enforcement policy
-- [ ] `PR_SET_NO_NEW_PRIVS` + `PR_SET_DUMPABLE=0` prctl flags on startup
+- [x] `PR_SET_NO_NEW_PRIVS` + `PR_SET_DUMPABLE=0` prctl flags on startup (`aegis/core/process_hardening.py`: `ProcessHardening.apply()` sets both prctl(2) flags via ctypes at startup, independently of seccomp; `PR_SET_NO_NEW_PRIVS=1` prevents privilege escalation via setuid/caps after startup; `PR_SET_DUMPABLE=0` disables core dumps and `/proc/PID/mem` access to prevent signing-key material leaks; graceful fallback on non-Linux; `verify()` reads back state from `/proc/self/status`; `AEGIS_SKIP_PROCESS_HARDENING` env override for CI; `pytest tests/test_process_hardening.py` — 27 tests)
 - [ ] AMD SEV-SNP or Intel TDX confidential VM attestation (memory encryption + remote attestation quote)
 - [ ] Intel SGX enclave for signing key material isolation (`sgx-sdk` or `Enarx`)
 - [ ] Kernel lockdown mode compatibility (`LOCK_INTEGRITY` or `LOCK_CONFIDENTIALITY`)
@@ -118,8 +118,8 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Hash chain linkage prevents retroactive insertion
 - [x] 21 CFR Part 11 compliant electronic signature: human-readable meaning annotation ("approved", "reviewed", "authored"), printed name + date in signature manifest
 - [ ] Audit trail lock-out: once a node is sealed it cannot be deleted (WORM enforcement at storage layer)
-- [ ] `audit_trail_version` schema field for migration traceability (Annex 11 §4.8)
-- [ ] System clock integrity assertion: NTP sync status logged at startup + per-node clock drift check
+- [x] `audit_trail_version` schema field for migration traceability (Annex 11 §4.8): added to `AuditNode` dataclass (`aegis/core/crypto_audit.py`) as `audit_trail_version: str = "1"` with default `"1"` in `from_dict()` for forward-compatibility; field present in `to_dict()` serialization; backward-compatible (existing WAL records get default)
+- [x] System clock integrity assertion: NTP sync status logged at startup + per-node clock drift check (`aegis/core/clock_integrity.py`: `ClockIntegrityAssertion` with `assert_startup()` probing `timedatectl show` then `adjtimex(2)` via ctypes for NTP sync status; `check_node_drift(node_timestamp)` computes `abs(now - timestamp)` against configurable `max_drift_seconds` (default 5s); `NTPSyncStatus` and `ClockDriftResult` with `to_dict()`; graceful fallback when both probes unavailable; `pytest tests/test_clock_integrity.py` — 34 tests)
 - [ ] Audit viewer UI with filter by tenant, time range, event type (required for 21 CFR Part 11 retrieval)
 - [x] Backup and restore with integrity re-verification (Annex 11 §7.1): `WALBackupManager` in `aegis/core/wal_backup.py` — timestamped backup snapshots with manifest, integrity-verified copy before completing, safe restore with pre-restore backup and post-restore verification; 19 tests
 
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
-| Defense & Government | 24 | 28 | ~86% |
-| Healthcare & Life Sciences | 17 | 24 | ~71% |
+| Defense & Government | 25 | 28 | ~89% |
+| Healthcare & Life Sciences | 19 | 24 | ~79% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
 | Advanced Forensics & WAF | 16 | 26 | ~62% |
-| **Total** | **78** | **122** | **~64%** |
+| **Total** | **81** | **122** | **~66%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
