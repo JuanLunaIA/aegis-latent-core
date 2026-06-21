@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 1396 passed, 1 skipped, 95.08% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 1442 passed, 1 skipped, 95.27% coverage).
 
 ---
 
@@ -50,7 +50,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Vault/AppRole secret management integration (`hvac>=2.1.0`)
 - [x] mTLS client certificate authentication with CAC/PIV card (DoD Common Access Card) via PKCS#11 slot
 - [x] LDAP/Active Directory integration for multi-factor identity assertion (`aegis/auth/ldap_auth.py`: `LDAPAuthenticator` with service-bind → user-lookup → user-bind → group-assertion flow; AD nested-group OID `1.2.840.113556.1.4.1941` + RFC 2307 group search; RFC 4515 LDAP-injection escaping; `ldaps://`/StartTLS with CA bundle verification; `AEGIS_LDAP_*` config fields; `ldap3` optional dep; `pytest tests/test_ldap_auth.py` — 42 tests, fully mocked, no live directory)
-- [ ] Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation
+- [x] Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation (`aegis/auth/rbac.py`: `Role`/`RoleRegistry` over the scope vocabulary with subject→role, LDAP group→role, and default-role resolution; `ZeroTrustPolicyEngine` deny-by-default evaluation with dynamic attribute constraints — `RequireMTLS`, `RequireAuthMethod`, `IPAllowlist`, `TimeWindow`; `AccessContext`/`AccessDecision` audit records; `pytest tests/test_rbac.py` — 46 tests)
 - [ ] Attribute-Based Access Control (ABAC) for IL5/IL6 data compartmentalization
 - [ ] SCIM 2.0 provisioning/deprovisioning lifecycle
 - [ ] Hardware-bound session tokens (TPM 2.0 attestation-sealed)
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
-| Defense & Government | 20 | 28 | ~71% |
+| Defense & Government | 21 | 28 | ~75% |
 | Healthcare & Life Sciences | 16 | 24 | ~67% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
 | Advanced Forensics & WAF | 16 | 26 | ~62% |
-| **Total** | **73** | **122** | **~60%** |
+| **Total** | **74** | **122** | **~61%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -328,10 +328,10 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 
 **Highest-leverage next items (unblocked, high ROI):**
 
-1. Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation (Domain 1.2).
-2. Attribute-Based Access Control (ABAC) for IL5/IL6 data compartmentalization (Domain 1.2).
-3. Prompt injection resistance scoring — ML classifier for indirect injection (Domain 5.1).
-4. SCIM 2.0 provisioning/deprovisioning lifecycle (Domain 1.2).
+1. Attribute-Based Access Control (ABAC) for IL5/IL6 data compartmentalization (Domain 1.2).
+2. Prompt injection resistance scoring — ML classifier for indirect injection (Domain 5.1).
+3. SCIM 2.0 provisioning/deprovisioning lifecycle (Domain 1.2).
+4. PII confidence scoring per response (entity recognition confidence threshold → block/flag/log) (Domain 2.4).
 
 > **Done:** WAL segment rotation & archival (Domain 3.3) — completed 2026-06-20.
 > **Done:** Real-time PHI de-identification, NIST SP 800-188 Safe Harbor (Domain 2.1) — completed 2026-06-20.
@@ -348,6 +348,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** De-identification audit trail — `ScrubAuditRecord` with per-category hit counts, confidence scores (0.75–0.99 by category specificity), UTC scrub timestamp, JSON-serializable `to_dict()`; `scrub_with_audit()` on `PHIDeidentifier`; 17 tests (Domain 2.1) — completed 2026-06-20.
 > **Done:** HIPAA minimum-necessary access enforcement per API key scope — `ScopedKeyRegistry` with constant-time key validation, per-key scope restrictions, `ScopeViolationError`, `parse_scope_config()` for `AEGIS_API_KEY_SCOPES` env var; `api_key_scopes` config field; 45 tests (Domain 2.1) — completed 2026-06-20.
 > **Done:** LDAP/Active Directory multi-factor identity assertion — `LDAPAuthenticator` (service-bind → user-lookup → user-bind → group-assert), AD nested-group OID + RFC 2307 group search, RFC 4515 injection escaping, ldaps:///StartTLS with CA verification, `AEGIS_LDAP_*` config, `ldap3` optional dep; 42 tests (Domain 1.2) — completed 2026-06-21.
+> **Done:** RBAC + NIST SP 800-207 Zero Trust attribute evaluation — `Role`/`RoleRegistry` (subject, LDAP-group, and default-role resolution) over the scope vocabulary; `ZeroTrustPolicyEngine` deny-by-default with dynamic constraints (`RequireMTLS`, `RequireAuthMethod`, `IPAllowlist`, `TimeWindow`); `AccessContext`/`AccessDecision` for auditable decisions; 46 tests (Domain 1.2) — completed 2026-06-21.
 
 ---
 
