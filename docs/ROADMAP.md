@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 3029 passed, 2 skipped, 95%+ coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 3079 passed, 2 skipped, 95%+ coverage).
 
 ---
 
@@ -140,7 +140,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Dosage hallucination detection: numeric range check for drug dosage claims against reference database (RxNorm, NLM DailyMed) (`aegis/core/dosage_hallucination.py`: `DosageHallucinationDetector` with ~100-drug curated reference database across 12 therapeutic classes (NSAIDs, opioids, antibiotics, antihypertensives, statins, anticoagulants, diabetes, psychiatric/neurological, pulmonary, GI, immunosuppressants, thyroid); `scan()` + `scan_messages()` (assistant-role only) with forward + reverse regex extraction, canonical-name deduplication, unit-mismatch guard, alias resolution (e.g. tylenol→acetaminophen); `DosageFinding.summary()` with direction (exceeds max / below min); `AEGIS_DOSAGE_STRICT` env var for unknown-drug enforcement; `extra_db` for institution formularies; 54 tests)
 - [x] PII confidence scoring per response (`aegis/core/pii_confidence.py`: `PIIConfidenceFilter` wraps `PHIDeidentifier`; per-entity confidence scores → BLOCK / FLAG / LOG action via configurable `PIIConfidenceThreshold`; `evaluate()` + `evaluate_messages()` + `worst_case()` for batch response gating; `from_config()` reads `AEGIS_PII_BLOCK_THRESHOLD`/`AEGIS_PII_FLAG_THRESHOLD`; `pytest tests/test_pii_confidence.py` — 45 tests)
 - [x] Adverse event (AE) keyword detection aligned to MedDRA preferred terms
-- [ ] De-novo clinical claim detection: block generation of novel clinical trial results without citation
+- [x] De-novo clinical claim detection: block generation of novel clinical trial results without citation (`aegis/core/clinical_claim_detector.py`: `ClinicalClaimDetector` with 8 claim patterns (RCT/study/trial language, percentage efficacy, "our research demonstrates", "clinical evidence shows", "in a study of N patients", "has been proven to treat") and 9 citation exoneration patterns (numeric refs, author-year with `et al.`, DOI, PMID, NCT numbers, PubMed/Cochrane/NEJM URLs, superscript, footnote markers, "according to FDA/WHO/CDC/NIH"); two-stage scan: claim detection → citation window check (configurable `AEGIS_CLINICAL_WINDOW`, default 300 chars); overlapping claim deduplication within 50 chars; `strict` mode flags all claims regardless of citations; `scan_messages()` scans only assistant-role; `AEGIS_CLINICAL_STRICT` env var; 50 tests)
 
 ---
 
@@ -315,11 +315,11 @@ is not committed to `docs/BENCHMARKS.md`.
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
 | Defense & Government | 28 | 28 | ~100% |
-| Healthcare & Life Sciences | 22 | 24 | ~92% |
+| Healthcare & Life Sciences | 23 | 24 | ~96% |
 | Industrial Automation & OT | 16 | 21 | ~76% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
 | Advanced Forensics & WAF | 30 | 27 | ~100% |
-| **Total** | **110** | **123** | **~89%** |
+| **Total** | **111** | **123** | **~90%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
