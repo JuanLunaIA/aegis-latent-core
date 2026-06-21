@@ -270,8 +270,11 @@ def _build_e01(
     pad_len = (_EWF_SECTOR_SIZE - len(evidence_bytes) % _EWF_SECTOR_SIZE) % _EWF_SECTOR_SIZE
     padded = evidence_bytes + b"\x00" * pad_len
 
-    # Compute hashes over original (unpadded) evidence
-    md5 = hashlib.md5(evidence_bytes).digest()  # noqa: S324
+    # Compute hashes over original (unpadded) evidence.
+    # MD5 is mandated by the EWF/E01 container format (EnCase standard) for the
+    # hash section; it is a format-compatibility checksum, NOT a security hash —
+    # integrity is additionally protected by the SHA-256 digest below.
+    md5 = hashlib.md5(evidence_bytes, usedforsecurity=False).digest()
     sha256 = hashlib.sha256(evidence_bytes).digest()
 
     parts: list[bytes] = []
@@ -447,7 +450,9 @@ class DFIRExporter:
         ts = datetime.now(tz=UTC).isoformat()
         ts_compact = ts[:19].replace(":", "").replace("-", "")
 
-        md5_hex = hashlib.md5(content).hexdigest()  # noqa: S324
+        # MD5 required by EWF/E01 format compatibility (not a security hash);
+        # SHA-256 below provides the cryptographic integrity guarantee.
+        md5_hex = hashlib.md5(content, usedforsecurity=False).hexdigest()
         sha256_hex = hashlib.sha256(content).hexdigest()
 
         try:
