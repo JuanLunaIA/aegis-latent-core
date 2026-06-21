@@ -266,7 +266,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] NFKC normalization (catches lookalike Unicode substitution attacks)
 - [x] Zero-width character strip (catches invisible character injection)
 - [x] Rust Aho-Corasick SIMD for throughput; Python regex as authoritative second pass
-- [ ] Homoglyph normalization beyond NFKC: Cyrillic/Greek/Latin lookalike mapping table (e.g., `а` U+0430 → `a` U+0061)
+- [x] Homoglyph normalization beyond NFKC: Cyrillic/Greek/Latin lookalike mapping table (e.g., `а` U+0430 → `a` U+0061)
 - [x] Base64/URL/HTML entity decode pipeline: iterative decode up to depth 5 before WAF scan
 - [ ] Token-split reassembly attack detection: detect patterns split across token boundaries (requires tokenizer-aware scan)
 - [ ] Language model-based semantic WAF: lightweight classifier (DistilBERT or FastText) as tertiary pass for novel jailbreaks not matching known patterns
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 20 | 24 | ~83% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
-| Advanced Forensics & WAF | 18 | 26 | ~69% |
-| **Total** | **85** | **122** | **~70%** |
+| Advanced Forensics & WAF | 19 | 26 | ~73% |
+| **Total** | **86** | **122** | **~70%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
