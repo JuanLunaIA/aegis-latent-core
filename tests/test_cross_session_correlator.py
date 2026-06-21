@@ -456,7 +456,9 @@ class TestIntegrationScenarios:
             "Explain the Pythagorean theorem.",
         ]
         now = time.time()
-        for i, (prompt, tid) in enumerate(zip(prompts, [f"user-{j}" for j in range(10)], strict=False)):
+        for i, (prompt, tid) in enumerate(
+            zip(prompts, [f"user-{j}" for j in range(10)], strict=False)
+        ):
             r = c.observe(prompt, tid, timestamp=now + i)
             assert not r.coordinated, f"False positive at index {i}: {r.reason}"
 

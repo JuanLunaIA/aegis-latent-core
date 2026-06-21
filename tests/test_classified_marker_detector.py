@@ -15,7 +15,9 @@ from aegis.core.classified_marker_detector import (
 
 class TestMarkerDetectionResult:
     def test_blocked_true(self):
-        r = MarkerDetectionResult(blocked=True, markers_found=[("SCI_SI", "//SI")], reason="x", scan_length=10)
+        r = MarkerDetectionResult(
+            blocked=True, markers_found=[("SCI_SI", "//SI")], reason="x", scan_length=10
+        )
         assert r.blocked is True
         assert bool(r) is True
 
@@ -554,9 +556,11 @@ class TestIntegrationScenarios:
 
     def test_system_prompt_plus_user_request_clean(self):
         d = ClassifiedMarkerDetector()
-        r = d.scan_text_bulk([
-            "You are a helpful medical assistant.",
-            "What are the side effects of ibuprofen?",
-            "Common side effects include stomach upset and headache.",
-        ])
+        r = d.scan_text_bulk(
+            [
+                "You are a helpful medical assistant.",
+                "What are the side effects of ibuprofen?",
+                "Common side effects include stomach upset and headache.",
+            ]
+        )
         assert not r.blocked

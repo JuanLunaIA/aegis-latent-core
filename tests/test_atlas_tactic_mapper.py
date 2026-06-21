@@ -77,10 +77,16 @@ class TestATLASTechniquesRegistry:
 
     def test_required_techniques_present(self):
         required = [
-            "AML.T0051", "AML.T0051.000", "AML.T0051.001",
-            "AML.T0054", "AML.T0054.000",
-            "AML.T0056", "AML.T0056.000",
-            "AML.T0047", "AML.T0048", "AML.T0048.002",
+            "AML.T0051",
+            "AML.T0051.000",
+            "AML.T0051.001",
+            "AML.T0054",
+            "AML.T0054.000",
+            "AML.T0056",
+            "AML.T0056.000",
+            "AML.T0047",
+            "AML.T0048",
+            "AML.T0048.002",
         ]
         for tid in required:
             assert tid in ATLAS_TECHNIQUES, f"{tid} missing from registry"
@@ -148,9 +154,7 @@ class TestConstructor:
         assert len(mapper.known_technique_ids) > 0
 
     def test_extra_mappings_added(self):
-        mapper = ATLASTacticMapper(
-            extra_mappings={"custom_attack": ["AML.T0051"]}
-        )
+        mapper = ATLASTacticMapper(extra_mappings={"custom_attack": ["AML.T0051"]})
         assert "custom_attack" in mapper.known_categories
 
     def test_extra_techniques_added(self):

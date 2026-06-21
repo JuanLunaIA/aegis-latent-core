@@ -166,8 +166,7 @@ class ClockIntegrityAssertion:
             ntp_synchronized=None,
             source="unavailable",
             warning=(
-                "NTP sync status could not be determined: "
-                "timedatectl and adjtimex both unavailable"
+                "NTP sync status could not be determined: timedatectl and adjtimex both unavailable"
             ),
         )
         logger.warning("clock_integrity: %s", status.warning)
@@ -195,9 +194,7 @@ class ClockIntegrityAssertion:
         drift = abs(now - node_timestamp)
         within = drift <= self._max_drift
         warning = (
-            f"clock drift {drift:.3f}s exceeds tolerance {self._max_drift}s"
-            if not within
-            else ""
+            f"clock drift {drift:.3f}s exceeds tolerance {self._max_drift}s" if not within else ""
         )
         if warning:
             logger.warning("clock_integrity: node_timestamp=%.3f %s", node_timestamp, warning)
@@ -266,6 +263,7 @@ class ClockIntegrityAssertion:
             import ctypes
             import ctypes.util
             import sys as _sys
+
             if _sys.platform != "linux":
                 return None
 
@@ -281,7 +279,9 @@ class ClockIntegrityAssertion:
 
             # ret < 0 means error; ret == 5 means TIME_ERROR (not synced)
             synced = 0 <= ret <= 4
-            warning = "" if synced else f"adjtimex returned TIME_ERROR ({ret}); clock not synchronized"
+            warning = (
+                "" if synced else f"adjtimex returned TIME_ERROR ({ret}); clock not synchronized"
+            )
             return NTPSyncStatus(
                 ntp_synchronized=synced,
                 source="adjtimex",

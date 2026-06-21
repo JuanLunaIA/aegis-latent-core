@@ -31,7 +31,10 @@ def test_validate_allowed_list_all_allowed():
 def test_validate_allowed_list_with_disallowed():
     # Use an allowed tuple that doesn't include list, triggering the recursive branch
     allowed = (str, int, float)
-    class Custom: pass
+
+    class Custom:
+        pass
+
     assert _validate_allowed([1, Custom()], allowed) is False
 
 
@@ -54,7 +57,10 @@ def test_validate_allowed_dict_int_key_allowed():
 def test_validate_allowed_dict_with_disallowed_value():
     # allowed doesn't include dict, so triggers dict recursion branch
     allowed = (str, int)
-    class Custom: pass
+
+    class Custom:
+        pass
+
     assert _validate_allowed({"k": Custom()}, allowed) is False
 
 
@@ -67,6 +73,7 @@ def test_validate_allowed_nested_list_in_dict():
 def test_validate_allowed_returns_false_for_non_primitive():
     class Custom:
         pass
+
     assert _validate_allowed(Custom(), DEFAULT_ALLOWED) is False
 
 
@@ -93,6 +100,7 @@ def test_find_class_allows_builtins_list():
 
 def test_find_class_forbids_non_builtin():
     import datetime
+
     buf = io.BytesIO()
     buf.write(pickle.dumps(datetime.datetime(2024, 1, 1)))
     buf.seek(0)
@@ -111,6 +119,7 @@ def test_safe_pickle_load_disallowed_type_raises(tmp_path):
     path.write_bytes(pickle.dumps({"key": "value"}))
 
     from unittest.mock import patch
+
     with patch("aegis.core.safe_serialization._validate_allowed", return_value=False):
         with pytest.raises(pickle.UnpicklingError, match="disallowed types"):
             safe_pickle_load(path)

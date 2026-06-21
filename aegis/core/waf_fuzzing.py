@@ -81,13 +81,13 @@ _SEEDS: list[str] = [
 
 _HOMOGLYPHS: dict[str, list[str]] = {
     "a": ["а", "ɑ", "α"],  # Cyrillic а, Latin ɑ, Greek α
-    "e": ["е", "ε"],             # Cyrillic е, Greek ε
-    "i": ["і", "ι"],             # Cyrillic і, Greek ι
-    "o": ["о", "ο"],             # Cyrillic о, Greek ο
-    "p": ["р", "ρ"],             # Cyrillic р (looks like p), Greek ρ
-    "s": ["ѕ"],                       # Cyrillic ѕ
-    "x": ["х"],                       # Cyrillic х
-    "y": ["у"],                       # Cyrillic у
+    "e": ["е", "ε"],  # Cyrillic е, Greek ε
+    "i": ["і", "ι"],  # Cyrillic і, Greek ι
+    "o": ["о", "ο"],  # Cyrillic о, Greek ο
+    "p": ["р", "ρ"],  # Cyrillic р (looks like p), Greek ρ
+    "s": ["ѕ"],  # Cyrillic ѕ
+    "x": ["х"],  # Cyrillic х
+    "y": ["у"],  # Cyrillic у
 }
 
 # ── Zero-width characters ─────────────────────────────────────────────────────
@@ -103,9 +103,7 @@ _ZW_CHARS = [
 
 # ── Full-width ASCII ──────────────────────────────────────────────────────────
 
-_ASCII_TO_FULLWIDTH: dict[str, str] = {
-    chr(c): chr(c + 0xFEE0) for c in range(0x21, 0x7F)
-}
+_ASCII_TO_FULLWIDTH: dict[str, str] = {chr(c): chr(c + 0xFEE0) for c in range(0x21, 0x7F)}
 
 
 # ── Transform types ───────────────────────────────────────────────────────────
@@ -215,7 +213,9 @@ class FuzzReport:
 # ── Transformation engine ─────────────────────────────────────────────────────
 
 
-def apply_transform(text: str, transform: EvasionTransform, rng: random.Random | None = None) -> str:
+def apply_transform(
+    text: str, transform: EvasionTransform, rng: random.Random | None = None
+) -> str:
     """Apply a single evasion transformation to *text*.
 
     Parameters
@@ -312,6 +312,7 @@ class WAFDifferentialFuzzer:
     ) -> None:
         if waf is None:
             from aegis.proxy.waf import AegisWAF  # noqa: PLC0415
+
             self._waf: AegisWAF = AegisWAF()
         else:
             self._waf = waf
@@ -369,8 +370,7 @@ class WAFDifferentialFuzzer:
                     bypass_candidates.append(variant)
 
         transform_stats = {
-            t: round(transform_blocks.get(t, 0) / transform_counts[t], 4)
-            for t in transform_counts
+            t: round(transform_blocks.get(t, 0) / transform_counts[t], 4) for t in transform_counts
         }
 
         return FuzzReport(

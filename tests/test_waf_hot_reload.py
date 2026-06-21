@@ -314,6 +314,7 @@ class TestStartStop:
 class TestErrorRecovery:
     def test_safe_reload_logs_warning_on_error(self, tmp_path, caplog):
         import logging
+
         p = _write_pattern_file(tmp_path / "patterns.json")
         r = WAFHotReloader(str(p), on_reload=lambda ps: None)
         # Delete the file to cause a reload failure.

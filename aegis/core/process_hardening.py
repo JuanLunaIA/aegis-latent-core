@@ -121,9 +121,7 @@ class ProcessHardening:
         result.dumpable_disabled = self._set_not_dumpable(libc, result)
 
         if result.fully_hardened:
-            logger.info(
-                "process_hardening: PR_SET_NO_NEW_PRIVS=1 and PR_SET_DUMPABLE=0 applied"
-            )
+            logger.info("process_hardening: PR_SET_NO_NEW_PRIVS=1 and PR_SET_DUMPABLE=0 applied")
         else:
             logger.warning(
                 "process_hardening: partial hardening — no_new_privs=%s dumpable_disabled=%s errors=%s",

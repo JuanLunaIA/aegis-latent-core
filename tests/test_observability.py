@@ -239,12 +239,14 @@ async def test_commit_and_alert_records_duration(tmp_path):
 def test_scheduling_jitter_metric_accessible():
     """SCHEDULING_JITTER must be importable and accept .observe() calls."""
     from aegis.core.observability import SCHEDULING_JITTER
+
     SCHEDULING_JITTER.observe(0.000005)  # 5 µs — must not raise
 
 
 def test_scheduling_jitter_noop_accepts_observe():
     """No-op stub must silently accept .observe() without prometheus_client."""
     from aegis.core import observability as obs
+
     obs.SCHEDULING_JITTER.observe(0.0)  # no-op; must not raise
 
 

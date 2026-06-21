@@ -68,6 +68,7 @@ class TestEncryptDecryptRoundTrip:
         enc = self._enc()
         node = self._node()
         import json
+
         plaintext_len = len(json.dumps(node, separators=(",", ":"), sort_keys=True).encode())
         ct = enc.encrypt_node("t", node, "h" * 64)
         # nonce (12) + tag (16) = 28 bytes overhead
@@ -158,7 +159,7 @@ class TestSalt:
     def test_same_key_different_salt_different_ciphertext(self):
         key = os.urandom(32)
         enc1 = AuditNodeEncryptor(master_key=key, salt=b"\x00" * 16)
-        enc2 = AuditNodeEncryptor(master_key=key, salt=b"\xFF" * 16)
+        enc2 = AuditNodeEncryptor(master_key=key, salt=b"\xff" * 16)
         node = {"x": 1}
         ct1 = enc1.encrypt_node("t", node, "h")
         ct2 = enc2.encrypt_node("t", node, "h")
@@ -168,7 +169,7 @@ class TestSalt:
     def test_wrong_salt_cannot_decrypt(self):
         key = os.urandom(32)
         enc1 = AuditNodeEncryptor(master_key=key, salt=b"\x00" * 16)
-        enc2 = AuditNodeEncryptor(master_key=key, salt=b"\xFF" * 16)
+        enc2 = AuditNodeEncryptor(master_key=key, salt=b"\xff" * 16)
         ct = enc1.encrypt_node("t", {"x": 1}, "h")
         with pytest.raises(AuditNodeEncryptionError):
             enc2.decrypt_node("t", ct, "h")

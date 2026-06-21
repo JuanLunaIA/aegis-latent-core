@@ -142,7 +142,9 @@ class TestHalfOpenTransition:
 
 class TestHalfOpenState:
     def _half_open(self, success_threshold: int = 2) -> CircuitBreaker:
-        cb = _open_breaker(failure_threshold=3, recovery_timeout=0.01, success_threshold=success_threshold)
+        cb = _open_breaker(
+            failure_threshold=3, recovery_timeout=0.01, success_threshold=success_threshold
+        )
         time.sleep(0.02)
         cb.allow_request()  # triggers OPEN → HALF_OPEN
         return cb
@@ -224,9 +226,7 @@ class TestFullLifecycle:
         cb.check()  # no raise
 
     def test_repeated_open_close_cycles(self):
-        cb = CircuitBreaker(
-            failure_threshold=1, recovery_timeout=0.01, success_threshold=1
-        )
+        cb = CircuitBreaker(failure_threshold=1, recovery_timeout=0.01, success_threshold=1)
         for _ in range(3):
             cb.record_failure()
             assert cb.state == "open"
@@ -328,6 +328,7 @@ class TestThreadSafety:
 class TestConfigIntegration:
     def test_default_config_values_valid(self):
         from aegis.config import AegisSettings
+
         s = AegisSettings()
         assert s.circuit_breaker_failure_threshold > 0
         assert s.circuit_breaker_recovery_timeout > 0
@@ -335,6 +336,7 @@ class TestConfigIntegration:
 
     def test_circuit_breaker_from_config(self):
         from aegis.config import AegisSettings
+
         s = AegisSettings(
             circuit_breaker_failure_threshold=7,
             circuit_breaker_recovery_timeout=45.0,

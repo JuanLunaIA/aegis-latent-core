@@ -37,6 +37,7 @@ Usage::
         sig_bytes, pub_hex, scheme = backend.sign(data)
     backend.close()
 """
+
 from __future__ import annotations
 
 import logging
@@ -182,7 +183,9 @@ class HSMSigningBackend:
                 logger.warning("HSM sign failed (%s); attempting session refresh", exc)
                 self._try_initialize()
                 if not self._available:
-                    raise HSMUnavailableError(f"HSM session lost and could not be re-established: {exc}") from exc
+                    raise HSMUnavailableError(
+                        f"HSM session lost and could not be re-established: {exc}"
+                    ) from exc
                 return self._sign_internal(data)
 
     def _sign_internal(self, data: bytes) -> tuple[bytes, str, str]:

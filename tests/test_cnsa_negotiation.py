@@ -88,16 +88,12 @@ class TestIsApproved:
         assert not n.is_approved("DES")
 
     def test_mandate_qr_rejects_classical_signature(self):
-        n = CNSANegotiator(
-            required_suite=CNSASuite.SUITE_B, mandate_quantum_resistant=True
-        )
+        n = CNSANegotiator(required_suite=CNSASuite.SUITE_B, mandate_quantum_resistant=True)
         # ECDSA is approved for Suite B but not quantum-resistant
         assert not n.is_approved("ECDSA-P384")
 
     def test_mandate_qr_allows_symmetric(self):
-        n = CNSANegotiator(
-            required_suite=CNSASuite.CNSA_2_0, mandate_quantum_resistant=True
-        )
+        n = CNSANegotiator(required_suite=CNSASuite.CNSA_2_0, mandate_quantum_resistant=True)
         # symmetric/hash not subject to QR mandate
         assert n.is_approved("AES-256-GCM")
         assert n.is_approved("SHA-384")
@@ -134,9 +130,7 @@ class TestApprovedAlgorithms:
         assert "ML-DSA-87" in all_approved
 
     def test_mandate_qr_excludes_classical_kx(self):
-        n = CNSANegotiator(
-            required_suite=CNSASuite.SUITE_B, mandate_quantum_resistant=True
-        )
+        n = CNSANegotiator(required_suite=CNSASuite.SUITE_B, mandate_quantum_resistant=True)
         kx = n.approved_algorithms(AlgorithmCategory.KEY_EXCHANGE)
         # Suite B has only classical KX; with QR mandate the list is empty
         assert kx == []
@@ -177,10 +171,13 @@ class TestNegotiationResult:
 class TestNegotiateCNSA2:
     def _full_cnsa2_offer(self) -> list[str]:
         return [
-            "ML-KEM-1024", "ML-KEM-768",
-            "ML-DSA-87", "ML-DSA-65",
+            "ML-KEM-1024",
+            "ML-KEM-768",
+            "ML-DSA-87",
+            "ML-DSA-65",
             "AES-256-GCM",
-            "SHA-384", "SHA-512",
+            "SHA-384",
+            "SHA-512",
         ]
 
     def test_full_offer_compliant(self):
@@ -211,7 +208,9 @@ class TestNegotiateCNSA2:
 
     def test_classical_offers_rejected(self):
         n = CNSANegotiator(required_suite=CNSASuite.CNSA_2_0)
-        r = n.negotiate(["ECDH-P384", "ECDSA-P384", "AES-256-GCM", "SHA-384", "ML-KEM-1024", "ML-DSA-87"])
+        r = n.negotiate(
+            ["ECDH-P384", "ECDSA-P384", "AES-256-GCM", "SHA-384", "ML-KEM-1024", "ML-DSA-87"]
+        )
         rejected_names = [name for name, _ in r.rejected]
         assert "ECDH-P384" in rejected_names
         assert "ECDSA-P384" in rejected_names
@@ -252,9 +251,7 @@ class TestNegotiateSuiteB:
 
     def test_prefers_aes256_over_aes128(self):
         n = CNSANegotiator(required_suite=CNSASuite.SUITE_B)
-        r = n.negotiate(
-            ["ECDH-P256", "ECDSA-P256", "AES-128-GCM", "AES-256-GCM", "SHA-256"]
-        )
+        r = n.negotiate(["ECDH-P256", "ECDSA-P256", "AES-128-GCM", "AES-256-GCM", "SHA-256"])
         assert r.selected["symmetric"] == "AES-256-GCM"
 
     def test_pqc_offers_rejected_in_suiteb(self):
@@ -301,9 +298,7 @@ class TestNegotiationEdgeCases:
         assert r.compliant
 
     def test_mandate_qr_full_negotiation(self):
-        n = CNSANegotiator(
-            required_suite=CNSASuite.CNSA_2_0, mandate_quantum_resistant=True
-        )
+        n = CNSANegotiator(required_suite=CNSASuite.CNSA_2_0, mandate_quantum_resistant=True)
         r = n.negotiate(["ML-KEM-1024", "ML-DSA-87", "AES-256-GCM", "SHA-384"])
         assert r.compliant
 
@@ -325,10 +320,14 @@ class TestIntegrationScenarios:
         n = CNSANegotiator(required_suite=CNSASuite.CNSA_2_0)
         r = n.negotiate(
             [
-                "ECDH-P384", "ML-KEM-1024",      # KX: one classical (reject), one PQC
-                "ECDSA-P384", "ML-DSA-87",       # SIG: one classical (reject), one PQC
-                "AES-128-GCM", "AES-256-GCM",    # SYM: pick 256
-                "SHA-256", "SHA-384",            # HASH: pick 384 (256 not in CNSA2)
+                "ECDH-P384",
+                "ML-KEM-1024",  # KX: one classical (reject), one PQC
+                "ECDSA-P384",
+                "ML-DSA-87",  # SIG: one classical (reject), one PQC
+                "AES-128-GCM",
+                "AES-256-GCM",  # SYM: pick 256
+                "SHA-256",
+                "SHA-384",  # HASH: pick 384 (256 not in CNSA2)
             ]
         )
         assert r.compliant

@@ -210,9 +210,7 @@ class PIIConfidenceFilter:
             reason=reason,
         )
 
-    def evaluate_messages(
-        self, messages: list[dict[str, object]]
-    ) -> list[PIIConfidenceResult]:
+    def evaluate_messages(self, messages: list[dict[str, object]]) -> list[PIIConfidenceResult]:
         """Evaluate a list of chat message dicts.
 
         Each dict is expected to have a ``"content"`` string key.  Messages

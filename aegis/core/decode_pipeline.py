@@ -121,9 +121,7 @@ class DecodePipeline:
         if max_depth < 1:
             raise ValueError(f"max_depth must be ≥ 1, got {max_depth!r}")
         if not 0.0 <= min_printable_ratio <= 1.0:
-            raise ValueError(
-                f"min_printable_ratio must be in [0, 1], got {min_printable_ratio!r}"
-            )
+            raise ValueError(f"min_printable_ratio must be in [0, 1], got {min_printable_ratio!r}")
         self._max_depth = max_depth
         self._min_printable_ratio = min_printable_ratio
 
@@ -193,6 +191,7 @@ class DecodePipeline:
 
     def _url_decode(self, text: str) -> str:
         """Decode percent-encoding including ``%uXXXX`` (IIS variant)."""
+
         # Expand %uXXXX → %XX%XX (approximate; decode as UTF-16 → UTF-8)
         def expand_iis(m: re.Match[str]) -> str:
             codepoint = int(m.group(1), 16)
@@ -242,7 +241,6 @@ class DecodePipeline:
         if not text:
             return False
         printable_count = sum(
-            1 for ch in text
-            if (ch.isprintable() and ch != "�") or ch in "\n\r\t"
+            1 for ch in text if (ch.isprintable() and ch != "�") or ch in "\n\r\t"
         )
         return (printable_count / len(text)) >= self._min_printable_ratio

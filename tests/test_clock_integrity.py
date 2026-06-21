@@ -133,6 +133,7 @@ class TestCheckNodeDrift:
 
     def test_uses_current_time_when_no_reference(self):
         import time
+
         cia = ClockIntegrityAssertion(max_drift_seconds=60.0)
         now = time.time()
         r = cia.check_node_drift(node_timestamp=now)
@@ -144,8 +145,12 @@ class TestCheckNodeDrift:
         r = cia.check_node_drift(node_timestamp=1000.0, reference_time=1002.0)
         d = r.to_dict()
         assert set(d.keys()) == {
-            "node_timestamp", "reference_time", "drift_seconds",
-            "max_drift_seconds", "within_tolerance", "warning",
+            "node_timestamp",
+            "reference_time",
+            "drift_seconds",
+            "max_drift_seconds",
+            "within_tolerance",
+            "warning",
         }
 
     def test_zero_drift_within(self):
@@ -211,7 +216,9 @@ class TestAssertStartupTimedatectl:
         assert status.source == "unavailable"
 
     def test_timedatectl_timeout_falls_through(self):
-        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="timedatectl", timeout=3)):
+        with patch(
+            "subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="timedatectl", timeout=3)
+        ):
             with patch.object(ClockIntegrityAssertion, "_check_adjtimex", return_value=None):
                 cia = ClockIntegrityAssertion()
                 status = cia.assert_startup()
@@ -312,9 +319,11 @@ class TestIntegration:
             status = ClockIntegrityAssertion().assert_startup()
         d = status.to_dict()
         import json
+
         json.dumps(d)  # must be JSON-serializable
 
     def test_drift_result_to_dict_serializable(self):
         r = ClockIntegrityAssertion().check_node_drift(node_timestamp=1000.0, reference_time=1001.5)
         import json
+
         json.dumps(r.to_dict())

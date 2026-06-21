@@ -307,6 +307,7 @@ def _apply_filter(
 
 # ── ScimStore ─────────────────────────────────────────────────────────────────
 
+
 def _now_utc() -> datetime:
     return datetime.now(UTC)
 
@@ -335,7 +336,7 @@ class ScimStore:
         self._users: dict[str, ScimUser] = {}
         self._groups: dict[str, ScimGroup] = {}
         # Secondary indexes (case-insensitive)
-        self._user_by_name: dict[str, str] = {}   # lower(userName) → id
+        self._user_by_name: dict[str, str] = {}  # lower(userName) → id
         self._group_by_name: dict[str, str] = {}  # lower(displayName) → id
 
     # ── User: CREATE ─────────────────────────────────────────────────────────
@@ -467,7 +468,9 @@ class ScimStore:
             new_key = state["user_name"].lower()
             old_key = user.user_name.lower()
             if new_key != old_key and new_key in self._user_by_name:
-                raise ScimError(409, f"userName {state['user_name']!r} already exists", "uniqueness")
+                raise ScimError(
+                    409, f"userName {state['user_name']!r} already exists", "uniqueness"
+                )
             updated = ScimUser(
                 id=user_id,
                 user_name=state["user_name"],
@@ -501,9 +504,7 @@ class ScimStore:
             for gid in user.group_ids:
                 if gid in self._groups:
                     g = self._groups[gid]
-                    self._groups[gid] = _replace_group(
-                        g, member_ids=g.member_ids - {user_id}
-                    )
+                    self._groups[gid] = _replace_group(g, member_ids=g.member_ids - {user_id})
             now = _now_utc()
             self._users[user_id] = ScimUser(
                 id=user.id,
@@ -796,11 +797,7 @@ class ScimStore:
             RoleRegistry(group_roles=store.to_group_roles())
         """
         with self._lock:
-            return {
-                g.display_name: g.roles
-                for g in self._groups.values()
-                if g.roles
-            }
+            return {g.display_name: g.roles for g in self._groups.values() if g.roles}
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────

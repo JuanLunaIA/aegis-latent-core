@@ -61,7 +61,9 @@ class TestCustodyEvent:
         assert d["notes"] == "initial export"
 
     def test_to_dict_empty_notes(self):
-        ev = CustodyEvent(event_type="access", operator="Bob", timestamp_iso="2026-01-01T00:00:00+00:00")
+        ev = CustodyEvent(
+            event_type="access", operator="Bob", timestamp_iso="2026-01-01T00:00:00+00:00"
+        )
         d = ev.to_dict()
         assert d["notes"] == ""
 
@@ -95,9 +97,13 @@ class TestAcquisitionMetadata:
         )
         d = am.to_dict()
         assert set(d.keys()) == {
-            "tool_name", "tool_version", "operator",
-            "acquisition_timestamp_iso", "acquisition_reason",
-            "hash_algorithm", "standard_reference",
+            "tool_name",
+            "tool_version",
+            "operator",
+            "acquisition_timestamp_iso",
+            "acquisition_reason",
+            "hash_algorithm",
+            "standard_reference",
         }
 
     def test_to_dict_values(self):
@@ -135,9 +141,17 @@ class TestEvidenceNode:
         )
         d = en.to_dict()
         assert set(d.keys()) == {
-            "index", "state_id", "node_hash", "prev_hash", "timestamp_iso",
-            "tenant_id", "request_hash", "response_hash", "signature",
-            "signature_scheme", "model",
+            "index",
+            "state_id",
+            "node_hash",
+            "prev_hash",
+            "timestamp_iso",
+            "tenant_id",
+            "request_hash",
+            "response_hash",
+            "signature",
+            "signature_scheme",
+            "model",
         }
 
     def test_to_dict_values(self):
@@ -174,6 +188,7 @@ class TestBuildEvidencePackage:
 
     def test_package_id_is_uuid4(self, tmp_path):
         import uuid
+
         ledger = _make_ledger(tmp_path)
         try:
             pkg = build_evidence_package(ledger, operator=_OPERATOR)
@@ -326,9 +341,7 @@ class TestBuildEvidencePackage:
     def test_custody_reason_in_notes_when_provided(self, tmp_path):
         ledger = _make_ledger(tmp_path)
         try:
-            pkg = build_evidence_package(
-                ledger, operator=_OPERATOR, acquisition_reason="audit"
-            )
+            pkg = build_evidence_package(ledger, operator=_OPERATOR, acquisition_reason="audit")
             assert "audit" in pkg.chain_of_custody[0].notes
         finally:
             ledger.close()
@@ -505,9 +518,16 @@ class TestToDict:
             pkg = build_evidence_package(ledger, operator=_OPERATOR)
             d = pkg.to_dict()
             expected = {
-                "package_id", "acquisition_metadata", "chain_of_custody",
-                "evidence_nodes", "chain_integrity_valid", "chain_integrity_error_index",
-                "node_count", "tail_hash", "legal_admissibility", "integrity_seal",
+                "package_id",
+                "acquisition_metadata",
+                "chain_of_custody",
+                "evidence_nodes",
+                "chain_integrity_valid",
+                "chain_integrity_error_index",
+                "node_count",
+                "tail_hash",
+                "legal_admissibility",
+                "integrity_seal",
             }
             assert set(d.keys()) == expected
         finally:

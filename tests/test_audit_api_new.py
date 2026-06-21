@@ -63,6 +63,7 @@ def _make_app(ledger) -> FastAPI:
 
     # Override the validate_audit_auth dependency
     from aegis.proxy.dependencies import validate_audit_auth
+
     app.dependency_overrides[validate_audit_auth] = lambda: "test"
 
     return app

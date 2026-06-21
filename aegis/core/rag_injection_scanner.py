@@ -76,7 +76,10 @@ _DIRECT_JAILBREAK: list[re.Pattern[str]] = [
         r"system\s+(prompt|instruction|directive)",
         re.IGNORECASE | re.DOTALL,
     ),
-    re.compile(r"forget\s+(all\s+)?(your\s+)?(previous\s+)?(rules|instructions?|guidelines?)", re.IGNORECASE),
+    re.compile(
+        r"forget\s+(all\s+)?(your\s+)?(previous\s+)?(rules|instructions?|guidelines?)",
+        re.IGNORECASE,
+    ),
     re.compile(r"new\s+persona\s*:?|from\s+now\s+on\s+(you\s+are|act\s+as)", re.IGNORECASE),
 ]
 
@@ -428,9 +431,7 @@ class RAGInjectionScanner:
             if role in ("tool", "function"):
                 tool_name = msg.get("name", "") or msg.get("tool_call_id", "")
                 text = _extract_text(content)
-                results.append(
-                    self.scan_document(text, source_id=f"msg[{idx}]:tool:{tool_name}")
-                )
+                results.append(self.scan_document(text, source_id=f"msg[{idx}]:tool:{tool_name}"))
 
             elif role == "user":
                 # Anthropic format: content is a list of typed blocks.

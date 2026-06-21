@@ -152,10 +152,12 @@ class TestDMZEnabled:
         app.add_middleware(DMZSourceIPMiddleware, allowed_networks=_parse(["10.0.0.0/8"]))
 
         @app.get("/a")
-        async def a(): return {}
+        async def a():
+            return {}
 
         @app.get("/b")
-        async def b(): return {}
+        async def b():
+            return {}
 
         client = TestClient(app, raise_server_exceptions=False)
         assert client.get("/a").status_code == 403
@@ -222,11 +224,13 @@ class TestTrustProxyHeaders:
 class TestConfigIntegration:
     def test_get_dmz_networks_empty_string(self):
         from aegis.config import AegisSettings
+
         s = AegisSettings(dmz_allowed_source_ips="")
         assert s.get_dmz_networks() == []
 
     def test_get_dmz_networks_single_ip(self):
         from aegis.config import AegisSettings
+
         s = AegisSettings(dmz_allowed_source_ips="10.0.0.1")
         nets = s.get_dmz_networks()
         assert len(nets) == 1
@@ -234,6 +238,7 @@ class TestConfigIntegration:
 
     def test_get_dmz_networks_cidr(self):
         from aegis.config import AegisSettings
+
         s = AegisSettings(dmz_allowed_source_ips="10.0.0.0/24")
         nets = s.get_dmz_networks()
         assert len(nets) == 1
@@ -241,23 +246,27 @@ class TestConfigIntegration:
 
     def test_get_dmz_networks_multiple(self):
         from aegis.config import AegisSettings
+
         s = AegisSettings(dmz_allowed_source_ips="10.0.0.0/24, 192.168.1.0/24")
         nets = s.get_dmz_networks()
         assert len(nets) == 2
 
     def test_get_dmz_networks_invalid_raises(self):
         from aegis.config import AegisSettings
+
         s = AegisSettings(dmz_allowed_source_ips="not-an-ip")
         with pytest.raises(ValueError, match="invalid address or network"):
             s.get_dmz_networks()
 
     def test_trust_proxy_headers_default_false(self):
         from aegis.config import AegisSettings
+
         s = AegisSettings()
         assert s.dmz_trust_proxy_headers is False
 
     def test_dmz_disabled_by_default(self):
         from aegis.config import AegisSettings
+
         s = AegisSettings()
         assert s.dmz_allowed_source_ips == ""
         assert s.get_dmz_networks() == []
@@ -269,6 +278,7 @@ class TestConfigIntegration:
 class TestLogging:
     def test_rejected_request_logs_warning(self, caplog):
         import logging
+
         app = _app_with_dmz(["10.0.0.0/24"])
         client = TestClient(app, raise_server_exceptions=False)
         with caplog.at_level(logging.WARNING, logger="aegis.proxy.dmz_middleware"):
@@ -277,6 +287,7 @@ class TestLogging:
 
     def test_allowed_request_no_warning(self, caplog):
         import logging
+
         app = _app_with_dmz(["10.0.0.0/24"], trust_proxy=True)
         client = TestClient(app)
         with caplog.at_level(logging.WARNING, logger="aegis.proxy.dmz_middleware"):

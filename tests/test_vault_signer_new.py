@@ -13,9 +13,18 @@ import pytest
 
 # ── Mock hvac before importing vault_signer ───────────────────────────────────
 
-class _Forbidden(Exception): pass
-class _VaultNotInitialized(Exception): pass
-class _VaultError(Exception): pass
+
+class _Forbidden(Exception):
+    pass
+
+
+class _VaultNotInitialized(Exception):
+    pass
+
+
+class _VaultError(Exception):
+    pass
+
 
 _mock_hvac_exceptions = MagicMock()
 _mock_hvac_exceptions.Forbidden = _Forbidden
@@ -115,8 +124,11 @@ def test_decode_vault_signature_not_vault_prefix_raises():
 
 def test_decode_vault_signature_bad_b64_raises():
     import base64 as _b64
-    with patch.object(_b64, "standard_b64decode", side_effect=Exception("bad")), \
-         patch.object(_b64, "urlsafe_b64decode", side_effect=Exception("also bad")):
+
+    with (
+        patch.object(_b64, "standard_b64decode", side_effect=Exception("bad")),
+        patch.object(_b64, "urlsafe_b64decode", side_effect=Exception("also bad")),
+    ):
         with pytest.raises(ValueError, match="base64 decode failed"):
             VaultSigner._decode_vault_signature("vault:v1:anything")
 
@@ -160,9 +172,7 @@ def test_do_approle_login_success():
         secret_id="s",
     )
     mock_client = MagicMock()
-    mock_client.auth.approle.login.return_value = {
-        "auth": {"client_token": "s.newtoken"}
-    }
+    mock_client.auth.approle.login.return_value = {"auth": {"client_token": "s.newtoken"}}
     vs._client = mock_client
 
     vs._do_approle_login()
@@ -304,9 +314,7 @@ def test_sign_sync_success():
 
     mock_client = MagicMock()
     mock_client.is_authenticated.return_value = True
-    mock_client.secrets.transit.sign_data.return_value = {
-        "data": {"signature": f"vault:v1:{b64}"}
-    }
+    mock_client.secrets.transit.sign_data.return_value = {"data": {"signature": f"vault:v1:{b64}"}}
 
     vs = _make_signer_with_client(mock_client)
     result = vs._sign_sync(b"hello")
@@ -471,9 +479,7 @@ def test_ensure_client_approle_path():
 
     mock_new_client = MagicMock()
     mock_new_client.is_authenticated.return_value = True
-    mock_new_client.auth.approle.login.return_value = {
-        "auth": {"client_token": "s.approle-tok"}
-    }
+    mock_new_client.auth.approle.login.return_value = {"auth": {"client_token": "s.approle-tok"}}
     _mock_hvac_mod.Client.return_value = mock_new_client
 
     vs._ensure_client()

@@ -385,9 +385,7 @@ class TestWORMEnforcerSealedSegments:
 class TestCountNodesInSegment:
     def test_counts_audit_node_lines(self, tmp_path):
         f = tmp_path / "seg.wal"
-        lines = [
-            json.dumps({"state_id": f"s{i}", "record_type": None}) for i in range(5)
-        ]
+        lines = [json.dumps({"state_id": f"s{i}", "record_type": None}) for i in range(5)]
         f.write_text("\n".join(lines) + "\n")
         assert count_nodes_in_segment(str(f)) == 5
 

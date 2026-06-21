@@ -2,6 +2,7 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """Tests for PHI de-identification audit trail (ScrubAuditRecord, scrub_with_audit)."""
+
 from __future__ import annotations
 
 from aegis.core.phi_deidentifier import PHIDeidentifier, ScrubAuditRecord, ScrubResult
@@ -129,6 +130,7 @@ class TestScrubWithAudit:
 
     def test_to_dict_is_json_serializable(self):
         import json
+
         s = self._scrubber()
         _, audit = s.scrub_with_audit("SSN: 123-45-6789")
         json.dumps(audit.to_dict())  # must not raise

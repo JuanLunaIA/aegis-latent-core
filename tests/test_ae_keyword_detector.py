@@ -207,9 +207,7 @@ class TestCaseInsensitivity:
 class TestWordBoundary:
     def test_partial_match_not_flagged(self):
         # "rash" should not match "brash" or "rashes" as separate word
-        r = AEKeywordDetector(require_clinical_context=False).scan(
-            "The patient had a rash on arm."
-        )
+        r = AEKeywordDetector(require_clinical_context=False).scan("The patient had a rash on arm.")
         assert r.flagged  # "rash" as whole word should match
 
     def test_partial_word_not_flagged(self):
@@ -247,9 +245,7 @@ class TestSOCClassification:
         assert "SA" in r.soc_counts
 
     def test_cardiac_soc(self):
-        r = AEKeywordDetector().scan(
-            "The patient developed tachycardia requiring treatment."
-        )
+        r = AEKeywordDetector().scan("The patient developed tachycardia requiring treatment.")
         assert "CA" in r.soc_counts
 
 
@@ -295,9 +291,7 @@ class TestContextRequired:
         assert r.flagged
 
     def test_adverse_itself_is_context(self):
-        r = AEKeywordDetector().scan(
-            "Adverse events including nausea were observed."
-        )
+        r = AEKeywordDetector().scan("Adverse events including nausea were observed.")
         assert r.flagged
 
 
@@ -306,16 +300,12 @@ class TestContextRequired:
 
 class TestDeduplication:
     def test_same_term_twice_appears_once(self):
-        r = AEKeywordDetector().scan(
-            "Patient had nausea before dose and nausea after dose."
-        )
+        r = AEKeywordDetector().scan("Patient had nausea before dose and nausea after dose.")
         nausea_terms = [t for t, _ in r.terms_found if t == "nausea"]
         assert len(nausea_terms) == 1
 
     def test_uk_us_spelling_both_counted(self):
-        r = AEKeywordDetector().scan(
-            "Patient reported diarrhoea and diarrhea during treatment."
-        )
+        r = AEKeywordDetector().scan("Patient reported diarrhoea and diarrhea during treatment.")
         terms = [t for t, _ in r.terms_found]
         # Both spellings are separate terms in the term list
         assert "diarrhoea" in terms or "diarrhea" in terms
@@ -435,9 +425,7 @@ class TestScanTextBulk:
 
 class TestReasonField:
     def test_reason_mentions_terms_when_flagged(self):
-        r = AEKeywordDetector().scan(
-            "Patient experienced nausea during drug therapy."
-        )
+        r = AEKeywordDetector().scan("Patient experienced nausea during drug therapy.")
         assert r.flagged
         assert "AE terms" in r.reason or "term" in r.reason
 

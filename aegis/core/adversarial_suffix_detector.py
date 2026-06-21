@@ -111,7 +111,10 @@ _OUTPUT_PREFIX_INJECTION = re.compile(
 _GCG_KNOWN_FRAGMENTS: list[re.Pattern[str]] = [
     re.compile(r"representing\s+Zeta\s+Alphaeus", re.IGNORECASE),
     re.compile(r"! ! ! ! ! !", re.IGNORECASE),
-    re.compile(r"(?:Write|Say|Print)\s+(?:the\s+)?(?:following|this):\s*Sure\s*,\s*here\s+is", re.IGNORECASE),
+    re.compile(
+        r"(?:Write|Say|Print)\s+(?:the\s+)?(?:following|this):\s*Sure\s*,\s*here\s+is",
+        re.IGNORECASE,
+    ),
     re.compile(r"\\n\\nAssistant\s*:", re.IGNORECASE),
     re.compile(r"responding\s+Sure\s*,\s*(?:here\s+is|I\s+can)", re.IGNORECASE),
     re.compile(r"begin.*(?:Sure|Absolutely)\s*[\.,:].*harm(?:ful)?", re.IGNORECASE),
@@ -226,9 +229,7 @@ class AdversarialSuffixDetector:
 
         flagged = bool(signals)
         if flagged:
-            reason = (
-                f"adversarial suffix detected: signals=[{', '.join(signals)}]"
-            )
+            reason = f"adversarial suffix detected: signals=[{', '.join(signals)}]"
         else:
             reason = "no adversarial suffix signals detected"
 
@@ -239,9 +240,7 @@ class AdversarialSuffixDetector:
             reason=reason,
         )
 
-    def scan_messages(
-        self, messages: list[dict[str, object]]
-    ) -> SuffixDetectionResult:
+    def scan_messages(self, messages: list[dict[str, object]]) -> SuffixDetectionResult:
         """Scan all user-turn message content for adversarial suffixes.
 
         Only user-role messages are checked since suffixes are attacker-controlled.

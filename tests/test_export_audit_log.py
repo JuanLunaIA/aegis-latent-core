@@ -359,9 +359,17 @@ class TestExportLogEntry:
         )
         d = e.to_dict()
         assert set(d.keys()) == {
-            "version", "index", "timestamp_iso", "operator", "package_id",
-            "client_ip", "api_key_hash", "node_count", "hash_algorithm",
-            "extra", "entry_sig",
+            "version",
+            "index",
+            "timestamp_iso",
+            "operator",
+            "package_id",
+            "client_ip",
+            "api_key_hash",
+            "node_count",
+            "hash_algorithm",
+            "extra",
+            "entry_sig",
         }
 
     def test_from_dict_roundtrip(self):
@@ -407,9 +415,7 @@ class TestPersistence:
     def test_verification_across_instances(self, tmp_path):
         p = tmp_path / "log.jsonl"
         for i in range(3):
-            ExportAuditLog(p, signing_key=_KEY).record(
-                operator="alice", package_id=f"pkg-{i}"
-            )
+            ExportAuditLog(p, signing_key=_KEY).record(operator="alice", package_id=f"pkg-{i}")
         ok, errors = ExportAuditLog(p, signing_key=_KEY).verify()
         assert ok is True
         assert errors == []

@@ -23,7 +23,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import aegis
 from aegis.auth.apikey import AuditKeyAuth, ProxyKeyAuth
 from aegis.config import AegisSettings, get_settings
-from aegis.proxy.dmz_middleware import DMZSourceIPMiddleware
 from aegis.core import observability
 from aegis.core.circuit_breaker import CircuitOpenError
 from aegis.core.crypto_audit import CryptographicAuditLedger
@@ -37,6 +36,7 @@ from aegis.core.waf_session import WAFSessionTracker
 from aegis.proxy.analyzer import ResponseAnalysis, ResponseAnalyzer
 from aegis.proxy.audit_api import build_audit_router
 from aegis.proxy.dependencies import validate_proxy_auth
+from aegis.proxy.dmz_middleware import DMZSourceIPMiddleware
 from aegis.proxy.forwarder import LLMForwarder
 from aegis.proxy.schemas import AlertOut
 from aegis.proxy.waf import AegisWAF
@@ -857,9 +857,15 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     )
                     _spawn_background(
                         _commit_and_alert(
-                            request_id, session_id, analysis, raw_body, request_start,
-                            phi_scrubbed=_phi_scrubbed, scrub_method=_scrub_method,
-                            signer_name=session_id, signature_meaning="authored",
+                            request_id,
+                            session_id,
+                            analysis,
+                            raw_body,
+                            request_start,
+                            phi_scrubbed=_phi_scrubbed,
+                            scrub_method=_scrub_method,
+                            signer_name=session_id,
+                            signature_meaning="authored",
                         )
                     )
 
@@ -902,9 +908,15 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         _spawn_background(
             _commit_and_alert(
-                request_id, session_id, analysis, raw_body, request_start,
-                phi_scrubbed=_phi_scrubbed, scrub_method=_scrub_method,
-                signer_name=session_id, signature_meaning="authored",
+                request_id,
+                session_id,
+                analysis,
+                raw_body,
+                request_start,
+                phi_scrubbed=_phi_scrubbed,
+                scrub_method=_scrub_method,
+                signer_name=session_id,
+                signature_meaning="authored",
             )
         )
 

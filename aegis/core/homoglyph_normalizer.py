@@ -146,9 +146,7 @@ _HOMOGLYPH_TABLE: dict[str, str] = {
 HOMOGLYPH_TABLE_SIZE: int = len(_HOMOGLYPH_TABLE)
 
 # Translation table for str.translate — O(1) per character
-_TRANSLATE_TABLE: dict[int, str] = {
-    ord(src): dst for src, dst in _HOMOGLYPH_TABLE.items()
-}
+_TRANSLATE_TABLE: dict[int, str] = {ord(src): dst for src, dst in _HOMOGLYPH_TABLE.items()}
 
 
 class HomoglyphNormalizer:

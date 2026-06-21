@@ -67,6 +67,7 @@ def test_get_signer_result_is_signer_provider():
 
 def test_crypto_getattr_unknown_raises():
     import aegis_server.crypto as crypto_mod
+
     with pytest.raises(AttributeError, match="has no attribute"):
         _ = crypto_mod.NonExistentSymbol
 

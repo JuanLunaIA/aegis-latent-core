@@ -9,6 +9,7 @@ scrubbed output, and that clean text is returned unchanged.  Also verifies
 hot-path integration: request message scrubbing and response scrubbing via the
 proxy helpers.
 """
+
 from __future__ import annotations
 
 import re
@@ -210,9 +211,7 @@ class TestScrubResult:
         assert result.total_hits == 0
 
     def test_total_hits_aggregates(self, scrubber):
-        result = scrubber.scrub(
-            "Contact dr.smith@clinic.com or call 555-000-1234."
-        )
+        result = scrubber.scrub("Contact dr.smith@clinic.com or call 555-000-1234.")
         assert result.total_hits >= 2
 
     def test_method_is_safe_harbor_regex(self, scrubber):
@@ -317,9 +316,7 @@ class TestProxyIntegration:
         from aegis.proxy.app import _apply_phi_scrub_response
 
         state = self._make_state(enabled=True)
-        resp = {
-            "choices": [{"message": {"role": "assistant", "content": "IP 10.0.0.1 was used."}}]
-        }
+        resp = {"choices": [{"message": {"role": "assistant", "content": "IP 10.0.0.1 was used."}}]}
         result = _apply_phi_scrub_response(resp, state)
         assert "10.0.0.1" not in result["choices"][0]["message"]["content"]
         assert "[REDACTED:IP_ADDRESS]" in result["choices"][0]["message"]["content"]

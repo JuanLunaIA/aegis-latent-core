@@ -584,6 +584,7 @@ class AegisSettings(BaseSettings):
     def get_dmz_networks(self) -> list[Any]:
         """Parse AEGIS_DMZ_ALLOWED_SOURCE_IPS into ipaddress network objects."""
         import ipaddress
+
         if not self.dmz_allowed_source_ips:
             return []
         networks = []

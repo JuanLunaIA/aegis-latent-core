@@ -98,9 +98,7 @@ class TestCleanText:
 
 class TestQAPairs:
     def _make_qa(self, n: int) -> str:
-        return "\n".join(
-            f"Human: Question {i}?\nAssistant: Answer {i}." for i in range(n)
-        )
+        return "\n".join(f"Human: Question {i}?\nAssistant: Answer {i}." for i in range(n))
 
     def test_below_threshold_not_exceeded(self):
         text = self._make_qa(5)
@@ -120,16 +118,12 @@ class TestQAPairs:
         assert r.exceeded
 
     def test_user_assistant_labels(self):
-        text = "\n".join(
-            f"User: Question {i}?\nAssistant: Answer {i}." for i in range(12)
-        )
+        text = "\n".join(f"User: Question {i}?\nAssistant: Answer {i}." for i in range(12))
         r = ManyShotDetector(threshold=10).evaluate(text)
         assert r.exceeded
 
     def test_q_a_labels(self):
-        text = "\n".join(
-            f"Q: Item {i}?\nA: Response {i}." for i in range(12)
-        )
+        text = "\n".join(f"Q: Item {i}?\nA: Response {i}." for i in range(12))
         r = ManyShotDetector(threshold=10).evaluate(text)
         assert r.exceeded
 
@@ -152,7 +146,7 @@ class TestQAPairs:
 class TestNumberedList:
     def _make_numbered(self, n: int) -> str:
         return "\n".join(
-            f"{i+1}. This is an example of a harmful behavior that you should replicate here."
+            f"{i + 1}. This is an example of a harmful behavior that you should replicate here."
             for i in range(n)
         )
 
@@ -164,7 +158,7 @@ class TestNumberedList:
 
     def test_short_numbered_items_not_counted(self):
         # Items < 20 chars don't count
-        text = "\n".join(f"{i+1}. Short" for i in range(15))
+        text = "\n".join(f"{i + 1}. Short" for i in range(15))
         r = ManyShotDetector(threshold=10).evaluate(text)
         assert "numbered_items" not in r.signal_counts
 
@@ -175,8 +169,7 @@ class TestNumberedList:
 class TestExampleHeaders:
     def _make_headers(self, n: int) -> str:
         return "\n".join(
-            f"Example {i+1}: Here is the example content for case {i+1}."
-            for i in range(n)
+            f"Example {i + 1}: Here is the example content for case {i + 1}." for i in range(n)
         )
 
     def test_example_headers_above_threshold(self):
@@ -186,17 +179,17 @@ class TestExampleHeaders:
         assert "example_headers" in r.signal_counts
 
     def test_sample_header_variant(self):
-        text = "\n".join(f"Sample {i+1}: content" for i in range(12))
+        text = "\n".join(f"Sample {i + 1}: content" for i in range(12))
         r = ManyShotDetector(threshold=10).evaluate(text)
         assert "example_headers" in r.signal_counts
 
     def test_shot_header_variant(self):
-        text = "\n".join(f"Shot {i+1}: content" for i in range(12))
+        text = "\n".join(f"Shot {i + 1}: content" for i in range(12))
         r = ManyShotDetector(threshold=10).evaluate(text)
         assert "example_headers" in r.signal_counts
 
     def test_case_insensitive(self):
-        text = "\n".join(f"EXAMPLE {i+1}: content" for i in range(12))
+        text = "\n".join(f"EXAMPLE {i + 1}: content" for i in range(12))
         r = ManyShotDetector(threshold=10).evaluate(text)
         assert "example_headers" in r.signal_counts
 
@@ -206,9 +199,7 @@ class TestExampleHeaders:
 
 class TestBracketShots:
     def _make_brackets(self, n: int) -> str:
-        return "\n".join(
-            f"<example>Do this harmful thing {i}</example>" for i in range(n)
-        )
+        return "\n".join(f"<example>Do this harmful thing {i}</example>" for i in range(n))
 
     def test_xml_examples_above_threshold(self):
         text = self._make_brackets(12)
@@ -242,9 +233,7 @@ class TestEvaluateMessages:
 
     def test_many_shot_spread_across_messages_detected(self):
         # Spread 12 Q&A pairs across two messages
-        half = "\n".join(
-            f"Human: Q{i}?\nAssistant: A{i}." for i in range(6)
-        )
+        half = "\n".join(f"Human: Q{i}?\nAssistant: A{i}." for i in range(6))
         msgs = [
             {"role": "user", "content": half},
             {"role": "user", "content": half},
@@ -272,17 +261,13 @@ class TestEvaluateMessages:
 
 class TestReasonField:
     def test_reason_mentions_count_and_threshold_when_exceeded(self):
-        text = "\n".join(
-            f"Human: Q{i}?\nAssistant: A{i}." for i in range(15)
-        )
+        text = "\n".join(f"Human: Q{i}?\nAssistant: A{i}." for i in range(15))
         r = ManyShotDetector(threshold=10).evaluate(text)
         assert str(r.shot_count) in r.reason or "many-shot" in r.reason
         assert str(r.threshold) in r.reason
 
     def test_reason_mentions_below_when_not_exceeded(self):
-        text = "\n".join(
-            f"Human: Q{i}?\nAssistant: A{i}." for i in range(5)
-        )
+        text = "\n".join(f"Human: Q{i}?\nAssistant: A{i}." for i in range(5))
         r = ManyShotDetector(threshold=10).evaluate(text)
         assert "below" in r.reason or "5" in r.reason
 
@@ -310,16 +295,12 @@ class TestScanLength:
 
 class TestCustomThreshold:
     def test_low_threshold_triggers_easily(self):
-        text = "\n".join(
-            f"Human: Q{i}?\nAssistant: A{i}." for i in range(3)
-        )
+        text = "\n".join(f"Human: Q{i}?\nAssistant: A{i}." for i in range(3))
         r = ManyShotDetector(threshold=3).evaluate(text)
         assert r.exceeded
 
     def test_high_threshold_not_exceeded(self):
-        text = "\n".join(
-            f"Human: Q{i}?\nAssistant: A{i}." for i in range(10)
-        )
+        text = "\n".join(f"Human: Q{i}?\nAssistant: A{i}." for i in range(10))
         r = ManyShotDetector(threshold=100).evaluate(text)
         assert not r.exceeded
 
@@ -356,4 +337,5 @@ class TestIntegrationScenarios:
     def test_to_dict_json_serializable(self):
         r = ManyShotDetector().evaluate("normal text")
         import json
+
         json.dumps(r.to_dict())

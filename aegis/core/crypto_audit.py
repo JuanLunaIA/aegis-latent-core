@@ -617,7 +617,7 @@ class CryptographicAuditLedger:
         for name in names:
             if not name.startswith(prefix):
                 continue
-            suffix = name[len(prefix):]
+            suffix = name[len(prefix) :]
             if suffix.isdigit():
                 segments.append((int(suffix), os.path.join(directory, name)))
         segments.sort(key=lambda t: t[0])

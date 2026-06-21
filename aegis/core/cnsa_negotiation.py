@@ -235,9 +235,7 @@ class CNSANegotiator:
         """Resolve an offered name (alias-aware) to a registered Algorithm."""
         return _BY_NORMALISED.get(_normalise(algorithm))
 
-    def approved_algorithms(
-        self, category: AlgorithmCategory | None = None
-    ) -> list[str]:
+    def approved_algorithms(self, category: AlgorithmCategory | None = None) -> list[str]:
         """List canonical names approved for the required suite (optionally
         filtered to a single *category*), strongest first."""
         out = [
@@ -270,9 +268,7 @@ class CNSANegotiator:
                 result.rejected.append((offered, "unknown algorithm"))
                 continue
             if not algo.approved_for(self.required_suite):
-                result.rejected.append(
-                    (offered, f"not approved for {self.required_suite.value}")
-                )
+                result.rejected.append((offered, f"not approved for {self.required_suite.value}"))
                 continue
             if self._mandate_qr and algo.category in (_KX, _SIG) and not algo.quantum_resistant:
                 result.rejected.append(
@@ -293,10 +289,7 @@ class CNSANegotiator:
 
         result.compliant = not result.missing_categories
         if result.compliant:
-            result.reason = (
-                f"{self.required_suite.value} negotiation succeeded: "
-                f"{result.selected}"
-            )
+            result.reason = f"{self.required_suite.value} negotiation succeeded: {result.selected}"
         else:
             result.reason = (
                 f"{self.required_suite.value} negotiation FAILED: no compliant "

@@ -2,6 +2,7 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """Tests for aegis.core.cac_piv — DoD CAC / GSA PIV certificate verification."""
+
 from __future__ import annotations
 
 import datetime
@@ -22,8 +23,8 @@ from aegis.core.cac_piv import (
 
 # ── Cert builder helpers ───────────────────────────────────────────────────────
 
-_DOD_OID = "2.16.840.1.101.2.1.11.36"   # id-dod-certpcy-PIV-auth
-_PIV_OID = "2.16.840.1.101.3.2.1.3.6"   # id-fpki-certpcy-pivi-hardware
+_DOD_OID = "2.16.840.1.101.2.1.11.36"  # id-dod-certpcy-PIV-auth
+_PIV_OID = "2.16.840.1.101.3.2.1.3.6"  # id-fpki-certpcy-pivi-hardware
 _EDIPI = "1234567890"
 _UUID = "550e8400-e29b-41d4-a716-446655440000"
 
@@ -32,7 +33,9 @@ def _keypair():
     return ec.generate_private_key(ec.SECP256R1())
 
 
-def _base_builder(cn: str = f"DOE.JOHN.A.{_EDIPI}") -> tuple[x509.CertificateBuilder, ec.EllipticCurvePrivateKey]:
+def _base_builder(
+    cn: str = f"DOE.JOHN.A.{_EDIPI}",
+) -> tuple[x509.CertificateBuilder, ec.EllipticCurvePrivateKey]:
     key = _keypair()
     subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, cn)])
     now = datetime.datetime.now(datetime.UTC)
@@ -292,6 +295,7 @@ class TestCACPIVAuth:
     def _make_request(self, headers: dict) -> object:
         """Minimal Request-like object for testing middleware."""
         from unittest.mock import MagicMock
+
         req = MagicMock()
         req.headers = headers
         return req
@@ -301,6 +305,7 @@ class TestCACPIVAuth:
         from fastapi import HTTPException
 
         from aegis.proxy.mtls import CACPIVAuth
+
         auth = CACPIVAuth()
         req = self._make_request({})
         with pytest.raises(HTTPException) as exc_info:
@@ -310,6 +315,7 @@ class TestCACPIVAuth:
     @pytest.mark.asyncio
     async def test_valid_cac_cert_returns_edipi(self):
         from aegis.proxy.mtls import CACPIVAuth
+
         cert = _make_cac_cert()
         pem = _to_pem(cert).decode()
         auth = CACPIVAuth()
@@ -322,6 +328,7 @@ class TestCACPIVAuth:
         from fastapi import HTTPException
 
         from aegis.proxy.mtls import CACPIVAuth
+
         b, k = _base_builder()
         b = _add_policy(b, "1.2.3.4.5")
         b = _add_client_auth_eku(b)
@@ -336,6 +343,7 @@ class TestCACPIVAuth:
     @pytest.mark.asyncio
     async def test_valid_piv_cert_returns_uuid(self):
         from aegis.proxy.mtls import CACPIVAuth
+
         cert = _make_piv_cert()
         pem = _to_pem(cert).decode()
         auth = CACPIVAuth()

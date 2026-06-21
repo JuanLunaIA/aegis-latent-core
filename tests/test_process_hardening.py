@@ -207,12 +207,9 @@ class TestIdempotency:
 
 class TestVerify:
     def test_verify_on_linux_reads_proc(self):
-        proc_status = (
-            "Name:\tpython3\n"
-            "NoNewPrivs:\t1\n"
-            "CoreDumping:\t0\n"
-        )
+        proc_status = "Name:\tpython3\nNoNewPrivs:\t1\nCoreDumping:\t0\n"
         import io
+
         with patch.object(sys, "platform", "linux"):
             with patch("builtins.open", return_value=io.StringIO(proc_status)):
                 out = ProcessHardening().verify()
@@ -237,7 +234,11 @@ class TestVerify:
 class TestModuleLevelHelpers:
     def test_apply_process_hardening_returns_result(self):
         with patch.object(sys, "platform", "linux"):
-            with patch.object(ProcessHardening, "_load_libc", return_value=MagicMock(prctl=MagicMock(return_value=0))):
+            with patch.object(
+                ProcessHardening,
+                "_load_libc",
+                return_value=MagicMock(prctl=MagicMock(return_value=0)),
+            ):
                 r = apply_process_hardening()
         assert isinstance(r, ProcessHardeningResult)
 
