@@ -139,7 +139,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] ICD-11 / SNOMED-CT ontology-aware anomaly detection: flag responses containing clinical codes mismatched to the request context
 - [ ] Dosage hallucination detection: numeric range check for drug dosage claims against reference database (RxNorm, NLM DailyMed)
 - [x] PII confidence scoring per response (`aegis/core/pii_confidence.py`: `PIIConfidenceFilter` wraps `PHIDeidentifier`; per-entity confidence scores → BLOCK / FLAG / LOG action via configurable `PIIConfidenceThreshold`; `evaluate()` + `evaluate_messages()` + `worst_case()` for batch response gating; `from_config()` reads `AEGIS_PII_BLOCK_THRESHOLD`/`AEGIS_PII_FLAG_THRESHOLD`; `pytest tests/test_pii_confidence.py` — 45 tests)
-- [ ] Adverse event (AE) keyword detection aligned to MedDRA preferred terms
+- [x] Adverse event (AE) keyword detection aligned to MedDRA preferred terms
 - [ ] De-novo clinical claim detection: block generation of novel clinical trial results without citation
 
 ---
@@ -315,11 +315,11 @@ is not committed to `docs/BENCHMARKS.md`.
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
 | Defense & Government | 26 | 28 | ~93% |
-| Healthcare & Life Sciences | 19 | 24 | ~79% |
+| Healthcare & Life Sciences | 20 | 24 | ~83% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
 | Advanced Forensics & WAF | 18 | 26 | ~69% |
-| **Total** | **84** | **122** | **~69%** |
+| **Total** | **85** | **122** | **~70%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
