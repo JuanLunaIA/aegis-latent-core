@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import json
@@ -154,6 +154,48 @@ async def metrics():
         return JSONResponse(content=data)
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": "failed to build metrics", "exception": str(e)})
+
+
+_MAX_SCAN_CHARS = 20000
+
+
+@app.post("/api/scan")
+async def scan(request: Request):
+    """Run submitted text through every real Aegis detection engine.
+
+    This powers the Threat Lab page: paste a prompt injection, an EICAR test
+    virus, a leaked key, a classified marker or a SCADA command and see exactly
+    which engines flag it and why. Input is bounded and never executed.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "invalid JSON body"})
+    text = (body or {}).get("text", "")
+    if not isinstance(text, str):
+        return JSONResponse(status_code=400, content={"error": "'text' must be a string"})
+    if len(text) > _MAX_SCAN_CHARS:
+        text = text[:_MAX_SCAN_CHARS]
+    try:
+        from tools.visualizer.threat_lab import scan_text
+
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor() as pool:
+            data = await loop.run_in_executor(pool, scan_text, text)
+        return JSONResponse(content=data)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": "scan failed", "exception": str(e)})
+
+
+@app.get("/api/threat_samples")
+async def threat_samples():
+    """Curated, safe one-click test payloads for the Threat Lab."""
+    try:
+        from tools.visualizer.threat_lab import sample_payloads
+
+        return JSONResponse(content={"samples": sample_payloads()})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": "failed to load samples", "exception": str(e)})
 
 
 @app.get("/")

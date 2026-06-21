@@ -31,8 +31,9 @@ TEMPLATE = HERE / "static" / "index.html"
 OUT_DIR = ROOT / "Samples"
 
 PAGES = [
-    "overview", "performance", "audit", "forensics", "waf",
-    "providers", "compliance", "architecture", "code", "health",
+    "overview", "performance", "providers", "health",
+    "threatlab", "detectors", "waf",
+    "audit", "forensics", "compliance", "architecture", "code",
 ]
 
 
@@ -202,11 +203,33 @@ def build_bootstrap() -> dict:
     return bootstrap
 
 
+def _threat_presets() -> list[dict]:
+    """Curated test payloads for the offline Threat Lab gallery.
+
+    Mirrors tools/visualizer/threat_lab.sample_payloads(); imported lazily so
+    the generator works even without the aegis runtime installed.
+    """
+    try:
+        from tools.visualizer.threat_lab import sample_payloads
+
+        return [{"id": p["id"], "label": p["label"], "expect": p["expect"], "text": p["text"]}
+                for p in sample_payloads()]
+    except Exception:
+        return []
+
+
 def inject(template: str, bootstrap: dict, page: str) -> str:
-    payload = json.dumps(bootstrap, separators=(",", ":"))
+    # Escape "</" so any embedded "</script>" (e.g. the XSS test payload) cannot
+    # prematurely terminate the host <script> block. Valid inside JS strings.
+    def _safe(obj: object) -> str:
+        return json.dumps(obj, separators=(",", ":")).replace("</", "<\\/")
+
+    payload = _safe(bootstrap)
+    threats = _safe(_threat_presets())
     script = (
         "  <script>\n"
         f"    window.__AEGIS_BOOTSTRAP__ = {payload};\n"
+        f"    window.__AEGIS_THREATS__ = {threats};\n"
         f"    window.__AEGIS_INITIAL_PAGE__ = {json.dumps(page)};\n"
         "  </script>\n"
     )
@@ -226,6 +249,10 @@ def main() -> None:
     template = TEMPLATE.read_text(encoding="utf-8")
     bootstrap = build_bootstrap()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Remove stale page snapshots so renumbering never leaves orphans behind.
+    for old in OUT_DIR.glob("*.html"):
+        old.unlink()
 
     # Full dashboard (lands on Overview).
     (OUT_DIR / "index.html").write_text(inject(template, bootstrap, "overview"), encoding="utf-8")
@@ -252,14 +279,16 @@ internet connection is used only to load the Chart.js / Mermaid CDNs).
 | `index.html` | Full dashboard (Overview) |
 | `01-overview.html` | Overview — KPIs, live throughput & latency |
 | `02-performance.html` | Performance — percentiles, Rust vs Python, budgets |
-| `03-audit.html` | Audit Chain — Merkle root, node explorer, growth |
-| `04-forensics.html` | Forensics — entropy / KL, static security scan |
-| `05-waf.html` | WAF & Limits — injection blocks, rate-limit pressure |
-| `06-providers.html` | Providers — routing share, token economics |
-| `07-compliance.html` | Compliance — SOC2 / HIPAA sealed bundles |
-| `08-architecture.html` | Architecture — topology, lifecycle, data flow |
-| `09-code.html` | Code Map — Python / Rust symbol explorer |
-| `10-health.html` | System Health — components & security posture |
+| `03-providers.html` | Providers — routing share, token economics |
+| `04-health.html` | System Health — components & security posture |
+| `05-threatlab.html` | **Threat Lab** — paste a payload (EICAR virus, injection, leaked key…) and watch every engine flag it |
+| `06-detectors.html` | **Detectors** — detection-engine catalog & coverage radar |
+| `07-waf.html` | WAF & Limits — injection blocks, rate-limit pressure |
+| `08-audit.html` | Audit Chain — Merkle root, node explorer, growth |
+| `09-forensics.html` | Forensics — entropy / KL, static security scan |
+| `10-compliance.html` | Compliance — SOC2 / HIPAA sealed bundles |
+| `11-architecture.html` | Architecture — topology, lifecycle, data flow |
+| `12-code.html` | Code Map — Python / Rust symbol explorer |
 
 Regenerate with:
 

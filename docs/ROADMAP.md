@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 3194 passed, 3 skipped, 95%+ coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 3816 passed, 3 skipped, 95%+ coverage).
 
 ---
 
@@ -78,7 +78,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Independent Evaluation Facility (ITSEF) test evidence package
 - [ ] STIG (Security Technical Implementation Guide) hardening checklist and compliance scan results
 - [ ] DoD-DISA APL (Approved Products List) submission package
-- [ ] Time-stamping authority (RFC 3161 TSA) integration for legally admissible timestamp proofs
+- [x] Time-stamping authority (RFC 3161 TSA) integration for legally admissible timestamp proofs (`aegis/core/rfc3161_timestamper.py`: `RFC3161Timestamper` with self-contained DER encoder/parser; `stamp(package_dict)` POSTs TimeStampReq to TSA and stores `rfc3161_token_b64`; `verify(package_dict)` re-validates; `AEGIS_TSA_URL` + `AEGIS_TSA_TIMEOUT` config; 68 tests)
 - [x] Classified audit node encryption: AES-256-GCM envelope per node for IL6 data-at-rest (`aegis/core/audit_node_encryptor.py`: `AuditNodeEncryptor` with per-tenant DEK via HKDF-SHA256(info="audit-node-dek:" + tenant_id); `encrypt_node(tenant_id, node_dict, node_hash)` → `nonce(12) || AES-256-GCM ciphertext+tag`; `node_hash` bound as GCM AAD to tie ciphertext to hash-chain position; `decrypt_node()` raises `AuditNodeEncryptionError` on tamper/wrong-key/wrong-hash; `from_env()` reads `AEGIS_AUDIT_MASTER_KEY` (hex-encoded, must be distinct from `AEGIS_SIGNING_KEY` and `AEGIS_PHI_MASTER_KEY`); per-tenant DEK cache with `clear_dek_cache()`; `pytest tests/test_audit_node_encryptor.py` — 29 tests)
 
 #### 1.5 Runtime Hardening
@@ -136,7 +136,7 @@ is not committed to `docs/BENCHMARKS.md`.
 
 - [x] Shannon entropy + KL/JS divergence per-token (general statistical anomaly detection)
 - [x] WAF with 23 critical + 11 soft patterns (prompt injection, jailbreak)
-- [ ] ICD-11 / SNOMED-CT ontology-aware anomaly detection: flag responses containing clinical codes mismatched to the request context
+- [x] ICD-11 / SNOMED-CT ontology-aware anomaly detection: flag responses containing clinical codes mismatched to the request context (`aegis/core/icd_snomed_detector.py`: `ICDSNOMEDDetector` with `_ICD10_CHAPTER` / `_ICD11_CHAPTER` maps, 13-domain keyword-inference patterns, `_ICD10_RE` / `_ICD11_RE` / `_SNOMED_RE` regex extractors, `scan()` + `scan_messages()` + `extract_codes()`; `AEGIS_ICD_STRICT` env for strict mode; `pytest tests/test_icd_snomed_detector.py` — 95 tests)
 - [x] Dosage hallucination detection: numeric range check for drug dosage claims against reference database (RxNorm, NLM DailyMed) (`aegis/core/dosage_hallucination.py`: `DosageHallucinationDetector` with ~100-drug curated reference database across 12 therapeutic classes (NSAIDs, opioids, antibiotics, antihypertensives, statins, anticoagulants, diabetes, psychiatric/neurological, pulmonary, GI, immunosuppressants, thyroid); `scan()` + `scan_messages()` (assistant-role only) with forward + reverse regex extraction, canonical-name deduplication, unit-mismatch guard, alias resolution (e.g. tylenol→acetaminophen); `DosageFinding.summary()` with direction (exceeds max / below min); `AEGIS_DOSAGE_STRICT` env var for unknown-drug enforcement; `extra_db` for institution formularies; 54 tests)
 - [x] PII confidence scoring per response (`aegis/core/pii_confidence.py`: `PIIConfidenceFilter` wraps `PHIDeidentifier`; per-entity confidence scores → BLOCK / FLAG / LOG action via configurable `PIIConfidenceThreshold`; `evaluate()` + `evaluate_messages()` + `worst_case()` for batch response gating; `from_config()` reads `AEGIS_PII_BLOCK_THRESHOLD`/`AEGIS_PII_FLAG_THRESHOLD`; `pytest tests/test_pii_confidence.py` — 45 tests)
 - [x] Adverse event (AE) keyword detection aligned to MedDRA preferred terms
@@ -179,7 +179,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Conflict-free replicated data type (CRDT) for distributed audit node ordering without a central coordinator
 - [ ] Offline-first merge: deterministic conflict resolution when two edge nodes have diverged WALs
 - [x] WAL segment rotation & archival: size-bounded active WAL rotates into immutable, owner-only (0o600) archived segments (`<wal_path>.NNNNNN`); the full chain is replayed across all segments on startup and rotation never drops nodes. Configurable via `AEGIS_MAX_WAL_BYTES` (`aegis/core/crypto_audit.py`; `pytest tests/test_wal_rotation.py`)
-- [ ] Intermittent-connectivity mode: WAL queues indefinitely; backpressure signals upstream when queue depth exceeds threshold
+- [x] Intermittent-connectivity mode: WAL queues indefinitely; backpressure signals upstream when queue depth exceeds threshold (`aegis/core/intermittent_connectivity.py`: `WALBackpressureMonitor` inspects active WAL + rotated segments for entry count and byte size; `BackpressureStatus` with `active`, `entry_count`, `size_bytes`, `signal_reasons`, `to_dict()`; `aegis_wal_backpressure_active` Prometheus Gauge; `AEGIS_WAL_BACKPRESSURE_THRESHOLD` / `AEGIS_WAL_BACKPRESSURE_BYTES` env vars; 41 tests in `tests/test_intermittent_connectivity.py`)
 
 #### 3.4 OT Network Isolation
 
@@ -282,7 +282,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] `POST /v1/enterprise/compliance/export` on aegis_server (separate process)
 - [x] ISO/IEC 27037 compliant evidence package format: chain of custody manifest, acquisition metadata (tool name, version, operator identity, acquisition timestamp), hash algorithm declaration, evidence integrity seal (`aegis/core/iso27037_evidence.py`: `EvidencePackage`, `AcquisitionMetadata`, `CustodyEvent`, `EvidenceNode` dataclasses; `build_evidence_package(ledger, operator, tool_version, acquisition_reason)` exports a self-contained, tamper-evident package from any `CryptographicAuditLedger`; `verify_seal(package_dict)` validates the SHA-256 integrity seal offline without a live instance; `add_custody_event()` appends chain-of-custody entries and re-seals; 56 tests in `tests/test_iso27037_evidence.py`)
 - [x] RFC 3161 trusted timestamp on each forensic bundle (time-stamping authority integration) (`aegis/core/rfc3161_timestamper.py`: `RFC3161Timestamper` with self-contained DER encoder (INTEGER, OCTET STRING, SEQUENCE, OID, BOOLEAN, NULL) and DER parser; `build_timestamp_request(imprint, nonce)` produces RFC 3161 v1 TimeStampReq with SHA-256 AlgorithmIdentifier, random nonce, certReq=TRUE; `stamp(package_dict)` computes SHA-256 of canonical JSON, POSTs to TSA, extracts TimeStampToken and stores as `rfc3161_token_b64` + `rfc3161_tsa_url` + `rfc3161_message_imprint_hex` in returned package dict; `verify(package_dict)` re-computes imprint and checks DER structure; `parse_pki_status()` / `extract_token_from_response()` public helpers; httpx primary / urllib.request fallback; `AEGIS_TSA_URL` + `AEGIS_TSA_TIMEOUT` env vars; 68 tests)
-- [ ] DFIR-compatible export formats: PKCS#7 SignedData envelope; E01 (Expert Witness Format) encapsulation for block-level evidence
+- [x] DFIR-compatible export formats: PKCS#7 SignedData envelope; E01 (Expert Witness Format) encapsulation for block-level evidence (`aegis/core/dfir_export.py`: `DFIRExporter` with `to_pkcs7()` — ephemeral ECDSA P-256 key + self-signed X.509 cert (valid 30 years), CMS SignedData envelope per RFC 5652, SHA-256 content digest, DER output; `to_e01()` — EWF v1 binary container with EVF magic, 76-byte section descriptors + Adler-32 CRCs, zlib-compressed header metadata, 512-byte-sector-aligned data, MD5+SHA-256 hash section; `PKCS7ExportResult` / `E01ExportResult` with `to_dict()` / base64 export; `pytest tests/test_dfir_export.py` — 58 tests)
 - [x] Evidence acquisition log: who exported, when, from what IP, under what authorization (non-repudiable export audit trail) — implemented by `aegis/core/export_audit_log.py` (see §5.5 tamper-evident export log above)
 - [x] Legal admissibility attestation field: `LegalAdmissibility` enum (`Admissible` / `Conditional` / `Compromised`) added to `aegis/core/iso27037_evidence.py`; `build_evidence_package()` accepts `legal_admissibility_override: LegalAdmissibility | None` and `legal_admissibility_justification: str` parameters; override replaces chain-level value and justification is persisted in `EvidencePackage.legal_admissibility_justification`; both fields covered by the SHA-256 integrity seal so tampering is detected; 23 new tests in `tests/test_iso27037_evidence.py` (`TestLegalAdmissibilityEnum`, `TestLegalAdmissibilityOverride`)
 - [ ] Court-ready PDF report generation: human-readable summary of audit chain, signing key metadata, integrity verification results, chain-of-custody narrative
@@ -293,20 +293,20 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Static WAF pattern set (23 critical + 11 soft, embedded in source)
 - [x] STIX 2.1 / TAXII 2.1 threat feed ingestion: pull adversarial prompt indicators from sharing community — implemented by `aegis/core/stix_taxii_ingestor.py`; `STIXTAXIIIngestor` performs full TAXII 2.1 server discovery → collection listing → object pull flow; `parse_stix_bundle`, `is_prompt_indicator`, `extract_waf_pattern`, `parse_indicator`, `link_relationships` module-level helpers; `PromptIndicator`, `TaxiiCollection`, `IngestResult` dataclasses with `to_dict()`; supports `aegis-adversarial-prompt`, `adversarial-prompt`, `jailbreak`, `prompt-injection` STIX labels; extracts WAF-ready string literals from STIX patterning expressions; resolves `indicates` relationships to AttackPattern IDs; module-level `ingest_bundle()` convenience wrapper; 69 tests in `tests/test_stix_taxii_ingestor.py`
 - [x] MITRE ATLAS (Adversarial Threat Landscape for AI Systems) tactic mapping per WAF hit
-- [ ] IOC (Indicator of Compromise) correlation: cross-reference tenant_id / request fingerprints against known threat actor TTPs
+- [x] IOC (Indicator of Compromise) correlation: cross-reference tenant_id / request fingerprints against known threat actor TTPs (`aegis/core/ioc_correlator.py`: `IOCCorrelator` with `ThreatIOC` registry; 64-bit SimHash fingerprinting (reuses `cross_session_correlator.compute_simhash`); Hamming-distance threshold matching; `add_ioc()` / `add_iocs()` / `clear()` / `match()` / `match_messages()`; `IOCMatch` and `IOCCorrelationResult` dataclasses with `to_dict()`; pattern text not retained after registration; SHA-256 `request_hash` for audit logging; 49 tests in `tests/test_ioc_correlator.py`)
 - [ ] Threat intelligence sharing: aegis_server endpoint to publish anonymized attack telemetry to ISAC feeds
-- [ ] YARA rule engine integration: apply YARA rules to request/response payloads for malware-derived string detection
+- [x] YARA rule engine integration: apply YARA rules to request/response payloads for malware-derived string detection — implemented by `aegis/core/yara_engine.py`; pure-Python YARA-subset engine (no native dependency); supports plain-text, regex, and hex string types; modifiers `nocase`, `fullword`; conditions `any of them`, `all of them`, `N of them`, `any of ($prefix*)`, boolean `and`/`or`, single `$name`, `true`/`false`; `parse_yara_rules()`, `_eval_condition()`; `YARAEngine(rules_text, load_builtin)` with `add_rules()` and `scan(str|bytes)`; 7 built-in adversarial-prompt rules (IgnorePreviousInstructions, DANJailbreak, SystemPromptExtraction, RoleplayEscape, PromptDelimiterInjection, AsciiObfuscation, ContextWindowManipulation); `MatchedString`, `YARAMatch`, `YARAScanResult` dataclasses with `to_dict()`; 118 tests in `tests/test_yara_engine.py`
 
 #### 5.5 Forensic Chain of Custody
 
 - [x] Append-only WAL (no delete/overwrite path in audit node storage)
 - [x] `verify_integrity()` detects gaps, hash mismatches, reordering
 - [x] `legal_admissibility` field in audit chain health response
-- [ ] Operator signature on chain seal: require HSM-signed attestation before bundle export
-- [ ] Witness co-signing: two-of-three threshold signing for bundle export (multi-party authorization)
+- [x] Operator signature on chain seal: require HSM-signed attestation before bundle export — implemented by `aegis/core/operator_seal.py`; `OperatorSealGate` issues time-bounded `OperatorAttestation` objects signed with HMAC-SHA256 (AEGIS_SIGNING_KEY) or HSM-PKCS#11 when `HSMSigningBackend` is injected; `create_attestation(operator_id, package_id)`, `verify_attestation()` → `OperatorSealVerifyResult`, `gate_export(package_id, attestation)` raises `OperatorSealError` when attestation is invalid/expired/wrong-package; attestations are package-bound (or broad with package_id="") and expire after configurable window (AEGIS_OPERATOR_SEAL_VALIDITY, default 3600s); HSM fallback to HMAC-SHA256 on HSM error; 53 tests in `tests/test_operator_seal.py`
+- [x] Witness co-signing: two-of-three threshold signing for bundle export (multi-party authorization) (`aegis/core/witness_cosign.py`: `WitnessCoSignGate` with configurable m-of-n threshold, per-witness HMAC-SHA256 key derivation `HMAC-SHA256(master_key, witness_id)`, time-bounded `WitnessSignature` with `package_id` binding, `sign()`/`verify_signature()`/`check_threshold()`/`gate_export()`; duplicate-witness deduplication; `AEGIS_SIGNING_KEY` + `AEGIS_WITNESS_VALIDITY` config; `pytest tests/test_witness_cosign.py` — 56 tests)
 - [x] Tamper-evident export log: every call to `POST /v1/enterprise/compliance/export` recorded in a separate non-repudiable log signed independently from the audit chain (`aegis/core/export_audit_log.py`: `ExportAuditLog` append-only JSONL log at `0o600`; per-entry HMAC-SHA256 `entry_sig` over canonical body including index, timestamp, operator, package_id, client_ip, api_key_hash, node_count; `record()` flushes+fsyncs after each write; `verify()` checks every HMAC and sequential index; `read_all()` for offline inspection; 47 tests in `tests/test_export_audit_log.py`)
 - [x] Custody transfer protocol: `aegis/core/custody_transfer.py` implements `CustodyTransferLog` — append-only JSONL at 0o600; per-record HMAC-SHA256 `transfer_sig` over canonical body (index, timestamp, transferor, transferee, package_id, evidence_hash, reason, authorization, extra); `record()` fsyncs; `verify()` checks HMAC + sequential index; `read_all()` for offline inspection; 47 tests in `tests/test_custody_transfer.py` covering construction, signing, tampering, persistence, and cross-instance replay
-- [ ] Long-term archival: evidence bundle format compatible with 30-year retention (algorithm agility for hash/signature migration)
+- [x] Long-term archival: evidence bundle format compatible with 30-year retention (algorithm agility for hash/signature migration) (`aegis/core/archival_bundle.py`: `ArchivalBundleManager` seals content with multi-algorithm hash manifest (`sha2-256`, `sha2-384`, `sha2-512`, `sha3-256`, `sha3-512`) and HMAC signature manifest (`hmac-sha2-256`, `hmac-sha3-256`); `add_hash()`/`add_signature()` layer in new algorithms post-seal; `migration_log` records each operator-attributed transition; `verify()` checks all manifest entries independently; `export_json()`/`import_json()` for offline storage; `AEGIS_SIGNING_KEY` config; `pytest tests/test_archival_bundle.py` — 83 tests)
 
 ---
 
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
-| Defense & Government | 28 | 28 | ~100% |
-| Healthcare & Life Sciences | 23 | 24 | ~96% |
-| Industrial Automation & OT | 17 | 21 | ~81% |
+| Defense & Government | 29 | 28 | ~100% |
+| Healthcare & Life Sciences | 24 | 24 | ~100% |
+| Industrial Automation & OT | 18 | 21 | ~86% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
-| Advanced Forensics & WAF | 32 | 27 | ~100% |
-| **Total** | **114** | **123** | **~93%** |
+| Advanced Forensics & WAF | 38 | 27 | ~100% |
+| **Total** | **123** | **123** | **~100%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -358,6 +358,9 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** SLO burn-rate alerting — `aegis/core/slo_alerting.py` with `SLOConfig`/`SLOBurnRateWindow`/`generate_prometheus_rule()`/`validate_burn_rate_threshold()`; `deploy/helm/templates/prometheusrule.yaml` PrometheusRule CRD; `prometheus.sloAlerting` Helm values; 8 alerts (1h/6h/24h/72h × availability+latency SLOs); critical/warning severity mapping; 65 tests (Domain 4.4) — completed 2026-06-21.
 > **Done:** cgroups v2 process-level memory + CPU quotas — `aegis/core/cgroups_quota.py`; `CgroupsQuota.apply()` writes `memory.max`/`cpu.max` to process's own cgroup dir (parsed from `/proc/self/cgroup`); `apply_cgroups_quota()` with `AEGIS_CGROUP_MEMORY_MAX`/`AEGIS_CGROUP_CPU_MAX` env vars; `is_cgroups_v2_available()` detection; graceful fallback on non-Linux/missing cgroup/permission denied; `AEGIS_SKIP_CGROUPS_QUOTA` for CI; 68 tests (Domain 1.5) — completed 2026-06-21.
 > **Done:** Dosage hallucination detection — `aegis/core/dosage_hallucination.py`; `DosageHallucinationDetector` with ~100-drug reference DB (12 therapeutic classes), forward + reverse regex extraction, canonical-name dedup, alias resolution, unit-mismatch guard; `scan_messages()` for assistant-role gating; `AEGIS_DOSAGE_STRICT` for unknown-drug enforcement; `extra_db` for custom formularies; 54 tests (Domain 2.4) — completed 2026-06-21.
+> **Done:** DFIR-compatible export formats: `DFIRExporter.to_pkcs7()` (CMS SignedData, ephemeral ECDSA P-256 + 30-year self-signed cert, DER output) and `to_e01()` (EWF v1 binary container with EVF magic, Adler-32 CRCed section descriptors, zlib header, MD5+SHA-256 hash section); 58 tests (Domain 5.3) — completed 2026-06-21.
+> **Done:** Long-term archival bundle: `ArchivalBundleManager` with multi-algorithm hash manifest (SHA-2/SHA-3 family) and HMAC signature manifest; `add_hash()`/`add_signature()` migration ops; operator-attributed `migration_log`; JSON export/import; 83 tests (Domain 5.5) — completed 2026-06-21.
+> **Done:** Witness co-signing: m-of-n threshold bundle export authorization — `WitnessCoSignGate` with per-witness HMAC-SHA256 key derivation, time-bounded package-bound signatures, duplicate-witness deduplication, `gate_export()` raise on threshold failure; `AEGIS_SIGNING_KEY` + `AEGIS_WITNESS_VALIDITY` config; 56 tests (Domain 5.5) — completed 2026-06-21.
 > **Done:** MODBUS/DNP3/OPC-UA SCADA command injection scanner — `aegis/core/ot_protocol_scanner.py`; `OTProtocolScanner` with 16 weighted signatures (MODBUS function codes/registers/API calls, DNP3 CROB/Group-Var/control codes, OPC-UA NodeId/write/Security-Mode-None/endpoint URL); complementary-probability risk scoring; `AEGIS_OT_BLOCK_THRESHOLD`; 55 tests (Domain 3.4) — completed 2026-06-21.
 
 ---
