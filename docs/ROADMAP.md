@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 2974 passed, 2 skipped, 95%+ coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 3029 passed, 2 skipped, 95%+ coverage).
 
 ---
 
@@ -185,7 +185,7 @@ is not committed to `docs/BENCHMARKS.md`.
 
 - [x] Seccomp BPF: `ptrace`, `mount`, `reboot` blocked permanently
 - [x] mTLS configurable CA bundle + client cert
-- [ ] MODBUS/DNP3/OPC-UA protocol parser to detect SCADA command injection in LLM-suggested outputs
+- [x] MODBUS/DNP3/OPC-UA protocol parser to detect SCADA command injection in LLM-suggested outputs (`aegis/core/ot_protocol_scanner.py`: `OTProtocolScanner` with 16 signatures across 3 protocols — MODBUS (hex frame, function codes, write FC 05/06/15/16, register/coil addresses, API calls, command composition), DNP3 (CROB/Group 12/Var 1, group-variation references, direct-operate/SBO, LATCH_ON/OFF/PULSE/TRIP control codes, master-operate context), OPC-UA (NodeId ns=N;i=M/s=Name, write/method calls, Security Mode None, endpoint URL opc.tcp://); complementary-probability risk scoring; `AEGIS_OT_BLOCK_THRESHOLD` env var; `scan_messages()` scans assistant-role only; `OTScanResult.to_dict()` with `protocols_detected`, `signals`, `risk_score`, `should_block`; 55 tests)
 - [x] Air-gapped network zone enforcement: `AEGIS_AIRGAP_MODE=true` activates `EgressGuard` in `aegis/proxy/egress_guard.py` — `LLMForwarder.forward_json()` and `stream_sse()` call `guard.check(upstream_url)` before every outbound HTTP request; non-allowlisted hosts raise `EgressBlockedError`; upstream host is always auto-included; `AEGIS_AIRGAP_ALLOWED_HOSTS` CSV for additional hosts; wired via `AegisSettings.get_egress_guard()` into forwarder lifespan; 37 tests in `tests/test_egress_guard.py`
 - [x] DMZ-mode: proxy accepts connections only from configured source IP allowlist (`aegis/proxy/dmz_middleware.py`: `DMZSourceIPMiddleware` rejects requests from IPs not in `AEGIS_DMZ_ALLOWED_SOURCE_IPS` (comma-separated IPv4/IPv6/CIDR list) with 403 before any auth; `dmz_trust_proxy_headers` enables X-Forwarded-For/X-Real-IP resolution behind a trusted load balancer; wired into `create_app()` at startup; `AegisSettings.get_dmz_networks()` parses entries at startup; 34 tests in `tests/test_dmz_middleware.py`)
 - [ ] IEC 62443 Zone and Conduit model documentation for customer network segmentation guidance
@@ -316,10 +316,10 @@ is not committed to `docs/BENCHMARKS.md`.
 |---|---|---|---|
 | Defense & Government | 28 | 28 | ~100% |
 | Healthcare & Life Sciences | 22 | 24 | ~92% |
-| Industrial Automation & OT | 15 | 21 | ~71% |
+| Industrial Automation & OT | 16 | 21 | ~76% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
 | Advanced Forensics & WAF | 30 | 27 | ~100% |
-| **Total** | **109** | **123** | **~89%** |
+| **Total** | **110** | **123** | **~89%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -358,6 +358,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** SLO burn-rate alerting — `aegis/core/slo_alerting.py` with `SLOConfig`/`SLOBurnRateWindow`/`generate_prometheus_rule()`/`validate_burn_rate_threshold()`; `deploy/helm/templates/prometheusrule.yaml` PrometheusRule CRD; `prometheus.sloAlerting` Helm values; 8 alerts (1h/6h/24h/72h × availability+latency SLOs); critical/warning severity mapping; 65 tests (Domain 4.4) — completed 2026-06-21.
 > **Done:** cgroups v2 process-level memory + CPU quotas — `aegis/core/cgroups_quota.py`; `CgroupsQuota.apply()` writes `memory.max`/`cpu.max` to process's own cgroup dir (parsed from `/proc/self/cgroup`); `apply_cgroups_quota()` with `AEGIS_CGROUP_MEMORY_MAX`/`AEGIS_CGROUP_CPU_MAX` env vars; `is_cgroups_v2_available()` detection; graceful fallback on non-Linux/missing cgroup/permission denied; `AEGIS_SKIP_CGROUPS_QUOTA` for CI; 68 tests (Domain 1.5) — completed 2026-06-21.
 > **Done:** Dosage hallucination detection — `aegis/core/dosage_hallucination.py`; `DosageHallucinationDetector` with ~100-drug reference DB (12 therapeutic classes), forward + reverse regex extraction, canonical-name dedup, alias resolution, unit-mismatch guard; `scan_messages()` for assistant-role gating; `AEGIS_DOSAGE_STRICT` for unknown-drug enforcement; `extra_db` for custom formularies; 54 tests (Domain 2.4) — completed 2026-06-21.
+> **Done:** MODBUS/DNP3/OPC-UA SCADA command injection scanner — `aegis/core/ot_protocol_scanner.py`; `OTProtocolScanner` with 16 weighted signatures (MODBUS function codes/registers/API calls, DNP3 CROB/Group-Var/control codes, OPC-UA NodeId/write/Security-Mode-None/endpoint URL); complementary-probability risk scoring; `AEGIS_OT_BLOCK_THRESHOLD`; 55 tests (Domain 3.4) — completed 2026-06-21.
 
 ---
 
