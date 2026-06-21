@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 1488 passed, 1 skipped, 95.36% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 1575 passed, 1 skipped, 95.36% coverage).
 
 ---
 
@@ -52,7 +52,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] LDAP/Active Directory integration for multi-factor identity assertion (`aegis/auth/ldap_auth.py`: `LDAPAuthenticator` with service-bind → user-lookup → user-bind → group-assertion flow; AD nested-group OID `1.2.840.113556.1.4.1941` + RFC 2307 group search; RFC 4515 LDAP-injection escaping; `ldaps://`/StartTLS with CA bundle verification; `AEGIS_LDAP_*` config fields; `ldap3` optional dep; `pytest tests/test_ldap_auth.py` — 42 tests, fully mocked, no live directory)
 - [x] Role-Based Access Control (RBAC) with NIST SP 800-207 Zero Trust attribute evaluation (`aegis/auth/rbac.py`: `Role`/`RoleRegistry` over the scope vocabulary with subject→role, LDAP group→role, and default-role resolution; `ZeroTrustPolicyEngine` deny-by-default evaluation with dynamic attribute constraints — `RequireMTLS`, `RequireAuthMethod`, `IPAllowlist`, `TimeWindow`; `AccessContext`/`AccessDecision` audit records; `pytest tests/test_rbac.py` — 46 tests)
 - [x] Attribute-Based Access Control (ABAC) for IL5/IL6 data compartmentalization (`aegis/auth/abac.py`: Bell-LaPadula `ABACPolicyEngine` with `ClassificationLevel` dominance, `SecurityLabel`/`SubjectAttributes`; `can_read` (no-read-up + need-to-know compartments + REL TO/NOFORN), `can_write` (no-write-down), `can_flow` (source→sink dominance), `endpoint_accredited` (IL→classification mapping); `pytest tests/test_abac.py` — 46 tests)
-- [ ] SCIM 2.0 provisioning/deprovisioning lifecycle
+- [x] SCIM 2.0 provisioning/deprovisioning lifecycle (`aegis/auth/scim.py`: RFC 7643/7644 `ScimStore` with User + Group CRUD, full PATCH (add/remove/replace) per RFC 7644 §3.5.2, bidirectional User↔Group membership with sync on delete/deprovisioning, SCIM filter engine (eq/ne/co/sw/ew/pr), ETags/meta, `ScimError` RFC-compliant error envelopes, `to_group_roles()` bridge for `RoleRegistry`; `pytest tests/test_scim.py` — 87 tests)
 - [ ] Hardware-bound session tokens (TPM 2.0 attestation-sealed)
 
 #### 1.3 Air-Gap & Disconnected Operations
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
-| Defense & Government | 22 | 28 | ~79% |
+| Defense & Government | 23 | 28 | ~82% |
 | Healthcare & Life Sciences | 16 | 24 | ~67% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
 | Advanced Forensics & WAF | 16 | 26 | ~62% |
-| **Total** | **75** | **122** | **~61%** |
+| **Total** | **76** | **122** | **~62%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
