@@ -240,6 +240,44 @@ class AegisWAF:
 
         return WAFResult(allowed=True)
 
+    def enable_hot_reload(
+        self,
+        path: str,
+        poll_interval_s: float = 1.0,
+    ) -> Any:
+        """Start watching *path* for WAF pattern changes; reload without restart.
+
+        The returned :class:`~aegis.core.waf_hot_reload.WAFHotReloader` is a
+        daemon thread; call ``.stop()`` to shut it down cleanly.
+
+        Parameters
+        ----------
+        path:
+            Path to a JSON WAF pattern file
+            (see :mod:`aegis.core.waf_hot_reload` for the schema).
+        poll_interval_s:
+            mtime-poll/select timeout in seconds.  Only relevant when inotify
+            is unavailable.
+
+        Returns
+        -------
+        WAFHotReloader
+            The running reloader instance.
+        """
+        from aegis.core.waf_hot_reload import WAFHotReloader, WAFPatternSet
+
+        def _on_reload(ps: WAFPatternSet) -> None:
+            self._critical_patterns = ps.critical
+            logger.info(
+                "AegisWAF: hot-reloaded %d critical patterns from %s",
+                len(ps.critical),
+                path,
+            )
+
+        reloader: Any = WAFHotReloader(path, on_reload=_on_reload, poll_interval_s=poll_interval_s)
+        reloader.start()
+        return reloader
+
     # ── helpers ───────────────────────────────────────────────────────
 
     def _is_too_deep(self, data: Any, depth: int) -> bool:

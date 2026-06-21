@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 2382 passed, 1 skipped, 95.49% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 2434 passed, 1 skipped, 95.25% coverage).
 
 ---
 
@@ -270,7 +270,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Base64/URL/HTML entity decode pipeline: iterative decode up to depth 5 before WAF scan
 - [ ] Token-split reassembly attack detection: detect patterns split across token boundaries (requires tokenizer-aware scan)
 - [ ] Language model-based semantic WAF: lightweight classifier (DistilBERT or FastText) as tertiary pass for novel jailbreaks not matching known patterns
-- [ ] WAF pattern hot-reload: push new patterns without restart via inotify watch on pattern file
+- [x] WAF pattern hot-reload: push new patterns without restart via inotify watch on pattern file (`aegis/core/waf_hot_reload.py`: `WAFHotReloader`, `WAFPatternSet`, `load_pattern_file`, `WAFPatternFileError`; uses Linux inotify via `ctypes` with `select()` timeout loop; falls back to mtime-poll on non-Linux or inotify init failure; JSON pattern file schema with `version`, `critical`, `soft` arrays; `AegisWAF.enable_hot_reload(path, poll_interval_s)` for zero-downtime atomic pattern swap; 38 tests in `tests/test_waf_hot_reload.py`)
 - [x] WAF shadow mode: log would-be blocks without enforcing, for rule tuning without production risk (`aegis/proxy/waf.py`: `shadow_mode=False` parameter on `AegisWAF`; when `True`, runs the full Rust+Layer-1+Layer-2 detection pipeline but suppresses enforcement — returns `WAFResult(allowed=True, shadow_blocked=True, reason=<detection_reason>, score=<score>)` and emits a `WARNING` log; `WAFResult` gets new `shadow_blocked: bool = False` field; internal `_run_detection()` always returns an enforcement decision; 14 new tests in `TestWAFShadowMode`)
 - [ ] Differential fuzzing harness: `hypothesis`-driven WAF bypass attempt generation (currently `aegis/core/fuzzing_harness.py` is a stub excluded from coverage)
 
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
-| Advanced Forensics & WAF | 24 | 26 | ~92% |
-| **Total** | **93** | **122** | **~76%** |
+| Advanced Forensics & WAF | 25 | 26 | ~96% |
+| **Total** | **94** | **122** | **~77%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
