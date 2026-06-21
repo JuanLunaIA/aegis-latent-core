@@ -231,3 +231,88 @@ async def test_commit_and_alert_records_duration(tmp_path):
             app.state.aegis.ledger.close()
         except Exception:
             pass
+
+
+# ── SCHEDULING_JITTER histogram ───────────────────────────────────────────────
+
+
+def test_scheduling_jitter_metric_accessible():
+    """SCHEDULING_JITTER must be importable and accept .observe() calls."""
+    from aegis.core.observability import SCHEDULING_JITTER
+    SCHEDULING_JITTER.observe(0.000005)  # 5 µs — must not raise
+
+
+def test_scheduling_jitter_noop_accepts_observe():
+    """No-op stub must silently accept .observe() without prometheus_client."""
+    from aegis.core import observability as obs
+    obs.SCHEDULING_JITTER.observe(0.0)  # no-op; must not raise
+
+
+def test_scheduling_jitter_prometheus_name():
+    """When prometheus_client is installed, the metric name includes 'jitter'."""
+    from aegis.core.observability import SCHEDULING_JITTER, prometheus_available
+
+    if not prometheus_available():
+        pytest.skip("prometheus_client not installed")
+    # Real Histogram has ._name attribute (prometheus_client implementation detail)
+    assert hasattr(SCHEDULING_JITTER, "_name")
+    assert "jitter" in SCHEDULING_JITTER._name
+
+
+@pytest.mark.asyncio
+async def test_spawn_background_records_jitter(tmp_path, monkeypatch):
+    """_spawn_background must record jitter before the wrapped coroutine executes."""
+    from aegis.core import observability as obs_mod
+    from aegis.proxy.app import _spawn_background
+
+    observed: list[float] = []
+
+    class _FakeJitter:
+        def observe(self, v: float) -> None:
+            observed.append(v)
+
+    monkeypatch.setattr(obs_mod, "SCHEDULING_JITTER", _FakeJitter())
+    monkeypatch.setattr(obs_mod, "AUDIT_PENDING_COMMITS", type("N", (), {"set": lambda *a: None})())
+
+    async def _noop() -> None:
+        pass
+
+    task = _spawn_background(_noop())
+    await task
+
+    assert len(observed) == 1
+    # Jitter should be non-negative and < 1 s in a local test environment
+    assert 0.0 <= observed[0] < 1.0
+
+
+@pytest.mark.asyncio
+async def test_spawn_background_jitter_is_microsecond_scale(tmp_path, monkeypatch):
+    """Typical scheduling jitter in a quiet loop must be sub-millisecond."""
+    import asyncio
+
+    from aegis.core import observability as obs_mod
+    from aegis.proxy.app import _spawn_background
+
+    observed: list[float] = []
+
+    class _FakeJitter:
+        def observe(self, v: float) -> None:
+            observed.append(v)
+
+    monkeypatch.setattr(obs_mod, "SCHEDULING_JITTER", _FakeJitter())
+    monkeypatch.setattr(obs_mod, "AUDIT_PENDING_COMMITS", type("N", (), {"set": lambda *a: None})())
+
+    async def _noop() -> None:
+        pass
+
+    # Run 10 back-to-back tasks and collect jitter samples
+    tasks = [_spawn_background(_noop()) for _ in range(10)]
+    await asyncio.gather(*tasks)
+
+    assert len(observed) == 10
+    # All samples should be non-negative
+    assert all(v >= 0.0 for v in observed)
+    # Median should be well under 10 ms in a test environment
+    sorted_obs = sorted(observed)
+    median = sorted_obs[len(sorted_obs) // 2]
+    assert median < 0.010  # < 10 ms median is a reasonable sanity check

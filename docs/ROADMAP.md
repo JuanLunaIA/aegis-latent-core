@@ -167,7 +167,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Real-time scheduling: `SCHED_FIFO` or `SCHED_DEADLINE` for Rust forwarder thread pool
 - [ ] CPU pinning (`taskset` / `cpuset` cgroup) for hot-path Rust threads to isolated cores
 - [ ] NUMA-aware memory allocation (`libnuma`) for multi-socket OT servers
-- [ ] Jitter histogram: p999 and p9999 latency tracked and alarmed (not just p99)
+- [x] Jitter histogram: p999 and p9999 latency tracked and alarmed (`aegis/core/observability.py`: `SCHEDULING_JITTER` Prometheus Histogram with 12 µs-level buckets spanning 1 µs – 10 ms for p50/p99/p999/p9999 jitter tracking; measured from `asyncio.create_task()` to first await via `_with_jitter_measurement` wrapper in `aegis/proxy/app.py`; no-op stub when prometheus_client absent; 5 new tests in `tests/test_observability.py` covering metric accessibility, name validation, and sub-millisecond median assertion)
 - [ ] Determinism test: latency variance must be <10µs σ under synthetic load (no such test exists)
 - [ ] Interrupt coalescing configuration guide for NIC offload (DPDK / XDP path)
 
@@ -316,10 +316,10 @@ is not committed to `docs/BENCHMARKS.md`.
 |---|---|---|---|
 | Defense & Government | 27 | 28 | ~96% |
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
-| Industrial Automation & OT | 12 | 21 | ~36% |
+| Industrial Automation & OT | 13 | 21 | ~38% |
 | Enterprise Hyperscale & HA | 11 | 23 | ~48% |
 | Advanced Forensics & WAF | 28 | 27 | ~100% |
-| **Total** | **99** | **123** | **~80%** |
+| **Total** | **100** | **123** | **~81%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background

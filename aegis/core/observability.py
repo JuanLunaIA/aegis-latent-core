@@ -112,6 +112,27 @@ if _PROM:
         "Current circuit breaker state: 0=CLOSED (healthy), 1=HALF_OPEN (probing), 2=OPEN (blocking)",
         ["provider"],
     )
+    SCHEDULING_JITTER: Any = Histogram(
+        "aegis_background_scheduling_jitter_seconds",
+        "Elapsed time between asyncio.create_task() and the first await in the "
+        "background forensic coroutine (scheduling overhead). Tracks p50/p99/p999/p9999 "
+        "jitter to validate the IEC 62443 SL-3 determinism requirement. "
+        "Buckets span 1 µs – 10 ms to capture µs-level overhead with long-tail detail.",
+        buckets=(
+            0.000_001,   # 1 µs
+            0.000_005,   # 5 µs
+            0.000_010,   # 10 µs
+            0.000_025,   # 25 µs
+            0.000_050,   # 50 µs
+            0.000_100,   # 100 µs
+            0.000_250,   # 250 µs
+            0.000_500,   # 500 µs
+            0.001_000,   # 1 ms
+            0.002_500,   # 2.5 ms
+            0.005_000,   # 5 ms
+            0.010_000,   # 10 ms
+        ),
+    )
 else:
     # No-op stubs — identical API surface so callers never branch on _PROM.
     # All methods are silent no-ops; the proxy runs identically when
@@ -138,6 +159,7 @@ else:
     AUDIT_COMMIT_ERRORS = _NoopMetric()
     CIRCUIT_BREAKER_OPENS = _NoopMetric()
     CIRCUIT_BREAKER_STATE = _NoopMetric()
+    SCHEDULING_JITTER = _NoopMetric()
 
 
 def prometheus_available() -> bool:

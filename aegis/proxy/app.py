@@ -51,9 +51,16 @@ _ALERT_BUFFER_SIZE = 10_000
 _BACKGROUND_TASKS: set[asyncio.Task[Any]] = set()
 
 
+async def _with_jitter_measurement(coro: Any, enqueued_at: float) -> Any:
+    """Wrap *coro* to record scheduling jitter as the first observable action."""
+    observability.SCHEDULING_JITTER.observe(time.perf_counter() - enqueued_at)
+    return await coro
+
+
 def _spawn_background(coro: Any) -> asyncio.Task[Any]:
     """Schedule *coro* as a tracked background task that survives GC."""
-    task = asyncio.create_task(coro)
+    enqueued_at = time.perf_counter()
+    task = asyncio.create_task(_with_jitter_measurement(coro, enqueued_at))
     _BACKGROUND_TASKS.add(task)
     observability.AUDIT_PENDING_COMMITS.set(len(_BACKGROUND_TASKS))
 
