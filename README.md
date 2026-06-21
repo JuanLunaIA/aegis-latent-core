@@ -419,9 +419,28 @@ The following speedup claims appear in source code docstrings but are not covere
 
 Contributions of benchmarks for these components are welcome.
 
+### Measured: Single-Node HTTP Throughput (Live Server)
+
+First published single-node numbers (2026-06-21). A real `uvicorn`-hosted proxy driven
+over loopback through the full ASGI + middleware stack on `GET /health`. Single worker
+process over the 4-thread Rust Tokio runtime. Full methodology, caveats, and the
+endurance run in [docs/BENCHMARKS.md](docs/BENCHMARKS.md#claim-3--live-single-node-http-server-throughput).
+
+| Concurrency | Throughput | p50 | p99 | Server CPU |
+|---|---|---|---|---|
+| 1 | 650 RPS | **1.49 ms** | 2.02 ms | 36 % |
+| 4 | **902 RPS** | 4.05 ms | 11.0 ms | 43 % |
+| 128 | 247 RPS | 298 ms | 4,256 ms | 14 % |
+
+Peak single-worker throughput (~900 RPS) is reached at concurrency ≈ core count; the
+server is never CPU-bound (≤43 %). Beyond that, latency climbs while CPU stays idle —
+the bottleneck is event-loop/GIL serialization, so **throughput scales horizontally**
+(one worker per core + replicas), not by raising per-worker concurrency. A 6-minute
+100k-request overload run returned **0 errors** with **flat 101.5 MiB RSS** (no leak).
+
 ### Design Target (Not Measured at Scale)
 
-> **>1 billion RPM at <1.2ms added proxy latency** — This is an architectural design goal for horizontally-scaled multi-node deployments. It has not been measured. Single-node throughput benchmarks are not yet published. Do not rely on this figure for capacity planning.
+> **>1 billion RPM at <1.2ms added proxy latency** — This is an architectural design goal for horizontally-scaled multi-node deployments. It has not been measured. The single-node numbers above are the measured per-worker baseline; the billion-RPM figure assumes horizontal fan-out across many such workers and has not been validated end-to-end. Do not rely on it for capacity planning.
 
 ### Memory Footprint
 
