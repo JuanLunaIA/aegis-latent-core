@@ -1,17 +1,22 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+from __future__ import annotations
+
+import asyncio
+import json
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-import json
-import subprocess
-from pathlib import Path
 
-import sys
+from tools.visualizer.generate_summary import generate_summary_dict
 
-if getattr(sys, 'frozen', False):
-    APP_DIR = Path(sys._MEIPASS)
+if getattr(sys, "frozen", False):
+    APP_DIR = Path(sys._MEIPASS)  # type: ignore[attr-defined]
 else:
     APP_DIR = Path(__file__).resolve().parents[2]
 
@@ -20,11 +25,6 @@ VIS_DIR = APP_DIR / "tools" / "visualizer"
 
 app = FastAPI(title="Aegis Visualizer")
 app.mount("/static", StaticFiles(directory=str(VIS_DIR / "static")), name="static")
-
-
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from tools.visualizer.generate_summary import generate_summary_dict
 
 @app.get("/api/summary")
 async def summary():
@@ -43,7 +43,7 @@ async def forensic_report():
     if not path.exists():
         return JSONResponse(status_code=404, content={"error": "forensic report not found"})
     try:
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             data = json.load(fh)
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": "failed to read report", "exception": str(e)})

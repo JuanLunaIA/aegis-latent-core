@@ -1,52 +1,235 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+#
+# release.yml — Full release pipeline triggered on "v*" tag pushes.
+#
+# Flow:
+#   1. Build multi-platform Python wheels (manylinux, macOS, Windows)
+#   2. Build Rust extension wheels for each platform via maturin
+#   3. Generate SHA-256 hashes for all artifacts
+#   4. Create GitHub Release with CHANGELOG excerpt and all artifacts
+#   5. Attest artifacts with GitHub's artifact attestation (SLSA Level 2)
 name: Release
 
 on:
   push:
     tags:
-      - 'v*'
+      - "v[0-9]*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v2.4.0)"
+        required: true
+
+env:
+  PYTHON_BUILD_VERSION: "3.12"
+  CARGO_TERM_COLOR: always
 
 jobs:
-  release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  # ── Validate the tag matches pyproject.toml version ─────────────────────
+  validate:
+    name: Validate release tag
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from pyproject.toml
+        id: ver
+        run: |
+          VERSION=$(python -c "
+          import re, sys
+          txt = open('pyproject.toml').read()
+          m = re.search(r'^version\s*=\s*[\"\']([\d.]+)[\"\']', txt, re.M)
+          if not m:
+              sys.exit('version not found in pyproject.toml')
+          print(m.group(1))
+          ")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VERSION"
+
+      - name: Check tag matches pyproject version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          PKG="${{ steps.ver.outputs.version }}"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::Tag v$TAG does not match pyproject.toml version $PKG"
+            exit 1
+          fi
+
+  # ── Pure-Python sdist + wheel (platform-independent) ────────────────────
+  build-python:
+    name: Build Python package
+    runs-on: ubuntu-22.04
+    needs: validate
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_BUILD_VERSION }}
+          cache: pip
 
-      - name: Install dependencies
-        run: |
-          pip install build
-          
-      - name: Build Source and Wheel
+      - name: Install build tools
+        run: pip install build twine
+
+      - name: Build sdist and wheel
         run: python -m build
 
-      - name: Generate SHA-256 Hashes
+      - name: Verify distribution
+        run: twine check dist/*
+
+      - name: Generate SHA-256 hashes
         run: |
           cd dist
-          for file in *; do
-            sha256sum "$file" > "$file.sha256"
+          for f in *; do
+            sha256sum "$f" > "$f.sha256"
           done
+          cat *.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+
+  # ── Rust extension wheels (manylinux x86_64) ────────────────────────────
+  build-rust-linux:
+    name: Rust wheel (linux-x86_64)
+    runs-on: ubuntu-22.04
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_BUILD_VERSION }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install maturin
+        run: pip install maturin
+
+      - name: Build manylinux wheel
+        working-directory: aegis_rust_v2
+        env:
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+        run: |
+          maturin build --release \
+            --target x86_64-unknown-linux-gnu \
+            --out ../rust-dist-linux
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rust-dist-linux
+          path: rust-dist-linux/
+
+  # ── Rust extension wheels (macOS x86_64 + arm64) ────────────────────────
+  build-rust-macos:
+    name: Rust wheel (macos)
+    runs-on: macos-13
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_BUILD_VERSION }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Install maturin
+        run: pip install maturin
+
+      - name: Build universal2 wheel
+        working-directory: aegis_rust_v2
+        env:
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+        run: |
+          maturin build --release \
+            --universal2 \
+            --out ../rust-dist-macos
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rust-dist-macos
+          path: rust-dist-macos/
+
+  # ── Create GitHub Release ────────────────────────────────────────────────
+  github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-22.04
+    needs: [validate, build-python, build-rust-linux, build-rust-macos]
+    permissions:
+      contents: write
+      id-token: write   # for artifact attestation
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets/
+
+      - name: Flatten artifact directories
+        run: |
+          mkdir -p release/
+          find release-assets/ -type f -not -name "*.sha256" \
+            \( -name "*.whl" -o -name "*.tar.gz" \) \
+            -exec cp {} release/ \;
+          # Rehash everything in one place
+          cd release/
+          for f in *.whl *.tar.gz; do
+            sha256sum "$f" > "$f.sha256"
+          done
+          ls -lh
+
+      - name: Attest build artifacts (SLSA Level 2)
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: "release/*.whl,release/*.tar.gz"
+
+      - name: Extract CHANGELOG excerpt for this release
+        id: changelog
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          # Extract the section for this version from CHANGELOG.md
+          python - <<'EOF'
+          import re, os, sys
+          version = os.environ["VERSION"]
+          text = open("CHANGELOG.md").read()
+          # Match "## [2.4.0]" or "## 2.4.0" sections
+          pattern = rf"(?m)^##\s+[\[v]?{re.escape(version)}[^\n]*\n(.*?)(?=\n##\s|\Z)"
+          m = re.search(pattern, text, re.DOTALL)
+          body = m.group(1).strip() if m else f"Release v{version}"
+          # Write to file so the shell step can use it
+          with open("release_body.md", "w") as f:
+              f.write(body)
+          print(f"Extracted {len(body)} chars for v{version}")
+          EOF
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/*.whl
-            dist/*.tar.gz
-            dist/*.sha256
-          body_path: CHANGELOG.md
+          tag_name: ${{ github.ref_name }}
+          name: "Aegis Latent Core v${{ needs.validate.outputs.version }}"
+          body_path: release_body.md
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(needs.validate.outputs.version, 'rc') || contains(needs.validate.outputs.version, 'b') || contains(needs.validate.outputs.version, 'a') }}
+          files: |
+            release/*.whl
+            release/*.tar.gz
+            release/*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

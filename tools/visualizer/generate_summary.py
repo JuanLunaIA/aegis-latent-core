@@ -8,11 +8,12 @@ Intended for the lightweight visualizer dashboard.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
+
 import ast
 import json
-import os
 import re
 from pathlib import Path
+
 ROOT = Path.cwd()
 def analyze_python_file(path: Path):
     try:
