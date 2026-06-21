@@ -79,7 +79,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] STIG (Security Technical Implementation Guide) hardening checklist and compliance scan results
 - [ ] DoD-DISA APL (Approved Products List) submission package
 - [ ] Time-stamping authority (RFC 3161 TSA) integration for legally admissible timestamp proofs
-- [ ] Classified audit node encryption: AES-256-GCM envelope per node for IL6 data-at-rest
+- [x] Classified audit node encryption: AES-256-GCM envelope per node for IL6 data-at-rest (`aegis/core/audit_node_encryptor.py`: `AuditNodeEncryptor` with per-tenant DEK via HKDF-SHA256(info="audit-node-dek:" + tenant_id); `encrypt_node(tenant_id, node_dict, node_hash)` → `nonce(12) || AES-256-GCM ciphertext+tag`; `node_hash` bound as GCM AAD to tie ciphertext to hash-chain position; `decrypt_node()` raises `AuditNodeEncryptionError` on tamper/wrong-key/wrong-hash; `from_env()` reads `AEGIS_AUDIT_MASTER_KEY` (hex-encoded, must be distinct from `AEGIS_SIGNING_KEY` and `AEGIS_PHI_MASTER_KEY`); per-tenant DEK cache with `clear_dek_cache()`; `pytest tests/test_audit_node_encryptor.py` — 29 tests)
 
 #### 1.5 Runtime Hardening
 
@@ -257,7 +257,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Cross-session correlation: detect coordinated multi-account attacks sharing jailbreak templates
 - [ ] Semantic similarity clustering: flag requests within cosine distance threshold of known jailbreak embeddings
 - [ ] Adversarial suffix detection: gradient-based suffix patterns (GCG, AutoDAN) via fixed signature set
-- [ ] Many-shot jailbreak detection: flag prompts with >N examples in few-shot context (configurable threshold, currently no count-based guard)
+- [x] Many-shot jailbreak detection: flag prompts with >N examples in few-shot context (`aegis/core/manyshot_detector.py`: `ManyShotDetector` with configurable `threshold` (default 10) and `min_qa_ratio`; multi-signal counting — Q&A turn pairs (Human/User/Q: + Assistant/AI/A: with assistant-to-human ratio guard), numbered-list items (≥20 chars), "Example/Sample/Shot N:" headers, bracket/XML shot delimiters (<example>, [EXAMPLE], <shot>); `evaluate(text)` and `evaluate_messages(messages)` (concatenates content across turns to defeat per-message evasion); `ManyShotDetectionResult` with `shot_count`, `signal_counts`, `exceeded`, `reason`, `scan_length`, `to_dict()`; `pytest tests/test_manyshot_detector.py` — 42 tests)
 - [ ] Prompt injection in retrieved context: RAG-aware WAF that scans tool outputs and retrieved documents, not just user input
 
 #### 5.2 Evasion-Resistant Pattern Matching
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
-| Defense & Government | 25 | 28 | ~89% |
+| Defense & Government | 26 | 28 | ~93% |
 | Healthcare & Life Sciences | 19 | 24 | ~79% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
-| Advanced Forensics & WAF | 16 | 26 | ~62% |
-| **Total** | **81** | **122** | **~66%** |
+| Advanced Forensics & WAF | 17 | 26 | ~65% |
+| **Total** | **83** | **122** | **~68%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
