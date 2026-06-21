@@ -187,7 +187,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] mTLS configurable CA bundle + client cert
 - [ ] MODBUS/DNP3/OPC-UA protocol parser to detect SCADA command injection in LLM-suggested outputs
 - [ ] Air-gapped network zone enforcement: configuration option to block all outbound connections except configured upstream (no current egress firewall at application layer)
-- [ ] DMZ-mode: proxy accepts connections only from configured source IP allowlist
+- [x] DMZ-mode: proxy accepts connections only from configured source IP allowlist (`aegis/proxy/dmz_middleware.py`: `DMZSourceIPMiddleware` rejects requests from IPs not in `AEGIS_DMZ_ALLOWED_SOURCE_IPS` (comma-separated IPv4/IPv6/CIDR list) with 403 before any auth; `dmz_trust_proxy_headers` enables X-Forwarded-For/X-Real-IP resolution behind a trusted load balancer; wired into `create_app()` at startup; `AegisSettings.get_dmz_networks()` parses entries at startup; 34 tests in `tests/test_dmz_middleware.py`)
 - [ ] IEC 62443 Zone and Conduit model documentation for customer network segmentation guidance
 
 ---
@@ -283,7 +283,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] ISO/IEC 27037 compliant evidence package format: chain of custody manifest, acquisition metadata (tool name, version, operator identity, acquisition timestamp), hash algorithm declaration, evidence integrity seal (`aegis/core/iso27037_evidence.py`: `EvidencePackage`, `AcquisitionMetadata`, `CustodyEvent`, `EvidenceNode` dataclasses; `build_evidence_package(ledger, operator, tool_version, acquisition_reason)` exports a self-contained, tamper-evident package from any `CryptographicAuditLedger`; `verify_seal(package_dict)` validates the SHA-256 integrity seal offline without a live instance; `add_custody_event()` appends chain-of-custody entries and re-seals; 56 tests in `tests/test_iso27037_evidence.py`)
 - [ ] RFC 3161 trusted timestamp on each forensic bundle (time-stamping authority integration)
 - [ ] DFIR-compatible export formats: PKCS#7 SignedData envelope; E01 (Expert Witness Format) encapsulation for block-level evidence
-- [ ] Evidence acquisition log: who exported, when, from what IP, under what authorization (non-repudiable export audit trail)
+- [x] Evidence acquisition log: who exported, when, from what IP, under what authorization (non-repudiable export audit trail) — implemented by `aegis/core/export_audit_log.py` (see §5.5 tamper-evident export log above)
 - [ ] Legal admissibility attestation field: `legal_admissibility` enum (`Admissible` / `Conditional` / `Compromised`) currently set at chain level — needs per-bundle override with justification
 - [ ] Court-ready PDF report generation: human-readable summary of audit chain, signing key metadata, integrity verification results, chain-of-custody narrative
 - [ ] INTERPOL / ILEA forensic standards alignment documentation
@@ -316,10 +316,10 @@ is not committed to `docs/BENCHMARKS.md`.
 |---|---|---|---|
 | Defense & Government | 27 | 28 | ~96% |
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
-| Industrial Automation & OT | 11 | 21 | ~34% |
+| Industrial Automation & OT | 12 | 21 | ~36% |
 | Enterprise Hyperscale & HA | 11 | 23 | ~48% |
 | Advanced Forensics & WAF | 28 | 27 | ~100% |
-| **Total** | **98** | **123** | **~80%** |
+| **Total** | **99** | **123** | **~80%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background

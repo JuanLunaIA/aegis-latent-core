@@ -23,6 +23,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import aegis
 from aegis.auth.apikey import AuditKeyAuth, ProxyKeyAuth
 from aegis.config import AegisSettings, get_settings
+from aegis.proxy.dmz_middleware import DMZSourceIPMiddleware
 from aegis.core import observability
 from aegis.core.circuit_breaker import CircuitOpenError
 from aegis.core.crypto_audit import CryptographicAuditLedger
@@ -580,6 +581,15 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
 
     app.add_middleware(RequestSmugglingProtectionMiddleware)
+
+    dmz_networks = cfg.get_dmz_networks()
+    if dmz_networks:
+        app.add_middleware(
+            DMZSourceIPMiddleware,
+            allowed_networks=dmz_networks,
+            trust_proxy_headers=cfg.dmz_trust_proxy_headers,
+        )
+
     app.include_router(build_audit_router(state.ledger, state.audit_auth), prefix="/v1/audit")
 
     if observability.prometheus_available():
