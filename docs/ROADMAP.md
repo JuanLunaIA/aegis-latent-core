@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 1575 passed, 1 skipped, 95.36% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 1620 passed, 1 skipped, 95.43% coverage).
 
 ---
 
@@ -138,7 +138,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] WAF with 23 critical + 11 soft patterns (prompt injection, jailbreak)
 - [ ] ICD-11 / SNOMED-CT ontology-aware anomaly detection: flag responses containing clinical codes mismatched to the request context
 - [ ] Dosage hallucination detection: numeric range check for drug dosage claims against reference database (RxNorm, NLM DailyMed)
-- [ ] PII confidence scoring per response (entity recognition confidence threshold → block/flag/log)
+- [x] PII confidence scoring per response (`aegis/core/pii_confidence.py`: `PIIConfidenceFilter` wraps `PHIDeidentifier`; per-entity confidence scores → BLOCK / FLAG / LOG action via configurable `PIIConfidenceThreshold`; `evaluate()` + `evaluate_messages()` + `worst_case()` for batch response gating; `from_config()` reads `AEGIS_PII_BLOCK_THRESHOLD`/`AEGIS_PII_FLAG_THRESHOLD`; `pytest tests/test_pii_confidence.py` — 45 tests)
 - [ ] Adverse event (AE) keyword detection aligned to MedDRA preferred terms
 - [ ] De-novo clinical claim detection: block generation of novel clinical trial results without citation
 
@@ -315,11 +315,11 @@ is not committed to `docs/BENCHMARKS.md`.
 | Domain | Implemented | Planned | Completion |
 |---|---|---|---|
 | Defense & Government | 23 | 28 | ~82% |
-| Healthcare & Life Sciences | 16 | 24 | ~67% |
+| Healthcare & Life Sciences | 17 | 24 | ~71% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 10 | 23 | ~30% |
 | Advanced Forensics & WAF | 16 | 26 | ~62% |
-| **Total** | **76** | **122** | **~62%** |
+| **Total** | **77** | **122** | **~63%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
