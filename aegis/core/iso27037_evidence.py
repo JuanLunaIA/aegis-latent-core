@@ -58,6 +58,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -66,6 +67,29 @@ if TYPE_CHECKING:
 _TOOL_NAME: str = "aegis-latent-core"
 _HASH_ALGORITHM: str = "SHA-256"
 _STANDARD_REF: str = "ISO/IEC 27037:2012"
+
+
+class LegalAdmissibility(StrEnum):
+    """Per-bundle legal admissibility classification.
+
+    Values map to evidential weight under ISO/IEC 27037:2012 §9.3:
+
+    Admissible
+        Chain integrity verified; all nodes signed; no tampering detected.
+        Suitable for court presentation without qualification.
+    Conditional
+        Minor integrity concerns (e.g. partial WAL loss, signing-key rotation
+        during capture window) that do not invalidate core evidence but require
+        expert qualification before court presentation.
+    Compromised
+        Integrity seal failed or hash-chain break detected; evidence may not
+        be presented as authentic without independent re-verification.
+    """
+
+    Admissible = "Admissible"
+    Conditional = "Conditional"
+    Compromised = "Compromised"
+
 
 # ── Chain of Custody ──────────────────────────────────────────────────────────
 
@@ -256,6 +280,7 @@ class EvidencePackage:
     node_count: int
     tail_hash: str
     legal_admissibility: str
+    legal_admissibility_justification: str = field(default="")
     integrity_seal: str = field(default="")
 
     def to_dict(self) -> dict[str, Any]:
@@ -269,6 +294,7 @@ class EvidencePackage:
             "node_count": self.node_count,
             "tail_hash": self.tail_hash,
             "legal_admissibility": self.legal_admissibility,
+            "legal_admissibility_justification": self.legal_admissibility_justification,
             "integrity_seal": self.integrity_seal,
         }
 
@@ -319,6 +345,8 @@ def build_evidence_package(
     operator: str,
     tool_version: str = "unknown",
     acquisition_reason: str = "",
+    legal_admissibility_override: LegalAdmissibility | None = None,
+    legal_admissibility_justification: str = "",
 ) -> EvidencePackage:
     """Build an ISO/IEC 27037 compliant evidence package from *ledger*.
 
@@ -340,6 +368,18 @@ def build_evidence_package(
     acquisition_reason:
         Optional free-form reason for this export (e.g.
         ``"scheduled-compliance-export"`` or ``"incident-response"``).
+    legal_admissibility_override:
+        Optional :class:`LegalAdmissibility` enum value that overrides the
+        chain-level admissibility.  When provided, ``legal_admissibility``
+        in the package is set to this value instead of the ledger's value.
+        Use when an investigator's review has upgraded or downgraded the
+        chain-level assessment (e.g. downgrade to ``Conditional`` due to
+        a gap in WAL coverage, upgrade to ``Admissible`` after expert
+        re-verification).
+    legal_admissibility_justification:
+        Free-form justification for the override (e.g. case number, expert
+        name, or summary of the re-verification result).  Stored in the
+        package and covered by the integrity seal.
 
     Returns
     -------
@@ -353,6 +393,10 @@ def build_evidence_package(
     with ledger._lock:
         chain_snapshot = list(ledger.chain)
         legal_admissibility = ledger.legal_admissibility
+
+    # Apply per-bundle override when provided.
+    if legal_admissibility_override is not None:
+        legal_admissibility = legal_admissibility_override.value
 
     # Chain integrity check
     is_valid, err_idx = ledger.verify_integrity()
@@ -405,6 +449,7 @@ def build_evidence_package(
         node_count=len(chain_snapshot),
         tail_hash=tail_hash,
         legal_admissibility=legal_admissibility,
+        legal_admissibility_justification=legal_admissibility_justification,
         integrity_seal="",
     )
 

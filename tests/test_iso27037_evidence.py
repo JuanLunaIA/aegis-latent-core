@@ -14,6 +14,7 @@ from aegis.core.iso27037_evidence import (
     CustodyEvent,
     EvidenceNode,
     EvidencePackage,
+    LegalAdmissibility,
     add_custody_event,
     build_evidence_package,
     verify_seal,
@@ -527,6 +528,7 @@ class TestToDict:
                 "node_count",
                 "tail_hash",
                 "legal_admissibility",
+                "legal_admissibility_justification",
                 "integrity_seal",
             }
             assert set(d.keys()) == expected
@@ -668,5 +670,216 @@ class TestLargeChain:
             pkg = build_evidence_package(ledger, operator=_OPERATOR)
             ids = [n.state_id for n in pkg.evidence_nodes]
             assert ids == [f"state-{i}" for i in range(10)]
+        finally:
+            ledger.close()
+
+
+# ── LegalAdmissibility enum ───────────────────────────────────────────────────
+
+
+class TestLegalAdmissibilityEnum:
+    def test_admissible_value(self):
+        assert LegalAdmissibility.Admissible.value == "Admissible"
+
+    def test_conditional_value(self):
+        assert LegalAdmissibility.Conditional.value == "Conditional"
+
+    def test_compromised_value(self):
+        assert LegalAdmissibility.Compromised.value == "Compromised"
+
+    def test_str_comparison_admissible(self):
+        assert LegalAdmissibility.Admissible == "Admissible"
+
+    def test_str_comparison_conditional(self):
+        assert LegalAdmissibility.Conditional == "Conditional"
+
+    def test_str_comparison_compromised(self):
+        assert LegalAdmissibility.Compromised == "Compromised"
+
+    def test_all_members_count(self):
+        assert len(LegalAdmissibility) == 3
+
+    def test_enum_from_value_admissible(self):
+        assert LegalAdmissibility("Admissible") is LegalAdmissibility.Admissible
+
+    def test_enum_from_value_conditional(self):
+        assert LegalAdmissibility("Conditional") is LegalAdmissibility.Conditional
+
+    def test_enum_from_value_compromised(self):
+        assert LegalAdmissibility("Compromised") is LegalAdmissibility.Compromised
+
+
+# ── Per-bundle LegalAdmissibility override ────────────────────────────────────
+
+
+class TestLegalAdmissibilityOverride:
+    def test_default_no_override_uses_chain_level(self, tmp_path):
+        """Without override, the chain-level value (High) is used."""
+        ledger = _make_ledger(tmp_path)
+        try:
+            pkg = build_evidence_package(ledger, operator=_OPERATOR)
+            assert pkg.legal_admissibility == "High"
+        finally:
+            ledger.close()
+
+    def test_override_admissible(self, tmp_path):
+        ledger = _make_ledger(tmp_path)
+        try:
+            pkg = build_evidence_package(
+                ledger,
+                operator=_OPERATOR,
+                legal_admissibility_override=LegalAdmissibility.Admissible,
+            )
+            assert pkg.legal_admissibility == "Admissible"
+        finally:
+            ledger.close()
+
+    def test_override_conditional(self, tmp_path):
+        ledger = _make_ledger(tmp_path)
+        try:
+            pkg = build_evidence_package(
+                ledger,
+                operator=_OPERATOR,
+                legal_admissibility_override=LegalAdmissibility.Conditional,
+            )
+            assert pkg.legal_admissibility == "Conditional"
+        finally:
+            ledger.close()
+
+    def test_override_compromised(self, tmp_path):
+        ledger = _make_ledger(tmp_path)
+        try:
+            pkg = build_evidence_package(
+                ledger,
+                operator=_OPERATOR,
+                legal_admissibility_override=LegalAdmissibility.Compromised,
+            )
+            assert pkg.legal_admissibility == "Compromised"
+        finally:
+            ledger.close()
+
+    def test_default_justification_is_empty(self, tmp_path):
+        ledger = _make_ledger(tmp_path)
+        try:
+            pkg = build_evidence_package(ledger, operator=_OPERATOR)
+            assert pkg.legal_admissibility_justification == ""
+        finally:
+            ledger.close()
+
+    def test_justification_stored(self, tmp_path):
+        ledger = _make_ledger(tmp_path)
+        try:
+            justification = "Expert re-verification by Dr. Smith; CASE-2026-042"
+            pkg = build_evidence_package(
+                ledger,
+                operator=_OPERATOR,
+                legal_admissibility_override=LegalAdmissibility.Admissible,
+                legal_admissibility_justification=justification,
+            )
+            assert pkg.legal_admissibility_justification == justification
+        finally:
+            ledger.close()
+
+    def test_justification_in_to_dict(self, tmp_path):
+        ledger = _make_ledger(tmp_path)
+        try:
+            pkg = build_evidence_package(
+                ledger,
+                operator=_OPERATOR,
+                legal_admissibility_override=LegalAdmissibility.Conditional,
+                legal_admissibility_justification="WAL gap at 03:00 UTC",
+            )
+            d = pkg.to_dict()
+            assert d["legal_admissibility_justification"] == "WAL gap at 03:00 UTC"
+        finally:
+            ledger.close()
+
+    def test_override_changes_seal(self, tmp_path):
+        """Different override values produce different integrity seals."""
+        ledger = _make_ledger(tmp_path, nodes=1)
+        try:
+            pkg_no_override = build_evidence_package(ledger, operator=_OPERATOR)
+            pkg_override = build_evidence_package(
+                ledger,
+                operator=_OPERATOR,
+                legal_admissibility_override=LegalAdmissibility.Conditional,
+            )
+            assert pkg_no_override.integrity_seal != pkg_override.integrity_seal
+        finally:
+            ledger.close()
+
+    def test_justification_covered_by_seal(self, tmp_path):
+        """Tampering with justification invalidates the seal."""
+        ledger = _make_ledger(tmp_path)
+        try:
+            pkg = build_evidence_package(
+                ledger,
+                operator=_OPERATOR,
+                legal_admissibility_override=LegalAdmissibility.Admissible,
+                legal_admissibility_justification="original justification",
+            )
+            d = pkg.to_dict()
+            d["legal_admissibility_justification"] = "tampered justification"
+            assert verify_seal(d) is False
+        finally:
+            ledger.close()
+
+    def test_tampered_admissibility_fails_seal(self, tmp_path):
+        """Tampering with the legal_admissibility field invalidates the seal."""
+        ledger = _make_ledger(tmp_path)
+        try:
+            pkg = build_evidence_package(
+                ledger,
+                operator=_OPERATOR,
+                legal_admissibility_override=LegalAdmissibility.Admissible,
+            )
+            d = pkg.to_dict()
+            d["legal_admissibility"] = "Compromised"
+            assert verify_seal(d) is False
+        finally:
+            ledger.close()
+
+    def test_override_seal_is_valid(self, tmp_path):
+        """Package with override still passes verify_seal."""
+        ledger = _make_ledger(tmp_path)
+        try:
+            pkg = build_evidence_package(
+                ledger,
+                operator=_OPERATOR,
+                legal_admissibility_override=LegalAdmissibility.Compromised,
+                legal_admissibility_justification="chain break at node 7; CASE-99",
+            )
+            assert verify_seal(pkg.to_dict()) is True
+        finally:
+            ledger.close()
+
+    def test_justification_without_override(self, tmp_path):
+        """Justification alone (without override) is stored and covered by seal."""
+        ledger = _make_ledger(tmp_path)
+        try:
+            pkg = build_evidence_package(
+                ledger,
+                operator=_OPERATOR,
+                legal_admissibility_justification="Routine compliance export",
+            )
+            assert pkg.legal_admissibility_justification == "Routine compliance export"
+            assert verify_seal(pkg.to_dict()) is True
+        finally:
+            ledger.close()
+
+    def test_json_roundtrip_preserves_override(self, tmp_path):
+        """Override and justification survive JSON serialization."""
+        ledger = _make_ledger(tmp_path)
+        try:
+            pkg = build_evidence_package(
+                ledger,
+                operator=_OPERATOR,
+                legal_admissibility_override=LegalAdmissibility.Conditional,
+                legal_admissibility_justification="Partial WAL coverage",
+            )
+            reloaded = json.loads(json.dumps(pkg.to_dict()))
+            assert reloaded["legal_admissibility"] == "Conditional"
+            assert reloaded["legal_admissibility_justification"] == "Partial WAL coverage"
+            assert verify_seal(reloaded) is True
         finally:
             ledger.close()
