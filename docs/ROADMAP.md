@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-21 (tests: 2490 passed, 1 skipped, 95.32% coverage).
+> **Last verified against codebase:** 2026-06-21 (tests: 2527 passed, 1 skipped, 95.32% coverage).
 
 ---
 
@@ -236,7 +236,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [ ] Kubernetes operator: `AegisProxy` CRD with automatic rolling update, canary traffic splitting, HPA by `aegis_request_latency_p99`
 - [x] Helm chart with production-grade defaults (PodDisruptionBudget, topologySpreadConstraints, resource limits)
 - [ ] Zero-downtime rolling deploy: WAL leader lease hand-off protocol during pod replacement
-- [ ] Circuit breaker per upstream provider (e.g., `tenacity` with per-host breaker state in DashMap)
+- [x] Circuit breaker per upstream provider (`aegis/core/circuit_breaker.py`: `CircuitBreaker` with CLOSED → OPEN → HALF_OPEN state machine; `failure_threshold` consecutive failures open the circuit; `recovery_timeout` before a single probe is allowed; `success_threshold` consecutive probe successes re-close; thread-safe via `threading.Lock`; `CircuitOpenError` for fail-fast 503 responses; Prometheus metric emission on state transitions; integrated in `LLMForwarder` via `circuit_breaker_failure_threshold` / `circuit_breaker_recovery_timeout` / `circuit_breaker_success_threshold` config fields; 37 tests in `tests/test_circuit_breaker.py`)
 - [ ] Chaos engineering test suite: `pytest-chaos` or Toxiproxy integration for WAL write failure, Redis failure, upstream timeout scenarios
 - [ ] SLO burn-rate alerting: PrometheusRule manifests for 1h/6h/24h/72h burn-rate windows
 
@@ -317,9 +317,9 @@ is not committed to `docs/BENCHMARKS.md`.
 | Defense & Government | 27 | 28 | ~96% |
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
-| Enterprise Hyperscale & HA | 10 | 23 | ~30% |
+| Enterprise Hyperscale & HA | 11 | 23 | ~48% |
 | Advanced Forensics & WAF | 26 | 26 | ~100% |
-| **Total** | **95** | **122** | **~78%** |
+| **Total** | **96** | **122** | **~79%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
