@@ -302,7 +302,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Append-only WAL (no delete/overwrite path in audit node storage)
 - [x] `verify_integrity()` detects gaps, hash mismatches, reordering
 - [x] `legal_admissibility` field in audit chain health response
-- [ ] Operator signature on chain seal: require HSM-signed attestation before bundle export
+- [x] Operator signature on chain seal: require HSM-signed attestation before bundle export — implemented by `aegis/core/operator_seal.py`; `OperatorSealGate` issues time-bounded `OperatorAttestation` objects signed with HMAC-SHA256 (AEGIS_SIGNING_KEY) or HSM-PKCS#11 when `HSMSigningBackend` is injected; `create_attestation(operator_id, package_id)`, `verify_attestation()` → `OperatorSealVerifyResult`, `gate_export(package_id, attestation)` raises `OperatorSealError` when attestation is invalid/expired/wrong-package; attestations are package-bound (or broad with package_id="") and expire after configurable window (AEGIS_OPERATOR_SEAL_VALIDITY, default 3600s); HSM fallback to HMAC-SHA256 on HSM error; 53 tests in `tests/test_operator_seal.py`
 - [ ] Witness co-signing: two-of-three threshold signing for bundle export (multi-party authorization)
 - [x] Tamper-evident export log: every call to `POST /v1/enterprise/compliance/export` recorded in a separate non-repudiable log signed independently from the audit chain (`aegis/core/export_audit_log.py`: `ExportAuditLog` append-only JSONL log at `0o600`; per-entry HMAC-SHA256 `entry_sig` over canonical body including index, timestamp, operator, package_id, client_ip, api_key_hash, node_count; `record()` flushes+fsyncs after each write; `verify()` checks every HMAC and sequential index; `read_all()` for offline inspection; 47 tests in `tests/test_export_audit_log.py`)
 - [x] Custody transfer protocol: `aegis/core/custody_transfer.py` implements `CustodyTransferLog` — append-only JSONL at 0o600; per-record HMAC-SHA256 `transfer_sig` over canonical body (index, timestamp, transferor, transferee, package_id, evidence_hash, reason, authorization, extra); `record()` fsyncs; `verify()` checks HMAC + sequential index; `read_all()` for offline inspection; 47 tests in `tests/test_custody_transfer.py` covering construction, signing, tampering, persistence, and cross-instance replay
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 23 | 24 | ~96% |
 | Industrial Automation & OT | 17 | 21 | ~81% |
 | Enterprise Hyperscale & HA | 14 | 23 | ~61% |
-| Advanced Forensics & WAF | 33 | 27 | ~100% |
-| **Total** | **115** | **123** | **~93%** |
+| Advanced Forensics & WAF | 34 | 27 | ~100% |
+| **Total** | **116** | **123** | **~94%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
