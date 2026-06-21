@@ -304,7 +304,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] `legal_admissibility` field in audit chain health response
 - [ ] Operator signature on chain seal: require HSM-signed attestation before bundle export
 - [ ] Witness co-signing: two-of-three threshold signing for bundle export (multi-party authorization)
-- [ ] Tamper-evident export log: every call to `POST /v1/enterprise/compliance/export` recorded in a separate non-repudiable log signed independently from the audit chain
+- [x] Tamper-evident export log: every call to `POST /v1/enterprise/compliance/export` recorded in a separate non-repudiable log signed independently from the audit chain (`aegis/core/export_audit_log.py`: `ExportAuditLog` append-only JSONL log at `0o600`; per-entry HMAC-SHA256 `entry_sig` over canonical body including index, timestamp, operator, package_id, client_ip, api_key_hash, node_count; `record()` flushes+fsyncs after each write; `verify()` checks every HMAC and sequential index; `read_all()` for offline inspection; 47 tests in `tests/test_export_audit_log.py`)
 - [ ] Custody transfer protocol: structured handoff record when evidence moves between custodians
 - [ ] Long-term archival: evidence bundle format compatible with 30-year retention (algorithm agility for hash/signature migration)
 
@@ -318,8 +318,8 @@ is not committed to `docs/BENCHMARKS.md`.
 | Healthcare & Life Sciences | 21 | 24 | ~88% |
 | Industrial Automation & OT | 11 | 21 | ~34% |
 | Enterprise Hyperscale & HA | 11 | 23 | ~48% |
-| Advanced Forensics & WAF | 27 | 27 | ~100% |
-| **Total** | **97** | **123** | **~79%** |
+| Advanced Forensics & WAF | 28 | 27 | ~100% |
+| **Total** | **98** | **123** | **~80%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
