@@ -241,7 +241,11 @@ class ReadOnlyRootfsGuard:
 
         effective_base = self.nfs_mount or self.tmpfs_base
         # Re-root: strip the leading '/' so Path join works correctly
-        relative = Path(preferred_path).relative_to("/") if Path(preferred_path).is_absolute() else Path(preferred_path)
+        relative = (
+            Path(preferred_path).relative_to("/")
+            if Path(preferred_path).is_absolute()
+            else Path(preferred_path)
+        )
         redirected_path = Path(effective_base) / relative
         redirected_path.mkdir(parents=True, exist_ok=True)
 

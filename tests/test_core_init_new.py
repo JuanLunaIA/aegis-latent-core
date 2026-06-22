@@ -10,7 +10,6 @@ from unittest.mock import patch
 
 import pytest
 
-
 # ── __getattr__ — known submodule (lines 41-43) ──────────────────────────────
 
 

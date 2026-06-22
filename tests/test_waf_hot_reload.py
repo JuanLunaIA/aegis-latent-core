@@ -281,27 +281,33 @@ class TestStartStop:
     def test_poll_based_reload_on_file_change(self, tmp_path):
         """Polling loop fires reload when the file's mtime changes."""
         p = _write_pattern_file(tmp_path / "patterns.json")
-        reload_count: list[int] = [0]
-        event = Event()
+        # Two separate events: one for the initial load, one for the file change.
+        # This eliminates the race where the poll thread records last_mtime
+        # after the main thread has already written the file.
+        initial_loaded = Event()
+        file_reloaded = Event()
 
         def on_reload(ps: WAFPatternSet) -> None:
-            reload_count[0] += 1
-            if reload_count[0] >= 2:
-                event.set()
+            if not initial_loaded.is_set():
+                initial_loaded.set()
+            else:
+                file_reloaded.set()
 
         # Force poll mode by overriding inotify detection.
         r = WAFHotReloader(str(p), on_reload=on_reload, poll_interval_s=0.05)
         r._use_inotify = False
         r.start()
         try:
-            time.sleep(0.1)
+            # Wait for initial load to complete before writing so the poll
+            # thread's last_mtime baseline is stable.
+            assert initial_loaded.wait(timeout=2.0), "Initial load did not fire"
             # Write updated content.
             new_data = dict(_VALID_JSON, version=99, soft=[r"updated_signal"])
             p.write_text(json.dumps(new_data))
             # Touch mtime explicitly to guarantee detection.
             os.utime(str(p), None)
-            triggered = event.wait(timeout=2.0)
-            assert triggered, "Polling loop did not detect file change in 2 s"
+            triggered = file_reloaded.wait(timeout=5.0)
+            assert triggered, "Polling loop did not detect file change in 5 s"
             assert r.current is not None
             assert r.current.version == 99
         finally:

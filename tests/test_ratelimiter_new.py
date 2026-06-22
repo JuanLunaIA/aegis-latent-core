@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -16,7 +15,6 @@ from aegis.core.ratelimiter import (
     InMemoryRateLimiter,
     create_rate_limiter,
 )
-
 
 # ── InMemoryRateLimiter — basic token bucket ──────────────────────────────────
 

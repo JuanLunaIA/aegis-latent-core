@@ -10,7 +10,6 @@ import pytest
 from aegis_server.crypto import LocalHMACSigner, SignerProvider, get_signer
 from aegis_server.storage import StorageProvider, get_provider
 
-
 # ── aegis_server.crypto.get_signer ───────────────────────────────────────────
 
 
@@ -96,7 +95,6 @@ def test_get_provider_unknown_backend_raises():
 
 
 def test_get_provider_result_is_storage_provider():
-    from aegis_server.storage.sqlite_provider import SQLiteStorageProvider
 
     settings = _enterprise_settings(storage_provider="sqlite")
     provider = get_provider(settings)

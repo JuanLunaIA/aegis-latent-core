@@ -9,7 +9,6 @@ import pytest
 
 from aegis.core.timing_defense import TimingDefense, timing_defense
 
-
 # ── constant_time_compare ─────────────────────────────────────────────────────
 
 

@@ -5,13 +5,10 @@
 
 from __future__ import annotations
 
-import importlib
-import sys
 from unittest.mock import MagicMock, patch
 
 import aegis.core.seccomp_guard as _sg_mod
 from aegis.core.seccomp_guard import SeccompGuard
-
 
 # ── _detect_sandbox — return False (line 120) ─────────────────────────────────
 
@@ -187,7 +184,6 @@ def test_apply_filter_non_sandbox_prctl_fails():
     _sg_mod._libseccomp = mock_libseccomp
 
     import ctypes.util as _ctu
-    import ctypes
 
     try:
         with (

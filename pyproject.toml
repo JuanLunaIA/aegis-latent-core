@@ -93,6 +93,7 @@ dev = [
     "bandit>=1.7",
     "aiosqlite>=0.20.0",
     "cachetools>=5.3.0",
+    "ldap3>=2.9.1",
 ]
 # ── Full install (all optional extras) ───────────────────────────────────────
 all = [
@@ -127,7 +128,7 @@ select = ["E", "F", "I", "N", "W", "UP", "S", "B", "A", "COM", "C4", "PT"]
 ignore = ["S101", "COM812", "E501", "S104", "N801", "N806", "S607", "S110"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["PT009", "PT011", "PT027", "S101", "S108", "N802", "C408", "E701"]
+"tests/**" = ["PT009", "PT011", "PT012", "PT017", "PT027", "S101", "S108", "N802", "C408", "E701", "S106", "S105", "N805", "B017", "F841", "N818", "S311", "C416"]
 "aegis/core/audit_node_pb2.py" = ["E712", "E501"]
 "aegis/core/**" = ["S311", "S603", "S108", "B904", "B007", "B006", "F841", "N813", "E701"]
 "aegis_server/**" = ["S311"]

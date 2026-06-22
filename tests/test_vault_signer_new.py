@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import base64
 import sys
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -39,7 +39,6 @@ sys.modules.setdefault("hvac", _mock_hvac_mod)
 sys.modules.setdefault("hvac.exceptions", _mock_hvac_exceptions)
 
 from aegis_server.crypto.vault_signer import VaultSigner  # noqa: E402
-
 
 # ── __init__ validations ───────────────────────────────────────────────────────
 

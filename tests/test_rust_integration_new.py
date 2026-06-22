@@ -14,7 +14,6 @@ from aegis.core.rust_integration import (
     verify_pqc_signature,
 )
 
-
 # ── has_rust ──────────────────────────────────────────────────────────────────
 
 

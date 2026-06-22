@@ -7,19 +7,15 @@ from __future__ import annotations
 
 import io
 import pickle
-from pathlib import Path
 
 import pytest
 
 from aegis.core.safe_serialization import (
+    DEFAULT_ALLOWED,
     RestrictedUnpickler,
     _validate_allowed,
     safe_pickle_load,
-    DEFAULT_ALLOWED,
-    safe_dump_json,
-    safe_load_json,
 )
-
 
 # ── _validate_allowed — list and dict branches (lines 48-54) ─────────────────
 

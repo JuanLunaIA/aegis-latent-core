@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, patch
 
 from aegis.core.lsm_guard import LSMGuard
 
-
 # ── _detect_sandbox ───────────────────────────────────────────────────────────
 
 

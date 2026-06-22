@@ -12,7 +12,6 @@ import pytest
 
 from aegis.core.secrets import SecretBundle, VaultManager
 
-
 # ── SecretBundle dataclass ────────────────────────────────────────────────────
 
 

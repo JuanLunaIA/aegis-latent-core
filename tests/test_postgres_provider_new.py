@@ -21,7 +21,6 @@ else:
 
 from aegis_server.storage.postgres_provider import PostgreSQLStorageProvider  # noqa: E402
 
-
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 

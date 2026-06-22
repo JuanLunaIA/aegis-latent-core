@@ -7,11 +7,9 @@ from __future__ import annotations
 
 import math
 
-import numpy as np
 import pytest
 
 from aegis.core.telemetry import LogitEntropyMonitor
-
 
 # ── compute_entropy_gpu ───────────────────────────────────────────────────────
 

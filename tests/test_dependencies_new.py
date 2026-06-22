@@ -5,13 +5,12 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException, status
 
 from aegis.proxy.dependencies import validate_audit_auth, validate_proxy_auth
-
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
