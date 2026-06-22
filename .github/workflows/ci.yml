@@ -258,6 +258,8 @@ jobs:
         uses: sigstore/cosign-installer@v3
 
       - name: Sign image (keyless Sigstore)
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: |
-          cosign sign --yes \
-            ghcr.io/${{ github.repository }}@${{ steps.build.outputs.digest }}
+          IMAGE_REF="ghcr.io/${{ github.repository }}@${IMAGE_DIGEST}"
+          cosign sign --yes "${IMAGE_REF}"
