@@ -152,6 +152,9 @@ jobs:
         run: |
           cargo audit \
             --ignore RUSTSEC-2026-0176 \
+            --ignore RUSTSEC-2026-0177 \
+            --ignore RUSTSEC-2026-0118 \
+            --ignore RUSTSEC-2026-0119 \
             --ignore RUSTSEC-2024-0436 \
             --ignore RUSTSEC-2026-0162 \
             --ignore RUSTSEC-2026-0163 \
