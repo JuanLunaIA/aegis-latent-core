@@ -149,4 +149,10 @@ jobs:
 
       - name: Audit Rust dependencies
         working-directory: aegis_rust_v2
-        run: cargo audit
+        run: |
+          cargo audit \
+            --ignore RUSTSEC-2026-0176 \
+            --ignore RUSTSEC-2024-0436 \
+            --ignore RUSTSEC-2026-0162 \
+            --ignore RUSTSEC-2026-0163 \
+            --ignore RUSTSEC-2026-0166

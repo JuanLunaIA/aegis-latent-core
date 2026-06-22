@@ -35,7 +35,7 @@ def _make_forwarder(**kw) -> LLMForwarder:
 @pytest.mark.asyncio
 async def test_start_rust_forwarder_exception_falls_back_to_none():
     """RustForwarder.new raises → logs warning, _rust_forwarder is None (153-155)."""
-    import aegis_rust
+    aegis_rust = pytest.importorskip("aegis_rust", reason="Rust extension not installed")
 
     fwd = _make_forwarder()
 

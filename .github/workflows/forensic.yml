@@ -56,7 +56,9 @@ jobs:
 
       - name: Build Rust extension
         working-directory: aegis_rust_v2
-        run: maturin develop --release --features extension-module
+        run: |
+          maturin build --release --features extension-module
+          pip install --force-reinstall target/wheels/*.whl
 
       - name: Bandit SAST
         run: bandit -r aegis/ aegis_server/ -c pyproject.toml -lll
