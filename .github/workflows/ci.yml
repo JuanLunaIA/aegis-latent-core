@@ -261,5 +261,5 @@ jobs:
         env:
           IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: |
-          IMAGE_REF="ghcr.io/${{ github.repository }}@${IMAGE_DIGEST}"
+          IMAGE_REF="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')@${IMAGE_DIGEST}"
           cosign sign --yes "${IMAGE_REF}"
