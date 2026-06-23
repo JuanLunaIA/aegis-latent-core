@@ -312,14 +312,14 @@ is not committed to `docs/BENCHMARKS.md`.
 
 ## Summary Scorecard
 
-| Domain | Implemented | Planned | Completion |
+| Domain | Implemented | Remaining | Completion |
 |---|---|---|---|
-| Defense & Government | 29 | 28 | ~100% |
-| Healthcare & Life Sciences | 24 | 24 | ~100% |
-| Industrial Automation & OT | 18 | 21 | ~86% |
-| Enterprise Hyperscale & HA | 14 | 23 | ~61% |
-| Advanced Forensics & WAF | 38 | 27 | ~100% |
-| **Total** | **123** | **123** | **~100%** |
+| Defense & Government | 33 | 17 | ~66% |
+| Healthcare & Life Sciences | 24 | 7 | ~77% |
+| Industrial Automation & OT | 17 | 14 | ~55% |
+| Enterprise Hyperscale & HA | 14 | 19 | ~42% |
+| Advanced Forensics & WAF | 42 | 6 | ~88% |
+| **Total** | **130** | **63** | **~67%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
