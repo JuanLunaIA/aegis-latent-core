@@ -48,13 +48,13 @@ logger = logging.getLogger(__name__)
 _DOMAIN_LEVEL: dict[str, int] = {
     "UNCLASSIFIED": 0,
     "CUI": 1,
-    "SECRET": 2,
-    "TOP_SECRET": 3,
+    "SECRET": 2,  # nosec B105 — classification level label, not a password
+    "TOP_SECRET": 3,  # nosec B105 — classification level label, not a password
 }
 
 # ── Redaction token ───────────────────────────────────────────────────────────
 
-_REDACT_TOKEN = "[REDACTED-CDS]"  # noqa: S105
+_REDACT_TOKEN = "[REDACTED-CDS]"  # noqa: S105  # nosec B105
 
 
 # ── Enums ─────────────────────────────────────────────────────────────────────
@@ -65,8 +65,8 @@ class ClassificationDomain(StrEnum):
 
     UNCLASSIFIED = "UNCLASSIFIED"
     CUI = "CUI"
-    SECRET = "SECRET"  # noqa: S105
-    TOP_SECRET = "TOP_SECRET"  # noqa: S105
+    SECRET = "SECRET"  # noqa: S105  # nosec B105
+    TOP_SECRET = "TOP_SECRET"  # noqa: S105  # nosec B105
 
 
 # ── Exceptions ────────────────────────────────────────────────────────────────
