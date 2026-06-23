@@ -2,6 +2,7 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """Tests for aegis.core.conversation_graph — conversation graph crescendo analysis."""
+
 from __future__ import annotations
 
 import threading

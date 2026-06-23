@@ -13,7 +13,6 @@ import pytest
 from aegis.config import AegisSettings
 from aegis.proxy.forwarder import LLMForwarder
 
-
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
@@ -121,8 +120,10 @@ async def test_forward_json_connect_error_records_failure():
     mock_client.post = AsyncMock(side_effect=httpx.ConnectError("refused"))
     fwd._client = mock_client
 
-    with patch.object(fwd._circuit_breaker, "check"), \
-         patch.object(fwd._circuit_breaker, "record_failure") as mock_fail:
+    with (
+        patch.object(fwd._circuit_breaker, "check"),
+        patch.object(fwd._circuit_breaker, "record_failure") as mock_fail,
+    ):
         with pytest.raises(httpx.ConnectError):
             await fwd.forward_json("/v1/chat/completions", {"messages": []})
 
@@ -136,8 +137,10 @@ async def test_forward_json_timeout_records_failure():
     mock_client.post = AsyncMock(side_effect=httpx.TimeoutException("timeout"))
     fwd._client = mock_client
 
-    with patch.object(fwd._circuit_breaker, "check"), \
-         patch.object(fwd._circuit_breaker, "record_failure") as mock_fail:
+    with (
+        patch.object(fwd._circuit_breaker, "check"),
+        patch.object(fwd._circuit_breaker, "record_failure") as mock_fail,
+    ):
         with pytest.raises(httpx.TimeoutException):
             await fwd.forward_json("/v1/chat/completions", {})
 
@@ -154,9 +157,11 @@ async def test_forward_json_5xx_records_failure():
     mock_client.post = AsyncMock(return_value=_make_response(500, b"error"))
     fwd._client = mock_client
 
-    with patch.object(fwd._circuit_breaker, "check"), \
-         patch.object(fwd._circuit_breaker, "record_failure") as mock_fail, \
-         patch.object(fwd._circuit_breaker, "record_success"):
+    with (
+        patch.object(fwd._circuit_breaker, "check"),
+        patch.object(fwd._circuit_breaker, "record_failure") as mock_fail,
+        patch.object(fwd._circuit_breaker, "record_success"),
+    ):
         await fwd.forward_json("/v1/chat/completions", {})
 
     mock_fail.assert_called_once()
@@ -172,8 +177,10 @@ async def test_forward_json_200_records_success():
     mock_client.post = AsyncMock(return_value=_make_response(200, b'{"id":"c"}'))
     fwd._client = mock_client
 
-    with patch.object(fwd._circuit_breaker, "check"), \
-         patch.object(fwd._circuit_breaker, "record_success") as mock_succ:
+    with (
+        patch.object(fwd._circuit_breaker, "check"),
+        patch.object(fwd._circuit_breaker, "record_success") as mock_succ,
+    ):
         await fwd.forward_json("/v1/chat/completions", {})
 
     mock_succ.assert_called_once()
@@ -189,9 +196,11 @@ async def test_forward_json_401_logs_error():
     mock_client.post = AsyncMock(return_value=_make_response(401, b"unauthorized"))
     fwd._client = mock_client
 
-    with patch.object(fwd._circuit_breaker, "check"), \
-         patch.object(fwd._circuit_breaker, "record_success"), \
-         patch("aegis.proxy.forwarder.logger") as mock_log:
+    with (
+        patch.object(fwd._circuit_breaker, "check"),
+        patch.object(fwd._circuit_breaker, "record_success"),
+        patch("aegis.proxy.forwarder.logger") as mock_log,
+    ):
         await fwd.forward_json("/v1/chat/completions", {})
 
     assert mock_log.error.called
@@ -207,9 +216,11 @@ async def test_forward_json_403_logs_error():
     mock_client.post = AsyncMock(return_value=_make_response(403, b"forbidden"))
     fwd._client = mock_client
 
-    with patch.object(fwd._circuit_breaker, "check"), \
-         patch.object(fwd._circuit_breaker, "record_success"), \
-         patch("aegis.proxy.forwarder.logger") as mock_log:
+    with (
+        patch.object(fwd._circuit_breaker, "check"),
+        patch.object(fwd._circuit_breaker, "record_success"),
+        patch("aegis.proxy.forwarder.logger") as mock_log,
+    ):
         await fwd.forward_json("/v1/chat/completions", {})
 
     assert mock_log.error.called
@@ -238,8 +249,10 @@ async def test_forward_json_non_openai_translates_response():
     )
     fwd._client = mock_client
 
-    with patch.object(fwd._circuit_breaker, "check"), \
-         patch.object(fwd._circuit_breaker, "record_success"):
+    with (
+        patch.object(fwd._circuit_breaker, "check"),
+        patch.object(fwd._circuit_breaker, "record_success"),
+    ):
         resp = await fwd.forward_json("/chat/completions", {"model": "claude-3"})
 
     assert resp.content == b'{"choices":[{"message":{"content":"hi"}}]}'
@@ -269,6 +282,7 @@ async def test_stream_passthrough_data_done():
     class _StreamCtxMgr:
         async def __aenter__(self_):
             return mock_response
+
         async def __aexit__(self_, *a):
             pass
 
@@ -304,6 +318,7 @@ async def test_stream_passthrough_data_json_line():
     class _StreamCtxMgr:
         async def __aenter__(self_):
             return mock_response
+
         async def __aexit__(self_, *a):
             pass
 
@@ -338,6 +353,7 @@ async def test_stream_passthrough_empty_line():
     class _StreamCtxMgr:
         async def __aenter__(self_):
             return mock_response
+
         async def __aexit__(self_, *a):
             pass
 
@@ -370,6 +386,7 @@ async def test_stream_passthrough_non_data_line():
     class _StreamCtxMgr:
         async def __aenter__(self_):
             return mock_response
+
         async def __aexit__(self_, *a):
             pass
 
@@ -402,6 +419,7 @@ async def test_stream_passthrough_invalid_json_line():
     class _StreamCtxMgr:
         async def __aenter__(self_):
             return mock_response
+
         async def __aexit__(self_, *a):
             pass
 
@@ -431,6 +449,7 @@ async def test_stream_passthrough_5xx_records_failure():
     class _StreamCtxMgr:
         async def __aenter__(self_):
             return mock_response
+
         async def __aexit__(self_, *a):
             pass
 
@@ -481,6 +500,7 @@ async def test_stream_sse_passthrough_provider():
     class _StreamCtxMgr:
         async def __aenter__(self_):
             return mock_response
+
         async def __aexit__(self_, *a):
             pass
 
@@ -488,8 +508,10 @@ async def test_stream_sse_passthrough_provider():
     mock_client.stream.return_value = _StreamCtxMgr()
     fwd._client = mock_client
 
-    with patch.object(fwd._circuit_breaker, "check"), \
-         patch.object(fwd._circuit_breaker, "record_success"):
+    with (
+        patch.object(fwd._circuit_breaker, "check"),
+        patch.object(fwd._circuit_breaker, "record_success"),
+    ):
         items = []
         async for item in fwd.stream_sse("/v1/chat/completions", {"stream": True}):
             items.append(item)

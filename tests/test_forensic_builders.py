@@ -18,7 +18,6 @@ from aegis.core.forensic import (
     sha256_hex,
 )
 
-
 # ── TokenTrailEntry ───────────────────────────────────────────────────────────
 
 

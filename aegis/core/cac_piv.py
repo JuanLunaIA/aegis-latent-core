@@ -17,6 +17,7 @@ Certificate policy OID sets follow:
   - NIST SP 800-73-4 (PIV / PIV-I)
   - GSA FPKI Certificate Policy (id-fpki)
 """
+
 from __future__ import annotations
 
 import logging
@@ -31,8 +32,8 @@ logger = logging.getLogger(__name__)
 
 _DOD_CAC_POLICY_OIDS: frozenset[str] = frozenset(
     {
-        "2.16.840.1.101.2.1.11.5",   # id-dod-certpcy-basicAssurance
-        "2.16.840.1.101.2.1.11.9",   # id-dod-certpcy-mediumAssurance
+        "2.16.840.1.101.2.1.11.5",  # id-dod-certpcy-basicAssurance
+        "2.16.840.1.101.2.1.11.9",  # id-dod-certpcy-mediumAssurance
         "2.16.840.1.101.2.1.11.17",  # id-dod-certpcy-highAssurance
         "2.16.840.1.101.2.1.11.18",  # id-dod-certpcy-mediumNPE
         "2.16.840.1.101.2.1.11.19",  # id-dod-certpcy-EDIPI
@@ -49,9 +50,9 @@ _PIV_POLICY_OIDS: frozenset[str] = frozenset(
     {
         "2.16.840.1.101.3.2.1.3.6",  # id-fpki-certpcy-pivi-hardware
         "2.16.840.1.101.3.2.1.3.7",  # id-fpki-certpcy-pivi-cardAuth
-        "2.16.840.1.101.3.2.1.3.13", # id-fpki-certpcy-pivi-contentSigning
-        "2.16.840.1.101.3.2.1.3.14", # id-fpki-certpcy-pivi-authKey
-        "2.16.840.1.101.3.2.1.3.17", # id-fpki-certpcy-pivca
+        "2.16.840.1.101.3.2.1.3.13",  # id-fpki-certpcy-pivi-contentSigning
+        "2.16.840.1.101.3.2.1.3.14",  # id-fpki-certpcy-pivi-authKey
+        "2.16.840.1.101.3.2.1.3.17",  # id-fpki-certpcy-pivca
     }
 )
 
@@ -111,20 +112,14 @@ class CACPIVVerifier:
             lacks the Client Auth EKU (when required), or has no extractable identity.
         """
         if not self._has_cac_piv_policy(cert):
-            raise CACPIVCertError(
-                "Certificate does not contain a recognized CAC/PIV policy OID"
-            )
+            raise CACPIVCertError("Certificate does not contain a recognized CAC/PIV policy OID")
 
         if self._require_eku and not self._has_client_auth_eku(cert):
-            raise CACPIVCertError(
-                "Certificate lacks Client Authentication EKU (id-kp-clientAuth)"
-            )
+            raise CACPIVCertError("Certificate lacks Client Authentication EKU (id-kp-clientAuth)")
 
         identity = self._extract_identity(cert)
         if not identity:
-            raise CACPIVCertError(
-                "Certificate has no extractable CAC/PIV identity (EDIPI or UUID)"
-            )
+            raise CACPIVCertError("Certificate has no extractable CAC/PIV identity (EDIPI or UUID)")
 
         logger.debug("CAC/PIV verified: identity=%s", identity)
         return identity
@@ -132,6 +127,7 @@ class CACPIVVerifier:
     def parse_pem(self, pem_bytes: bytes) -> x509.Certificate:
         """Parse PEM-encoded certificate bytes and return the x509 object."""
         from cryptography.hazmat.primitives.serialization import Encoding  # noqa: F401
+
         return x509.load_pem_x509_certificate(pem_bytes)
 
     # ── Private helpers ───────────────────────────────────────────────────────

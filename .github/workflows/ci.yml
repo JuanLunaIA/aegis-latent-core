@@ -10,6 +10,7 @@ on:
     branches: [main, develop]
   release:
     types: [published]
+  workflow_dispatch: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,8 +19,11 @@ concurrency:
 env:
   PYTHON_VERSION: "3.12"
   CARGO_TERM_COLOR: always
+  # Prevent seccomp filter from interfering with CI runners
+  HERMES_SANDBOX: "true"
 
 jobs:
+  # ── License headers ──────────────────────────────────────────────────────────
   license-check:
     name: License Headers
     runs-on: ubuntu-22.04
@@ -37,6 +41,7 @@ jobs:
             exit 1
           fi
 
+  # ── Lint & format ─────────────────────────────────────────────────────────
   lint:
     name: Lint & Format
     runs-on: ubuntu-22.04
@@ -46,18 +51,28 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-      - name: Install tooling
+      - name: Install ruff
         run: pip install ruff
-      - name: Ruff lint (runtime packages)
+      - name: Ruff lint
         run: |
           ruff check \
             aegis \
             aegis_server \
             integrations \
-            tests
+            tests \
+            tools/visualizer \
+            benchmarks
       - name: Ruff format check
-        run: ruff format --check aegis aegis_server integrations tests
+        run: |
+          ruff format --check \
+            aegis \
+            aegis_server \
+            integrations \
+            tests \
+            tools/visualizer \
+            benchmarks
 
+  # ── Type check ────────────────────────────────────────────────────────────
   typecheck:
     name: Type Check
     runs-on: ubuntu-22.04
@@ -67,9 +82,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-      - name: Install package (editable) + mypy
+      - name: Install package + mypy
         run: pip install -e ".[dev]"
-      - name: Mypy (CI profile — proxy + core runtime modules)
+      - name: Mypy (CI profile — proxy + core runtime)
         run: |
           mypy --config-file=mypy-ci.ini \
             aegis/config.py \
@@ -90,13 +105,14 @@ jobs:
             aegis/proxy/schemas.py \
             aegis/proxy/forwarder.py
 
+  # ── Tests ─────────────────────────────────────────────────────────────────
   test:
     name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -119,6 +135,7 @@ jobs:
           files: coverage.xml
           fail_ci_if_error: false
 
+  # ── Rust extension ────────────────────────────────────────────────────────
   rust:
     name: Rust Extension
     runs-on: ubuntu-22.04
@@ -130,17 +147,18 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install maturin
         run: pip install maturin
-      - name: Cargo test (aegis_rust_v2)
+      - name: Cargo test
         working-directory: aegis_rust_v2
         env:
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
         run: cargo test --release
-      - name: Build Python wheel (smoke)
+      - name: Build Python wheel (smoke check)
         working-directory: aegis_rust_v2
         env:
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
-        run: maturin build --release
+        run: maturin build --release --features extension-module
 
+  # ── Security scan ─────────────────────────────────────────────────────────
   security:
     name: Security Scan
     runs-on: ubuntu-22.04
@@ -156,9 +174,10 @@ jobs:
           pip install pip-audit
       - name: Bandit SAST
         run: bandit -r aegis/ aegis_server/ -c pyproject.toml -lll
-      - name: Dependency audit (runtime requirements)
+      - name: Dependency audit
         run: pip-audit -r requirements.txt
 
+  # ── Helm lint ─────────────────────────────────────────────────────────────
   helm-lint:
     name: Helm Lint
     runs-on: ubuntu-22.04
@@ -169,6 +188,7 @@ jobs:
           version: v3.14.4
       - run: helm lint deploy/helm/
 
+  # ── SBOM (release only) ───────────────────────────────────────────────────
   sbom:
     name: Generate SBOM
     runs-on: ubuntu-22.04
@@ -186,6 +206,7 @@ jobs:
           name: sbom
           path: sbom.spdx.json
 
+  # ── Docker build & push (main + release) ──────────────────────────────────
   docker:
     name: Docker Build & Push
     runs-on: ubuntu-22.04
@@ -202,14 +223,13 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
-        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker meta
+      - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -226,7 +246,7 @@ jobs:
         with:
           context: .
           file: deploy/docker/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -235,11 +255,11 @@ jobs:
           sbom: true
 
       - name: Install cosign
-        if: github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@v3
 
-      - name: Sign image (keyless, Sigstore)
-        if: github.event_name != 'pull_request'
+      - name: Sign image (keyless Sigstore)
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: |
-          cosign sign --yes \
-            ghcr.io/${{ github.repository }}@${{ steps.build.outputs.digest }}
+          IMAGE_REF="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')@${IMAGE_DIGEST}"
+          cosign sign --yes "${IMAGE_REF}"

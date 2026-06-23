@@ -6,9 +6,7 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -128,7 +126,9 @@ def test_write_atomic_unlink_also_raises_is_silenced(tmp_path):
     """When write_text and unlink both raise, OSError from unlink is silenced (511-512)."""
     output_path = tmp_path / "test.json"
 
-    with patch("pathlib.Path.write_text", side_effect=OSError("disk full")), \
-         patch("pathlib.Path.unlink", side_effect=OSError("unlink failed")):
+    with (
+        patch("pathlib.Path.write_text", side_effect=OSError("disk full")),
+        patch("pathlib.Path.unlink", side_effect=OSError("unlink failed")),
+    ):
         with pytest.raises(RuntimeError, match="failed to write bundle"):
             ComplianceExporter._write_atomic(output_path, {"key": "value"})

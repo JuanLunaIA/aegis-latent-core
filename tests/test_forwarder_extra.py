@@ -35,12 +35,14 @@ def _make_forwarder(**kw) -> LLMForwarder:
 @pytest.mark.asyncio
 async def test_start_rust_forwarder_exception_falls_back_to_none():
     """RustForwarder.new raises → logs warning, _rust_forwarder is None (153-155)."""
-    import aegis_rust
+    aegis_rust = pytest.importorskip("aegis_rust", reason="Rust extension not installed")
 
     fwd = _make_forwarder()
 
-    with patch("aegis.proxy.forwarder.httpx.AsyncClient") as mock_cls, \
-         patch.object(aegis_rust.RustForwarder, "new", side_effect=RuntimeError("init fail")):
+    with (
+        patch("aegis.proxy.forwarder.httpx.AsyncClient") as mock_cls,
+        patch.object(aegis_rust.RustForwarder, "new", side_effect=RuntimeError("init fail")),
+    ):
         mock_cls.return_value = AsyncMock()
         await fwd.start()
 
@@ -61,9 +63,11 @@ async def test_forward_json_rust_path_success():
     mock_rust.forward_json_sync.return_value = mock_response
     fwd._rust_forwarder = mock_rust
 
-    with patch.object(fwd_mod, "HAS_RUST", True), \
-         patch.object(fwd._circuit_breaker, "check"), \
-         patch.object(fwd._circuit_breaker, "record_success") as mock_succ:
+    with (
+        patch.object(fwd_mod, "HAS_RUST", True),
+        patch.object(fwd._circuit_breaker, "check"),
+        patch.object(fwd._circuit_breaker, "record_success") as mock_succ,
+    ):
         resp = await fwd.forward_json("/v1/chat/completions", {"messages": []})
 
     mock_succ.assert_called_once()
@@ -80,9 +84,11 @@ async def test_forward_json_rust_path_exception_records_failure():
     mock_rust.forward_json_sync.side_effect = RuntimeError("rust died")
     fwd._rust_forwarder = mock_rust
 
-    with patch.object(fwd_mod, "HAS_RUST", True), \
-         patch.object(fwd._circuit_breaker, "check"), \
-         patch.object(fwd._circuit_breaker, "record_failure") as mock_fail:
+    with (
+        patch.object(fwd_mod, "HAS_RUST", True),
+        patch.object(fwd._circuit_breaker, "check"),
+        patch.object(fwd._circuit_breaker, "record_failure") as mock_fail,
+    ):
         with pytest.raises(RuntimeError, match="rust died"):
             await fwd.forward_json("/v1/chat/completions", {})
 
@@ -106,7 +112,7 @@ async def test_stream_sse_translation_provider():
     mock_provider.translate_request.return_value = ("/v1/messages", {"messages": []})
 
     async def _mock_translate_stream(line_iter, **kwargs):
-        yield b"data: {\"id\":\"c\",\"choices\":[]}\n"
+        yield b'data: {"id":"c","choices":[]}\n'
         yield b"data: [DONE]\n"
 
     mock_provider.translate_stream = _mock_translate_stream
@@ -133,8 +139,10 @@ async def test_stream_sse_translation_provider():
     mock_client.stream.return_value = _StreamCtxMgr()
     fwd._client = mock_client
 
-    with patch.object(fwd._circuit_breaker, "check"), \
-         patch.object(fwd._circuit_breaker, "record_success"):
+    with (
+        patch.object(fwd._circuit_breaker, "check"),
+        patch.object(fwd._circuit_breaker, "record_success"),
+    ):
         items = []
         async for item in fwd.stream_sse("/v1/chat/completions", {"stream": True}):
             items.append(item)

@@ -8,6 +8,7 @@ All PKCS#11 interactions are mocked so no real HSM hardware or SoftHSM2
 installation is required.  The mock faithfully reproduces the python-pkcs11
 object graph (lib → token → session → key objects).
 """
+
 from __future__ import annotations
 
 import sys
@@ -116,14 +117,22 @@ def pkcs11_rsa_env():
     token = _make_token(session)
     slot = _make_slot(token)
     pkcs11_mod = _make_pkcs11_module()
-    pkcs11_mod.lib = MagicMock(return_value=MagicMock(
-        get_slots=MagicMock(return_value=[slot]),
-        get_token=MagicMock(return_value=token),
-    ))
+    pkcs11_mod.lib = MagicMock(
+        return_value=MagicMock(
+            get_slots=MagicMock(return_value=[slot]),
+            get_token=MagicMock(return_value=token),
+        )
+    )
 
-    with patch.dict(sys.modules, {"pkcs11": pkcs11_mod, "pkcs11.util.rsa": pkcs11_mod.util.rsa,
-                                   "pkcs11.mechanisms": pkcs11_mod.mechanisms,
-                                   "pkcs11.util.ec": pkcs11_mod.util.ec}):
+    with patch.dict(
+        sys.modules,
+        {
+            "pkcs11": pkcs11_mod,
+            "pkcs11.util.rsa": pkcs11_mod.util.rsa,
+            "pkcs11.mechanisms": pkcs11_mod.mechanisms,
+            "pkcs11.util.ec": pkcs11_mod.util.ec,
+        },
+    ):
         yield pkcs11_mod, priv, pub, session
 
 
@@ -138,14 +147,22 @@ def pkcs11_ec_env():
     # Make KeyType.RSA mismatch so EC branch is taken
     pkcs11_mod.KeyType.RSA = "RSA"
     pkcs11_mod.KeyType.EC = "EC"
-    pkcs11_mod.lib = MagicMock(return_value=MagicMock(
-        get_slots=MagicMock(return_value=[slot]),
-        get_token=MagicMock(return_value=token),
-    ))
+    pkcs11_mod.lib = MagicMock(
+        return_value=MagicMock(
+            get_slots=MagicMock(return_value=[slot]),
+            get_token=MagicMock(return_value=token),
+        )
+    )
 
-    with patch.dict(sys.modules, {"pkcs11": pkcs11_mod, "pkcs11.util.rsa": pkcs11_mod.util.rsa,
-                                   "pkcs11.mechanisms": pkcs11_mod.mechanisms,
-                                   "pkcs11.util.ec": pkcs11_mod.util.ec}):
+    with patch.dict(
+        sys.modules,
+        {
+            "pkcs11": pkcs11_mod,
+            "pkcs11.util.rsa": pkcs11_mod.util.rsa,
+            "pkcs11.mechanisms": pkcs11_mod.mechanisms,
+            "pkcs11.util.ec": pkcs11_mod.util.ec,
+        },
+    ):
         yield pkcs11_mod, priv, pub, session
 
 
@@ -159,6 +176,7 @@ class TestHSMSigningBackendUnavailable:
         saved = sys.modules.pop("pkcs11", None)
         try:
             import aegis.core.hsm as hsm_mod
+
             # Patch _PKCS11_AVAILABLE to False to simulate missing library
             with patch.object(hsm_mod, "_PKCS11_AVAILABLE", False):
                 backend = hsm_mod.HSMSigningBackend(library_path="/nonexistent.so")
@@ -170,6 +188,7 @@ class TestHSMSigningBackendUnavailable:
     def test_sign_raises_when_unavailable(self):
         import aegis.core.hsm as hsm_mod
         from aegis.core.hsm import HSMSigningBackend, HSMUnavailableError
+
         with patch.object(hsm_mod, "_PKCS11_AVAILABLE", False):
             backend = HSMSigningBackend(library_path="/nonexistent.so")
             with pytest.raises(HSMUnavailableError):
@@ -181,8 +200,15 @@ class TestHSMSigningBackendUnavailable:
 
         mock_pkcs11 = MagicMock()
         mock_pkcs11.lib = MagicMock(side_effect=Exception("library load error"))
-        with patch.dict(sys.modules, {"pkcs11": mock_pkcs11, "pkcs11.util.rsa": MagicMock(),
-                                       "pkcs11.mechanisms": MagicMock(), "pkcs11.util.ec": MagicMock()}):
+        with patch.dict(
+            sys.modules,
+            {
+                "pkcs11": mock_pkcs11,
+                "pkcs11.util.rsa": MagicMock(),
+                "pkcs11.mechanisms": MagicMock(),
+                "pkcs11.util.ec": MagicMock(),
+            },
+        ):
             with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
                 backend = hsm_mod.HSMSigningBackend(library_path="/fake/libpkcs11.so")
                 assert backend.available is False
@@ -191,11 +217,16 @@ class TestHSMSigningBackendUnavailable:
         import aegis.core.hsm as hsm_mod
 
         mock_pkcs11 = MagicMock()
-        mock_pkcs11.lib = MagicMock(return_value=MagicMock(
-            get_slots=MagicMock(return_value=[])
-        ))
-        with patch.dict(sys.modules, {"pkcs11": mock_pkcs11, "pkcs11.util.rsa": MagicMock(),
-                                       "pkcs11.mechanisms": MagicMock(), "pkcs11.util.ec": MagicMock()}):
+        mock_pkcs11.lib = MagicMock(return_value=MagicMock(get_slots=MagicMock(return_value=[])))
+        with patch.dict(
+            sys.modules,
+            {
+                "pkcs11": mock_pkcs11,
+                "pkcs11.util.rsa": MagicMock(),
+                "pkcs11.mechanisms": MagicMock(),
+                "pkcs11.util.ec": MagicMock(),
+            },
+        ):
             with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
                 backend = hsm_mod.HSMSigningBackend(library_path="/fake/libpkcs11.so")
                 assert backend.available is False
@@ -204,6 +235,7 @@ class TestHSMSigningBackendUnavailable:
 class TestHSMSigningBackendRSA:
     def test_available_true_with_rsa_key(self, pkcs11_rsa_env):
         import aegis.core.hsm as hsm_mod
+
         with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
             backend = hsm_mod.HSMSigningBackend(
                 library_path="/fake/libsofthsm2.so",
@@ -213,6 +245,7 @@ class TestHSMSigningBackendRSA:
 
     def test_rsa_sign_returns_correct_scheme(self, pkcs11_rsa_env):
         import aegis.core.hsm as hsm_mod
+
         with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
             backend = hsm_mod.HSMSigningBackend(
                 library_path="/fake/libsofthsm2.so",
@@ -228,6 +261,7 @@ class TestHSMSigningBackendRSA:
     def test_rsa_signature_matches_mock(self, pkcs11_rsa_env):
         pkcs11_mod, priv, pub, session = pkcs11_rsa_env
         import aegis.core.hsm as hsm_mod
+
         with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
             backend = hsm_mod.HSMSigningBackend(
                 library_path="/fake/libsofthsm2.so",
@@ -239,6 +273,7 @@ class TestHSMSigningBackendRSA:
     def test_close_calls_session_close(self, pkcs11_rsa_env):
         pkcs11_mod, priv, pub, session = pkcs11_rsa_env
         import aegis.core.hsm as hsm_mod
+
         with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
             backend = hsm_mod.HSMSigningBackend(
                 library_path="/fake/libsofthsm2.so",
@@ -249,11 +284,13 @@ class TestHSMSigningBackendRSA:
 
     def test_key_label_not_found_raises(self, pkcs11_rsa_env):
         from aegis.core.hsm import HSMUnavailableError
+
         pkcs11_mod, priv, pub, session = pkcs11_rsa_env
         # Override session to return empty key list
         session.get_objects = MagicMock(return_value=[])
 
         import aegis.core.hsm as hsm_mod
+
         with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
             backend = hsm_mod.HSMSigningBackend(
                 library_path="/fake/libsofthsm2.so",
@@ -268,6 +305,7 @@ class TestHSMSigningBackendEC:
     def test_ec_sign_returns_correct_scheme(self, pkcs11_ec_env):
         pkcs11_mod, priv, pub, session = pkcs11_ec_env
         import aegis.core.hsm as hsm_mod
+
         # Patch the KeyType so RSA branch is NOT taken
         with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
             with patch.object(pkcs11_mod.KeyType, "RSA", "RSA_NEVER_MATCH"):
@@ -297,9 +335,7 @@ class TestLedgerHSMIntegration:
 
         mock_backend = self._make_mock_backend()
         wal = str(tmp_path / "hsm.wal.jsonl")
-        ledger = CryptographicAuditLedger(
-            wal, signing_key="", hsm_backend=mock_backend
-        )
+        ledger = CryptographicAuditLedger(wal, signing_key="", hsm_backend=mock_backend)
         try:
             node = ledger.commit_state("s1", 1.0, b"payload")
             assert node.signature_scheme == "pkcs11-rsa-pss-sha256"
@@ -314,9 +350,7 @@ class TestLedgerHSMIntegration:
 
         mock_backend = self._make_mock_backend()
         wal = str(tmp_path / "hsm2.wal.jsonl")
-        ledger = CryptographicAuditLedger(
-            wal, signing_key="", hsm_backend=mock_backend
-        )
+        ledger = CryptographicAuditLedger(wal, signing_key="", hsm_backend=mock_backend)
         try:
             ledger.commit_state("s1", 1.0, b"p1")
             ledger.commit_state("s2", 2.0, b"p2")
@@ -349,9 +383,7 @@ class TestLedgerHSMIntegration:
 
         wal = str(tmp_path / "raise.wal.jsonl")
         with patch("aegis.core.crypto_audit.RUST_AVAILABLE", False):
-            ledger = CryptographicAuditLedger(
-                wal, signing_key="fallback-key", hsm_backend=backend
-            )
+            ledger = CryptographicAuditLedger(wal, signing_key="fallback-key", hsm_backend=backend)
             try:
                 node = ledger.commit_state("s1", 1.0, b"payload")
                 assert node.signature_scheme == "hmac-sha256"
@@ -375,9 +407,7 @@ class TestLedgerHSMIntegration:
 
         mock_backend = self._make_mock_backend()
         wal = str(tmp_path / "integrity.wal.jsonl")
-        ledger = CryptographicAuditLedger(
-            wal, signing_key="", hsm_backend=mock_backend
-        )
+        ledger = CryptographicAuditLedger(wal, signing_key="", hsm_backend=mock_backend)
         try:
             for i in range(5):
                 ledger.commit_state(f"s{i}", float(i), b"data")

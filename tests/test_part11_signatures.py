@@ -2,6 +2,7 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """21 CFR Part 11 electronic signature annotation fields (ROADMAP Domain 2.2)."""
+
 from __future__ import annotations
 
 import json
@@ -48,13 +49,23 @@ class TestAuditNodePart11Fields:
     def test_fields_not_in_node_hash(self, tmp_path):
         """signer_name and signature_meaning must not appear in the hash content string."""
         ledger = self._ledger(tmp_path)
-        node = ledger.commit_state("s1", 0.0, b"payload", signer_name="alice", signature_meaning="authored")
+        node = ledger.commit_state(
+            "s1", 0.0, b"payload", signer_name="alice", signature_meaning="authored"
+        )
         ledger.close()
-        hash_content = "|".join([
-            node.prev_hash, node.state_id, f"{node.timestamp:.9f}",
-            str(node.entropy), node.tenant_id, node.merkle_root,
-            node.signature, node.request_hash, node.response_hash,
-        ])
+        hash_content = "|".join(
+            [
+                node.prev_hash,
+                node.state_id,
+                f"{node.timestamp:.9f}",
+                str(node.entropy),
+                node.tenant_id,
+                node.merkle_root,
+                node.signature,
+                node.request_hash,
+                node.response_hash,
+            ]
+        )
         assert "alice" not in hash_content
         assert "authored" not in hash_content
 

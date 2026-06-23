@@ -8,8 +8,6 @@ from __future__ import annotations
 import sys
 from unittest.mock import MagicMock
 
-import pytest
-
 # ── sys.modules stubs for optional backends ───────────────────────────────────
 
 # hvac stub (must be before import of vault_signer)
@@ -66,6 +64,7 @@ def _enterprise_settings(**kwargs) -> EnterpriseSettings:
 def test_crypto_getattr_vault_signer_returns_class():
     """__getattr__('VaultSigner') imports and returns VaultSigner class (45-47)."""
     import aegis_server.crypto as crypto_mod
+
     VaultSigner = crypto_mod.__getattr__("VaultSigner")
     assert VaultSigner.__name__ == "VaultSigner"
 

@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -16,7 +15,6 @@ from aegis.core.ratelimiter import (
     InMemoryRateLimiter,
     create_rate_limiter,
 )
-
 
 # ── InMemoryRateLimiter — basic token bucket ──────────────────────────────────
 
@@ -141,9 +139,7 @@ async def test_distributed_check_limit_allows_on_redis_failure(caplog):
 
 @pytest.mark.asyncio
 async def test_distributed_check_limit_zero_rate_returns_false():
-    limiter = DistributedRateLimiter(
-        redis_url="redis://localhost:6379", requests_per_minute=0
-    )
+    limiter = DistributedRateLimiter(redis_url="redis://localhost:6379", requests_per_minute=0)
     limiter.redis = MagicMock()
     result = await limiter.check_limit("user-1")
     assert result is False

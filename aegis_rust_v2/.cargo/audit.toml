@@ -1,0 +1,26 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+#
+# cargo-audit advisory suppression — review before each pyo3/pqcrypto upgrade.
+
+[advisories]
+ignore = [
+    # pyo3 0.24.x: two CVEs tracked for upgrade to >=0.29.0 when API migration scheduled.
+    "RUSTSEC-2026-0176",  # out-of-bounds read in nth/nth_back for PyList/PyTuple iterators
+    "RUSTSEC-2026-0177",  # missing Sync bound on PyCFunction::new_closure closures
+
+    # hickory-dns/hickory-proto: transitive via reqwest hickory-dns feature.
+    # RUSTSEC-2026-0118 has no fix available upstream; RUSTSEC-2026-0119 requires
+    # hickory-proto >=0.26.1 which reqwest has not yet released support for.
+    "RUSTSEC-2026-0118",  # hickory-dns
+    "RUSTSEC-2026-0119",  # hickory-proto CPU exhaustion (O(n²) name compression)
+
+    # paste macro crate — unmaintained upstream, no CVE; used transitively by pqcrypto.
+    "RUSTSEC-2024-0436",
+
+    # pqcrypto family — unmaintained upstream advisories; no replacement available yet.
+    "RUSTSEC-2026-0162",  # pqcrypto-traits
+    "RUSTSEC-2026-0163",  # pqcrypto-internals
+    "RUSTSEC-2026-0166",  # pqcrypto-mldsa
+]
