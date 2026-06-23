@@ -13,7 +13,10 @@ authors = ["Juan Luna <juan.c.luna04@gmail.com>"]
 # Enable when building as a Python extension (.so/.pyd).
 # maturin passes --features extension-module automatically; cargo test omits it
 # so libpython is linked normally for the test binary.
+default = ["extension-module"]
 extension-module = ["pyo3/extension-module"]
+embedded = []  # Strip non-essential components for edge/OT deployment
+full = ["extension-module"]  # All features
 
 [lib]
 name = "aegis_rust"
@@ -79,7 +82,22 @@ wiremock = "0.6"
 tempfile = "3"
 
 [profile.release]
+opt-level = 3
 lto = "fat"
 codegen-units = 1
+panic = "abort"
+overflow-checks = true
+strip = "debuginfo"
+
+[profile.release.build-override]
 opt-level = 3
 strip = true
+
+[profile.embedded]
+inherits = "release"
+opt-level = "z"        # Optimize for size
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true           # Strip all symbols for minimum size
+overflow-checks = false  # Disable for size (safety still via seccomp)
