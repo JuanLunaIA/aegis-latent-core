@@ -1,0 +1,14 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+#
+# Cargo build configuration — linker hardening flags for Linux release builds.
+# PIE is enabled by default by the Rust toolchain on Linux x86-64.
+# These flags add RELRO and a non-executable stack explicitly.
+
+[target.'cfg(target_os = "linux")']
+rustflags = [
+    "-C", "link-arg=-Wl,-z,relro",
+    "-C", "link-arg=-Wl,-z,now",
+    "-C", "link-arg=-Wl,-z,noexecstack",
+]
