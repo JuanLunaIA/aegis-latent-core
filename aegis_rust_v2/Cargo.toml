@@ -9,13 +9,19 @@ description = "Tier-4 Rust core: zero-copy forwarder, Aho-Corasick WAF, BLAKE3 a
 license = "AGPL-3.0-only"
 authors = ["Juan Luna <juan.c.luna04@gmail.com>"]
 
+[features]
+default = ["extension-module"]
+extension-module = ["pyo3/extension-module"]
+embedded = []  # Strip non-essential components for edge/OT deployment
+full = ["extension-module"]  # All features
+
 [lib]
 name = "aegis_rust"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # Python bindings
-pyo3 = { version = "0.24.1", features = ["extension-module", "abi3-py311"] }
+pyo3 = { version = "0.24.1", features = ["abi3-py311"] }
 
 # Async runtime — powers connection-pooled HTTP forwarder
 tokio = { version = "1", features = ["full"] }
@@ -77,3 +83,12 @@ lto = "fat"
 codegen-units = 1
 opt-level = 3
 strip = true
+
+[profile.embedded]
+inherits = "release"
+opt-level = "z"        # Optimize for size
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true           # Strip all symbols for minimum size
+overflow-checks = false  # Disable for size (safety still via seccomp)
