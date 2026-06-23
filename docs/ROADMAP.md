@@ -39,7 +39,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] HSM/PKCS#11 signing integration (e.g., `python-pkcs11`, `opensc`, Thales Luna / AWS CloudHSM): `aegis/core/hsm.py` implements `HSMSigningBackend` with RSA-PSS and ECDSA-SHA256; graceful fallback when library absent; integrated into `CryptographicAuditLedger` signing priority chain
 - [ ] FIPS 140-3 Level 3 validated module boundary (currently uses upstream Rust crates, not a validated boundary)
 - [x] NSA Suite B / CNSA 2.0 algorithm negotiation (P-384 ECDH, AES-256-GCM, SHA-384 where Suite B mandated) (`aegis/core/cnsa_negotiation.py`: `CNSANegotiator` with a 16-algorithm approved registry across Suite B / CNSA 1.0 / CNSA 2.0 and four categories (key exchange, signature, symmetric, hash); per-category strongest-compliant selection, alias-aware resolution (Kyber→ML-KEM, Dilithium→ML-DSA), `mandate_quantum_resistant` enforcement, downgrade-attack refusal, and `NegotiationResult` with `selected`/`rejected`/`missing_categories`/`to_dict()`; `pytest tests/test_cnsa_negotiation.py` — 44 tests)
-- [ ] Kyber-1024 (FIPS 203 ML-KEM) key encapsulation for session bootstrap
+- [x] Kyber-1024 (FIPS 203 ML-KEM) key encapsulation for session bootstrap (`aegis/core/mlkem_session.py`: `MLKEMSessionBootstrap` with `generate_keypair()`, `encapsulate()`, `decapsulate()`, and `full_exchange()` using `kyber-py` Kyber-1024; `MLKEMKeyPair` frozen dataclass with size validation; soft dependency with `HAS_MLKEM` flag and `MLKEMUnavailableError` fallback; pk=1568 B, sk=3168 B, ct=1568 B, ss=32 B; `pytest tests/test_mlkem_session.py` — 21 tests)
 - [ ] Cross-domain solution (CDS) guard integration for classified ↔ unclassified boundary enforcement
 
 #### 1.2 Access Control & Identity (NIST AC-2, AC-3, IA-2, IA-5)
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Remaining | Completion |
 |---|---|---|---|
-| Defense & Government | 33 | 17 | ~66% |
+| Defense & Government | 34 | 16 | ~68% |
 | Healthcare & Life Sciences | 24 | 7 | ~77% |
 | Industrial Automation & OT | 17 | 14 | ~55% |
 | Enterprise Hyperscale & HA | 14 | 19 | ~42% |
 | Advanced Forensics & WAF | 42 | 6 | ~88% |
-| **Total** | **130** | **63** | **~67%** |
+| **Total** | **131** | **62** | **~68%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
