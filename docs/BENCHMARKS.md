@@ -1,6 +1,7 @@
 # Aegis Performance Benchmarks
 
-Measured on **2026-06-20**. All numbers are from actual execution — none are invented.
+Measured on **2026-06-20** (Claims 1–2) and **2026-06-21** (Claim 3, live HTTP load).
+All numbers are from actual execution — none are invented.
 See [Reproducing](#reproducing) for exact commands to re-run.
 
 ---
@@ -130,6 +131,70 @@ For very small N (<100), PyO3 call overhead approaches the per-leaf computation 
 
 ---
 
+## Claim 3 — Live Single-Node HTTP Server Throughput
+
+**Measured 2026-06-21.** First published single-node throughput numbers (the README
+previously noted these were "not yet published").
+
+**Methodology:** A real `uvicorn` server hosting `create_proxy_app()` was launched on
+`127.0.0.1:8080`, then driven over loopback TCP by `benchmarks/bench_http_load.py`
+(async `httpx` client). Target endpoint: `GET /health` — exercises the full ASGI
+middleware stack (request-smuggling guard, auth shim, routing) plus the live ledger
+and analyzer-cache health checks on every request. Latency is wall-clock per request;
+server CPU is `utime+stime` deltas from `/proc/<pid>/stat`; RSS is sampled from
+`/proc/<pid>/status` at 10 Hz.
+
+> **Server topology caveat:** measurements are from a **single** uvicorn worker driving
+> the Rust `aegis_rust` Tokio runtime (4 threads). The `--workers 4` multiprocess model
+> could not be measured in this container: the seccomp `clone`/`clone3` lockdown applied
+> at end-of-startup terminates forked workers (expected behaviour of the hardening
+> filter, see `aegis/core/seccomp_guard.py`). Production multi-worker deployments run
+> one process per core behind a load balancer — see
+> [`docs/performance/SCALING_GUIDE.md`](performance/SCALING_GUIDE.md).
+
+### Per-request latency and concurrency sweep
+
+| Concurrency | Throughput (RPS) | p50 | p99 | max | Server CPU | n |
+|---|---|---|---|---|---|---|
+| 1 | 650.1 | **1.494 ms** | **2.019 ms** | 21.3 ms | 35.7 % | 20,000 |
+| 4 | **902.0** | 4.051 ms | 10.99 ms | 120.8 ms | 43.1 % | 20,000 |
+| 32 | 339.3 | 65.2 ms | 424 ms | — | 18.7 % | 8,000 |
+| 128 | 246.9 | 297.6 ms | 4,256 ms | — | 13.8 % | 8,000 |
+
+**Interpretation [PROVEN]:**
+- **Clean per-request cost (c=1):** 1.49 ms p50 / 2.02 ms p99 for a full-stack `/health`
+  round-trip over loopback — this is the realistic floor including TCP, ASGI, middleware,
+  and live health checks (heavier than the in-process mock-upstream figure in Claim 1).
+- **Peak single-worker throughput ≈ 900 RPS at c=4**, matching the 4-thread Rust runtime
+  and 4 cores. The server is **never CPU-bound** (peak ~43 % ≈ 1.7 cores).
+- **Throughput degrades past c≈4** while latency climbs by ~200× from c=1 to c=128. With
+  CPU idle, this is **event-loop head-of-line blocking** (GIL contention between the
+  CPython request loop and the Rust Tokio threads, plus synchronous health-check work),
+  **not** compute saturation.
+
+**Scaling implication [INFERENCE]:** single-worker throughput is bounded by event-loop
+serialization, so the throughput lever is **horizontal** — one worker process per core
+and replicas behind a load balancer — not raising per-worker concurrency. This is the
+empirical basis for the horizontally-scaled design target; it does **not** by itself
+prove the ">1 B RPM" figure, which remains an unmeasured multi-node architectural goal.
+
+### Endurance / stability run
+
+| Property | Value |
+|---|---|
+| Requests | 100,000 (concurrency 256) |
+| Duration | 362.9 s (~6 min sustained overload) |
+| Errors | **0** (100 % success) |
+| Throughput | 275.6 RPS (overloaded regime, past saturation) |
+| Server peak RSS | **101.5 MiB** (flat start-to-finish — no leak) |
+| Server CPU | 15.1 % avg |
+
+**Interpretation [PROVEN]:** under 6 minutes of deliberate overload (c=256, well past the
+c≈4 saturation point) the server returned **zero errors**, held memory **flat at 101.5 MiB**,
+and degraded gracefully (latency rose, throughput held — no collapse, no OOM, no leak).
+
+---
+
 ## Claims Without Benchmarks
 
 The following speedup claims appear in source code docstrings but have **not** been benchmarked.
@@ -165,6 +230,16 @@ cd aegis_rust_v2
 maturin develop --release
 cd ..
 python -m benchmarks.bench_mmr
+
+# Live single-node HTTP throughput (Claim 3) — launch the server, then drive load:
+AEGIS_SIGNING_KEY=$(python -c 'import secrets;print(secrets.token_hex(32))') \
+AEGIS_DEBUG_MODE=1 AEGIS_AUTH_DISABLED=1 HERMES_SANDBOX=true \
+  uvicorn aegis.proxy.app:create_proxy_app --factory \
+  --host 127.0.0.1 --port 8080 --workers 1 &
+# wait for GET /health to return 200, then (server PID = $!):
+python -m benchmarks.bench_http_load \
+  --url http://127.0.0.1:8080/health \
+  --total 20000 --concurrency 4 --warmup 1000 --server-pid $!
 ```
 
 A third party running these commands on equivalent hardware (x86-64 @ 2.8+ GHz,

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import sys
-from contextlib import contextmanager, ExitStack
+from contextlib import ExitStack, contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -33,11 +33,10 @@ from starlette.testclient import TestClient  # noqa: E402
 
 from aegis_server.config import EnterpriseSettings  # noqa: E402
 from aegis_server.main import (  # noqa: E402
-    create_app,
-    _run_forensic_analytics,
     ComplianceExportRequest,
+    _run_forensic_analytics,
+    create_app,
 )
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -138,9 +137,11 @@ def test_lifespan_storage_initialize_failure():
 def test_create_app_with_cors_origins():
     """When cors_origins is set, CORS middleware is added."""
     s = _make_settings(cors_origins="http://localhost:3000,http://example.com")
-    with patch("aegis_server.main.get_settings", return_value=s), \
-         patch("aegis_server.main.get_provider", return_value=_make_storage()), \
-         patch("aegis_server.main.get_signer", return_value=_make_signer()):
+    with (
+        patch("aegis_server.main.get_settings", return_value=s),
+        patch("aegis_server.main.get_provider", return_value=_make_storage()),
+        patch("aegis_server.main.get_signer", return_value=_make_signer()),
+    ):
         app = create_app(settings=s)
     cors_classes = [getattr(m, "cls", None) for m in app.user_middleware]
     assert any("CORS" in (c.__name__ if c else "") for c in cors_classes)
@@ -151,9 +152,11 @@ def test_create_app_debug_mode_exposes_docs():
     s = _make_settings()
     s_debug = MagicMock(wraps=s)
     s_debug.debug_mode = True
-    with patch("aegis_server.main.get_settings", return_value=s_debug), \
-         patch("aegis_server.main.get_provider", return_value=_make_storage()), \
-         patch("aegis_server.main.get_signer", return_value=_make_signer()):
+    with (
+        patch("aegis_server.main.get_settings", return_value=s_debug),
+        patch("aegis_server.main.get_provider", return_value=_make_storage()),
+        patch("aegis_server.main.get_signer", return_value=_make_signer()),
+    ):
         app = create_app(settings=s_debug)
     assert app.docs_url == "/docs"
 
@@ -161,9 +164,11 @@ def test_create_app_debug_mode_exposes_docs():
 def test_create_app_no_debug_hides_docs():
     """Without debug mode, docs_url is None (secure default)."""
     s = _make_settings()
-    with patch("aegis_server.main.get_settings", return_value=s), \
-         patch("aegis_server.main.get_provider", return_value=_make_storage()), \
-         patch("aegis_server.main.get_signer", return_value=_make_signer()):
+    with (
+        patch("aegis_server.main.get_settings", return_value=s),
+        patch("aegis_server.main.get_provider", return_value=_make_storage()),
+        patch("aegis_server.main.get_signer", return_value=_make_signer()),
+    ):
         app = create_app(settings=s)
     assert app.docs_url is None
 
@@ -300,7 +305,7 @@ def test_audit_integrity_storage_error():
 
 def test_compliance_export_success(tmp_path):
     """POST /v1/enterprise/compliance/export returns 201."""
-    from aegis_server.compliance.exporter import ExportResult, ComplianceExporter
+    from aegis_server.compliance.exporter import ComplianceExporter, ExportResult
 
     export_file = tmp_path / "bundle.json"
     export_file.write_text('{"aegis_compliance_bundle": {"verification_manifest": {}}}')
@@ -447,7 +452,6 @@ def test_proxy_chat_completions_connection_error():
 
 def test_proxy_chat_completions_success():
     """Successful proxy returns upstream response."""
-    import httpx
 
     s = _make_settings()
     upstream_body = json.dumps({"id": "chatcmpl-1", "choices": []}).encode()
@@ -488,25 +492,29 @@ async def test_run_forensic_analytics_basic():
     signer = _make_signer()
 
     req_bytes = json.dumps({"model": "gpt-4", "messages": []}).encode()
-    resp_bytes = json.dumps({
-        "id": "cmpl-1",
-        "choices": [{
-            "message": {"content": "hello"},
-            "logprobs": {
-                "content": [
-                    {
-                        "token": "hello",
-                        "logprob": -0.5,
-                        "top_logprobs": [
-                            {"token": "hello", "logprob": -0.5},
-                            {"token": "world", "logprob": -1.2},
-                        ],
-                    }
-                ]
-            }
-        }],
-        "usage": {"prompt_tokens": 10, "completion_tokens": 1},
-    }).encode()
+    resp_bytes = json.dumps(
+        {
+            "id": "cmpl-1",
+            "choices": [
+                {
+                    "message": {"content": "hello"},
+                    "logprobs": {
+                        "content": [
+                            {
+                                "token": "hello",
+                                "logprob": -0.5,
+                                "top_logprobs": [
+                                    {"token": "hello", "logprob": -0.5},
+                                    {"token": "world", "logprob": -1.2},
+                                ],
+                            }
+                        ]
+                    },
+                }
+            ],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 1},
+        }
+    ).encode()
 
     await _run_forensic_analytics(
         request_id="req-001",
@@ -702,19 +710,23 @@ async def test_run_forensic_analytics_single_logprob_deterministic():
     storage = _make_storage()
     signer = _make_signer()
 
-    resp = json.dumps({
-        "choices": [{
-            "logprobs": {
-                "content": [
-                    {
-                        "token": "hi",
-                        "logprob": -0.1,
-                        "top_logprobs": [{"token": "hi", "logprob": -0.1}],
+    resp = json.dumps(
+        {
+            "choices": [
+                {
+                    "logprobs": {
+                        "content": [
+                            {
+                                "token": "hi",
+                                "logprob": -0.1,
+                                "top_logprobs": [{"token": "hi", "logprob": -0.1}],
+                            }
+                        ]
                     }
-                ]
-            }
-        }]
-    }).encode()
+                }
+            ]
+        }
+    ).encode()
 
     await _run_forensic_analytics(
         request_id="req-009",
@@ -892,7 +904,6 @@ def test_proxy_auth_invalid_key_returns_403():
 
 def test_proxy_auth_valid_key_forwards():
     """Valid API key on proxy passes auth (line 327, _require_auth)."""
-    import httpx
 
     s = _make_settings(auth_disabled=False, api_keys="proxy-key-123")
     upstream_body = json.dumps({"id": "cid", "choices": []}).encode()
@@ -925,7 +936,6 @@ def test_proxy_auth_valid_key_forwards():
 
 def test_proxy_non_json_request_body():
     """Non-JSON request body → JSON parse fails gracefully (lines 851-852)."""
-    import httpx
 
     s = _make_settings()
     upstream_body = b"upstream response"
@@ -958,7 +968,6 @@ def test_proxy_non_json_request_body():
 
 def test_proxy_with_backend_api_key():
     """When backend_api_key is set, Authorization header is injected (line 867)."""
-    import httpx
 
     s = _make_settings(backend_api_key="sk-backend-key-secret")
     upstream_body = json.dumps({"id": "cid", "choices": []}).encode()
@@ -1020,20 +1029,30 @@ async def test_run_forensic_analytics_logprob_extraction_exception():
 @pytest.mark.asyncio
 async def test_run_forensic_analytics_entropy_exception():
     """When np.mean raises, entropy calculation exception is caught (lines 483-484)."""
-    import numpy as np
+
     storage = _make_storage()
     signer = _make_signer()
 
-    resp = json.dumps({
-        "choices": [{
-            "logprobs": {
-                "content": [{"token": "hello", "logprob": -0.5, "top_logprobs": [
-                    {"token": "hello", "logprob": -0.5},
-                    {"token": "world", "logprob": -1.2},
-                ]}]
-            }
-        }]
-    }).encode()
+    resp = json.dumps(
+        {
+            "choices": [
+                {
+                    "logprobs": {
+                        "content": [
+                            {
+                                "token": "hello",
+                                "logprob": -0.5,
+                                "top_logprobs": [
+                                    {"token": "hello", "logprob": -0.5},
+                                    {"token": "world", "logprob": -1.2},
+                                ],
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    ).encode()
 
     with patch("aegis_server.main.np.mean", side_effect=RuntimeError("numpy error")):
         await _run_forensic_analytics(

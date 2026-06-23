@@ -25,6 +25,7 @@ Usage::
     agg = DPAggregator(epsilon=1.0, delta=0.0)
     report = agg.compute(ledger.chain)
 """
+
 from __future__ import annotations
 
 import math
@@ -98,11 +99,11 @@ class LaplaceDP:
         Sensitivity of variance is value_range² / n.
         """
         if len(values) < 2:
-            return max(0.0, self._noise(value_range ** 2))
+            return max(0.0, self._noise(value_range**2))
         n = len(values)
         mean = sum(values) / n
         true_var = sum((x - mean) ** 2 for x in values) / n
-        sensitivity = (value_range ** 2) / n
+        sensitivity = (value_range**2) / n
         return max(0.0, true_var + self._noise(sensitivity))
 
 
@@ -111,7 +112,7 @@ class DPAnalyticsReport:
     """Differentially-private aggregate statistics over the audit chain."""
 
     epsilon: float
-    delta: float = 0.0              # always 0.0 for pure Laplace DP
+    delta: float = 0.0  # always 0.0 for pure Laplace DP
     mechanism: str = "laplace"
 
     # Noised aggregates
@@ -194,9 +195,6 @@ class DPAggregator:
             mean_entropy=self._dp.noisy_mean(entropies, self.entropy_range),
             entropy_variance=self._dp.noisy_variance(entropies, self.entropy_range),
             phi_scrubbed_count=self._dp.noisy_count(phi_count),
-            tenant_counts={
-                tid: self._dp.noisy_count(cnt)
-                for tid, cnt in tenant_raw.items()
-            },
+            tenant_counts={tid: self._dp.noisy_count(cnt) for tid, cnt in tenant_raw.items()},
         )
         return report

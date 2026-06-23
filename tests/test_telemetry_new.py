@@ -7,11 +7,9 @@ from __future__ import annotations
 
 import math
 
-import numpy as np
 import pytest
 
 from aegis.core.telemetry import LogitEntropyMonitor
-
 
 # ── compute_entropy_gpu ───────────────────────────────────────────────────────
 
@@ -26,6 +24,7 @@ def test_compute_entropy_gpu_raises_import_error_without_torch():
             # Create a dummy object since torch.Tensor isn't available
             class FakeTensor:
                 pass
+
             monitor.compute_entropy_gpu(FakeTensor())
 
 

@@ -202,6 +202,7 @@ def test_forwarder_handles_missing_rust_extension():
     aegis_rust IS installed in this environment, so we force its import to fail
     and reload the module to execute the fallback, then reload again to restore.
     """
+    pytest.importorskip("aegis_rust", reason="Rust extension not installed")
     import aegis.proxy.forwarder as fwd
 
     real_import = builtins.__import__
@@ -272,6 +273,7 @@ def _restore_with_rust(module, saved_rust):
 
 def test_rust_integration_without_extension():
     """Covers the ``except Exception`` fallback that sets _HAS_RUST = False."""
+    pytest.importorskip("aegis_rust", reason="Rust extension not installed")
     import aegis.core.rust_integration as ri
 
     saved = _reload_without_rust(ri)
@@ -284,6 +286,7 @@ def test_rust_integration_without_extension():
 
 def test_crypto_audit_without_extension():
     """Covers the ImportError fallback that sets RUST_AVAILABLE = False."""
+    pytest.importorskip("aegis_rust", reason="Rust extension not installed")
     import aegis.core.crypto_audit as ca
 
     saved = _reload_without_rust(ca)

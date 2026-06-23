@@ -13,7 +13,6 @@ import pytest
 from aegis.core.session_manager import SessionLifecycleManager
 from aegis.core.telemetry import LogitEntropyMonitor
 
-
 # ── constructor ───────────────────────────────────────────────────────────────
 
 

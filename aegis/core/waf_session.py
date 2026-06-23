@@ -33,6 +33,7 @@ Usage::
     if result.escalated:
         raise HTTPException(429, detail=result.reason)
 """
+
 from __future__ import annotations
 
 import threading

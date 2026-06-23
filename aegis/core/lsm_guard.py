@@ -171,7 +171,7 @@ class LSMGuard:
         found or the reload fails.  Never raises.
         """
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603 B607 — trusted system binary, not user input
                 ["apparmor_parser", "-r", profile_path],
                 capture_output=True,
                 timeout=30,

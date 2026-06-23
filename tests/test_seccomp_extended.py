@@ -5,13 +5,10 @@
 
 from __future__ import annotations
 
-import importlib
-import sys
 from unittest.mock import MagicMock, patch
 
 import aegis.core.seccomp_guard as _sg_mod
 from aegis.core.seccomp_guard import SeccompGuard
-
 
 # ── _detect_sandbox — return False (line 120) ─────────────────────────────────
 
@@ -20,18 +17,20 @@ def test_detect_sandbox_returns_false_when_no_markers():
     import importlib.util as _ilu
 
     guard = SeccompGuard.__new__(SeccompGuard)
-    with patch.dict("os.environ", {}, clear=True), \
-         patch("os.path.exists", return_value=False), \
-         patch.object(_ilu, "find_spec", return_value=None):
+    with (
+        patch.dict("os.environ", {}, clear=True),
+        patch("os.path.exists", return_value=False),
+        patch.object(_ilu, "find_spec", return_value=None),
+    ):
         result = guard._detect_sandbox()
     assert result is False
 
 
 def test_detect_sandbox_importerror_path():
     guard = SeccompGuard.__new__(SeccompGuard)
-    with patch.dict("os.environ", {}, clear=True), \
-         patch("os.path.exists", return_value=False):
+    with patch.dict("os.environ", {}, clear=True), patch("os.path.exists", return_value=False):
         import builtins
+
         _real_import = builtins.__import__
 
         def _fake_import(name, *args, **kwargs):
@@ -69,6 +68,7 @@ def test_load_libseccomp_library_not_found():
     guard._is_sandbox = False
 
     import ctypes.util as _ctu
+
     original_loaded = _sg_mod._libseccomp_loaded
     try:
         _sg_mod._libseccomp_loaded = False
@@ -88,12 +88,15 @@ def test_load_libseccomp_cdll_exception():
     guard._is_sandbox = False
 
     import ctypes.util as _ctu
+
     original_loaded = _sg_mod._libseccomp_loaded
     original_lib = _sg_mod._libseccomp
     try:
         _sg_mod._libseccomp_loaded = False
-        with patch.object(_ctu, "find_library", return_value="/lib/libseccomp.so"), \
-             patch("ctypes.CDLL", side_effect=OSError("cannot load")):
+        with (
+            patch.object(_ctu, "find_library", return_value="/lib/libseccomp.so"),
+            patch("ctypes.CDLL", side_effect=OSError("cannot load")),
+        ):
             result = guard._load_libseccomp()
     finally:
         _sg_mod._libseccomp_loaded = original_loaded
@@ -111,13 +114,16 @@ def test_load_libseccomp_success_sets_global():
 
     mock_lib = MagicMock()
     import ctypes.util as _ctu
+
     original_loaded = _sg_mod._libseccomp_loaded
     original_lib = _sg_mod._libseccomp
     try:
         _sg_mod._libseccomp_loaded = False
         _sg_mod._libseccomp = None
-        with patch.object(_ctu, "find_library", return_value="/lib/libseccomp.so"), \
-             patch("ctypes.CDLL", return_value=mock_lib):
+        with (
+            patch.object(_ctu, "find_library", return_value="/lib/libseccomp.so"),
+            patch("ctypes.CDLL", return_value=mock_lib),
+        ):
             result = guard._load_libseccomp()
     finally:
         _sg_mod._libseccomp_loaded = original_loaded
@@ -155,8 +161,10 @@ def test_apply_filter_non_sandbox_libc_not_found():
     mock_lib = MagicMock()
     import ctypes.util as _ctu
 
-    with patch.object(guard, "_load_libseccomp", return_value=True), \
-         patch.object(_ctu, "find_library", return_value=None):
+    with (
+        patch.object(guard, "_load_libseccomp", return_value=True),
+        patch.object(_ctu, "find_library", return_value=None),
+    ):
         result = guard.apply_filter()
 
     assert result is False
@@ -176,12 +184,13 @@ def test_apply_filter_non_sandbox_prctl_fails():
     _sg_mod._libseccomp = mock_libseccomp
 
     import ctypes.util as _ctu
-    import ctypes
 
     try:
-        with patch.object(guard, "_load_libseccomp", return_value=True), \
-             patch.object(_ctu, "find_library", return_value="/lib/libc.so"), \
-             patch("ctypes.CDLL", return_value=mock_libc):
+        with (
+            patch.object(guard, "_load_libseccomp", return_value=True),
+            patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
+            patch("ctypes.CDLL", return_value=mock_libc),
+        ):
             result = guard.apply_filter()
     finally:
         _sg_mod._libseccomp = None
@@ -210,9 +219,11 @@ def test_apply_filter_non_sandbox_success():
     import ctypes.util as _ctu
 
     try:
-        with patch.object(guard, "_load_libseccomp", return_value=True), \
-             patch.object(_ctu, "find_library", return_value="/lib/libc.so"), \
-             patch("ctypes.CDLL", return_value=mock_libc):
+        with (
+            patch.object(guard, "_load_libseccomp", return_value=True),
+            patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
+            patch("ctypes.CDLL", return_value=mock_libc),
+        ):
             result = guard.apply_filter()
     finally:
         _sg_mod._libseccomp = None
@@ -241,9 +252,11 @@ def test_apply_filter_non_sandbox_seccomp_load_fails():
     import ctypes.util as _ctu
 
     try:
-        with patch.object(guard, "_load_libseccomp", return_value=True), \
-             patch.object(_ctu, "find_library", return_value="/lib/libc.so"), \
-             patch("ctypes.CDLL", return_value=mock_libc):
+        with (
+            patch.object(guard, "_load_libseccomp", return_value=True),
+            patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
+            patch("ctypes.CDLL", return_value=mock_libc),
+        ):
             result = guard.apply_filter()
     finally:
         _sg_mod._libseccomp = None
@@ -270,9 +283,11 @@ def test_apply_filter_non_sandbox_null_ctx():
     import ctypes.util as _ctu
 
     try:
-        with patch.object(guard, "_load_libseccomp", return_value=True), \
-             patch.object(_ctu, "find_library", return_value="/lib/libc.so"), \
-             patch("ctypes.CDLL", return_value=mock_libc):
+        with (
+            patch.object(guard, "_load_libseccomp", return_value=True),
+            patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
+            patch("ctypes.CDLL", return_value=mock_libc),
+        ):
             result = guard.apply_filter()
     finally:
         _sg_mod._libseccomp = None

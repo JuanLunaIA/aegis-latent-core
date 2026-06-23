@@ -2,6 +2,7 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """Tests for aegis.core.phi_encryption — AES-256-GCM PHI payload encryption."""
+
 from __future__ import annotations
 
 import os
@@ -14,7 +15,9 @@ _MASTER_KEY = os.urandom(32)
 
 
 class TestPHIPayloadEncryptor:
-    def _enc(self, master_key: bytes = _MASTER_KEY, salt: bytes | None = None) -> PHIPayloadEncryptor:
+    def _enc(
+        self, master_key: bytes = _MASTER_KEY, salt: bytes | None = None
+    ) -> PHIPayloadEncryptor:
         return PHIPayloadEncryptor(master_key=master_key, salt=salt)
 
     # ── Construction ─────────────────────────────────────────────────────────

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import sys
-import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -75,11 +74,14 @@ def test_entropy_module_import_error_sets_none_state(tmp_path):
     """When entropy modules can't be imported, state fields are None (lines 333-336)."""
     from aegis.proxy import app as app_mod
 
-    with patch.dict(sys.modules, {
-        "aegis.core.entropy_analysis": None,
-        "aegis.core.taint_analysis": None,
-        "aegis.core.xdp_dynamic_segmentation": None,
-    }):
+    with patch.dict(
+        sys.modules,
+        {
+            "aegis.core.entropy_analysis": None,
+            "aegis.core.taint_analysis": None,
+            "aegis.core.xdp_dynamic_segmentation": None,
+        },
+    ):
         fwd_inst = _mock_forwarder()
         with patch.object(app_mod, "LLMForwarder", return_value=fwd_inst):
             cfg = _make_settings(tmp_path)
@@ -128,7 +130,9 @@ def test_seccomp_exception_in_sandbox_logs_warning(tmp_path):
     with patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst):
         cfg = _make_settings(tmp_path)
         app = create_app(cfg)
-        with patch("aegis.core.seccomp_guard.SeccompGuard", side_effect=RuntimeError("seccomp unavailable")):
+        with patch(
+            "aegis.core.seccomp_guard.SeccompGuard", side_effect=RuntimeError("seccomp unavailable")
+        ):
             with TestClient(app) as client:
                 resp = client.get("/health")
         assert resp.status_code in (200, 503)
@@ -214,6 +218,7 @@ def test_vault_initialized_when_vault_url_set(tmp_path):
 def test_cors_middleware_added_with_origins(tmp_path):
     """When cors_origins is non-empty, CORSMiddleware is added (line 460)."""
     from aegis.proxy import app as app_mod
+
     fwd_inst = _mock_forwarder()
     with patch.object(app_mod, "LLMForwarder", return_value=fwd_inst):
         cfg = _make_settings(tmp_path, cors_origins="http://localhost:3000")
@@ -291,6 +296,7 @@ def test_pii_redact_tenant_id_hashes_session(tmp_path):
 
 def test_health_provider_name_exception_returns_unavailable(tmp_path):
     """When provider.name raises, provider_name becomes 'unavailable' (558-559)."""
+
     class _BrokenProvider:
         @property
         def name(self):
@@ -480,7 +486,9 @@ def test_completions_endpoint_circuit_open_returns_503(tmp_path):
 def test_completions_endpoint_non_200_upstream(tmp_path):
     """POST /v1/completions with non-200 upstream → upstream status returned."""
     fwd_inst = _mock_forwarder()
-    fwd_inst.forward_json = AsyncMock(return_value=_mock_response(status_code=400, data={"error": "bad"}))
+    fwd_inst.forward_json = AsyncMock(
+        return_value=_mock_response(status_code=400, data={"error": "bad"})
+    )
 
     with patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst):
         cfg = _make_settings(tmp_path)
@@ -527,7 +535,11 @@ def test_chat_streaming_request(tmp_path):
     fwd_inst = _mock_forwarder()
 
     async def _sse_gen():
-        yield b"data: " + json.dumps({"choices": [{"delta": {"content": "Hello"}, "logprobs": None}]}).encode(), {"choices": [{"delta": {"content": "Hello"}, "logprobs": None}]}
+        yield (
+            b"data: "
+            + json.dumps({"choices": [{"delta": {"content": "Hello"}, "logprobs": None}]}).encode(),
+            {"choices": [{"delta": {"content": "Hello"}, "logprobs": None}]},
+        )
         yield b"data: [DONE]", None
 
     fwd_inst.stream_sse = MagicMock(return_value=_sse_gen())
@@ -539,7 +551,11 @@ def test_chat_streaming_request(tmp_path):
             resp = client.post(
                 "/v1/chat/completions",
                 headers={"Authorization": "Bearer sk-valid"},
-                json={"model": "gpt-4", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+                json={
+                    "model": "gpt-4",
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "stream": True,
+                },
             )
     # May be 200 (streaming) or error — just verify we exercised the path
     assert resp.status_code in (200, 500)
@@ -560,7 +576,9 @@ def test_chat_streaming_non_data_raw_bytes(tmp_path):
         # A raw chunk that doesn't start with b"data:" but has content → line 669
         yield b"event: ping\r\n", None
         # A chunk with logprobs → line 675
-        lp_parsed = {"choices": [{"delta": {}, "logprobs": {"content": [{"token": "a", "logprob": -0.1}]}}]}
+        lp_parsed = {
+            "choices": [{"delta": {}, "logprobs": {"content": [{"token": "a", "logprob": -0.1}]}}]
+        }
         yield b"data: " + json.dumps(lp_parsed).encode(), lp_parsed
         yield b"data: [DONE]", None
 
@@ -573,7 +591,11 @@ def test_chat_streaming_non_data_raw_bytes(tmp_path):
             resp = client.post(
                 "/v1/chat/completions",
                 headers={"Authorization": "Bearer sk-valid"},
-                json={"model": "gpt-4", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+                json={
+                    "model": "gpt-4",
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "stream": True,
+                },
             )
     assert resp.status_code in (200, 500)
     try:
@@ -595,7 +617,10 @@ def test_mtls_init_exception_with_ssl_ca_certs(tmp_path):
         cfg = _make_settings(tmp_path, ssl_ca_certs=str(ca_file), mtls_required=False)
         app = create_app(cfg)
         # Patch identity/mtls to raise during lifespan
-        with patch("aegis.core.identity.SpiffeIdentityManager", side_effect=RuntimeError("SPIRE not available")):
+        with patch(
+            "aegis.core.identity.SpiffeIdentityManager",
+            side_effect=RuntimeError("SPIRE not available"),
+        ):
             with TestClient(app) as client:
                 resp = client.get("/health")
     assert resp.status_code in (200, 503)
@@ -701,21 +726,39 @@ def test_alert_store_append_when_kl_spike_fires(tmp_path):
                 "finish_reason": "stop",
                 "logprobs": {
                     "content": [
-                        {"token": "a", "logprob": -1.609, "top_logprobs": [
-                            {"token": "a", "logprob": -1.609}, {"token": "b", "logprob": -1.609},
-                            {"token": "c", "logprob": -1.609}, {"token": "d", "logprob": -1.609},
-                            {"token": "e", "logprob": -1.609},
-                        ]},
-                        {"token": "a", "logprob": -0.001, "top_logprobs": [
-                            {"token": "a", "logprob": -0.001}, {"token": "b", "logprob": -7.0},
-                            {"token": "c", "logprob": -7.0}, {"token": "d", "logprob": -7.0},
-                            {"token": "e", "logprob": -7.0},
-                        ]},
-                        {"token": "a", "logprob": -1.609, "top_logprobs": [
-                            {"token": "a", "logprob": -1.609}, {"token": "b", "logprob": -1.609},
-                            {"token": "c", "logprob": -1.609}, {"token": "d", "logprob": -1.609},
-                            {"token": "e", "logprob": -1.609},
-                        ]},
+                        {
+                            "token": "a",
+                            "logprob": -1.609,
+                            "top_logprobs": [
+                                {"token": "a", "logprob": -1.609},
+                                {"token": "b", "logprob": -1.609},
+                                {"token": "c", "logprob": -1.609},
+                                {"token": "d", "logprob": -1.609},
+                                {"token": "e", "logprob": -1.609},
+                            ],
+                        },
+                        {
+                            "token": "a",
+                            "logprob": -0.001,
+                            "top_logprobs": [
+                                {"token": "a", "logprob": -0.001},
+                                {"token": "b", "logprob": -7.0},
+                                {"token": "c", "logprob": -7.0},
+                                {"token": "d", "logprob": -7.0},
+                                {"token": "e", "logprob": -7.0},
+                            ],
+                        },
+                        {
+                            "token": "a",
+                            "logprob": -1.609,
+                            "top_logprobs": [
+                                {"token": "a", "logprob": -1.609},
+                                {"token": "b", "logprob": -1.609},
+                                {"token": "c", "logprob": -1.609},
+                                {"token": "d", "logprob": -1.609},
+                                {"token": "e", "logprob": -1.609},
+                            ],
+                        },
                     ]
                 },
             }
@@ -787,7 +830,10 @@ def test_mtls_required_but_init_fails_raises(tmp_path):
     with patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst):
         cfg = _make_settings(tmp_path, ssl_ca_certs=str(ca_file), mtls_required=True)
         app = create_app(cfg)
-        with patch("aegis.core.identity.SpiffeIdentityManager", side_effect=RuntimeError("SPIRE unavailable")):
+        with patch(
+            "aegis.core.identity.SpiffeIdentityManager",
+            side_effect=RuntimeError("SPIRE unavailable"),
+        ):
             with pytest.raises(Exception):
                 with TestClient(app) as client:
                     client.get("/health")
@@ -803,6 +849,7 @@ def test_mtls_required_but_init_fails_raises(tmp_path):
 def test_chat_response_includes_trace_id_header(tmp_path):
     """When current_trace_id returns a value, X-Trace-ID header is set (line 761)."""
     from aegis.core import observability as obs
+
     fwd_inst = _mock_forwarder()
     fwd_inst.forward_json = AsyncMock(return_value=_mock_response())
 
@@ -831,6 +878,7 @@ def test_chat_response_includes_trace_id_header(tmp_path):
 async def test_alert_store_append_via_commit_and_alert(tmp_path):
     """With low KL threshold, alerts fire and alert_store.append is called (line 525)."""
     import asyncio
+
     fwd_inst = _mock_forwarder()
 
     # Response with logprobs that trigger KL_SPIKE with very low threshold
@@ -844,21 +892,39 @@ async def test_alert_store_append_via_commit_and_alert(tmp_path):
                 "finish_reason": "stop",
                 "logprobs": {
                     "content": [
-                        {"token": "a", "logprob": -1.609, "top_logprobs": [
-                            {"token": "a", "logprob": -1.609}, {"token": "b", "logprob": -1.609},
-                            {"token": "c", "logprob": -1.609}, {"token": "d", "logprob": -1.609},
-                            {"token": "e", "logprob": -1.609},
-                        ]},
-                        {"token": "a", "logprob": -0.001, "top_logprobs": [
-                            {"token": "a", "logprob": -0.001}, {"token": "b", "logprob": -7.0},
-                            {"token": "c", "logprob": -7.0}, {"token": "d", "logprob": -7.0},
-                            {"token": "e", "logprob": -7.0},
-                        ]},
-                        {"token": "a", "logprob": -1.609, "top_logprobs": [
-                            {"token": "a", "logprob": -1.609}, {"token": "b", "logprob": -1.609},
-                            {"token": "c", "logprob": -1.609}, {"token": "d", "logprob": -1.609},
-                            {"token": "e", "logprob": -1.609},
-                        ]},
+                        {
+                            "token": "a",
+                            "logprob": -1.609,
+                            "top_logprobs": [
+                                {"token": "a", "logprob": -1.609},
+                                {"token": "b", "logprob": -1.609},
+                                {"token": "c", "logprob": -1.609},
+                                {"token": "d", "logprob": -1.609},
+                                {"token": "e", "logprob": -1.609},
+                            ],
+                        },
+                        {
+                            "token": "a",
+                            "logprob": -0.001,
+                            "top_logprobs": [
+                                {"token": "a", "logprob": -0.001},
+                                {"token": "b", "logprob": -7.0},
+                                {"token": "c", "logprob": -7.0},
+                                {"token": "d", "logprob": -7.0},
+                                {"token": "e", "logprob": -7.0},
+                            ],
+                        },
+                        {
+                            "token": "a",
+                            "logprob": -1.609,
+                            "top_logprobs": [
+                                {"token": "a", "logprob": -1.609},
+                                {"token": "b", "logprob": -1.609},
+                                {"token": "c", "logprob": -1.609},
+                                {"token": "d", "logprob": -1.609},
+                                {"token": "e", "logprob": -1.609},
+                            ],
+                        },
                     ]
                 },
             }

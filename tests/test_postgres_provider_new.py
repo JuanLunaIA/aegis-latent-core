@@ -21,7 +21,6 @@ else:
 
 from aegis_server.storage.postgres_provider import PostgreSQLStorageProvider  # noqa: E402
 
-
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
@@ -43,6 +42,7 @@ def _make_mock_pool():
     class _AcquireCtx:
         async def __aenter__(self_):
             return mock_conn
+
         async def __aexit__(self_, *args):
             pass
 
@@ -229,16 +229,18 @@ async def test_get_latest_node_empty_returns_none():
 async def test_get_latest_node_returns_record():
     p = _make_provider()
     mock_pool, mock_conn = _make_mock_pool()
-    mock_conn.fetchrow = AsyncMock(return_value={
-        "node_id": "abc",
-        "timestamp": "2024-01-01T00:00:00Z",
-        "request_hash": "rh",
-        "response_hash": "sh",
-        "merkle_root": "mr",
-        "signature": "sig",
-        "client_id": "c1",
-        "node_data": json.dumps({"prev_hash": "0" * 64}),
-    })
+    mock_conn.fetchrow = AsyncMock(
+        return_value={
+            "node_id": "abc",
+            "timestamp": "2024-01-01T00:00:00Z",
+            "request_hash": "rh",
+            "response_hash": "sh",
+            "merkle_root": "mr",
+            "signature": "sig",
+            "client_id": "c1",
+            "node_data": json.dumps({"prev_hash": "0" * 64}),
+        }
+    )
     p._pool = mock_pool
 
     result = await p.get_latest_node()
@@ -283,16 +285,18 @@ async def test_get_node_not_found_returns_none():
 async def test_get_node_found_returns_dict():
     p = _make_provider()
     mock_pool, mock_conn = _make_mock_pool()
-    mock_conn.fetchrow = AsyncMock(return_value={
-        "node_id": "xyz",
-        "timestamp": "2024-01-01T00:00:00Z",
-        "request_hash": "",
-        "response_hash": "",
-        "merkle_root": "",
-        "signature": "",
-        "client_id": "",
-        "node_data": "{}",
-    })
+    mock_conn.fetchrow = AsyncMock(
+        return_value={
+            "node_id": "xyz",
+            "timestamp": "2024-01-01T00:00:00Z",
+            "request_hash": "",
+            "response_hash": "",
+            "merkle_root": "",
+            "signature": "",
+            "client_id": "",
+            "node_data": "{}",
+        }
+    )
     p._pool = mock_pool
 
     result = await p.get_node("xyz")
@@ -334,16 +338,20 @@ async def test_list_nodes_negative_offset_raises():
 async def test_list_nodes_no_tenant():
     p = _make_provider()
     mock_pool, mock_conn = _make_mock_pool()
-    mock_conn.fetch = AsyncMock(return_value=[{
-        "node_id": "n1",
-        "timestamp": "2024-01-01",
-        "request_hash": "",
-        "response_hash": "",
-        "merkle_root": "",
-        "signature": "",
-        "client_id": "",
-        "node_data": "{}",
-    }])
+    mock_conn.fetch = AsyncMock(
+        return_value=[
+            {
+                "node_id": "n1",
+                "timestamp": "2024-01-01",
+                "request_hash": "",
+                "response_hash": "",
+                "merkle_root": "",
+                "signature": "",
+                "client_id": "",
+                "node_data": "{}",
+            }
+        ]
+    )
     p._pool = mock_pool
 
     result = await p.list_nodes(10, 0)
@@ -405,16 +413,18 @@ async def test_check_integrity_valid_chain():
     node_b_id = "b" * 64
 
     # asyncpg decodes JSONB as dicts automatically — pass dicts directly
-    mock_conn.fetch = AsyncMock(return_value=[
-        {
-            "node_id": node_a_id,
-            "node_data": {"prev_hash": "0" * 64},
-        },
-        {
-            "node_id": node_b_id,
-            "node_data": {"prev_hash": node_a_id},
-        },
-    ])
+    mock_conn.fetch = AsyncMock(
+        return_value=[
+            {
+                "node_id": node_a_id,
+                "node_data": {"prev_hash": "0" * 64},
+            },
+            {
+                "node_id": node_b_id,
+                "node_data": {"prev_hash": node_a_id},
+            },
+        ]
+    )
     p._pool = mock_pool
 
     result = await p.check_integrity()
@@ -428,16 +438,18 @@ async def test_check_integrity_broken_chain():
     mock_pool, mock_conn = _make_mock_pool()
 
     # asyncpg decodes JSONB as dicts automatically
-    mock_conn.fetch = AsyncMock(return_value=[
-        {
-            "node_id": "a" * 64,
-            "node_data": {"prev_hash": "0" * 64},
-        },
-        {
-            "node_id": "b" * 64,
-            "node_data": {"prev_hash": "wrong" * 13},  # wrong link
-        },
-    ])
+    mock_conn.fetch = AsyncMock(
+        return_value=[
+            {
+                "node_id": "a" * 64,
+                "node_data": {"prev_hash": "0" * 64},
+            },
+            {
+                "node_id": "b" * 64,
+                "node_data": {"prev_hash": "wrong" * 13},  # wrong link
+            },
+        ]
+    )
     p._pool = mock_pool
 
     result = await p.check_integrity()
@@ -499,16 +511,18 @@ async def test_get_latest_node_invalid_json_node_data():
     """When node_data is an invalid JSON string, json.loads raises → pass (278-279)."""
     p = _make_provider()
     mock_pool, mock_conn = _make_mock_pool()
-    mock_conn.fetchrow = AsyncMock(return_value={
-        "node_id": "abc" * 21 + "a",
-        "node_data": "{ NOT VALID JSON {{",
-        "timestamp": "2024-01-01T00:00:00",
-        "request_hash": "rh",
-        "response_hash": "rh2",
-        "merkle_root": "mr",
-        "signature": "sig",
-        "client_id": "c1",
-    })
+    mock_conn.fetchrow = AsyncMock(
+        return_value={
+            "node_id": "abc" * 21 + "a",
+            "node_data": "{ NOT VALID JSON {{",
+            "timestamp": "2024-01-01T00:00:00",
+            "request_hash": "rh",
+            "response_hash": "rh2",
+            "merkle_root": "mr",
+            "signature": "sig",
+            "client_id": "c1",
+        }
+    )
     p._pool = mock_pool
 
     result = await p.get_latest_node()

@@ -7,11 +7,7 @@ from __future__ import annotations
 
 import importlib
 import sys
-from contextlib import asynccontextmanager
 from unittest.mock import MagicMock, patch
-
-import pytest
-
 
 # ── Prometheus paths (lines 46, 52-109) ───────────────────────────────────────
 
@@ -33,6 +29,7 @@ def test_observability_prometheus_paths_via_reload():
 
     try:
         import aegis.core.observability as obs_mod
+
         importlib.reload(obs_mod)
         assert obs_mod._PROM is True
         assert obs_mod.prometheus_available() is True
@@ -71,6 +68,7 @@ def test_observability_otel_paths_via_reload():
 
     try:
         import aegis.core.observability as obs_mod
+
         importlib.reload(obs_mod)
         assert obs_mod._OTEL is True
     finally:
@@ -109,8 +107,8 @@ def test_setup_otel_when_otel_enabled(monkeypatch):
 
 def test_setup_otel_with_endpoint(monkeypatch):
     """setup_otel() with OTEL endpoint env var set exercises BatchSpanProcessor path."""
+
     import aegis.core.observability as obs
-    import os
 
     mock_provider = MagicMock()
     mock_provider_instance = MagicMock()
@@ -132,10 +130,13 @@ def test_setup_otel_with_endpoint(monkeypatch):
     mock_sdk_export = MagicMock()
     mock_sdk_export.BatchSpanProcessor = mock_batch_cls
 
-    with patch.dict(sys.modules, {
-        "opentelemetry.exporter.otlp.proto.grpc.trace_exporter": mock_otlp_mod,
-        "opentelemetry.sdk.trace.export": mock_sdk_export,
-    }):
+    with patch.dict(
+        sys.modules,
+        {
+            "opentelemetry.exporter.otlp.proto.grpc.trace_exporter": mock_otlp_mod,
+            "opentelemetry.sdk.trace.export": mock_sdk_export,
+        },
+    ):
         obs.setup_otel("test-service")
 
     mock_provider_instance.add_span_processor.assert_called_once()
@@ -151,6 +152,7 @@ def test_record_span_with_tracer_yields_span(monkeypatch):
     class _FakeCtx:
         def __enter__(self_):
             return mock_span
+
         def __exit__(self_, *a):
             pass
 

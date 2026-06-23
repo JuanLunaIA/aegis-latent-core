@@ -16,14 +16,16 @@ internet connection is used only to load the Chart.js / Mermaid CDNs).
 | `index.html` | Full dashboard (Overview) |
 | `01-overview.html` | Overview — KPIs, live throughput & latency |
 | `02-performance.html` | Performance — percentiles, Rust vs Python, budgets |
-| `03-audit.html` | Audit Chain — Merkle root, node explorer, growth |
-| `04-forensics.html` | Forensics — entropy / KL, static security scan |
-| `05-waf.html` | WAF & Limits — injection blocks, rate-limit pressure |
-| `06-providers.html` | Providers — routing share, token economics |
-| `07-compliance.html` | Compliance — SOC2 / HIPAA sealed bundles |
-| `08-architecture.html` | Architecture — topology, lifecycle, data flow |
-| `09-code.html` | Code Map — Python / Rust symbol explorer |
-| `10-health.html` | System Health — components & security posture |
+| `03-providers.html` | Providers — routing share, token economics |
+| `04-health.html` | System Health — components & security posture |
+| `05-threatlab.html` | **Threat Lab** — paste a payload (EICAR virus, injection, leaked key…) and watch every engine flag it |
+| `06-detectors.html` | **Detectors** — detection-engine catalog & coverage radar |
+| `07-waf.html` | WAF & Limits — injection blocks, rate-limit pressure |
+| `08-audit.html` | Audit Chain — Merkle root, node explorer, growth |
+| `09-forensics.html` | Forensics — entropy / KL, static security scan |
+| `10-compliance.html` | Compliance — SOC2 / HIPAA sealed bundles |
+| `11-architecture.html` | Architecture — topology, lifecycle, data flow |
+| `12-code.html` | Code Map — Python / Rust symbol explorer |
 
 Regenerate with:
 

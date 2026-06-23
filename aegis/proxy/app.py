@@ -36,6 +36,7 @@ from aegis.core.waf_session import WAFSessionTracker
 from aegis.proxy.analyzer import ResponseAnalysis, ResponseAnalyzer
 from aegis.proxy.audit_api import build_audit_router
 from aegis.proxy.dependencies import validate_proxy_auth
+from aegis.proxy.dmz_middleware import DMZSourceIPMiddleware
 from aegis.proxy.forwarder import LLMForwarder
 from aegis.proxy.schemas import AlertOut
 from aegis.proxy.waf import AegisWAF
@@ -50,9 +51,16 @@ _ALERT_BUFFER_SIZE = 10_000
 _BACKGROUND_TASKS: set[asyncio.Task[Any]] = set()
 
 
+async def _with_jitter_measurement(coro: Any, enqueued_at: float) -> Any:
+    """Wrap *coro* to record scheduling jitter as the first observable action."""
+    observability.SCHEDULING_JITTER.observe(time.perf_counter() - enqueued_at)
+    return await coro
+
+
 def _spawn_background(coro: Any) -> asyncio.Task[Any]:
     """Schedule *coro* as a tracked background task that survives GC."""
-    task = asyncio.create_task(coro)
+    enqueued_at = time.perf_counter()
+    task = asyncio.create_task(_with_jitter_measurement(coro, enqueued_at))
     _BACKGROUND_TASKS.add(task)
     observability.AUDIT_PENDING_COMMITS.set(len(_BACKGROUND_TASKS))
 
@@ -496,7 +504,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             anthropic_api_version=cfg.anthropic_api_version,
         )
 
-        state.forwarder = LLMForwarder(forwarder_cfg, provider=provider)
+        egress_guard = cfg.get_egress_guard()
+        state.forwarder = LLMForwarder(forwarder_cfg, provider=provider, egress_guard=egress_guard)
         await state.forwarder.start()
         state.sessions = SessionLifecycleManager(max_sessions=4_096)
 
@@ -580,6 +589,15 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
 
     app.add_middleware(RequestSmugglingProtectionMiddleware)
+
+    dmz_networks = cfg.get_dmz_networks()
+    if dmz_networks:
+        app.add_middleware(
+            DMZSourceIPMiddleware,
+            allowed_networks=dmz_networks,
+            trust_proxy_headers=cfg.dmz_trust_proxy_headers,
+        )
+
     app.include_router(build_audit_router(state.ledger, state.audit_auth), prefix="/v1/audit")
 
     if observability.prometheus_available():
@@ -840,9 +858,15 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     )
                     _spawn_background(
                         _commit_and_alert(
-                            request_id, session_id, analysis, raw_body, request_start,
-                            phi_scrubbed=_phi_scrubbed, scrub_method=_scrub_method,
-                            signer_name=session_id, signature_meaning="authored",
+                            request_id,
+                            session_id,
+                            analysis,
+                            raw_body,
+                            request_start,
+                            phi_scrubbed=_phi_scrubbed,
+                            scrub_method=_scrub_method,
+                            signer_name=session_id,
+                            signature_meaning="authored",
                         )
                     )
 
@@ -885,9 +909,15 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         _spawn_background(
             _commit_and_alert(
-                request_id, session_id, analysis, raw_body, request_start,
-                phi_scrubbed=_phi_scrubbed, scrub_method=_scrub_method,
-                signer_name=session_id, signature_meaning="authored",
+                request_id,
+                session_id,
+                analysis,
+                raw_body,
+                request_start,
+                phi_scrubbed=_phi_scrubbed,
+                scrub_method=_scrub_method,
+                signer_name=session_id,
+                signature_meaning="authored",
             )
         )
 

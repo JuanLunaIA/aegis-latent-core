@@ -1,17 +1,22 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
-from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from __future__ import annotations
+
+import asyncio
 import json
-import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import sys
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
-if getattr(sys, 'frozen', False):
-    APP_DIR = Path(sys._MEIPASS)
+from tools.visualizer.generate_summary import generate_summary_dict
+
+if getattr(sys, "frozen", False):
+    APP_DIR = Path(sys._MEIPASS)  # type: ignore[attr-defined]
 else:
     APP_DIR = Path(__file__).resolve().parents[2]
 
@@ -22,10 +27,6 @@ app = FastAPI(title="Aegis Visualizer")
 app.mount("/static", StaticFiles(directory=str(VIS_DIR / "static")), name="static")
 
 
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from tools.visualizer.generate_summary import generate_summary_dict
-
 @app.get("/api/summary")
 async def summary():
     try:
@@ -34,7 +35,9 @@ async def summary():
             data = await loop.run_in_executor(pool, generate_summary_dict)
         return JSONResponse(content=data)
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": "failed to generate summary", "exception": str(e)})
+        return JSONResponse(
+            status_code=500, content={"error": "failed to generate summary", "exception": str(e)}
+        )
 
 
 @app.get("/api/forensic_report")
@@ -43,10 +46,12 @@ async def forensic_report():
     if not path.exists():
         return JSONResponse(status_code=404, content={"error": "forensic report not found"})
     try:
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             data = json.load(fh)
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": "failed to read report", "exception": str(e)})
+        return JSONResponse(
+            status_code=500, content={"error": "failed to read report", "exception": str(e)}
+        )
     return JSONResponse(content=data)
 
 
@@ -153,10 +158,55 @@ async def metrics():
             data = await loop.run_in_executor(pool, _build_metrics)
         return JSONResponse(content=data)
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": "failed to build metrics", "exception": str(e)})
+        return JSONResponse(
+            status_code=500, content={"error": "failed to build metrics", "exception": str(e)}
+        )
+
+
+_MAX_SCAN_CHARS = 20000
+
+
+@app.post("/api/scan")
+async def scan(request: Request):
+    """Run submitted text through every real Aegis detection engine.
+
+    This powers the Threat Lab page: paste a prompt injection, an EICAR test
+    virus, a leaked key, a classified marker or a SCADA command and see exactly
+    which engines flag it and why. Input is bounded and never executed.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "invalid JSON body"})
+    text = (body or {}).get("text", "")
+    if not isinstance(text, str):
+        return JSONResponse(status_code=400, content={"error": "'text' must be a string"})
+    if len(text) > _MAX_SCAN_CHARS:
+        text = text[:_MAX_SCAN_CHARS]
+    try:
+        from tools.visualizer.threat_lab import scan_text
+
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor() as pool:
+            data = await loop.run_in_executor(pool, scan_text, text)
+        return JSONResponse(content=data)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": "scan failed", "exception": str(e)})
+
+
+@app.get("/api/threat_samples")
+async def threat_samples():
+    """Curated, safe one-click test payloads for the Threat Lab."""
+    try:
+        from tools.visualizer.threat_lab import sample_payloads
+
+        return JSONResponse(content={"samples": sample_payloads()})
+    except Exception as e:
+        return JSONResponse(
+            status_code=500, content={"error": "failed to load samples", "exception": str(e)}
+        )
 
 
 @app.get("/")
 async def index():
     return FileResponse(str(VIS_DIR / "static" / "index.html"))
-

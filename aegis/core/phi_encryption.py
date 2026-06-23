@@ -38,6 +38,7 @@ Usage::
     # Decrypt when reading back
     pt = encryptor.decrypt("tenant-abc", ct)
 """
+
 from __future__ import annotations
 
 import os
@@ -46,8 +47,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
-_NONCE_SIZE = 12   # 96-bit nonce (NIST SP 800-38D recommended)
-_KEY_SIZE = 32     # 256-bit AES key
+_NONCE_SIZE = 12  # 96-bit nonce (NIST SP 800-38D recommended)
+_KEY_SIZE = 32  # 256-bit AES key
 _HKDF_HASH = hashes.SHA256()
 
 
@@ -71,9 +72,7 @@ class PHIPayloadEncryptor:
 
     def __init__(self, master_key: bytes, salt: bytes | None = None) -> None:
         if len(master_key) != _KEY_SIZE:
-            raise ValueError(
-                f"master_key must be exactly {_KEY_SIZE} bytes, got {len(master_key)}"
-            )
+            raise ValueError(f"master_key must be exactly {_KEY_SIZE} bytes, got {len(master_key)}")
         self._master_key = master_key
         self._salt = salt  # None → HKDF uses all-zero salt (still secure with info)
         self._dek_cache: dict[str, bytes] = {}

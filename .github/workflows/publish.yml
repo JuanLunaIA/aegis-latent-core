@@ -1,0 +1,105 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+#
+# publish.yml — PyPI package build verification (PRs) and publish (releases).
+#
+# The "submit-pypi" job runs on every PR to prove the package builds correctly
+# and passes twine check. On a release tag it publishes to PyPI using OIDC
+# Trusted Publishing (no stored API token required).
+#
+# Setup required (one-time, on PyPI):
+#   1. Create a project on pypi.org → Publishing → Add a publisher
+#   2. Owner: JuanLunaIA, Repo: aegis-latent-core, Workflow: publish.yml, Env: pypi
+name: Publish
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    tags:
+      - "v[0-9]*"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to PyPI (yes/no)"
+        required: false
+        default: "no"
+
+jobs:
+  # ── Build check on every PR ─────────────────────────────────────────────
+  # This job is a required status check named "submit-pypi".
+  # On PRs it only builds and verifies — it does NOT publish.
+  submit-pypi:
+    name: submit-pypi
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so hatchling can derive version from VCS
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build tools
+        run: pip install build twine
+
+      - name: Build source and wheel
+        run: python -m build
+
+      - name: Verify distribution metadata (twine check)
+        run: twine check dist/*
+
+      - name: Verify wheel installs cleanly
+        run: |
+          pip install dist/*.whl
+          python -c "import aegis; print('aegis', aegis.__version__)"
+
+      - name: Show built artifacts
+        run: ls -lh dist/
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: dist/
+          retention-days: 7
+
+  # ── Publish to PyPI on release tag ──────────────────────────────────────
+  pypi-release:
+    name: Publish to PyPI
+    runs-on: ubuntu-22.04
+    needs: submit-pypi
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'yes')
+    environment:
+      name: pypi
+      url: https://pypi.org/project/aegis-latent-core/
+    permissions:
+      id-token: write   # required for OIDC Trusted Publishing
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build tools
+        run: pip install build twine
+
+      - name: Build source and wheel
+        run: python -m build
+
+      - name: Verify distribution metadata
+        run: twine check dist/*
+
+      - name: Publish to PyPI (OIDC Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          print-hash: true
+          verbose: true

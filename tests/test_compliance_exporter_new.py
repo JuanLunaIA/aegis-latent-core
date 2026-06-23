@@ -13,14 +13,12 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from aegis_server.compliance.exporter import (
+    _MAX_EXPORT_NODES,
     ComplianceExporter,
     ExportParams,
     ExportResult,
-    _MAX_EXPORT_NODES,
 )
 from aegis_server.crypto.base import LocalHMACSigner
-from aegis_server.storage.sqlite_provider import SQLiteStorageProvider
-
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -252,9 +250,7 @@ async def test_export_range_paginated_single_page(tmp_path):
     storage.list_nodes = AsyncMock(return_value=[{"n": i} for i in range(3)])
 
     exporter = ComplianceExporter(storage=storage, signer=signer, export_dir=str(tmp_path))
-    results = await exporter.export_range_paginated(
-        total_limit=3, page_size=10, tenant_id=None
-    )
+    results = await exporter.export_range_paginated(total_limit=3, page_size=10, tenant_id=None)
     assert len(results) == 1
     assert results[0].node_count == 3
 
@@ -270,9 +266,7 @@ async def test_export_range_paginated_exhausts_storage(tmp_path):
     storage.list_nodes = AsyncMock(return_value=[{"n": i} for i in range(5)])
 
     exporter = ComplianceExporter(storage=storage, signer=signer, export_dir=str(tmp_path))
-    results = await exporter.export_range_paginated(
-        total_limit=100, page_size=10, tenant_id=None
-    )
+    results = await exporter.export_range_paginated(total_limit=100, page_size=10, tenant_id=None)
     # Only one bundle since storage had fewer than page_size nodes
     assert len(results) == 1
 

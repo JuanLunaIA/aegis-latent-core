@@ -2,11 +2,10 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """Multi-turn behavioral WAF session state machine (ROADMAP Domain 5.1)."""
+
 from __future__ import annotations
 
 import threading
-
-import pytest
 
 from aegis.core.waf_session import SessionEscalationResult, WAFSessionState, WAFSessionTracker
 
@@ -202,9 +201,7 @@ class TestWAFSessionIntegration:
         session = "attacker-001"
         # 4 turns with score 0.4 each — cumulative = 1.6 after turn 4
         scores = [0.4, 0.4, 0.4, 0.4]
-        results = [
-            tracker.record_and_check(session, score=s, allowed=True) for s in scores
-        ]
+        results = [tracker.record_and_check(session, score=s, allowed=True) for s in scores]
         # First 3: 0.4+0.4+0.4=1.2 < 1.5 → not escalated
         assert not results[0].escalated
         assert not results[1].escalated

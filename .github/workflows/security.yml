@@ -1,0 +1,161 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+#
+# security.yml — Scheduled and on-demand deep security scanning.
+#
+# Runs weekly and on every push to main. Results are uploaded to GitHub
+# Security (SARIF) so findings appear in the Security → Code Scanning tab.
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly deep scan — Mondays at 03:00 UTC
+    - cron: "0 3 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # ── CodeQL static analysis ───────────────────────────────────────────────
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-22.04
+    # GitHub's default CodeQL setup conflicts with advanced workflow setup.
+    # continue-on-error lets the other security jobs proceed regardless.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python]
+        # Add rust once CodeQL has stable Rust support
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}
+
+  # ── Bandit SAST (SARIF output) ───────────────────────────────────────────
+  bandit:
+    name: Bandit SAST
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install bandit with SARIF support
+        run: pip install "bandit[sarif]"
+
+      - name: Run bandit
+        run: |
+          bandit -r aegis/ aegis_server/ \
+            -c pyproject.toml \
+            -f sarif \
+            -o bandit.sarif \
+            --exit-zero
+          # Still fail on high severity
+          bandit -r aegis/ aegis_server/ -c pyproject.toml -lll
+
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: bandit.sarif
+          category: bandit
+
+  # ── pip-audit dependency vulnerability scan ──────────────────────────────
+  pip-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit runtime dependencies
+        run: pip-audit -r requirements.txt --progress-spinner off
+
+      - name: Audit dev dependencies
+        run: |
+          pip install -e ".[dev]"
+          pip-audit --progress-spinner off
+
+  # ── Trivy container vulnerability scan ──────────────────────────────────
+  trivy:
+    name: Trivy Container Scan
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image for scanning
+        run: |
+          docker build -f deploy/docker/Dockerfile -t aegis-scan:latest . || true
+
+      - name: Scan filesystem (no Docker build needed)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "0"   # report but don't block
+
+      - name: Upload Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+  # ── Cargo audit (Rust dependency security) ──────────────────────────────
+  cargo-audit:
+    name: Cargo Audit
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --quiet
+
+      - name: Audit Rust dependencies
+        working-directory: aegis_rust_v2
+        run: |
+          cargo audit \
+            --ignore RUSTSEC-2026-0176 \
+            --ignore RUSTSEC-2026-0177 \
+            --ignore RUSTSEC-2026-0118 \
+            --ignore RUSTSEC-2026-0119 \
+            --ignore RUSTSEC-2024-0436 \
+            --ignore RUSTSEC-2026-0162 \
+            --ignore RUSTSEC-2026-0163 \
+            --ignore RUSTSEC-2026-0166

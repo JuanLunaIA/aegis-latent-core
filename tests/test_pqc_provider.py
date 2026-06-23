@@ -5,10 +5,7 @@
 
 from __future__ import annotations
 
-import pytest
-
 from aegis.core.pqc_provider import PQCKeyPair, PQCProvider
-
 
 # ── PQCKeyPair dataclass ───────────────────────────────────────────────────────
 

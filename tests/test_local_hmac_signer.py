@@ -6,10 +6,8 @@
 from __future__ import annotations
 
 import pytest
-import pytest_asyncio
 
-from aegis_server.crypto.base import LocalHMACSigner, SignerProvider, _MIN_KEY_BYTES
-
+from aegis_server.crypto.base import _MIN_KEY_BYTES, LocalHMACSigner, SignerProvider
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 

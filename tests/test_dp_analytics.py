@@ -2,6 +2,7 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """Tests for aegis.core.dp_analytics — differential privacy noise injection."""
+
 from __future__ import annotations
 
 import statistics
@@ -78,6 +79,7 @@ class TestLaplaceDP:
 
     def test_larger_epsilon_less_noise(self):
         """Higher epsilon → smaller scale → less variance in noise."""
+
         def variance_of_noise(eps, n=5000):
             dp = LaplaceDP(epsilon=eps, seed=0)
             samples = [dp.noisy_count(0) for _ in range(n)]

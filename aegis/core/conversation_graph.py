@@ -36,6 +36,7 @@ Usage::
     if result.erosion_detected:
         raise HTTPException(429, detail=result.reason)
 """
+
 from __future__ import annotations
 
 import threading
@@ -170,7 +171,10 @@ class ConversationGraphState:
                     drop = self._baseline_mean - recent_mean
                     # Combined signal: WAF activity lowers the drift threshold
                     effective_threshold = self._entropy_drop_threshold
-                    if self._combined_score_boost > 0 and cumulative_waf >= self._combined_score_boost:
+                    if (
+                        self._combined_score_boost > 0
+                        and cumulative_waf >= self._combined_score_boost
+                    ):
                         effective_threshold *= 0.5
 
                     if drop >= effective_threshold:
