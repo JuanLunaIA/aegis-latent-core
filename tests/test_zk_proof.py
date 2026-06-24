@@ -215,6 +215,24 @@ def test_prover_is_stub(prover):
     assert prover.is_stub is True
 
 
+def test_require_real_raises_without_native_backend():
+    import pytest
+
+    from aegis.core.zk_proof import HAS_ZK_NATIVE, ZKProofUnavailableError, ZKProver
+
+    # The stub backend must refuse to operate when a caller demands real proofs.
+    assert HAS_ZK_NATIVE is False
+    with pytest.raises(ZKProofUnavailableError, match="not sound"):
+        ZKProver(require_real=True)
+
+
+def test_default_prover_does_not_require_real():
+    from aegis.core.zk_proof import ZKProver
+
+    # Default construction stays usable as an explicit, labelled stub.
+    assert ZKProver().is_stub is True
+
+
 # ── to_dict / to_base64 ───────────────────────────────────────────────────────
 
 

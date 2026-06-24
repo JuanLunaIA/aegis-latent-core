@@ -266,6 +266,26 @@ def _transparency_log() -> ControlCapability:
     )
 
 
+def _zk_audit_proofs() -> ControlCapability:
+    try:
+        from aegis.core import zk_proof
+
+        native = zk_proof.HAS_ZK_NATIVE
+    except Exception:  # pragma: no cover - import failure path
+        native = False
+    return ControlCapability(
+        name="zk_audit_inclusion_proofs",
+        category="assurance-pipeline",
+        status="REAL" if native else "UNAVAILABLE",
+        module="aegis.core.zk_proof",
+        detail=(
+            "native ZK proving backend integrated"
+            if native
+            else "honest stub (is_stub=True, HAS_ZK_NATIVE=False); no ZK soundness claimed"
+        ),
+    )
+
+
 def _public_anchoring() -> ControlCapability:
     try:
         from aegis.core.blockchain_anchor import blockchain_provider
@@ -303,6 +323,7 @@ _PROBES = (
     _dependency_audit,
     _reproducible_build,
     _transparency_log,
+    _zk_audit_proofs,
     _public_anchoring,
 )
 

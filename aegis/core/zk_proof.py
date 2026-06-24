@@ -160,7 +160,22 @@ class ZKProver:
         )
         result = prover.generate_proof(request)
         assert prover.is_stub  # always True until real library integrated
+
+    Honesty contract
+    ----------------
+    Construct with ``require_real=True`` on any path that must not rely on a
+    non-sound stub proof: it raises :class:`ZKProofUnavailableError` at
+    construction while ``HAS_ZK_NATIVE`` is ``False``, so production code can
+    refuse to operate rather than silently emitting a stub proof that provides no
+    zero-knowledge soundness.
     """
+
+    def __init__(self, *, require_real: bool = False) -> None:
+        if require_real and not HAS_ZK_NATIVE:
+            raise ZKProofUnavailableError(
+                "real ZK backend (bellman/halo2/winterfell) is not integrated; "
+                "refusing to operate with require_real=True (stub proofs are not sound)"
+            )
 
     def generate_proof(self, request: ZKProofRequest) -> ZKProofResult:
         """
