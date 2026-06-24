@@ -70,7 +70,7 @@ production and is excluded from compliance evidence.
 ### P0.2 Fake hardware-root-of-trust & runtime attestation
 
 - [x] `aegis/core/tpm.py` — removed the `_simulated_pcr_value` in-memory fake and the "In a real system" comment; PCR extend/read now delegate to the real `tpm2_pcrextend` / `tpm2_pcrread` CLI (guarded by `shutil.which`). When tpm2-tools or the TPM device is absent it falls back to a clearly-labelled **software** PCR with the correct extend formula `SHA256(PCR_old ‖ SHA256(binary))` and an advisory warning — never a silent false positive. `_parse_pcrread_output` extracts the hex value from real CLI output; 16 tests cover hardware/software mode selection, extend-formula correctness, hardware-failure raising, PCR parsing, and verify match/mismatch (`tests/test_tpm.py`).
-- [ ] `aegis/core/hardware_token.py` — TPM2 backend currently logs "using HMAC stub (real PCR quote not yet implemented)" and falls back to software HMAC; implement real PCR-bound token sealing.
+- [x] `aegis/core/hardware_token.py` — removed the "using HMAC stub (real PCR quote not yet implemented)" software-only TPM2 path. The TPM2 backend now performs **real PCR binding**: the attestation is `HMAC-SHA256(signing_key, canonical_fields ‖ pcr_digest)` where `pcr_digest = SHA-256(live PCR values)` read via `tpm2_pcrread` over a configurable selection (`AEGIS_TOKEN_PCR_SELECTION`, default `sha256:0..7`). A token therefore validates only while the platform measurement state is unchanged — extending a bound PCR invalidates it. TPM2 is selected only when **both** a TPM device and `tpm2-tools` are present (else honest SOFTWARE fallback); TPM read failures during validation fail closed (invalid result, no raise). 11 new tests cover parse/hash, stable-PCR round-trip, PCR-change invalidation, CLI-missing/failure handling, and device+tools gating (`tests/test_hardware_token.py`). `AEGIS_SIGNING_KEY` remains separate from API keys.
 - [x] `aegis/core/cfi_manager.py` — replaced `is_cfi_enabled = True  # Simulation result` with real ELF parsing via `pyelftools` (subprocess `readelf`/`nm` fallback). Three detection tiers: LLVM CFI (`__cfi_check`), GCC/LLVM unwind tables (`.eh_frame`/`.eh_frame_hdr`), Intel CET (`GNU_PROPERTY_X86_FEATURE_1_AND`). New `CFIReport` dataclass; 18 tests prove honest results on real binary and graceful failure for missing/non-ELF files (`tests/test_cfi_manager.py`).
 - [x] `aegis/core/mte_guard.py` — replaced simulated MTE detection with real `/proc/cpuinfo` `mte` flag check, `AT_HWCAP2` auxiliary-vector parsing, and `prctl(PR_SET_TAGGED_ADDR_CTRL)` syscall via `ctypes`. Returns False on x86/non-ARM; never manufactures a positive result. 14 tests cover hardware-absent and mocked-hardware paths (`tests/test_mte_guard.py`). ARM integration tests skip cleanly on CI.
 - [x] `aegis/core/tee_manager.py` / `enclave_provider.py` — replaced simulated enclave (hardcoded fake measurements + `ENCLAVE_SECRET_SALT` signature) with honest hardware-gated stubs: `_tee_device_available()` / `_enclave_device_available()` probe `/dev/sgx_enclave`, `/dev/isgx`, `/dev/sev`, `/dev/tdx_guest`; `initialize_enclave()` returns `False` when absent; operations raise `NotImplementedError` when hardware present but C API not yet bound — no fake values manufactured. Real SGX/SEV-SNP attestation binding tracked in DX-Gov.
@@ -199,12 +199,12 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 
 | Track | Open items | Priority |
 |---|---|---|
-| P0 — Trust integrity (de-sim / real crypto) | 3 | Critical |
+| P0 — Trust integrity (de-sim / real crypto) | 2 | Critical |
 | P1 — Supply chain | 6 | High |
 | P1 — Live-path correctness | 6 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **47** | — |
+| **Total open** | **46** | — |
 
 > **P0.5 complete (2026-06-24, run 13):** with the capability matrix + `SECURITY.md`
 > "Simulated vs. Real Controls" section + the obviated quarantine package, all of P0.5

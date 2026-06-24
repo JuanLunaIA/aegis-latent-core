@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import dataclasses
 import time
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -277,6 +278,122 @@ class TestBackend:
 
     def test_is_tpm_available_does_not_raise(self) -> None:
         HardwareTokenManager._is_tpm_available()  # must not raise
+
+    def test_tpm2_requires_both_device_and_tools(self) -> None:
+        # Device present but tpm2-tools absent → not usable → SOFTWARE.
+        with (
+            patch.object(HardwareTokenManager, "_is_tpm_available", return_value=True),
+            patch.object(HardwareTokenManager, "_tpm2_tools_available", return_value=False),
+        ):
+            m = HardwareTokenManager(signing_key=_TEST_KEY, backend=TokenBackend.TPM2)
+        assert m.backend is TokenBackend.SOFTWARE
+
+
+# ── TPM2 PCR-bound backend ────────────────────────────────────────────────────
+
+
+_PCRREAD_A = "sha256:\n  0 : 0x" + "00" * 32 + "\n  1 : 0x" + "11" * 32 + "\n"
+_PCRREAD_B = "sha256:\n  0 : 0x" + "00" * 32 + "\n  1 : 0x" + "22" * 32 + "\n"
+
+
+def _cp(stdout: str = "", returncode: int = 0, stderr: str = ""):
+    m = MagicMock()
+    m.stdout = stdout
+    m.stderr = stderr
+    m.returncode = returncode
+    return m
+
+
+def _tpm2_manager() -> HardwareTokenManager:
+    with patch.object(HardwareTokenManager, "_tpm2_usable", return_value=True):
+        return HardwareTokenManager(signing_key=_TEST_KEY, backend=TokenBackend.TPM2)
+
+
+class TestTpm2PcrBinding:
+    def test_backend_is_tpm2_when_usable(self) -> None:
+        mgr = _tpm2_manager()
+        assert mgr.backend is TokenBackend.TPM2
+
+    def test_read_pcr_digest_parses_and_hashes(self) -> None:
+        mgr = _tpm2_manager()
+        with patch("aegis.core.hardware_token.subprocess.run", return_value=_cp(_PCRREAD_A)):
+            digest = mgr._read_pcr_digest()
+        assert isinstance(digest, bytes)
+        assert len(digest) == 32
+
+    def test_issue_validate_roundtrip_with_stable_pcrs(self) -> None:
+        mgr = _tpm2_manager()
+        with patch("aegis.core.hardware_token.subprocess.run", return_value=_cp(_PCRREAD_A)):
+            token = mgr.issue(subject="user:a", tenant_id="t")
+            result = mgr.validate(token)
+        assert result.valid is True
+        assert result.backend_used is TokenBackend.TPM2
+
+    def test_pcr_change_invalidates_token(self) -> None:
+        mgr = _tpm2_manager()
+        # PCR state A at issue, PCR state B at validate → attestation must mismatch.
+        with patch(
+            "aegis.core.hardware_token.subprocess.run",
+            side_effect=[_cp(_PCRREAD_A), _cp(_PCRREAD_B)],
+        ):
+            token = mgr.issue(subject="user:a", tenant_id="t")
+            result = mgr.validate(token)
+        assert result.valid is False
+        assert "tamper" in result.reason or "mismatch" in result.reason
+
+    def test_tpm_failure_on_validate_is_invalid_not_raised(self) -> None:
+        mgr = _tpm2_manager()
+        with patch(
+            "aegis.core.hardware_token.subprocess.run",
+            side_effect=[_cp(_PCRREAD_A), _cp("", returncode=1, stderr="tpm busy")],
+        ):
+            token = mgr.issue(subject="user:a", tenant_id="t")
+            result = mgr.validate(token)
+        assert result.valid is False
+        assert "attestation unavailable" in result.reason
+
+    def test_read_pcr_digest_raises_on_nonzero_exit(self) -> None:
+        mgr = _tpm2_manager()
+        with (
+            patch(
+                "aegis.core.hardware_token.subprocess.run",
+                return_value=_cp("", returncode=1, stderr="no tpm"),
+            ),
+            pytest.raises(HardwareTokenError, match="tpm2_pcrread failed"),
+        ):
+            mgr._read_pcr_digest()
+
+    def test_read_pcr_digest_raises_when_no_values(self) -> None:
+        mgr = _tpm2_manager()
+        with (
+            patch(
+                "aegis.core.hardware_token.subprocess.run",
+                return_value=_cp("no pcr lines here"),
+            ),
+            pytest.raises(HardwareTokenError, match="no parseable PCR values"),
+        ):
+            mgr._read_pcr_digest()
+
+    def test_read_pcr_digest_raises_when_cli_missing(self) -> None:
+        mgr = _tpm2_manager()
+        with (
+            patch(
+                "aegis.core.hardware_token.subprocess.run",
+                side_effect=FileNotFoundError("tpm2_pcrread"),
+            ),
+            pytest.raises(HardwareTokenError, match="could not be executed"),
+        ):
+            mgr._read_pcr_digest()
+
+    def test_tpm2_attestation_differs_from_software(self) -> None:
+        # The PCR binding must change the attestation vs the pure-software HMAC.
+        sw = HardwareTokenManager(signing_key=_TEST_KEY, backend=TokenBackend.SOFTWARE)
+        tpm = _tpm2_manager()
+        args = ("id-1", "user:a", "t", 1000.0, 2000.0)
+        sw_att = sw._attest(*args)
+        with patch("aegis.core.hardware_token.subprocess.run", return_value=_cp(_PCRREAD_A)):
+            tpm_att = tpm._attest(*args)
+        assert sw_att != tpm_att
 
 
 # ── TokenValidationResult.to_dict() ──────────────────────────────────────────

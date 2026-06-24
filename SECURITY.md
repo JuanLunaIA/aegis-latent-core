@@ -114,6 +114,7 @@ and what it does when the dependency is missing.
 | Seccomp syscall filter | `sandbox_l1` | libseccomp | `UNAVAILABLE`; filter not loaded |
 | TPM PCR root-of-trust | `tpm` | tpm2-tools + TPM device | labelled **software** PCR (not a hardware RoT) |
 | Trusted-boot attestation | `boot_attestation` | signed vendor manifest + TPM | manifest signature always verified; live PCR check needs a TPM |
+| Hardware-bound session tokens | `hardware_token` | TPM device + tpm2-tools | software HMAC binding (no PCR seal) when TPM/tools absent |
 | TEE enclave attestation | `tee_manager` / `enclave_provider` | SGX/SEV/TDX device | `UNAVAILABLE`; operations raise |
 | eBPF runtime monitor | `ebpf_monitor` | `bpftool` + CAP_BPF | probes stay inactive; no fabricated telemetry |
 | DPDK kernel-bypass datapath | `dpdk_engine` | hugepages + dpdk-devbind | `UNAVAILABLE`; no packets (no fake packets) |
