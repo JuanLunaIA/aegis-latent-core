@@ -9,6 +9,8 @@ Implements fuzzing targets for the Rust core using cargo-fuzz and AFL++.
 from __future__ import annotations
 
 import logging
+import shutil
+import subprocess  # noqa: S404  # nosec B404
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -52,29 +54,48 @@ class AegisFuzzingEngine:
             ),
         ]
 
-    def run_target(self, target_name: str, duration_seconds: int = 3600):
+    def run_target(self, target_name: str, duration_seconds: int = 3600) -> bool:
         """
         Executes a specific fuzz target using cargo-fuzz.
+
+        Runs `cargo fuzz run <target> -- -max_total_time=<duration>`.
+        Returns True when the run completes (crash or clean); False when
+        cargo/cargo-fuzz is absent or the engine itself raises.
+        Sets target.last_run_status to CLEAN, CRASH_FOUND, or UNAVAILABLE.
         """
         target = next((t for t in self.targets if t.name == target_name), None)
         if not target:
             logger.error("Fuzz target %s not found.", target_name)
             return False
 
+        if shutil.which("cargo") is None:
+            logger.warning(
+                "cargo not found — fuzzing unavailable for target %s. "
+                "Install Rust toolchain to enable.",
+                target_name,
+            )
+            target.last_run_status = "UNAVAILABLE"
+            return False
+
         logger.info("Starting fuzzing for target [%s] (%s)...", target.name, target.description)
 
-        # In a real environment: subprocess.run(["cargo", "fuzz", "run", target.name, "--", "-max_total_time", str(duration_seconds)])
+        cmd = [
+            "cargo",
+            "fuzz",
+            "run",
+            target.name,
+            "--",
+            f"-max_total_time={duration_seconds}",
+            f"-artifact_prefix={target.corpus_path}/crashes/",
+        ]
+
         try:
-            # Simulation of fuzzing execution
-            import time
-
-            time.sleep(2)  # Simulate start-up
-            logger.info("Fuzzing target %s: Executing mutations...", target.name)
-
-            # Simulation: 95% chance of no crash, 5% chance of finding an edge case
-            import random
-
-            if random.random() > 0.95:
+            result = subprocess.run(  # noqa: S603  # nosec B603
+                cmd,
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
                 logger.error(
                     "CRASH DETECTED in target %s! Corpus entry saved to %s/crashes/",
                     target.name,
@@ -84,10 +105,16 @@ class AegisFuzzingEngine:
             else:
                 logger.info("Fuzzing target %s: No crashes found in session.", target.name)
                 target.last_run_status = "CLEAN"
-
             return True
-        except Exception as e:
-            logger.error("Fuzzing engine failure: %s", e)
+        except FileNotFoundError:
+            logger.warning(
+                "cargo-fuzz not installed — run `cargo install cargo-fuzz` to enable target %s.",
+                target.name,
+            )
+            target.last_run_status = "UNAVAILABLE"
+            return False
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Fuzzing engine failure: %s", exc)
             return False
 
     def get_coverage_report(self) -> dict:

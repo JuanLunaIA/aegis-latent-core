@@ -8,7 +8,15 @@ Defines the security queries and sinks/sources used to scan the Aegis codebase.
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
 
+import json
+import logging
+import shutil
+import subprocess  # noqa: S404  # nosec B404
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -27,7 +35,8 @@ class AegisCodeQLPipeline:
     such as incorrect PQC parameter usage or unsafe Rust blocks.
     """
 
-    def __init__(self):
+    def __init__(self, source_root: Path | str | None = None):
+        self.source_root: Path = Path(source_root) if source_root is not None else Path.cwd()
         self.queries: list[CodeQLQuery] = [
             CodeQLQuery(
                 id="AEGIS-001",
@@ -92,13 +101,86 @@ jobs:
 
     def run_local_scan(self) -> dict:
         """
-        Simulates a local CodeQL scan by executing a subset of the defined queries.
-        In production, this calls the 'codeql database analyze' CLI.
+        Runs a local CodeQL scan via the ``codeql`` CLI.
+
+        Creates a temporary CodeQL database for the Python source, runs
+        ``codeql database analyze`` with the built-in security-extended
+        query pack, and returns a result dict parsed from SARIF output.
+
+        Returns ``{"status": "UNAVAILABLE", ...}`` when the ``codeql`` CLI is
+        not installed — no fake results are manufactured.
         """
-        # SIMULATION: Scan results based on current codebase state
-        return {
-            "status": "SUCCESS",
-            "vulnerabilities_found": 0,
-            "queries_executed": len(self.queries),
-            "timestamp": "2026-05-30T18:10:00Z",
-        }
+        if shutil.which("codeql") is None:
+            logger.warning("codeql CLI not found — install CodeQL CLI to enable local scanning.")
+            return {
+                "status": "UNAVAILABLE",
+                "reason": "codeql CLI not installed",
+                "queries_defined": len(self.queries),
+            }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "codeql-db"
+            sarif_path = Path(tmp) / "results.sarif"
+
+            create_cmd = [
+                "codeql",
+                "database",
+                "create",
+                str(db_path),
+                "--language=python",
+                f"--source-root={self.source_root}",
+                "--overwrite",
+            ]
+            analyze_cmd = [
+                "codeql",
+                "database",
+                "analyze",
+                str(db_path),
+                "python-security-extended",
+                "--format=sarif-latest",
+                f"--output={sarif_path}",
+            ]
+
+            try:
+                create_result = subprocess.run(  # noqa: S603  # nosec B603
+                    create_cmd, capture_output=True, text=True
+                )
+                if create_result.returncode != 0:
+                    logger.error("codeql database create failed: %s", create_result.stderr)
+                    return {
+                        "status": "ERROR",
+                        "reason": "database creation failed",
+                        "stderr": create_result.stderr,
+                    }
+
+                analyze_result = subprocess.run(  # noqa: S603  # nosec B603
+                    analyze_cmd, capture_output=True, text=True
+                )
+                if analyze_result.returncode != 0:
+                    logger.error("codeql database analyze failed: %s", analyze_result.stderr)
+                    return {
+                        "status": "ERROR",
+                        "reason": "analysis failed",
+                        "stderr": analyze_result.stderr,
+                    }
+
+                sarif = (
+                    json.loads(sarif_path.read_text(encoding="utf-8"))
+                    if sarif_path.exists()
+                    else {}
+                )
+                runs = sarif.get("runs", [])
+                results = runs[0].get("results", []) if runs else []
+                vuln_count = len(results)
+
+                logger.info("CodeQL scan complete. Vulnerabilities found: %d", vuln_count)
+                return {
+                    "status": "SUCCESS",
+                    "vulnerabilities_found": vuln_count,
+                    "queries_executed": len(self.queries),
+                    "sarif_results": results,
+                }
+
+            except Exception as exc:  # noqa: BLE001
+                logger.error("CodeQL local scan raised: %s", exc)
+                return {"status": "ERROR", "reason": str(exc)}

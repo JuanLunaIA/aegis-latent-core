@@ -9,6 +9,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **De-simulated `CFIManager`** (ROADMAP P0.2). `aegis/core/cfi_manager.py`
+  previously hardcoded `is_cfi_enabled = True  # Simulation result`, always
+  returning a positive CFI attestation regardless of the binary under inspection.
+  Rewritten with three real ELF detection tiers: LLVM CFI (`__cfi_check` /
+  `__cfi_prototype` symbols via `pyelftools`), GCC/LLVM unwind tables
+  (`.eh_frame` / `.eh_frame_hdr` sections), and Intel CET IBT + Shadow Stack
+  (`GNU_PROPERTY_X86_FEATURE_1_AND` in `.note.gnu.property`). Falls back to
+  `readelf`/`nm` subprocess if `pyelftools` is not installed. 18 tests including
+  KAT against the real Rust `.so` binary and malformed-file edge cases
+  (`tests/test_cfi_manager.py`).
+
+- **De-simulated `MTEGuard`** (ROADMAP P0.2). `aegis/core/mte_guard.py`
+  previously fabricated ARM MTE support on every platform (`self._hardware_support
+  = True`) and simulated `PR_SET_TAGGED_ADDR_CTRL` success without issuing the
+  syscall. Rewritten with real `/proc/cpuinfo` `mte` flag parsing, `AT_HWCAP2`
+  bit 18 (`HWCAP2_MTE`) auxiliary-vector check, and a real `prctl(55, 1)` call
+  via `ctypes.CDLL("libc.so.6")`. Returns `False` on x86/non-ARM hosts. 14 tests
+  cover the no-hardware path and monkeypatched hardware paths; 2 ARM integration
+  tests skip cleanly on CI (`tests/test_mte_guard.py`).
+
+- **De-simulated `DependencyAuditor`** (ROADMAP P0.4). `aegis/core/dependency_audit.py`
+  previously calculated `SHA-256(f"{name}_{version}_AUDITED")` as the audit hash
+  and re-computed the exact same string for verification — always passing. Replaced
+  with a real `pip-audit -f json` invocation (`DependencyAuditor.scan()` returning
+  `VulnerabilityFinding` dataclasses) and real `importlib.metadata` RECORD hash
+  verification using URL-safe base64 (PEP 658). `DependencyInternalizer.verify_supply_chain()`
+  now delegates to both. 24 tests including tamper detection and real certifi hash
+  match (`tests/test_dependency_audit.py`). Also registered `slow` pytest mark.
+
+- **De-simulated `XDPDynamicSegmenter`** (ROADMAP P0.3). `aegis/core/xdp_dynamic_segmentation.py`
+  previously added IPs only to an in-memory Python `set` and logged
+  `# Simulation: eBPF_map_update(...DROP)` — no packet was ever dropped at the
+  kernel level. Replaced with `_FirewallBackend` that auto-detects nftables (`nft`)
+  → iptables → NONE and issues real kernel rules (`nft add/delete element` or
+  `iptables -I/-D INPUT -s <ip> -j DROP`). `block_ip_immediately()` returns `True`
+  only when a kernel rule is installed; the application-layer-only fallback path logs
+  an explicit "APPLICATION-LAYER ONLY" advisory. 27 tests cover backend detection,
+  idempotency, kernel failure fallback, and zone blackhole/active transitions
+  (`tests/test_xdp_dynamic_segmentation.py`).
+
+- **Hardened `DependencyAuditor` against B607 partial-path subprocess start**.
+  `pip-audit` is now resolved via `shutil.which()` in `__init__`; a `DependencyAuditorError`
+  is raised immediately if the tool is absent — no partial-path fallback. `subprocess.run`
+  annotated `# noqa: S603`. Test updated to patch `shutil.which`.
+
+- **De-simulated `sandbox_l1.py`** (ROADMAP P0.2). Previously skipped the
+  entire rule-addition step ("we simulate the rule addition") and called
+  `seccomp_load` with zero allowlist rules and `SCMP_ACT_KILL` — any loaded
+  filter would have immediately killed the process. Rewritten with real
+  `seccomp_syscall_resolve_name` + `seccomp_rule_add` calls via ctypes for
+  every syscall in the allowlist; default action changed to
+  `SCMP_ACT_ERRNO(EPERM)` (safe); `apply_filter()` returns `True` only when
+  `seccomp_load()` succeeds; `build_filter_without_loading()` validates the
+  filter safely in tests. 18 tests including real subprocess filter load and
+  mocked-library failure paths (`tests/test_sandbox_l1.py`).
+
+- **De-simulated `panic_mode.py`** (ROADMAP P0.2). `_zeroize_critical_memory` previously only
+  logged "Zeroizing..." and "complete" with a `# Simulation` comment and no actual write.
+  Replaced with real `ctypes.memset` over registered ``bytearray``/``memoryview`` buffers;
+  ``register_sensitive_buffer()`` added so callers can enlist secret-bearing buffers.
+  `_isolate_network` previously only logged with `# Simulation: calls XDPDynamicSegmenter...`.
+  Replaced with real subprocess calls to `nft add rule ... drop` or `iptables -P INPUT/OUTPUT/FORWARD DROP`;
+  returns `False` and logs a CRITICAL advisory when no kernel firewall tool is available.
+
+- **De-simulated `root_ca_gateway.py`** (ROADMAP P0.2). `import_signed_certificate`
+  had a `# Simulation of decoding the physical transfer` comment despite doing real
+  JSON decoding. Comment removed. `fetch_certificate(request_id)` previously ignored
+  the `request_id` parameter ("In a real system, we would match the request_id");
+  now iterates `_inbound_buffer` and matches by `cert.ca_serial == request_id`.
+
+- **De-simulated `memory.py`** (ROADMAP P0.2). `HardenedMemoryManager.initialize_hardened_allocator`
+  previously set `_allocator_type = "mimalloc"` via a "Simulation mode" comment
+  even when neither `libmimalloc.so` nor `libhardened_malloc.so` appeared in
+  `/proc/self/maps`. Now logs a warning and sets `_allocator_type = "standard"`
+  honestly when no hardened allocator is detected.
+
+- **De-simulated `memory_invariants.py`** (ROADMAP P0.2). Previously computed
+  golden hashes from a `f"STATE_{start}_{end}"` string (always matching itself,
+  never detecting any modification). Rewritten with `_read_range()` reading the
+  actual bytes from the process's own virtual address space via `/proc/self/mem`,
+  and `_hash_range()` computing real SHA-256 digests. `register_invariant()`
+  returns `False` when the range is unreadable. `verify_invariants()` re-reads
+  each range and detects real modifications; unmapped pages after registration
+  are logged as CRITICAL. 16 tests including real ctypes buffer tampering
+  detection, unmapped-address handling, and mock-based unreadable-after-register
+  coverage (`tests/test_memory_invariants.py`).
+
+- `tests/test_no_simulation_markers.py` — `KNOWN_SIMULATION_DEBT` shrunk from
+  23 → 16 as `cfi_manager.py`, `mte_guard.py`, `dependency_audit.py`,
+  `xdp_dynamic_segmentation.py`, `sandbox_l1.py`, `memory.py`, and
+  `memory_invariants.py` are removed. Debt-count assertion updated to `== 16`.
+
 - **Removed two fake post-quantum modules that manufactured false cryptographic
   assurance** (ROADMAP P0.1). `aegis/core/pqc.py` advertised "ML-DSA (Dilithium)"
   signatures but computed HMAC-SHA512 padded with random bytes; `aegis/core/

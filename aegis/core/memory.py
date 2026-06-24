@@ -71,8 +71,12 @@ class HardenedMemoryManager:
                 if "libmimalloc.so" in maps or "libhardened_malloc.so" in maps:
                     self._allocator_type = "hardened"
                 else:
-                    # Simulation mode: assume activation if the flag is set in config.
-                    self._allocator_type = "mimalloc"
+                    logger.warning(
+                        "HardenedMemoryManager: no libmimalloc.so or libhardened_malloc.so "
+                        "found in /proc/self/maps — using standard Python allocator. "
+                        "LD_PRELOAD a hardened allocator before launching for real protection."
+                    )
+                    self._allocator_type = "standard"
 
             self._initialized = True
             logger.info(

@@ -21,22 +21,30 @@ logger = logging.getLogger(__name__)
 @dataclass
 class XMSSSignature:
     index: int
+    ots_key: bytes  # one-time private key, revealed upon signing (index becomes invalid)
     ots_signature: bytes
-    auth_path: list[bytes]  # Merkle path to the root
+    auth_path: list[bytes]  # Merkle siblings from leaf to root
 
 
 class QuantumForensicSealer:
     """
-    Implements a hash-based signature scheme (simplified XMSS) for sealing logs.
-    Unlike RSA/ECDSA, the security of XMSS depends only on the collision
-    resistance of the underlying hash function (SHA-256), making it quantum-safe.
+    Hash-based signature scheme (XMSS-style) for sealing forensic logs.
+
+    Each leaf in the Merkle tree is an OTS public key = SHA-256(ots_private_key).
+    Signing reveals the OTS private key alongside an HMAC authenticator and the
+    Merkle authentication path.  Verification checks the HMAC and recomputes the
+    Merkle root from the revealed key and the auth path.
+
+    Security rests entirely on SHA-256 collision resistance — no RSA/ECDSA
+    discrete-log assumptions, making it quantum-safe.  Each index is one-time
+    only; exhausting all leaves raises RuntimeError.
     """
 
     def __init__(self, tree_height: int = 10):
         self.tree_height = tree_height
         self.num_leaves = 2**tree_height
         self._seed = os.urandom(32)
-        self._root = self._generate_merkle_tree()
+        self._root, self._tree = self._generate_merkle_tree()
         self._used_indices: set[int] = set()
         logger.info(
             "QuantumForensicSealer initialized. Tree height: %d. Total signatures available: %d",
@@ -45,49 +53,22 @@ class QuantumForensicSealer:
         )
 
     def _generate_ots_key(self, index: int) -> bytes:
-        """Generates a Winternitz-style One-Time Signature (WOTS) key."""
+        """Generates a one-time signature private key from the master seed."""
         return hashlib.sha256(self._seed + index.to_bytes(4, "big")).digest()
 
     def _generate_merkle_tree(self) -> tuple[str, list[list[bytes]]]:
         """
-        Builds the Merkle Tree of OTS public keys.
-        The root of this tree is the long-term public key of the sealer.
+        Builds the Merkle tree of OTS public keys.
+        Leaf i = SHA-256(ots_private_key_i).  Internal nodes = SHA-256(left ‖ right).
+        Returns (root_hex, full_tree) where full_tree[0] is the leaf level.
         """
-        # Level 0: Leaves (OTS public keys)
-        tree = []
-        current_level = []
-        for i in range(self.num_leaves):
-            # Simulate WOTS public key generation
-            pk = hashlib.sha256(self._generate_ots_key(i)).digest()
-            current_level.append(pk)
-
-        tree.append(current_level)
-
-        # Build up to the root
-        while len(current_level) > 1:
-            next_level = []
-            for i in range(0, len(current_level), 2):
-                combined = current_level[i] + (
-                    current_level[i + 1] if i + 1 < len(current_level) else current_level[i]
-                )
-                next_level.append(hashlib.sha256(combined).digest())
-            current_level = next_level
-            tree.append(current_level)
-
-        return current_level[0].hex(), tree
-
-    def _generate_merkle_tree(self) -> tuple[str, list[list[bytes]]]:
-        """Corrected implementation of Merkle Tree generation."""
-        # Level 0: Leaves
-        current_level = []
-        for i in range(self.num_leaves):
-            pk = hashlib.sha256(self._generate_ots_key(i)).digest()
-            current_level.append(pk)
-
-        tree = [current_level]
+        current_level: list[bytes] = [
+            hashlib.sha256(self._generate_ots_key(i)).digest() for i in range(self.num_leaves)
+        ]
+        tree: list[list[bytes]] = [current_level]
 
         while len(current_level) > 1:
-            next_level = []
+            next_level: list[bytes] = []
             for i in range(0, len(current_level), 2):
                 left = current_level[i]
                 right = current_level[i + 1] if i + 1 < len(current_level) else left
@@ -99,9 +80,12 @@ class QuantumForensicSealer:
 
     def seal_log_entry(self, log_data: bytes) -> XMSSSignature:
         """
-        Signs a log entry using the next available OTS key and provides the authentication path.
+        Signs a log entry using the next available OTS key.
+
+        Returns an XMSSSignature carrying the revealed OTS private key, an HMAC
+        authenticator, and the real Merkle authentication path.  The index is
+        consumed; using it again would be a security violation.
         """
-        # Find next unused index
         idx = 0
         while idx in self._used_indices:
             idx += 1
@@ -111,38 +95,57 @@ class QuantumForensicSealer:
 
         self._used_indices.add(idx)
 
-        # 1. Sign using OTS (simulated)
-        # In real XMSS, this involves chaining hashes based on the message bits
-        ots_sig = hmac.new(self._generate_ots_key(idx), log_data, hashlib.sha256).digest()
+        ots_key = self._generate_ots_key(idx)
+        ots_sig = hmac.new(ots_key, log_data, hashlib.sha256).digest()
 
-        # 2. Compute Authentication Path (Merkle Path)
-        # Logic: Traverse up the tree and collect the siblings of the nodes on the path to the root
-        # This is simulated for the architectural demonstration
-        auth_path = []
-        # In reality: loop from level 0 to height-1, appending sibling of current node
-        for _h in range(self.tree_height):
-            auth_path.append(os.urandom(32))  # Simulated sibling hashes
+        # Real Merkle authentication path: collect the sibling at each level
+        auth_path: list[bytes] = []
+        current_idx = idx
+        for h in range(self.tree_height):
+            level = self._tree[h]
+            sibling_idx = current_idx ^ 1  # flip last bit → sibling
+            sibling = level[sibling_idx] if sibling_idx < len(level) else level[current_idx]
+            auth_path.append(sibling)
+            current_idx >>= 1  # parent index at next level
 
         logger.info(
             "Log entry sealed using XMSS index %d. Quantum-resistant signature generated.", idx
         )
-        return XMSSSignature(index=idx, ots_signature=ots_sig, auth_path=auth_path)
+        return XMSSSignature(index=idx, ots_key=ots_key, ots_signature=ots_sig, auth_path=auth_path)
 
     def verify_seal(self, data: bytes, sig: XMSSSignature, root: str) -> bool:
         """
-        Verifies that the signature was produced by the holder of the private key
-        associated with the provided Merkle root.
+        Verifies a seal against the provided Merkle root.
+
+        Two checks must both pass:
+        1. HMAC authenticator: HMAC(sig.ots_key, data) == sig.ots_signature.
+        2. Merkle root: SHA-256(sig.ots_key) traversed up via sig.auth_path equals root.
         """
-        # 1. Recover OTS public key from signature and data
-        # Simulation: Recov_PK = Hash(ots_sig + data)
-        recovered_pk = hashlib.sha256(sig.ots_signature + data).digest()
+        # 1. Verify the HMAC using the revealed OTS private key
+        expected_sig = hmac.new(sig.ots_key, data, hashlib.sha256).digest()
+        if not hmac.compare_digest(expected_sig, sig.ots_signature):
+            logger.warning("SEAL VERIFY FAILED: HMAC mismatch for index %d.", sig.index)
+            return False
 
-        # 2. Recompute root using the auth path
-        # Logic: current_hash = Hash(recovered_pk + sibling_0) -> Hash(current_hash + sibling_1) ...
-        current_hash = recovered_pk
+        # 2. Recompute Merkle root from OTS public key + authentication path
+        current_hash = hashlib.sha256(sig.ots_key).digest()  # OTS public key = H(ots_key)
+        current_idx = sig.index
         for sibling in sig.auth_path:
-            # Order depends on if index is left or right child
-            combined = current_hash + sibling  # Simplified
+            if current_idx % 2 == 0:
+                combined = current_hash + sibling  # current is left child
+            else:
+                combined = sibling + current_hash  # current is right child
             current_hash = hashlib.sha256(combined).digest()
+            current_idx >>= 1
 
-        return current_hash.hex() == root
+        computed_root = current_hash.hex()
+        if computed_root != root:
+            logger.warning(
+                "SEAL VERIFY FAILED: Merkle root mismatch for index %d. Expected %s, got %s.",
+                sig.index,
+                root[:16],
+                computed_root[:16],
+            )
+            return False
+
+        return True

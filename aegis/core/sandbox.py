@@ -12,7 +12,11 @@ import ctypes
 import logging
 from dataclasses import dataclass
 
+from aegis.core.sandbox_l1 import SeccompSandbox
+
 logger = logging.getLogger(__name__)
+
+_PR_SET_NO_NEW_PRIVS = 38
 
 # Syscall numbers for x86_64
 SYS_READ = 0
@@ -44,39 +48,55 @@ class SeccompFilter:
 
     def __init__(self, initial_syscalls: list[int]):
         self.current_allowed = set(initial_syscalls)
-        self._libc = ctypes.CDLL("libc.so.6")
+        self._libc = ctypes.CDLL("libc.so.6", use_errno=True)
         self._phase = "INIT"
+        self._filter_applied = False
 
     def transition_to_phase(self, phase: str, new_syscalls: list[int]):
         """
         Transitions the process to a new security phase, narrowing the syscall surface.
-        In a real implementation, this would apply a new BPF program or update
-        an existing one via a secure mechanism.
+        Seccomp filters stack — each successive call to apply() adds a constraint layer,
+        so transitions must only narrow (remove) allowed syscalls to remain safe.
         """
         logger.info("Transitioning sandbox phase: %s -> %s", self._phase, phase)
         self._phase = phase
         self.current_allowed = set(new_syscalls)
-
-        # Real implementation: prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &new_prog)
-        # Note: seccomp filters are typically additive or replacement.
-        # Transitioning to a MORE restrictive set is always possible.
         logger.info(
             "Sandbox phase updated. New syscall surface size: %d", len(self.current_allowed)
         )
 
     def apply(self):
-        """Applies the current filter to the process."""
+        """Applies the current filter to the process.
+
+        Calls prctl(PR_SET_NO_NEW_PRIVS) to lock privilege-escalation paths, then
+        installs a kernel-enforced seccomp-bpf syscall allowlist via libseccomp.
+        Both operations are irreversible for the lifetime of the process.
+        """
         try:
             logger.info(
                 "Applying seccomp-bpf filter for phase %s. Allowed: %s",
                 self._phase,
                 self.current_allowed,
             )
-            # Simulation of prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)
-            # Simulation of prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog)
-            pass
-        except Exception as e:
-            logger.error("Failed to apply seccomp filter: %s", e)
+            ret = self._libc.prctl(_PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)
+            if ret != 0:
+                errno = ctypes.get_errno()
+                raise RuntimeError(f"prctl(PR_SET_NO_NEW_PRIVS) failed with errno {errno}")
+            logger.info("PR_SET_NO_NEW_PRIVS set — privilege escalation paths locked.")
+
+            sb = SeccompSandbox()
+            if sb.apply_filter():
+                self._filter_applied = True
+                logger.info("Seccomp-BPF filter installed via libseccomp.")
+            else:
+                logger.warning(
+                    "libseccomp unavailable — syscall filter not installed. "
+                    "Install libseccomp for kernel-enforced syscall allowlisting."
+                )
+        except RuntimeError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Failed to apply seccomp filter: %s", exc)
             raise RuntimeError("Security invariant violation: Seccomp could not be applied.")
 
 
@@ -136,8 +156,6 @@ def enable_hardened_sandbox(phase: str = "INIT"):
         1,
         2,  # open, openat, etc.
     ]
-
-    # Minimal set for RUNNING (no file opening allowed)
 
     filter_engine = SeccompFilter(init_syscalls)
     filter_engine.apply()

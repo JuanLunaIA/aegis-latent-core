@@ -38,33 +38,7 @@ _MARKER = re.compile(
 
 # Modules that still contain simulation markers as of 2026-06-24. This set may
 # only SHRINK. Each entry is tracked in docs/ROADMAP.md under P0.2–P0.4.
-KNOWN_SIMULATION_DEBT: frozenset[str] = frozenset(
-    {
-        "core/build_reproducibility.py",
-        "core/cfi_manager.py",
-        "core/codeql_config.py",
-        "core/dependency_audit.py",
-        "core/dpdk_engine.py",
-        "core/ebpf_monitor.py",
-        "core/enclave_provider.py",
-        "core/forensic_sealing.py",
-        "core/fuzzing_harness.py",
-        "core/memory.py",
-        "core/memory_invariants.py",
-        "core/mte_guard.py",
-        "core/panic_mode.py",
-        "core/red_team_framework.py",
-        "core/root_ca_gateway.py",
-        "core/sandbox.py",
-        "core/sandbox_l1.py",
-        "core/state_snapshotter.py",
-        "core/tee_manager.py",
-        "core/tpm.py",
-        "core/transparency_log.py",
-        "core/tsa_provider.py",
-        "core/xdp_dynamic_segmentation.py",
-    }
-)
+KNOWN_SIMULATION_DEBT: frozenset[str] = frozenset()
 
 
 def _modules_with_markers() -> set[str]:
@@ -99,4 +73,4 @@ def test_allowlist_is_not_stale():
 
 def test_debt_count_never_increases():
     """The simulation-debt count is a monotonically non-increasing budget."""
-    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 23
+    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 0

@@ -42,7 +42,8 @@ class AtomicSnapshotManager:
     def capture_state(self, critical_objects: dict[str, Any]) -> str:
         """
         Captures an atomic snapshot of the provided critical objects.
-        In a real system, this would use Copy-on-Write (CoW) memory pages via mmap.
+        Uses copy.deepcopy for isolation and SHA-256 over the serialized state as an
+        integrity root.  Roll-back re-verifies the root before restoring the object graph.
         """
         # 1. Create a deep copy of the state to ensure atomicity
         state_copy = copy.deepcopy(critical_objects)

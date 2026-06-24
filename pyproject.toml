@@ -118,6 +118,9 @@ packages = ["aegis", "integrations"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = "--cov=aegis --cov-report=term-missing --cov-fail-under=65"
+markers = [
+    "slow: marks tests as slow-running (e.g. real network / subprocess calls)",
+]
 
 [tool.ruff]
 line-length = 100
