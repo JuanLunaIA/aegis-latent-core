@@ -101,31 +101,34 @@ class SeccompFilter:
 
 
 class LandlockManager:
-    """
-    Implements Landlock LSM (Linux Security Module) for fine-grained filesystem isolation.
+    """Landlock LSM filesystem restriction intent recorder.
+
+    Records the caller's intended path restrictions.  The kernel Landlock API
+    (``landlock_create_ruleset`` / ``landlock_add_rule`` / ``landlock_restrict_self``)
+    is not yet called here — this is a documented stub.  ``is_restricted`` reflects
+    that restrictions have been *requested*, not that kernel enforcement is active.
+    Real kernel Landlock enforcement is tracked in the ROADMAP.
     """
 
     def __init__(self):
         self._restricted = False
 
     def restrict_filesystem(self, allowed_paths: dict[str, str]):
-        """
-        Restricts the process to a set of allowed paths with specific permissions.
-        """
+        """Record the intended filesystem restrictions (stub — no kernel call yet)."""
         try:
-            logger.info("Enforcing Landlock LSM filesystem restrictions...")
+            logger.info(
+                "LandlockManager: recording filesystem restrictions (kernel Landlock not yet wired)."
+            )
             for path, perm in allowed_paths.items():
-                logger.info("Allowing path [%s] with permission [%s]", path, perm)
-
-            # Real implementation would use:
-            # 1. landlock_create_ruleset()
-            # 2. landlock_add_rule(ruleset, LANDLOCK_ACCESS_FS_READ_FILE, path)
-            # 3. landlock_restrict_self(ruleset)
+                logger.info("Restriction recorded: path [%s] permission [%s]", path, perm)
 
             self._restricted = True
-            logger.info("Landlock LSM active. Filesystem isolated.")
+            logger.warning(
+                "LandlockManager: restrictions recorded but kernel Landlock is NOT active. "
+                "Real isolation requires landlock_create_ruleset/add_rule/restrict_self."
+            )
         except Exception as e:
-            logger.error("Landlock enforcement failed: %s", e)
+            logger.error("LandlockManager recording failed: %s", e)
             raise RuntimeError("Security invariant violation: Landlock could not be applied.")
 
     @property

@@ -1,12 +1,12 @@
 """
 aegis.core.seccomp_guard — Secure Computing (Seccomp-BPF) Enforcement.
-Robust implementation with lazy loading and sandbox-aware graceful degradation.
+High-level profile management and sandbox detection; delegates all ctypes
+work to ``aegis.core.sandbox_l1.SeccompSandbox``.
 """
 
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
-import ctypes
 import logging
 import os
 import sys
@@ -14,11 +14,7 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
-# Global variables for lazy loading
-_libseccomp = None
-_libseccomp_loaded = False
-
-# Constants
+# Constants re-exported for callers that import them from this module.
 SCMP_ACT_KILL = 0x00000000
 SCMP_ACT_ALLOW = 0x7FFF0000
 PR_SET_NO_NEW_PRIVS = 38
@@ -34,7 +30,11 @@ class SyscallProfile:
 class SeccompGuard:
     """
     Enforces a strict Seccomp-BPF filter.
-    Implements Lazy Loading to prevent crashes in restricted environments.
+
+    Performs sandbox detection to avoid crashing test runners and restricted
+    CI environments.  In non-sandbox environments, delegates the actual filter
+    build and load to ``aegis.core.sandbox_l1.SeccompSandbox`` so there is
+    exactly one ctypes-libseccomp implementation in the tree.
     """
 
     DEFAULT_PROFILE = SyscallProfile(
@@ -145,64 +145,23 @@ class SeccompGuard:
                 return True
         return False
 
-    def _load_libseccomp(self) -> bool:
-        """Lazy loads libseccomp. Returns True if successful."""
-        global _libseccomp, _libseccomp_loaded
-        if _libseccomp_loaded:
-            return True
-
-        if self._is_sandbox:
-            logger.warning("Sandbox detected. Skipping libseccomp loading to prevent SIGSEGV.")
-            return False
-
-        try:
-            import ctypes.util
-
-            path = ctypes.util.find_library("seccomp")
-            if not path:
-                return False
-            _libseccomp = ctypes.CDLL(path)
-
-            # Define argtypes and restype for safety
-            _libseccomp.seccomp_init.restype = ctypes.c_void_p
-            _libseccomp.seccomp_init.argtypes = []
-
-            _libseccomp.seccomp_rule_add.restype = ctypes.c_int
-            _libseccomp.seccomp_rule_add.argtypes = [
-                ctypes.c_void_p,
-                ctypes.c_uint,
-                ctypes.c_int,
-                ctypes.c_uint,
-            ]
-
-            _libseccomp.seccomp_load.restype = ctypes.c_int
-            _libseccomp.seccomp_load.argtypes = [ctypes.c_void_p]
-
-            _libseccomp.seccomp_syscall_resolve_name.restype = ctypes.c_int
-            _libseccomp.seccomp_syscall_resolve_name.argtypes = [ctypes.c_char_p]
-
-            _libseccomp_loaded = True
-            return True
-        except Exception as e:
-            logger.warning(f"Lazy loading libseccomp failed: {e}")
-            return False
-
     def apply_filter(self) -> bool:
-        """
-        Applies the Seccomp-BPF filter.
+        """Apply the Seccomp-BPF filter for this guard's profile.
+
+        Skipped when a sandbox/test environment is detected (returns False,
+        sets degraded mode).  In production, sets PR_SET_NO_NEW_PRIVS then
+        delegates filter construction and loading to
+        ``aegis.core.sandbox_l1.SeccompSandbox``.
         """
         if self._is_sandbox:
             logger.warning("System is in SANDBOX mode. Skipping real Seccomp enforcement.")
             self._degraded_mode = True
             return False
 
-        if not self._load_libseccomp():
-            logger.error("libseccomp not available. Entering degraded mode.")
-            self._degraded_mode = True
-            return False
-
         try:
-            # 1. Set NO_NEW_PRIVS
+            # 1. Set PR_SET_NO_NEW_PRIVS (required before the seccomp filter).
+            import ctypes.util
+
             libc_path = ctypes.util.find_library("c")
             if not libc_path:
                 raise RuntimeError("libc not found via ctypes.util.find_library")
@@ -211,27 +170,25 @@ class SeccompGuard:
             if res != 0:
                 raise PermissionError("Failed to set PR_SET_NO_NEW_PRIVS")
 
-            # 2. Initialize context
-            ctx = _libseccomp.seccomp_init(SCMP_ACT_KILL)
-            if not ctx:
-                raise RuntimeError("Failed to initialize seccomp context")
+            # 2. Build and load the filter via sandbox_l1 (single ctypes layer).
+            from aegis.core.sandbox_l1 import SeccompSandbox
 
-            # 3. Add rules
-            for syscall_name in self.profile.allowed_syscalls:
-                syscall_nr = _libseccomp.seccomp_syscall_resolve_name(syscall_name.encode())
-                if syscall_nr >= 0:
-                    _libseccomp.seccomp_rule_add(ctx, SCMP_ACT_ALLOW, syscall_nr, 0)
-
-            # 4. Load
-            res = _libseccomp.seccomp_load(ctx)
-            if res != 0:
-                raise RuntimeError(f"Failed to load seccomp filter (Error: {res})")
+            sb = SeccompSandbox(
+                allowed_syscalls=tuple(self.profile.allowed_syscalls),
+                default_action=SCMP_ACT_KILL,
+            )
+            if not sb.enabled:
+                logger.error("libseccomp not available. Entering degraded mode.")
+                self._degraded_mode = True
+                return False
+            if not sb.apply_filter():
+                raise RuntimeError("SeccompSandbox.apply_filter() returned False")
 
             self._is_enforced = True
             return True
 
         except Exception as e:
-            logger.error(f"Seccomp application failed: {e}. Entering degraded mode.")
+            logger.error("Seccomp application failed: %s. Entering degraded mode.", e)
             self._degraded_mode = True
             return False
 

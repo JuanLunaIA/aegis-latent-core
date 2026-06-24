@@ -3,19 +3,23 @@
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """aegis.core.sandbox_l1 — L1 Seccomp-BPF sandbox via libseccomp C API.
 
-Builds and loads a real seccomp-BPF filter using the libseccomp shared library
-via ctypes.  Every allowed syscall is resolved by name with
-``seccomp_syscall_resolve_name`` and permitted with a real ``seccomp_rule_add``
-call; the default action is ``SCMP_ACT_ERRNO(EPERM)`` (returns EPERM to the
-caller rather than killing the process outright).
+This is the authoritative ctypes binding layer for libseccomp in Aegis.
+Every allowed syscall is resolved by name with ``seccomp_syscall_resolve_name``
+and permitted with a real ``seccomp_rule_add`` call.
+
+``SeccompSandbox`` accepts an optional ``allowed_syscalls`` tuple and
+``default_action`` constant so callers can supply a custom profile without
+duplicating the ctypes loading logic.  The default action is
+``SCMP_ACT_ERRNO(EPERM)`` (returns EPERM rather than killing the thread);
+callers requiring harder enforcement pass ``SCMP_ACT_KILL``.
 
 When libseccomp is unavailable the sandbox is disabled and logs a critical
 advisory — it never pretends to enforce a filter it has not loaded.
 
-Relationship to ``seccomp_guard.py``: that module exposes a higher-level
-``SeccompGuard`` class with profile management.  This module is the thin
-ctypes binding layer; operators who want profile management should use
-``SeccompGuard`` instead.
+Relationship to ``seccomp_guard.py``: ``SeccompGuard`` is the high-level
+profile-management and sandbox-detection layer; it delegates all ctypes work
+to ``SeccompSandbox`` here.  ``sandbox.py`` is the Landlock + phase coordinator
+that also uses ``SeccompSandbox`` for its ``SeccompFilter`` wrapper.
 """
 
 from __future__ import annotations
@@ -26,8 +30,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 # libseccomp action constants (from seccomp.h)
+_SCMP_ACT_KILL = 0x00000000  # kill the calling thread
 _SCMP_ACT_ERRNO_EPERM = 0x00050001  # SCMP_ACT_ERRNO(1 == EPERM)
 _SCMP_ACT_ALLOW = 0x7FFF0000
+
+# Public aliases for callers that want the KILL action
+SCMP_ACT_KILL = _SCMP_ACT_KILL
+SCMP_ACT_ALLOW = _SCMP_ACT_ALLOW
 
 # Minimal syscall allowlist for the aegis proxy process.
 # Resolved at runtime via seccomp_syscall_resolve_name so syscall
@@ -128,16 +137,25 @@ class SeccompSandbox:
     """L1 Sandbox — real syscall filtering via libseccomp C API.
 
     Uses ``seccomp_syscall_resolve_name`` to map syscall names to numbers and
-    ``seccomp_rule_add`` to permit each entry in ``_ALLOWED_SYSCALLS``.  The
-    default action is ``SCMP_ACT_ERRNO(EPERM)`` so unrecognised syscalls fail
-    with EPERM rather than killing the process outright.
+    ``seccomp_rule_add`` to permit each entry in the allowlist.  Callers can
+    supply a custom ``allowed_syscalls`` tuple (e.g. ``SeccompGuard`` supplies
+    its Tokio-aware extended list) and a ``default_action`` constant (e.g.
+    ``SCMP_ACT_KILL`` for hard enforcement).
 
     Call ``apply_filter()`` to load the filter into the kernel.  This is a
     one-way, process-wide operation — call only after all setup work is done.
     Use ``build_filter_without_loading()`` for health checks and tests.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        allowed_syscalls: tuple[str, ...] | None = None,
+        default_action: int = _SCMP_ACT_ERRNO_EPERM,
+    ) -> None:
+        self._allowed_syscalls: tuple[str, ...] = (
+            allowed_syscalls if allowed_syscalls is not None else _ALLOWED_SYSCALLS
+        )
+        self._default_action = default_action
         lib = _load_libseccomp()
         if lib is None:
             logger.error(
@@ -157,13 +175,13 @@ class SeccompSandbox:
         """
         assert self._lib is not None
         lib = self._lib
-        ctx = lib.seccomp_init(_SCMP_ACT_ERRNO_EPERM)
+        ctx = lib.seccomp_init(self._default_action)
         if not ctx:
             logger.error("SeccompSandbox: seccomp_init() returned NULL.")
             return None
 
         missing: list[str] = []
-        for name in _ALLOWED_SYSCALLS:
+        for name in self._allowed_syscalls:
             nr = lib.seccomp_syscall_resolve_name(name.encode())
             if nr < 0:
                 missing.append(name)
