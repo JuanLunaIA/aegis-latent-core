@@ -206,6 +206,14 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
 | **Total open** | **56** | — |
 
+> **Progress 2026-06-24 (run 7):** P0.4 — `fuzzing_harness.py` de-simulated
+> (replaced `# Simulation of fuzzing execution` / `Simulation: 95% chance of no crash`
+> random block with real `cargo fuzz run <target> -- -max_total_time=<duration>`
+> via subprocess; `shutil.which("cargo")` guard returns UNAVAILABLE when toolchain
+> absent; `FileNotFoundError` handled when cargo-fuzz not installed; crash detected
+> via non-zero exit code; 16 tests). `KNOWN_SIMULATION_DEBT` shrunk 9 → 8;
+> count asserted `== 8`.
+>
 > **Progress 2026-06-24 (run 6):** P0.1 — `forensic_sealing.py` de-simulated
 > (replaced `# Simulation: Recov_PK = Hash(ots_sig + data)` with real XMSS-style
 > OTS: `XMSSSignature` now carries `ots_key: bytes`; `seal_log_entry()` builds
