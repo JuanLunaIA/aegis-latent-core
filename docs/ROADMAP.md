@@ -206,6 +206,13 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
 | **Total open** | **56** | — |
 
+> **Progress 2026-06-24 (run 4):** P0.2 — `sandbox.py` de-simulated (real
+> `prctl(PR_SET_NO_NEW_PRIVS)` via ctypes + `SeccompSandbox.apply_filter()` from
+> `sandbox_l1`; 19 tests). `tsa_provider.py` de-simulated (real RFC 3161 TSQ built
+> by `openssl ts -query`, POSTed via httpx; `verify_token` uses `openssl ts -verify`
+> with system CA bundle; honest failure when TSA is unreachable; 13 tests).
+> `KNOWN_SIMULATION_DEBT` shrunk 14 → 12; count asserted `== 12`.
+>
 > **Progress 2026-06-24 (run 3):** P0.3 complete — `xdp_dynamic_segmentation.py`
 > de-simulated (real nftables/iptables enforcement). P0.4 hardened —
 > `dependency_audit.py` Bandit B607 fix. P0.2 partial — `sandbox_l1.py`

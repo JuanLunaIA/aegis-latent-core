@@ -48,12 +48,10 @@ KNOWN_SIMULATION_DEBT: frozenset[str] = frozenset(
         "core/forensic_sealing.py",
         "core/fuzzing_harness.py",
         "core/red_team_framework.py",
-        "core/sandbox.py",
         "core/state_snapshotter.py",
         "core/tee_manager.py",
         "core/tpm.py",
         "core/transparency_log.py",
-        "core/tsa_provider.py",
     }
 )
 
@@ -90,4 +88,4 @@ def test_allowlist_is_not_stale():
 
 def test_debt_count_never_increases():
     """The simulation-debt count is a monotonically non-increasing budget."""
-    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 14
+    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 12
