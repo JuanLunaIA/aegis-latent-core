@@ -79,7 +79,7 @@ pqcrypto-traits = "0.3"
 
 # Legacy crypto (retained for backward compat + HMAC signing)
 sha2 = "0.10"
-hmac = "0.12"
+hmac = "0.13"
 hex = "0.4"
 subtle = "2"
 zeroize = { version = "1", features = ["derive"] }
