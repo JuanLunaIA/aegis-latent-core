@@ -237,7 +237,7 @@ fn extract_body_bytes(py: Python<'_>, body: &Bound<'_, PyAny>) -> PyResult<Vec<u
 }
 
 fn python_obj_to_bytes(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
-    let json_mod = py.import_bound("json")?;
+    let json_mod = py.import("json")?;
     let dumped: String = json_mod.call_method1("dumps", (obj,))?.extract()?;
     Ok(dumped.into_bytes())
 }

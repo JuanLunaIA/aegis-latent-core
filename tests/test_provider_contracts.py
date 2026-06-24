@@ -319,8 +319,8 @@ class TestAnthropicStreamContract:
         chunks = _parse_chunks(raw)
         assert any(c["choices"][0]["delta"].get("role") == "assistant" for c in chunks)
 
-    def test_input_json_delta_forwarded_as_content(self):
-        """input_json_delta with non-empty partial_json emits a content chunk (lines 377-381)."""
+    def test_input_json_delta_forwarded_as_tool_call_arguments(self):
+        """input_json_delta emits an OpenAI tool_calls arguments delta, NOT content."""
         raw = _run_stream(
             self.adapter,
             self._data(
@@ -333,9 +333,108 @@ class TestAnthropicStreamContract:
             self._data({"type": "message_stop"}),
         )
         chunks = _parse_chunks(raw)
-        content_chunks = [c for c in chunks if c["choices"][0]["delta"].get("content")]
-        assert len(content_chunks) >= 1
-        assert '{"key":' in content_chunks[0]["choices"][0]["delta"]["content"]
+        # Must not corrupt the message content with tool JSON.
+        assert not any(c["choices"][0]["delta"].get("content") for c in chunks)
+        tool_chunks = [c for c in chunks if c["choices"][0]["delta"].get("tool_calls")]
+        assert len(tool_chunks) >= 1
+        tc = tool_chunks[0]["choices"][0]["delta"]["tool_calls"][0]
+        assert tc["function"]["arguments"] == '{"key":'
+
+    def test_full_tool_call_sequence_reassembles(self):
+        """content_block_start(tool_use) + input_json_delta* → coherent OpenAI tool_call."""
+        raw = _run_stream(
+            self.adapter,
+            self._data({"type": "message_start", "message": {"id": "m1", "model": "claude"}}),
+            self._data(
+                {
+                    "type": "content_block_start",
+                    "index": 0,
+                    "content_block": {"type": "tool_use", "id": "toolu_1", "name": "get_weather"},
+                }
+            ),
+            self._data(
+                {
+                    "type": "content_block_delta",
+                    "index": 0,
+                    "delta": {"type": "input_json_delta", "partial_json": '{"city":'},
+                }
+            ),
+            self._data(
+                {
+                    "type": "content_block_delta",
+                    "index": 0,
+                    "delta": {"type": "input_json_delta", "partial_json": '"Paris"}'},
+                }
+            ),
+            self._data({"type": "message_delta", "delta": {"stop_reason": "tool_use"}}),
+            self._data({"type": "message_stop"}),
+        )
+        chunks = _parse_chunks(raw)
+        tool_chunks = [c for c in chunks if c["choices"][0]["delta"].get("tool_calls")]
+        # First tool chunk carries id + name; subsequent carry argument fragments.
+        first = tool_chunks[0]["choices"][0]["delta"]["tool_calls"][0]
+        assert first["id"] == "toolu_1"
+        assert first["type"] == "function"
+        assert first["function"]["name"] == "get_weather"
+        assert all(tc["choices"][0]["delta"]["tool_calls"][0]["index"] == 0 for tc in tool_chunks)
+        # Reassembled arguments across fragments form the full JSON.
+        args = "".join(
+            tc["choices"][0]["delta"]["tool_calls"][0]["function"].get("arguments", "")
+            for tc in tool_chunks
+        )
+        assert args == '{"city":"Paris"}'
+        # finish_reason maps tool_use → tool_calls.
+        finish = [
+            c["choices"][0]["finish_reason"] for c in chunks if c["choices"][0]["finish_reason"]
+        ]
+        assert finish == ["tool_calls"]
+
+    def test_multiple_tool_calls_get_distinct_indices(self):
+        """Two tool_use blocks → two OpenAI tool_calls with indices 0 and 1."""
+        raw = _run_stream(
+            self.adapter,
+            self._data({"type": "message_start", "message": {"id": "m1", "model": "claude"}}),
+            self._data(
+                {
+                    "type": "content_block_start",
+                    "index": 0,
+                    "content_block": {"type": "tool_use", "id": "t0", "name": "a"},
+                }
+            ),
+            self._data(
+                {
+                    "type": "content_block_start",
+                    "index": 1,
+                    "content_block": {"type": "tool_use", "id": "t1", "name": "b"},
+                }
+            ),
+            self._data(
+                {
+                    "type": "content_block_delta",
+                    "index": 1,
+                    "delta": {"type": "input_json_delta", "partial_json": "{}"},
+                }
+            ),
+            self._data({"type": "message_stop"}),
+        )
+        chunks = _parse_chunks(raw)
+        starts = [
+            c["choices"][0]["delta"]["tool_calls"][0]
+            for c in chunks
+            if c["choices"][0]["delta"].get("tool_calls")
+            and c["choices"][0]["delta"]["tool_calls"][0].get("id")
+        ]
+        assert [s["index"] for s in starts] == [0, 1]
+        assert [s["id"] for s in starts] == ["t0", "t1"]
+        # The argument fragment for block index 1 must target tool_call index 1.
+        arg_chunks = [
+            c["choices"][0]["delta"]["tool_calls"][0]
+            for c in chunks
+            if c["choices"][0]["delta"].get("tool_calls")
+            and "arguments" in c["choices"][0]["delta"]["tool_calls"][0].get("function", {})
+            and not c["choices"][0]["delta"]["tool_calls"][0].get("id")
+        ]
+        assert arg_chunks[0]["index"] == 1
 
     def test_input_json_delta_empty_partial_not_forwarded(self):
         """Empty partial_json is NOT emitted (branch 370->317 / 391->317)."""

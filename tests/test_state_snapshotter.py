@@ -46,6 +46,16 @@ class TestCaptureState:
         assert "In a real" not in doc
         assert "SIMULATION" not in doc
 
+    def test_module_docstring_does_not_overclaim(self):
+        import aegis.core.state_snapshotter as mod
+
+        doc = (mod.__doc__ or "").lower()
+        # The honest scope must not advertise capabilities the module does not provide.
+        assert "microsecond" not in doc
+        assert "advisory" in doc
+        # CoW/mmap are only mentioned to say they are out of scope.
+        assert "out of scope" in doc
+
 
 class TestRollbackTo:
     def test_successful_rollback_returns_state(self):

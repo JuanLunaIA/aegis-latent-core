@@ -8,11 +8,16 @@ Before any evidence bundle can be exported, the operator must present a valid
 
 * **HMAC-SHA256** when no HSM is configured (software fallback, always available).
 * **HSM-PKCS#11** when a :class:`~aegis.core.hsm.HSMSigningBackend` is injected;
-  the hardware-derived signature is stored in ``signature`` and the scheme is
-  ``"hsm-pkcs11"``.
+  the hardware-derived asymmetric signature is stored in ``signature``, the
+  exported public key (``SubjectPublicKeyInfo`` DER hex) in ``public_key``, and
+  the precise scheme in ``signature_scheme`` (``"pkcs11-rsa-pss-sha256"`` or
+  ``"pkcs11-ecdsa-sha256"``).  Verification is a real asymmetric check against
+  the published public key (``cryptography``) and does **not** require the HSM
+  to be present at verify time.
 
 Both schemes are explicitly permitted by the Aegis security policy
-(HMAC-SHA256 and HSM-backed HMAC both qualify as "HMAC-SHA256 or ML-DSA").
+(HMAC-SHA256, and asymmetric RSA-PSS/ECDSA, both qualify under the
+"HMAC-SHA256 or asymmetric signature" rule).
 
 Attestations are:
 
@@ -90,7 +95,14 @@ class OperatorAttestation:
     signature:
         Hex-encoded HMAC-SHA256 or HSM signature over the canonical body.
     signature_scheme:
-        ``"hmac-sha256"`` or ``"hsm-pkcs11"``.
+        ``"hmac-sha256"``, ``"pkcs11-rsa-pss-sha256"``, or
+        ``"pkcs11-ecdsa-sha256"``.
+    public_key:
+        Hex-encoded ``SubjectPublicKeyInfo`` DER of the signing key, for
+        asymmetric (HSM) schemes.  Empty for symmetric ``hmac-sha256``.
+        Carrying the public key makes asymmetric attestations verifiable
+        **without** the HSM present at verify time (the whole point of an
+        asymmetric scheme: anyone with the public key can verify).
     """
 
     attestation_id: str
@@ -101,6 +113,7 @@ class OperatorAttestation:
     expires_at: str
     signature: str
     signature_scheme: str
+    public_key: str = ""
 
     def to_dict(self) -> dict[str, str]:
         return {
@@ -112,6 +125,7 @@ class OperatorAttestation:
             "expires_at": self.expires_at,
             "signature": self.signature,
             "signature_scheme": self.signature_scheme,
+            "public_key": self.public_key,
         }
 
 
@@ -170,6 +184,69 @@ def _hmac_sign(key: str, data: bytes) -> str:
 def _hmac_verify(key: str, data: bytes, expected_hex: str) -> bool:
     actual = _hmac_sign(key, data)
     return _hmac_module.compare_digest(actual, expected_hex)
+
+
+# Precise asymmetric HSM schemes produced by HSMSigningBackend.sign().
+_PKCS11_RSA_SCHEME = "pkcs11-rsa-pss-sha256"
+_PKCS11_EC_SCHEME = "pkcs11-ecdsa-sha256"
+_ASYMMETRIC_SCHEMES = frozenset({_PKCS11_RSA_SCHEME, _PKCS11_EC_SCHEME})
+
+
+def _verify_asymmetric(public_key_der: bytes, scheme: str, data: bytes, signature: bytes) -> bool:
+    """Verify an asymmetric HSM signature using the published public key.
+
+    Uses ``cryptography`` only — no HSM is required at verify time.
+
+    * ``pkcs11-rsa-pss-sha256`` — RSA-PSS over SHA-256, MGF1-SHA-256, salt=32
+      (matching ``CKM_SHA256_RSA_PKCS_PSS`` as emitted by the HSM backend).
+    * ``pkcs11-ecdsa-sha256`` — ECDSA over SHA-256.  PKCS#11 ``CKM_ECDSA``
+      emits the raw ``r ‖ s`` concatenation, whereas ``cryptography`` expects a
+      DER-encoded signature, so we reconstruct the DER form before verifying.
+
+    Returns ``False`` (never raises) on any malformed input, key-load failure,
+    or signature mismatch.
+    """
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec, padding
+    from cryptography.hazmat.primitives.asymmetric import utils as asym_utils
+    from cryptography.hazmat.primitives.serialization import load_der_public_key
+
+    try:
+        public_key = load_der_public_key(public_key_der)
+    except Exception as exc:
+        logger.warning("operator_seal: could not load public key for %s: %s", scheme, exc)
+        return False
+
+    try:
+        if scheme == _PKCS11_RSA_SCHEME:
+            public_key.verify(  # type: ignore[union-attr]
+                signature,
+                data,
+                padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=32),
+                hashes.SHA256(),
+            )
+            return True
+        if scheme == _PKCS11_EC_SCHEME:
+            if len(signature) == 0 or len(signature) % 2 != 0:
+                logger.warning(
+                    "operator_seal: malformed raw ECDSA signature (length %d)", len(signature)
+                )
+                return False
+            half = len(signature) // 2
+            r = int.from_bytes(signature[:half], "big")
+            s = int.from_bytes(signature[half:], "big")
+            der_sig = asym_utils.encode_dss_signature(r, s)
+            public_key.verify(der_sig, data, ec.ECDSA(hashes.SHA256()))  # type: ignore[union-attr]
+            return True
+    except InvalidSignature:
+        return False
+    except Exception as exc:
+        logger.warning("operator_seal: asymmetric verify error (%s): %s", scheme, exc)
+        return False
+
+    logger.warning("operator_seal: unsupported asymmetric scheme %r", scheme)
+    return False
 
 
 # ── Gate ─────────────────────────────────────────────────────────────────────
@@ -254,7 +331,7 @@ class OperatorSealGate:
             attestation_id, operator_id, package_id, _BUNDLE_EXPORT_ACTION, issued_at, expires_at
         )
 
-        signature, scheme = self._sign(body)
+        signature, scheme, public_key = self._sign(body)
 
         logger.info(
             "operator_seal: attestation %s issued for operator=%r package=%r scheme=%s",
@@ -272,6 +349,7 @@ class OperatorSealGate:
             expires_at=expires_at,
             signature=signature,
             signature_scheme=scheme,
+            public_key=public_key,
         )
 
     def verify_attestation(self, attestation: OperatorAttestation) -> OperatorSealVerifyResult:
@@ -330,11 +408,13 @@ class OperatorSealGate:
             attestation.expires_at,
         )
 
-        if not self._verify_sig(body, attestation.signature, attestation.signature_scheme):
-            if attestation.signature_scheme == "hsm-pkcs11" and not self._hsm_available():
-                reason = "HSM not available to verify hsm-pkcs11 attestation"
-            else:
-                reason = f"Signature verification failed (scheme={attestation.signature_scheme})"
+        if not self._verify_sig(
+            body,
+            attestation.signature,
+            attestation.signature_scheme,
+            attestation.public_key,
+        ):
+            reason = f"Signature verification failed (scheme={attestation.signature_scheme})"
             return OperatorSealVerifyResult(
                 valid=False,
                 reason=reason,
@@ -385,12 +465,24 @@ class OperatorSealGate:
     def _hsm_available(self) -> bool:
         return self._hsm is not None and getattr(self._hsm, "_available", False)
 
-    def _sign(self, data: bytes) -> tuple[str, str]:
-        """Return (signature_hex, scheme_name)."""
+    def _sign(self, data: bytes) -> tuple[str, str, str]:
+        """Return ``(signature_hex, scheme_name, public_key_hex)``.
+
+        When an HSM backend is available, the asymmetric signature, its precise
+        scheme (``pkcs11-rsa-pss-sha256`` / ``pkcs11-ecdsa-sha256``), and the
+        exported ``SubjectPublicKeyInfo`` DER are returned so the attestation is
+        verifiable without the HSM.  Falls back to HMAC-SHA256 on any HSM error.
+        """
         if self._hsm_available():
             try:
-                sig_bytes = self._hsm.sign(data)  # type: ignore[union-attr]
-                return sig_bytes.hex(), "hsm-pkcs11"
+                # HSMSigningBackend.sign() -> (sig_bytes, public_key_hex, scheme).
+                sig_bytes, pub_hex, scheme = self._hsm.sign(data)  # type: ignore[union-attr]
+                if not pub_hex:
+                    raise OperatorSealError(
+                        f"HSM returned no public key for scheme {scheme!r}; "
+                        "cannot issue a verifiable asymmetric attestation"
+                    )
+                return sig_bytes.hex(), scheme, pub_hex
             except Exception as exc:
                 logger.warning(
                     "operator_seal: HSM sign failed (%s); falling back to HMAC-SHA256", exc
@@ -400,9 +492,9 @@ class OperatorSealGate:
             raise OperatorSealError(
                 "Cannot sign: AEGIS_SIGNING_KEY not configured and HSM unavailable."
             )
-        return _hmac_sign(self._signing_key, data), "hmac-sha256"
+        return _hmac_sign(self._signing_key, data), "hmac-sha256", ""
 
-    def _verify_sig(self, data: bytes, sig_hex: str, scheme: str) -> bool:
+    def _verify_sig(self, data: bytes, sig_hex: str, scheme: str, public_key_hex: str = "") -> bool:
         """Verify *sig_hex* against *data* using the appropriate scheme."""
         if scheme == "hmac-sha256":
             if not self._signing_key:
@@ -412,21 +504,33 @@ class OperatorSealGate:
                 return False
             return _hmac_verify(self._signing_key, data, sig_hex)
 
-        if scheme == "hsm-pkcs11":
-            if not self._hsm_available():
+        if scheme in _ASYMMETRIC_SCHEMES:
+            # Real asymmetric verification with the published public key — no HSM
+            # needed at verify time. (The previous re-sign-and-compare approach
+            # could never validate a randomized RSA-PSS / ECDSA signature.)
+            if not public_key_hex:
                 logger.warning(
-                    "operator_seal: HSM not available to verify hsm-pkcs11 attestation; rejecting"
+                    "operator_seal: %s attestation carries no public key; cannot verify — rejecting",
+                    scheme,
                 )
                 return False
-            # For symmetric HMAC-based HSM mechanisms: re-sign and compare.
-            # For asymmetric HSM keys, a dedicated C_Verify call with the exported
-            # public key is required — this stub uses re-sign comparison.
             try:
-                expected = self._hsm.sign(data)  # type: ignore[union-attr]
-                return _hmac_module.compare_digest(expected.hex(), sig_hex)
-            except Exception as exc:
-                logger.warning("operator_seal: HSM verify failed: %s", exc)
+                pub_der = bytes.fromhex(public_key_hex)
+                sig = bytes.fromhex(sig_hex)
+            except ValueError:
+                logger.warning("operator_seal: malformed hex in %s attestation; rejecting", scheme)
                 return False
+            return _verify_asymmetric(pub_der, scheme, data, sig)
+
+        if scheme == "hsm-pkcs11":
+            # Legacy generic label (pre-asymmetric-verify). Without the precise
+            # algorithm and the public key it is not soundly verifiable; reject
+            # rather than fall back to the old broken re-sign comparison.
+            logger.warning(
+                "operator_seal: legacy 'hsm-pkcs11' scheme is not verifiable "
+                "(no algorithm/public key); rejecting"
+            )
+            return False
 
         logger.warning("operator_seal: unknown signature scheme %r; rejecting", scheme)
         return False

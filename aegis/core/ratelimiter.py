@@ -148,7 +148,11 @@ class DistributedRateLimiter:
             )
             return result == 1
         except Exception as e:
-            logger.warning("Redis rate limit check failed (%s); allowing request", e)
+            # Fail-open: Redis unavailability must not bring down the proxy.
+            # This is a security-relevant event (rate limiting bypassed) — log as ERROR.
+            logger.error(
+                "Redis rate limit check failed — rate limiting BYPASSED for this request: %s", e
+            )
             return True
 
     async def close(self) -> None:

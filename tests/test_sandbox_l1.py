@@ -186,3 +186,49 @@ class TestApplyFilterSubprocess:
         assert result.returncode == 0, (
             f"subprocess failed:\nstdout: {result.stdout}\nstderr: {result.stderr}"
         )
+
+
+# ── Custom allowed_syscalls and default_action parameters ─────────────────────
+
+
+class TestSeccompSandboxCustomParams:
+    def test_custom_allowed_syscalls_used_in_build_context(self):
+        custom = ("read", "write", "exit_group")
+        sb = SeccompSandbox(allowed_syscalls=custom)
+        assert sb._allowed_syscalls == custom
+        mock_lib = MagicMock()
+        mock_lib.seccomp_init.return_value = 0xABCD
+        mock_lib.seccomp_syscall_resolve_name.return_value = 1
+        mock_lib.seccomp_rule_add.return_value = 0
+        sb._lib = mock_lib
+
+        sb._build_context()
+        assert mock_lib.seccomp_rule_add.call_count == len(custom)
+
+    def test_default_action_passed_to_seccomp_init(self):
+        from aegis.core.sandbox_l1 import SCMP_ACT_KILL
+
+        sb = SeccompSandbox(default_action=SCMP_ACT_KILL)
+        assert sb._default_action == SCMP_ACT_KILL
+        mock_lib = MagicMock()
+        mock_lib.seccomp_init.return_value = 0xABCD
+        mock_lib.seccomp_syscall_resolve_name.return_value = 1
+        mock_lib.seccomp_rule_add.return_value = 0
+        sb._lib = mock_lib
+
+        sb._build_context()
+        mock_lib.seccomp_init.assert_called_once_with(SCMP_ACT_KILL)
+
+    def test_default_constructor_uses_module_allowlist(self):
+        sb = SeccompSandbox()
+        assert sb._allowed_syscalls is _ALLOWED_SYSCALLS
+
+    def test_scmp_act_kill_constant_value(self):
+        from aegis.core.sandbox_l1 import SCMP_ACT_KILL
+
+        assert SCMP_ACT_KILL == 0x00000000
+
+    def test_scmp_act_allow_constant_value(self):
+        from aegis.core.sandbox_l1 import SCMP_ACT_ALLOW
+
+        assert SCMP_ACT_ALLOW == 0x7FFF0000

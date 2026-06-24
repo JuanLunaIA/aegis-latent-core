@@ -96,13 +96,23 @@ jobs:
           python-version: "3.12"
           cache: pip
 
+      - name: Floor build tooling (CVE-2024-6345 / CVE-2026-24049)
+        run: |
+          python -m pip install --upgrade \
+            "pip>=26.1" \
+            "setuptools>=78.1.1" \
+            "wheel>=0.46.2"
+
       - name: Install pip-audit
         run: pip install pip-audit
 
-      - name: Audit runtime dependencies
+      - name: Audit runtime dependencies (pinned requirements)
         run: pip-audit -r requirements.txt --progress-spinner off
 
-      - name: Audit dev dependencies
+      - name: Audit resolved/installed environment
+        # No -r: audits the full installed closure (runtime + dev + build tooling)
+        # so vulnerable resolved versions are caught even when requirements.txt
+        # is clean. Fails the job on any known advisory.
         run: |
           pip install -e ".[dev]"
           pip-audit --progress-spinner off
@@ -134,6 +144,35 @@ jobs:
         with:
           sarif_file: trivy-fs.sarif
           category: trivy-fs
+
+  # ── OSV-Scanner (cross-ecosystem lockfile vulnerability scan) ────────────
+  osv-scanner:
+    name: OSV Scanner
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run OSV-Scanner over Python lockfile
+        # Scans the committed requirements.txt against the OSV database.
+        # (Rust crates are covered by the dedicated cargo-audit job below;
+        # Cargo.lock is not committed yet — see .gitignore / ROADMAP.)
+        # Report-only: findings surface as SARIF in the Security tab but do not
+        # block the PR — the gating Python audit is the pip-audit job above.
+        uses: google/osv-scanner-action/osv-scanner-action@v2.0.2
+        continue-on-error: true
+        with:
+          scan-args: |-
+            --lockfile=requirements.txt
+            --format=sarif
+            --output=osv-results.sarif
+
+      - name: Upload OSV SARIF
+        # Only upload when the scanner actually produced a report.
+        if: ${{ always() && hashFiles('osv-results.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: osv-results.sarif
+          category: osv-scanner
 
   # ── Cargo audit (Rust dependency security) ──────────────────────────────
   cargo-audit:

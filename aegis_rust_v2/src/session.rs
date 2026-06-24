@@ -30,7 +30,6 @@ fn now_secs() -> u64 {
 
 #[derive(Clone)]
 struct SessionEntry {
-    created_at: u64,
     last_seen: u64,
     request_count: u64,
 }
@@ -73,7 +72,6 @@ impl RustSessionStore {
                 e.request_count += 1;
             })
             .or_insert(SessionEntry {
-                created_at: now,
                 last_seen: now,
                 request_count: 1,
             });

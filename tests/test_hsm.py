@@ -28,6 +28,8 @@ def _make_pkcs11_module() -> MagicMock:
     mod.Attribute.CLASS = "CLASS"
     mod.Attribute.LABEL = "LABEL"
     mod.Attribute.KEY_TYPE = "KEY_TYPE"
+    mod.Attribute.MODULUS = "MODULUS"
+    mod.Attribute.PUBLIC_EXPONENT = "PUBLIC_EXPONENT"
     mod.ObjectClass = MagicMock()
     mod.ObjectClass.PRIVATE_KEY = "PRIVATE_KEY"
     mod.ObjectClass.PUBLIC_KEY = "PUBLIC_KEY"
@@ -316,6 +318,74 @@ class TestHSMSigningBackendEC:
                 if backend.available:
                     sig_bytes, pub_hex, scheme = backend.sign(b"test-ec")
                     assert scheme == "pkcs11-ecdsa-sha256"
+
+
+class TestRSAPublicKeyExport:
+    """The RSA exporter must emit canonical SPKI DER loadable by `cryptography`.
+
+    The verify side (aegis.core.operator_seal) loads the public key with
+    `cryptography.load_der_public_key`, which accepts SubjectPublicKeyInfo only.
+    This test rebuilds a real RSA key's modulus/exponent through the exporter
+    and confirms the round trip — without needing a physical HSM.
+    """
+
+    def test_export_produces_loadable_spki(self):
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.hazmat.primitives.serialization import load_der_public_key
+
+        import aegis.core.hsm as hsm_mod
+
+        priv = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        numbers = priv.public_key().public_numbers()
+        n_bytes = numbers.n.to_bytes((numbers.n.bit_length() + 7) // 8, "big")
+        e_bytes = numbers.e.to_bytes((numbers.e.bit_length() + 7) // 8, "big")
+
+        # Stub pkcs11 module + a public-key object exposing MODULUS / PUBLIC_EXPONENT.
+        pkcs11_stub = MagicMock()
+        pkcs11_stub.Attribute.CLASS = "CLASS"
+        pkcs11_stub.Attribute.LABEL = "LABEL"
+        pkcs11_stub.Attribute.MODULUS = "MODULUS"
+        pkcs11_stub.Attribute.PUBLIC_EXPONENT = "PUBLIC_EXPONENT"
+        pkcs11_stub.ObjectClass.PUBLIC_KEY = "PUBLIC_KEY"
+
+        pub_obj = MagicMock()
+        pub_obj.__getitem__ = MagicMock(
+            side_effect=lambda a: {"MODULUS": n_bytes, "PUBLIC_EXPONENT": e_bytes}[a]
+        )
+        session = MagicMock()
+        session.get_objects = MagicMock(return_value=[pub_obj])
+
+        backend = hsm_mod.HSMSigningBackend.__new__(hsm_mod.HSMSigningBackend)
+        backend._key_label = "aegis-signing-key"
+        pub_hex = backend._export_rsa_public_key(session, pkcs11_stub)
+
+        assert pub_hex  # non-empty
+        loaded = load_der_public_key(bytes.fromhex(pub_hex))
+        assert loaded.public_numbers().n == numbers.n
+        assert loaded.public_numbers().e == numbers.e
+        # And the canonical SPKI matches what cryptography would emit directly.
+        expected = (
+            priv.public_key()
+            .public_bytes(
+                serialization.Encoding.DER,
+                serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+            .hex()
+        )
+        assert pub_hex == expected
+
+    def test_export_returns_empty_on_no_keys(self):
+        import aegis.core.hsm as hsm_mod
+
+        pkcs11_stub = MagicMock()
+        pkcs11_stub.ObjectClass.PUBLIC_KEY = "PUBLIC_KEY"
+        session = MagicMock()
+        session.get_objects = MagicMock(return_value=[])
+
+        backend = hsm_mod.HSMSigningBackend.__new__(hsm_mod.HSMSigningBackend)
+        backend._key_label = "aegis-signing-key"
+        assert backend._export_rsa_public_key(session, pkcs11_stub) == ""
 
 
 # ── Integration: CryptographicAuditLedger with HSM backend ───────────────────

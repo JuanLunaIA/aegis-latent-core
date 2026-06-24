@@ -34,6 +34,11 @@ _MARKER = re.compile(
     r"|is_cfi_enabled = True"
     r"|_simulated_"
     r"|Simulated success of"
+    # Phrasings that previously slipped the ratchet in fake-anchoring modules:
+    r"|Simplified for simulation"
+    r"|mock-API"
+    r"|mock-ledger"
+    r"|_mock_blockchain"
 )
 
 # Modules that still contain simulation markers as of 2026-06-24. This set may

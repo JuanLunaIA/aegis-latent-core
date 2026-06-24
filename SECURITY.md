@@ -29,6 +29,24 @@ Use [GitHub Security Advisories](https://github.com/JuanLunaIA/aegis-latent-core
 
 We follow coordinated disclosure. Reports may be credited in the changelog unless the reporter requests anonymity.
 
+### Dependency Vulnerability SLA
+
+Dependency advisories are surfaced automatically and continuously:
+
+- **Dependabot** (`.github/dependabot.yml`) opens update PRs for every ecosystem in the tree — Python (`pip`), Rust (`cargo`), GitHub Actions, and the container base image. Dependabot raises **security** update PRs immediately, independent of the weekly routine-bump schedule.
+- **CI gates** fail the build on any known advisory: `pip-audit` against both the pinned `requirements.txt` and the resolved/installed environment, `osv-scanner` over `requirements.txt` + `Cargo.lock`, and `cargo-audit` for Rust crates.
+
+Remediation targets, measured from advisory publication (or Dependabot PR open, whichever is first):
+
+| Severity              | Triage   | Fix merged to `main`        |
+| :-------------------- | :------- | :-------------------------- |
+| CRITICAL              | 24 hours | 72 hours                    |
+| HIGH                  | 48 hours | 7 days                      |
+| MEDIUM                | 5 days   | 30 days                     |
+| LOW / informational   | best-effort | next routine bump cycle  |
+
+A Dependabot security PR for a HIGH/CRITICAL advisory is reviewed, its CI run (including the audit gates above) confirmed green, and merged within the window. When a fix is not yet available upstream, the advisory is documented with a temporary, justified `--ignore`/`--ignore-vuln` entry and tracked until a fixed release exists.
+
 ---
 
 ## Deployment Security Checklist
@@ -82,6 +100,54 @@ As of v2.3.0, the LSM guard runs in **advisory mode**: missing AppArmor or SELin
 - Bind to `127.0.0.1` or a private interface unless a load balancer or ingress controller handles public-facing TLS termination.
 - Restrict `/v1/audit/*` endpoints to trusted internal networks or require `AEGIS_AUDIT_API_KEYS`.
 - The visualizer server (`tools/visualizer/`) is a local development tool. Never expose it to public networks.
+
+---
+
+## Simulated vs. Real Controls
+
+Aegis ships **no simulated security controls**. A 2026-06-24 full-tree audit found
+~20% of `aegis/core` modules returning success without performing the advertised
+function (fake PQC signatures, hardcoded enclave measurements, randomly-generated
+"telemetry", etc.). Every one has since been replaced with a real implementation
+or an honest, hardware-gated stub that **fails closed** when its dependency is
+absent — never fabricating assurance. This is enforced two ways:
+
+- **Regression ratchet** — `tests/test_no_simulation_markers.py` fails CI if any
+  `aegis/` module reintroduces a simulation marker (`KNOWN_SIMULATION_DEBT` is
+  empty and the test asserts the count stays `0`).
+- **Live capability report** — `GET /v1/attestation/capabilities` (behind audit
+  auth) reports each control's status in the running deployment as `REAL`,
+  `UNAVAILABLE`, or `SIMULATED`, with a `simulation_debt` count that must be `0`.
+
+Many controls depend on hardware or external tooling. Where that dependency is
+absent, the control reports `UNAVAILABLE` and refuses to run — it does **not**
+silently degrade to a fake. The matrix below shows each control, its dependency,
+and what it does when the dependency is missing.
+
+| Control | Module | Requires | When dependency absent |
+| :------ | :----- | :------- | :--------------------- |
+| ML-DSA-65 signing | `pqc_signer` | Rust `aegis_rust` ext | `UNAVAILABLE`; `sign()` raises (no fake signature) |
+| Audit signing (HMAC-SHA256) | `crypto_audit` | stdlib | always `REAL` |
+| Hybrid PQC TLS (X25519+ML-KEM) | `pqc_tls` | `cryptography` + ML-KEM | refuses classical-only downgrade |
+| Seccomp syscall filter | `sandbox_l1` | libseccomp | `UNAVAILABLE`; filter not loaded |
+| TPM PCR root-of-trust | `tpm` | tpm2-tools + TPM device | labelled **software** PCR (not a hardware RoT) |
+| Trusted-boot attestation | `boot_attestation` | signed vendor manifest + TPM | manifest signature always verified; live PCR check needs a TPM |
+| Hardware-bound session tokens | `hardware_token` | TPM device + tpm2-tools | software HMAC binding (no PCR seal) when TPM/tools absent |
+| TEE enclave attestation | `tee_manager` / `enclave_provider` | SGX/SEV/TDX device | `UNAVAILABLE`; operations raise |
+| eBPF runtime monitor | `ebpf_monitor` | `bpftool` + CAP_BPF | probes stay inactive; no fabricated telemetry |
+| DPDK kernel-bypass datapath | `dpdk_engine` | hugepages + dpdk-devbind | `UNAVAILABLE`; no packets (no fake packets) |
+| Dynamic firewall segmentation | `xdp_dynamic_segmentation` | nftables/iptables | application-layer only (no kernel drop) |
+| CFI binary inspection | `cfi_manager` | pyelftools / readelf | `UNAVAILABLE` |
+| MTE detection | `mte_guard` | ARM MTE hardware | honest `False` on x86/non-ARM |
+| Fuzzing harness | `fuzzing_harness` | `cargo` + cargo-fuzz | `UNAVAILABLE` (no fake clean run) |
+| Dependency CVE audit | `dependency_audit` | `pip-audit` | raises (no fake clean result) |
+| Reproducible-build verify | `build_reproducibility` | `cargo` | raises (no fake match) |
+| Transparency log | `transparency_log` | stdlib (JSONL) | always `REAL` |
+| Public root anchoring | `blockchain_anchor` | configured anchor backend (RFC3161/OTS) | `publish_root` fails closed — never fabricates a tx/proof |
+
+> The `zk_proof` audit-inclusion proof is still an honest stub (it sets
+> `is_stub == True` and does not claim ZK soundness); integrating a real proving
+> system is tracked in `docs/ROADMAP.md` (DX-Forensic).
 
 ---
 

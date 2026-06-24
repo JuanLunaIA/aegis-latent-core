@@ -128,15 +128,36 @@ def test_apply_filter_sets_degraded_mode():
     assert guard.is_degraded() is True
 
 
-# ── _load_libseccomp in sandbox ───────────────────────────────────────────────
+# ── apply_filter delegates ctypes work to sandbox_l1.SeccompSandbox ─────────
 
 
-def test_load_libseccomp_skips_in_sandbox():
-    guard = SeccompGuard()
-    assert guard.is_sandbox is True
-    # In sandbox, _load_libseccomp returns False without touching ctypes
-    result = guard._load_libseccomp()
-    assert result is False
+def test_apply_filter_uses_seccomp_sandbox_in_non_sandbox():
+    """apply_filter must reach SeccompSandbox when not in a sandbox env."""
+    guard = SeccompGuard.__new__(SeccompGuard)
+    guard._is_sandbox = False
+    guard._is_enforced = False
+    guard._degraded_mode = False
+    guard.profile = SeccompGuard.DEFAULT_PROFILE
+
+    import ctypes.util as _ctu
+    from unittest.mock import MagicMock, patch
+
+    mock_libc = MagicMock()
+    mock_libc.prctl.return_value = 0
+
+    mock_sb = MagicMock()
+    mock_sb.enabled = True
+    mock_sb.apply_filter.return_value = True
+
+    with (
+        patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
+        patch("ctypes.CDLL", return_value=mock_libc),
+        patch("aegis.core.sandbox_l1.SeccompSandbox", return_value=mock_sb),
+    ):
+        result = guard.apply_filter()
+
+    assert result is True
+    mock_sb.apply_filter.assert_called_once()
 
 
 # ── is_enforced / is_degraded accessors ──────────────────────────────────────

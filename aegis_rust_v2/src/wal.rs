@@ -218,7 +218,6 @@ fn scan_write_pos(mmap: &MmapMut, capacity: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
     use tempfile::NamedTempFile;
 
     fn tmp_wal() -> RustWal {

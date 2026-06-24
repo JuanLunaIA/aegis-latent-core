@@ -1,6 +1,17 @@
 """
-aegis.core.state_snapshotter — Atomic State Snapshotting.
-Implements microsecond-level memory snapshots for instant recovery after intrusion.
+aegis.core.state_snapshotter — in-memory state snapshotting & rollback.
+
+**Scope (advisory):** this module provides a *process-local* snapshot store. It
+captures critical Python objects with :func:`copy.deepcopy` (so later mutation of
+the originals cannot corrupt a snapshot) and records a SHA-256 over the serialized
+state as an integrity tag that is re-checked before rollback. It is suitable for
+rolling back application-level state to a known-good point after a detected
+invariant violation.
+
+It does **not** provide OS-level copy-on-write or `mmap` page snapshots, and it
+makes no sub-millisecond latency guarantee — deep-copy cost scales with the size
+of the captured object graph. True CoW/`mmap` snapshotting (for large state or
+kernel-assisted atomicity) is out of scope here and tracked in ``docs/ROADMAP.md``.
 """
 
 # Copyright (c) 2026 Juan Luna. All rights reserved.
@@ -29,8 +40,12 @@ class SystemSnapshot:
 
 class AtomicSnapshotManager:
     """
-    Manages high-frequency snapshots of the system's critical state.
-    Allows for near-instant roll-back to a 'Known Good State' upon detection of a breach.
+    Process-local snapshot store for the system's critical state.
+
+    Each snapshot is a deep copy plus a SHA-256 integrity tag; rollback returns a
+    previously-captured object graph after re-verifying that tag. "Atomic" refers
+    to the deepcopy isolation (a snapshot is independent of later mutations), not
+    to OS-level atomicity. See the module docstring for scope limits.
     """
 
     def __init__(self, snapshot_interval_ms: int = 100):

@@ -314,6 +314,10 @@ class AnthropicAdapter(ProviderAdapter):
         chunk_id = f"chatcmpl-{request_id}"
         model = original_model
         role_emitted = False
+        # Tool-call reassembly: map Anthropic content-block index → OpenAI
+        # tool_call index, so input_json_delta fragments append to the right call.
+        block_to_tool_index: dict[int, int] = {}
+        tool_call_count = 0
 
         async for raw_line in raw_lines:
             line = raw_line.strip()
@@ -364,6 +368,33 @@ class AnthropicAdapter(ProviderAdapter):
                     )
                     role_emitted = True
 
+                # A tool_use block opens an OpenAI tool_call: emit its id+name now,
+                # with empty arguments (the JSON arrives via input_json_delta).
+                content_block = event.get("content_block", {})
+                if content_block.get("type") == "tool_use":
+                    block_index = event.get("index", 0)
+                    tc_index = tool_call_count
+                    tool_call_count += 1
+                    block_to_tool_index[block_index] = tc_index
+                    yield _make_openai_chunk(
+                        chunk_id,
+                        model,
+                        created,
+                        delta={
+                            "tool_calls": [
+                                {
+                                    "index": tc_index,
+                                    "id": content_block.get("id", ""),
+                                    "type": "function",
+                                    "function": {
+                                        "name": content_block.get("name", ""),
+                                        "arguments": "",
+                                    },
+                                }
+                            ]
+                        },
+                    )
+
             elif event_type == "content_block_delta":
                 delta = event.get("delta", {})
                 if delta.get("type") == "text_delta":
@@ -376,14 +407,25 @@ class AnthropicAdapter(ProviderAdapter):
                             delta={"content": text},
                         )
                 elif delta.get("type") == "input_json_delta":
-                    # Tool use partial JSON — forward as content for now.
+                    # Tool-call arguments arrive incrementally — forward them as an
+                    # OpenAI tool_calls arguments delta on the matching tool call,
+                    # NOT as message content (which would corrupt the response).
                     partial = delta.get("partial_json", "")
                     if partial:
+                        block_index = event.get("index", 0)
+                        tc_index = block_to_tool_index.get(block_index, 0)
                         yield _make_openai_chunk(
                             chunk_id,
                             model,
                             created,
-                            delta={"content": partial},
+                            delta={
+                                "tool_calls": [
+                                    {
+                                        "index": tc_index,
+                                        "function": {"arguments": partial},
+                                    }
+                                ]
+                            },
                         )
 
             elif event_type == "message_delta":

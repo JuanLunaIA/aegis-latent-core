@@ -162,6 +162,20 @@ class IntegrityReport(BaseModel):
     legal_admissibility: str
 
 
+class ControlCapabilityOut(BaseModel):
+    name: str
+    category: str
+    status: str  # REAL | UNAVAILABLE | SIMULATED
+    module: str
+    detail: str
+
+
+class CapabilitiesReport(BaseModel):
+    controls: list[ControlCapabilityOut]
+    summary: dict[str, int]  # counts keyed by status (REAL / UNAVAILABLE / SIMULATED)
+    simulation_debt: int  # number of controls reporting SIMULATED — must be 0
+
+
 class AlertOut(BaseModel):
     session_id: str
     state_id: str

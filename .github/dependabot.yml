@@ -1,0 +1,72 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+#
+# dependabot.yml — automated dependency update PRs across every ecosystem in
+# the tree. Security updates are raised by Dependabot immediately regardless of
+# the weekly schedule below; the schedule governs routine version bumps.
+#
+# HIGH/CRITICAL advisory handling SLA is documented in SECURITY.md
+# ("Dependency Vulnerability SLA"). Security-update PRs feed the same CI gates
+# (pip-audit resolved-env, osv-scanner, cargo-audit, Bandit, CodeQL) as any
+# other change.
+version: 2
+updates:
+  # ── Python (pyproject.toml + requirements.txt) ─────────────────────────────
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    labels: ["dependencies", "python"]
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      python-minor-patch:
+        update-types: ["minor", "patch"]
+
+  # ── Rust extension (aegis_rust_v2/Cargo.toml + Cargo.lock) ─────────────────
+  - package-ecosystem: "cargo"
+    directory: "/aegis_rust_v2"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    labels: ["dependencies", "rust"]
+    commit-message:
+      prefix: "deps(rust)"
+    groups:
+      cargo-minor-patch:
+        update-types: ["minor", "patch"]
+
+  # ── GitHub Actions workflows ───────────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "deps(ci)"
+
+  # ── Container base image ───────────────────────────────────────────────────
+  - package-ecosystem: "docker"
+    directory: "/deploy/docker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "docker"]
+    commit-message:
+      prefix: "deps(docker)"

@@ -11,5 +11,7 @@ protobuf>=5.0.0
 redis>=5.0.0
 requests>=2.31.0
 cryptography>=42.0.0
-# Security floor for transitive deps (Dependabot / PYSEC-2026-215)
+# Security floors for transitive deps (Dependabot / PYSEC advisories)
 idna>=3.15
+# urllib3 (transitive via requests): PYSEC-2026-141 / PYSEC-2026-142
+urllib3>=2.7.0

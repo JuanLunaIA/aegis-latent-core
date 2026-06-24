@@ -11,9 +11,17 @@ Token binding: The HMAC is computed over (token_id ‖ subject ‖ tenant_id ‖
 ‖ expires_at) keyed with AEGIS_SIGNING_KEY. This binds the token to the signing key
 (hardware-equivalent when AEGIS_SIGNING_KEY is itself TPM-sealed or HSM-wrapped).
 
-Soft dependency on TPM: when ``/dev/tpm0`` or ``/dev/tpmrm0`` is readable the
-``TPM2`` backend is selected; otherwise the module falls back to ``SOFTWARE``
-automatically. No import error is raised in either case.
+Soft dependency on TPM: the ``TPM2`` backend is selected only when both a TPM
+device (``/dev/tpm0`` / ``/dev/tpmrm0``) **and** the ``tpm2-tools`` CLI are
+present; otherwise the module falls back to ``SOFTWARE`` automatically. No import
+error is raised in either case.
+
+TPM2 PCR binding: when the ``TPM2`` backend is active the attestation HMAC is
+additionally bound to the **live PCR digest** read via ``tpm2_pcrread`` over a
+configurable PCR selection. A token therefore validates only while the platform
+measurement state is unchanged — if a PCR is extended (e.g. a measured component
+changes) the attestation no longer matches and the token is rejected. This is a
+real PCR binding using ``tpm2-tools``, not a hardcoded value.
 """
 
 from __future__ import annotations
@@ -22,7 +30,10 @@ import hashlib
 import hmac as hmac_mod
 import logging
 import os
+import re
+import shutil
 import struct
+import subprocess  # noqa: S404  # nosec B404
 import time
 import uuid
 from dataclasses import dataclass
@@ -36,6 +47,13 @@ _DEFAULT_TTL_SECONDS: int = 3600
 _SIGNING_KEY_ENV: str = "AEGIS_SIGNING_KEY"
 _TTL_ENV: str = "AEGIS_TOKEN_TTL_SECONDS"
 _BACKEND_ENV: str = "AEGIS_TOKEN_BACKEND"
+_PCR_SELECTION_ENV: str = "AEGIS_TOKEN_PCR_SELECTION"
+
+_TPM2_PCRREAD: str = "tpm2_pcrread"
+# Bind to the firmware/bootloader/kernel measurement PCRs by default.
+_DEFAULT_PCR_SELECTION: str = "sha256:0,1,2,3,4,5,6,7"
+# tpm2_pcrread emits lines like "  0 : 0xABCD..." (spacing varies by version).
+_PCR_LINE = re.compile(r"^\s*(\d+)\s*:\s*0x([0-9a-fA-F]+)\s*$")
 
 # ── Enumerations ─────────────────────────────────────────────────────────────
 
@@ -137,6 +155,7 @@ class HardwareTokenManager:
         signing_key: bytes,
         ttl_seconds: int = _DEFAULT_TTL_SECONDS,
         backend: TokenBackend | None = None,
+        pcr_selection: str = _DEFAULT_PCR_SELECTION,
     ) -> None:
         if not signing_key:
             raise HardwareTokenError(
@@ -144,16 +163,18 @@ class HardwareTokenManager:
             )
         self._signing_key: bytes = signing_key
         self._ttl_seconds: int = ttl_seconds
+        self._pcr_selection: str = pcr_selection
         self._revoked: set[str] = set()
 
         if backend is None:
-            self._backend = TokenBackend.TPM2 if self._is_tpm_available() else TokenBackend.SOFTWARE
+            self._backend = TokenBackend.TPM2 if self._tpm2_usable() else TokenBackend.SOFTWARE
         else:
             self._backend = backend
 
-        if self._backend is TokenBackend.TPM2 and not self._is_tpm_available():
+        if self._backend is TokenBackend.TPM2 and not self._tpm2_usable():
             logger.warning(
-                "TPM2 backend requested but /dev/tpm0 is not available — falling back to SOFTWARE"
+                "TPM2 backend requested but a TPM device and/or tpm2-tools is unavailable — "
+                "falling back to SOFTWARE"
             )
             self._backend = TokenBackend.SOFTWARE
 
@@ -207,7 +228,14 @@ class HardwareTokenManager:
                 f"{_BACKEND_ENV} must be 'tpm2', 'software', or 'auto', got {backend_raw!r}"
             )
 
-        return cls(signing_key=signing_key, ttl_seconds=ttl_seconds, backend=backend)
+        pcr_selection = os.environ.get(_PCR_SELECTION_ENV, _DEFAULT_PCR_SELECTION)
+
+        return cls(
+            signing_key=signing_key,
+            ttl_seconds=ttl_seconds,
+            backend=backend,
+            pcr_selection=pcr_selection,
+        )
 
     # ── Properties ────────────────────────────────────────────────────────────
 
@@ -292,13 +320,22 @@ class HardwareTokenManager:
                 backend_used=self._backend,
             )
 
-        expected_attestation = self._attest(
-            token.token_id,
-            token.subject,
-            token.tenant_id,
-            token.issued_at,
-            token.expires_at,
-        )
+        try:
+            expected_attestation = self._attest(
+                token.token_id,
+                token.subject,
+                token.tenant_id,
+                token.issued_at,
+                token.expires_at,
+            )
+        except HardwareTokenError as exc:
+            # TPM transiently unavailable — fail closed without raising.
+            return TokenValidationResult(
+                valid=False,
+                token=token,
+                reason=f"attestation unavailable: {exc}",
+                backend_used=self._backend,
+            )
         if not hmac_mod.compare_digest(expected_attestation, token.attestation_data):
             return TokenValidationResult(
                 valid=False,
@@ -384,18 +421,55 @@ class HardwareTokenManager:
         Produce attestation data for the given token fields.
 
         Software path: returns HMAC-SHA256(signing_key, canonical_fields).
-        TPM path: would extend a PCR and return a quote; currently stubs to the
-        software path (a real implementation requires tpm2-tss or direct /dev/tpm0
-        access via ``ioctl``).
+        TPM2 path: binds the HMAC to the live PCR digest read via ``tpm2_pcrread``
+        — HMAC-SHA256(signing_key, canonical_fields ‖ 0x00 ‖ pcr_digest) — so the
+        token is valid only while the platform measurement state is unchanged.
+        Raises :class:`HardwareTokenError` if the TPM read fails.
         """
-        if self._backend is TokenBackend.TPM2:
-            # Real TPM implementation would use PCR extend + quote here.
-            # For now, falls back to software HMAC while maintaining the backend label.
-            logger.debug(
-                "TPM2 attestation requested; using HMAC stub (real PCR quote not yet implemented)"
-            )
         msg = self._canonical_fields(token_id, subject, tenant_id, issued_at, expires_at)
+        if self._backend is TokenBackend.TPM2:
+            pcr_digest = self._read_pcr_digest()
+            msg = msg + b"\x00" + pcr_digest
+            logger.debug("TPM2 attestation bound to live PCR digest (%s)", self._pcr_selection)
         return hmac_mod.new(self._signing_key, msg, hashlib.sha256).digest()
+
+    def _read_pcr_digest(self) -> bytes:
+        """
+        Read the configured PCRs via ``tpm2_pcrread`` and return SHA-256 over the
+        concatenated PCR values (sorted by index).
+
+        Raises :class:`HardwareTokenError` when the CLI is missing, exits
+        non-zero, or returns no parseable PCR values — never silently degrades.
+        """
+        try:
+            result = subprocess.run(  # noqa: S603  # nosec B603
+                [_TPM2_PCRREAD, self._pcr_selection],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except (FileNotFoundError, OSError) as exc:
+            raise HardwareTokenError(f"tpm2_pcrread could not be executed: {exc}") from exc
+        except subprocess.TimeoutExpired as exc:
+            raise HardwareTokenError("tpm2_pcrread timed out") from exc
+
+        if result.returncode != 0:
+            raise HardwareTokenError(
+                f"tpm2_pcrread failed (rc={result.returncode}): {result.stderr.strip()}"
+            )
+
+        pairs: list[tuple[int, str]] = []
+        for line in result.stdout.splitlines():
+            match = _PCR_LINE.match(line)
+            if match:
+                pairs.append((int(match.group(1)), match.group(2).lower()))
+
+        if not pairs:
+            raise HardwareTokenError("tpm2_pcrread returned no parseable PCR values")
+
+        pairs.sort()
+        concat = "".join(value for _, value in pairs).encode("ascii")
+        return hashlib.sha256(concat).digest()
 
     @staticmethod
     def _compute_token_hash(
@@ -435,6 +509,16 @@ class HardwareTokenManager:
             except OSError:
                 pass
         return False
+
+    @staticmethod
+    def _tpm2_tools_available() -> bool:
+        """Return ``True`` if the ``tpm2_pcrread`` CLI is on PATH."""
+        return shutil.which(_TPM2_PCRREAD) is not None
+
+    @classmethod
+    def _tpm2_usable(cls) -> bool:
+        """TPM2 binding requires both a readable TPM device and tpm2-tools."""
+        return cls._is_tpm_available() and cls._tpm2_tools_available()
 
 
 # ── Self-test / __main__ ──────────────────────────────────────────────────────

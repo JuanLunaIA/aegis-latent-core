@@ -33,7 +33,7 @@ use forwarder::{warmup_runtime, RustForwarder};
 use hasher::{hash_audit_payload, hash_blake3, hash_sha256_fast, keyed_hash_blake3, keyed_hash_blake3_bytes};
 use ledger::{blake3_hash, blake3_keyed_hash, hash_sha256, hmac_sign};
 use mmr::MmrAccumulator;
-use pqc::{generate_pqc_keypair, verify_pqc_signature, PqcKeypair};
+use pqc::{generate_pqc_keypair, keypair_from_bytes, verify_pqc_signature, PqcKeypair};
 use pyo3::{prelude::*, types::PyBytes, wrap_pyfunction};
 use rate_limit::RustRateLimiter;
 use session::RustSessionStore;
@@ -57,11 +57,11 @@ impl HttpResponse {
 
     #[getter]
     fn content<'py>(&self, py: Python<'py>) -> Bound<'py, PyBytes> {
-        PyBytes::new_bound(py, &self.content)
+        PyBytes::new(py, &self.content)
     }
 
     fn json(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        let json_mod = py.import_bound("json")?;
+        let json_mod = py.import("json")?;
         let text = std::str::from_utf8(&self.content).map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string())
         })?;
@@ -69,7 +69,7 @@ impl HttpResponse {
     }
 
     fn headers_dict(&self, py: Python<'_>) -> PyResult<Py<pyo3::types::PyDict>> {
-        let dict = pyo3::types::PyDict::new_bound(py);
+        let dict = pyo3::types::PyDict::new(py);
         for (k, v) in &self.headers {
             dict.set_item(k, v)?;
         }
@@ -109,6 +109,7 @@ fn aegis_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PqcKeypair>()?;
     m.add_class::<MmrAccumulator>()?;
     m.add_function(wrap_pyfunction!(generate_pqc_keypair, m)?)?;
+    m.add_function(wrap_pyfunction!(keypair_from_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(verify_pqc_signature, m)?)?;
 
     // Legacy SHA-256 / HMAC (backward compat)

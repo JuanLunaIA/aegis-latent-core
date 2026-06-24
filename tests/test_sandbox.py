@@ -158,3 +158,11 @@ class TestLandlockManager:
             lm.restrict_filesystem({"/data": "rw", "/config": "ro"})
         assert "/data" in caplog.text
         assert "/config" in caplog.text
+
+    def test_restrict_filesystem_warns_not_enforced(self, caplog):
+        import logging
+
+        lm = LandlockManager()
+        with caplog.at_level(logging.WARNING, logger="aegis.core.sandbox"):
+            lm.restrict_filesystem({"/tmp": "rw"})
+        assert "NOT active" in caplog.text or "not yet wired" in caplog.text

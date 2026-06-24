@@ -188,3 +188,60 @@ class TestVerifyHardening:
         s = PQCSigner()
         with pytest.raises(TypeError):
             s.sign("not-bytes")  # type: ignore[arg-type]
+
+
+# ── Persistent identity: export + from_keys round-trip (P0.1) ─────────────────
+
+
+class TestPersistentIdentity:
+    @requires_real
+    def test_export_private_key_size(self):
+        s = PQCSigner()
+        assert len(s.export_private_key()) == PRIVATE_KEY_BYTES
+
+    @requires_real
+    def test_export_raises_without_keypair(self):
+        s = PQCSigner.__new__(PQCSigner)
+        s._kp = None
+        s._backend = "unavailable"
+        with pytest.raises(PQCUnavailableError):
+            s.export_private_key()
+
+    @requires_real
+    def test_reloaded_identity_has_same_public_key(self):
+        original = PQCSigner()
+        pk, sk = original.public_key, original.export_private_key()
+        reloaded = PQCSigner.from_keys(pk, sk)
+        assert reloaded.is_available is True
+        assert reloaded.backend == "ml-dsa-65-rust"
+        assert reloaded.public_key == pk
+
+    @requires_real
+    def test_reloaded_identity_signs_verifiably(self):
+        # A persisted-then-reloaded identity must produce signatures that verify
+        # under the original published public key.
+        original = PQCSigner()
+        pk, sk = original.public_key, original.export_private_key()
+        reloaded = PQCSigner.from_keys(pk, sk)
+        msg = b"persistent-signing-identity:state_id=xyz"
+        sig = reloaded.sign(msg)
+        assert PQCSigner.verify(msg, sig, pk) is True
+
+    @requires_real
+    def test_from_keys_rejects_malformed_bytes(self):
+        with pytest.raises(ValueError):
+            PQCSigner.from_keys(b"too-short-pk", b"\x00" * PRIVATE_KEY_BYTES)
+        with pytest.raises(ValueError):
+            PQCSigner.from_keys(b"\x00" * PUBLIC_KEY_BYTES, b"too-short-sk")
+
+    @requires_real
+    def test_from_keys_rejects_non_bytes(self):
+        with pytest.raises(TypeError):
+            PQCSigner.from_keys("pk", b"\x00" * PRIVATE_KEY_BYTES)  # type: ignore[arg-type]
+
+    def test_from_keys_raises_without_backend(self, monkeypatch):
+        import aegis.core.pqc_signer as mod
+
+        monkeypatch.setattr(mod, "_HAS_RUST", False)
+        with pytest.raises(PQCUnavailableError):
+            mod.PQCSigner.from_keys(b"pk", b"sk")

@@ -88,6 +88,12 @@ Desktop.ini
 # ── Rust (optional extension build) ───────────────────────────────────────────
 aegis_rust_v2/target/
 **/target/
+# Cargo.lock is currently git-ignored. Committing it (correct for a cdylib
+# extension, and required to OSV/Trivy-scan the Rust tree) is blocked on a
+# dependency-upgrade effort to clear pre-existing advisories in the pinned
+# tree (pyo3 0.24→0.29: GHSA-36hh-v3qg-5jq4 / GHSA-chgr-c6px-7xpp; hickory-proto
+# via reqwest: GHSA-3v94-mw7p-v465 [no fix yet] / GHSA-q2qq-hmj6-3wpp). Tracked
+# in docs/ROADMAP.md. Until then cargo-audit (with documented ignores) covers Rust.
 Cargo.lock
 
 # ── Aegis runtime data ────────────────────────────────────────────────────────
@@ -119,3 +125,8 @@ docs/audit/
 # Runtime artifacts produced by Claude Code sessions
 *.claude-session
 .claude-context/
+
+# ── Generated tool artifacts (regenerated in CI / on demand) ───────────────────
+# forensic_checks.py and generate_summary.py produce these; never commit them.
+tools/forensic/report.json
+tools/visualizer/summary.json

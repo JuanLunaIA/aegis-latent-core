@@ -24,6 +24,63 @@ from aegis.core.operator_seal import (
     _hmac_verify,
 )
 
+# ── HSM test doubles backed by REAL asymmetric crypto ─────────────────────────
+# These mocks reproduce exactly what aegis.core.hsm.HSMSigningBackend.sign()
+# returns — (signature_bytes, public_key_hex, scheme) — using the same
+# signature formats a PKCS#11 token emits (raw r‖s for ECDSA, raw RSA-PSS),
+# so the operator_seal verify path is exercised against genuine signatures
+# without needing a physical HSM / SoftHSM in CI.
+
+
+def _make_ecdsa_hsm() -> MagicMock:
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives.asymmetric import utils as asym_utils
+
+    priv = ec.generate_private_key(ec.SECP256R1())
+    pub_hex = (
+        priv.public_key()
+        .public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+        .hex()
+    )
+
+    def _sign(data: bytes):
+        der_sig = priv.sign(data, ec.ECDSA(hashes.SHA256()))
+        r, s = asym_utils.decode_dss_signature(der_sig)
+        raw = r.to_bytes(32, "big") + s.to_bytes(32, "big")  # PKCS#11 raw r‖s
+        return raw, pub_hex, "pkcs11-ecdsa-sha256"
+
+    m = MagicMock()
+    m._available = True
+    m.sign.side_effect = _sign
+    return m
+
+
+def _make_rsa_hsm() -> MagicMock:
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding, rsa
+
+    priv = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    pub_hex = (
+        priv.public_key()
+        .public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+        .hex()
+    )
+
+    def _sign(data: bytes):
+        sig = priv.sign(
+            data,
+            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=32),
+            hashes.SHA256(),
+        )
+        return sig, pub_hex, "pkcs11-rsa-pss-sha256"
+
+    m = MagicMock()
+    m._available = True
+    m.sign.side_effect = _sign
+    return m
+
+
 # ── _canonical_body ───────────────────────────────────────────────────────────
 
 
@@ -105,6 +162,7 @@ class TestOperatorAttestationToDict:
             "expires_at",
             "signature",
             "signature_scheme",
+            "public_key",
         }
 
     def test_to_dict_values(self):
@@ -239,12 +297,11 @@ class TestCreateAttestation:
         assert len(ids) == 5
 
     def test_hsm_preferred_when_available(self):
-        mock_hsm = MagicMock()
-        mock_hsm._available = True
-        mock_hsm.sign.return_value = b"\xde\xad\xbe\xef" * 8
+        mock_hsm = _make_ecdsa_hsm()
         gate = OperatorSealGate(signing_key="k", hsm_backend=mock_hsm)  # noqa: S106
         att = gate.create_attestation("op1")
-        assert att.signature_scheme == "hsm-pkcs11"
+        assert att.signature_scheme == "pkcs11-ecdsa-sha256"
+        assert att.public_key != ""
         mock_hsm.sign.assert_called_once()
 
     def test_hsm_failure_falls_back_to_hmac(self):
@@ -391,21 +448,96 @@ class TestGateExport:
 
 
 class TestHSMPath:
-    def _mock_hsm(self, sig_bytes: bytes = b"\xca\xfe" * 16) -> MagicMock:
-        m = MagicMock()
-        m._available = True
-        m.sign.return_value = sig_bytes
-        return m
-
-    def test_hsm_sign_and_verify_round_trip(self):
-        sig_bytes = b"\xab\xcd" * 16
-        hsm = self._mock_hsm(sig_bytes)
+    def test_ecdsa_sign_and_verify_round_trip(self):
+        hsm = _make_ecdsa_hsm()
         gate = OperatorSealGate(signing_key="k", hsm_backend=hsm)  # noqa: S106
         att = gate.create_attestation("op1", "pkg1")
-        assert att.signature_scheme == "hsm-pkcs11"
-        # verify_attestation re-calls hsm.sign with the same body and compares
+        assert att.signature_scheme == "pkcs11-ecdsa-sha256"
+        assert att.public_key
         result = gate.verify_attestation(att)
         assert result.valid is True
+
+    def test_rsa_sign_and_verify_round_trip(self):
+        hsm = _make_rsa_hsm()
+        gate = OperatorSealGate(signing_key="k", hsm_backend=hsm)  # noqa: S106
+        att = gate.create_attestation("op1", "pkg1")
+        assert att.signature_scheme == "pkcs11-rsa-pss-sha256"
+        assert att.public_key
+        result = gate.verify_attestation(att)
+        assert result.valid is True
+
+    def test_asymmetric_verify_without_hsm_present(self):
+        # The whole point of an asymmetric scheme: the verifier does NOT need
+        # the HSM — the published public key is sufficient.
+        hsm = _make_ecdsa_hsm()
+        signer = OperatorSealGate(signing_key="k", hsm_backend=hsm)  # noqa: S106
+        att = signer.create_attestation("op1", "pkg1")
+
+        verifier = OperatorSealGate(signing_key="other-key")  # noqa: S106  (no HSM)
+        result = verifier.verify_attestation(att)
+        assert result.valid is True
+
+    def test_ecdsa_tampered_body_rejected(self):
+        hsm = _make_ecdsa_hsm()
+        gate = OperatorSealGate(signing_key="k", hsm_backend=hsm)  # noqa: S106
+        att = gate.create_attestation("op1", "pkg1")
+        att.operator_id = "evil-op"  # body no longer matches the signature
+        result = gate.verify_attestation(att)
+        assert result.valid is False
+
+    def test_rsa_tampered_signature_rejected(self):
+        hsm = _make_rsa_hsm()
+        gate = OperatorSealGate(signing_key="k", hsm_backend=hsm)  # noqa: S106
+        att = gate.create_attestation("op1")
+        # Flip the last byte of the signature.
+        sig = bytearray(bytes.fromhex(att.signature))
+        sig[-1] ^= 0xFF
+        att.signature = bytes(sig).hex()
+        result = gate.verify_attestation(att)
+        assert result.valid is False
+
+    def test_wrong_public_key_rejected(self):
+        hsm = _make_ecdsa_hsm()
+        gate = OperatorSealGate(signing_key="k", hsm_backend=hsm)  # noqa: S106
+        att = gate.create_attestation("op1")
+        # Swap in a DIFFERENT public key — signature can no longer validate.
+        other = _make_ecdsa_hsm()
+        _sig, other_pub, _scheme = other.sign(b"x")
+        att.public_key = other_pub
+        result = gate.verify_attestation(att)
+        assert result.valid is False
+
+    def test_asymmetric_missing_public_key_rejected(self):
+        hsm = _make_ecdsa_hsm()
+        gate = OperatorSealGate(signing_key="k", hsm_backend=hsm)  # noqa: S106
+        att = gate.create_attestation("op1")
+        att.public_key = ""  # cannot verify an asymmetric sig without the key
+        result = gate.verify_attestation(att)
+        assert result.valid is False
+
+    def test_legacy_hsm_pkcs11_scheme_rejected(self):
+        # The old generic 'hsm-pkcs11' label is not soundly verifiable; reject
+        # rather than fall back to the previous broken re-sign comparison.
+        gate = OperatorSealGate(signing_key="k")  # noqa: S106
+        att = OperatorAttestation(
+            attestation_id="aid",
+            operator_id="op1",
+            package_id="",
+            action=_BUNDLE_EXPORT_ACTION,
+            issued_at=datetime.now(tz=UTC).isoformat(),
+            expires_at=(datetime.now(tz=UTC) + timedelta(hours=1)).isoformat(),
+            signature="deadbeef",
+            signature_scheme="hsm-pkcs11",
+        )
+        result = gate.verify_attestation(att)
+        assert result.valid is False
+
+    def test_hsm_gate_export_round_trip(self):
+        hsm = _make_rsa_hsm()
+        gate = OperatorSealGate(signing_key="k", hsm_backend=hsm)  # noqa: S106
+        att = gate.create_attestation("op1", "pkg1")
+        # Should not raise.
+        gate.gate_export("pkg1", att)
 
     def test_hsm_unavailable_means_not_available(self):
         hsm = MagicMock()
@@ -416,20 +548,19 @@ class TestHSMPath:
         assert att.signature_scheme == "hmac-sha256"
 
     def test_hsm_sign_failure_falls_back(self):
-        hsm = self._mock_hsm()
+        hsm = MagicMock()
+        hsm._available = True
         hsm.sign.side_effect = RuntimeError("HSM error")
         gate = OperatorSealGate(signing_key="k", hsm_backend=hsm)  # noqa: S106
         att = gate.create_attestation("op1")
         assert att.signature_scheme == "hmac-sha256"
 
-    def test_hsm_unavailable_for_verify_rejects(self):
-        hsm = self._mock_hsm()
+    def test_hsm_no_public_key_falls_back_to_hmac(self):
+        # If the HSM cannot export a public key, an asymmetric attestation would
+        # be unverifiable — the gate must fall back to HMAC rather than issue one.
+        hsm = MagicMock()
+        hsm._available = True
+        hsm.sign.return_value = (b"\x01\x02\x03", "", "pkcs11-ecdsa-sha256")
         gate = OperatorSealGate(signing_key="k", hsm_backend=hsm)  # noqa: S106
         att = gate.create_attestation("op1")
-        assert att.signature_scheme == "hsm-pkcs11"
-
-        # Now remove HSM from verifying gate
-        verifier = OperatorSealGate(signing_key="k")  # noqa: S106
-        result = verifier.verify_attestation(att)
-        assert result.valid is False
-        assert "HSM not available" in result.reason
+        assert att.signature_scheme == "hmac-sha256"

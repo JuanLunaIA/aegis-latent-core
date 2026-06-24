@@ -33,12 +33,14 @@ signature must fall back to the real HMAC-SHA256 audit signer in
 
 Key lifetime
 ------------
-The current Rust binding exposes no constructor for ``PqcKeypair`` (keypairs can
-only be freshly generated, not loaded from persisted bytes), so a ``PQCSigner``
-holds an in-process keypair whose public key is published alongside each
-signature for verification. Persistent ML-DSA signing identities (loading a
-private key across restarts) require a Rust ``PqcKeypair.from_private_key``
-constructor — tracked in ``docs/ROADMAP.md`` (P0.1).
+By default a ``PQCSigner`` generates a fresh in-process keypair whose public key
+is published alongside each signature for verification. For a **persistent**
+signing identity that survives restarts, export the identity with
+:meth:`PQCSigner.public_key` + :meth:`PQCSigner.export_private_key`, store both
+halves under encryption / access control, and reload them with
+:meth:`PQCSigner.from_keys`. Both halves are required because an ML-DSA-65 secret
+key does not embed the full public key (``t1``); the Rust ``keypair_from_bytes``
+constructor validates each half before reconstructing the keypair.
 """
 
 from __future__ import annotations
@@ -118,6 +120,41 @@ class PQCSigner:
                 "require_real=True (no simulated fallback exists)"
             )
 
+    # ── Alternate constructor: persistent identity ────────────────────────────
+
+    @classmethod
+    def from_keys(cls, public_key: bytes, private_key: bytes) -> PQCSigner:
+        """Load a persistent ML-DSA-65 signing identity from stored key bytes.
+
+        Reconstructs the in-process keypair from a previously-exported
+        ``(public_key, private_key)`` pair via the Rust ``keypair_from_bytes``
+        constructor. Both halves are required because an ML-DSA-65 secret key
+        does not embed the full public key.
+
+        Raises
+        ------
+        PQCUnavailableError
+            When the real Rust backend is unavailable (never loads a fake identity).
+        ValueError
+            When the key bytes are malformed or the wrong size (raised by the
+            backend's ML-DSA-65 decoder).
+        TypeError
+            When *public_key* or *private_key* is not bytes-like.
+        """
+        if not _HAS_RUST:
+            raise PQCUnavailableError(
+                "real ML-DSA-65 backend unavailable; cannot load a persistent identity"
+            )
+        if not (
+            isinstance(public_key, (bytes, bytearray, memoryview))
+            and isinstance(private_key, (bytes, bytearray, memoryview))
+        ):
+            raise TypeError("public_key and private_key must be bytes-like")
+        signer = cls.__new__(cls)
+        signer._kp = aegis_rust.keypair_from_bytes(bytes(public_key), bytes(private_key))
+        signer._backend = "ml-dsa-65-rust"
+        return signer
+
     # ── Status ────────────────────────────────────────────────────────────────
 
     @property
@@ -140,6 +177,23 @@ class PQCSigner:
         if self._kp is None:
             raise PQCUnavailableError("no real ML-DSA-65 keypair available")
         return bytes(self._kp.public_key)
+
+    def export_private_key(self) -> bytes:
+        """Return the raw ML-DSA-65 private key (4032 bytes) for **persistence**.
+
+        This is the signing secret. The caller is responsible for storing it
+        under encryption / access control (e.g. sealed to a TEE or wrapped by
+        ``AEGIS_SIGNING_KEY``) and must never log, print, or commit it. Pair the
+        result with :attr:`public_key` and reload via :meth:`from_keys`.
+
+        Raises
+        ------
+        PQCUnavailableError
+            When no real ML-DSA-65 keypair is held.
+        """
+        if self._kp is None:
+            raise PQCUnavailableError("no real ML-DSA-65 keypair available")
+        return bytes(self._kp.private_key)
 
     # ── Operations ──────────────────────────────────────────────────────────
 

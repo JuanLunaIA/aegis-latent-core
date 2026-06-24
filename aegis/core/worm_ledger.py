@@ -8,8 +8,17 @@ sealed, it is protected at both application level (``WORMViolationError`` on
 any delete/overwrite attempt) and OS level (``0o400`` read-only permissions for
 non-root processes).
 
+Also provides SEC Rule 17a-4 / FINRA 4511 retention-period enforcement and
+evidence export via :class:`RetentionPolicy`, :class:`WORMAttestationBundle`,
+and :meth:`WORMEnforcer.attest`.
+
 Compliance targets
 ------------------
+- SEC Rule 17a-4(b)(1)–(4): broker-dealer records retained 3 years accessible
+  (first 2 years in an easily accessible place), 6 years total, on
+  non-rewriteable, non-erasable media.
+- FINRA Rule 4511: records must be preserved for the periods required by
+  applicable laws and rules.
 - 21 CFR Part 11 Annex 11 §5: audit trail lock-out — records cannot be
   altered or deleted after commitment.
 - NIST SP 800-53 AU-9: protection of audit information against unauthorized
@@ -18,23 +27,28 @@ Compliance targets
 
 Usage::
 
-    from aegis.core.worm_ledger import WORMEnforcer, WORMViolationError
+    from aegis.core.worm_ledger import (
+        WORMEnforcer,
+        WORMViolationError,
+        SEC_17A4_BROKER_DEALER,
+    )
 
     enforcer = WORMEnforcer()
     seal = enforcer.seal("/var/aegis/wal/audit.wal.000001", node_count=1200)
-    # → writes a seal sentinel to the segment, sets permissions to 0o400
 
-    # Before any write/delete, call:
-    enforcer.enforce_immutability("/var/aegis/wal/audit.wal.000001")
-    # → raises WORMViolationError for sealed paths
-
-    # Audit nodes cannot be deleted, ever:
-    enforcer.delete_node("state-abc-123")
-    # → raises WORMViolationError unconditionally
+    # Generate an attestation bundle for a regulator / auditor.
+    signing_key = os.environb[b"AEGIS_SIGNING_KEY"]
+    bundle = enforcer.attest(
+        policy=SEC_17A4_BROKER_DEALER,
+        signing_key=signing_key,
+    )
+    print(bundle.to_json())  # submit to regulator / store alongside WAL
 """
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
 import stat
@@ -43,6 +57,189 @@ from dataclasses import dataclass, field
 
 _WORM_SEAL_RECORD_TYPE = "worm_seal"
 _WORM_READONLY_MODE = 0o400
+_SECS_PER_YEAR = 365.25 * 86_400  # mean Julian year
+
+
+# ── Retention policy ──────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class RetentionPolicy:
+    """Named retention policy for sealed WAL segments.
+
+    Parameters
+    ----------
+    name:
+        Short identifier used in attestation bundles.
+    accessible_years:
+        Number of years the records must remain accessible.
+    total_years:
+        Total retention period; records may only be purged after this.
+    citations:
+        Regulatory citations this policy satisfies.
+    """
+
+    name: str
+    accessible_years: float
+    total_years: float
+    citations: tuple[str, ...]
+
+    def accessible_until(self, sealed_at: float) -> float:
+        """Unix timestamp after which the segment need not be *immediately* accessible."""
+        return sealed_at + self.accessible_years * _SECS_PER_YEAR
+
+    def purge_eligible_at(self, sealed_at: float) -> float:
+        """Unix timestamp after which the segment may be purged."""
+        return sealed_at + self.total_years * _SECS_PER_YEAR
+
+    def retention_status(self, sealed_at: float, now: float | None = None) -> str:
+        """Return ``"ACCESSIBLE"``, ``"LONG_TERM"``, or ``"PURGE_ELIGIBLE"``."""
+        t = now if now is not None else time.time()
+        if t < self.accessible_until(sealed_at):
+            return "ACCESSIBLE"
+        if t < self.purge_eligible_at(sealed_at):
+            return "LONG_TERM"
+        return "PURGE_ELIGIBLE"
+
+
+# Pre-built regulatory retention policies.
+
+SEC_17A4_BROKER_DEALER = RetentionPolicy(
+    name="SEC_17A4_BROKER_DEALER",
+    accessible_years=3.0,
+    total_years=6.0,
+    citations=(
+        "SEC Rule 17a-4(b)(1)",
+        "SEC Rule 17a-4(b)(4)",
+        "FINRA Rule 4511",
+    ),
+)
+
+SEC_17A4_THREE_YEAR = RetentionPolicy(
+    name="SEC_17A4_THREE_YEAR",
+    accessible_years=2.0,
+    total_years=3.0,
+    citations=(
+        "SEC Rule 17a-4(b)(2)",
+        "FINRA Rule 4511",
+    ),
+)
+
+
+# ── Attestation bundle ────────────────────────────────────────────────────────
+
+
+@dataclass
+class WORMSegmentAttestation:
+    """Per-segment attestation evidence included in a :class:`WORMAttestationBundle`.
+
+    Attributes
+    ----------
+    segment_path:
+        Absolute path to the sealed WAL segment.
+    sealed_at:
+        Unix timestamp when the segment was sealed.
+    node_count:
+        Audit node count recorded in the seal sentinel.
+    seal_hmac:
+        HMAC-SHA256 (hex) of the raw seal-sentinel JSON line, keyed by
+        ``AEGIS_SIGNING_KEY``.  Lets a verifier confirm the sentinel has
+        not been tampered with.
+    retention_policy:
+        Name of the :class:`RetentionPolicy` applied to this segment.
+    accessible_until:
+        Unix timestamp marking the end of the *accessible* retention period.
+    purge_eligible_at:
+        Unix timestamp after which the segment may be deleted.
+    status:
+        Current retention status: ``"ACCESSIBLE"``, ``"LONG_TERM"``, or
+        ``"PURGE_ELIGIBLE"``.
+    """
+
+    segment_path: str
+    sealed_at: float
+    node_count: int
+    seal_hmac: str
+    retention_policy: str
+    accessible_until: float
+    purge_eligible_at: float
+    status: str
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "segment_path": self.segment_path,
+            "sealed_at": self.sealed_at,
+            "node_count": self.node_count,
+            "seal_hmac": self.seal_hmac,
+            "retention_policy": self.retention_policy,
+            "accessible_until": self.accessible_until,
+            "purge_eligible_at": self.purge_eligible_at,
+            "status": self.status,
+        }
+
+
+@dataclass
+class WORMAttestationBundle:
+    """SEC Rule 17a-4 / FINRA 4511 attestation bundle.
+
+    Contains per-segment WORM evidence (seal time, node count, HMAC of the
+    seal sentinel, retention deadlines) and a bundle-level HMAC covering all
+    segment evidence so the bundle cannot be silently edited.
+
+    Parameters
+    ----------
+    generated_at:
+        Unix timestamp when this bundle was produced.
+    generated_by:
+        Identity string of the ``WORMEnforcer`` that produced the bundle.
+    regulatory_citations:
+        Regulatory references satisfied by the policy applied.
+    segments:
+        Per-segment attestation records.
+    bundle_hmac:
+        HMAC-SHA256 (hex) of the canonical JSON representation of all
+        *segments* (sorted by ``segment_path``), keyed by
+        ``AEGIS_SIGNING_KEY``.
+    """
+
+    generated_at: float = field(default_factory=time.time)
+    generated_by: str = "WORMEnforcer"
+    regulatory_citations: tuple[str, ...] = ()
+    segments: list[WORMSegmentAttestation] = field(default_factory=list)
+    bundle_hmac: str = ""
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "generated_at": self.generated_at,
+            "generated_by": self.generated_by,
+            "regulatory_citations": list(self.regulatory_citations),
+            "segments": [s.to_dict() for s in self.segments],
+            "bundle_hmac": self.bundle_hmac,
+        }
+
+    def to_json(self, indent: int | None = 2) -> str:
+        return json.dumps(self.to_dict(), indent=indent)
+
+    def verify_bundle_hmac(self, signing_key: bytes) -> bool:
+        """Return True if the bundle HMAC is valid for *signing_key*."""
+        expected = _compute_bundle_hmac(self.segments, signing_key)
+        return hmac.compare_digest(expected, self.bundle_hmac)
+
+
+# ── HMAC helpers ──────────────────────────────────────────────────────────────
+
+
+def _hmac_hex(key: bytes, data: bytes) -> str:
+    return hmac.new(key, data, hashlib.sha256).hexdigest()
+
+
+def _compute_bundle_hmac(segments: list[WORMSegmentAttestation], key: bytes) -> str:
+    canonical = json.dumps(
+        sorted([s.to_dict() for s in segments], key=lambda d: d["segment_path"]),
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    return _hmac_hex(key, canonical)
 
 
 # ── Exception ─────────────────────────────────────────────────────────────────
@@ -253,6 +450,70 @@ class WORMEnforcer:
             "prohibits deletion of audit records."
         )
 
+    def attest(
+        self,
+        policy: RetentionPolicy,
+        signing_key: bytes,
+        segment_paths: list[str] | None = None,
+        now: float | None = None,
+    ) -> WORMAttestationBundle:
+        """Generate a SEC Rule 17a-4 / FINRA 4511 attestation bundle.
+
+        For each sealed segment, reads the seal-sentinel line from disk,
+        computes an HMAC-SHA256 of it (keyed by *signing_key*), and records
+        the retention deadlines dictated by *policy*.  A bundle-level HMAC
+        covers all segment records so the bundle cannot be silently edited.
+
+        Parameters
+        ----------
+        policy:
+            :class:`RetentionPolicy` to apply (e.g., ``SEC_17A4_BROKER_DEALER``).
+        signing_key:
+            Raw bytes from ``AEGIS_SIGNING_KEY``; used for HMAC-SHA256.
+        segment_paths:
+            Optional explicit list of paths to attest.  Defaults to all paths
+            currently tracked by this enforcer's in-memory seal registry.
+        now:
+            Override for current time (tests only).
+
+        Returns
+        -------
+        WORMAttestationBundle
+            Fully populated attestation bundle ready for ``to_json()`` export.
+        """
+        ts = now if now is not None else time.time()
+        paths = list(segment_paths) if segment_paths is not None else list(self._sealed_paths)
+
+        segment_attestations: list[WORMSegmentAttestation] = []
+        for raw_path in sorted(paths):
+            abs_path = os.path.abspath(raw_path)
+            seal_rec = self._read_seal_record(abs_path)
+            sealed_at = seal_rec.sealed_at if seal_rec is not None else 0.0
+            node_count = seal_rec.node_count if seal_rec is not None else 0
+            seal_line = self._read_seal_line(abs_path)
+            seal_hmac = _hmac_hex(signing_key, seal_line.encode("utf-8"))
+            segment_attestations.append(
+                WORMSegmentAttestation(
+                    segment_path=abs_path,
+                    sealed_at=sealed_at,
+                    node_count=node_count,
+                    seal_hmac=seal_hmac,
+                    retention_policy=policy.name,
+                    accessible_until=policy.accessible_until(sealed_at),
+                    purge_eligible_at=policy.purge_eligible_at(sealed_at),
+                    status=policy.retention_status(sealed_at, now=ts),
+                )
+            )
+
+        bundle_hmac = _compute_bundle_hmac(segment_attestations, signing_key)
+        return WORMAttestationBundle(
+            generated_at=ts,
+            generated_by=self._sealed_by,
+            regulatory_citations=policy.citations,
+            segments=segment_attestations,
+            bundle_hmac=bundle_hmac,
+        )
+
     def unseal_for_testing(self, path: str) -> None:
         """Remove a path from the sealed set and restore write permissions.
 
@@ -300,6 +561,48 @@ class WORMEnforcer:
             except (json.JSONDecodeError, AttributeError):
                 return False
         return False
+
+    @staticmethod
+    def _read_seal_line(path: str) -> str:
+        """Return the raw seal-sentinel JSON line, or empty string if not found."""
+        try:
+            with open(path) as fh:
+                lines = fh.readlines()
+        except OSError:
+            return ""
+        for line in reversed(lines):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                data = json.loads(stripped)
+                if data.get("record_type") == _WORM_SEAL_RECORD_TYPE:
+                    return stripped
+            except (json.JSONDecodeError, AttributeError):
+                pass
+            return ""
+        return ""
+
+    @staticmethod
+    def _read_seal_record(path: str) -> WORMSealRecord | None:
+        """Parse and return the seal sentinel from *path*, or None if absent."""
+        try:
+            with open(path) as fh:
+                lines = fh.readlines()
+        except OSError:
+            return None
+        for line in reversed(lines):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                data = json.loads(stripped)
+                if data.get("record_type") == _WORM_SEAL_RECORD_TYPE:
+                    return WORMSealRecord.from_dict(data)
+            except (json.JSONDecodeError, AttributeError):
+                pass
+            return None
+        return None
 
 
 # ── Convenience helpers ───────────────────────────────────────────────────────

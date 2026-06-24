@@ -1,6 +1,11 @@
 """
-aegis.core.anchoring — External Root Anchoring.
-Provides mechanisms to anchor Merkle roots into immutable storage (WORM / Blockchain).
+aegis.core.anchoring — external root anchoring orchestration.
+
+Anchors Merkle roots into immutable storage for legal admissibility. WORM storage
+is always written (in-process durable store); public anchoring is attempted via
+the configured :class:`~aegis.core.blockchain_anchor.BlockchainAnchorProvider`
+backend and is recorded honestly as available or unavailable — no fabricated
+blockchain proof is ever produced.
 """
 
 # Copyright (c) 2026 Juan Luna. All rights reserved.
@@ -9,9 +14,14 @@ Provides mechanisms to anchor Merkle roots into immutable storage (WORM / Blockc
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 
-from aegis.core.blockchain_anchor import blockchain_provider
+from aegis.core.blockchain_anchor import (
+    AnchorReceipt,
+    AnchorUnavailableError,
+    blockchain_provider,
+)
 from aegis.core.worm_storage import worm_provider
 
 logger = logging.getLogger(__name__)
@@ -23,59 +33,88 @@ class AnchorProof:
     anchor_id: str
     timestamp: float
     provider: str
-    verification_url: str
+    worm_index: int
+    blockchain_available: bool
+    verification_url: str = ""
 
 
 class AnchorManager:
     """
-    Orchestrates anchoring of Merkle roots across multiple immutable providers.
+    Orchestrates anchoring of Merkle roots across immutable providers.
+
+    WORM storage is the always-available durable anchor; public/external anchoring
+    is layered on top when a real backend is configured.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._anchors: dict[str, AnchorProof] = {}
+        self._receipts: dict[str, AnchorReceipt] = {}
 
     async def anchor_root(self, root_hash: str) -> AnchorProof:
         """
-        Anchors the provided root hash into BOTH Blockchain and WORM storage
-        for maximum redundancy and legal admissibility.
+        Anchor *root_hash* to WORM storage (always) and to the external anchoring
+        backend (when configured). The returned proof states honestly whether the
+        blockchain/external anchor was actually obtained.
         """
-        logger.info("Executing Redundant Anchoring for root [%s]...", root_hash)
+        logger.info("Anchoring root [%s]...", root_hash)
 
-        # 1. Anchor to Public Blockchain (Temporal proof)
-        bc_proof = await blockchain_provider.publish_root(root_hash)
-
-        # 2. Anchor to WORM Storage (Physical proof)
-        # We store the root_hash as bytes in the WORM device.
+        # 1. WORM storage (real, in-process durable write).
         worm_idx = await worm_provider.write_entry(root_hash.encode())
 
-        # Create a consolidated proof
-        anchor_id = bc_proof.tx_hash
+        # 2. External/public anchoring — only if a real backend is configured.
+        bc_receipt: AnchorReceipt | None = None
+        try:
+            bc_receipt = await blockchain_provider.publish_root(root_hash)
+        except AnchorUnavailableError as exc:
+            logger.warning(
+                "External anchoring unavailable (%s); proceeding with WORM-only anchor.", exc
+            )
+
+        anchor_id = bc_receipt.anchor_ref if bc_receipt is not None else f"worm-{worm_idx}"
         proof = AnchorProof(
             root_hash=root_hash,
             anchor_id=anchor_id,
-            timestamp=bc_proof.timestamp,
-            provider=f"Hybrid(BC:{bc_proof.network}|WORM:{worm_provider.storage_type})",
-            verification_url=bc_proof.verification_url,
+            timestamp=time.time(),
+            provider=(
+                f"Hybrid(external:{blockchain_provider.backend_name}|"
+                f"WORM:{worm_provider.storage_type})"
+            ),
+            worm_index=worm_idx,
+            blockchain_available=bc_receipt is not None,
+            verification_url=bc_receipt.verification_url if bc_receipt is not None else "",
         )
 
         self._anchors[anchor_id] = proof
-        logger.info("Root anchored redundantly. BC_TX: %s | WORM_IDX: %d", anchor_id, worm_idx)
+        if bc_receipt is not None:
+            self._receipts[anchor_id] = bc_receipt
+        logger.info(
+            "Root anchored (id=%s, worm_idx=%d, external=%s).",
+            anchor_id,
+            worm_idx,
+            proof.blockchain_available,
+        )
         return proof
 
     async def verify_anchor(self, anchor_id: str, expected_root: str) -> bool:
         """
-        Verifies the root against both providers.
-        """
-        # 1. Verify via Blockchain
-        bc_ok = await blockchain_provider.verify_proof(anchor_id, expected_root)
+        Verify the root against the providers that actually anchored it.
 
-        # 2. Verify via WORM (Search for the root in storage)
-        # Simplified for simulation: check if the root exists in any WORM entry.
+        WORM is checked by searching stored entries. The external anchor is
+        verified only when a real receipt was captured; if anchoring was
+        WORM-only, verification relies on WORM alone (and does not claim a
+        blockchain proof that does not exist).
+        """
         worm_ok = any(
             entry.data.decode() == expected_root for entry in worm_provider._storage.values()
         )
 
-        return bc_ok and worm_ok
+        receipt = self._receipts.get(anchor_id)
+        if receipt is None:
+            # No external proof was obtained — WORM is the sole anchor.
+            return worm_ok
+
+        bc_ok = await blockchain_provider.verify_proof(receipt, expected_root)
+        return worm_ok and bc_ok
 
 
 anchor_manager = AnchorManager()
