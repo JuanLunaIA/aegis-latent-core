@@ -28,7 +28,7 @@ import importlib.metadata
 import json
 import logging
 import shutil
-import subprocess
+import subprocess  # nosec B404
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -111,7 +111,7 @@ class DependencyAuditor:
         try:
             # self._pip_audit is an absolute path resolved by shutil.which in __init__;
             # cmd is a fixed list with no user-controlled elements (B603/B607 safe).
-            result = subprocess.run(  # noqa: S603
+            result = subprocess.run(  # noqa: S603  # nosec B603
                 cmd,
                 capture_output=True,
                 text=True,

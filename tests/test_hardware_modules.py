@@ -257,7 +257,10 @@ class TestDPKPEngine:
             return Path(p)
 
         original_path = __import__("pathlib").Path
-        with patch("aegis.core.dpdk_engine.Path", side_effect=lambda p: hp_file if "hugepages" in str(p) else original_path(p)):
+        with patch(
+            "aegis.core.dpdk_engine.Path",
+            side_effect=lambda p: hp_file if "hugepages" in str(p) else original_path(p),
+        ):
             result = engine.setup_hugepages()
         assert result is False
 

@@ -8,9 +8,7 @@ from __future__ import annotations
 from subprocess import CompletedProcess
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from aegis.core.fuzzing_harness import AegisFuzzingEngine, FuzzTarget
+from aegis.core.fuzzing_harness import AegisFuzzingEngine
 
 
 class TestAegisFuzzingEngineInit:

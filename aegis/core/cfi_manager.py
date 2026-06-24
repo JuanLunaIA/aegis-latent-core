@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import shutil
 import struct
-import subprocess
+import subprocess  # nosec B404
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -175,7 +175,7 @@ def _audit_via_subprocess(binary_path: str, report: CFIReport) -> None:
     # Tier 1 — LLVM CFI symbols via nm -D
     # binary_path is a caller-validated existing file path (not user input).
     try:
-        res = subprocess.run(  # noqa: S603
+        res = subprocess.run(  # noqa: S603  # nosec B603
             [nm_cmd, "-D", binary_path], capture_output=True, text=True, timeout=10
         )
         for sym in _LLVM_CFI_SYMBOLS:
@@ -186,7 +186,7 @@ def _audit_via_subprocess(binary_path: str, report: CFIReport) -> None:
 
     # Tier 2 — EH frame sections via readelf -S
     try:
-        res = subprocess.run(  # noqa: S603
+        res = subprocess.run(  # noqa: S603  # nosec B603
             [readelf, "-S", binary_path], capture_output=True, text=True, timeout=10
         )
         for sec in (".eh_frame_hdr", ".eh_frame"):
@@ -197,7 +197,7 @@ def _audit_via_subprocess(binary_path: str, report: CFIReport) -> None:
 
     # Tier 3 — Intel CET via readelf --notes
     try:
-        res = subprocess.run(  # noqa: S603
+        res = subprocess.run(  # noqa: S603  # nosec B603
             [readelf, "--notes", binary_path], capture_output=True, text=True, timeout=10
         )
         out = res.stdout

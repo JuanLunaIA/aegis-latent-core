@@ -5,12 +5,9 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 
-import pytest
-
-from aegis.core.transparency_log import LogEntry, TransparencyLogManager
+from aegis.core.transparency_log import TransparencyLogManager
 
 
 class TestTransparencyLogManagerInit:
@@ -169,6 +166,12 @@ class TestFilePersistence:
 
     def test_malformed_line_is_skipped(self, tmp_path):
         path = tmp_path / "ledger.jsonl"
-        path.write_text('{"index": 0, "binary_hash": "good", "version": "1.0", "timestamp": 1.0, "prev_hash": "' + "0" * 64 + '", "entry_hash": "' + "a" * 64 + '"}\nNOT_JSON\n')
+        path.write_text(
+            '{"index": 0, "binary_hash": "good", "version": "1.0", "timestamp": 1.0, "prev_hash": "'
+            + "0" * 64
+            + '", "entry_hash": "'
+            + "a" * 64
+            + '"}\nNOT_JSON\n'
+        )
         mgr = TransparencyLogManager(storage_path=path)
         assert len(mgr._ledger) == 1

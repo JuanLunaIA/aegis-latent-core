@@ -11,6 +11,7 @@ DependencyInternalizer.verify_supply_chain reports honestly.
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from unittest.mock import MagicMock, patch
 
@@ -23,6 +24,23 @@ from aegis.core.dependency_audit import (
     HardenedMath,
     VulnerabilityFinding,
 )
+
+
+@pytest.fixture(autouse=True)
+def _stub_pip_audit_which(request):
+    """Make ``shutil.which("pip-audit")`` succeed for unit tests.
+
+    ``DependencyAuditor.__init__`` resolves pip-audit via ``shutil.which`` and
+    raises when it is absent. CI runners do not install pip-audit, so unit
+    tests (which mock ``subprocess.run``) would fail at construction. Tests
+    marked ``slow`` run the real binary and are excluded from this stub.
+    """
+    if request.node.get_closest_marker("slow"):
+        yield
+        return
+    with patch("aegis.core.dependency_audit.shutil.which", return_value="/usr/bin/pip-audit"):
+        yield
+
 
 # ── VulnerabilityFinding ──────────────────────────────────────────────────────
 
@@ -265,6 +283,10 @@ class TestHardenedMath:
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(
+    shutil.which("pip-audit") is None,
+    reason="pip-audit not installed in this environment",
+)
 class TestRealPipAudit:
     def test_scan_returns_list(self):
         """Real pip-audit scan against current environment."""

@@ -132,7 +132,9 @@ class TestMeasureBinaryHwMode:
                 return _make_cp(0, stdout=pcrread_output)
             return _make_cp(0)
 
-        with patch("aegis.core.tpm.subprocess.run", return_value=_make_cp(0, stdout=pcrread_output)):
+        with patch(
+            "aegis.core.tpm.subprocess.run", return_value=_make_cp(0, stdout=pcrread_output)
+        ):
             result = mgr.measure_binary(str(binary))
         assert result == expected
 

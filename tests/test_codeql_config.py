@@ -9,9 +9,7 @@ import json
 from subprocess import CompletedProcess
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from aegis.core.codeql_config import AegisCodeQLPipeline, CodeQLQuery
+from aegis.core.codeql_config import AegisCodeQLPipeline
 
 
 class TestAegisCodeQLPipelineInit:
@@ -85,7 +83,9 @@ class TestRunLocalScanWithCodeQL:
         cp.stderr = stderr
         return cp
 
-    def _patch_scan(self, create_rc: int, analyze_rc: int, sarif: dict | None = None, tmp_path=None):
+    def _patch_scan(
+        self, create_rc: int, analyze_rc: int, sarif: dict | None = None, tmp_path=None
+    ):
         """Return context managers that mock shutil.which + subprocess.run + sarif file."""
         sarif_content = json.dumps(sarif) if sarif else None
 

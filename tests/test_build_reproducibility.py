@@ -207,9 +207,7 @@ class TestBuildAndHash:
 
 class TestVerifyReproducibility:
     def _artifact(self, sha256: str) -> BuildArtifact:
-        return BuildArtifact(
-            binary_path="/bin/a", sha256=sha256, build_env="{}", timestamp=0.0
-        )
+        return BuildArtifact(binary_path="/bin/a", sha256=sha256, build_env="{}", timestamp=0.0)
 
     def test_matching_hashes_returns_true(self):
         engine = ReproducibleBuildEngine()

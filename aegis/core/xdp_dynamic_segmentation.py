@@ -29,7 +29,7 @@ from __future__ import annotations
 import ipaddress
 import logging
 import shutil
-import subprocess  # noqa: S404
+import subprocess  # noqa: S404  # nosec B404
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ class _FirewallBackend:
     def _detect_backend(self) -> str:
         if self._nft:
             try:
-                subprocess.run(  # noqa: S603
+                subprocess.run(  # noqa: S603  # nosec B603
                     [self._nft, "list", "tables"],
                     capture_output=True,
                     check=True,
@@ -75,7 +75,7 @@ class _FirewallBackend:
                 logger.debug("nft probe failed: %s", exc)
         if self._ipt:
             try:
-                subprocess.run(  # noqa: S603
+                subprocess.run(  # noqa: S603  # nosec B603
                     [self._ipt, "-L", "INPUT", "-n"],
                     capture_output=True,
                     check=True,
@@ -95,7 +95,7 @@ class _FirewallBackend:
 
     def _run(self, cmd: list[str]) -> bool:
         try:
-            subprocess.run(  # noqa: S603
+            subprocess.run(  # noqa: S603  # nosec B603
                 cmd,
                 capture_output=True,
                 check=True,
