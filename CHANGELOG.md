@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **De-simulated `CFIManager`** (ROADMAP P0.2). `aegis/core/cfi_manager.py`
+  previously hardcoded `is_cfi_enabled = True  # Simulation result`, always
+  returning a positive CFI attestation regardless of the binary under inspection.
+  Rewritten with three real ELF detection tiers: LLVM CFI (`__cfi_check` /
+  `__cfi_prototype` symbols via `pyelftools`), GCC/LLVM unwind tables
+  (`.eh_frame` / `.eh_frame_hdr` sections), and Intel CET IBT + Shadow Stack
+  (`GNU_PROPERTY_X86_FEATURE_1_AND` in `.note.gnu.property`). Falls back to
+  `readelf`/`nm` subprocess if `pyelftools` is not installed. 18 tests including
+  KAT against the real Rust `.so` binary and malformed-file edge cases
+  (`tests/test_cfi_manager.py`).
+
+- **De-simulated `MTEGuard`** (ROADMAP P0.2). `aegis/core/mte_guard.py`
+  previously fabricated ARM MTE support on every platform (`self._hardware_support
+  = True`) and simulated `PR_SET_TAGGED_ADDR_CTRL` success without issuing the
+  syscall. Rewritten with real `/proc/cpuinfo` `mte` flag parsing, `AT_HWCAP2`
+  bit 18 (`HWCAP2_MTE`) auxiliary-vector check, and a real `prctl(55, 1)` call
+  via `ctypes.CDLL("libc.so.6")`. Returns `False` on x86/non-ARM hosts. 14 tests
+  cover the no-hardware path and monkeypatched hardware paths; 2 ARM integration
+  tests skip cleanly on CI (`tests/test_mte_guard.py`).
+
+- `tests/test_no_simulation_markers.py` — `KNOWN_SIMULATION_DEBT` shrunk from
+  23 → 21 as `cfi_manager.py` and `mte_guard.py` are removed from the debt list.
+  Debt-count assertion updated to `== 21`.
+
 - **Removed two fake post-quantum modules that manufactured false cryptographic
   assurance** (ROADMAP P0.1). `aegis/core/pqc.py` advertised "ML-DSA (Dilithium)"
   signatures but computed HMAC-SHA512 padded with random bytes; `aegis/core/

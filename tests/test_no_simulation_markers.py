@@ -41,7 +41,6 @@ _MARKER = re.compile(
 KNOWN_SIMULATION_DEBT: frozenset[str] = frozenset(
     {
         "core/build_reproducibility.py",
-        "core/cfi_manager.py",
         "core/codeql_config.py",
         "core/dependency_audit.py",
         "core/dpdk_engine.py",
@@ -51,7 +50,6 @@ KNOWN_SIMULATION_DEBT: frozenset[str] = frozenset(
         "core/fuzzing_harness.py",
         "core/memory.py",
         "core/memory_invariants.py",
-        "core/mte_guard.py",
         "core/panic_mode.py",
         "core/red_team_framework.py",
         "core/root_ca_gateway.py",
@@ -99,4 +97,4 @@ def test_allowlist_is_not_stale():
 
 def test_debt_count_never_increases():
     """The simulation-debt count is a monotonically non-increasing budget."""
-    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 23
+    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 21

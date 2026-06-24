@@ -71,8 +71,8 @@ production and is excluded from compliance evidence.
 
 - [ ] `aegis/core/tpm.py` — replace simulated PCR extend/quote (`_simulated_pcr_value`) with a real TPM 2.0 binding via `tpm2-pytss`; `golden_hash` comparison must use a real quote signature, not a string compare.
 - [ ] `aegis/core/hardware_token.py` — TPM2 backend currently logs "using HMAC stub (real PCR quote not yet implemented)" and falls back to software HMAC; implement real PCR-bound token sealing.
-- [ ] `aegis/core/cfi_manager.py` — currently hardcodes `is_cfi_enabled = True  # Simulation result`; either parse the real ELF for CFI sections (`readelf`/`pyelftools`) or remove the control so it cannot emit a false "CFI enforced" attestation.
-- [ ] `aegis/core/mte_guard.py` — replace simulated `/proc/cpuinfo` MTE detection and "Simulated success of hardware fault detection" with a real check (or quarantine).
+- [x] `aegis/core/cfi_manager.py` — replaced `is_cfi_enabled = True  # Simulation result` with real ELF parsing via `pyelftools` (subprocess `readelf`/`nm` fallback). Three detection tiers: LLVM CFI (`__cfi_check`), GCC/LLVM unwind tables (`.eh_frame`/`.eh_frame_hdr`), Intel CET (`GNU_PROPERTY_X86_FEATURE_1_AND`). New `CFIReport` dataclass; 18 tests prove honest results on real binary and graceful failure for missing/non-ELF files (`tests/test_cfi_manager.py`).
+- [x] `aegis/core/mte_guard.py` — replaced simulated MTE detection with real `/proc/cpuinfo` `mte` flag check, `AT_HWCAP2` auxiliary-vector parsing, and `prctl(PR_SET_TAGGED_ADDR_CTRL)` syscall via `ctypes`. Returns False on x86/non-ARM; never manufactures a positive result. 14 tests cover hardware-absent and mocked-hardware paths (`tests/test_mte_guard.py`). ARM integration tests skip cleanly on CI.
 - [ ] `aegis/core/tee_manager.py` / `enclave_provider.py` — replace simulated enclave with real SEV-SNP/TDX/SGX attestation (see DX-Gov) or quarantine and stop advertising TEE.
 - [ ] `aegis/core/sandbox_l1.py` — replace "we simulate the rule addition" seccomp logic with real `seccomp_syscall_resolve_name`/libseccomp binding (the live `seccomp_guard.py` is real; `sandbox_l1` is a parallel sim that should be reconciled or deleted).
 - [ ] `aegis/core/boot_attestation.py` — example golden measurements must come from a signed vendor manifest, not in-source constants.
@@ -199,21 +199,29 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 
 | Track | Open items | Priority |
 |---|---|---|
-| P0 — Trust integrity (de-sim / real crypto) | 21 | Critical |
+| P0 — Trust integrity (de-sim / real crypto) | 19 | Critical |
 | P1 — Supply chain | 6 | High |
 | P1 — Live-path correctness | 6 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **65** | — |
+| **Total open** | **63** | — |
 
-> **Progress 2026-06-24:** P0.1 fake-crypto cluster **complete**. (1) `pqc.py` +
-> `pqc_provider.py` deleted → real `PQCSigner` (ML-DSA-65 / FIPS 204) with
-> forgery-rejection KATs. (2) `pqc_tls.py` → real X25519 + ML-KEM-1024 hybrid KEM
-> with key-agreement + tamper tests. (3) `artifact_signing.py` → real HMAC /
-> ML-DSA with correct asymmetric verify. (4) `test_no_simulation_markers.py`
+> **Progress 2026-06-24 (run 2):** P0.2 partial — `cfi_manager.py` and
+> `mte_guard.py` de-simulated. `cfi_manager.py` now parses real ELF binaries via
+> `pyelftools` (3 detection tiers: LLVM CFI, `.eh_frame`, Intel CET) with
+> subprocess fallback; 18 tests prove honest results. `mte_guard.py` now reads
+> `/proc/cpuinfo`, `AT_HWCAP2` auxv, and calls `prctl(PR_SET_TAGGED_ADDR_CTRL)`;
+> 14 tests cover hardware-absent path and monkeypatched hardware paths.
+> `KNOWN_SIMULATION_DEBT` shrunk from 23 → 21; debt count assertion updated.
+> Suite: 4,640 passed, 5 skipped, 94.81% coverage.
+>
+> **Progress 2026-06-24 (run 1):** P0.1 fake-crypto cluster **complete**. (1)
+> `pqc.py` + `pqc_provider.py` deleted → real `PQCSigner` (ML-DSA-65 / FIPS 204)
+> with forgery-rejection KATs. (2) `pqc_tls.py` → real X25519 + ML-KEM-1024
+> hybrid KEM with key-agreement + tamper tests. (3) `artifact_signing.py` → real
+> HMAC / ML-DSA with correct asymmetric verify. (4) `test_no_simulation_markers.py`
 > ratchet guard locks in 23-module simulation debt (shrink-only). 6 items closed,
-> 1 follow-up opened (persistent-key Rust constructor). Next: P0.2 hardware-root-
-> of-trust de-simulation (`tpm.py`, `cfi_manager.py`, …).
+> 1 follow-up opened (persistent-key Rust constructor).
 
 **Headline finding:** ~20% of `aegis/core` (25/125 modules) ships simulated
 security controls. The product's accreditation value depends on driving the P0
