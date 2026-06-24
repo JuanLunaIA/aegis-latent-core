@@ -76,6 +76,11 @@ Industrial, Enterprise HA, Forensics), advancing the roadmap scorecard to
 
 ### Fixed
 
+- **Rust extension test linking:** `aegis_rust_v2/Cargo.toml` had
+  `default = ["extension-module"]`, which made `cargo test` omit the libpython
+  link and fail with undefined `Py*` symbols. Changed to `default = []`;
+  maturin still enables `pyo3/extension-module` via `[tool.maturin] features`,
+  so production wheels are unaffected. (`cargo test --release` → 23 passed.)
 - **Version drift:** `aegis_server.__version__` and the standard
   `deploy/docker/Dockerfile` were stale at 2.3.0; the `aegis_server` `/health`
   and `/ready` endpoints now report the correct release version.
