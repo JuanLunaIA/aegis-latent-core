@@ -67,6 +67,9 @@ impl RustWal {
             .read(true)
             .write(true)
             .create(true)
+            // A WAL must preserve existing frames across restarts for crash
+            // recovery — never truncate an existing segment on open.
+            .truncate(false)
             .open(path)
             .map_err(|e| {
                 PyErr::new::<pyo3::exceptions::PyIOError, _>(format!(

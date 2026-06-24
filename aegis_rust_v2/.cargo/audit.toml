@@ -6,9 +6,9 @@
 
 [advisories]
 ignore = [
-    # pyo3 0.24.x: two CVEs tracked for upgrade to >=0.29.0 when API migration scheduled.
-    "RUSTSEC-2026-0176",  # out-of-bounds read in nth/nth_back for PyList/PyTuple iterators
-    "RUSTSEC-2026-0177",  # missing Sync bound on PyCFunction::new_closure closures
+    # pyo3 0.24.x advisories RUSTSEC-2026-0176 / -0177 were cleared by the
+    # upgrade to pyo3 0.29.0 (FromPyObject opt-in + GIL-API rename migration).
+    # They are intentionally NOT ignored here so a regression would re-fail CI.
 
     # hickory-dns/hickory-proto: transitive via reqwest hickory-dns feature.
     # RUSTSEC-2026-0118 has no fix available upstream; RUSTSEC-2026-0119 requires

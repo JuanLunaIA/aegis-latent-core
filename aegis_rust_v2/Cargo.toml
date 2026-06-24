@@ -28,7 +28,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # Python bindings
-pyo3 = { version = "0.24.1", features = ["abi3-py311"] }
+pyo3 = { version = "0.29", features = ["abi3-py311"] }
 
 # Async runtime — powers connection-pooled HTTP forwarder
 tokio = { version = "1", features = ["full"] }
