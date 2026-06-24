@@ -662,7 +662,7 @@ class TISharer:
 
         req = urllib.request.Request(url, data=payload, headers=headers, method="POST")  # noqa: S310
         try:
-            with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+            with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310  # nosec B310
                 return 200 <= resp.status < 300
         except Exception as exc:  # noqa: BLE001
             raise RuntimeError(f"urllib POST failed: {exc}") from exc

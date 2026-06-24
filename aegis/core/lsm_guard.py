@@ -253,3 +253,62 @@ class LSMGuard:
                 status.lsm_type.value,
                 status.mode,
             )
+
+    # ── Backward-compatible instance API ──────────────────────────────────────
+    # Pre-existing tests reference instance methods; these delegate to the
+    # static implementations above while preserving the old call surface.
+
+    _SANDBOX_MARKERS: tuple[str, ...] = ("/.dockerenv", "/.hermes_sandbox_marker")
+
+    def __init__(self) -> None:
+        self._is_sandbox: bool = self._detect_sandbox()
+        self._is_confined: bool = self.verify_confinement()
+
+    @property
+    def is_sandbox(self) -> bool:
+        """``True`` when a container sandbox marker is present."""
+        return self._is_sandbox
+
+    def _detect_sandbox(self) -> bool:
+        """Return ``True`` when a known sandbox marker file exists."""
+        for marker in self._SANDBOX_MARKERS:
+            try:
+                if os.path.exists(marker):
+                    return True
+            except OSError:
+                pass
+        return False
+
+    def _check_selinux(self) -> bool:
+        """Return ``True`` when SELinux is in enforcing mode (via ``getenforce``)."""
+        try:
+            result = subprocess.run(  # nosec B603 B607 — trusted system binary
+                ["getenforce"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            return result.returncode == 0 and result.stdout.strip().lower() == "enforcing"
+        except Exception:
+            return False
+
+    def _check_apparmor(self) -> bool:
+        """Return ``True`` when the AppArmor profiles sysfs directory is present."""
+        try:
+            return os.path.exists(_APPARMOR_PROFILES)
+        except OSError:
+            return False
+
+    def verify_confinement(self) -> bool:
+        """Return ``True`` when SELinux or AppArmor confinement is active."""
+        try:
+            confined = self._check_selinux() or self._check_apparmor()
+            self._is_confined = confined
+            return confined
+        except Exception:
+            self._is_confined = False
+            return False
+
+    def get_confinement_status(self) -> str:
+        """Return ``"CONFINED"`` or ``"UNCONFINED"`` based on current LSM state."""
+        return "CONFINED" if self._is_confined else "UNCONFINED"
