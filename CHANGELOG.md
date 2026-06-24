@@ -5,6 +5,51 @@ All notable changes to **Aegis Latent Core** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- **Removed two fake post-quantum modules that manufactured false cryptographic
+  assurance** (ROADMAP P0.1). `aegis/core/pqc.py` advertised "ML-DSA (Dilithium)"
+  signatures but computed HMAC-SHA512 padded with random bytes; `aegis/core/
+  pqc_provider.py` was a SHAKE-256 "simulation" whose `verify()` accepted **any**
+  128-byte signature regardless of message. Both are deleted.
+
+### Added
+
+- `aegis/core/pqc_signer.py` — the single real `PQCSigner` over genuine ML-DSA-65
+  (FIPS 204) via the Rust `pqcrypto-mldsa` backend: real keypair (pk 1952 / sk
+  4032 / sig 3309 bytes), `sign`/`verify`, honest `backend` reporting (never a
+  simulation label), `require_real` mode, and no simulated fallback. 20 KAT-style
+  tests prove forgery, tamper, wrong-key, and truncation rejection
+  (`tests/test_pqc_signer.py`).
+
+### Changed
+
+- `aegis/core/pqc_tls.py` rewritten as a **real** hybrid post-quantum key
+  exchange: X25519 ECDH (`cryptography`) composed with ML-KEM-1024
+  (`aegis.core.mlkem_session`) via `HKDF-SHA256`, TLS-1.3-style initiator/
+  responder protocol. The previous module's "X25519" and "Kyber" secrets were
+  both `sha256(priv ‖ pub)` — not a Diffie-Hellman and not post-quantum. The new
+  module refuses to downgrade to classical-only when ML-KEM is unavailable. 14
+  tests prove key agreement and tamper-breaks-agreement (`tests/test_pqc_tls.py`).
+- `aegis/core/artifact_signing.py` rewritten with two honestly-labelled **real**
+  schemes — `HMAC_SHA512` and real `ML_DSA_65` (via `PQCSigner`) — fixing a
+  comment that labelled HMAC as ML-DSA and a verify path that re-signed instead
+  of doing asymmetric verification with the published public key. 10 tests
+  (`tests/test_artifact_signing.py`).
+- `tests/test_no_simulation_markers.py` — a **ratchet** CI guard: no new `aegis/`
+  module may introduce a `# SIMULATION` marker, and de-simulated modules must be
+  removed from the 23-entry `KNOWN_SIMULATION_DEBT` allowlist (shrink-only).
+
+### Fixed
+
+- `tests/test_determinism.py::test_no_outlier_exceeds_500us` now skips on shared
+  CI runners (`HERMES_SANDBOX`/`CI`), where multi-tenant kernel-scheduler
+  preemption produces millisecond-scale dispatch outliers unrelated to the code
+  under test (a 90 ms outlier was observed). The hard <500 µs bound remains
+  enforced on dedicated CPU-isolated hardware.
+
 ## [2.4.1] - 2026-06-24
 
 Release-hardening and capability-expansion release. Twenty roadmap controls were

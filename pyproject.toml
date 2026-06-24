@@ -150,7 +150,6 @@ omit = [
     # Roadmap / platform-specific modules (not required for proxy runtime)
     "aegis/core/adversarial_filter.py",
     "aegis/core/anchoring.py",
-    "aegis/core/artifact_signing.py",
     "aegis/core/audit_node_pb2.py",
     "aegis/core/blockchain_anchor.py",
     "aegis/core/boot_attestation.py",
@@ -174,8 +173,6 @@ omit = [
     "aegis/core/mte_guard.py",
     "aegis/core/network_isolation.py",
     "aegis/core/panic_mode.py",
-    "aegis/core/pqc.py",
-    "aegis/core/pqc_tls.py",
     "aegis/core/red_team_framework.py",
     "aegis/core/root_ca_gateway.py",
     "aegis/core/sandbox.py",
