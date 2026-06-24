@@ -29,7 +29,7 @@ from __future__ import annotations
 import ipaddress
 import logging
 import shutil
-import subprocess
+import subprocess  # noqa: S404
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -71,8 +71,8 @@ class _FirewallBackend:
                     timeout=5,
                 )
                 return self.NFTABLES
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("nft probe failed: %s", exc)
         if self._ipt:
             try:
                 subprocess.run(  # noqa: S603
@@ -82,8 +82,8 @@ class _FirewallBackend:
                     timeout=5,
                 )
                 return self.IPTABLES
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("iptables probe failed: %s", exc)
         logger.warning(
             "No kernel firewall backend available (nft=%s, iptables=%s). "
             "Block operations are APPLICATION-LAYER ONLY — no packets are dropped "
