@@ -85,6 +85,51 @@ As of v2.3.0, the LSM guard runs in **advisory mode**: missing AppArmor or SELin
 
 ---
 
+## Simulated vs. Real Controls
+
+Aegis ships **no simulated security controls**. A 2026-06-24 full-tree audit found
+~20% of `aegis/core` modules returning success without performing the advertised
+function (fake PQC signatures, hardcoded enclave measurements, randomly-generated
+"telemetry", etc.). Every one has since been replaced with a real implementation
+or an honest, hardware-gated stub that **fails closed** when its dependency is
+absent — never fabricating assurance. This is enforced two ways:
+
+- **Regression ratchet** — `tests/test_no_simulation_markers.py` fails CI if any
+  `aegis/` module reintroduces a simulation marker (`KNOWN_SIMULATION_DEBT` is
+  empty and the test asserts the count stays `0`).
+- **Live capability report** — `GET /v1/attestation/capabilities` (behind audit
+  auth) reports each control's status in the running deployment as `REAL`,
+  `UNAVAILABLE`, or `SIMULATED`, with a `simulation_debt` count that must be `0`.
+
+Many controls depend on hardware or external tooling. Where that dependency is
+absent, the control reports `UNAVAILABLE` and refuses to run — it does **not**
+silently degrade to a fake. The matrix below shows each control, its dependency,
+and what it does when the dependency is missing.
+
+| Control | Module | Requires | When dependency absent |
+| :------ | :----- | :------- | :--------------------- |
+| ML-DSA-65 signing | `pqc_signer` | Rust `aegis_rust` ext | `UNAVAILABLE`; `sign()` raises (no fake signature) |
+| Audit signing (HMAC-SHA256) | `crypto_audit` | stdlib | always `REAL` |
+| Hybrid PQC TLS (X25519+ML-KEM) | `pqc_tls` | `cryptography` + ML-KEM | refuses classical-only downgrade |
+| Seccomp syscall filter | `sandbox_l1` | libseccomp | `UNAVAILABLE`; filter not loaded |
+| TPM PCR root-of-trust | `tpm` | tpm2-tools + TPM device | labelled **software** PCR (not a hardware RoT) |
+| TEE enclave attestation | `tee_manager` / `enclave_provider` | SGX/SEV/TDX device | `UNAVAILABLE`; operations raise |
+| eBPF runtime monitor | `ebpf_monitor` | `bpftool` + CAP_BPF | probes stay inactive; no fabricated telemetry |
+| DPDK kernel-bypass datapath | `dpdk_engine` | hugepages + dpdk-devbind | `UNAVAILABLE`; no packets (no fake packets) |
+| Dynamic firewall segmentation | `xdp_dynamic_segmentation` | nftables/iptables | application-layer only (no kernel drop) |
+| CFI binary inspection | `cfi_manager` | pyelftools / readelf | `UNAVAILABLE` |
+| MTE detection | `mte_guard` | ARM MTE hardware | honest `False` on x86/non-ARM |
+| Fuzzing harness | `fuzzing_harness` | `cargo` + cargo-fuzz | `UNAVAILABLE` (no fake clean run) |
+| Dependency CVE audit | `dependency_audit` | `pip-audit` | raises (no fake clean result) |
+| Reproducible-build verify | `build_reproducibility` | `cargo` | raises (no fake match) |
+| Transparency log | `transparency_log` | stdlib (JSONL) | always `REAL` |
+
+> Items still tracked as roadmap stubs (`zk_proof`, `blockchain_anchor`,
+> `state_snapshotter`) are documented as **not yet implemented** in
+> `docs/ROADMAP.md` and do not claim to provide their target guarantee.
+
+---
+
 ## Known Security-Relevant Fixes
 
 | Version | Fix | Severity |
