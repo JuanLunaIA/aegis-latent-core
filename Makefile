@@ -1,5 +1,5 @@
 # aegis-latent-core — developer convenience targets
-.PHONY: help install dev lint type security test test-cov smoke build-rust clean
+.PHONY: help install dev lint type security test test-cov smoke build-rust vendor-wheels docker-airgap clean
 
 PYTHON   := python3
 PIP      := pip install
@@ -19,6 +19,8 @@ help:
 	@echo "  test-cov    Run tests with coverage report (65% gate)"
 	@echo "  smoke       Run scripts/smoke_test.sh against local server"
 	@echo "  build-rust  Build aegis_rust_v2 extension (.so) via maturin"
+	@echo "  vendor-wheels Download all Python wheels for air-gapped build"
+	@echo "  docker-airgap Build the air-gapped Docker image (requires vendor-wheels first)"
 	@echo "  clean       Remove build artifacts"
 
 install:
@@ -46,6 +48,18 @@ test-cov:
 smoke:
 	chmod +x scripts/smoke_test.sh
 	./scripts/smoke_test.sh
+
+vendor-wheels:
+	chmod +x scripts/vendor_wheels.sh
+	./scripts/vendor_wheels.sh
+
+docker-airgap: vendor-wheels
+	@DIGEST=$$(cat vendor/python-3.11-slim-digest.txt 2>/dev/null || echo "sha256:c56af7e73c7b0cf23f4e83fa9c8acb0a63a5c10a3cd83f04c1f9dba3dd4d6d69"); \
+	docker load < vendor/python-3.11-slim.tar.gz 2>/dev/null || true; \
+	docker build --network=none \
+	    --build-arg PYTHON_BASE_DIGEST=$$DIGEST \
+	    -f deploy/docker/Dockerfile.airgap \
+	    -t aegis-latent-core:2.4.0-airgap .
 
 build-rust:
 	@command -v maturin >/dev/null 2>&1 || { echo "maturin not found: pip install maturin"; exit 1; }

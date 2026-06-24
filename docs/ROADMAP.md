@@ -22,7 +22,7 @@ implements it**, add or update the test that proves it, and update the
 mark an item `[x]` on the basis of a stub, a docstring claim, or a benchmark that
 is not committed to `docs/BENCHMARKS.md`.
 
-> **Last verified against codebase:** 2026-06-24 (tests: 4000+ passed, 3 skipped).
+> **Last verified against codebase:** 2026-06-24 (tests: 4575 passed, 3 skipped).
 
 ---
 
@@ -60,7 +60,7 @@ is not committed to `docs/BENCHMARKS.md`.
 - [x] Offline WAL persistence: JSONL WAL (0o600, fsync) survives network loss; reconstructed on startup
 - [x] Rust mmap WAL with CRC32 framing (integrity without connectivity)
 - [x] All provider adapters configurable to local endpoints (vLLM, Ollama)
-- [ ] Fully air-gapped Docker image (no external registry pulls; all layers vendored)
+- [x] Fully air-gapped Docker image (no external registry pulls; all layers vendored) (`deploy/docker/Dockerfile.airgap`: multi-stage build with `ARG PYTHON_BASE_DIGEST` (sha256 pin), `pip install --no-index --find-links /wheels` from `vendor/wheels/`, `aegis.airgap="true"` OCI label, non-root UID 10001, HEALTHCHECK; `scripts/vendor_wheels.sh` for offline wheel vendoring + SHA256SUMS manifest; `make docker-airgap` target; `pytest tests/test_airgap_docker.py` — 31 tests covering digest pinning, no-index enforcement, multi-stage structure, security constraints)
 - [ ] OCSP stapling / CRL distribution point hosted in enclave network (no public CA connectivity)
 - [x] Offline license validation (no phone-home for commercial license enforcement) (`aegis/core/offline_license.py`: `OfflineLicenseValidator` with `from_env()` reading `AEGIS_LICENSE_FILE`/`AEGIS_LICENSE_KEY`; enforces `AEGIS_LICENSE_KEY != AEGIS_SIGNING_KEY`; HMAC-SHA256 over canonical sorted-key JSON; constant-time `hmac.compare_digest`; `LicenseRecord` frozen dataclass; `LicenseExpiredError`/`LicenseTamperError`; `pytest tests/test_offline_license.py`)
 - [x] Air-gapped signature verification chain (pinned root CA bundle, no runtime CA fetch) (`aegis/core/pinned_ca_bundle.py`: `PinnedCABundle` with `from_env()` reading `AEGIS_PINNED_CA_FINGERPRINTS`; SHA-256 of DER cert for fingerprint; `verify_cert()`/`verify_cert_chain()` — trusted if any cert in chain matches; `PinnedCAUnavailableError` when `cryptography` absent; `pytest tests/test_pinned_ca_bundle.py`)
@@ -314,12 +314,12 @@ is not committed to `docs/BENCHMARKS.md`.
 
 | Domain | Implemented | Remaining | Completion |
 |---|---|---|---|
-| Defense & Government | 40 | 10 | ~80% |
+| Defense & Government | 41 | 9 | ~82% |
 | Healthcare & Life Sciences | 26 | 5 | ~84% |
 | Industrial Automation & OT | 21 | 10 | ~68% |
 | Enterprise Hyperscale & HA | 17 | 16 | ~52% |
 | Advanced Forensics & WAF | 46 | 2 | ~96% |
-| **Total** | **150** | **43** | **~78%** |
+| **Total** | **151** | **42** | **~78%** |
 
 **Current foundation strengths (production-ready today):** cryptographic audit
 chain, ML-DSA-65 PQC signing, multi-provider proxy with zero-latency background
@@ -381,6 +381,7 @@ Redis-backed HA rate limiting, Prometheus + OTel observability, Vault secrets.
 > **Done:** Court-ready forensic PDF report — `aegis/core/forensic_pdf_report.py`; `ForensicReportBuilder` 6-section report; `ForensicReport.to_text()`/`to_json()`/`compute_seal()` SHA-256 seal; no external PDF lib (Domain 5.3) — completed 2026-06-24.
 > **Done:** Anonymized threat intelligence sharing — `aegis/core/ti_sharing.py`; `TIAnonymizer` SHA-256 pattern normalization + timestamp bucketing; `TISharer` httpx+urllib fallback; STIX 2.1 `to_stix_indicator()` (Domain 5.4) — completed 2026-06-24.
 > **Done:** GxP IQ/OQ qualification scripts — `tools/qualification/iq_checks.py` IQ-001..IQ-008; `tools/qualification/oq_checks.py` OQProtocol; JSON evidence artifacts; `tests/test_iq_oq.py` (Domain 2.3) — completed 2026-06-24.
+> **Done:** Fully air-gapped Docker image — `deploy/docker/Dockerfile.airgap` multi-stage, `ARG PYTHON_BASE_DIGEST` sha256 pin, `pip install --no-index --find-links /wheels`, `aegis.airgap="true"` OCI label, UID 10001; `scripts/vendor_wheels.sh` offline wheel vendoring + SHA256SUMS; `make docker-airgap`; 31 tests in `tests/test_airgap_docker.py` (Domain 1.3) — completed 2026-06-24.
 
 ---
 
