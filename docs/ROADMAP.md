@@ -206,6 +206,14 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
 | **Total open** | **56** | — |
 
+> **Progress 2026-06-24 (run 9):** P0.4 — `codeql_config.py` de-simulated
+> (replaced `# SIMULATION: Scan results based on current codebase state` and hardcoded
+> fake return with a real `codeql database create` + `codeql database analyze` subprocess
+> pipeline; `shutil.which("codeql")` guard returns `{"status": "UNAVAILABLE"}` when the
+> CLI is absent — no fake results manufactured; SARIF output parsed for real vuln count;
+> 16 tests covering unavailable/error/success paths and SARIF parsing).
+> `KNOWN_SIMULATION_DEBT` shrunk 7 → 6; count asserted `== 6`.
+>
 > **Progress 2026-06-24 (run 8):** P0.4 — `transparency_log.py` de-simulated
 > (removed "Simulation of a public ledger" comment; added real JSONL file
 > persistence: constructor accepts `storage_path`, appends entries to a WAL file
