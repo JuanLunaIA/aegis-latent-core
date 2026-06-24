@@ -39,7 +39,14 @@ tokio = { version = "1", features = ["full"] }
 # async resolver. This is REQUIRED for seccomp compatibility: it ensures the
 # only OS threads are the fixed Tokio worker pool (warmed before the seccomp
 # filter is applied), so clone()/clone3() can stay forbidden at steady state.
-reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "native-tls", "http2", "hickory-dns"] }
+# `native-tls-vendored` keeps the native-tls backend (SChannel on Windows,
+# Secure Transport on macOS, OpenSSL on Linux) — preserving TLS/mTLS client
+# identity semantics — but statically links a from-source OpenSSL on Linux
+# instead of dynamically linking the host's libssl/libcrypto. This is what
+# makes the released wheels self-contained and cross-compilable for the full
+# manylinux/musllinux × {x86_64, aarch64, armv7} release matrix (no target-arch
+# system OpenSSL required at build or run time).
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "native-tls", "native-tls-vendored", "http2", "hickory-dns"] }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
