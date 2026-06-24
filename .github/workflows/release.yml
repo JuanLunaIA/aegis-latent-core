@@ -196,7 +196,7 @@ jobs:
           ls -lh
 
       - name: Attest build artifacts (SLSA Level 2)
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: "release/*.whl,release/*.tar.gz"
 
