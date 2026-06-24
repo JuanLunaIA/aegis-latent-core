@@ -59,7 +59,9 @@ class TestRegister:
 
     def test_register_stores_fields(self):
         reg = ModelGovernanceRegistry()
-        rec = reg.register("m1", owner="team-a", use_case="credit-scoring", material=True, tier=ModelTier.HIGH)
+        rec = reg.register(
+            "m1", owner="team-a", use_case="credit-scoring", material=True, tier=ModelTier.HIGH
+        )
         assert rec.model_id == "m1"
         assert rec.owner == "team-a"
         assert rec.use_case == "credit-scoring"
@@ -120,12 +122,16 @@ class TestRecordValidation:
 
     def test_record_validation_returns_validation_record(self):
         reg = self._reg_with_model()
-        val = reg.record_validation("m1", "val-team", SR117ValidationStatus.APPROVED, "sha256:abc", _KEY)
+        val = reg.record_validation(
+            "m1", "val-team", SR117ValidationStatus.APPROVED, "sha256:abc", _KEY
+        )
         assert isinstance(val, ValidationRecord)
 
     def test_record_validation_id_is_uuid(self):
         reg = self._reg_with_model()
-        val = reg.record_validation("m1", "val-team", SR117ValidationStatus.APPROVED, "sha256:abc", _KEY)
+        val = reg.record_validation(
+            "m1", "val-team", SR117ValidationStatus.APPROVED, "sha256:abc", _KEY
+        )
         uuid.UUID(val.validation_id)
 
     def test_record_validation_updates_status(self):
@@ -141,7 +147,9 @@ class TestRecordValidation:
     def test_multiple_validations_accumulate(self):
         reg = self._reg_with_model()
         reg.record_validation("m1", "v1", SR117ValidationStatus.APPROVED, "h1", _KEY)
-        reg.record_validation("m1", "v2", SR117ValidationStatus.APPROVED_WITH_CONDITIONS, "h2", _KEY)
+        reg.record_validation(
+            "m1", "v2", SR117ValidationStatus.APPROVED_WITH_CONDITIONS, "h2", _KEY
+        )
         assert len(reg.get_model("m1").validation_history) == 2
 
     def test_record_validation_hmac_set(self):
@@ -182,7 +190,9 @@ class TestRecordValidation:
     def test_notes_truncated_to_500(self):
         reg = self._reg_with_model()
         long_note = "x" * 1000
-        val = reg.record_validation("m1", "v", SR117ValidationStatus.APPROVED, "h", _KEY, notes=long_note)
+        val = reg.record_validation(
+            "m1", "v", SR117ValidationStatus.APPROVED, "h", _KEY, notes=long_note
+        )
         assert len(val.notes) == 500
 
     def test_unregistered_model_raises(self):
@@ -394,10 +404,19 @@ class TestModelRecord:
         rec = reg.register("m1", owner="o", use_case="u")
         d = rec.to_dict()
         for f in [
-            "model_id", "registered_at", "owner", "use_case", "material",
-            "tier", "validation_status", "validation_history",
-            "deployment_approved_at", "deployment_approver", "decommissioned_at",
-            "is_active", "is_deployment_approved",
+            "model_id",
+            "registered_at",
+            "owner",
+            "use_case",
+            "material",
+            "tier",
+            "validation_status",
+            "validation_history",
+            "deployment_approved_at",
+            "deployment_approver",
+            "decommissioned_at",
+            "is_active",
+            "is_deployment_approved",
         ]:
             assert f in d
 

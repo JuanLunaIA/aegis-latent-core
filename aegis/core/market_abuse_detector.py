@@ -501,9 +501,7 @@ class MarketAbuseDetector:
 
     def __init__(
         self,
-        extra_patterns: Sequence[
-            tuple[str, MarketAbuseType, AbuseSeverity, re.Pattern[str]]
-        ] = (),
+        extra_patterns: Sequence[tuple[str, MarketAbuseType, AbuseSeverity, re.Pattern[str]]] = (),
     ) -> None:
         self._patterns = list(_PATTERNS) + list(extra_patterns)
 
