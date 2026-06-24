@@ -199,12 +199,12 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 
 | Track | Open items | Priority |
 |---|---|---|
-| P0 — Trust integrity (de-sim / real crypto) | 14 | Critical |
+| P0 — Trust integrity (de-sim / real crypto) | 12 | Critical |
 | P1 — Supply chain | 6 | High |
 | P1 — Live-path correctness | 6 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **58** | — |
+| **Total open** | **56** | — |
 
 > **Progress 2026-06-24 (run 3):** P0.3 complete — `xdp_dynamic_segmentation.py`
 > de-simulated (real nftables/iptables enforcement). P0.4 hardened —

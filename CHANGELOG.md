@@ -65,6 +65,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   filter safely in tests. 18 tests including real subprocess filter load and
   mocked-library failure paths (`tests/test_sandbox_l1.py`).
 
+- **De-simulated `panic_mode.py`** (ROADMAP P0.2). `_zeroize_critical_memory` previously only
+  logged "Zeroizing..." and "complete" with a `# Simulation` comment and no actual write.
+  Replaced with real `ctypes.memset` over registered ``bytearray``/``memoryview`` buffers;
+  ``register_sensitive_buffer()`` added so callers can enlist secret-bearing buffers.
+  `_isolate_network` previously only logged with `# Simulation: calls XDPDynamicSegmenter...`.
+  Replaced with real subprocess calls to `nft add rule ... drop` or `iptables -P INPUT/OUTPUT/FORWARD DROP`;
+  returns `False` and logs a CRITICAL advisory when no kernel firewall tool is available.
+
+- **De-simulated `root_ca_gateway.py`** (ROADMAP P0.2). `import_signed_certificate`
+  had a `# Simulation of decoding the physical transfer` comment despite doing real
+  JSON decoding. Comment removed. `fetch_certificate(request_id)` previously ignored
+  the `request_id` parameter ("In a real system, we would match the request_id");
+  now iterates `_inbound_buffer` and matches by `cert.ca_serial == request_id`.
+
 - **De-simulated `memory.py`** (ROADMAP P0.2). `HardenedMemoryManager.initialize_hardened_allocator`
   previously set `_allocator_type = "mimalloc"` via a "Simulation mode" comment
   even when neither `libmimalloc.so` nor `libhardened_malloc.so` appeared in

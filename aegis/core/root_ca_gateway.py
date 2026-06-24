@@ -66,7 +66,6 @@ class AirGapGateway:
         Imports a signed certificate returning from the Air-Gapped CA.
         """
         try:
-            # Simulation of decoding the physical transfer (e.g., scanning a QR code)
             import json
 
             decoded = json.loads(base64.b64decode(encoded_payload).decode())
@@ -79,10 +78,12 @@ class AirGapGateway:
             logger.error("Failed to import certificate from Air-Gapped CA: %s", e)
 
     def fetch_certificate(self, request_id: str) -> SignedCertificate | None:
+        """Retrieve an imported certificate by the originating request ID.
+
+        Returns the certificate and removes it from the inbound buffer, or
+        None when no certificate for that request has been imported yet.
         """
-        Retrieves the signed certificate if it has been imported.
-        """
-        # In a real system, we would match the request_id to the cert.
-        if self._inbound_buffer:
-            return self._inbound_buffer.pop(0)
+        for i, cert in enumerate(self._inbound_buffer):
+            if cert.ca_serial == request_id:
+                return self._inbound_buffer.pop(i)
         return None
