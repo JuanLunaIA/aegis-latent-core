@@ -89,7 +89,7 @@ production and is excluded from compliance evidence.
 - [x] `aegis/core/dependency_audit.py` — replaced "Simulation of a deep source code audit" and fake hash check with a real `pip-audit -f json` invocation (`DependencyAuditor.scan()` → `VulnerabilityFinding` list) and `importlib.metadata` RECORD hash verification (URL-safe base64, per PEP 658). `DependencyInternalizer.verify_supply_chain()` now delegates to both real checks. 24 tests covering mocked pip-audit output, tamper detection, real certifi hash match, and integration scan (`tests/test_dependency_audit.py`).
 - [x] `aegis/core/transparency_log.py` — replaced the simulated in-memory log with a **real append-only JSONL ledger**: an optional `storage_path` persists every `LogEntry` via append-mode writes and replays the ledger on init (malformed lines skipped). 24 tests cover chain construction, inclusion-presence, integrity, file persistence and replay (`tests/test_transparency_log.py`). A public Sigstore/Rekor binding remains tracked in DX-Forensic.
 - [x] `aegis/core/build_reproducibility.py` — removed the `# Simulation:` / `# In a real system` markers; `create_hermetic_environment()` actually sets `SOURCE_DATE_EPOCH` in `os.environ` and runs `cargo clean`, and `build_and_hash()` runs `cargo build --release --locked`, reads the real output binary, computes its SHA-256, and captures `rustc --version` — raising `RuntimeError` when cargo is absent or the build fails. 15 tests cover env-set, cargo-absent/​build-failure raising, real hash computation, and the `verify_reproducibility` comparison (`tests/test_build_reproducibility.py`).
-- [ ] `aegis/core/state_snapshotter.py` — implement real CoW/mmap snapshotting or mark advisory.
+- [x] `aegis/core/state_snapshotter.py` — **marked advisory** (the chosen ROADMAP option). The module was not simulated (it already does real `copy.deepcopy` isolation + SHA-256 integrity-tag + verified rollback), but its docstrings **overclaimed** "microsecond-level memory snapshots" and implied OS-level CoW/`mmap`. Corrected the module/class docstrings to describe the actual process-local deepcopy snapshot store, state explicitly that OS-level CoW/`mmap` and any sub-millisecond latency are **out of scope**, and added a test asserting the docstring no longer overclaims. True kernel-assisted CoW/`mmap` snapshotting remains future work (DX-Industrial).
 - [ ] `aegis/core/zk_proof.py` — currently emits `SHA-256(...)` as "proof bytes" (`is_stub == True`). Integrate a real proving system (Groth16/PLONK via `arkworks`/`halo2`, or STARK) for the audit-inclusion proofs Domain 4.2 advertises.
 - [ ] `aegis/core/blockchain_anchor.py` — roadmap stub; implement a real anchoring backend (RFC 3161 TSA already exists; add OpenTimestamps/Ethereum/Fabric anchoring as the durable public proof).
 
@@ -199,12 +199,12 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 
 | Track | Open items | Priority |
 |---|---|---|
-| P0 — Trust integrity (de-sim / real crypto) | 4 | Critical |
+| P0 — Trust integrity (de-sim / real crypto) | 3 | Critical |
 | P1 — Supply chain | 6 | High |
 | P1 — Live-path correctness | 6 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **48** | — |
+| **Total open** | **47** | — |
 
 > **P0.5 complete (2026-06-24, run 13):** with the capability matrix + `SECURITY.md`
 > "Simulated vs. Real Controls" section + the obviated quarantine package, all of P0.5
