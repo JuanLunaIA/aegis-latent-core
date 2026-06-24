@@ -18,19 +18,19 @@ pub struct PqcKeypair {
 impl PqcKeypair {
     #[getter]
     fn public_key<'py>(&self, py: Python<'py>) -> Bound<'py, PyBytes> {
-        PyBytes::new_bound(py, &self.public_key)
+        PyBytes::new(py, &self.public_key)
     }
 
     #[getter]
     fn private_key<'py>(&self, py: Python<'py>) -> Bound<'py, PyBytes> {
-        PyBytes::new_bound(py, &self.private_key)
+        PyBytes::new(py, &self.private_key)
     }
 
     fn sign<'py>(&self, py: Python<'py>, data: &[u8]) -> PyResult<Bound<'py, PyBytes>> {
         let sk = mldsa65::SecretKey::from_bytes(&self.private_key)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("invalid secret key: {e}")))?;
         let sig = mldsa65::detached_sign(data, &sk);
-        Ok(PyBytes::new_bound(py, sig.as_bytes()))
+        Ok(PyBytes::new(py, sig.as_bytes()))
     }
 }
 

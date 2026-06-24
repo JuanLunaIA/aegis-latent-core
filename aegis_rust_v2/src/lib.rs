@@ -57,11 +57,11 @@ impl HttpResponse {
 
     #[getter]
     fn content<'py>(&self, py: Python<'py>) -> Bound<'py, PyBytes> {
-        PyBytes::new_bound(py, &self.content)
+        PyBytes::new(py, &self.content)
     }
 
     fn json(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        let json_mod = py.import_bound("json")?;
+        let json_mod = py.import("json")?;
         let text = std::str::from_utf8(&self.content).map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string())
         })?;
@@ -69,7 +69,7 @@ impl HttpResponse {
     }
 
     fn headers_dict(&self, py: Python<'_>) -> PyResult<Py<pyo3::types::PyDict>> {
-        let dict = pyo3::types::PyDict::new_bound(py);
+        let dict = pyo3::types::PyDict::new(py);
         for (k, v) in &self.headers {
             dict.set_item(k, v)?;
         }

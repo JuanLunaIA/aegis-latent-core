@@ -46,7 +46,7 @@ pub fn keyed_hash_blake3_bytes<'py>(
         )
     })?;
     let hash = blake3::keyed_hash(&key_arr, data);
-    Ok(PyBytes::new_bound(py, hash.as_bytes()))
+    Ok(PyBytes::new(py, hash.as_bytes()))
 }
 
 /// Canonical audit-payload hash: BLAKE3 over null-separated chain fields.
