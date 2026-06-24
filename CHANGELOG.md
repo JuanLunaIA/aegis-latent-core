@@ -5,6 +5,25 @@ All notable changes to **Aegis Latent Core** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- **Removed two fake post-quantum modules that manufactured false cryptographic
+  assurance** (ROADMAP P0.1). `aegis/core/pqc.py` advertised "ML-DSA (Dilithium)"
+  signatures but computed HMAC-SHA512 padded with random bytes; `aegis/core/
+  pqc_provider.py` was a SHAKE-256 "simulation" whose `verify()` accepted **any**
+  128-byte signature regardless of message. Both are deleted.
+
+### Added
+
+- `aegis/core/pqc_signer.py` — the single real `PQCSigner` over genuine ML-DSA-65
+  (FIPS 204) via the Rust `pqcrypto-mldsa` backend: real keypair (pk 1952 / sk
+  4032 / sig 3309 bytes), `sign`/`verify`, honest `backend` reporting (never a
+  simulation label), `require_real` mode, and no simulated fallback. 20 KAT-style
+  tests prove forgery, tamper, wrong-key, and truncation rejection
+  (`tests/test_pqc_signer.py`).
+
 ## [2.4.1] - 2026-06-24
 
 Release-hardening and capability-expansion release. Twenty roadmap controls were
