@@ -29,7 +29,7 @@ block, or a benchmark that is not committed to `docs/BENCHMARKS.md`.
 > The goal is unchanged and explicit: make Aegis the control plane that every
 > regulated organization running AI is effectively required to deploy.
 
-> **Audit baseline:** 4,579 tests passing · 3 skipped · 94.79% coverage ·
+> **Audit baseline:** 5,364 tests passing · 5 skipped · 95.07% coverage ·
 > `ruff`/`mypy`/`bandit` clean · `cargo test` 23 passing (last verified
 > 2026-06-24). The open items below are *not* regressions in that suite — they
 > are gaps the suite does not yet cover.
@@ -162,7 +162,7 @@ Measured ceilings from `docs/BENCHMARKS.md`:
 
 ### DX-Healthcare · Life Sciences
 
-- [ ] HL7 v2 / FHIR-aware PHI detection (structured-field de-identification beyond Safe Harbor regex).
+- [x] HL7 v2 / FHIR-aware PHI detection (structured-field de-identification beyond Safe Harbor regex). New `aegis/core/hl7_fhir_phi_detector.py`: `HL7v2PHIScrubber` scrubs pipe-delimited HL7 v2 messages by segment+field position (PID, PV1, PV2, NK1, IN1, GT1, AL1, DG1, OBX, MSH, EVN, PRD — 12 segments, PHI by HL7 v2.9 field index); `FHIRPHIScrubber` scrubs FHIR R4/R5 JSON by resource-type + field path (Patient, Practitioner, RelatedPerson, Person, Organization, Location, Encounter, Observation, DiagnosticReport, Condition, Medication, MedicationRequest, AllergyIntolerance, Coverage — 14 resource types); `HL7FHIRPHIDetector` unified interface with auto-format detection (MSH| line → HL7 v2; "resourceType": → FHIR; else plain-text pass-through); PHI replaced with `[REDACTED:{category}]` for scalars and `[{"redacted": true}]` for arrays; `PHIScrubResult` carries scrubbed text, format, category set, and redaction count; Bundle resources handled recursively; no raw PHI retained. Regulatory basis: HIPAA Privacy Rule 45 CFR § 164.514(b) + Security Rule § 164.312, EU GDPR Recital 26/Art. 25; 64 tests in `tests/test_hl7_fhir_phi_detector.py`.
 - [ ] GxP Performance Qualification (PQ): production-representative load test with sign-off; Change-control integration (version-gated deploy requiring an approved change record); Requirement→Design→Test→Evidence traceability matrix (RTM); Vendor Qualification Package (VQP).
 - [ ] FDA SaMD Predetermined Change Control Plan (PCCP) hooks for model updates; 21 CFR Part 11 audit-viewer UI (filter by tenant/time/event for retrieval).
 
@@ -204,8 +204,8 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 | P1 — Supply chain | 1 | High |
 | P1 — Live-path correctness | 0 | High |
 | P2 — Performance & optimization | 5 | Medium |
-| DX — Domain expansion (7 verticals) | 21 | Strategic |
-| **Total open** | **28** | — |
+| DX — Domain expansion (7 verticals) | 20 | Strategic |
+| **Total open** | **27** | — |
 
 > **Only open P0 item:** `zk_proof.py` — replace the honest SHA-256 stub
 > (`is_stub == True`) with a real proving system (Groth16/PLONK/STARK). This is a
