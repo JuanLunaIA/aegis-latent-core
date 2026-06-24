@@ -174,7 +174,6 @@ omit = [
     "aegis/core/mte_guard.py",
     "aegis/core/network_isolation.py",
     "aegis/core/panic_mode.py",
-    "aegis/core/pqc_tls.py",
     "aegis/core/red_team_framework.py",
     "aegis/core/root_ca_gateway.py",
     "aegis/core/sandbox.py",
