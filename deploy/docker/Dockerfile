@@ -2,10 +2,10 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 #
-# Aegis Latent Core v2.3.0 — production image (Python 3.12)
+# Aegis Latent Core v2.4.1 — production image (Python 3.12)
 #
-# Build:  docker build -f deploy/docker/Dockerfile -t aegis-latent-core:2.3.0 .
-# Run:    docker run -p 8080:8080 --env-file .env aegis-latent-core:2.3.0
+# Build:  docker build -f deploy/docker/Dockerfile -t aegis-latent-core:2.4.1 .
+# Run:    docker run -p 8080:8080 --env-file .env aegis-latent-core:2.4.1
 #
 # Required env vars:
 #   AEGIS_BACKEND_API_KEY   — upstream LLM API key
@@ -43,7 +43,7 @@ RUN pip install --no-cache-dir ".[storage-sqlite]"
 FROM python:3.12-slim
 
 LABEL org.opencontainers.image.title="Aegis Latent Core" \
-      org.opencontainers.image.version="2.3.0" \
+      org.opencontainers.image.version="2.4.1" \
       org.opencontainers.image.description="Enterprise LLM proxy with cryptographic audit chain" \
       org.opencontainers.image.licenses="AGPL-3.0"
 
@@ -76,7 +76,7 @@ ENV AEGIS_LOG_LEVEL=INFO \
 
 EXPOSE 8080
 
-# Deep healthcheck using the v2.3.0 /health endpoint
+# Deep healthcheck using the v2.4.1 /health endpoint
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD python -c "\
 import urllib.request, json, sys; \

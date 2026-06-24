@@ -19,15 +19,14 @@ References:
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
-
 
 # ── Role enumeration ──────────────────────────────────────────────────────────
 
 
-class RaftRole(str, Enum):
+class RaftRole(StrEnum):
     FOLLOWER = "follower"
     CANDIDATE = "candidate"
     LEADER = "leader"
@@ -56,13 +55,13 @@ class RaftLogEntry:
     tamper detection on stored logs.
     """
 
-    index: int          # 1-based log index
-    term: int           # Election term when this entry was appended
-    command: str        # Opaque command string (WAL entry JSON or similar)
-    entry_hash: str     # SHA-256 of (index ‖ term ‖ command)
+    index: int  # 1-based log index
+    term: int  # Election term when this entry was appended
+    command: str  # Opaque command string (WAL entry JSON or similar)
+    entry_hash: str  # SHA-256 of (index ‖ term ‖ command)
 
     @classmethod
-    def create(cls, index: int, term: int, command: str) -> "RaftLogEntry":
+    def create(cls, index: int, term: int, command: str) -> RaftLogEntry:
         """Construct a RaftLogEntry, computing entry_hash automatically."""
         raw = f"{index}|{term}|{command}"
         entry_hash = hashlib.sha256(raw.encode()).hexdigest()
@@ -99,12 +98,12 @@ class RaftState:
 
     node_id: str
     current_term: int
-    voted_for: str | None           # node_id voted for in current_term; None if not voted
+    voted_for: str | None  # node_id voted for in current_term; None if not voted
     log: list[RaftLogEntry]
-    commit_index: int               # Highest log index known to be committed
-    last_applied: int               # Highest log index applied to state machine
+    commit_index: int  # Highest log index known to be committed
+    last_applied: int  # Highest log index applied to state machine
     role: RaftRole
-    leader_id: str | None           # Current known leader
+    leader_id: str | None  # Current known leader
 
     def last_log_index(self) -> int:
         """Return the index of the last log entry, or 0 if log is empty."""
@@ -155,10 +154,10 @@ class AppendEntriesRequest:
 
     term: int
     leader_id: str
-    prev_log_index: int             # Log index immediately preceding new entries
-    prev_log_term: int              # Term of prev_log_index entry
-    entries: list[RaftLogEntry]     # Empty for heartbeats
-    leader_commit: int              # Leader's current commit_index
+    prev_log_index: int  # Log index immediately preceding new entries
+    prev_log_term: int  # Term of prev_log_index entry
+    entries: list[RaftLogEntry]  # Empty for heartbeats
+    leader_commit: int  # Leader's current commit_index
 
 
 @dataclass
@@ -168,7 +167,7 @@ class AppendEntriesResponse:
     term: int
     success: bool
     follower_id: str
-    match_index: int                # Highest index known to be replicated on this follower
+    match_index: int  # Highest index known to be replicated on this follower
 
 
 # ── Core node ─────────────────────────────────────────────────────────────────
@@ -266,8 +265,7 @@ class RaftNode:
 
         # Check if we can vote for this candidate
         already_voted_for_other = (
-            self._state.voted_for is not None
-            and self._state.voted_for != req.candidate_id
+            self._state.voted_for is not None and self._state.voted_for != req.candidate_id
         )
         if already_voted_for_other:
             return VoteResponse(
@@ -280,9 +278,8 @@ class RaftNode:
         # Candidate's last entry must be at least as recent as ours.
         our_last_term = self._state.last_log_term()
         our_last_index = self._state.last_log_index()
-        log_ok = (
-            req.last_log_term > our_last_term
-            or (req.last_log_term == our_last_term and req.last_log_index >= our_last_index)
+        log_ok = req.last_log_term > our_last_term or (
+            req.last_log_term == our_last_term and req.last_log_index >= our_last_index
         )
         if not log_ok:
             return VoteResponse(
@@ -440,9 +437,7 @@ class RaftNode:
 
         peer = resp.follower_id
         if resp.success:
-            self._match_index[peer] = max(
-                self._match_index.get(peer, 0), resp.match_index
-            )
+            self._match_index[peer] = max(self._match_index.get(peer, 0), resp.match_index)
             self._next_index[peer] = self._match_index[peer] + 1
         else:
             # Decrement next_index and retry (simplified back-off)

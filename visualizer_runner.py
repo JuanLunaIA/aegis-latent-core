@@ -2,7 +2,9 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 import multiprocessing
+
 import uvicorn
+
 from tools.visualizer.app import app
 
 if __name__ == "__main__":

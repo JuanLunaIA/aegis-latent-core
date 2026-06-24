@@ -17,9 +17,9 @@ References:
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
-
+from typing import Any
 
 # ── Exceptions ────────────────────────────────────────────────────────────────
 
@@ -63,7 +63,7 @@ class FencingToken:
         """True if the lease has not yet expired."""
         return time.time() < self.expires_at
 
-    def supersedes(self, other: "FencingToken") -> bool:
+    def supersedes(self, other: FencingToken) -> bool:
         """True if this token is strictly more recent than *other*.
 
         A token supersedes another when its value is strictly greater.

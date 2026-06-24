@@ -115,7 +115,7 @@ def build_bootstrap() -> dict:
     bootstrap = {
         "project": "aegis-latent-core",
         "git_head": "1aed8ea",
-        "version": "2.4.0",
+        "version": "2.4.1",
         "code": {
             "python_files": 97,
             "rust_files": 11,

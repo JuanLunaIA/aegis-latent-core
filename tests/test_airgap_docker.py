@@ -43,20 +43,14 @@ def airgap_content() -> str:
 
 class TestAirgapDockerfileExists:
     def test_airgap_dockerfile_present(self):
-        assert DOCKERFILE_AIRGAP.exists(), (
-            f"Air-gapped Dockerfile not found at {DOCKERFILE_AIRGAP}"
-        )
+        assert DOCKERFILE_AIRGAP.exists(), f"Air-gapped Dockerfile not found at {DOCKERFILE_AIRGAP}"
 
     def test_vendor_script_present(self):
-        assert VENDOR_SCRIPT.exists(), (
-            f"Vendor wheels script not found at {VENDOR_SCRIPT}"
-        )
+        assert VENDOR_SCRIPT.exists(), f"Vendor wheels script not found at {VENDOR_SCRIPT}"
 
     def test_vendor_script_executable(self):
         mode = VENDOR_SCRIPT.stat().st_mode
-        assert bool(mode & stat.S_IXUSR), (
-            f"{VENDOR_SCRIPT} is not executable"
-        )
+        assert bool(mode & stat.S_IXUSR), f"{VENDOR_SCRIPT} is not executable"
 
     def test_standard_dockerfile_still_present(self):
         assert DOCKERFILE_STANDARD.exists(), (
@@ -77,12 +71,10 @@ class TestDigestPinning:
 
     def test_from_uses_sha256_digest(self, airgap_content: str):
         from_lines = [
-            line for line in airgap_content.splitlines()
-            if line.strip().upper().startswith("FROM") and "AS builder" not in line.upper()
-            or (line.strip().upper().startswith("FROM") and "AS builder" in line.upper())
+            line for line in airgap_content.splitlines() if line.strip().upper().startswith("FROM")
         ]
         # At least one FROM must contain @sha256:
-        digest_pins = [l for l in from_lines if "@sha256:" in l or "${PYTHON_BASE_DIGEST}" in l]
+        digest_pins = [ln for ln in from_lines if "@sha256:" in ln or "${PYTHON_BASE_DIGEST}" in ln]
         assert len(digest_pins) >= 1, (
             "Air-gapped Dockerfile must pin the base image with @sha256: or "
             "via ARG PYTHON_BASE_DIGEST — floating tags not allowed"
@@ -102,15 +94,11 @@ class TestDigestPinning:
         pinned = re.compile(r"@sha256:|@\$\{")
         for line in airgap_lines:
             if floating_from.match(line) and not pinned.search(line):
-                pytest.fail(
-                    f"Floating FROM tag detected (no @sha256 digest): {line.strip()!r}"
-                )
+                pytest.fail(f"Floating FROM tag detected (no @sha256 digest): {line.strip()!r}")
 
     def test_digest_arg_default_looks_like_sha256(self, airgap_content: str):
         m = re.search(r"ARG PYTHON_BASE_DIGEST=(sha256:[0-9a-f]{64})", airgap_content)
-        assert m, (
-            "ARG PYTHON_BASE_DIGEST default value must be a full sha256:<64-hex-char> digest"
-        )
+        assert m, "ARG PYTHON_BASE_DIGEST default value must be a full sha256:<64-hex-char> digest"
 
 
 # ── No-index pip install ──────────────────────────────────────────────────────
@@ -127,23 +115,21 @@ class TestNoIndexPipInstall:
         # Join line continuations before checking — pip flags may span lines.
         joined = re.sub(r"\\\n\s*", " ", airgap_content)
         bad = [
-            line.strip() for line in joined.splitlines()
+            line.strip()
+            for line in joined.splitlines()
             if "pip install" in line
             and "--no-index" not in line
             and not line.strip().startswith("#")
         ]
         assert len(bad) == 0, (
-            "pip install without --no-index found (breaks air-gap):\n"
-            + "\n".join(bad)
+            "pip install without --no-index found (breaks air-gap):\n" + "\n".join(bad)
         )
 
     def test_pip_install_uses_find_links(self, airgap_content: str):
         pip_install_blocks = re.findall(r"pip install[^\n\\]+(?:\\\n[^\n\\]+)*", airgap_content)
         for block in pip_install_blocks:
             if "--find-links" not in block and "/wheels" not in block:
-                pytest.fail(
-                    f"pip install block missing --find-links /wheels:\n{block.strip()}"
-                )
+                pytest.fail(f"pip install block missing --find-links /wheels:\n{block.strip()}")
 
     def test_no_pip_install_index_url(self, airgap_content: str):
         assert "--index-url" not in airgap_content, (
@@ -169,7 +155,7 @@ class TestMultiStageBuild:
         )
 
     def test_has_at_least_two_from(self, airgap_lines: list[str]):
-        from_lines = [l for l in airgap_lines if l.strip().upper().startswith("FROM")]
+        from_lines = [ln for ln in airgap_lines if ln.strip().upper().startswith("FROM")]
         assert len(from_lines) >= 2, (
             f"Expected at least 2 FROM statements for multi-stage build, found {len(from_lines)}"
         )
@@ -190,9 +176,7 @@ class TestMultiStageBuild:
 
 class TestNonRootUser:
     def test_has_non_root_user(self, airgap_content: str):
-        assert "USER aegis" in airgap_content, (
-            "Container must run as non-root user 'aegis'"
-        )
+        assert "USER aegis" in airgap_content, "Container must run as non-root user 'aegis'"
 
     def test_user_created_with_explicit_uid(self, airgap_content: str):
         assert "-u 10001" in airgap_content or "useradd -u 10001" in airgap_content, (
@@ -218,21 +202,19 @@ class TestSecurityConstraints:
 
     def test_no_curl_in_run(self, airgap_content: str):
         run_blocks = [
-            line for line in airgap_content.splitlines()
+            line
+            for line in airgap_content.splitlines()
             if "RUN " in line and "curl" in line.lower()
         ]
-        assert len(run_blocks) == 0, (
-            f"curl in RUN breaks air-gap: {run_blocks}"
-        )
+        assert len(run_blocks) == 0, f"curl in RUN breaks air-gap: {run_blocks}"
 
     def test_no_wget_in_run(self, airgap_content: str):
         run_blocks = [
-            line for line in airgap_content.splitlines()
+            line
+            for line in airgap_content.splitlines()
             if "RUN " in line and "wget" in line.lower()
         ]
-        assert len(run_blocks) == 0, (
-            f"wget in RUN breaks air-gap: {run_blocks}"
-        )
+        assert len(run_blocks) == 0, f"wget in RUN breaks air-gap: {run_blocks}"
 
     def test_has_healthcheck(self, airgap_content: str):
         assert "HEALTHCHECK" in airgap_content, (
@@ -241,8 +223,7 @@ class TestSecurityConstraints:
 
     def test_apt_get_uses_no_install_recommends(self, airgap_content: str):
         apt_lines = [
-            line.strip() for line in airgap_content.splitlines()
-            if "apt-get install" in line
+            line.strip() for line in airgap_content.splitlines() if "apt-get install" in line
         ]
         for line in apt_lines:
             assert "--no-install-recommends" in line, (
@@ -258,11 +239,11 @@ class TestSecurityConstraints:
         # Only standalone CMD instructions (not CMD inside HEALTHCHECK).
         standalone_cmd = re.compile(r"^CMD\s+", re.MULTILINE)
         for m in standalone_cmd.finditer(airgap_content):
-            rest = airgap_content[m.end():].lstrip()
+            rest = airgap_content[m.end() :].lstrip()
             if rest and rest[0] != "[":
                 pytest.fail(
                     f"CMD in shell form (no exec array) allows PID 1 signal handling issues: "
-                    f"{airgap_content[m.start():m.start()+80].strip()!r}"
+                    f"{airgap_content[m.start() : m.start() + 80].strip()!r}"
                 )
 
     def test_airgap_label_set(self, airgap_content: str):

@@ -17,7 +17,7 @@
 #   docker build --network=none \
 #       --build-arg PYTHON_BASE_DIGEST=sha256:<digest-from-step-2> \
 #       -f deploy/docker/Dockerfile.airgap \
-#       -t aegis-latent-core:2.4.0-airgap .
+#       -t aegis-latent-core:2.4.1-airgap .
 #
 # ─── Required env vars (same as standard image) ───────────────────────────────
 #   AEGIS_SIGNING_KEY   — HMAC-SHA256 or ML-DSA signing key (must be separate
@@ -64,7 +64,7 @@ RUN pip install \
 FROM python:3.11-slim@${PYTHON_BASE_DIGEST}
 
 LABEL org.opencontainers.image.title="Aegis Latent Core (Air-Gapped)" \
-      org.opencontainers.image.version="2.4.0" \
+      org.opencontainers.image.version="2.4.1" \
       org.opencontainers.image.description="Enterprise LLM proxy — air-gapped build, all layers vendored" \
       org.opencontainers.image.licenses="AGPL-3.0" \
       aegis.airgap="true" \

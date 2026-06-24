@@ -17,7 +17,6 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
-
 # ── Version constant ──────────────────────────────────────────────────────────
 
 _TOOL_VERSION = "1.0.0"
@@ -31,7 +30,7 @@ class OQCheck:
     """Result of a single OQ operational verification step."""
 
     check_id: str
-    category: str       # "waf", "audit_chain", "signing", "rate_limiting", "phi"
+    category: str  # "waf", "audit_chain", "signing", "rate_limiting", "phi"
     description: str
     passed: bool
     evidence: str
@@ -43,7 +42,7 @@ class OQReport:
     """Aggregate report produced by OQProtocol.run_all()."""
 
     report_id: str
-    generated_at: str   # ISO 8601 UTC
+    generated_at: str  # ISO 8601 UTC
     tool_version: str
     checks: list[OQCheck] = field(default_factory=list)
     passed: bool = False
@@ -276,8 +275,9 @@ class OQProtocol:
                 f"Input contained SSN pattern; "
                 f"output SSN present={ssn_in_output}; "
                 f"hits={result.hits}; "
-                f"output='{result.text[:60]}...'" if len(result.text) > 60 else
-                f"output='{result.text}'"
+                f"output='{result.text[:60]}...'"
+                if len(result.text) > 60
+                else f"output='{result.text}'"
             )
             evidence = (
                 f"PHIDeidentifier.scrub('Patient SSN: 123-45-6789'): "
@@ -306,7 +306,7 @@ class OQProtocol:
 
             mmr = MerkleMountainRange()
             leaf_data = b"oq-mmr-leaf-0"
-            root = mmr.add_leaf(leaf_data)
+            mmr.add_leaf(leaf_data)
             # Add more leaves so proof traversal has siblings
             for i in range(1, 4):
                 mmr.add_leaf(f"oq-mmr-leaf-{i}".encode())
@@ -395,9 +395,8 @@ class OQProtocol:
         passed = False
         evidence = ""
         try:
-            from fastapi.testclient import TestClient  # noqa: PLC0415
-
             from aegis.app import create_app  # noqa: PLC0415
+            from fastapi.testclient import TestClient  # noqa: PLC0415
 
             # Temporarily set auth env vars for this check
             env_backup = os.environ.copy()

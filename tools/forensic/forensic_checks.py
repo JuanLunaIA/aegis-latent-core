@@ -10,6 +10,7 @@ and attempt to compile the Rust extension capturing errors. Outputs a JSON repor
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -42,8 +43,8 @@ def search_files():
             continue
         if p.is_file() and p.suffix not in (".pyc", ".pyo"):
             try:
-                text = p.read_text(encoding='utf-8', errors='ignore')
-            except Exception:
+                text = p.read_text(encoding="utf-8", errors="ignore")
+            except Exception:  # noqa: S112 — best-effort scan; unreadable files are skipped
                 continue
             for k, pat in PATTERNS.items():
                 if pat.search(text):
@@ -55,9 +56,13 @@ def python_syntax_check():
     errors = []
     for p in ROOT.rglob("*.py"):
         try:
-            subprocess.check_output(['python','-m','py_compile', str(p)])
+            subprocess.check_output(  # noqa: S603 — trusted py_compile of repo files
+                ["python", "-m", "py_compile", str(p)]
+            )
         except subprocess.CalledProcessError as e:
-            errors.append({'file': str(p.relative_to(ROOT)), 'error': e.output.decode(errors='ignore')})
+            errors.append(
+                {"file": str(p.relative_to(ROOT)), "error": e.output.decode(errors="ignore")}
+            )
     return errors
 
 
@@ -68,49 +73,59 @@ def rust_build_attempt():
     system C compiler (cc/gcc/clang) and returns a concise status when these are
     missing to avoid long blocking compilations on developer machines.
     """
-    rust_dir = ROOT / 'aegis_rust_v2'
+    rust_dir = ROOT / "aegis_rust_v2"
     if not rust_dir.exists():
-        return {'status': 'missing', 'detail': 'aegis_rust_v2 not found'}
+        return {"status": "missing", "detail": "aegis_rust_v2 not found"}
 
     import shutil
 
-    cargo = shutil.which('cargo')
-    cc = shutil.which('cc') or shutil.which('gcc') or shutil.which('clang')
+    cargo = shutil.which("cargo")
+    cc = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
 
     if cargo is None:
-        return {'status': 'skipped', 'detail': 'cargo not found in PATH'}
+        return {"status": "skipped", "detail": "cargo not found in PATH"}
     if cc is None:
-        return {'status': 'skipped', 'detail': 'C compiler not found (cc/gcc/clang). Install build-essential or equivalent.'}
+        return {
+            "status": "skipped",
+            "detail": "C compiler not found (cc/gcc/clang). Install build-essential or equivalent.",
+        }
 
     try:
-        env = dict(**dict())
-        env.update({'PYO3_USE_ABI3_FORWARD_COMPATIBILITY': '1'})
-        proc = subprocess.run(
-            ['cargo', 'test', '--lib', '--manifest-path', str(rust_dir / 'Cargo.toml')],
+        # Inherit the real environment (PATH, HOME, etc.) so cargo and the C
+        # toolchain resolve correctly; add the PyO3 forward-compat flag on top.
+        env = os.environ.copy()
+        env["PYO3_USE_ABI3_FORWARD_COMPATIBILITY"] = "1"
+        proc = subprocess.run(  # noqa: S603 — trusted cargo invocation, no user input
+            ["cargo", "test", "--lib", "--manifest-path", str(rust_dir / "Cargo.toml")],
             capture_output=True,
             text=True,
             env=env,
             timeout=600,
         )
-        return {'status': 'done', 'returncode': proc.returncode, 'stdout': proc.stdout[:10000], 'stderr': proc.stderr[:10000]}
+        return {
+            "status": "done",
+            "returncode": proc.returncode,
+            "stdout": proc.stdout[:10000],
+            "stderr": proc.stderr[:10000],
+        }
     except subprocess.TimeoutExpired:
-        return {'status': 'error', 'detail': 'cargo test timed out'}
+        return {"status": "error", "detail": "cargo test timed out"}
     except Exception as e:
-        return {'status': 'error', 'detail': str(e)}
+        return {"status": "error", "detail": str(e)}
 
 
 def main():
     report = {}
-    report['patterns'] = search_files()
-    report['python_syntax'] = python_syntax_check()
-    report['rust_build'] = rust_build_attempt()
-    report['notes'] = [
-        'This report is a snapshot. Review rust_build.stderr for linker errors (missing libpython-dev or ABI mismatch).',
-        'Files listed under exec_call, eval_call, pickle_load may need security review for untrusted input handling.'
+    report["patterns"] = search_files()
+    report["python_syntax"] = python_syntax_check()
+    report["rust_build"] = rust_build_attempt()
+    report["notes"] = [
+        "This report is a snapshot. Review rust_build.stderr for linker errors (missing libpython-dev or ABI mismatch).",
+        "Files listed under exec_call, eval_call, pickle_load may need security review for untrusted input handling.",
     ]
-    REPORT.write_text(json.dumps(report, indent=2), encoding='utf-8')
+    REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(f"Wrote report to {REPORT}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

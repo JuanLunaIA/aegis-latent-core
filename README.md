@@ -9,12 +9,12 @@
 **OpenAI-compatible · Zero application changes · Cryptographically-signed tamper-evident audit chain**
 
 [![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-3846%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-4575%20passed-brightgreen.svg)](tests/)
 [![Coverage](https://img.shields.io/badge/coverage-95%25%2B-brightgreen.svg)](tests/)
 [![License: AGPLv3 / Commercial](https://img.shields.io/badge/License-AGPLv3%20%7C%20Commercial-blue.svg)](COMMERCIAL.md)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Rust](https://img.shields.io/badge/Rust-acceleration-orange.svg?logo=rust)](aegis_rust_v2/)
-[![Version](https://img.shields.io/badge/version-2.4.0-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.4.1-green.svg)](CHANGELOG.md)
 [![FedRAMP](https://img.shields.io/badge/FedRAMP-High%20aligned-navy.svg)]( docs/ROADMAP.md)
 [![SOC 2](https://img.shields.io/badge/SOC%202-Type%20II%20ready-blue.svg)](docs/ROADMAP.md)
 [![HIPAA](https://img.shields.io/badge/HIPAA-compliant%20ready-red.svg)](docs/ROADMAP.md)
@@ -75,7 +75,7 @@ Every guarantee below is derived from code you can read, tests you can run, and 
 | **G5** | API key comparison is timing-attack-resistant | `hmac.compare_digest()` used for every key comparison | Code: `aegis/proxy/auth.py:ProxyKeyAuth` |
 | **G6** | The WAL file is readable only by the process owner | `os.chmod(path, 0o600)` set on creation | `stat $AEGIS_WAL_PATH` |
 
-**Test evidence:** 3,846 tests passing, 3 skipped, 95%+ branch coverage. `pytest tests/ -q` reproduces this in any clone.
+**Test evidence:** 4,575 tests passing, 3 skipped, 95%+ branch coverage. `pytest tests/ -q` reproduces this in any clone.
 
 ---
 
@@ -390,6 +390,18 @@ Peak single-worker throughput ~900 RPS at concurrency ≈ core count. The server
 
 Methodology: 5 independent trials per N; best-of-5 reported. Rust built with `maturin --release` (LTO, `codegen-units=1`).
 
+### Audit Chain Throughput — Commit & Verification
+
+Cost of the core forensic guarantees (tamper-evident chain + HMAC signatures), measured against a real WAL with `fsync` per node. Full methodology in [docs/BENCHMARKS.md](docs/BENCHMARKS.md) (Claim 4).
+
+| Phase | Throughput | Latency / op |
+|-------|-----------|--------------|
+| HMAC-SHA256 node sign (crypto-only) | 496,340 ops/s | 2.02 µs |
+| `commit_forensic()` end-to-end (HMAC + MMR + WAL fsync) | 693 commits/s | 1.44 ms |
+| `verify_integrity()` (full chain sweep) | 71,560 nodes/s | 14.0 µs |
+
+The durable commit is fsync-bound (~716× the bare signing cost), and that fsync runs **off** the client hot path (Claim 1). Offline re-verification of a 1M-node chain completes in ~14 s.
+
 ### Design Target (Not Yet Measured at Scale)
 
 > **>1 billion RPM at <1.2ms added proxy latency** — Architectural goal for horizontally-scaled multi-node deployments. Not yet validated end-to-end. The single-node numbers above are the measured per-worker baseline.
@@ -481,7 +493,7 @@ cargo test --manifest-path aegis_rust_v2/Cargo.toml --all-features
 
 ```bash
 # Build
-docker build -f deploy/docker/Dockerfile -t aegis-latent-core:2.4.0 .
+docker build -f deploy/docker/Dockerfile -t aegis-latent-core:2.4.1 .
 
 # Run (OpenAI backend example)
 docker run -d \
@@ -492,7 +504,7 @@ docker run -d \
   -e AEGIS_API_KEYS="my-proxy-key" \
   -e AEGIS_SIGNING_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')" \
   -v "$(pwd)/data:/data" \
-  aegis-latent-core:2.4.0
+  aegis-latent-core:2.4.1
 
 # Verify
 curl -sf http://localhost:8080/health | python -m json.tool
@@ -590,7 +602,7 @@ AEGIS_MAX_MEMORY_NODES=100000
 version: "3.9"
 services:
   aegis:
-    image: aegis-latent-core:2.4.0
+    image: aegis-latent-core:2.4.1
     ports:
       - "127.0.0.1:8080:8080"
     environment:
@@ -690,7 +702,7 @@ stat -c "%a %U" "$AEGIS_WAL_PATH"
   "ledger": { "nodes": 4821, "fault_state": "healthy", "healthy": true },
   "analyzer_cache": { "size": 312, "capacity": 4096, "eviction_rate": 0.04, "healthy": true },
   "provider": "openai",
-  "version": "2.4.0"
+  "version": "2.4.1"
 }
 ```
 
@@ -913,5 +925,5 @@ Commercial licenses (without copyleft requirements) available — see [`COMMERCI
 
 ---
 
-*Aegis Latent Core v2.4.0 · Rust extension v3.0.0 · Python 3.11 / 3.12 / 3.13 · 3,846 tests · 95%+ coverage*  
+*Aegis Latent Core v2.4.1 · Rust extension v3.0.0 · Python 3.11 / 3.12 / 3.13 · 4,575 tests · 95%+ coverage*  
 *Copyright © 2026 Juan Luna. All rights reserved.*
