@@ -46,7 +46,7 @@ tokio = { version = "1", features = ["full"] }
 # makes the released wheels self-contained and cross-compilable for the full
 # manylinux/musllinux × {x86_64, aarch64, armv7} release matrix (no target-arch
 # system OpenSSL required at build or run time).
-reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "native-tls", "native-tls-vendored", "http2", "hickory-dns"] }
+reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "native-tls", "native-tls-vendored", "http2", "hickory-dns"] }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
