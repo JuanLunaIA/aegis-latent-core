@@ -119,3 +119,8 @@ docs/audit/
 # Runtime artifacts produced by Claude Code sessions
 *.claude-session
 .claude-context/
+
+# ── Generated tool artifacts (regenerated in CI / on demand) ───────────────────
+# forensic_checks.py and generate_summary.py produce these; never commit them.
+tools/forensic/report.json
+tools/visualizer/summary.json

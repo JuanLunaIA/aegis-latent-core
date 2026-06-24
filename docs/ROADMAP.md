@@ -123,7 +123,7 @@ environment is not).
 - [ ] `aegis/core/operator_seal.py:423` — "public key is required — this stub uses re-sign comparison"; implement real asymmetric verification.
 - [ ] `aegis/core/gossip_wal_sync.py` — documented "stub" (in-process, no real network); implement real SWIM gossip transport or fold into the Raft path so HA claims are end-to-end testable.
 - [ ] Reconcile duplicate/parallel modules so there is exactly one implementation per concern: PQC (`pqc.py` vs `pqc_provider.py` vs Rust vs Vault), sandbox (`sandbox.py` vs `sandbox_l1.py` vs `sandbox_l2.py` vs `seccomp_guard.py`), HSM (`hsm.py` real vs the preserved stub `HSMManager`).
-- [ ] Remove committed generated artifacts from the tree (`tools/forensic/report.json`, `tools/visualizer/summary.json` — both reference stale `pqc_provider.py`/version data); add to `.gitignore` and regenerate in CI.
+- [x] Remove committed generated artifacts from the tree (`tools/forensic/report.json`, `tools/visualizer/summary.json` — both referenced stale `pqc_provider.py`/version data). Untracked via `git rm --cached` and added to `.gitignore`; they are regenerated on demand by `tools/forensic/forensic_checks.py` and `tools/visualizer/generate_summary.py` (no test or runtime path depends on the committed copies).
 - [ ] Audit every broad `except Exception:` in the live path (`aegis/proxy/`, `aegis/core/crypto_audit.py`, ratelimiter) to ensure no security failure is silently swallowed into a permissive default.
 
 ---
@@ -201,7 +201,7 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 |---|---|---|
 | P0 — Trust integrity (de-sim / real crypto) | 1 | Critical |
 | P1 — Supply chain | 6 | High |
-| P1 — Live-path correctness | 5 | High |
+| P1 — Live-path correctness | 4 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
 | **Total open** | **44** | — |
