@@ -112,7 +112,7 @@ environment is not).
 - [x] **pyjwt** — investigated: `pyjwt` is **not a declared dependency** (absent from `pyproject.toml`/`requirements.txt`), is **not imported** anywhere in `aegis`/`aegis_server`/`integrations`, and `pip show pyjwt` reports an empty `Required-by` (nothing in the closure needs it). It is an environment leftover, not part of Aegis's dependency closure — no floor to add and nothing to remove from our spec.
 - [x] Floor build tooling in CI images: **setuptools ≥ 78.1.1** (CVE-2024-6345 RCE in `package_index`), **wheel ≥ 0.46.2** (CVE-2026-24049), **pip ≥ 26.1**. Added a "Floor build tooling" step (`python -m pip install --upgrade "pip>=26.1" "setuptools>=78.1.1" "wheel>=0.46.2"`) to the security jobs in both `.github/workflows/ci.yml` and `.github/workflows/security.yml` ahead of any package install.
 - [x] Make the "Dependency Audit" CI job audit the **resolved/installed** environment (`pip-audit` with no `-r`), not just `requirements.txt`. Both workflows now run two audit steps: a pinned-requirements audit (`pip-audit -r requirements.txt`) and a resolved-environment audit (`pip-audit` over the installed closure after `pip install -e ".[dev]"`); both fail the job on any known advisory. (Air-gap wheel-bundle audit remains a follow-up.)
-- [~] Add `osv-scanner` over the project lockfiles. **Done:** an `osv-scanner` job (`google/osv-scanner-action` v2, report-only) in `security.yml` scans the committed `requirements.txt` against the OSV database and uploads SARIF to the Security tab; Rust crates remain covered by the dedicated `cargo-audit` job. **Remaining:** (a) commit `aegis_rust_v2/Cargo.lock` and OSV/Trivy-scan it — **blocked** on the Rust dependency-upgrade item below (committing the current pinned tree surfaces pre-existing HIGH advisories, one of which has no fixed release yet); (b) generate a `requirements.lock` with hashes (`--require-hashes`) for reproducible, audited installs.
+- [~] Add `osv-scanner` over the project lockfiles. **Done:** an `osv-scanner` job (`google/osv-scanner-action` v2, report-only) in `security.yml` scans the committed `requirements.txt` against the OSV database and uploads SARIF to the Security tab; Rust crates remain covered by the dedicated `cargo-audit` job; `requirements.lock` (944 lines, all hashes, Python 3.11) committed and drift-checked by a new `lock-file-check` CI job that regenerates with `pip-compile --generate-hashes` and diffs against the committed file. **Remaining:** commit `aegis_rust_v2/Cargo.lock` and OSV/Trivy-scan it — **blocked** on the Rust dependency-upgrade item below (committing the current pinned tree surfaces pre-existing HIGH advisories, one of which has no fixed release yet).
 - [x] Wire Dependabot auto-PRs and document the SLA for HIGH advisories. Added `.github/dependabot.yml` covering all four ecosystems in the tree — `pip` (`/`), `cargo` (`/aegis_rust_v2`), `github-actions` (`/`), and `docker` (`/deploy/docker`) — with weekly routine bumps, grouped minor/patch updates, and immediate security-update PRs that feed the same CI audit gates. Documented a per-severity remediation SLA (CRITICAL 72h / HIGH 7d / MEDIUM 30d) in `SECURITY.md` ("Dependency Vulnerability SLA").
 - [ ] **Rust dependency upgrade** to clear pre-existing advisories in the pinned crate tree, so `Cargo.lock` can be committed and OSV/Trivy-scanned: **pyo3 0.24 → 0.29** (GHSA-36hh-v3qg-5jq4 HIGH out-of-bounds read in `nth`/`nth_back`; GHSA-chgr-c6px-7xpp missing `Sync` bound — a multi-minor breaking migration on top of the 0.24 Bound-API work already done) and **hickory-proto** via `reqwest`'s `hickory-dns` feature (GHSA-3v94-mw7p-v465 HIGH NSEC3 unbounded loop — **no fixed release yet**, monitor; GHSA-q2qq-hmj6-3wpp MEDIUM O(n²) name compression, fixed in 0.26.1 but gated behind a `reqwest`/`hickory-resolver` bump). `cargo-audit` currently tracks these via documented `--ignore` entries.
 
@@ -201,11 +201,11 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 | Track | Open items | Priority |
 |---|---|---|
 | P0 — Trust integrity (de-sim / real crypto) | 1 | Critical |
-| P1 — Supply chain | 2 | High |
+| P1 — Supply chain | 1 | High |
 | P1 — Live-path correctness | 0 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 26 | Strategic |
-| **Total open** | **34** | — |
+| **Total open** | **33** | — |
 
 > **Only open P0 item:** `zk_proof.py` — replace the honest SHA-256 stub
 > (`is_stub == True`) with a real proving system (Groth16/PLONK/STARK). This is a

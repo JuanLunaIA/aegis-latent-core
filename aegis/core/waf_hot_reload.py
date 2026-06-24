@@ -259,6 +259,7 @@ class WAFHotReloader:
         self._poll_interval = poll_interval_s
         self._current: WAFPatternSet | None = None
         self._stop_event = threading.Event()
+        self._watcher_ready = threading.Event()
         self._thread: threading.Thread | None = None
         self._lock = threading.Lock()
         self._use_inotify: bool = _inotify_available()
@@ -275,12 +276,16 @@ class WAFHotReloader:
             return
         self.reload_now()
         self._stop_event.clear()
+        self._watcher_ready.clear()
         self._thread = threading.Thread(
             target=self._watch_loop,
             daemon=True,
             name=f"waf-hot-reload:{os.path.basename(self._path)}",
         )
         self._thread.start()
+        # Wait until the watcher thread has captured its last_mtime baseline so
+        # callers can safely write files and be certain the change is detected.
+        self._watcher_ready.wait(timeout=5.0)
         logger.info(
             "WAFHotReloader started: watching %s (mechanism=%s, interval=%.2fs)",
             self._path,
@@ -344,6 +349,7 @@ class WAFHotReloader:
 
     def _poll_loop(self) -> None:
         last_mtime = self._get_mtime()
+        self._watcher_ready.set()
         while not self._stop_event.wait(self._poll_interval):
             mtime = self._get_mtime()
             if mtime != last_mtime:
@@ -369,6 +375,7 @@ class WAFHotReloader:
                 os.close(fd)
                 self._poll_loop()
                 return
+            self._watcher_ready.set()
             while not self._stop_event.is_set():
                 try:
                     readable, _, _ = select.select([fd], [], [], self._poll_interval)

@@ -188,6 +188,29 @@ jobs:
         # versions that a clean requirements.txt would otherwise hide.
         run: pip-audit --progress-spinner off
 
+  # ── Lock file integrity ───────────────────────────────────────────────────
+  lock-file-check:
+    name: Lock File Integrity
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install pip-tools
+        run: pip install pip-tools
+      - name: Regenerate lock file
+        run: pip-compile --generate-hashes --output-file=requirements.lock.new requirements.txt
+      - name: Check for drift
+        run: |
+          if ! diff -q requirements.lock requirements.lock.new > /dev/null 2>&1; then
+            echo "::error::requirements.lock is out of date. Regenerate with:"
+            echo "::error::  pip-compile --generate-hashes --output-file=requirements.lock requirements.txt"
+            diff requirements.lock requirements.lock.new || true
+            exit 1
+          fi
+
   # ── Helm lint ─────────────────────────────────────────────────────────────
   helm-lint:
     name: Helm Lint
