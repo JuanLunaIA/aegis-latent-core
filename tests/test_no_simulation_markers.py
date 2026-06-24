@@ -40,7 +40,6 @@ _MARKER = re.compile(
 # only SHRINK. Each entry is tracked in docs/ROADMAP.md under P0.2–P0.4.
 KNOWN_SIMULATION_DEBT: frozenset[str] = frozenset(
     {
-        "core/build_reproducibility.py",
         "core/dpdk_engine.py",
         "core/ebpf_monitor.py",
         "core/enclave_provider.py",
@@ -82,4 +81,4 @@ def test_allowlist_is_not_stale():
 
 def test_debt_count_never_increases():
     """The simulation-debt count is a monotonically non-increasing budget."""
-    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 6
+    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 5

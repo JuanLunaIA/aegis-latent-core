@@ -206,6 +206,16 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
 | **Total open** | **56** | — |
 
+> **Progress 2026-06-24 (run 10):** P0.4 — `build_reproducibility.py` de-simulated
+> (removed `# Simulation:` / `# Simulation of: cargo build` / `# In a real system`
+> markers; `create_hermetic_environment()` now actually sets `SOURCE_DATE_EPOCH=1716854400`
+> in `os.environ` and runs `cargo clean`; `build_and_hash()` runs `cargo build --release
+> --locked`, reads the real output binary, computes SHA-256, and captures `rustc --version`;
+> raises `RuntimeError` when cargo is absent; 15 tests covering env-set, cargo-absent raises,
+> build-failure raises, binary-not-found, real hash computation, env snapshot, and
+> `verify_reproducibility` comparison).
+> `KNOWN_SIMULATION_DEBT` shrunk 6 → 5; count asserted `== 5`.
+>
 > **Progress 2026-06-24 (run 9):** P0.4 — `codeql_config.py` de-simulated
 > (replaced `# SIMULATION: Scan results based on current codebase state` and hardcoded
 > fake return with a real `codeql database create` + `codeql database analyze` subprocess
