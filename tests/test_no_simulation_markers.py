@@ -42,7 +42,6 @@ KNOWN_SIMULATION_DEBT: frozenset[str] = frozenset(
     {
         "core/build_reproducibility.py",
         "core/codeql_config.py",
-        "core/dependency_audit.py",
         "core/dpdk_engine.py",
         "core/ebpf_monitor.py",
         "core/enclave_provider.py",
@@ -97,4 +96,4 @@ def test_allowlist_is_not_stale():
 
 def test_debt_count_never_increases():
     """The simulation-debt count is a monotonically non-increasing budget."""
-    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 21
+    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 20

@@ -86,7 +86,7 @@ production and is excluded from compliance evidence.
 ### P0.4 Fake assurance pipelines
 
 - [ ] `aegis/core/fuzzing_harness.py` — replace "95% chance of no crash, 5% edge case" random simulation with a real fuzzing harness (libFuzzer/`cargo-fuzz`/`atheris`) producing reproducible corpora.
-- [ ] `aegis/core/dependency_audit.py` — replace "Simulation of a deep source code audit" / simulated hash check with a real `pip-audit`/`osv-scanner` + hash-pinning verification.
+- [x] `aegis/core/dependency_audit.py` — replaced "Simulation of a deep source code audit" and fake hash check with a real `pip-audit -f json` invocation (`DependencyAuditor.scan()` → `VulnerabilityFinding` list) and `importlib.metadata` RECORD hash verification (URL-safe base64, per PEP 658). `DependencyInternalizer.verify_supply_chain()` now delegates to both real checks. 24 tests covering mocked pip-audit output, tamper detection, real certifi hash match, and integration scan (`tests/test_dependency_audit.py`).
 - [ ] `aegis/core/transparency_log.py` — replace simulated transparency log with a real Sigstore/Rekor append-only log binding (see DX-Forensic).
 - [ ] `aegis/core/build_reproducibility.py` — replace simulated cache purge / repro check with a real bit-for-bit reproducible build verification.
 - [ ] `aegis/core/state_snapshotter.py` — implement real CoW/mmap snapshotting or mark advisory.
@@ -199,12 +199,12 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 
 | Track | Open items | Priority |
 |---|---|---|
-| P0 — Trust integrity (de-sim / real crypto) | 19 | Critical |
+| P0 — Trust integrity (de-sim / real crypto) | 18 | Critical |
 | P1 — Supply chain | 6 | High |
 | P1 — Live-path correctness | 6 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **63** | — |
+| **Total open** | **62** | — |
 
 > **Progress 2026-06-24 (run 2):** P0.2 partial — `cfi_manager.py` and
 > `mte_guard.py` de-simulated. `cfi_manager.py` now parses real ELF binaries via

@@ -29,9 +29,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cover the no-hardware path and monkeypatched hardware paths; 2 ARM integration
   tests skip cleanly on CI (`tests/test_mte_guard.py`).
 
+- **De-simulated `DependencyAuditor`** (ROADMAP P0.4). `aegis/core/dependency_audit.py`
+  previously calculated `SHA-256(f"{name}_{version}_AUDITED")` as the audit hash
+  and re-computed the exact same string for verification — always passing. Replaced
+  with a real `pip-audit -f json` invocation (`DependencyAuditor.scan()` returning
+  `VulnerabilityFinding` dataclasses) and real `importlib.metadata` RECORD hash
+  verification using URL-safe base64 (PEP 658). `DependencyInternalizer.verify_supply_chain()`
+  now delegates to both. 24 tests including tamper detection and real certifi hash
+  match (`tests/test_dependency_audit.py`). Also registered `slow` pytest mark.
+
 - `tests/test_no_simulation_markers.py` — `KNOWN_SIMULATION_DEBT` shrunk from
-  23 → 21 as `cfi_manager.py` and `mte_guard.py` are removed from the debt list.
-  Debt-count assertion updated to `== 21`.
+  23 → 20 as `cfi_manager.py`, `mte_guard.py`, and `dependency_audit.py` are
+  removed from the debt list. Debt-count assertion updated to `== 20`.
 
 - **Removed two fake post-quantum modules that manufactured false cryptographic
   assurance** (ROADMAP P0.1). `aegis/core/pqc.py` advertised "ML-DSA (Dilithium)"
