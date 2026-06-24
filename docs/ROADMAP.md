@@ -199,19 +199,19 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 
 | Track | Open items | Priority |
 |---|---|---|
-| P0 — Trust integrity (de-sim / real crypto) | 16 | Critical |
+| P0 — Trust integrity (de-sim / real crypto) | 14 | Critical |
 | P1 — Supply chain | 6 | High |
 | P1 — Live-path correctness | 6 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **60** | — |
+| **Total open** | **58** | — |
 
 > **Progress 2026-06-24 (run 3):** P0.3 complete — `xdp_dynamic_segmentation.py`
 > de-simulated (real nftables/iptables enforcement). P0.4 hardened —
 > `dependency_audit.py` Bandit B607 fix. P0.2 partial — `sandbox_l1.py`
-> de-simulated: real `seccomp_syscall_resolve_name` + `seccomp_rule_add` via
-> ctypes; 18 tests including real subprocess filter load.
-> `KNOWN_SIMULATION_DEBT` shrunk 21 → 20 → 19 → 18; count asserted `== 18`.
+> (real seccomp rule injection), `memory.py` (honest allocator detection),
+> `memory_invariants.py` (real `/proc/self/mem` SHA-256 golden-state hashing).
+> `KNOWN_SIMULATION_DEBT` shrunk 21 → 16; count asserted `== 16`.
 >
 > **Progress 2026-06-24 (run 1):** P0.1 fake-crypto cluster **complete**. (1)
 > `pqc.py` + `pqc_provider.py` deleted → real `PQCSigner` (ML-DSA-65 / FIPS 204)

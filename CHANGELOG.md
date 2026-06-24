@@ -65,10 +65,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   filter safely in tests. 18 tests including real subprocess filter load and
   mocked-library failure paths (`tests/test_sandbox_l1.py`).
 
+- **De-simulated `memory.py`** (ROADMAP P0.2). `HardenedMemoryManager.initialize_hardened_allocator`
+  previously set `_allocator_type = "mimalloc"` via a "Simulation mode" comment
+  even when neither `libmimalloc.so` nor `libhardened_malloc.so` appeared in
+  `/proc/self/maps`. Now logs a warning and sets `_allocator_type = "standard"`
+  honestly when no hardened allocator is detected.
+
+- **De-simulated `memory_invariants.py`** (ROADMAP P0.2). Previously computed
+  golden hashes from a `f"STATE_{start}_{end}"` string (always matching itself,
+  never detecting any modification). Rewritten with `_read_range()` reading the
+  actual bytes from the process's own virtual address space via `/proc/self/mem`,
+  and `_hash_range()` computing real SHA-256 digests. `register_invariant()`
+  returns `False` when the range is unreadable. `verify_invariants()` re-reads
+  each range and detects real modifications; unmapped pages after registration
+  are logged as CRITICAL. 16 tests including real ctypes buffer tampering
+  detection, unmapped-address handling, and mock-based unreadable-after-register
+  coverage (`tests/test_memory_invariants.py`).
+
 - `tests/test_no_simulation_markers.py` — `KNOWN_SIMULATION_DEBT` shrunk from
-  23 → 20 → 19 → 18 as `cfi_manager.py`, `mte_guard.py`, `dependency_audit.py`,
-  `xdp_dynamic_segmentation.py`, and `sandbox_l1.py` are removed from the debt
-  list. Debt-count assertion updated to `== 18`.
+  23 → 16 as `cfi_manager.py`, `mte_guard.py`, `dependency_audit.py`,
+  `xdp_dynamic_segmentation.py`, `sandbox_l1.py`, `memory.py`, and
+  `memory_invariants.py` are removed. Debt-count assertion updated to `== 16`.
 
 - **Removed two fake post-quantum modules that manufactured false cryptographic
   assurance** (ROADMAP P0.1). `aegis/core/pqc.py` advertised "ML-DSA (Dilithium)"
