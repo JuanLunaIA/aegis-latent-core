@@ -154,7 +154,7 @@ Measured ceilings from `docs/BENCHMARKS.md`:
 
 - [ ] SEC Rule 17a-4 / FINRA 4511 WORM retention attestation bundle (the WORM ledger exists; add the regulatory retention-period + non-rewriteable-media evidence export).
 - [ ] MiFID II / Dodd-Frank transaction & communication record-keeping mapping for LLM-mediated trades and advice.
-- [ ] PCI-DSS v4.0 cardholder-data (PAN/track/CVV) detector + tokenization-before-forward, analogous to the PHI path.
+- [~] PCI-DSS v4.0 cardholder-data (PAN/track/CVV) detector + tokenization-before-forward, analogous to the PHI path. **Detection engine delivered:** `aegis/core/pci_detector.py` (`PCIScrubber`) detects PANs with a **Luhn + issuer-IIN** gate (Visa/MC/Amex/Discover/Diners/JCB — low false positives), redacts CVV/CVC only in a card-security context (always fully redacted per PCI §3.2, never stored), and redacts Track 1/2 magnetic-stripe data; PANs are masked to the last four digits (`[PAN-****1111]`) per PCI §3.4. 19 tests with the standard public test PANs (`tests/test_pci_detector.py`). **Remaining:** wire `PCIScrubber` into the proxy request/response hot path behind a config flag (mirroring `_apply_phi_scrub_*`) and add a vault-backed reversible-tokenization option.
 - [ ] SOX ICFR audit-control mapping and SR 11-7 model-risk-management governance hooks (model inventory, validation evidence, challenger logging).
 - [ ] Market-abuse / fraud pattern detection on prompts+responses (insider-info leakage, spoofing-instruction detection) feeding the WAF verdict.
 - [ ] Basel-aligned model-decision explainability record per inference for regulated credit/insurance decisions.
