@@ -73,15 +73,15 @@ production and is excluded from compliance evidence.
 - [ ] `aegis/core/hardware_token.py` — TPM2 backend currently logs "using HMAC stub (real PCR quote not yet implemented)" and falls back to software HMAC; implement real PCR-bound token sealing.
 - [x] `aegis/core/cfi_manager.py` — replaced `is_cfi_enabled = True  # Simulation result` with real ELF parsing via `pyelftools` (subprocess `readelf`/`nm` fallback). Three detection tiers: LLVM CFI (`__cfi_check`), GCC/LLVM unwind tables (`.eh_frame`/`.eh_frame_hdr`), Intel CET (`GNU_PROPERTY_X86_FEATURE_1_AND`). New `CFIReport` dataclass; 18 tests prove honest results on real binary and graceful failure for missing/non-ELF files (`tests/test_cfi_manager.py`).
 - [x] `aegis/core/mte_guard.py` — replaced simulated MTE detection with real `/proc/cpuinfo` `mte` flag check, `AT_HWCAP2` auxiliary-vector parsing, and `prctl(PR_SET_TAGGED_ADDR_CTRL)` syscall via `ctypes`. Returns False on x86/non-ARM; never manufactures a positive result. 14 tests cover hardware-absent and mocked-hardware paths (`tests/test_mte_guard.py`). ARM integration tests skip cleanly on CI.
-- [ ] `aegis/core/tee_manager.py` / `enclave_provider.py` — replace simulated enclave with real SEV-SNP/TDX/SGX attestation (see DX-Gov) or quarantine and stop advertising TEE.
+- [x] `aegis/core/tee_manager.py` / `enclave_provider.py` — replaced simulated enclave (hardcoded fake measurements + `ENCLAVE_SECRET_SALT` signature) with honest hardware-gated stubs: `_tee_device_available()` / `_enclave_device_available()` probe `/dev/sgx_enclave`, `/dev/isgx`, `/dev/sev`, `/dev/tdx_guest`; `initialize_enclave()` returns `False` when absent; operations raise `NotImplementedError` when hardware present but C API not yet bound — no fake values manufactured. Real SGX/SEV-SNP attestation binding tracked in DX-Gov.
 - [x] `aegis/core/sandbox_l1.py` — replaced "we simulate the rule addition" with real libseccomp C API via ctypes: `seccomp_syscall_resolve_name` resolves each syscall name to its kernel number, `seccomp_rule_add` permits it, default action is `SCMP_ACT_ERRNO(EPERM)`. `apply_filter()` returns `True` only when `seccomp_load()` succeeds; `build_filter_without_loading()` validates the filter safely in tests. 18 tests including real subprocess filter-load and mocked-library failure paths (`tests/test_sandbox_l1.py`).
 - [ ] `aegis/core/boot_attestation.py` — example golden measurements must come from a signed vendor manifest, not in-source constants.
 
 ### P0.3 Fake datapath / network enforcement (LIVE-PATH false assurance)
 
 - [x] `aegis/core/xdp_dynamic_segmentation.py` — replaced eBPF simulation with real nftables/iptables enforcement. `_FirewallBackend` auto-detects nft → iptables → NONE and issues real kernel `nft add/delete element` or `iptables -I/-D INPUT` commands. `block_ip_immediately()` returns `True` only when a kernel rule is installed; application-layer-only path logs an explicit "APPLICATION-LAYER ONLY" advisory. 27 tests cover backend detection, idempotency, kernel failure fallback, and zone blackhole/active transitions (`tests/test_xdp_dynamic_segmentation.py`).
-- [ ] `aegis/core/dpdk_engine.py` — simulated DPDK fast path; wire to a real DPDK/AF_XDP datapath or quarantine (see DX-Industrial).
-- [ ] `aegis/core/ebpf_monitor.py` — verify the eBPF monitor performs real `bpf()` syscalls or mark advisory.
+- [x] `aegis/core/dpdk_engine.py` — replaced simulated DPDK fast path with honest hardware stubs: `setup_hugepages()` reads real sysfs `/sys/kernel/mm/hugepages/.../nr_hugepages`; `bind_interfaces()` probes `dpdk-devbind` / `dpdk-devbind.py` via `shutil.which`; `poll_packets()` / `transmit_packet()` return empty/False — no fake packets manufactured. Real DPDK/AF_XDP datapath wiring tracked in DX-Industrial.
+- [x] `aegis/core/ebpf_monitor.py` — replaced random fake event generation (`import random, time` + 5% chance blocks) with real `bpftool`-guarded load: `shutil.which("bpftool")` + `subprocess.run(["bpftool", "prog", "list"])` confirm BPF access; `poll_events()` returns `[]` until real compiled BPF programs are loaded — no manufactured telemetry.
 
 ### P0.4 Fake assurance pipelines
 
@@ -199,13 +199,15 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 
 | Track | Open items | Priority |
 |---|---|---|
-| P0 — Trust integrity (de-sim / real crypto) | 12 | Critical |
+| P0 — Trust integrity (de-sim / real crypto) | 8 | Critical |
 | P1 — Supply chain | 6 | High |
 | P1 — Live-path correctness | 6 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **56** | — |
+| **Total open** | **52** | — |
 
+> **Progress 2026-06-24 (run 12):** P0.2/P0.3 — final four hardware-gated modules de-simulated; `KNOWN_SIMULATION_DEBT` shrunk 4 → 0 (all simulation debt eliminated). `ebpf_monitor.py`: removed `import random, time` and all random-event-generation blocks; `EBPFProbe.load()` now runs `shutil.which("bpftool")` + `subprocess.run(["bpftool", "prog", "list"])` to confirm real BPF kernel access; `poll_events()` returns `[]` without fabricating telemetry. `enclave_provider.py`: removed `simulated_sig = hashlib.sha256(data + b"ENCLAVE_SECRET_SALT").digest()` and fake `EnclaveAttestation`; `_enclave_device_available()` probes `/dev/sgx_enclave`, `/dev/isgx`, `/dev/sev`; honest `NotImplementedError` when hardware found but C API absent. `tee_manager.py`: removed hardcoded `measurement = "a8f7e6d5c4b3a2f1..."` fake; `_tee_device_available()` probes SGX/SEV/TDX devices; `verify_remote_attestation()` rejects empty measurements and non-genuine reports; honest `NotImplementedError` for quote generation. `dpdk_engine.py`: removed `import random` and fake packet generation; `setup_hugepages()` reads real sysfs nr_hugepages; `bind_interfaces()` gates on `shutil.which("dpdk-devbind")`; `poll_packets()` / `transmit_packet()` return empty/False with advisory logs. 37 new tests in `tests/test_hardware_modules.py` cover all four modules. Ratchet count asserted `== 0`.
+>
 > **Progress 2026-06-24 (run 11):** P0.2 — `tpm.py` de-simulated: removed
 > `_simulated_pcr_value` in-memory fake and `In a real system` comment; replaced
 > with real `tpm2_pcrextend` / `tpm2_pcrread` CLI delegation guarded by

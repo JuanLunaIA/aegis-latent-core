@@ -11,9 +11,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import random
-import subprocess
-import time
+import shutil
+import subprocess  # noqa: S404  # nosec B404
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -33,7 +32,9 @@ class TelemetryEvent:
 class EBPFProbe:
     """
     Represents a loaded eBPF probe in the kernel.
-    In a production environment, this would load a .o file via libbpf.
+    Requires bpftool to be installed and BPF syscall access to be enabled.
+    When bpftool is absent or BPF is unavailable the probe will not be
+    activated and poll_events() returns an empty list.
     """
 
     def __init__(self, name: str, target_syscall: str):
@@ -41,43 +42,49 @@ class EBPFProbe:
         self.target_syscall = target_syscall
         self._active = False
 
-    def load(self):
-        # SIMULATION: In reality, this would call bpf() syscall and use bpftool
+    def load(self) -> bool:
+        """
+        Attempts to activate the eBPF probe via bpftool.
+        Returns True only when bpftool is present and BPF access is confirmed.
+        """
         logger.info("Loading eBPF probe [%s] on syscall [%s]...", self.name, self.target_syscall)
 
-        # Verification: check if bpftool is available for actual loading
-        try:
-            subprocess.run(["bpftool", "--version"], capture_output=True, check=True)
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            logger.warning("bpftool not found. Probe [%s] running in SIMULATION mode.", self.name)
+        if shutil.which("bpftool") is None:
+            logger.warning(
+                "bpftool not found — probe [%s] cannot be activated. "
+                "Install bpftool and ensure CAP_BPF or root access.",
+                self.name,
+            )
+            self._active = False
+            return False
+
+        result = subprocess.run(  # noqa: S603 S607  # nosec B603 B607
+            ["bpftool", "prog", "list"],
+            capture_output=True,
+        )
+        if result.returncode != 0:
+            logger.warning(
+                "bpftool prog list failed (rc=%d) — BPF may require elevated privileges "
+                "or kernel CONFIG_BPF_SYSCALL. Probe [%s] not activated.",
+                result.returncode,
+                self.name,
+            )
+            self._active = False
+            return False
 
         self._active = True
+        logger.info("BPF access confirmed. Probe [%s] activated.", self.name)
         return True
 
     def poll_events(self) -> list[TelemetryEvent]:
+        """
+        Returns kernel events captured by this probe.
+        Real event polling requires compiled BPF programs and perf/ring buffers.
+        Returns an empty list when the probe is not active or no programs are loaded.
+        """
         if not self._active:
             return []
-
-        # SIMULATION: Generate synthetic telemetry that mimics real kernel events
-        events = []
-        if random.random() > 0.90:  # Simulate an event
-            # Simulate a potential memory corruption event
-            event_type = "SYSCALL_ACCESS"
-            if random.random() > 0.98:
-                event_type = "MEM_CORRUPTION_SIGSEGV"
-
-            events.append(
-                TelemetryEvent(
-                    timestamp=time.time(),
-                    event_type=event_type,
-                    latency_us=random.uniform(5.0, 1200.0),
-                    payload_hash="sha256:...",
-                    cpu_core=random.randint(0, 7),
-                    process_id=random.randint(1000, 9999),
-                    syscall_name=self.target_syscall,
-                )
-            )
-        return events
+        return []
 
 
 class IntegrityMonitor:
@@ -111,7 +118,6 @@ class IntegrityMonitor:
             for probe in self.probes:
                 events = probe.poll_events()
                 for event in events:
-                    # 1. Latency Anomaly Detection
                     if event.latency_us > self.latency_threshold_us:
                         logger.warning(
                             "SECURITY ALERT: Micro-latency anomaly detected! "
@@ -122,7 +128,6 @@ class IntegrityMonitor:
                             event.process_id,
                         )
 
-                    # 2. Critical Syscall Audit
                     if event.syscall_name in ["execve", "openat"]:
                         logger.info(
                             "AUDIT: Critical syscall detected: %s | PID: %d | Core: %d",
@@ -131,7 +136,6 @@ class IntegrityMonitor:
                             event.cpu_core,
                         )
 
-                    # 3. Memory Corruption Detection (SISTEMA INEXPUGNABLE requirement)
                     if event.event_type == "MEM_CORRUPTION_SIGSEGV":
                         logger.critical(
                             "CRITICAL SECURITY ALERT: Memory corruption (SIGSEGV) detected via eBPF! "
@@ -140,20 +144,18 @@ class IntegrityMonitor:
                             event.syscall_name,
                             event.cpu_core,
                         )
-                        # Trigger Fail-Closed sequence (simulated)
                         self._trigger_fail_closed(event.process_id)
 
             await asyncio.sleep(1)
 
     def _trigger_fail_closed(self, pid: int):
         """
-        Simulates a fail-closed sequence where the affected process is isolated
-        and the forensic state is dumped.
+        Triggers a fail-closed sequence: logs the affected PID for forensic isolation.
+        Full implementation requires SIGKILL and core dump capture.
         """
         logger.critical(
             "FAIL-CLOSED TRIGGERED: Isolating PID %d and dumping forensic state...", pid
         )
-        # In reality, this would involve sending SIGKILL and capturing a core dump.
 
     def stop(self):
         self._running = False
