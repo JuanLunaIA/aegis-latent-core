@@ -168,14 +168,25 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+      - name: Floor build tooling (CVE-2024-6345 / CVE-2026-24049)
+        run: |
+          python -m pip install --upgrade \
+            "pip>=26.1" \
+            "setuptools>=78.1.1" \
+            "wheel>=0.46.2"
       - name: Install package and scanners
         run: |
           pip install -e ".[dev]"
           pip install pip-audit
       - name: Bandit SAST
         run: bandit -r aegis/ aegis_server/ -c pyproject.toml -lll
-      - name: Dependency audit
-        run: pip-audit -r requirements.txt
+      - name: Dependency audit (pinned requirements)
+        run: pip-audit -r requirements.txt --progress-spinner off
+      - name: Dependency audit (resolved/installed environment)
+        # Audits what is actually installed (transitive closure + build tooling),
+        # not just the pinned requirements.txt. This catches vulnerable resolved
+        # versions that a clean requirements.txt would otherwise hide.
+        run: pip-audit --progress-spinner off
 
   # ── Helm lint ─────────────────────────────────────────────────────────────
   helm-lint:
