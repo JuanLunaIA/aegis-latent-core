@@ -38,9 +38,11 @@ def _make_ecdsa_hsm() -> MagicMock:
     from cryptography.hazmat.primitives.asymmetric import utils as asym_utils
 
     priv = ec.generate_private_key(ec.SECP256R1())
-    pub_hex = priv.public_key().public_bytes(
-        serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
-    ).hex()
+    pub_hex = (
+        priv.public_key()
+        .public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+        .hex()
+    )
 
     def _sign(data: bytes):
         der_sig = priv.sign(data, ec.ECDSA(hashes.SHA256()))
@@ -59,9 +61,11 @@ def _make_rsa_hsm() -> MagicMock:
     from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
     priv = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    pub_hex = priv.public_key().public_bytes(
-        serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
-    ).hex()
+    pub_hex = (
+        priv.public_key()
+        .public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+        .hex()
+    )
 
     def _sign(data: bytes):
         sig = priv.sign(

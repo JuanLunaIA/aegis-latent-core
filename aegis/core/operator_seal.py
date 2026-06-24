@@ -494,9 +494,7 @@ class OperatorSealGate:
             )
         return _hmac_sign(self._signing_key, data), "hmac-sha256", ""
 
-    def _verify_sig(
-        self, data: bytes, sig_hex: str, scheme: str, public_key_hex: str = ""
-    ) -> bool:
+    def _verify_sig(self, data: bytes, sig_hex: str, scheme: str, public_key_hex: str = "") -> bool:
         """Verify *sig_hex* against *data* using the appropriate scheme."""
         if scheme == "hmac-sha256":
             if not self._signing_key:
