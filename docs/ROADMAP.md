@@ -31,7 +31,10 @@ block, or a benchmark that is not committed to `docs/BENCHMARKS.md`.
 
 > **Audit baseline:** 5,436 tests passing · 5 skipped · 95.18% coverage ·
 > `ruff`/`mypy`/`bandit` clean · `cargo test` 26 passing · `cargo clippy
-> --all-targets` warning-clean · pyo3 0.29 / `Cargo.lock` committed (last
+> --all-targets` warning-clean · pyo3 0.29 / `Cargo.lock` committed · release CI
+> builds self-contained `cp311-abi3` wheels across an 8-target matrix
+> (manylinux2014 + musllinux × x86_64/aarch64/armv7, macOS Intel/ARM, Windows;
+> vendored static OpenSSL so wheels carry no dynamic libssl/libcrypto) (last
 > verified 2026-06-24). The open items below are *not* regressions in that
 > suite — they are gaps the suite does not yet cover.
 
@@ -171,7 +174,7 @@ Measured ceilings from `docs/BENCHMARKS.md`:
 
 - [ ] Real DPDK/AF_XDP datapath (replace `dpdk_engine` sim) for deterministic <50 µs p99 against a real upstream.
 - [ ] NUMA-aware memory allocation (`libnuma`); interrupt-coalescing / NIC-offload tuning guide.
-- [ ] Embedded build profile: compile-time feature flags to strip Prometheus/OTel/Vault/compliance exporter; pre-built `aarch64`/`armv7`/`riscv64` musl wheels; firmware-signing chain for the Rust module.
+- [ ] Embedded build profile: compile-time feature flags to strip Prometheus/OTel/Vault/compliance exporter; pre-built `aarch64`/`armv7`/`riscv64` musl wheels; firmware-signing chain for the Rust module. *(Partial: release CI now produces `aarch64` and `armv7` musllinux_1_2 wheels via the `PyO3/maturin-action` matrix in `release.yml`, statically vendoring OpenSSL so they need no target-arch system libs. Remaining: `riscv64` musl target, the compile-time `embedded`/`full` feature-strip wiring into the wheel build, and the firmware-signing chain.)*
 - [ ] Offline-first deterministic WAL merge for diverged edge nodes; IEC 62443 Zone/Conduit segmentation documentation.
 
 ### DX-Forensic · Legal Admissibility
