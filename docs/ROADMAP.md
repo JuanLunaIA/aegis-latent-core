@@ -29,7 +29,7 @@ block, or a benchmark that is not committed to `docs/BENCHMARKS.md`.
 > The goal is unchanged and explicit: make Aegis the control plane that every
 > regulated organization running AI is effectively required to deploy.
 
-> **Audit baseline:** 5,436 tests passing · 5 skipped · 95.18% coverage ·
+> **Audit baseline:** 5,451 tests passing · 5 skipped · 95.18% coverage ·
 > `ruff`/`mypy`/`bandit` clean · `cargo test` 26 passing · `cargo clippy
 > --all-targets` warning-clean · pyo3 0.29 / `Cargo.lock` committed · release CI
 > builds self-contained `cp311-abi3` wheels across an 8-target matrix
