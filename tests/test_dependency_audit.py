@@ -120,10 +120,10 @@ class TestDependencyAuditorScan:
             findings = DependencyAuditor().scan()
         assert findings == []
 
-    def test_pip_audit_not_found_raises(self):
-        with patch("subprocess.run", side_effect=FileNotFoundError):
+    def test_pip_audit_not_found_raises_on_init(self):
+        with patch("shutil.which", return_value=None):
             with pytest.raises(DependencyAuditorError, match="pip-audit not found"):
-                DependencyAuditor().scan()
+                DependencyAuditor()
 
     def test_timeout_raises(self):
         with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("pip-audit", 120)):

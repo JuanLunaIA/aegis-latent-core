@@ -79,7 +79,7 @@ production and is excluded from compliance evidence.
 
 ### P0.3 Fake datapath / network enforcement (LIVE-PATH false assurance)
 
-- [ ] `aegis/core/xdp_dynamic_segmentation.py` is imported by the **live proxy** (`aegis/proxy/app.py:431`). Its `block_ip_immediately()` only adds to an in-memory Python `set` and logs `# Simulation: eBPF_map_update(...DROP)` — **no packet is ever dropped**, and the in-memory blacklist is never consulted on subsequent requests. Either implement a real XDP/eBPF map update (or nftables/ipset fallback) **and** enforce the blacklist on ingress, or rename the control so operators do not believe IPs are kernel-blackholed.
+- [x] `aegis/core/xdp_dynamic_segmentation.py` — replaced eBPF simulation with real nftables/iptables enforcement. `_FirewallBackend` auto-detects nft → iptables → NONE and issues real kernel `nft add/delete element` or `iptables -I/-D INPUT` commands. `block_ip_immediately()` returns `True` only when a kernel rule is installed; application-layer-only path logs an explicit "APPLICATION-LAYER ONLY" advisory. 27 tests cover backend detection, idempotency, kernel failure fallback, and zone blackhole/active transitions (`tests/test_xdp_dynamic_segmentation.py`).
 - [ ] `aegis/core/dpdk_engine.py` — simulated DPDK fast path; wire to a real DPDK/AF_XDP datapath or quarantine (see DX-Industrial).
 - [ ] `aegis/core/ebpf_monitor.py` — verify the eBPF monitor performs real `bpf()` syscalls or mark advisory.
 
@@ -199,21 +199,21 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 
 | Track | Open items | Priority |
 |---|---|---|
-| P0 — Trust integrity (de-sim / real crypto) | 18 | Critical |
+| P0 — Trust integrity (de-sim / real crypto) | 17 | Critical |
 | P1 — Supply chain | 6 | High |
 | P1 — Live-path correctness | 6 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **62** | — |
+| **Total open** | **61** | — |
 
-> **Progress 2026-06-24 (run 2):** P0.2 partial — `cfi_manager.py` and
-> `mte_guard.py` de-simulated. `cfi_manager.py` now parses real ELF binaries via
-> `pyelftools` (3 detection tiers: LLVM CFI, `.eh_frame`, Intel CET) with
-> subprocess fallback; 18 tests prove honest results. `mte_guard.py` now reads
-> `/proc/cpuinfo`, `AT_HWCAP2` auxv, and calls `prctl(PR_SET_TAGGED_ADDR_CTRL)`;
-> 14 tests cover hardware-absent path and monkeypatched hardware paths.
-> `KNOWN_SIMULATION_DEBT` shrunk from 23 → 21; debt count assertion updated.
-> Suite: 4,640 passed, 5 skipped, 94.81% coverage.
+> **Progress 2026-06-24 (run 3):** P0.3 complete — `xdp_dynamic_segmentation.py`
+> de-simulated. `_FirewallBackend` auto-detects nft → iptables → NONE and issues
+> real kernel rules; `block_ip_immediately()` returns True only when a kernel rule
+> is installed; application-layer-only path logs an explicit advisory. P0.4
+> complete — `dependency_audit.py` Bandit fix: `shutil.which("pip-audit")` resolved
+> in `__init__`, raises `DependencyAuditorError` if absent (eliminates B607
+> partial-path risk). `KNOWN_SIMULATION_DEBT` shrunk from 21 → 20 → 19; debt count
+> updated to `== 19`.
 >
 > **Progress 2026-06-24 (run 1):** P0.1 fake-crypto cluster **complete**. (1)
 > `pqc.py` + `pqc_provider.py` deleted → real `PQCSigner` (ML-DSA-65 / FIPS 204)

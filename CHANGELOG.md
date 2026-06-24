@@ -38,9 +38,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now delegates to both. 24 tests including tamper detection and real certifi hash
   match (`tests/test_dependency_audit.py`). Also registered `slow` pytest mark.
 
+- **De-simulated `XDPDynamicSegmenter`** (ROADMAP P0.3). `aegis/core/xdp_dynamic_segmentation.py`
+  previously added IPs only to an in-memory Python `set` and logged
+  `# Simulation: eBPF_map_update(...DROP)` — no packet was ever dropped at the
+  kernel level. Replaced with `_FirewallBackend` that auto-detects nftables (`nft`)
+  → iptables → NONE and issues real kernel rules (`nft add/delete element` or
+  `iptables -I/-D INPUT -s <ip> -j DROP`). `block_ip_immediately()` returns `True`
+  only when a kernel rule is installed; the application-layer-only fallback path logs
+  an explicit "APPLICATION-LAYER ONLY" advisory. 27 tests cover backend detection,
+  idempotency, kernel failure fallback, and zone blackhole/active transitions
+  (`tests/test_xdp_dynamic_segmentation.py`).
+
+- **Hardened `DependencyAuditor` against B607 partial-path subprocess start**.
+  `pip-audit` is now resolved via `shutil.which()` in `__init__`; a `DependencyAuditorError`
+  is raised immediately if the tool is absent — no partial-path fallback. `subprocess.run`
+  annotated `# noqa: S603`. Test updated to patch `shutil.which`.
+
 - `tests/test_no_simulation_markers.py` — `KNOWN_SIMULATION_DEBT` shrunk from
-  23 → 20 as `cfi_manager.py`, `mte_guard.py`, and `dependency_audit.py` are
-  removed from the debt list. Debt-count assertion updated to `== 20`.
+  23 → 20 → 19 as `cfi_manager.py`, `mte_guard.py`, `dependency_audit.py`, and
+  `xdp_dynamic_segmentation.py` are removed from the debt list. Debt-count
+  assertion updated to `== 19`.
 
 - **Removed two fake post-quantum modules that manufactured false cryptographic
   assurance** (ROADMAP P0.1). `aegis/core/pqc.py` advertised "ML-DSA (Dilithium)"

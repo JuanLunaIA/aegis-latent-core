@@ -59,7 +59,6 @@ KNOWN_SIMULATION_DEBT: frozenset[str] = frozenset(
         "core/tpm.py",
         "core/transparency_log.py",
         "core/tsa_provider.py",
-        "core/xdp_dynamic_segmentation.py",
     }
 )
 
@@ -96,4 +95,4 @@ def test_allowlist_is_not_stale():
 
 def test_debt_count_never_increases():
     """The simulation-debt count is a monotonically non-increasing budget."""
-    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 20
+    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 19

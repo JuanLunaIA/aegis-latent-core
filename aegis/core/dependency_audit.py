@@ -80,7 +80,14 @@ class DependencyAuditor:
     ) -> None:
         self._requirements_file = requirements_file
         self._timeout = timeout
-        self._pip_audit = shutil.which("pip-audit") or "pip-audit"
+        # Resolve to an absolute path from PATH so subprocess never executes a
+        # relative/partial name (mitigates B607 partial-path subprocess start).
+        resolved = shutil.which("pip-audit")
+        if resolved is None:
+            raise DependencyAuditorError(
+                "pip-audit not found in PATH. Install it with: pip install pip-audit"
+            )
+        self._pip_audit = resolved
 
     def scan(self) -> list[VulnerabilityFinding]:
         """Run pip-audit and return all findings.
@@ -102,6 +109,8 @@ class DependencyAuditor:
             cmd += ["-r", self._requirements_file]
 
         try:
+            # self._pip_audit is an absolute path resolved by shutil.which in __init__;
+            # cmd is a fixed list with no user-controlled elements (B603/B607 safe).
             result = subprocess.run(  # noqa: S603
                 cmd,
                 capture_output=True,
@@ -110,8 +119,7 @@ class DependencyAuditor:
             )
         except FileNotFoundError as exc:
             raise DependencyAuditorError(
-                f"pip-audit not found at {self._pip_audit!r}. "
-                "Install it with: pip install pip-audit"
+                f"pip-audit executable missing: {self._pip_audit!r}"
             ) from exc
         except subprocess.TimeoutExpired as exc:
             raise DependencyAuditorError(f"pip-audit timed out after {self._timeout}s") from exc
