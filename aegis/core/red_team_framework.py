@@ -100,7 +100,7 @@ class RedTeamFramework:
 
         async with httpx.AsyncClient(timeout=10.0) as client:
             for _ in range(iterations):
-                scenario = random.choice(self.scenarios)
+                scenario = random.choice(self.scenarios)  # nosec B311 — not cryptographic
                 payload = scenario.payload_generator()
 
                 try:

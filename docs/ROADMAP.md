@@ -206,6 +206,14 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
 | **Total open** | **56** | — |
 
+> **Progress 2026-06-24 (run 6):** P0.1 — `forensic_sealing.py` de-simulated
+> (replaced `# Simulation: Recov_PK = Hash(ots_sig + data)` with real XMSS-style
+> OTS: `XMSSSignature` now carries `ots_key: bytes`; `seal_log_entry()` builds
+> the Merkle authentication path from `self._tree` via `sibling_idx = current_idx ^ 1`;
+> `verify_seal()` checks HMAC then recomputes Merkle root from the revealed
+> OTS key + auth_path; 18 tests in `tests/test_forensic_sealing.py`).
+> `KNOWN_SIMULATION_DEBT` shrunk 10 → 9; count asserted `== 9`.
+>
 > **Progress 2026-06-24 (run 5):** P0.4 — `red_team_framework.py` de-simulated
 > (`execute_campaign` now uses real `httpx.AsyncClient` POST requests; network
 > errors recorded honestly; 9 async tests). `state_snapshotter.py` de-simulated

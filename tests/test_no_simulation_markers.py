@@ -45,7 +45,6 @@ KNOWN_SIMULATION_DEBT: frozenset[str] = frozenset(
         "core/dpdk_engine.py",
         "core/ebpf_monitor.py",
         "core/enclave_provider.py",
-        "core/forensic_sealing.py",
         "core/fuzzing_harness.py",
         "core/tee_manager.py",
         "core/tpm.py",
@@ -86,4 +85,4 @@ def test_allowlist_is_not_stale():
 
 def test_debt_count_never_increases():
     """The simulation-debt count is a monotonically non-increasing budget."""
-    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 10
+    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 9
