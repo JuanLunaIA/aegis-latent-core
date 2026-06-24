@@ -206,6 +206,15 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
 | **Total open** | **56** | — |
 
+> **Progress 2026-06-24 (run 8):** P0.4 — `transparency_log.py` de-simulated
+> (removed "Simulation of a public ledger" comment; added real JSONL file
+> persistence: constructor accepts `storage_path`, appends entries to a WAL file
+> opened in append mode, replays existing entries on startup; tamper detection
+> via hash-chain still fully real; `get_merkle_root` docstring updated; 24 tests
+> covering chain construction, presence checks, integrity verification, file
+> write+replay, append-not-overwrite, and malformed-line skip).
+> `KNOWN_SIMULATION_DEBT` shrunk 8 → 7; count asserted `== 7`.
+>
 > **Progress 2026-06-24 (run 7):** P0.4 — `fuzzing_harness.py` de-simulated
 > (replaced `# Simulation of fuzzing execution` / `Simulation: 95% chance of no crash`
 > random block with real `cargo fuzz run <target> -- -max_total_time=<duration>`
