@@ -92,7 +92,7 @@ jobs:
           done
           cat *.sha256
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: python-dist
           path: dist/
@@ -155,7 +155,7 @@ jobs:
         shell: bash
         run: ls -lh aegis_rust_v2/dist/*.whl
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rust-dist-${{ matrix.platform.target }}
           path: aegis_rust_v2/dist/
