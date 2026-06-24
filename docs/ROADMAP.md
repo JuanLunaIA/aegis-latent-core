@@ -120,7 +120,7 @@ environment is not).
 ## P1 — Live-path correctness & half-finished work
 
 - [x] `aegis/providers/anthropic_provider.py` — replaced the "Tool use partial JSON — forward as content for now" hack (which leaked tool-call JSON into message `content` and made `tool_calls` unreconstructable) with correct streaming reassembly: a `content_block_start` of type `tool_use` now opens an OpenAI `delta.tool_calls` entry (id + function name, empty arguments) and each `input_json_delta` is appended as a `function.arguments` fragment on the matching tool-call index (Anthropic content-block index → OpenAI tool_call index map). `stop_reason="tool_use"` already mapped to `finish_reason="tool_calls"`. 4 new/updated streaming tests cover single-call reassembly, multi-call distinct indices, and that no tool JSON leaks into `content` (`tests/test_provider_contracts.py`).
-- [ ] `aegis/core/operator_seal.py:423` — "public key is required — this stub uses re-sign comparison"; implement real asymmetric verification.
+- [x] `aegis/core/operator_seal.py` — implemented **real asymmetric verification** for HSM attestations. The previous `hsm-pkcs11` path was doubly broken: (1) `_sign` called `self._hsm.sign(data).hex()` on the backend's 3-tuple return, so it **always threw and silently fell back to HMAC** (HSM signing never actually worked); (2) verify did a **re-sign-and-compare**, which can never validate a randomized RSA-PSS / ECDSA signature. Fixed by: storing the precise scheme (`pkcs11-rsa-pss-sha256` / `pkcs11-ecdsa-sha256`) and the exported `SubjectPublicKeyInfo` DER public key on the attestation (new `public_key` field), then verifying with `cryptography` against the published key — **no HSM needed at verify time**. RSA-PSS (SHA-256/MGF1/salt=32) and ECDSA (raw `r‖s` → DER reconstruction) are both handled; the legacy generic `hsm-pkcs11` label is now rejected rather than re-sign-compared. The HSM RSA public-key exporter (`hsm.py`) now rebuilds canonical SPKI DER from the token's modulus/exponent via `cryptography` (loadable by `load_der_public_key`). 14 new/updated tests sign with real RSA & EC keys (in PKCS#11 wire formats) and prove round-trip verify, tamper/wrong-key/missing-key rejection, HMAC fallback, and SPKI export correctness (`tests/test_operator_seal.py`, `tests/test_hsm.py`). Verification uses only `cryptography` (a hard dependency); HMAC and asymmetric signatures both satisfy the signing-policy constraint.
 - [ ] `aegis/core/gossip_wal_sync.py` — documented "stub" (in-process, no real network); implement real SWIM gossip transport or fold into the Raft path so HA claims are end-to-end testable.
 - [ ] Reconcile duplicate/parallel modules so there is exactly one implementation per concern: PQC (`pqc.py` vs `pqc_provider.py` vs Rust vs Vault), sandbox (`sandbox.py` vs `sandbox_l1.py` vs `sandbox_l2.py` vs `seccomp_guard.py`), HSM (`hsm.py` real vs the preserved stub `HSMManager`).
 - [x] Remove committed generated artifacts from the tree (`tools/forensic/report.json`, `tools/visualizer/summary.json` — both referenced stale `pqc_provider.py`/version data). Untracked via `git rm --cached` and added to `.gitignore`; they are regenerated on demand by `tools/forensic/forensic_checks.py` and `tools/visualizer/generate_summary.py` (no test or runtime path depends on the committed copies).
@@ -201,10 +201,10 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 |---|---|---|
 | P0 — Trust integrity (de-sim / real crypto) | 1 | Critical |
 | P1 — Supply chain | 4 | High |
-| P1 — Live-path correctness | 3 | High |
+| P1 — Live-path correctness | 2 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 26 | Strategic |
-| **Total open** | **39** | — |
+| **Total open** | **38** | — |
 
 > **Only open P0 item:** `zk_proof.py` — replace the honest SHA-256 stub
 > (`is_stub == True`) with a real proving system (Groth16/PLONK/STARK). This is a

@@ -249,9 +249,16 @@ class HSMSigningBackend:
         return sig_bytes, pub_hex, "pkcs11-ecdsa-sha256"
 
     def _export_rsa_public_key(self, session: Any, _pkcs11: Any) -> str:
-        """Return hex-encoded SPKI DER of the RSA public key, or '' on failure."""
+        """Return hex-encoded ``SubjectPublicKeyInfo`` DER of the RSA public key.
+
+        The key is rebuilt from the token's ``CKA_MODULUS`` / ``CKA_PUBLIC_EXPONENT``
+        attributes via ``cryptography`` so the output is canonical SPKI DER
+        (directly loadable by ``cryptography.load_der_public_key`` on the verify
+        side). Returns ``''`` on any failure.
+        """
         try:
-            import pkcs11.util.rsa as _rsa_util  # noqa: PLC0415
+            from cryptography.hazmat.primitives import serialization  # noqa: PLC0415
+            from cryptography.hazmat.primitives.asymmetric import rsa  # noqa: PLC0415
 
             pub_keys = list(
                 session.get_objects(
@@ -263,7 +270,14 @@ class HSMSigningBackend:
             )
             if not pub_keys:
                 return ""
-            der = _rsa_util.encode_rsa_public_key(pub_keys[0])
+            pub = pub_keys[0]
+            n = int.from_bytes(bytes(pub[_pkcs11.Attribute.MODULUS]), "big")
+            e = int.from_bytes(bytes(pub[_pkcs11.Attribute.PUBLIC_EXPONENT]), "big")
+            key = rsa.RSAPublicNumbers(e, n).public_key()
+            der = key.public_bytes(
+                serialization.Encoding.DER,
+                serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
             return str(der.hex())
         except Exception:
             return ""
