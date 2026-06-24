@@ -161,35 +161,43 @@ def _parse_property_array(props: bytes, report: CFIReport) -> None:
 
 
 def _audit_via_subprocess(binary_path: str, report: CFIReport) -> None:
-    """Populate *report* using readelf/nm subprocess fallback."""
+    """Populate *report* using readelf/nm subprocess fallback.
+
+    ``binary_path`` must be a validated, existing filesystem path (callers
+    check ``Path(binary_path).is_file()`` before reaching this function).
+    All subprocess calls use a list form — never ``shell=True`` — so the
+    path cannot be used for shell injection.
+    """
+    # Resolve tool paths from PATH; never accept a user-supplied tool name.
     readelf = shutil.which("readelf") or "readelf"
     nm_cmd = shutil.which("nm") or "nm"
 
     # Tier 1 — LLVM CFI symbols via nm -D
+    # binary_path is a caller-validated existing file path (not user input).
     try:
-        res = subprocess.run(
+        res = subprocess.run(  # noqa: S603
             [nm_cmd, "-D", binary_path], capture_output=True, text=True, timeout=10
         )
         for sym in _LLVM_CFI_SYMBOLS:
             if sym in res.stdout:
                 report.llvm_cfi.append(sym)
-    except Exception:
-        pass
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("nm fallback (tier 1) failed for %s: %s", binary_path, exc)
 
     # Tier 2 — EH frame sections via readelf -S
     try:
-        res = subprocess.run(
+        res = subprocess.run(  # noqa: S603
             [readelf, "-S", binary_path], capture_output=True, text=True, timeout=10
         )
         for sec in (".eh_frame_hdr", ".eh_frame"):
             if sec in res.stdout:
                 report.eh_frame.append(sec)
-    except Exception:
-        pass
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("readelf -S fallback (tier 2) failed for %s: %s", binary_path, exc)
 
     # Tier 3 — Intel CET via readelf --notes
     try:
-        res = subprocess.run(
+        res = subprocess.run(  # noqa: S603
             [readelf, "--notes", binary_path], capture_output=True, text=True, timeout=10
         )
         out = res.stdout
@@ -197,8 +205,8 @@ def _audit_via_subprocess(binary_path: str, report: CFIReport) -> None:
             report.intel_cet_ibt = True
         if "SHSTK" in out or "GNU_PROPERTY_X86_FEATURE_1_SHSTK" in out:
             report.intel_cet_shadow_stack = True
-    except Exception:
-        pass
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("readelf --notes fallback (tier 3) failed for %s: %s", binary_path, exc)
 
 
 class CFIManager:
