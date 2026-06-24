@@ -27,7 +27,7 @@ import ctypes
 import logging
 import os
 import shutil  # noqa: S404
-import subprocess  # noqa: S404
+import subprocess  # noqa: S404  # nosec B404
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -161,7 +161,7 @@ class PanicModeController:
     def _run_cmd(cmd: list[str]) -> bool:
         """Run a firewall command; return True on success."""
         try:
-            subprocess.run(  # noqa: S603
+            subprocess.run(  # noqa: S603  # nosec B603
                 cmd, capture_output=True, check=True, timeout=5
             )
             return True

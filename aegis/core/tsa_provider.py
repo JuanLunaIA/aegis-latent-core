@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import shutil
-import subprocess  # noqa: S404
+import subprocess  # noqa: S404  # nosec B404
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -62,7 +62,7 @@ class TSAProvider:
             tsq_path = Path(tmpdir) / "request.tsq"
             data_path.write_bytes(data)
 
-            subprocess.run(  # noqa: S603
+            subprocess.run(  # noqa: S603  # nosec B603
                 [
                     self._openssl,
                     "ts",
@@ -126,7 +126,7 @@ class TSAProvider:
             if ca_file:
                 cmd += ["-CAfile", ca_file]
 
-            result = subprocess.run(  # noqa: S603
+            result = subprocess.run(  # noqa: S603  # nosec B603
                 cmd,
                 capture_output=True,
                 check=False,

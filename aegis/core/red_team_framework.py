@@ -13,6 +13,8 @@ import random
 from dataclasses import dataclass
 from typing import Any
 
+import httpx
+
 logger = logging.getLogger(__name__)
 
 
@@ -87,33 +89,43 @@ class RedTeamFramework:
     async def execute_campaign(self, target_url: str, iterations: int = 100):
         """
         Runs a full red teaming campaign against the specified target.
+
+        Uses httpx.AsyncClient to issue real HTTP requests to ``target_url``.
+        Each iteration picks a scenario at random, POSTs its payload, and applies
+        the scenario's success_criteria to the observed response.  Network errors
+        are recorded as status_code=0 rather than silently discarded.
         """
         logger.info("Starting Red Team Campaign against %s...", target_url)
         results = []
 
-        for i in range(iterations):
-            scenario = random.choice(self.scenarios)
-            scenario.payload_generator()
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            for _ in range(iterations):
+                scenario = random.choice(self.scenarios)
+                payload = scenario.payload_generator()
 
-            # SIMULATION: Execute request to the proxy
-            # In reality, use httpx.AsyncClient
-            status_code = 200
-            alerts = []
+                try:
+                    resp = await client.post(
+                        target_url,
+                        json=payload,
+                        headers={"Content-Type": "application/json"},
+                    )
+                    status_code = resp.status_code
+                    try:
+                        body = resp.json()
+                    except Exception:  # noqa: BLE001
+                        body = {}
+                    alerts = body.get("alerts", [])
+                except httpx.HTTPError as exc:
+                    logger.warning("Request to %s failed: %s", target_url, exc)
+                    status_code = 0
+                    alerts = []
 
-            # Simulate security layer response
-            if scenario.category == "INJECTION":
-                status_code = 403  # WAF/Entropy should block it
-            elif scenario.category == "STRESS":
-                status_code = 429 if i > 50 else 200  # Rate limit should hit
-            elif scenario.category == "CORRUPTION":
-                alerts = ["KL_SPIKE"]
+                response = {"status_code": status_code, "alerts": alerts}
+                success = scenario.success_criteria(response)
+                results.append(
+                    {"scenario": scenario.name, "success": success, "response": response}
+                )
 
-            response = {"status_code": status_code, "alerts": alerts}
-            success = scenario.success_criteria(response)
-
-            results.append({"scenario": scenario.name, "success": success, "response": response})
-
-        # Calculate overall resilience
         success_rate = sum(1 for r in results if r["success"]) / iterations
         logger.info("Campaign Complete. Resilience Score: %.2f%%", success_rate * 100)
         return results

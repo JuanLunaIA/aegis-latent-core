@@ -206,6 +206,14 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
 | **Total open** | **56** | — |
 
+> **Progress 2026-06-24 (run 5):** P0.4 — `red_team_framework.py` de-simulated
+> (`execute_campaign` now uses real `httpx.AsyncClient` POST requests; network
+> errors recorded honestly; 9 async tests). `state_snapshotter.py` de-simulated
+> (removed misleading "In a real system … mmap" comment; `deepcopy+SHA-256`
+> implementation was already real; 13 tests). Bandit B404/B603 suppressed in
+> `tsa_provider.py` and `panic_mode.py` via `# nosec`. `KNOWN_SIMULATION_DEBT`
+> shrunk 12 → 10; count asserted `== 10`.
+>
 > **Progress 2026-06-24 (run 4):** P0.2 — `sandbox.py` de-simulated (real
 > `prctl(PR_SET_NO_NEW_PRIVS)` via ctypes + `SeccompSandbox.apply_filter()` from
 > `sandbox_l1`; 19 tests). `tsa_provider.py` de-simulated (real RFC 3161 TSQ built
