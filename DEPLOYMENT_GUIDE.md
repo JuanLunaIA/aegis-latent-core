@@ -102,7 +102,7 @@ docker run -p 8080:8080 \
   -e AEGIS_SIGNING_KEY=$SIGNING_KEY \
   -e AEGIS_WAL_PATH=/var/lib/aegis/aegis.wal.jsonl \
   --memory=1g --cpus=2 \
-  aegis-latent-core:2.4.0
+  aegis-latent-core:2.4.1
 ```
 
 Always set `--memory`/`--cpus` (requests+limits in K8s). The chain deque is

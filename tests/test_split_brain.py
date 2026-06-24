@@ -17,7 +17,6 @@ from aegis.core.split_brain import (
     StaleLeaseError,
 )
 
-
 # ── FencingToken ──────────────────────────────────────────────────────────────
 
 

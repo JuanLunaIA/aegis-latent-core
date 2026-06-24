@@ -6,16 +6,10 @@
 from __future__ import annotations
 
 import json
-import os
 import re
-import sys
-import tempfile
-
-import pytest
 
 from tools.qualification.iq_checks import IQCheck, IQProtocol, IQReport
 from tools.qualification.oq_checks import OQCheck, OQProtocol, OQReport
-
 
 # ── IQ: report structure ──────────────────────────────────────────────────────
 
@@ -114,9 +108,8 @@ def test_iq_python_version_check_id():
 
 def test_iq_python_version_passes_on_311():
     chk = IQProtocol().check_python_version()
-    # The test environment must be >= 3.11
-    if sys.version_info >= (3, 11):
-        assert chk.passed
+    # requires-python is >=3.11, so the IQ-001 check must always pass here.
+    assert chk.passed
 
 
 def test_iq_python_version_category():

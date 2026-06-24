@@ -172,7 +172,7 @@ class ForensicReportBuilder:
         operator_identity: str,
         acquisition_reason: str,
         classification: ReportClassification = ReportClassification.UNCLASSIFIED,
-        tool_version: str = "2.4.0",
+        tool_version: str = "2.4.1",
     ) -> None:
         self._operator_identity = operator_identity
         self._acquisition_reason = acquisition_reason

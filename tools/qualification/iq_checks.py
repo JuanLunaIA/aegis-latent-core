@@ -15,7 +15,6 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
-
 # ── Version constant ──────────────────────────────────────────────────────────
 
 _TOOL_VERSION = "1.0.0"
@@ -28,13 +27,13 @@ _TOOL_VERSION = "1.0.0"
 class IQCheck:
     """Result of a single IQ verification step."""
 
-    check_id: str       # e.g. "IQ-001"
-    category: str       # "python_version", "dependencies", "file_permissions", "config"
+    check_id: str  # e.g. "IQ-001"
+    category: str  # "python_version", "dependencies", "file_permissions", "config"
     description: str
     expected: str
     actual: str
     passed: bool
-    evidence: str       # Human-readable evidence string
+    evidence: str  # Human-readable evidence string
 
 
 @dataclass
@@ -42,7 +41,7 @@ class IQReport:
     """Aggregate report produced by IQProtocol.run_all()."""
 
     report_id: str
-    generated_at: str   # ISO 8601 UTC
+    generated_at: str  # ISO 8601 UTC
     tool_version: str
     checks: list[IQCheck] = field(default_factory=list)
     passed: bool = False  # True only when ALL checks pass
@@ -176,9 +175,8 @@ class IQProtocol:
                 missing.append(pkg)
         passed = len(missing) == 0
         actual = f"found={found}; missing={missing}" if missing else f"all found: {found}"
-        evidence = (
-            f"Imported {len(found)}/{len(required)} packages. "
-            + (f"Missing: {', '.join(missing)}" if missing else "All present.")
+        evidence = f"Imported {len(found)}/{len(required)} packages. " + (
+            f"Missing: {', '.join(missing)}" if missing else "All present."
         )
         return IQCheck(
             check_id="IQ-003",
@@ -237,7 +235,8 @@ class IQProtocol:
 
     def check_wal_dir_permissions(self) -> IQCheck:
         """IQ-005: WAL directory writable; temp files created at 0o600."""
-        wal_dir = os.environ.get("AEGIS_WAL_DIR", "/tmp/aegis_wal_iq_check")
+        default_wal_dir = os.path.join(tempfile.gettempdir(), "aegis_wal_iq_check")
+        wal_dir = os.environ.get("AEGIS_WAL_DIR", default_wal_dir)
         passed = False
         actual = "untested"
         evidence = ""

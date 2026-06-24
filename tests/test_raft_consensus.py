@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-import hashlib
-
 import pytest
 
 from aegis.core.raft_consensus import (
@@ -16,11 +14,9 @@ from aegis.core.raft_consensus import (
     RaftLogEntry,
     RaftNode,
     RaftRole,
-    RaftState,
     VoteRequest,
     VoteResponse,
 )
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -452,8 +448,16 @@ def test_raft_state_last_log_term_empty():
 def test_raft_state_to_dict_has_required_keys():
     node = make_node()
     d = node.state.to_dict()
-    for key in ("node_id", "current_term", "voted_for", "log", "commit_index",
-                "last_applied", "role", "leader_id"):
+    for key in (
+        "node_id",
+        "current_term",
+        "voted_for",
+        "log",
+        "commit_index",
+        "last_applied",
+        "role",
+        "leader_id",
+    ):
         assert key in d
 
 

@@ -37,11 +37,7 @@ LICENSE_MARKER = "Licensed under the GNU Affero General Public License v3"
 
 def _block(prefix: str) -> str:
     """Render the full copyright + license block for a given comment prefix."""
-    return (
-        f"{prefix} {COPYRIGHT_TEXT}\n"
-        f"{prefix} {LICENSE_LINE_1}\n"
-        f"{prefix} {LICENSE_LINE_2}\n"
-    )
+    return f"{prefix} {COPYRIGHT_TEXT}\n{prefix} {LICENSE_LINE_1}\n{prefix} {LICENSE_LINE_2}\n"
 
 
 def _copyright_line(prefix: str) -> str:
@@ -112,9 +108,7 @@ def _insert_after_prefix_lines(text: str, block: str, prefixes: tuple[str, ...])
     lines = text.splitlines(keepends=True)
     idx = 0
     if lines and lines[0].startswith(prefixes):
-        while idx < len(lines) and (
-            lines[idx].startswith(prefixes) or lines[idx].strip() == ""
-        ):
+        while idx < len(lines) and (lines[idx].startswith(prefixes) or lines[idx].strip() == ""):
             idx += 1
     return "".join(lines[:idx]) + block + "".join(lines[idx:])
 
