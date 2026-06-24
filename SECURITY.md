@@ -29,6 +29,24 @@ Use [GitHub Security Advisories](https://github.com/JuanLunaIA/aegis-latent-core
 
 We follow coordinated disclosure. Reports may be credited in the changelog unless the reporter requests anonymity.
 
+### Dependency Vulnerability SLA
+
+Dependency advisories are surfaced automatically and continuously:
+
+- **Dependabot** (`.github/dependabot.yml`) opens update PRs for every ecosystem in the tree — Python (`pip`), Rust (`cargo`), GitHub Actions, and the container base image. Dependabot raises **security** update PRs immediately, independent of the weekly routine-bump schedule.
+- **CI gates** fail the build on any known advisory: `pip-audit` against both the pinned `requirements.txt` and the resolved/installed environment, `osv-scanner` over `requirements.txt` + `Cargo.lock`, and `cargo-audit` for Rust crates.
+
+Remediation targets, measured from advisory publication (or Dependabot PR open, whichever is first):
+
+| Severity              | Triage   | Fix merged to `main`        |
+| :-------------------- | :------- | :-------------------------- |
+| CRITICAL              | 24 hours | 72 hours                    |
+| HIGH                  | 48 hours | 7 days                      |
+| MEDIUM                | 5 days   | 30 days                     |
+| LOW / informational   | best-effort | next routine bump cycle  |
+
+A Dependabot security PR for a HIGH/CRITICAL advisory is reviewed, its CI run (including the audit gates above) confirmed green, and merged within the window. When a fix is not yet available upstream, the advisory is documented with a temporary, justified `--ignore`/`--ignore-vuln` entry and tracked until a fixed release exists.
+
 ---
 
 ## Deployment Security Checklist

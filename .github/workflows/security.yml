@@ -152,17 +152,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run OSV-Scanner over project lockfiles
-        # Scans the committed requirements.txt (Python) and Cargo.lock (Rust)
-        # against the OSV database. Report-only: findings surface as SARIF in
-        # the Security tab but do not block the PR — the gating audits are the
-        # pip-audit job above (Python) and cargo-audit below (Rust).
+      - name: Run OSV-Scanner over Python lockfile
+        # Scans the committed requirements.txt against the OSV database.
+        # (Rust crates are covered by the dedicated cargo-audit job below;
+        # Cargo.lock is not committed yet — see .gitignore / ROADMAP.)
+        # Report-only: findings surface as SARIF in the Security tab but do not
+        # block the PR — the gating Python audit is the pip-audit job above.
         uses: google/osv-scanner-action/osv-scanner-action@v2.0.2
         continue-on-error: true
         with:
           scan-args: |-
             --lockfile=requirements.txt
-            --lockfile=aegis_rust_v2/Cargo.lock
             --format=sarif
             --output=osv-results.sarif
 
