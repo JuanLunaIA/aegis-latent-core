@@ -125,10 +125,11 @@ and what it does when the dependency is missing.
 | Dependency CVE audit | `dependency_audit` | `pip-audit` | raises (no fake clean result) |
 | Reproducible-build verify | `build_reproducibility` | `cargo` | raises (no fake match) |
 | Transparency log | `transparency_log` | stdlib (JSONL) | always `REAL` |
+| Public root anchoring | `blockchain_anchor` | configured anchor backend (RFC3161/OTS) | `publish_root` fails closed — never fabricates a tx/proof |
 
-> Items still tracked as roadmap stubs (`zk_proof`, `blockchain_anchor`,
-> `state_snapshotter`) are documented as **not yet implemented** in
-> `docs/ROADMAP.md` and do not claim to provide their target guarantee.
+> The `zk_proof` audit-inclusion proof is still an honest stub (it sets
+> `is_stub == True` and does not claim ZK soundness); integrating a real proving
+> system is tracked in `docs/ROADMAP.md` (DX-Forensic).
 
 ---
 

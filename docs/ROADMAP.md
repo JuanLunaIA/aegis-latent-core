@@ -91,12 +91,12 @@ production and is excluded from compliance evidence.
 - [x] `aegis/core/build_reproducibility.py` — removed the `# Simulation:` / `# In a real system` markers; `create_hermetic_environment()` actually sets `SOURCE_DATE_EPOCH` in `os.environ` and runs `cargo clean`, and `build_and_hash()` runs `cargo build --release --locked`, reads the real output binary, computes its SHA-256, and captures `rustc --version` — raising `RuntimeError` when cargo is absent or the build fails. 15 tests cover env-set, cargo-absent/​build-failure raising, real hash computation, and the `verify_reproducibility` comparison (`tests/test_build_reproducibility.py`).
 - [x] `aegis/core/state_snapshotter.py` — **marked advisory** (the chosen ROADMAP option). The module was not simulated (it already does real `copy.deepcopy` isolation + SHA-256 integrity-tag + verified rollback), but its docstrings **overclaimed** "microsecond-level memory snapshots" and implied OS-level CoW/`mmap`. Corrected the module/class docstrings to describe the actual process-local deepcopy snapshot store, state explicitly that OS-level CoW/`mmap` and any sub-millisecond latency are **out of scope**, and added a test asserting the docstring no longer overclaims. True kernel-assisted CoW/`mmap` snapshotting remains future work (DX-Industrial).
 - [ ] `aegis/core/zk_proof.py` — currently emits `SHA-256(...)` as "proof bytes" (`is_stub == True`). Integrate a real proving system (Groth16/PLONK via `arkworks`/`halo2`, or STARK) for the audit-inclusion proofs Domain 4.2 advertises.
-- [ ] `aegis/core/blockchain_anchor.py` — roadmap stub; implement a real anchoring backend (RFC 3161 TSA already exists; add OpenTimestamps/Ethereum/Fabric anchoring as the durable public proof).
+- [x] `aegis/core/blockchain_anchor.py` — **de-simulated false assurance.** The old module fabricated a fake `tx_hash` (`SHA-256(root‖time)`), a fake `block_number`, and a fake explorer `verification_url`, wrote them to a hardcoded `/tmp` file, then logged "Root successfully anchored in Public Blockchain" — manufacturing blockchain proofs that never existed (it had slipped the ratchet regex via "In a production… system" / "mock-API that simulates" phrasing). Rewrote it as a **pluggable, fail-closed** anchor: `publish_root` raises `AnchorUnavailableError` when no backend is configured (never fabricates), and a real `RFC3161AnchorBackend` anchors to an RFC 3161 Time-Stamping Authority (external, third-party-verifiable) via the existing `RFC3161Timestamper`. Its consumer `aegis/core/anchoring.py` was likewise rewritten (removed the "Simplified for simulation" path) to write real WORM + attempt external anchoring and record honestly whether it succeeded. The simulation ratchet regex was strengthened to catch the slipped phrasings (`mock-API`, `mock-ledger`, `Simplified for simulation`). Added a `public_root_anchoring` probe to `/v1/attestation/capabilities`. 11 tests (`tests/test_blockchain_anchor.py`). Public-blockchain backends (OpenTimestamps/Ethereum) remain future work behind the same interface (DX-Forensic).
 
 ### P0.5 Quarantine + honesty infrastructure
 
 - [x] ~~Create `aegis/simulation/` package; move every still-simulated module there with an `AEGIS_ALLOW_SIMULATION` import guard~~ — **obviated**: the de-simulation effort drove `KNOWN_SIMULATION_DEBT` to **0**, so there are no simulated modules left to quarantine. The honesty guarantee is instead provided by (a) the regression ratchet (`tests/test_no_simulation_markers.py`, asserts count `== 0`) which fails CI if any sim is reintroduced, and (b) the live `GET /v1/attestation/capabilities` report whose `simulation_debt` must stay `0`. Building an empty quarantine package would add ceremony without assurance.
-- [x] Add a `GET /v1/attestation/capabilities` endpoint that reports, per control, whether it is `REAL`, `SIMULATED`, or `UNAVAILABLE` — so auditors can never mistake a sim for a real control. `aegis/core/attestation_capabilities.py` probes 13 controls (PQC/audit signing, seccomp, TPM, TEE, eBPF, DPDK, firewall segmentation, CFI, fuzzing, dependency audit, reproducible build, transparency log) with cheap side-effect-free checks (`shutil.which` / `os.path.exists` / `find_library`), returning a `simulation_debt` count that must stay `0`. Exposed via `aegis/proxy/attestation_api.py` (mounted at `/v1/attestation`, behind audit auth). 17 tests (`tests/test_attestation_capabilities.py`).
+- [x] Add a `GET /v1/attestation/capabilities` endpoint that reports, per control, whether it is `REAL`, `SIMULATED`, or `UNAVAILABLE` — so auditors can never mistake a sim for a real control. `aegis/core/attestation_capabilities.py` probes the security controls (PQC/audit signing, seccomp, TPM, TEE, eBPF, DPDK, firewall segmentation, CFI, fuzzing, dependency audit, reproducible build, transparency log, public anchoring) with cheap side-effect-free checks (`shutil.which` / `os.path.exists` / `find_library`), returning a `simulation_debt` count that must stay `0`. Exposed via `aegis/proxy/attestation_api.py` (mounted at `/v1/attestation`, behind audit auth). 17 tests (`tests/test_attestation_capabilities.py`).
 - [x] README/SECURITY.md: add a "Simulated vs. Real Controls" matrix; remove any capability claim backed only by a simulation module. `SECURITY.md` now carries a **Simulated vs. Real Controls** section documenting that Aegis ships zero simulated controls, the two enforcement mechanisms (ratchet + capabilities endpoint), and a per-control matrix of each control's dependency and fail-closed behaviour when that dependency is absent.
 
 ---
@@ -199,12 +199,17 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 
 | Track | Open items | Priority |
 |---|---|---|
-| P0 — Trust integrity (de-sim / real crypto) | 2 | Critical |
+| P0 — Trust integrity (de-sim / real crypto) | 1 | Critical |
 | P1 — Supply chain | 6 | High |
 | P1 — Live-path correctness | 6 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **46** | — |
+| **Total open** | **45** | — |
+
+> **Only open P0 item:** `zk_proof.py` — replace the honest SHA-256 stub
+> (`is_stub == True`) with a real proving system (Groth16/PLONK/STARK). This is a
+> large DX-Forensic effort requiring a new proving backend; it is **not** security
+> theater today (it declares itself a stub and claims no ZK soundness).
 
 > **P0.5 complete (2026-06-24, run 13):** with the capability matrix + `SECURITY.md`
 > "Simulated vs. Real Controls" section + the obviated quarantine package, all of P0.5
@@ -226,8 +231,8 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 > (deprecated pyo3 `*_bound` → canonical names; removed an unused import and a dead struct field);
 > `cargo test` 26 passing, warning-free. P0.5 — added the honest capability matrix:
 > `aegis/core/attestation_capabilities.py` + `GET /v1/attestation/capabilities` report each of
-> 13 controls as `REAL` / `UNAVAILABLE` / `SIMULATED` (the last must stay 0) so an auditor can
-> never mistake a hardware-absent or regressed control for a real one; 17 tests.
+> each security control as `REAL` / `UNAVAILABLE` / `SIMULATED` (the last must stay 0) so an
+> auditor can never mistake a hardware-absent or regressed control for a real one; 17 tests.
 >
 > **Progress 2026-06-24 (run 12):** P0.2/P0.3 — final four hardware-gated modules de-simulated; `KNOWN_SIMULATION_DEBT` shrunk 4 → 0 (all simulation debt eliminated). `ebpf_monitor.py`: removed `import random, time` and all random-event-generation blocks; `EBPFProbe.load()` now runs `shutil.which("bpftool")` + `subprocess.run(["bpftool", "prog", "list"])` to confirm real BPF kernel access; `poll_events()` returns `[]` without fabricating telemetry. `enclave_provider.py`: removed `simulated_sig = hashlib.sha256(data + b"ENCLAVE_SECRET_SALT").digest()` and fake `EnclaveAttestation`; `_enclave_device_available()` probes `/dev/sgx_enclave`, `/dev/isgx`, `/dev/sev`; honest `NotImplementedError` when hardware found but C API absent. `tee_manager.py`: removed hardcoded `measurement = "a8f7e6d5c4b3a2f1..."` fake; `_tee_device_available()` probes SGX/SEV/TDX devices; `verify_remote_attestation()` rejects empty measurements and non-genuine reports; honest `NotImplementedError` for quote generation. `dpdk_engine.py`: removed `import random` and fake packet generation; `setup_hugepages()` reads real sysfs nr_hugepages; `bind_interfaces()` gates on `shutil.which("dpdk-devbind")`; `poll_packets()` / `transmit_packet()` return empty/False with advisory logs. 37 new tests in `tests/test_hardware_modules.py` cover all four modules. Ratchet count asserted `== 0`.
 >

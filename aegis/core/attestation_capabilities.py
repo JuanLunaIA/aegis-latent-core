@@ -266,6 +266,28 @@ def _transparency_log() -> ControlCapability:
     )
 
 
+def _public_anchoring() -> ControlCapability:
+    try:
+        from aegis.core.blockchain_anchor import blockchain_provider
+
+        configured = blockchain_provider.is_available
+        backend = blockchain_provider.backend_name
+    except Exception:  # pragma: no cover - import failure path
+        configured = False
+        backend = "none"
+    return ControlCapability(
+        name="public_root_anchoring",
+        category="assurance-pipeline",
+        status="REAL" if configured else "UNAVAILABLE",
+        module="aegis.core.blockchain_anchor",
+        detail=(
+            f"anchoring backend configured: {backend}"
+            if configured
+            else "no anchoring backend configured; publish_root fails closed (no fabricated proof)"
+        ),
+    )
+
+
 # Order is stable for deterministic auditor-facing output.
 _PROBES = (
     _pqc_signing,
@@ -281,6 +303,7 @@ _PROBES = (
     _dependency_audit,
     _reproducible_build,
     _transparency_log,
+    _public_anchoring,
 )
 
 
