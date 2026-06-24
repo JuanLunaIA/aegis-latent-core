@@ -524,6 +524,17 @@ class AegisSettings(BaseSettings):
             "NLP model. Enable for HIPAA-regulated deployments."
         ),
     )
+    pci_scrub: bool = Field(
+        default=False,
+        description=(
+            "When True, apply real-time PCI-DSS v4.0 cardholder-data detection and masking "
+            "to request message content before forwarding to the upstream LLM, and to response "
+            "content before returning to the client. Detects PANs (Luhn + IIN gate), "
+            "CVV/CVC security codes (in context), and Track 1/2 magnetic-stripe data. "
+            "PANs are masked to last-4 per PCI-DSS §3.4; CVV and track data are fully redacted. "
+            "Enable for PCI-DSS-scoped deployments (payments, e-commerce, financial services)."
+        ),
+    )
     pii_redact_tenant_id: bool = Field(
         default=False,
         description=(

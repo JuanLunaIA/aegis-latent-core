@@ -152,3 +152,99 @@ class TestResultModel:
     def test_total_hits_sums(self):
         res = self.s.scan(f"{VISA16} {MC} CVV 321")
         assert res.total_hits == res.pan_count + res.cvv_count + res.track_count
+
+
+# ── Integration: proxy helper functions ──────────────────────────────────────
+
+
+class TestPCIProxyHelpers:
+    """Verify the _apply_pci_scrub_request/_response helpers wired into app.py."""
+
+    def _make_state(self, enabled: bool):
+        from aegis.core.pci_detector import PCIScrubber
+
+        class _FakeState:
+            _pci_scrubber = PCIScrubber() if enabled else None
+
+        return _FakeState()
+
+    def test_request_scrub_disabled_returns_same_object(self):
+        from aegis.proxy.app import _apply_pci_scrub_request
+
+        state = self._make_state(enabled=False)
+        body = {"messages": [{"role": "user", "content": f"card {VISA16}"}]}
+        result, scrubbed = _apply_pci_scrub_request(body, state)
+        assert result is body
+        assert scrubbed is False
+
+    def test_request_scrub_masks_pan(self):
+        from aegis.proxy.app import _apply_pci_scrub_request
+
+        state = self._make_state(enabled=True)
+        body = {"messages": [{"role": "user", "content": f"charge card {VISA16} now"}]}
+        result, scrubbed = _apply_pci_scrub_request(body, state)
+        assert scrubbed is True
+        assert VISA16 not in result["messages"][0]["content"]
+        assert "[PAN-****1111]" in result["messages"][0]["content"]
+        assert result is not body
+
+    def test_request_scrub_no_chd_returns_same_object(self):
+        from aegis.proxy.app import _apply_pci_scrub_request
+
+        state = self._make_state(enabled=True)
+        body = {"messages": [{"role": "user", "content": "Hello, what is the weather?"}]}
+        result, scrubbed = _apply_pci_scrub_request(body, state)
+        assert result is body
+        assert scrubbed is False
+
+    def test_request_scrub_empty_messages_passthrough(self):
+        from aegis.proxy.app import _apply_pci_scrub_request
+
+        state = self._make_state(enabled=True)
+        body = {"prompt": "no messages key here"}
+        result, scrubbed = _apply_pci_scrub_request(body, state)
+        assert result is body
+        assert scrubbed is False
+
+    def test_response_scrub_disabled_returns_same_object(self):
+        from aegis.proxy.app import _apply_pci_scrub_response
+
+        state = self._make_state(enabled=False)
+        resp = {"choices": [{"message": {"content": f"Your card {VISA16} is charged."}}]}
+        result = _apply_pci_scrub_response(resp, state)
+        assert result is resp
+
+    def test_response_scrub_masks_pan(self):
+        from aegis.proxy.app import _apply_pci_scrub_response
+
+        state = self._make_state(enabled=True)
+        resp = {"choices": [{"message": {"role": "assistant", "content": f"Card {MC} approved."}}]}
+        result = _apply_pci_scrub_response(resp, state)
+        assert MC not in result["choices"][0]["message"]["content"]
+        assert "[PAN-****4444]" in result["choices"][0]["message"]["content"]
+
+    def test_response_scrub_no_chd_passthrough(self):
+        from aegis.proxy.app import _apply_pci_scrub_response
+
+        state = self._make_state(enabled=True)
+        resp = {"choices": [{"message": {"content": "No card data here."}}]}
+        result = _apply_pci_scrub_response(resp, state)
+        assert result is resp
+
+    def test_response_scrub_cvv_redacted(self):
+        from aegis.proxy.app import _apply_pci_scrub_response
+
+        state = self._make_state(enabled=True)
+        resp = {"choices": [{"message": {"content": "CVV: 999 was provided."}}]}
+        result = _apply_pci_scrub_response(resp, state)
+        assert "999" not in result["choices"][0]["message"]["content"]
+        assert "[REDACTED:CVV]" in result["choices"][0]["message"]["content"]
+
+    def test_scrub_method_appended_when_pci_fires(self):
+        """When PCI scrubbing triggers, 'pci_pan_mask' is appended to scrub_method."""
+        from aegis.proxy.app import _apply_pci_scrub_request
+
+        state = self._make_state(enabled=True)
+        body = {"messages": [{"role": "user", "content": f"Amex {AMEX}"}]}
+        _, scrubbed = _apply_pci_scrub_request(body, state)
+        assert scrubbed is True

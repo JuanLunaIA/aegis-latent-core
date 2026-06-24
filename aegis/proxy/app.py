@@ -28,6 +28,7 @@ from aegis.core.circuit_breaker import CircuitOpenError
 from aegis.core.crypto_audit import CryptographicAuditLedger
 from aegis.core.hsm import HSMSigningBackend
 from aegis.core.normalization import canonical_normalize
+from aegis.core.pci_detector import PCIScrubber
 from aegis.core.phi_deidentifier import PHIDeidentifier
 from aegis.core.ratelimiter import create_rate_limiter
 from aegis.core.secrets import VaultManager
@@ -234,6 +235,8 @@ class _AppState:
     _entropy_segmenter: Any
     # PHI de-identification scrubber (None when phi_deidentify=False).
     _phi_scrubber: PHIDeidentifier | None
+    # PCI-DSS cardholder-data scrubber (None when pci_scrub=False).
+    _pci_scrubber: PCIScrubber | None
     # Multi-turn behavioral WAF session tracker (Domain 5.1).
     waf_session_tracker: WAFSessionTracker
 
@@ -352,6 +355,82 @@ def _apply_phi_scrub_response(resp_json: dict, state: _AppState) -> dict:
     return resp_json
 
 
+def _apply_pci_scrub_request(body: dict, state: _AppState) -> tuple[dict, bool]:
+    """Scrub PCI cardholder data from request message content when pci_scrub is enabled.
+
+    Returns ``(body, pci_scrubbed)``.  The original dict is not mutated; a shallow
+    copy is returned only when scrubbing actually fires.
+    """
+    scrubber = state._pci_scrubber
+    if scrubber is None:
+        return body, False
+    messages = body.get("messages")
+    if not messages:
+        return body, False
+    modified = False
+    new_messages = []
+    for msg in messages:
+        if isinstance(msg, dict) and isinstance(msg.get("content"), str):
+            result = scrubber.scan(msg["content"])
+            if result.chd_detected:
+                logger.debug(
+                    "PCI scrubbed from request (%d PAN, %d CVV, %d track): brands=%s",
+                    result.pan_count,
+                    result.cvv_count,
+                    result.track_count,
+                    [b.value for b in result.brands],
+                )
+                new_msg = dict(msg)
+                new_msg["content"] = result.text
+                new_messages.append(new_msg)
+                modified = True
+                continue
+        new_messages.append(msg)
+    if modified:
+        new_body = dict(body)
+        new_body["messages"] = new_messages
+        return new_body, True
+    return body, False
+
+
+def _apply_pci_scrub_response(resp_json: dict, state: _AppState) -> dict:
+    """Scrub PCI cardholder data from response choices[].message.content when pci_scrub is enabled.
+
+    Returns a (possibly modified) response dict.  The original is not mutated.
+    """
+    scrubber = state._pci_scrubber
+    if scrubber is None:
+        return resp_json
+    choices = resp_json.get("choices")
+    if not choices:
+        return resp_json
+    modified = False
+    new_choices = []
+    for choice in choices:
+        msg = choice.get("message") if isinstance(choice, dict) else None
+        if msg and isinstance(msg.get("content"), str):
+            result = scrubber.scan(msg["content"])
+            if result.chd_detected:
+                logger.debug(
+                    "PCI scrubbed from response (%d PAN, %d CVV, %d track)",
+                    result.pan_count,
+                    result.cvv_count,
+                    result.track_count,
+                )
+                new_choice = dict(choice)
+                new_choice["message"] = dict(msg)
+                new_choice["message"]["content"] = result.text
+                new_choices.append(new_choice)
+                modified = True
+                continue
+        new_choices.append(choice)
+    if modified:
+        new_resp = dict(resp_json)
+        new_resp["choices"] = new_choices
+        return new_resp
+    return resp_json
+
+
 def _extract_logprobs(resp_json: dict) -> list:
     try:
         return resp_json.get("choices", [])[0].get("logprobs", {}).get("content", [])
@@ -384,6 +463,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         crescendo_turns=cfg.waf_session_crescendo_turns,
     )
     state._phi_scrubber = PHIDeidentifier() if cfg.phi_deidentify else None
+    state._pci_scrubber = PCIScrubber() if cfg.pci_scrub else None
 
     # HSM/PKCS#11 signing backend (optional; degrades gracefully when unavailable).
     _hsm_backend: HSMSigningBackend | None = None
@@ -772,6 +852,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         # raw_body (used for audit) retains the original; body is the scrubbed copy.
         body, _phi_scrubbed, _scrub_method = _apply_phi_scrub_request(body, state)
 
+        # PCI-DSS cardholder-data scrubbing (PAN/CVV/Track) before forwarding.
+        body, _pci_scrubbed = _apply_pci_scrub_request(body, state)
+        if _pci_scrubbed:
+            _scrub_method = (_scrub_method + "+pci_pan_mask").lstrip("+")
+
         session_id = request.headers.get("x-session-id") or body.get("user") or str(uuid.uuid4())
         request_id = str(uuid.uuid4())
 
@@ -902,6 +987,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         resp_json = upstream.json()
         # PHI de-identification on the hot response path: scrub before returning to client.
         resp_json = _apply_phi_scrub_response(resp_json, state)
+        # PCI-DSS cardholder-data scrubbing on the hot response path.
+        resp_json = _apply_pci_scrub_response(resp_json, state)
         analysis = analyzer.analyze(
             request_id=request_id,
             model=body.get("model", "unknown"),
@@ -934,7 +1021,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
 
         trace_id = observability.current_trace_id()
-        resp_content = json.dumps(resp_json).encode() if state._phi_scrubber else upstream.content
+        resp_content = (
+            json.dumps(resp_json).encode()
+            if (state._phi_scrubber or state._pci_scrubber)
+            else upstream.content
+        )
         resp = Response(content=resp_content, status_code=200)
         resp.headers.update(
             {
