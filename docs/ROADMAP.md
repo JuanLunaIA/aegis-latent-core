@@ -74,7 +74,7 @@ production and is excluded from compliance evidence.
 - [x] `aegis/core/cfi_manager.py` — replaced `is_cfi_enabled = True  # Simulation result` with real ELF parsing via `pyelftools` (subprocess `readelf`/`nm` fallback). Three detection tiers: LLVM CFI (`__cfi_check`), GCC/LLVM unwind tables (`.eh_frame`/`.eh_frame_hdr`), Intel CET (`GNU_PROPERTY_X86_FEATURE_1_AND`). New `CFIReport` dataclass; 18 tests prove honest results on real binary and graceful failure for missing/non-ELF files (`tests/test_cfi_manager.py`).
 - [x] `aegis/core/mte_guard.py` — replaced simulated MTE detection with real `/proc/cpuinfo` `mte` flag check, `AT_HWCAP2` auxiliary-vector parsing, and `prctl(PR_SET_TAGGED_ADDR_CTRL)` syscall via `ctypes`. Returns False on x86/non-ARM; never manufactures a positive result. 14 tests cover hardware-absent and mocked-hardware paths (`tests/test_mte_guard.py`). ARM integration tests skip cleanly on CI.
 - [ ] `aegis/core/tee_manager.py` / `enclave_provider.py` — replace simulated enclave with real SEV-SNP/TDX/SGX attestation (see DX-Gov) or quarantine and stop advertising TEE.
-- [ ] `aegis/core/sandbox_l1.py` — replace "we simulate the rule addition" seccomp logic with real `seccomp_syscall_resolve_name`/libseccomp binding (the live `seccomp_guard.py` is real; `sandbox_l1` is a parallel sim that should be reconciled or deleted).
+- [x] `aegis/core/sandbox_l1.py` — replaced "we simulate the rule addition" with real libseccomp C API via ctypes: `seccomp_syscall_resolve_name` resolves each syscall name to its kernel number, `seccomp_rule_add` permits it, default action is `SCMP_ACT_ERRNO(EPERM)`. `apply_filter()` returns `True` only when `seccomp_load()` succeeds; `build_filter_without_loading()` validates the filter safely in tests. 18 tests including real subprocess filter-load and mocked-library failure paths (`tests/test_sandbox_l1.py`).
 - [ ] `aegis/core/boot_attestation.py` — example golden measurements must come from a signed vendor manifest, not in-source constants.
 
 ### P0.3 Fake datapath / network enforcement (LIVE-PATH false assurance)
@@ -199,21 +199,19 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 
 | Track | Open items | Priority |
 |---|---|---|
-| P0 — Trust integrity (de-sim / real crypto) | 17 | Critical |
+| P0 — Trust integrity (de-sim / real crypto) | 16 | Critical |
 | P1 — Supply chain | 6 | High |
 | P1 — Live-path correctness | 6 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **61** | — |
+| **Total open** | **60** | — |
 
 > **Progress 2026-06-24 (run 3):** P0.3 complete — `xdp_dynamic_segmentation.py`
-> de-simulated. `_FirewallBackend` auto-detects nft → iptables → NONE and issues
-> real kernel rules; `block_ip_immediately()` returns True only when a kernel rule
-> is installed; application-layer-only path logs an explicit advisory. P0.4
-> complete — `dependency_audit.py` Bandit fix: `shutil.which("pip-audit")` resolved
-> in `__init__`, raises `DependencyAuditorError` if absent (eliminates B607
-> partial-path risk). `KNOWN_SIMULATION_DEBT` shrunk from 21 → 20 → 19; debt count
-> updated to `== 19`.
+> de-simulated (real nftables/iptables enforcement). P0.4 hardened —
+> `dependency_audit.py` Bandit B607 fix. P0.2 partial — `sandbox_l1.py`
+> de-simulated: real `seccomp_syscall_resolve_name` + `seccomp_rule_add` via
+> ctypes; 18 tests including real subprocess filter load.
+> `KNOWN_SIMULATION_DEBT` shrunk 21 → 20 → 19 → 18; count asserted `== 18`.
 >
 > **Progress 2026-06-24 (run 1):** P0.1 fake-crypto cluster **complete**. (1)
 > `pqc.py` + `pqc_provider.py` deleted → real `PQCSigner` (ML-DSA-65 / FIPS 204)

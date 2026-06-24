@@ -54,10 +54,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is raised immediately if the tool is absent — no partial-path fallback. `subprocess.run`
   annotated `# noqa: S603`. Test updated to patch `shutil.which`.
 
+- **De-simulated `sandbox_l1.py`** (ROADMAP P0.2). Previously skipped the
+  entire rule-addition step ("we simulate the rule addition") and called
+  `seccomp_load` with zero allowlist rules and `SCMP_ACT_KILL` — any loaded
+  filter would have immediately killed the process. Rewritten with real
+  `seccomp_syscall_resolve_name` + `seccomp_rule_add` calls via ctypes for
+  every syscall in the allowlist; default action changed to
+  `SCMP_ACT_ERRNO(EPERM)` (safe); `apply_filter()` returns `True` only when
+  `seccomp_load()` succeeds; `build_filter_without_loading()` validates the
+  filter safely in tests. 18 tests including real subprocess filter load and
+  mocked-library failure paths (`tests/test_sandbox_l1.py`).
+
 - `tests/test_no_simulation_markers.py` — `KNOWN_SIMULATION_DEBT` shrunk from
-  23 → 20 → 19 as `cfi_manager.py`, `mte_guard.py`, `dependency_audit.py`, and
-  `xdp_dynamic_segmentation.py` are removed from the debt list. Debt-count
-  assertion updated to `== 19`.
+  23 → 20 → 19 → 18 as `cfi_manager.py`, `mte_guard.py`, `dependency_audit.py`,
+  `xdp_dynamic_segmentation.py`, and `sandbox_l1.py` are removed from the debt
+  list. Debt-count assertion updated to `== 18`.
 
 - **Removed two fake post-quantum modules that manufactured false cryptographic
   assurance** (ROADMAP P0.1). `aegis/core/pqc.py` advertised "ML-DSA (Dilithium)"

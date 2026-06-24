@@ -53,7 +53,6 @@ KNOWN_SIMULATION_DEBT: frozenset[str] = frozenset(
         "core/red_team_framework.py",
         "core/root_ca_gateway.py",
         "core/sandbox.py",
-        "core/sandbox_l1.py",
         "core/state_snapshotter.py",
         "core/tee_manager.py",
         "core/tpm.py",
@@ -95,4 +94,4 @@ def test_allowlist_is_not_stale():
 
 def test_debt_count_never_increases():
     """The simulation-debt count is a monotonically non-increasing budget."""
-    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 19
+    assert len(_modules_with_markers()) <= len(KNOWN_SIMULATION_DEBT) == 18
