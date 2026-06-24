@@ -34,6 +34,7 @@ from aegis.core.secrets import VaultManager
 from aegis.core.session_manager import SessionLifecycleManager
 from aegis.core.waf_session import WAFSessionTracker
 from aegis.proxy.analyzer import ResponseAnalysis, ResponseAnalyzer
+from aegis.proxy.attestation_api import build_attestation_router
 from aegis.proxy.audit_api import build_audit_router
 from aegis.proxy.dependencies import validate_proxy_auth
 from aegis.proxy.dmz_middleware import DMZSourceIPMiddleware
@@ -599,6 +600,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
 
     app.include_router(build_audit_router(state.ledger, state.audit_auth), prefix="/v1/audit")
+    app.include_router(build_attestation_router(), prefix="/v1/attestation")
 
     if observability.prometheus_available():
         from prometheus_client import CONTENT_TYPE_LATEST, generate_latest

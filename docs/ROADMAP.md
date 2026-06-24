@@ -96,7 +96,7 @@ production and is excluded from compliance evidence.
 ### P0.5 Quarantine + honesty infrastructure
 
 - [ ] Create `aegis/simulation/` package; move every still-simulated module there with an `AEGIS_ALLOW_SIMULATION` import guard that raises in production (`AEGIS_DEBUG_MODE=false`).
-- [ ] Add a `GET /v1/attestation/capabilities` endpoint that reports, per control, whether it is `REAL`, `SIMULATED`, or `UNAVAILABLE` — so auditors can never mistake a sim for a real control.
+- [x] Add a `GET /v1/attestation/capabilities` endpoint that reports, per control, whether it is `REAL`, `SIMULATED`, or `UNAVAILABLE` — so auditors can never mistake a sim for a real control. `aegis/core/attestation_capabilities.py` probes 13 controls (PQC/audit signing, seccomp, TPM, TEE, eBPF, DPDK, firewall segmentation, CFI, fuzzing, dependency audit, reproducible build, transparency log) with cheap side-effect-free checks (`shutil.which` / `os.path.exists` / `find_library`), returning a `simulation_debt` count that must stay `0`. Exposed via `aegis/proxy/attestation_api.py` (mounted at `/v1/attestation`, behind audit auth). 17 tests (`tests/test_attestation_capabilities.py`).
 - [ ] README/SECURITY.md: add a "Simulated vs. Real Controls" matrix; remove any capability claim backed only by a simulation module.
 
 ---
@@ -199,12 +199,12 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 
 | Track | Open items | Priority |
 |---|---|---|
-| P0 — Trust integrity (de-sim / real crypto) | 8 | Critical |
+| P0 — Trust integrity (de-sim / real crypto) | 7 | Critical |
 | P1 — Supply chain | 6 | High |
 | P1 — Live-path correctness | 6 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **52** | — |
+| **Total open** | **51** | — |
 
 > **Progress 2026-06-24 (run 13):** P0.1 — added the Rust `keypair_from_bytes(public_key,
 > private_key)` constructor (registered in `lib.rs`) so a **persistent** ML-DSA-65 signing
@@ -218,7 +218,10 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 > `build_reproducibility.py` were de-simulated and merged in PR #43 but still showed `[ ]` —
 > flipped to `[x]` with accurate descriptions. Separately cleared **all `cargo build` warnings**
 > (deprecated pyo3 `*_bound` → canonical names; removed an unused import and a dead struct field);
-> `cargo test` 26 passing, warning-free.
+> `cargo test` 26 passing, warning-free. P0.5 — added the honest capability matrix:
+> `aegis/core/attestation_capabilities.py` + `GET /v1/attestation/capabilities` report each of
+> 13 controls as `REAL` / `UNAVAILABLE` / `SIMULATED` (the last must stay 0) so an auditor can
+> never mistake a hardware-absent or regressed control for a real one; 17 tests.
 >
 > **Progress 2026-06-24 (run 12):** P0.2/P0.3 — final four hardware-gated modules de-simulated; `KNOWN_SIMULATION_DEBT` shrunk 4 → 0 (all simulation debt eliminated). `ebpf_monitor.py`: removed `import random, time` and all random-event-generation blocks; `EBPFProbe.load()` now runs `shutil.which("bpftool")` + `subprocess.run(["bpftool", "prog", "list"])` to confirm real BPF kernel access; `poll_events()` returns `[]` without fabricating telemetry. `enclave_provider.py`: removed `simulated_sig = hashlib.sha256(data + b"ENCLAVE_SECRET_SALT").digest()` and fake `EnclaveAttestation`; `_enclave_device_available()` probes `/dev/sgx_enclave`, `/dev/isgx`, `/dev/sev`; honest `NotImplementedError` when hardware found but C API absent. `tee_manager.py`: removed hardcoded `measurement = "a8f7e6d5c4b3a2f1..."` fake; `_tee_device_available()` probes SGX/SEV/TDX devices; `verify_remote_attestation()` rejects empty measurements and non-genuine reports; honest `NotImplementedError` for quote generation. `dpdk_engine.py`: removed `import random` and fake packet generation; `setup_hugepages()` reads real sysfs nr_hugepages; `bind_interfaces()` gates on `shutil.which("dpdk-devbind")`; `poll_packets()` / `transmit_packet()` return empty/False with advisory logs. 37 new tests in `tests/test_hardware_modules.py` cover all four modules. Ratchet count asserted `== 0`.
 >
