@@ -49,6 +49,8 @@ dependencies = [
     "cachetools>=5.3.0",
     # Security floor for transitive dep (PYSEC-2026-215 / CVE-2026-45409).
     "idna>=3.15",
+    # Security floor for transitive dep via requests (PYSEC-2026-141 / -142).
+    "urllib3>=2.7.0",
 ]
 
 [project.optional-dependencies]

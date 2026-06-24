@@ -108,8 +108,8 @@ across 5 packages**. The repo's "Dependency Audit" CI job is not catching these
 (it audits the pinned `requirements.txt`, which is clean, while the resolved
 environment is not).
 
-- [ ] Upgrade/floor **urllib3 ≥ 2.7.0** (PYSEC-2026-141, PYSEC-2026-142 — runtime, transitive via httpx/requests). Likely one of the open Dependabot alerts.
-- [ ] Upgrade/floor **pyjwt ≥ 2.13.0** (PYSEC-2026-120/175/177/179, PYSEC-2025-183 — 7 advisories). Confirm whether `pyjwt` is actually reachable; if unused, remove it from the dependency closure.
+- [x] Upgrade/floor **urllib3 ≥ 2.7.0** (PYSEC-2026-141, PYSEC-2026-142 — transitive via requests). Added `urllib3>=2.7.0` to both `pyproject.toml` and `requirements.txt` (matching the existing `idna>=3.15` transitive-floor precedent); verified the floor resolves cleanly with `requests` (`pip install --dry-run`). `requests` allows `urllib3<3`, so no conflict.
+- [x] **pyjwt** — investigated: `pyjwt` is **not a declared dependency** (absent from `pyproject.toml`/`requirements.txt`), is **not imported** anywhere in `aegis`/`aegis_server`/`integrations`, and `pip show pyjwt` reports an empty `Required-by` (nothing in the closure needs it). It is an environment leftover, not part of Aegis's dependency closure — no floor to add and nothing to remove from our spec.
 - [ ] Floor build tooling in CI images: **setuptools ≥ 78.1.1** (CVE-2024-6345 RCE in `package_index`), **wheel ≥ 0.46.2** (CVE-2026-24049), **pip ≥ 26.1**.
 - [ ] Make the "Dependency Audit" CI job audit the **resolved/installed** environment (`pip-audit` with no `-r`, plus the air-gap wheel bundle), not just `requirements.txt`, and fail on HIGH.
 - [ ] Add `osv-scanner` over the full lockfile + `Cargo.lock`; commit a generated `requirements.lock` with hashes (`--require-hashes`) for reproducible, audited installs.
@@ -200,11 +200,11 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 | Track | Open items | Priority |
 |---|---|---|
 | P0 — Trust integrity (de-sim / real crypto) | 1 | Critical |
-| P1 — Supply chain | 6 | High |
+| P1 — Supply chain | 4 | High |
 | P1 — Live-path correctness | 4 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **44** | — |
+| **Total open** | **41** | — |
 
 > **Only open P0 item:** `zk_proof.py` — replace the honest SHA-256 stub
 > (`is_stub == True`) with a real proving system (Groth16/PLONK/STARK). This is a
