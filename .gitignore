@@ -88,7 +88,9 @@ Desktop.ini
 # ── Rust (optional extension build) ───────────────────────────────────────────
 aegis_rust_v2/target/
 **/target/
-Cargo.lock
+# Cargo.lock IS committed: aegis_rust is a cdylib extension (an application
+# artifact, not a reusable library), so a pinned lockfile is required for
+# reproducible builds (cargo build --locked) and OSV/cargo-audit scanning.
 
 # ── Aegis runtime data ────────────────────────────────────────────────────────
 *.wal.jsonl
