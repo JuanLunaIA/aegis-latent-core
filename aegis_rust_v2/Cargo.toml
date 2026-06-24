@@ -11,9 +11,13 @@ authors = ["Juan Luna <juan.c.luna04@gmail.com>"]
 
 [features]
 # Enable when building as a Python extension (.so/.pyd).
-# maturin passes --features extension-module automatically; cargo test omits it
-# so libpython is linked normally for the test binary.
-default = ["extension-module"]
+# maturin enables pyo3/extension-module explicitly via `[tool.maturin] features`
+# in pyproject.toml, so it must NOT be a default feature here: a default
+# extension-module would also apply to `cargo test`, which then omits the
+# libpython link and fails with undefined Py* symbols. Keeping `default = []`
+# lets the test binary link libpython normally, while production wheels still
+# get extension-module from maturin (and the CI `--features extension-module`).
+default = []
 extension-module = ["pyo3/extension-module"]
 embedded = []  # Strip non-essential components for edge/OT deployment
 full = ["extension-module"]  # All features
