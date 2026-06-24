@@ -235,8 +235,9 @@ class AegisWAF:
                             score=guard_result.confidence,
                         )
                 except Exception as exc:
-                    # Never let WAF errors block a legitimate request
-                    logger.debug("AegisWAF layer-2 error (non-fatal): %s", exc)
+                    # Fail-open: a WAF evaluation error must not block a legitimate request,
+                    # but it is a security-relevant event that must be visible in production.
+                    logger.warning("AegisWAF layer-2 error (fail-open, request allowed): %s", exc)
 
         return WAFResult(allowed=True)
 

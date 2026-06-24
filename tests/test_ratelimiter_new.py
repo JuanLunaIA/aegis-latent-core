@@ -182,3 +182,29 @@ def test_create_rate_limiter_redis():
     )
     limiter = create_rate_limiter(settings)
     assert isinstance(limiter, DistributedRateLimiter)
+
+
+# ── except Exception audit: Redis failure must log at ERROR, not WARNING ──────
+
+
+@pytest.mark.asyncio
+async def test_redis_failure_logs_error_and_allows(caplog):
+    """Redis unavailability bypasses rate limiting — must be logged at ERROR level."""
+    redis_mock = AsyncMock()
+    redis_mock.eval.side_effect = ConnectionError("Redis is down")
+
+    limiter = DistributedRateLimiter(
+        redis_url="redis://localhost:6379",
+        requests_per_minute=60,
+        burst=10,
+    )
+    limiter.redis = redis_mock
+
+    with caplog.at_level(logging.ERROR, logger="aegis.core.ratelimiter"):
+        result = await limiter.check_limit("session-x")
+
+    # Fail-open: must allow the request
+    assert result is True
+    # But must log at ERROR (not silently swallow or only warn)
+    error_msgs = [r.message for r in caplog.records if r.levelno >= logging.ERROR]
+    assert any("bypass" in m.lower() or "bypassed" in m.lower() for m in error_msgs)

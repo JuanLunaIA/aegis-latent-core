@@ -124,7 +124,7 @@ environment is not).
 - [ ] `aegis/core/gossip_wal_sync.py` — documented "stub" (in-process, no real network); implement real SWIM gossip transport or fold into the Raft path so HA claims are end-to-end testable.
 - [ ] Reconcile duplicate/parallel modules so there is exactly one implementation per concern: PQC (`pqc.py` vs `pqc_provider.py` vs Rust vs Vault), sandbox (`sandbox.py` vs `sandbox_l1.py` vs `sandbox_l2.py` vs `seccomp_guard.py`), HSM (`hsm.py` real vs the preserved stub `HSMManager`).
 - [x] Remove committed generated artifacts from the tree (`tools/forensic/report.json`, `tools/visualizer/summary.json` — both referenced stale `pqc_provider.py`/version data). Untracked via `git rm --cached` and added to `.gitignore`; they are regenerated on demand by `tools/forensic/forensic_checks.py` and `tools/visualizer/generate_summary.py` (no test or runtime path depends on the committed copies).
-- [ ] Audit every broad `except Exception:` in the live path (`aegis/proxy/`, `aegis/core/crypto_audit.py`, ratelimiter) to ensure no security failure is silently swallowed into a permissive default.
+- [x] Audit every broad `except Exception:` in the live path (`aegis/proxy/`, `aegis/core/crypto_audit.py`, ratelimiter) to ensure no security failure is silently swallowed into a permissive default. **Findings & fixes:** (1) `aegis/proxy/waf.py` Layer-2 (LLMGuard) evaluation errors were logged at `DEBUG` — invisible in production, so a WAF that silently stopped scoring would look healthy; raised to `WARNING` with an explicit "fail-open, request allowed" message. (2) `aegis/core/ratelimiter.py` Redis failures (which bypass rate limiting entirely) were logged at `WARNING`; raised to `ERROR` with an explicit "rate limiting BYPASSED" message so the bypass is alertable. The remaining live-path `except Exception` handlers were reviewed and are correct: `app.py` lifespan handlers (LSM/mTLS/seccomp) already re-raise when the control is *required* (`mtls_required`, non-sandbox seccomp) and only degrade with a `WARNING` otherwise; `forwarder.py` records the circuit-breaker failure and **re-raises** (no swallow); `crypto_audit.py` PQC-sign fallback logs `WARNING` then falls through to the real HMAC path (no security loss). 4 new tests assert the corrected log levels and fail-open behaviour (`tests/test_waf_new.py::TestWAFLayer2FailOpen`, `tests/test_ratelimiter_new.py::test_redis_failure_logs_error_and_allows`).
 
 ---
 
@@ -201,10 +201,10 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 |---|---|---|
 | P0 — Trust integrity (de-sim / real crypto) | 1 | Critical |
 | P1 — Supply chain | 4 | High |
-| P1 — Live-path correctness | 4 | High |
+| P1 — Live-path correctness | 3 | High |
 | P2 — Performance & optimization | 5 | Medium |
-| DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **41** | — |
+| DX — Domain expansion (7 verticals) | 26 | Strategic |
+| **Total open** | **39** | — |
 
 > **Only open P0 item:** `zk_proof.py` — replace the honest SHA-256 stub
 > (`is_stub == True`) with a real proving system (Groth16/PLONK/STARK). This is a

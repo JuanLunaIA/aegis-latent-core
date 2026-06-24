@@ -228,3 +228,41 @@ class TestWAFShadowMode:
         result = waf.inspect_payload(nested)
         assert result.allowed is True
         assert result.shadow_blocked is True
+
+
+# ── except Exception audit: WAF layer-2 fail-open log level ──────────────────
+
+
+class TestWAFLayer2FailOpen:
+    """Layer-2 (LLMGuard) errors must be logged at WARNING, not suppressed at DEBUG."""
+
+    def test_layer2_exception_is_warning_not_debug(self, caplog):
+        import logging
+        from unittest.mock import MagicMock
+
+        guard = MagicMock()
+        guard.analyze_input.side_effect = RuntimeError("guard exploded")
+
+        waf = AegisWAF()
+        waf._guard = guard
+
+        with caplog.at_level(logging.WARNING, logger="aegis.proxy.waf"):
+            result = waf.inspect_payload({"messages": [{"role": "user", "content": "hello"}]})
+
+        # Request still allowed (fail-open policy)
+        assert result.allowed is True
+        # But a WARNING-level record must exist
+        warning_msgs = [r.message for r in caplog.records if r.levelno >= logging.WARNING]
+        assert any("fail-open" in m.lower() or "layer-2" in m.lower() for m in warning_msgs)
+
+    def test_layer2_exception_allows_request(self):
+        from unittest.mock import MagicMock
+
+        guard = MagicMock()
+        guard.analyze_input.side_effect = ValueError("bad input")
+
+        waf = AegisWAF()
+        waf._guard = guard
+
+        result = waf.inspect_payload({"messages": [{"role": "user", "content": "harmless"}]})
+        assert result.allowed is True
