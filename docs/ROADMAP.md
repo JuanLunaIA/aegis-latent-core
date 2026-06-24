@@ -206,6 +206,18 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
 | **Total open** | **56** | — |
 
+> **Progress 2026-06-24 (run 11):** P0.2 — `tpm.py` de-simulated: removed
+> `_simulated_pcr_value` in-memory fake and `In a real system` comment; replaced
+> with real `tpm2_pcrextend` / `tpm2_pcrread` CLI delegation guarded by
+> `shutil.which`; when tpm2-tools or device absent falls back to software PCR
+> extend (correct formula: SHA256(PCR_old ‖ SHA256(binary))) with an advisory
+> warning — no silent false positive; `_parse_pcrread_output` extracts hex from
+> real CLI YAML output; 16 tests cover hardware/software mode selection, extend
+> formula correctness, hw-failure raises, PCR parse, verify match/mismatch).
+> `KNOWN_SIMULATION_DEBT` shrunk 5 → 4; count asserted `== 4`.
+> Bandit B607 (`# nosec B607`) applied to all three subprocess.run calls in
+> `build_reproducibility.py` (PR review comments on lines 62 and 113).
+>
 > **Progress 2026-06-24 (run 10):** P0.4 — `build_reproducibility.py` de-simulated
 > (removed `# Simulation:` / `# Simulation of: cargo build` / `# In a real system`
 > markers; `create_hermetic_environment()` now actually sets `SOURCE_DATE_EPOCH=1716854400`

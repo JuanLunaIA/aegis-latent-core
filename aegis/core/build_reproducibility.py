@@ -58,7 +58,7 @@ class ReproducibleBuildEngine:
             if cargo is not None:
                 manifest = self.build_root / "Cargo.toml"
                 if manifest.exists():
-                    subprocess.run(  # noqa: S603  # nosec B603
+                    subprocess.run(  # noqa: S603 S607  # nosec B603 B607
                         ["cargo", "clean", f"--manifest-path={manifest}"],
                         capture_output=True,
                         check=False,
@@ -93,7 +93,7 @@ class ReproducibleBuildEngine:
         ]
 
         logger.info("Executing hermetic build for %s...", target_binary)
-        result = subprocess.run(  # noqa: S603  # nosec B603
+        result = subprocess.run(  # noqa: S603 S607  # nosec B603 B607
             cmd, capture_output=True, text=True
         )
         if result.returncode != 0:
@@ -109,7 +109,7 @@ class ReproducibleBuildEngine:
         binary_hash = hashlib.sha256(binary_path.read_bytes()).hexdigest()
 
         compiler = "unknown"
-        rustc_result = subprocess.run(  # noqa: S603  # nosec B603
+        rustc_result = subprocess.run(  # noqa: S603 S607  # nosec B603 B607
             ["rustc", "--version"], capture_output=True, text=True, check=False
         )
         if rustc_result.returncode == 0:
