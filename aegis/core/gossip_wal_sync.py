@@ -2,18 +2,36 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """
-aegis.core.gossip_wal_sync — Domain 3.3 gossip-based WAL sync stub.
+aegis.core.gossip_wal_sync — SWIM-inspired gossip WAL sync.
 
-Implements a SWIM-inspired gossip protocol stub for WAL synchronization between
-Aegis nodes.  Real implementation requires UDP multicast or a memberlist
-integration.  This stub manages peer state and sync decisions using in-process
-data structures, enabling unit testing without actual network I/O.
+Implements a SWIM-inspired gossip protocol for WAL synchronization between
+Aegis nodes.  Two layers are provided:
+
+``GossipUDPTransport``
+    Real UDP send/receive transport.  Binds to a local address and port,
+    sends JSON-encoded :class:`GossipMessage` datagrams to peers, and
+    receives them with a configurable timeout.  When no transport is
+    provided, :class:`GossipWALSyncer` operates in in-process mode
+    (useful for unit tests and single-node deployments).
+
+``GossipWALSyncer``
+    Peer state manager and sync-decision engine.  Call
+    :meth:`GossipWALSyncer.broadcast` to fan out the local WAL state to all
+    registered peers via the transport.  Call
+    :meth:`GossipWALSyncer.receive_one` to read a single inbound message
+    from the transport and update peer state.
+
+Multi-node HA with strong consistency is provided by the Raft layer
+(DX-Enterprise).  Gossip complements Raft by providing eventual-convergence
+failure detection and WAL-head comparison across a cluster.
 
 Environment variables (read by :meth:`GossipWALSyncer.from_env`):
   AEGIS_GOSSIP_NODE_ID       this node's ID (default: hostname)
   AEGIS_GOSSIP_PEERS         CSV of "peer_id@host:port"
   AEGIS_GOSSIP_INTERVAL_S    gossip interval in seconds (default: 5.0)
   AEGIS_GOSSIP_WAL_PATH      path to local WAL file
+  AEGIS_GOSSIP_BIND_ADDR     local bind address for UDP transport (default: 0.0.0.0)
+  AEGIS_GOSSIP_BIND_PORT     local bind port for UDP transport (default: 7946)
 """
 
 from __future__ import annotations
@@ -25,6 +43,9 @@ import socket
 import time
 from dataclasses import asdict, dataclass
 from enum import Enum
+
+# Max UDP datagram size accepted (prevents amplification; gossip messages are small)
+_MAX_DGRAM = 65_535
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +110,79 @@ class SyncDecision(str, Enum):  # noqa: UP042 — roadmap API requires str+Enum 
     SYNC_NEEDED = "sync_needed"  # Peer has more nodes than us
     PEER_STALE = "peer_stale"  # Peer has fewer nodes (we are ahead)
     UNKNOWN = "unknown"  # Can't compare (different chains)
+
+
+# ── GossipUDPTransport ────────────────────────────────────────────────────────
+
+
+class GossipUDPTransport:
+    """Real UDP transport for gossip messages.
+
+    Binds a UDP socket to ``bind_address:bind_port`` and provides
+    ``send`` / ``receive`` primitives.  Each call to ``receive`` returns
+    at most one :class:`GossipMessage`, with a configurable timeout so
+    callers can drive their own event loop.
+
+    The transport is intentionally minimal: no encryption, no framing,
+    no sequence numbers — the gossip layer is designed for best-effort,
+    eventually-consistent dissemination.  Confidentiality must be provided
+    at the network layer (VPN / WireGuard / IPsec).
+    """
+
+    def __init__(
+        self,
+        bind_address: str = "0.0.0.0",
+        bind_port: int = 7946,
+    ) -> None:
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._sock.bind((bind_address, bind_port))
+        self.bind_address = bind_address
+        self.bind_port = bind_port
+        logger.info("GossipUDPTransport: bound to %s:%d", bind_address, bind_port)
+
+    @classmethod
+    def from_env(cls) -> GossipUDPTransport:
+        """Construct from ``AEGIS_GOSSIP_BIND_ADDR`` / ``AEGIS_GOSSIP_BIND_PORT``."""
+        bind_addr = os.environ.get("AEGIS_GOSSIP_BIND_ADDR", "0.0.0.0")
+        bind_port = int(os.environ.get("AEGIS_GOSSIP_BIND_PORT", "7946"))
+        return cls(bind_address=bind_addr, bind_port=bind_port)
+
+    def send(self, address: str, message: GossipMessage) -> bool:
+        """Send ``message`` to ``address`` (``"host:port"``).
+
+        Returns ``True`` on success, ``False`` on network error.
+        """
+        try:
+            host, port_str = address.rsplit(":", 1)
+            payload = message.to_json().encode()
+            self._sock.sendto(payload, (host, int(port_str)))
+            return True
+        except (OSError, ValueError) as exc:
+            logger.warning("GossipUDPTransport: send to %s failed: %s", address, exc)
+            return False
+
+    def receive(self, timeout_s: float = 1.0) -> GossipMessage | None:
+        """Receive one gossip message, blocking up to ``timeout_s`` seconds.
+
+        Returns ``None`` on timeout or parse error.
+        """
+        self._sock.settimeout(timeout_s)
+        try:
+            data, _ = self._sock.recvfrom(_MAX_DGRAM)
+            return GossipMessage.from_json(data.decode())
+        except TimeoutError:
+            return None
+        except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+            logger.warning("GossipUDPTransport: receive error: %s", exc)
+            return None
+
+    def close(self) -> None:
+        """Release the underlying UDP socket."""
+        try:
+            self._sock.close()
+        except OSError:
+            pass
 
 
 # ── GossipSyncResult ──────────────────────────────────────────────────────────
@@ -288,6 +382,59 @@ class GossipWALSyncer:
         if not candidates:
             return None
         return max(candidates, key=lambda p: p.node_count)
+
+    # ── Transport integration ─────────────────────────────────────────────────
+
+    def broadcast(
+        self,
+        transport: GossipUDPTransport,
+        wal_head_hash: str,
+        wal_size_bytes: int,
+        node_count: int,
+    ) -> dict[str, bool]:
+        """Send our current WAL state to all registered peers via ``transport``.
+
+        Returns a ``{peer_id: success}`` map indicating which sends succeeded.
+        Failed peers are NOT automatically marked failed — the caller should
+        drive failure detection (SWIM probe/probe-req) independently.
+        """
+        msg = self.build_message(
+            wal_head_hash=wal_head_hash,
+            wal_size_bytes=wal_size_bytes,
+            node_count=node_count,
+        )
+        results: dict[str, bool] = {}
+        for peer_id, peer in list(self._peers.items()):
+            if peer_id in self._failed:
+                results[peer_id] = False
+                continue
+            ok = transport.send(peer.address, msg)
+            results[peer_id] = ok
+            if not ok:
+                logger.warning(
+                    "GossipWALSyncer: broadcast to peer %s @ %s failed",
+                    peer_id,
+                    peer.address,
+                )
+        return results
+
+    def receive_one(
+        self,
+        transport: GossipUDPTransport,
+        our_node_count: int,
+        timeout_s: float = 1.0,
+    ) -> GossipSyncResult | None:
+        """Receive one inbound gossip message from ``transport`` and process it.
+
+        Returns a :class:`GossipSyncResult` when a valid message arrives,
+        or ``None`` on timeout.
+        """
+        msg = transport.receive(timeout_s=timeout_s)
+        if msg is None:
+            return None
+        if msg.sender_id == self.node_id:
+            return None  # ignore our own reflected broadcasts
+        return self.process_message(msg, our_node_count=our_node_count)
 
     # ── Health tracking ───────────────────────────────────────────────────────
 

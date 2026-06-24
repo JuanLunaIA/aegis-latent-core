@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import time
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -13,6 +14,7 @@ from aegis.core.gossip_wal_sync import (
     GossipMessage,
     GossipPeer,
     GossipSyncResult,
+    GossipUDPTransport,
     GossipWALSyncer,
     SyncDecision,
 )
@@ -307,3 +309,182 @@ def test_get_peer_health_stale_peer_is_false(syncer):
     # last_seen remains 0 — peer has never been seen
     health = syncer.get_peer_health()
     assert health["B"] is False
+
+
+# ── GossipUDPTransport ────────────────────────────────────────────────────────
+
+
+class TestGossipUDPTransportSend:
+    """send() is tested with a mocked socket to avoid network I/O."""
+
+    def _make_transport(self):
+        with patch("socket.socket") as mock_socket_cls:
+            mock_sock = MagicMock()
+            mock_socket_cls.return_value = mock_sock
+            t = GossipUDPTransport(bind_address="127.0.0.1", bind_port=19460)
+        t._sock = mock_sock
+        return t, mock_sock
+
+    def test_send_calls_sendto_with_json_payload(self):
+        t, sock = self._make_transport()
+        msg = GossipMessage(
+            sender_id="node-A",
+            wal_head_hash="abc123",
+            wal_size_bytes=512,
+            node_count=10,
+            timestamp=0.0,
+        )
+        result = t.send("10.0.0.2:7946", msg)
+        assert result is True
+        sock.sendto.assert_called_once()
+        args = sock.sendto.call_args[0]
+        payload = args[0]
+        dest = args[1]
+        assert dest == ("10.0.0.2", 7946)
+        parsed = GossipMessage.from_json(payload.decode())
+        assert parsed.sender_id == "node-A"
+        assert parsed.wal_head_hash == "abc123"
+
+    def test_send_returns_false_on_oserror(self):
+        t, sock = self._make_transport()
+        sock.sendto.side_effect = OSError("network unreachable")
+        msg = GossipMessage("x", "h", 0, 0, 0.0)
+        result = t.send("10.0.0.1:7946", msg)
+        assert result is False
+
+    def test_send_returns_false_on_malformed_address(self):
+        t, _ = self._make_transport()
+        msg = GossipMessage("x", "h", 0, 0, 0.0)
+        result = t.send("no-port-here", msg)
+        assert result is False
+
+
+class TestGossipUDPTransportReceive:
+    def _make_transport(self):
+        with patch("socket.socket") as mock_socket_cls:
+            mock_sock = MagicMock()
+            mock_socket_cls.return_value = mock_sock
+            t = GossipUDPTransport(bind_address="127.0.0.1", bind_port=19461)
+        t._sock = mock_sock
+        return t, mock_sock
+
+    def test_receive_returns_gossip_message_on_valid_json(self):
+        t, sock = self._make_transport()
+        msg = GossipMessage("node-B", "def456", 1024, 5, 1.0)
+        sock.recvfrom.return_value = (msg.to_json().encode(), ("127.0.0.1", 7946))
+        result = t.receive(timeout_s=0.1)
+        assert result is not None
+        assert result.sender_id == "node-B"
+        assert result.wal_head_hash == "def456"
+
+    def test_receive_returns_none_on_timeout(self):
+        t, sock = self._make_transport()
+        sock.recvfrom.side_effect = TimeoutError("timed out")
+        result = t.receive(timeout_s=0.01)
+        assert result is None
+
+    def test_receive_returns_none_on_invalid_json(self):
+        t, sock = self._make_transport()
+        sock.recvfrom.return_value = (b"not-json", ("127.0.0.1", 7946))
+        result = t.receive(timeout_s=0.1)
+        assert result is None
+
+    def test_close_calls_sock_close(self):
+        t, sock = self._make_transport()
+        t.close()
+        sock.close.assert_called_once()
+
+
+class TestGossipUDPTransportFromEnv:
+    def test_from_env_uses_defaults(self):
+        with patch("socket.socket") as mock_socket_cls:
+            mock_socket_cls.return_value = MagicMock()
+            with patch.dict("os.environ", {}, clear=False):
+                import os
+
+                os.environ.pop("AEGIS_GOSSIP_BIND_ADDR", None)
+                os.environ.pop("AEGIS_GOSSIP_BIND_PORT", None)
+                t = GossipUDPTransport.from_env()
+        assert t.bind_address == "0.0.0.0"
+        assert t.bind_port == 7946
+
+    def test_from_env_respects_env_vars(self):
+        with patch("socket.socket") as mock_socket_cls:
+            mock_socket_cls.return_value = MagicMock()
+            with patch.dict(
+                "os.environ",
+                {"AEGIS_GOSSIP_BIND_ADDR": "127.0.0.1", "AEGIS_GOSSIP_BIND_PORT": "19500"},
+            ):
+                t = GossipUDPTransport.from_env()
+        assert t.bind_address == "127.0.0.1"
+        assert t.bind_port == 19500
+
+
+# ── GossipWALSyncer.broadcast ─────────────────────────────────────────────────
+
+
+class TestBroadcast:
+    def _make_transport(self, send_ok: bool = True) -> GossipUDPTransport:
+        t = MagicMock(spec=GossipUDPTransport)
+        t.send.return_value = send_ok
+        return t
+
+    def test_broadcast_sends_to_all_peers(self, syncer):
+        syncer.add_peer("B", "10.0.0.2:7946")
+        syncer.add_peer("C", "10.0.0.3:7946")
+        transport = self._make_transport(send_ok=True)
+        results = syncer.broadcast(transport, "abc", 512, 10)
+        assert results == {"B": True, "C": True}
+        assert transport.send.call_count == 2
+
+    def test_broadcast_skips_failed_peers(self, syncer):
+        syncer.add_peer("B", "10.0.0.2:7946")
+        syncer.mark_peer_failed("B")
+        transport = self._make_transport()
+        results = syncer.broadcast(transport, "abc", 512, 10)
+        assert results["B"] is False
+        transport.send.assert_not_called()
+
+    def test_broadcast_records_send_failure(self, syncer):
+        syncer.add_peer("B", "10.0.0.2:7946")
+        transport = self._make_transport(send_ok=False)
+        results = syncer.broadcast(transport, "abc", 512, 10)
+        assert results["B"] is False
+
+    def test_broadcast_message_has_correct_fields(self, syncer):
+        syncer.add_peer("B", "10.0.0.2:7946")
+        transport = self._make_transport()
+        syncer.broadcast(transport, "deephash", 999, 42)
+        sent_msg = transport.send.call_args[0][1]
+        assert sent_msg.wal_head_hash == "deephash"
+        assert sent_msg.wal_size_bytes == 999
+        assert sent_msg.node_count == 42
+        assert sent_msg.sender_id == "node-A"
+
+
+# ── GossipWALSyncer.receive_one ───────────────────────────────────────────────
+
+
+class TestReceiveOne:
+    def test_receive_one_processes_valid_message(self, syncer):
+        syncer.add_peer("node-B", "10.0.0.2:7946")
+        msg = GossipMessage("node-B", "xyz", 100, 20, time.time())
+        transport = MagicMock(spec=GossipUDPTransport)
+        transport.receive.return_value = msg
+        result = syncer.receive_one(transport, our_node_count=10)
+        assert result is not None
+        assert result.decision == SyncDecision.SYNC_NEEDED
+        assert result.peer_node_count == 20
+
+    def test_receive_one_returns_none_on_timeout(self, syncer):
+        transport = MagicMock(spec=GossipUDPTransport)
+        transport.receive.return_value = None
+        result = syncer.receive_one(transport, our_node_count=10)
+        assert result is None
+
+    def test_receive_one_ignores_own_messages(self, syncer):
+        msg = GossipMessage("node-A", "xyz", 100, 20, time.time())
+        transport = MagicMock(spec=GossipUDPTransport)
+        transport.receive.return_value = msg
+        result = syncer.receive_one(transport, our_node_count=10)
+        assert result is None
