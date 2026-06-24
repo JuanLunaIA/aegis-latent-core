@@ -153,7 +153,7 @@ Measured ceilings from `docs/BENCHMARKS.md`:
 
 ### DX-Finance · Financial Services (**NEW vertical — currently uncovered**)
 
-- [ ] SEC Rule 17a-4 / FINRA 4511 WORM retention attestation bundle (the WORM ledger exists; add the regulatory retention-period + non-rewriteable-media evidence export).
+- [x] SEC Rule 17a-4 / FINRA 4511 WORM retention attestation bundle. Added `RetentionPolicy` (frozen dataclass with `accessible_years`, `total_years`, `citations`, `retention_status()`); two pre-built policies: `SEC_17A4_BROKER_DEALER` (3-year accessible / 6-year total, citations: SEC Rule 17a-4(b)(1)/(4) + FINRA Rule 4511) and `SEC_17A4_THREE_YEAR` (2/3). Added `WORMSegmentAttestation` (per-segment: sealed_at, node_count, HMAC-SHA256 of the seal-sentinel line, retention deadlines, status); `WORMAttestationBundle` (bundle-level HMAC-SHA256 over all segment records, `to_json()`, `verify_bundle_hmac()`); `WORMEnforcer.attest(policy, signing_key)` — reads seal-sentinel from each tracked segment, computes per-segment HMAC, produces the full bundle. Signing uses HMAC-SHA256 keyed by `AEGIS_SIGNING_KEY`. 26 new tests (`tests/test_worm_ledger.py` — 83 total).
 - [ ] MiFID II / Dodd-Frank transaction & communication record-keeping mapping for LLM-mediated trades and advice.
 - [x] PCI-DSS v4.0 cardholder-data (PAN/track/CVV) detector + hot-path wiring. **Delivered:** `aegis/core/pci_detector.py` (`PCIScrubber`) with Luhn + IIN gate (Visa/MC/Amex/Discover/Diners/JCB), CVV context-gated redaction (PCI §3.2), Track 1/2 magnetic-stripe full redaction, PAN last-4 masking (PCI §3.4); `AEGIS_PCI_SCRUB=true` config flag; `_apply_pci_scrub_request/response` helpers wired into proxy hot path mirroring the PHI path; `_scrub_method` field updated; `resp_content` re-serialization gated on `pci_scrubber`; 28 tests (`tests/test_pci_detector.py`). **Remaining:** vault-backed reversible tokenization option.
 - [ ] SOX ICFR audit-control mapping and SR 11-7 model-risk-management governance hooks (model inventory, validation evidence, challenger logging).
@@ -204,8 +204,8 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 | P1 — Supply chain | 1 | High |
 | P1 — Live-path correctness | 0 | High |
 | P2 — Performance & optimization | 5 | Medium |
-| DX — Domain expansion (7 verticals) | 26 | Strategic |
-| **Total open** | **33** | — |
+| DX — Domain expansion (7 verticals) | 25 | Strategic |
+| **Total open** | **32** | — |
 
 > **Only open P0 item:** `zk_proof.py` — replace the honest SHA-256 stub
 > (`is_stub == True`) with a real proving system (Groth16/PLONK/STARK). This is a

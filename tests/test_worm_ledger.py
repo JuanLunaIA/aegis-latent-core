@@ -14,6 +14,9 @@ import time
 import pytest
 
 from aegis.core.worm_ledger import (
+    SEC_17A4_BROKER_DEALER,
+    SEC_17A4_THREE_YEAR,
+    WORMAttestationBundle,
     WORMEnforcer,
     WORMSealRecord,
     WORMViolationError,
@@ -551,3 +554,222 @@ class TestWORMIntegrationWithLedger:
             fresh.enforce_immutability(wal_path)
 
         sealer.unseal_for_testing(wal_path)
+
+
+# ── RetentionPolicy ───────────────────────────────────────────────────────────
+
+_SIGNING_KEY = b"test-signing-key-32-bytes-padded"
+
+
+class TestRetentionPolicy:
+    def test_accessible_until_is_accessible_years_after_seal(self):
+        policy = SEC_17A4_BROKER_DEALER
+        sealed_at = 1_000_000.0
+        until = policy.accessible_until(sealed_at)
+        assert until > sealed_at
+        # 3 years ≈ 94,608,000 s (Julian year)
+        delta = until - sealed_at
+        assert 94_600_000 < delta < 94_700_000
+
+    def test_purge_eligible_at_is_total_years_after_seal(self):
+        policy = SEC_17A4_BROKER_DEALER
+        sealed_at = 1_000_000.0
+        purge = policy.purge_eligible_at(sealed_at)
+        # 6 Julian years = 6 * 365.25 * 86400 = 189,345,600 s
+        delta = purge - sealed_at
+        assert 189_300_000 < delta < 189_400_000
+
+    def test_retention_status_accessible(self):
+        policy = SEC_17A4_BROKER_DEALER
+        sealed_at = time.time() - 86400  # sealed 1 day ago
+        assert policy.retention_status(sealed_at) == "ACCESSIBLE"
+
+    def test_retention_status_long_term(self):
+        policy = SEC_17A4_BROKER_DEALER
+        # sealed 4 years ago (> accessible_years=3, < total_years=6)
+        sealed_at = time.time() - 4 * 365.25 * 86400
+        assert policy.retention_status(sealed_at) == "LONG_TERM"
+
+    def test_retention_status_purge_eligible(self):
+        policy = SEC_17A4_BROKER_DEALER
+        # sealed 7 years ago
+        sealed_at = time.time() - 7 * 365.25 * 86400
+        assert policy.retention_status(sealed_at) == "PURGE_ELIGIBLE"
+
+    def test_three_year_policy_constants(self):
+        assert SEC_17A4_THREE_YEAR.accessible_years == 2.0
+        assert SEC_17A4_THREE_YEAR.total_years == 3.0
+        assert "SEC Rule 17a-4(b)(2)" in SEC_17A4_THREE_YEAR.citations
+
+    def test_broker_dealer_policy_constants(self):
+        assert SEC_17A4_BROKER_DEALER.total_years == 6.0
+        assert "FINRA Rule 4511" in SEC_17A4_BROKER_DEALER.citations
+
+    def test_policy_is_frozen(self):
+        with pytest.raises((AttributeError, TypeError)):
+            SEC_17A4_BROKER_DEALER.total_years = 99  # type: ignore[misc]
+
+
+# ── WORMAttestationBundle ─────────────────────────────────────────────────────
+
+
+class TestWORMAttestationBundle:
+    def test_to_dict_contains_expected_keys(self):
+        bundle = WORMAttestationBundle(
+            generated_at=1_000_000.0,
+            generated_by="test",
+            regulatory_citations=("SEC Rule 17a-4(b)(1)",),
+            segments=[],
+            bundle_hmac="abc",
+        )
+        d = bundle.to_dict()
+        assert "generated_at" in d
+        assert "regulatory_citations" in d
+        assert "segments" in d
+        assert "bundle_hmac" in d
+
+    def test_to_json_is_valid_json(self):
+        bundle = WORMAttestationBundle()
+        parsed = json.loads(bundle.to_json())
+        assert isinstance(parsed, dict)
+
+    def test_verify_bundle_hmac_valid(self, tmp_path):
+        enforcer = WORMEnforcer()
+        seg = tmp_path / "seg.wal"
+        seg.write_text("")
+        enforcer.seal(str(seg))
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        assert bundle.verify_bundle_hmac(_SIGNING_KEY) is True
+        enforcer.unseal_for_testing(str(seg))
+
+    def test_verify_bundle_hmac_wrong_key(self, tmp_path):
+        enforcer = WORMEnforcer()
+        seg = tmp_path / "seg.wal"
+        seg.write_text("")
+        enforcer.seal(str(seg))
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        assert bundle.verify_bundle_hmac(b"wrong-key") is False
+        enforcer.unseal_for_testing(str(seg))
+
+    def test_tampered_segment_fails_hmac(self, tmp_path):
+        enforcer = WORMEnforcer()
+        seg = tmp_path / "seg.wal"
+        seg.write_text("")
+        enforcer.seal(str(seg))
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        # Tamper with a segment record
+        bundle.segments[0].node_count = 9999
+        assert bundle.verify_bundle_hmac(_SIGNING_KEY) is False
+        enforcer.unseal_for_testing(str(seg))
+
+
+# ── WORMEnforcer.attest ───────────────────────────────────────────────────────
+
+
+class TestWORMEnforcerAttest:
+    def _make_sealed_segment(self, tmp_path, name: str, node_count: int = 5) -> tuple:
+        path = tmp_path / name
+        path.write_text('{"record_type":"audit_node","id":"x"}\n' * node_count)
+        enforcer = WORMEnforcer(sealed_by="test-enforcer")
+        record = enforcer.seal(str(path), node_count=node_count)
+        return str(path), enforcer, record
+
+    def test_attest_returns_bundle(self, tmp_path):
+        path, enforcer, _ = self._make_sealed_segment(tmp_path, "a.wal")
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        assert isinstance(bundle, WORMAttestationBundle)
+        enforcer.unseal_for_testing(path)
+
+    def test_attest_segments_count(self, tmp_path):
+        p1, e, _ = self._make_sealed_segment(tmp_path, "a.wal")
+        p2 = tmp_path / "b.wal"
+        p2.write_text("")
+        e.seal(str(p2))
+        bundle = e.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        assert len(bundle.segments) == 2
+        e.unseal_for_testing(p1)
+        e.unseal_for_testing(str(p2))
+
+    def test_attest_segment_path_is_absolute(self, tmp_path):
+        path, enforcer, _ = self._make_sealed_segment(tmp_path, "a.wal")
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        assert os.path.isabs(bundle.segments[0].segment_path)
+        enforcer.unseal_for_testing(path)
+
+    def test_attest_node_count_matches_seal(self, tmp_path):
+        path, enforcer, record = self._make_sealed_segment(tmp_path, "a.wal", node_count=7)
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        assert bundle.segments[0].node_count == record.node_count
+        enforcer.unseal_for_testing(path)
+
+    def test_attest_regulatory_citations_from_policy(self, tmp_path):
+        path, enforcer, _ = self._make_sealed_segment(tmp_path, "a.wal")
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        assert "SEC Rule 17a-4(b)(1)" in bundle.regulatory_citations
+        assert "FINRA Rule 4511" in bundle.regulatory_citations
+        enforcer.unseal_for_testing(path)
+
+    def test_attest_bundle_hmac_non_empty(self, tmp_path):
+        path, enforcer, _ = self._make_sealed_segment(tmp_path, "a.wal")
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        assert len(bundle.bundle_hmac) == 64  # SHA-256 hex = 64 chars
+        enforcer.unseal_for_testing(path)
+
+    def test_attest_seal_hmac_non_empty(self, tmp_path):
+        path, enforcer, _ = self._make_sealed_segment(tmp_path, "a.wal")
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        assert len(bundle.segments[0].seal_hmac) == 64
+        enforcer.unseal_for_testing(path)
+
+    def test_attest_different_keys_produce_different_hmacs(self, tmp_path):
+        path, enforcer, _ = self._make_sealed_segment(tmp_path, "a.wal")
+        b1 = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        b2 = enforcer.attest(SEC_17A4_BROKER_DEALER, b"other-key-32-bytes-padded00000000")
+        assert b1.bundle_hmac != b2.bundle_hmac
+        enforcer.unseal_for_testing(path)
+
+    def test_attest_explicit_segment_paths(self, tmp_path):
+        p1, enforcer, _ = self._make_sealed_segment(tmp_path, "a.wal")
+        p2 = tmp_path / "b.wal"
+        p2.write_text("")
+        enforcer.seal(str(p2))
+        # Attest only the first segment
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY, segment_paths=[p1])
+        assert len(bundle.segments) == 1
+        assert bundle.segments[0].segment_path == os.path.abspath(p1)
+        enforcer.unseal_for_testing(p1)
+        enforcer.unseal_for_testing(str(p2))
+
+    def test_attest_status_accessible_for_new_segment(self, tmp_path):
+        path, enforcer, _ = self._make_sealed_segment(tmp_path, "a.wal")
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        assert bundle.segments[0].status == "ACCESSIBLE"
+        enforcer.unseal_for_testing(path)
+
+    def test_attest_status_purge_eligible_for_old_segment(self, tmp_path):
+        path, enforcer, _ = self._make_sealed_segment(tmp_path, "a.wal")
+        old_now = time.time() + 7 * 365.25 * 86400  # pretend it's 7 years later
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY, now=old_now)
+        assert bundle.segments[0].status == "PURGE_ELIGIBLE"
+        enforcer.unseal_for_testing(path)
+
+    def test_attest_to_json_round_trip(self, tmp_path):
+        path, enforcer, _ = self._make_sealed_segment(tmp_path, "a.wal")
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        parsed = json.loads(bundle.to_json())
+        assert parsed["generated_by"] == "test-enforcer"
+        assert len(parsed["segments"]) == 1
+        assert parsed["segments"][0]["retention_policy"] == "SEC_17A4_BROKER_DEALER"
+        enforcer.unseal_for_testing(path)
+
+    def test_attest_bundle_generated_by_matches_enforcer(self, tmp_path):
+        path, enforcer, _ = self._make_sealed_segment(tmp_path, "a.wal")
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        assert bundle.generated_by == "test-enforcer"
+        enforcer.unseal_for_testing(path)
+
+    def test_attest_empty_enforcer_produces_empty_bundle(self):
+        enforcer = WORMEnforcer()
+        bundle = enforcer.attest(SEC_17A4_BROKER_DEALER, _SIGNING_KEY)
+        assert bundle.segments == []
+        assert len(bundle.bundle_hmac) == 64  # still has a valid bundle HMAC
