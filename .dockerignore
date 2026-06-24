@@ -1,0 +1,34 @@
+# Standard Docker build excludes — keep the build context lean.
+# vendor/wheels is intentionally INCLUDED in Dockerfile.airgap builds.
+# For the standard Dockerfile, exclude it (not needed, saves context size).
+.git
+.github
+.claude
+.pytest_cache
+.mypy_cache
+.ruff_cache
+__pycache__
+*.pyc
+*.pyo
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+*.egg-info/
+.env
+.env.*
+*.wal.jsonl
+aegis.wal.jsonl
+# Vendor wheels only needed for airgap builds (Dockerfile.airgap uses COPY vendor/wheels)
+# Uncomment the line below for standard (non-airgap) builds to reduce context size:
+# vendor/
+docs/
+benchmarks/
+tests/
+tools/
+Samples/
+specs/
+examples/
+integrations/
+visualizer_runner*

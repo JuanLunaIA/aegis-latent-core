@@ -1,0 +1,111 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+#
+# Aegis Latent Core — AIR-GAPPED production image
+#
+# All layers are vendored: no external registry pulls, no PyPI access at
+# build time. Suitable for classified/disconnected environments.
+#
+# ─── Pre-build (networked machine) ────────────────────────────────────────────
+#   1. scripts/vendor_wheels.sh          # downloads wheels → vendor/wheels/
+#   2. docker pull python:3.11-slim
+#   3. docker save python:3.11-slim | gzip > vendor/python-3.11-slim.tar.gz
+#
+# ─── Air-gapped build (no network) ────────────────────────────────────────────
+#   docker load < vendor/python-3.11-slim.tar.gz
+#   docker build --network=none \
+#       --build-arg PYTHON_BASE_DIGEST=sha256:<digest-from-step-2> \
+#       -f deploy/docker/Dockerfile.airgap \
+#       -t aegis-latent-core:2.4.0-airgap .
+#
+# ─── Required env vars (same as standard image) ───────────────────────────────
+#   AEGIS_SIGNING_KEY   — HMAC-SHA256 or ML-DSA signing key (must be separate
+#                         from AEGIS_BACKEND_API_KEY; ≥32 hex bytes)
+#   AEGIS_BACKEND_API_KEY — upstream LLM API key
+#   AEGIS_API_KEYS        — comma-separated proxy client keys
+
+# ── Digest pinning ────────────────────────────────────────────────────────────
+# Override with the sha256 digest obtained from `docker inspect` or
+# `docker manifest inspect python:3.11-slim` on the networked prep machine.
+ARG PYTHON_BASE_DIGEST=sha256:c56af7e73c7b0cf23f4e83fa9c8acb0a63a5c10a3cd83f04c1f9dba3dd4d6d69
+
+# ── Stage 1: builder ──────────────────────────────────────────────────────────
+FROM python:3.11-slim@${PYTHON_BASE_DIGEST} AS builder
+
+# Build-only system packages loaded from the vendored apt cache.
+# In a fully air-gapped build, mount the apt cache as a bind mount or
+# preload /var/cache/apt/archives from the vendor archive.
+RUN apt-get install -y --no-install-recommends \
+        gcc \
+        libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Vendored Python wheels — copied from vendor/wheels/ (created by
+# scripts/vendor_wheels.sh on a networked machine before the air-gapped build).
+COPY vendor/wheels /wheels
+
+# Install the package and all runtime dependencies exclusively from local wheels.
+# --no-index prevents any PyPI access; --find-links points to the wheel cache.
+COPY pyproject.toml README.md ./
+COPY aegis ./aegis
+COPY aegis_server ./aegis_server
+COPY integrations ./integrations
+
+RUN pip install \
+        --no-cache-dir \
+        --no-index \
+        --find-links /wheels \
+        ".[storage-sqlite]"
+
+# ── Stage 2: minimal runtime image ────────────────────────────────────────────
+FROM python:3.11-slim@${PYTHON_BASE_DIGEST}
+
+LABEL org.opencontainers.image.title="Aegis Latent Core (Air-Gapped)" \
+      org.opencontainers.image.version="2.4.0" \
+      org.opencontainers.image.description="Enterprise LLM proxy — air-gapped build, all layers vendored" \
+      org.opencontainers.image.licenses="AGPL-3.0" \
+      aegis.airgap="true" \
+      aegis.vendor.wheels="vendor/wheels" \
+      aegis.base.digest="${PYTHON_BASE_DIGEST}"
+
+# Non-root user — principle of least privilege
+RUN groupadd -g 10001 aegis \
+    && useradd -u 10001 -g aegis -m -s /usr/sbin/nologin aegis
+
+WORKDIR /app
+
+# Copy installed packages from builder — no network call in final stage
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin/aegis-server /usr/local/bin/aegis-server
+
+# Copy application source
+COPY aegis ./aegis
+COPY aegis_server ./aegis_server
+COPY integrations ./integrations
+
+# Persistent data directory — mount a volume here in production
+RUN mkdir -p /data && chown aegis:aegis /data
+
+USER aegis
+
+# Runtime defaults
+ENV AEGIS_LOG_LEVEL=INFO \
+    AEGIS_WAL_PATH=/data/aegis.wal.jsonl \
+    AEGIS_RATE_LIMIT_BACKEND=memory \
+    AEGIS_DEBUG_MODE=false \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "\
+import urllib.request, json, sys; \
+resp = urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=4); \
+body = json.loads(resp.read()); \
+sys.exit(0 if body.get('status') == 'healthy' else 1)"
+
+CMD ["aegis-server"]
