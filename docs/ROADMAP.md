@@ -119,7 +119,7 @@ environment is not).
 
 ## P1 — Live-path correctness & half-finished work
 
-- [ ] `aegis/proxy/anthropic_provider.py:379` — "Tool use partial JSON — forward as content for now" — implement correct streaming tool-use/`tool_result` reassembly instead of forwarding partial JSON as content.
+- [x] `aegis/providers/anthropic_provider.py` — replaced the "Tool use partial JSON — forward as content for now" hack (which leaked tool-call JSON into message `content` and made `tool_calls` unreconstructable) with correct streaming reassembly: a `content_block_start` of type `tool_use` now opens an OpenAI `delta.tool_calls` entry (id + function name, empty arguments) and each `input_json_delta` is appended as a `function.arguments` fragment on the matching tool-call index (Anthropic content-block index → OpenAI tool_call index map). `stop_reason="tool_use"` already mapped to `finish_reason="tool_calls"`. 4 new/updated streaming tests cover single-call reassembly, multi-call distinct indices, and that no tool JSON leaks into `content` (`tests/test_provider_contracts.py`).
 - [ ] `aegis/core/operator_seal.py:423` — "public key is required — this stub uses re-sign comparison"; implement real asymmetric verification.
 - [ ] `aegis/core/gossip_wal_sync.py` — documented "stub" (in-process, no real network); implement real SWIM gossip transport or fold into the Raft path so HA claims are end-to-end testable.
 - [ ] Reconcile duplicate/parallel modules so there is exactly one implementation per concern: PQC (`pqc.py` vs `pqc_provider.py` vs Rust vs Vault), sandbox (`sandbox.py` vs `sandbox_l1.py` vs `sandbox_l2.py` vs `seccomp_guard.py`), HSM (`hsm.py` real vs the preserved stub `HSMManager`).
@@ -201,10 +201,10 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 |---|---|---|
 | P0 — Trust integrity (de-sim / real crypto) | 1 | Critical |
 | P1 — Supply chain | 6 | High |
-| P1 — Live-path correctness | 6 | High |
+| P1 — Live-path correctness | 5 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **45** | — |
+| **Total open** | **44** | — |
 
 > **Only open P0 item:** `zk_proof.py` — replace the honest SHA-256 stub
 > (`is_stub == True`) with a real proving system (Groth16/PLONK/STARK). This is a
