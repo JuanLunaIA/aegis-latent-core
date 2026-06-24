@@ -64,8 +64,8 @@ production and is excluded from compliance evidence.
 - [x] Consolidate on the **one real ML-DSA path**: `aegis/core/pqc_signer.py` `PQCSigner` over the Rust `pqcrypto-mldsa` (FIPS 204) backend — real keypair (pk 1952 / sk 4032 / sig 3309 bytes), `sign`/`verify`, honest `backend` reporting (`ml-dsa-65-rust` or `unavailable`, never a sim label), `require_real` mode, and no simulated fallback; 20 KAT-style tests in `tests/test_pqc_signer.py` proving forgery/tamper/wrong-key rejection (`pytest tests/test_pqc_signer.py`).
 - [ ] Add a Rust `PqcKeypair::from_private_key` constructor so `PQCSigner` can load a **persistent** ML-DSA signing identity across restarts (today the binding only generates fresh in-process keypairs; the Python signer is ready for it).
 - [x] Replace `aegis/core/pqc_tls.py` simulated X25519/Kyber handshake (both "secrets" were `sha256(priv‖pub)` — no real DH, no PQC) with a **real hybrid KEM**: X25519 ECDH (`cryptography`) composed with ML-KEM-1024 (`mlkem_session`) via `HKDF-SHA256(x25519_ss ‖ mlkem_ss)`, TLS-1.3-style initiator/responder flow; refuses to downgrade to classical-only when ML-KEM is absent. 14 tests prove initiator/responder key agreement + tamper-breaks-agreement (`tests/test_pqc_tls.py`).
-- [ ] Remove `aegis/core/artifact_signing.py` "Simulate PQC Signature" path; route artifact signing through the real signer + HSM.
-- [ ] Add a CI guard that fails the build if any module under `aegis/` (excluding an allow-listed `simulation/` quarantine package) contains `# SIMULATION` / `simulate a … signature` markers.
+- [x] Rewrite `aegis/core/artifact_signing.py` — removed the "Simulate PQC Signature (ML-DSA)" label over HMAC code and the broken re-sign-and-compare verification. Now offers two **real** honestly-labelled schemes: `HMAC_SHA512` and real `ML_DSA_65` (via `PQCSigner`, asymmetric verify with the published public key); UTC timestamps; 10 tests (`tests/test_artifact_signing.py`).
+- [x] CI guard against security-theater regressions — `tests/test_no_simulation_markers.py` is a **ratchet**: no new `aegis/` module may introduce a `# SIMULATION` marker, and a de-simulated module must be removed from `KNOWN_SIMULATION_DEBT` (currently 23 entries; may only shrink).
 
 ### P0.2 Fake hardware-root-of-trust & runtime attestation
 
@@ -199,18 +199,21 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 
 | Track | Open items | Priority |
 |---|---|---|
-| P0 — Trust integrity (de-sim / real crypto) | 23 | Critical |
+| P0 — Trust integrity (de-sim / real crypto) | 21 | Critical |
 | P1 — Supply chain | 6 | High |
 | P1 — Live-path correctness | 6 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **67** | — |
+| **Total open** | **65** | — |
 
-> **Progress 2026-06-24:** P0.1 de-simulation underway. (1) `pqc.py` +
-> `pqc_provider.py` deleted, replaced by the real `PQCSigner` (ML-DSA-65 / FIPS
-> 204) with forgery-rejection KATs. (2) `pqc_tls.py` rewritten as a real X25519 +
-> ML-KEM-1024 hybrid KEM with key-agreement + tamper tests. 4 items closed, 1
-> follow-up opened (persistent-key Rust constructor).
+> **Progress 2026-06-24:** P0.1 fake-crypto cluster **complete**. (1) `pqc.py` +
+> `pqc_provider.py` deleted → real `PQCSigner` (ML-DSA-65 / FIPS 204) with
+> forgery-rejection KATs. (2) `pqc_tls.py` → real X25519 + ML-KEM-1024 hybrid KEM
+> with key-agreement + tamper tests. (3) `artifact_signing.py` → real HMAC /
+> ML-DSA with correct asymmetric verify. (4) `test_no_simulation_markers.py`
+> ratchet guard locks in 23-module simulation debt (shrink-only). 6 items closed,
+> 1 follow-up opened (persistent-key Rust constructor). Next: P0.2 hardware-root-
+> of-trust de-simulation (`tpm.py`, `cfi_manager.py`, …).
 
 **Headline finding:** ~20% of `aegis/core` (25/125 modules) ships simulated
 security controls. The product's accreditation value depends on driving the P0

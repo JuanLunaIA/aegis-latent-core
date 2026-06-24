@@ -33,6 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   both `sha256(priv ‖ pub)` — not a Diffie-Hellman and not post-quantum. The new
   module refuses to downgrade to classical-only when ML-KEM is unavailable. 14
   tests prove key agreement and tamper-breaks-agreement (`tests/test_pqc_tls.py`).
+- `aegis/core/artifact_signing.py` rewritten with two honestly-labelled **real**
+  schemes — `HMAC_SHA512` and real `ML_DSA_65` (via `PQCSigner`) — fixing a
+  comment that labelled HMAC as ML-DSA and a verify path that re-signed instead
+  of doing asymmetric verification with the published public key. 10 tests
+  (`tests/test_artifact_signing.py`).
+- `tests/test_no_simulation_markers.py` — a **ratchet** CI guard: no new `aegis/`
+  module may introduce a `# SIMULATION` marker, and de-simulated modules must be
+  removed from the 23-entry `KNOWN_SIMULATION_DEBT` allowlist (shrink-only).
 
 ### Fixed
 
