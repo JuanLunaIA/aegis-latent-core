@@ -97,11 +97,40 @@ jobs:
           name: python-dist
           path: dist/
 
-  # ── Rust extension wheels (manylinux x86_64) ────────────────────────────
-  build-rust-linux:
-    name: Rust wheel (linux-x86_64)
-    runs-on: ubuntu-22.04
+  # ── Rust extension wheels (deterministic cross-platform matrix) ─────────
+  # One abi3 (cp311-abi3) wheel per platform target covers every supported
+  # CPython >= 3.11, so there is no Python-version axis. PyO3/maturin-action
+  # builds glibc wheels inside pinned manylinux2014 containers and musl wheels
+  # inside musllinux_1_2 containers (reproducible toolchains), cross-compiling
+  # aarch64/armv7 via the action's bundled cross/zig support. macOS and Windows
+  # build natively on their respective hosted runners.
+  #
+  #   Linux  glibc  : x86_64, aarch64            (manylinux2014)
+  #   Linux  musl   : x86_64, aarch64, armv7     (musllinux_1_2 — edge / OT / IL5)
+  #   macOS         : x86_64 (Intel), arm64 (Apple Silicon)
+  #   Windows       : x86_64 (MSVC)
+  build-rust:
+    name: Rust wheel (${{ matrix.platform.target }})
+    runs-on: ${{ matrix.platform.runner }}
     needs: validate
+    strategy:
+      # Never let one target's failure cancel the others — every platform
+      # must build independently for a complete release.
+      fail-fast: false
+      matrix:
+        platform:
+          # ── Linux glibc (manylinux2014) ──
+          - { runner: ubuntu-22.04,  target: x86_64-unknown-linux-gnu,        manylinux: "2014" }
+          - { runner: ubuntu-22.04,  target: aarch64-unknown-linux-gnu,       manylinux: "2014" }
+          # ── Linux musl (static — air-gapped / edge / industrial) ──
+          - { runner: ubuntu-22.04,  target: x86_64-unknown-linux-musl,       manylinux: musllinux_1_2 }
+          - { runner: ubuntu-22.04,  target: aarch64-unknown-linux-musl,      manylinux: musllinux_1_2 }
+          - { runner: ubuntu-22.04,  target: armv7-unknown-linux-musleabihf,  manylinux: musllinux_1_2 }
+          # ── macOS (native) ──
+          - { runner: macos-13,      target: x86_64-apple-darwin }
+          - { runner: macos-14,      target: aarch64-apple-darwin }
+          # ── Windows (native, MSVC) ──
+          - { runner: windows-2022,  target: x86_64-pc-windows-msvc }
     steps:
       - uses: actions/checkout@v4
 
@@ -109,65 +138,33 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_BUILD_VERSION }}
 
-      - uses: dtolnay/rust-toolchain@stable
-
-      - name: Install maturin
-        run: pip install maturin
-
-      - name: Build manylinux wheel
-        working-directory: aegis_rust_v2
+      - name: Build abi3 wheel
+        uses: PyO3/maturin-action@v1
         env:
+          # Allow building an abi3-py311 wheel against a newer interpreter.
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
-        run: |
-          maturin build --release \
-            --target x86_64-unknown-linux-gnu \
-            --out ../rust-dist-linux \
-            --features extension-module
+        with:
+          working-directory: aegis_rust_v2
+          target: ${{ matrix.platform.target }}
+          # `auto` is a no-op on macOS/Windows; the container image is only
+          # consulted for the Linux targets above.
+          manylinux: ${{ matrix.platform.manylinux || 'auto' }}
+          args: --release --out dist --features extension-module
+
+      - name: Verify wheel was produced
+        shell: bash
+        run: ls -lh aegis_rust_v2/dist/*.whl
 
       - uses: actions/upload-artifact@v4
         with:
-          name: rust-dist-linux
-          path: rust-dist-linux/
-
-  # ── Rust extension wheels (macOS x86_64 + arm64) ────────────────────────
-  build-rust-macos:
-    name: Rust wheel (macos)
-    runs-on: macos-13
-    needs: validate
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_BUILD_VERSION }}
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
-
-      - name: Install maturin
-        run: pip install maturin
-
-      - name: Build universal2 wheel
-        working-directory: aegis_rust_v2
-        env:
-          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
-        run: |
-          maturin build --release \
-            --universal2 \
-            --out ../rust-dist-macos \
-            --features extension-module
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: rust-dist-macos
-          path: rust-dist-macos/
+          name: rust-dist-${{ matrix.platform.target }}
+          path: aegis_rust_v2/dist/
 
   # ── Create GitHub Release ────────────────────────────────────────────────
   github-release:
     name: Create GitHub Release
     runs-on: ubuntu-22.04
-    needs: [validate, build-python, build-rust-linux, build-rust-macos]
+    needs: [validate, build-python, build-rust]
     permissions:
       contents: write
       id-token: write   # for artifact attestation

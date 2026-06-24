@@ -88,13 +88,12 @@ Desktop.ini
 # ── Rust (optional extension build) ───────────────────────────────────────────
 aegis_rust_v2/target/
 **/target/
-# Cargo.lock is currently git-ignored. Committing it (correct for a cdylib
-# extension, and required to OSV/Trivy-scan the Rust tree) is blocked on a
-# dependency-upgrade effort to clear pre-existing advisories in the pinned
-# tree (pyo3 0.24→0.29: GHSA-36hh-v3qg-5jq4 / GHSA-chgr-c6px-7xpp; hickory-proto
-# via reqwest: GHSA-3v94-mw7p-v465 [no fix yet] / GHSA-q2qq-hmj6-3wpp). Tracked
-# in docs/ROADMAP.md. Until then cargo-audit (with documented ignores) covers Rust.
-Cargo.lock
+# Cargo.lock IS committed (correct for a cdylib extension shipping reproducible
+# wheels): the pyo3 0.24→0.29 upgrade cleared GHSA-36hh-v3qg-5jq4 /
+# GHSA-chgr-c6px-7xpp, so the lock can be pinned for deterministic builds. The
+# remaining transitive advisories (hickory-proto GHSA-3v94-mw7p-v465 [no upstream
+# fix yet] / GHSA-q2qq-hmj6-3wpp; pqcrypto family) are documented permanent
+# entries in aegis_rust_v2/.cargo/audit.toml until upstream fixes land.
 
 # ── Aegis runtime data ────────────────────────────────────────────────────────
 *.wal.jsonl

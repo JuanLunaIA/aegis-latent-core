@@ -77,7 +77,12 @@ pub struct RustWaf {
 }
 
 /// Result returned to Python for each WAF scan.
-#[pyclass]
+///
+/// `skip_from_py_object`: this type is only ever *returned* to Python, never
+/// accepted as a function argument, so it needs no `FromPyObject` derive.
+/// Opting out explicitly silences the PyO3 0.29 deprecation that makes the
+/// `Clone`-based `FromPyObject` auto-derive opt-in.
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
 pub struct WafResult {
     #[pyo3(get)]

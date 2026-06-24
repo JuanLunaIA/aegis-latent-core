@@ -140,7 +140,7 @@ impl RustForwarder {
         let client = self.client.clone();
         let timeout = self.timeout;
 
-        let result = py.allow_threads(move || {
+        let result = py.detach(move || {
             rt().block_on(async move {
                 let mut req = client
                     .post(&url)
@@ -229,7 +229,7 @@ fn extract_body_bytes(py: Python<'_>, body: &Bound<'_, PyAny>) -> PyResult<Vec<u
         });
     }
 
-    if let Ok(dict) = body.downcast::<PyDict>() {
+    if let Ok(dict) = body.cast::<PyDict>() {
         return python_obj_to_bytes(py, dict.as_any());
     }
 

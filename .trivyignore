@@ -1,0 +1,30 @@
+# Trivy vulnerability suppressions — Rust dependency tree (aegis_rust_v2/Cargo.lock)
+#
+# These entries MIRROR the documented, owner-accepted advisories already tracked
+# in aegis_rust_v2/.cargo/audit.toml (cargo-audit --ignore list). They are listed
+# here only because committing Cargo.lock for deterministic/reproducible wheel
+# builds makes the Rust lockfile visible to the filesystem (Trivy) scanner, which
+# — unlike cargo-audit — does not read .cargo/audit.toml.
+#
+# Each suppression is an ACCEPTED, MONITORED risk (not a denial that the issue
+# exists): every advisory remains visible in Dependabot and will be un-suppressed
+# the moment an upstream fix becomes installable. Review on every reqwest /
+# hickory bump.
+
+# hickory-proto (transitive via reqwest "hickory-dns" feature, which is REQUIRED
+# for seccomp compatibility — it keeps the resolver on the fixed Tokio worker
+# pool instead of spawning getaddrinfo threads via clone()).
+#
+# GHSA-3v94-mw7p-v465 (RUSTSEC-2026-0118, HIGH): NSEC3 closest-encloser proof
+#   validation can enter an unbounded loop on cross-zone responses (DoS). NO
+#   upstream fix is available yet. Exposure is bounded: Aegis resolves only a
+#   small set of configured, trusted upstream API hosts.
+GHSA-3v94-mw7p-v465
+# RUSTSEC alias for the same advisory (in case Trivy keys on the RUSTSEC ID).
+RUSTSEC-2026-0118
+
+# GHSA-q2qq-hmj6-3wpp (RUSTSEC-2026-0119, MEDIUM): O(n^2) name compression during
+#   message encoding can exhaust CPU. Fixed in hickory-proto 0.26.1, but that
+#   bump is gated behind a reqwest / hickory-resolver release that pins it.
+GHSA-q2qq-hmj6-3wpp
+RUSTSEC-2026-0119

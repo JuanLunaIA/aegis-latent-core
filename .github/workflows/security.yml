@@ -137,6 +137,10 @@ jobs:
           output: trivy-fs.sarif
           severity: CRITICAL,HIGH
           exit-code: "0"   # report but don't block
+          # Trivy does NOT read aegis_rust_v2/.cargo/audit.toml, so the
+          # owner-accepted, documented Rust advisories (hickory-proto) are
+          # mirrored in the repo-root .trivyignore. Keep the two lists in sync.
+          trivyignores: .trivyignore
 
       - name: Upload Trivy SARIF
         if: always()
@@ -154,8 +158,8 @@ jobs:
 
       - name: Run OSV-Scanner over Python lockfile
         # Scans the committed requirements.txt against the OSV database.
-        # (Rust crates are covered by the dedicated cargo-audit job below;
-        # Cargo.lock is not committed yet — see .gitignore / ROADMAP.)
+        # (Rust crates are covered by the dedicated cargo-audit job below,
+        # which reads the now-committed Cargo.lock with documented ignores.)
         # Report-only: findings surface as SARIF in the Security tab but do not
         # block the PR — the gating Python audit is the pip-audit job above.
         uses: google/osv-scanner-action/osv-scanner-action@v2.0.2
@@ -189,9 +193,9 @@ jobs:
       - name: Audit Rust dependencies
         working-directory: aegis_rust_v2
         run: |
+          # RUSTSEC-2026-0176 / -0177 (pyo3 0.24.x) were cleared by the pyo3
+          # 0.29.0 upgrade and are deliberately no longer ignored.
           cargo audit \
-            --ignore RUSTSEC-2026-0176 \
-            --ignore RUSTSEC-2026-0177 \
             --ignore RUSTSEC-2026-0118 \
             --ignore RUSTSEC-2026-0119 \
             --ignore RUSTSEC-2024-0436 \
