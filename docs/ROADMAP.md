@@ -75,7 +75,7 @@ production and is excluded from compliance evidence.
 - [x] `aegis/core/mte_guard.py` — replaced simulated MTE detection with real `/proc/cpuinfo` `mte` flag check, `AT_HWCAP2` auxiliary-vector parsing, and `prctl(PR_SET_TAGGED_ADDR_CTRL)` syscall via `ctypes`. Returns False on x86/non-ARM; never manufactures a positive result. 14 tests cover hardware-absent and mocked-hardware paths (`tests/test_mte_guard.py`). ARM integration tests skip cleanly on CI.
 - [x] `aegis/core/tee_manager.py` / `enclave_provider.py` — replaced simulated enclave (hardcoded fake measurements + `ENCLAVE_SECRET_SALT` signature) with honest hardware-gated stubs: `_tee_device_available()` / `_enclave_device_available()` probe `/dev/sgx_enclave`, `/dev/isgx`, `/dev/sev`, `/dev/tdx_guest`; `initialize_enclave()` returns `False` when absent; operations raise `NotImplementedError` when hardware present but C API not yet bound — no fake values manufactured. Real SGX/SEV-SNP attestation binding tracked in DX-Gov.
 - [x] `aegis/core/sandbox_l1.py` — replaced "we simulate the rule addition" with real libseccomp C API via ctypes: `seccomp_syscall_resolve_name` resolves each syscall name to its kernel number, `seccomp_rule_add` permits it, default action is `SCMP_ACT_ERRNO(EPERM)`. `apply_filter()` returns `True` only when `seccomp_load()` succeeds; `build_filter_without_loading()` validates the filter safely in tests. 18 tests including real subprocess filter-load and mocked-library failure paths (`tests/test_sandbox_l1.py`).
-- [ ] `aegis/core/boot_attestation.py` — example golden measurements must come from a signed vendor manifest, not in-source constants.
+- [x] `aegis/core/boot_attestation.py` — removed the in-source `GOLDEN_MEASUREMENTS = {"a"*64, ...}` fake constants and the broken `attestor` singleton (it called non-existent `tpm.extend_pcr`/`read_pcr` classmethods). Golden measurements now load from a **cryptographically-signed vendor manifest** via `load_signed_manifest()`: a JSON `{version, measurements, algorithm, signature}` whose signature (real `ml-dsa-65` verified with the vendor public key, or `hmac-sha512` with a provisioning key) is checked over the canonical payload before any measurement is trusted — no unsigned fallback. `BootAttestationManager` now uses the real `TPMManager` API (`measure_binary` / `get_pcr_value`) per PCR and fails closed on mismatch. 18 tests cover valid/tampered/wrong-key/missing-key/malformed manifests, ML-DSA + HMAC paths, and boot-state match/mismatch (`tests/test_boot_attestation.py`).
 
 ### P0.3 Fake datapath / network enforcement (LIVE-PATH false assurance)
 
@@ -199,12 +199,12 @@ completion percentages (completed history lives in `CHANGELOG.md` + git).
 
 | Track | Open items | Priority |
 |---|---|---|
-| P0 — Trust integrity (de-sim / real crypto) | 5 | Critical |
+| P0 — Trust integrity (de-sim / real crypto) | 4 | Critical |
 | P1 — Supply chain | 6 | High |
 | P1 — Live-path correctness | 6 | High |
 | P2 — Performance & optimization | 5 | Medium |
 | DX — Domain expansion (7 verticals) | 27 | Strategic |
-| **Total open** | **49** | — |
+| **Total open** | **48** | — |
 
 > **P0.5 complete (2026-06-24, run 13):** with the capability matrix + `SECURITY.md`
 > "Simulated vs. Real Controls" section + the obviated quarantine package, all of P0.5
