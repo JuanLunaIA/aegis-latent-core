@@ -102,6 +102,12 @@ Aegis serves every stakeholder. Jump directly to what matters for your role:
 
 ## What Aegis Delivers — Six Verifiable Guarantees
 
+<div align="center">
+
+<img alt="A translucent shield enclosing a vertical stack of chained, sealed ledger blocks topped by a glowing check seal — every inference guarded on the way in and sealed in a tamper-evident chain on the way out" src="docs/assets/art-hero.png" width="100%">
+
+</div>
+
 Every guarantee below is derived from code you can read, tests you can run, and proofs any auditor can reproduce. Nothing is a marketing claim.
 
 | # | Guarantee | Mechanism | Verify Now |
@@ -120,6 +126,12 @@ Every guarantee below is derived from code you can read, tests you can run, and 
 ## Who Deploys Aegis
 
 Aegis is designed for organizations where AI governance is non-negotiable — and where the cost of an unverified audit trail is measured in regulatory fines, reputational damage, or lives.
+
+<div align="center">
+
+<img alt="Glass icons for healthcare, banking, government, justice, industry and silicon, each lit in royal blue and teal and connected beneath a single protective shield — one governance layer across every regulated sector" src="docs/assets/art-industries.png" width="100%">
+
+</div>
 
 | Sector | Requirement Aegis Satisfies |
 |--------|----------------------------|
@@ -154,6 +166,12 @@ Aegis aligns to the following frameworks. Alignment means the control is impleme
 ## Architecture Overview
 
 Aegis installs as a transparent proxy between your application and any LLM provider. **No application changes required** — update one environment variable (`OPENAI_BASE_URL=http://aegis:8080/v1`) and every existing OpenAI-SDK call is governed.
+
+<div align="center">
+
+<img alt="A stream of requests flowing through a brushed-metal governance gateway and a translucent blue filter membrane on its way to an upstream service, while a quieter secondary path branches down into a sealed audit vault — the proxy on the hot path, the audit committed off it" src="docs/assets/art-gateway.png" width="100%">
+
+</div>
 
 ```mermaid
 graph TB
@@ -279,6 +297,12 @@ The Merkle Mountain Range (MMR) adds a logarithmic proof layer on top: an audito
 
 ### Post-Quantum Signatures — The 30-Year Wax Seal
 
+<div align="center">
+
+<img alt="A brushed-titanium circular cryptographic seal with a deep-blue glass inlay, an engraved check mark and a fine concentric lattice etched into the rim — a post-quantum, lattice-based signature on every record" src="docs/assets/art-pqc-seal.png" width="320">
+
+</div>
+
 Each audit node is signed with **ML-DSA-65 (FIPS 204)** — the post-quantum digital signature standard finalized by NIST in August 2024 (formerly Dilithium). Classical signatures (RSA-2048, ECDSA) are vulnerable to Shor's algorithm on sufficiently powerful quantum computers; ML-DSA is built on module lattice hardness — a problem that remains hard under current quantum computing models.
 
 In practical terms: the HMAC-SHA256 key protects today's audit records against today's threats. The ML-DSA-65 layer protects their validity against "harvest now, decrypt later" attacks — a documented concern for government and financial regulators under NIST SP 800-131A Rev 3 and CNSSP-15.
@@ -286,6 +310,12 @@ In practical terms: the HMAC-SHA256 key protects today's audit records against t
 The Rust `pqcrypto-mldsa` backend generates real keypairs (public key 1,952 bytes / secret key 4,032 bytes / signature 3,309 bytes). There is no simulation fallback; `require_real=True` refuses to start if the Rust backend is absent.
 
 ---
+
+<div align="center">
+
+<img alt="" src="docs/assets/art-divider.png" width="100%">
+
+</div>
 
 ## The ROI — What Aegis Costs vs. What It Prevents
 
@@ -369,6 +399,12 @@ sequenceDiagram
 ---
 
 ## Security Guarantees
+
+<div align="center">
+
+<img alt="A horizontal chain of frosted-glass cubes linked by a luminous blue thread, with one cube lifted and sealed by a glowing check-disc — an ordered, append-only record where any tampered link breaks the chain" src="docs/assets/art-audit-chain.png" width="100%">
+
+</div>
 
 ### Audit Chain Integrity
 
@@ -970,6 +1006,12 @@ assert result.integrity == True
 | Seccomp install failure | Warning logged | Proxy continues; seccomp not active | Check kernel and container runtime |
 
 ---
+
+<div align="center">
+
+<img alt="" src="docs/assets/art-divider.png" width="100%">
+
+</div>
 
 ## Commercial Licensing
 
