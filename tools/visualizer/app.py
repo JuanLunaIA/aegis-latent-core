@@ -6,11 +6,13 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from tools.visualizer.generate_summary import generate_summary_dict
@@ -24,6 +26,48 @@ PROJECT_DIR = Path.cwd()
 VIS_DIR = APP_DIR / "tools" / "visualizer"
 
 app = FastAPI(title="Aegis Visualizer")
+
+# ── SSE event bus ─────────────────────────────────────────────────────────────
+# A module-level asyncio.Queue that POST /api/scan publishes scan events to.
+# GET /api/events subscribers consume from their own per-connection copy via a
+# broadcast list so every connected dashboard tab receives every event.
+_SSE_SUBSCRIBERS: list[asyncio.Queue[str]] = []
+_SSE_LOCK = asyncio.Lock()
+
+
+async def _broadcast_event(event_type: str, data: dict) -> None:
+    """Publish a JSON event to all active SSE subscribers."""
+    payload = json.dumps({"type": event_type, "ts": time.time(), **data})
+    msg = f"data: {payload}\n\n"
+    async with _SSE_LOCK:
+        dead: list[asyncio.Queue[str]] = []
+        for q in _SSE_SUBSCRIBERS:
+            try:
+                q.put_nowait(msg)
+            except asyncio.QueueFull:
+                dead.append(q)
+        for q in dead:
+            _SSE_SUBSCRIBERS.remove(q)
+
+
+async def _sse_generator(queue: asyncio.Queue[str]) -> AsyncGenerator[str, None]:
+    """Yield SSE frames from the subscriber queue until the client disconnects."""
+    yield ": aegis-stream-connected\n\n"  # Initial ping so the browser opens the connection
+    try:
+        while True:
+            try:
+                msg = await asyncio.wait_for(queue.get(), timeout=25.0)
+                yield msg
+            except asyncio.TimeoutError:
+                yield ": keepalive\n\n"  # Prevent proxy/load-balancer idle disconnects
+    except asyncio.CancelledError:
+        pass
+    finally:
+        async with _SSE_LOCK:
+            try:
+                _SSE_SUBSCRIBERS.remove(queue)
+            except ValueError:
+                pass
 app.mount("/static", StaticFiles(directory=str(VIS_DIR / "static")), name="static")
 
 
@@ -187,11 +231,57 @@ async def scan(request: Request):
         from tools.visualizer.threat_lab import scan_text
 
         loop = asyncio.get_running_loop()
+        t0 = time.perf_counter()
         with ThreadPoolExecutor() as pool:
             data = await loop.run_in_executor(pool, scan_text, text)
+        latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+        data["latency_ms"] = latency_ms
+        # Broadcast to all SSE subscribers so every open dashboard tab updates live
+        await _broadcast_event(
+            "scan_result",
+            {
+                "verdict": data.get("verdict"),
+                "severity": data.get("severity"),
+                "latency_ms": latency_ms,
+                "engine_count": len(data.get("engines", [])),
+                "flagged_engines": [
+                    e["engine"] for e in data.get("engines", []) if e.get("flagged")
+                ],
+                "text_preview": text[:80],
+            },
+        )
         return JSONResponse(content=data)
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": "scan failed", "exception": str(e)})
+
+
+@app.get("/api/events")
+async def events(request: Request) -> StreamingResponse:
+    """Server-Sent Events stream for live dashboard updates.
+
+    Every POST /api/scan result is broadcast here so all 12 dashboard tabs
+    can update in real time without polling.
+
+    Connect from JavaScript:
+        const es = new EventSource('/api/events');
+        es.onmessage = e => { const ev = JSON.parse(e.data); ... };
+
+    Event types:
+        scan_result  — a completed Threat Lab scan (verdict, engines, latency_ms)
+        keepalive    — 25-second heartbeat comment (no event dispatched by browser)
+    """
+    queue: asyncio.Queue[str] = asyncio.Queue(maxsize=64)
+    async with _SSE_LOCK:
+        _SSE_SUBSCRIBERS.append(queue)
+    return StreamingResponse(
+        _sse_generator(queue),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering for SSE
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @app.get("/api/threat_samples")

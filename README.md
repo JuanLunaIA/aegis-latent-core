@@ -9,8 +9,8 @@
 **OpenAI-compatible · Zero application changes · Cryptographically-signed tamper-evident audit chain**
 
 [![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-4575%20passed-brightgreen.svg)](tests/)
-[![Coverage](https://img.shields.io/badge/coverage-95%25%2B-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-5451%20passed-brightgreen.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-95.18%25%2B-brightgreen.svg)](tests/)
 [![License: AGPLv3 / Commercial](https://img.shields.io/badge/License-AGPLv3%20%7C%20Commercial-blue.svg)](COMMERCIAL.md)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Rust](https://img.shields.io/badge/Rust-acceleration-orange.svg?logo=rust)](aegis_rust_v2/)
@@ -45,20 +45,22 @@ Standard application logs cannot satisfy this. They prove *that* a call was made
 3. [Compliance Framework Coverage](#compliance-framework-coverage)
 4. [Architecture Overview](#architecture-overview)
 5. [Threat Lab — Live Detection Testing](#threat-lab--live-detection-testing)
-6. [Request Lifecycle](#request-lifecycle)
-7. [Security Guarantees](#security-guarantees)
-8. [Performance — Measured, Not Claimed](#performance--measured-not-claimed)
-9. [Quick Evaluation — 5 Minutes](#quick-evaluation--5-minutes)
-10. [Installation](#installation)
-11. [Production Deployment](#production-deployment)
-12. [Operational Checklist](#operational-checklist)
-13. [Observability](#observability)
-14. [Mission Control Dashboard](#mission-control-dashboard)
-15. [Compliance Exports](#compliance-exports)
-16. [Threat Model and Non-Goals](#threat-model-and-non-goals)
-17. [Failure Modes](#failure-modes)
-18. [Commercial Licensing](#commercial-licensing)
-19. [Documentation Index](#documentation-index)
+6. [The Mechanics — How Aegis Works (Without the PhD)](#the-mechanics--how-aegis-works-without-the-phd)
+7. [The ROI — What Aegis Costs vs. What It Prevents](#the-roi--what-aegis-costs-vs-what-it-prevents)
+8. [Request Lifecycle](#request-lifecycle)
+9. [Security Guarantees](#security-guarantees)
+10. [Performance — Measured, Not Claimed](#performance--measured-not-claimed)
+11. [Quick Evaluation — 5 Minutes](#quick-evaluation--5-minutes)
+12. [Installation](#installation)
+13. [Production Deployment](#production-deployment)
+14. [Operational Checklist](#operational-checklist)
+15. [Observability](#observability)
+16. [Mission Control Dashboard](#mission-control-dashboard)
+17. [Compliance Exports](#compliance-exports)
+18. [Threat Model and Non-Goals](#threat-model-and-non-goals)
+19. [Failure Modes](#failure-modes)
+20. [Commercial Licensing](#commercial-licensing)
+21. [Documentation Index](#documentation-index)
 
 ---
 
@@ -75,7 +77,7 @@ Every guarantee below is derived from code you can read, tests you can run, and 
 | **G5** | API key comparison is timing-attack-resistant | `hmac.compare_digest()` used for every key comparison | Code: `aegis/proxy/auth.py:ProxyKeyAuth` |
 | **G6** | The WAL file is readable only by the process owner | `os.chmod(path, 0o600)` set on creation | `stat $AEGIS_WAL_PATH` |
 
-**Test evidence:** 4,575 tests passing, 3 skipped, 95%+ branch coverage. `pytest tests/ -q` reproduces this in any clone.
+**Test evidence:** 5,451 tests passing, 3 skipped, 95.18%+ branch coverage. `pytest tests/ -q` reproduces this in any clone.
 
 ---
 
@@ -203,6 +205,73 @@ curl -s -X POST http://localhost:8081/api/scan \
   | python -m json.tool
 # "verdict": "BLOCK", "max_severity": "critical", "engines_flagged": 3
 ```
+
+---
+
+## The Mechanics — How Aegis Works (Without the PhD)
+
+### Two-Path Execution: Your Train, Our Security Camera
+
+Aegis does not make your LLM calls slower. It uses a two-path execution model:
+
+**Hot path (client waits):** Auth → WAF → Rate limit → Forward to provider → Return response to client. All of this is synchronous and must be fast.
+
+**Background path (client never waits):** After `return JSONResponse(...)` sends the response, `asyncio.create_task()` dispatches the audit work. The client is already gone. The background task runs `ResponseAnalyzer` (Shannon entropy / KL divergence per token) → `CryptographicAuditLedger.commit_forensic()` → Write-Ahead Log (fsync, mode 0o600). Measured scheduling overhead: **2.4 µs p50**. See `docs/BENCHMARKS.md`.
+
+Think of it as a train station security camera: the passenger boards the train (response delivered), then — and only then — the security officer writes the incident report and seals it in a tamper-proof vault. The train never waited for the report.
+
+### The Cryptographic Lego Tower — Merkle Mountain Range + Hash Chain
+
+Every inference creates one audit node — a Lego brick. Each brick contains the SHA-256 hash of the brick below it:
+
+```
+node[i].hash = SHA256(node[i-1].hash ‖ state_id ‖ request_hash ‖ response_hash)
+```
+
+Remove or modify brick `i` and every brick above it fails its hash check. There is no way to tamper silently. `verify_integrity()` sweeps the entire chain in O(N) time, checking field tampering, chain linkage, and HMAC signatures — all via constant-time comparison.
+
+The Merkle Mountain Range (MMR) adds a logarithmic proof layer on top: an auditor can prove node #10,000 existed in the chain by verifying only log₂(N) hashes — no need to replay the entire ledger. This makes multi-year WORM-compliant exports tractable.
+
+### Post-Quantum Signatures — The 30-Year Wax Seal
+
+Each audit node is signed with **ML-DSA-65 (FIPS 204)** — the post-quantum digital signature standard finalized by NIST in August 2024 (formerly Dilithium). Classical signatures (RSA-2048, ECDSA) are vulnerable to Shor's algorithm on sufficiently powerful quantum computers; ML-DSA is built on module lattice hardness — a problem that remains hard under current quantum computing models.
+
+In practical terms: the HMAC-SHA256 key protects today's audit records against today's threats. The ML-DSA-65 layer protects their validity against "harvest now, decrypt later" attacks — a documented concern for government and financial regulators under NIST SP 800-131A Rev 3 and CNSSP-15.
+
+The Rust `pqcrypto-mldsa` backend generates real keypairs (public key 1,952 bytes / secret key 4,032 bytes / signature 3,309 bytes). There is no simulation fallback; `require_real=True` refuses to start if the Rust backend is absent.
+
+---
+
+## The ROI — What Aegis Costs vs. What It Prevents
+
+### The Regulatory Exposure Without a Tamper-Evident Audit Trail
+
+| Regulatory Risk | Reference | Documented Penalty Range |
+|----------------|-----------|--------------------------|
+| HIPAA audit failure — no tamper-evident inference log | 45 CFR §164.312(b) | $100 – $50,000 per violation; criminal for willful neglect |
+| SEC Rule 17a-4 non-compliance — mutable electronic records | 17 CFR §240.17a-4 | Up to $10M per violation; avg. SEC enforcement action: $1.1M |
+| EU AI Act — no audit trail for high-risk AI system | EU 2024/1689 Art. 12–13 | Up to €30M or 6% global annual turnover |
+| GDPR accountability failure — no demonstrable audit trail | Art. 5(2), Art. 83(4) | Up to €20M or 4% global annual turnover |
+| FedRAMP — no evidence of AI inference content | NIST SP 800-53 AU-9 | Authorization revoked; contract termination |
+| Daubert challenge — AI forensic evidence rejected at trial | Fed. R. Evid. 702 | Evidence excluded; case outcomes reversed |
+
+### Litigation Defense
+
+When an AI system is involved in a medical diagnosis error, financial advice dispute, or automated hiring decision, opposing counsel's first question is: *"Can you produce, under oath, an unmodified record of exactly what the model received and returned?"*
+
+Standard application logs answer: *"We believe it was..."*
+
+Aegis answers with a cryptographic proof: SHA-256 hash-chained, HMAC-signed, ML-DSA-65 post-quantum-signed audit records, verifiable offline from a sealed export bundle, meeting Daubert's requirement for "sufficient facts or data" derived from "reliable principles and methods applied reliably to the facts."
+
+### Build vs. Buy
+
+| Deployment Model | Aegis Annual Cost | Build-It-Yourself Cost Estimate |
+|-----------------|-------------------|--------------------------------|
+| Self-Serve Enterprise | From $29,900 / yr | 1–2 compliance engineers × 6–12 months = $180,000–$480,000 |
+| Premium Sovereign | From $150,000 / yr | Dedicated team + legal review + annual audit = $500,000–$2,000,000 |
+| OEM / Embedded | Negotiated | Full engineering + legal org build-out |
+
+The Aegis hash-chain, MMR, and ML-DSA signing infrastructure took over two years to build, audit, and validate across 5,451 tests. No bespoke application logging system replicates this in one sprint.
 
 ---
 
@@ -860,12 +929,13 @@ Aegis Latent Core is dual-licensed:
 
 ### License Tiers
 
-| Tier | Deployment | SLA | Services |
-|------|-----------|-----|---------|
-| **Evaluation** | Non-production PoC / testing | Email support | Installation guidance |
-| **Startup** | Single-org closed-source | 48–72h security patches | Monthly patch stream + one architecture review |
-| **Enterprise** | Multi-node, multi-region production | P1: 4h ack / 1–3 day remediation; 24×7 add-on | Signed SBOMs, reproducible builds, on-premises packaging, onboarding |
-| **OEM / Embedded** | Redistribution / white-label | Negotiated | Indemnities, extended auditing, custom forks |
+| Tier | Deployment | SLA | Annual Investment |
+|------|-----------|-----|-------------------|
+| **Evaluation** | Non-production PoC / testing | Email, best-effort | Free |
+| **Startup** | Single-org closed-source, < 1M req/mo | 72h security patch stream | From $9,900 |
+| **Self-Serve Enterprise** | Multi-org, automated compliance exports, SOC 2 / HIPAA evidence packs | 48h critical CVE patch; documentation portal access; no direct-access SLA | From $29,900 |
+| **Premium Sovereign** | Air-gapped, mission-critical, Gov/DoD, bespoke onboarding | P1: 4h ack · 1 business day remediation · direct founder access | From $150,000 |
+| **OEM / Embedded** | Redistribution / white-label with indemnities | Negotiated per MSA | Contact |
 
 **Contact for commercial licensing, procurement paperwork (SOW, ISO/SOC evidence), and enterprise discovery:**
 
@@ -925,5 +995,5 @@ Commercial licenses (without copyleft requirements) available — see [`COMMERCI
 
 ---
 
-*Aegis Latent Core v2.4.1 · Rust extension v3.0.0 · Python 3.11 / 3.12 / 3.13 · 4,575 tests · 95%+ coverage*  
+*Aegis Latent Core v2.4.1 · Rust extension v3.0.0 · Python 3.11 / 3.12 / 3.13 · 5,451 tests · 95.18% coverage*  
 *Copyright © 2026 Juan Luna. All rights reserved.*

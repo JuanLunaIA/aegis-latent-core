@@ -296,6 +296,24 @@
     .det-sub { font-size: 0.72rem; color: var(--faint); }
     .det-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.55; }
     .det-foot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 6px; }
+    /* Live Threats feed */
+    .threat-row { display:grid; grid-template-columns:auto 1fr auto auto; gap:12px; align-items:start; padding:12px; border-bottom:1px solid var(--border); transition:background .3s; }
+    .threat-row:hover { background:rgba(255,255,255,0.02); }
+    .threat-row.new { animation:threatFlash 1.8s ease-out forwards; }
+    @keyframes threatFlash { 0%{background:rgba(239,68,68,0.22);} 100%{background:transparent;} }
+    .threat-dot { width:10px; height:10px; border-radius:50%; flex:none; margin-top:4px; box-shadow:0 0 8px currentColor; }
+    .threat-dot.block { color:var(--red); background:var(--red); }
+    .threat-dot.flag  { color:var(--amber); background:var(--amber); }
+    .threat-dot.allow { color:var(--green); background:var(--green); }
+    .badge-pulse { animation:badgePulse 1.4s infinite; }
+    @keyframes badgePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(.9)} }
+    .batch-result { display:grid; grid-template-columns:auto 1fr auto auto auto; gap:10px; align-items:center; padding:9px 12px; border-bottom:1px solid var(--border); font-size:.82rem; }
+    .batch-result:last-child { border-bottom:none; }
+    .sse-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+    .sse-dot.connected { background:var(--green); box-shadow:0 0 6px var(--green); animation:beat 1.6s infinite; }
+    .sse-dot.disconnected { background:var(--faint); }
+    .scan-hist-item { padding:8px 10px; border-bottom:1px solid var(--border); font-size:.8rem; display:flex; gap:10px; align-items:center; }
+    .scan-hist-item:last-child { border-bottom:none; }
   </style>
 </head>
 <body>
@@ -393,6 +411,10 @@
     pollTimer: null, tickTimer: null,
     threatSamples: (window.__AEGIS_THREATS__ || null),
     series: { throughput: [], p99: [], entropy: [], ctrlLatency: [] },
+    liveEvents: [],
+    scanHistory: [],
+    sseActive: false,
+    alertBadge: 0,
   };
 
   /* ----------------------------- Pages ----------------------------- */
@@ -408,6 +430,7 @@
     { id:'threatlab',    title:'Threat Lab',      sub:'Live payload testing across every engine',  icon:'target', sec:'Security' },
     { id:'detectors',    title:'Detectors',       sub:'Detection-engine catalog & coverage',       icon:'radar', sec:'Security' },
     { id:'waf',          title:'WAF & Limits',    sub:'Prompt-injection defense & rate limiting',  icon:'shield', sec:'Security' },
+    { id:'alerts',       title:'Live Threats',    sub:'Real-time SSE blocked event feed',          icon:'bell',   sec:'Security' },
     { id:'audit',        title:'Audit Chain',     sub:'Merkle chain-of-custody & node explorer',   icon:'link', sec:'Forensics' },
     { id:'forensics',    title:'Forensics',       sub:'Entropy / KL analysis & security scan',     icon:'scan', sec:'Forensics' },
     { id:'compliance',   title:'Compliance',      sub:'SOC2 / HIPAA sealed export bundles',        icon:'doc', sec:'Governance' },
@@ -428,6 +451,8 @@
     heart:'<path d="M20.8 5.6a5.5 5.5 0 00-7.8 0L12 6.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/>',
     target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/>',
     radar:'<path d="M12 12l6-3M12 3a9 9 0 109 9"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="8.5"/>',
+    bell:'<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>',
+    alert:'<circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
   };
 
   /* ===================================================================== *
@@ -944,6 +969,10 @@
                 <span>Scan payload</span>
               </button>
               <button class="btn ghost" onclick="clearLab()">Clear</button>
+              <button class="btn ghost" id="lab-scan-all" onclick="scanAllPresets()" title="Run all ${presets.length} presets sequentially">
+                <svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
+                <span>Scan All</span>
+              </button>
               <span class="lsub mono" id="lab-meta" style="color:var(--faint);font-size:0.74rem">0 chars</span>
             </div>`, { accent: COLORS.red })}
           <div style="height:16px"></div>
@@ -953,7 +982,17 @@
         <div id="lab-results">
           ${labVerdict(null)}
         </div>
-      </div>`;
+      </div>
+      <div style="height:16px"></div>
+      ${card('Scan history (this session)', state.scanHistory.length ? `
+        <div style="max-height:260px;overflow-y:auto">${state.scanHistory.slice().reverse().map((h,i)=>`
+          <div class="scan-hist-item">
+            <span class="tag ${h.verdict==='BLOCK'?'crit':h.verdict==='FLAG'?'warn':'ok'}" style="min-width:52px;justify-content:center">${h.verdict}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.78rem;color:var(--muted)">${h.preview}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--faint)">${h.engines_flagged}/${h.engines_total} eng</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--faint)">${fmt.num(h.ms,1)}ms</span>
+          </div>`).join('')}</div>` : `<div class="empty" style="padding:20px;font-size:.82rem">No scans yet this session.</div>`,
+        { accent:COLORS.blue, tools:`${state.scanHistory.length} scans` })}`;
   };
 
   function labVerdict(res) {
@@ -1009,6 +1048,45 @@
     scanThreat();
   };
   window.clearLab = () => { const ta=$('#lab-text'); if (ta){ ta.value=''; updateLabMeta(); } $('#lab-results').innerHTML = labVerdict(null); };
+
+  window.scanAllPresets = async () => {
+    const presets = state.threatSamples || THREAT_PRESETS;
+    const btn = $('#lab-scan-all');
+    if (btn) { btn.disabled = true; btn.querySelector('span').textContent = `0/${presets.length}`; }
+    const results = [];
+    for (let i = 0; i < presets.length; i++) {
+      const p = presets[i];
+      try {
+        let res;
+        if (IS_SAMPLE) { res = sampleScan(p.text); }
+        else {
+          const r = await fetch('/api/scan', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:p.text}) });
+          res = r.ok ? await r.json() : { verdict:'ERROR', engines_flagged:0, engines_total:10 };
+        }
+        const match = (p.expect === res.verdict) || (p.expect === 'BLOCK' && res.verdict === 'BLOCK') || (p.expect === 'FLAG' && res.verdict === 'FLAG') || (p.expect === 'ALLOW' && res.verdict === 'ALLOW');
+        results.push({ id:p.id, label:p.label, expected:p.expect, actual:res.verdict, match, ms:res.scan_ms||0, flagged:res.engines_flagged, total:res.engines_total });
+        if (btn) btn.querySelector('span').textContent = `${i+1}/${presets.length}`;
+      } catch(e) {
+        results.push({ id:p.id, label:p.label, expected:p.expect, actual:'ERROR', match:false, ms:0, flagged:0, total:10 });
+      }
+    }
+    const passed = results.filter(r=>r.match).length;
+    const rows = results.map(r=>`<div class="batch-result">
+      <span style="color:${r.match?'var(--green)':'var(--red)'};font-weight:700">${r.match?'✓':'✗'}</span>
+      <span style="font-size:.82rem">${r.label}</span>
+      <span class="tag ${r.actual==='BLOCK'?'crit':r.actual==='FLAG'?'warn':r.actual==='ALLOW'?'ok':'muted'}">${r.actual}</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--faint)">${r.flagged}/${r.total}</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--faint)">${fmt.num(r.ms,1)}ms</span>
+    </div>`).join('');
+    let batchEl = $('#batch-results-card');
+    if (!batchEl) { batchEl = document.createElement('div'); batchEl.id='batch-results-card'; batchEl.style.marginTop='16px'; $('#view-threatlab').appendChild(batchEl); }
+    batchEl.innerHTML = card(`Batch scan results — ${passed}/${presets.length} matched expected`,
+      `<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">${rows}</div>`,
+      { accent: passed===presets.length ? COLORS.green : COLORS.amber });
+    toast(`Batch scan: ${passed}/${presets.length} matched expected verdicts`);
+    if (btn) { btn.disabled = false; btn.querySelector('span').textContent = 'Scan All'; }
+  };
+
   window.updateLabMeta = () => { const ta=$('#lab-text'), el=$('#lab-meta'); if (ta&&el) el.textContent = `${ta.value.length.toLocaleString()} chars`; };
 
   window.scanThreat = async () => {
@@ -1025,6 +1103,8 @@
         res = await r.json();
       }
       $('#lab-results').innerHTML = labVerdict(res);
+      state.scanHistory.push({ verdict:res.verdict, preview:(text||'').slice(0,60), engines_flagged:res.engines_flagged, engines_total:res.engines_total, ms:res.scan_ms||0 });
+      if (state.scanHistory.length > 50) state.scanHistory.shift();
       requestAnimationFrame(()=>{ if ($('#c-labsev')) buildLabChart(res); });
       toast(`Verdict: ${res.verdict} · ${res.engines_flagged}/${res.engines_total} engines flagged`);
     } catch (e) { toast('Scan failed: '+e.message); }
@@ -1106,6 +1186,58 @@
       ${card('Engine catalog', `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">${cards}</div>`, { accent: COLORS.purple, tools: `${DETECTORS.length} engines` })}
       <div style="height:16px"></div>
       ${card('Try it', `<p style="color:var(--muted);font-size:0.86rem;line-height:1.7">Every engine above runs live in the <a onclick="navigate('threatlab')" style="cursor:pointer">Threat Lab</a> — paste a payload (or use a preset like the EICAR test virus) and watch each engine return its verdict, severity and matched signatures in real time.</p>`, { accent: COLORS.green })}`;
+  };
+
+  R.alerts = (m) => {
+    const evs = state.liveEvents;
+    const blocks = evs.filter(e=>e.verdict==='BLOCK').length;
+    const flags  = evs.filter(e=>e.verdict==='FLAG').length;
+    const allows = evs.filter(e=>e.verdict==='ALLOW').length;
+    const sseDot = `<span class="sse-dot ${state.sseActive?'connected':'disconnected'}"></span>`;
+    return `
+      <div class="grid kpi-grid" style="margin-bottom:16px">
+        ${kpi('Live Blocks', fmt.int(blocks||0), { accent:COLORS.red, delta:'via SSE stream', spark:'', deltaDir:'down' })}
+        ${kpi('Live Flags', fmt.int(flags||0), { accent:COLORS.amber, delta:'suspicious, allowed' })}
+        ${kpi('Live Allows', fmt.int(allows||0), { accent:COLORS.green, delta:'clean pass-through' })}
+        ${kpi('SSE Status', `<span style="font-size:1.1rem">${state.sseActive?'CONNECTED':'OFFLINE'}</span>`, { accent:state.sseActive?COLORS.green:COLORS.amber, delta:`${sseDot}${state.sseActive?'receiving events':'scan a payload to connect'}` })}
+      </div>
+      ${evs.length ? card('Blocked & flagged events — live feed',
+        `<div id="live-feed" style="max-height:520px;overflow-y:auto">
+          ${evs.slice().reverse().map((e,i) => {
+            const dotCls = e.verdict==='BLOCK'?'block':e.verdict==='FLAG'?'flag':'allow';
+            const verdictColor = e.verdict==='BLOCK'?'var(--red)':e.verdict==='FLAG'?'var(--amber)':'var(--green)';
+            const engs = (e.flagged_engines||[]).slice(0,4).map(x=>`<span class="tag crit" style="font-size:.66rem">${x}</span>`).join(' ');
+            return `<div class="threat-row ${i===0?'new':''}">
+              <div class="threat-dot ${dotCls}" style="margin-top:5px"></div>
+              <div>
+                <div style="font-weight:600;font-size:.84rem;margin-bottom:3px">${e.text_preview||'(no preview)'}…</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${engs}</div>
+              </div>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--faint);white-space:nowrap;padding-top:2px">${new Date(e.ts*1000).toLocaleTimeString('en-GB')}</span>
+              <div style="text-align:right">
+                <span class="verdict-badge ${e.verdict==='BLOCK'?'vb-block':e.verdict==='FLAG'?'vb-flag':'vb-allow'}" style="font-size:.76rem;padding:5px 12px">${e.verdict}</span>
+                <div style="font-size:.68rem;color:var(--faint);margin-top:3px">${fmt.num(e.latency_ms,1)}ms · ${e.engine_count} eng</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`,
+        { accent:COLORS.red, tools:`${evs.length} events · auto-scroll` })
+      :
+      card('Live Threats Feed', `
+        <div class="empty" style="padding:40px">
+          <div class="em-ico"><svg viewBox="0 0 24 24">${ICONS.bell}</svg></div>
+          <div style="font-size:.9rem;margin-bottom:8px">Awaiting real-time scan events</div>
+          <div style="color:var(--faint);font-size:.8rem;margin-bottom:16px">
+            Use the <a onclick="navigate('threatlab')" style="cursor:pointer;color:var(--cyan)">Threat Lab</a> to scan payloads —
+            each scan publishes here via Server-Sent Events.
+          </div>
+          <button class="btn" onclick="navigate('threatlab')">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2">${ICONS.target}</svg>
+            <span>Open Threat Lab</span>
+          </button>
+        </div>`, { accent:COLORS.amber })}
+      ${evs.length ? `<div style="height:16px"></div>
+      ${card('How events flow', '<p style="color:var(--muted);font-size:.84rem;line-height:1.7">Every <code>POST /api/scan</code> call (from the Threat Lab or external clients) publishes a <code>scan_result</code> event to all connected <code>GET /api/events</code> SSE subscribers. This page consumes that stream and displays events in real time — no polling, no page refresh required. Events are kept in memory for this session only.</p>', { accent:COLORS.blue })}`:''}`;
   };
 
   /* ---- shared fragments ---- */
@@ -1369,6 +1501,7 @@
         <span class="ico"><svg viewBox="0 0 24 24">${ICONS[p.icon]}</svg></span>
         <span class="nav-label">${p.title}</span>
         ${p.id==='waf' && hasWafBadge() ? `<span class="badge" id="waf-badge"></span>` : ''}
+        ${p.id==='alerts' ? `<span class="badge" id="alerts-badge" style="display:none"></span>` : ''}
       </button>`;
     });
     nav.innerHTML = html;
@@ -1378,6 +1511,7 @@
 
   function navigate(page) {
     if (!PAGES.find(p=>p.id===page)) page = 'overview';
+    if (page === 'alerts') { state.alertBadge = 0; updateAlertBadge(); }
     state.page = page; location.hash = page;
     const def = PAGES.find(p=>p.id===page);
     $('#page-title').textContent = def.title;
@@ -1402,6 +1536,18 @@
 
   function updateBadges(m) {
     const b = $('#waf-badge'); if (b) { const n = m.runtime?.waf?.blocked_total; if (n) { b.textContent = n>999?(n/1000).toFixed(1)+'k':n; b.style.display=''; } else b.style.display='none'; }
+  }
+
+  function updateAlertBadge() {
+    const b = $('#alerts-badge');
+    if (b) {
+      const n = state.alertBadge;
+      b.textContent = n > 99 ? '99+' : (n || '');
+      b.style.display = n > 0 ? '' : 'none';
+      if (n > 0) b.classList.add('badge-pulse'); else b.classList.remove('badge-pulse');
+    }
+    const dot = $('.sse-dot');
+    if (dot) { dot.className = 'sse-dot ' + (state.sseActive ? 'connected' : 'disconnected'); }
   }
 
   /* ===================================================================== *
@@ -1520,6 +1666,29 @@
         .then(r => r.ok ? r.json() : null)
         .then(d => { if (d && d.samples) { state.threatSamples = d.samples; if (state.page==='threatlab') renderPage(); } })
         .catch(()=>{});
+    }
+
+    // SSE live event stream
+    if (!IS_SAMPLE) {
+      const connectSSE = () => {
+        const es = new EventSource('/api/events');
+        state.sseActive = true;
+        es.onmessage = (e) => {
+          try {
+            const ev = JSON.parse(e.data);
+            if (ev.type === 'scan_result') {
+              state.liveEvents.push(ev);
+              if (state.liveEvents.length > 200) state.liveEvents.shift();
+              state.alertBadge++;
+              updateAlertBadge();
+              if (state.page === 'alerts') renderPage();
+            }
+          } catch {}
+        };
+        es.onerror = () => { state.sseActive = false; updateAlertBadge(); setTimeout(connectSSE, 5000); };
+        es.onopen = () => { state.sseActive = true; updateAlertBadge(); };
+      };
+      connectSSE();
     }
 
     navigate(state.page);

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.1] — 2026-06-24
+
+### Summary
+
+Commercial deployment release. Closes all remaining P0 security-theater items
+identified in the 2026-06-24 roadmap audit; ships the complete cross-platform
+abi3 wheel matrix; upgrades Helm chart to v2.4.1; introduces the enterprise
+multi-vertical Docker Compose; and restructures COMMERCIAL.md with concrete
+SLA tiers and AGPL §13 enforcement mechanics.
+
+**Audit baseline at release:** 5,451 tests · 5 skipped · 95.18% branch
+coverage · `ruff`/`mypy`/`bandit` clean · `cargo test` 26 passing · pyo3 0.29
+/ `edition = "2021"` · 8-target abi3 wheel matrix (manylinux2014 + musllinux ×
+x86_64/aarch64/armv7, macOS Intel/ARM, Windows MSVC) · all simulation-debt
+entries driven to zero (`tests/test_no_simulation_markers.py` asserts 0).
+
 ### Security
 
 - **De-simulated `CFIManager`** (ROADMAP P0.2). `aegis/core/cfi_manager.py`
