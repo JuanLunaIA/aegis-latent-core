@@ -23,6 +23,11 @@ aegis.wal.jsonl
 # Vendor wheels only needed for airgap builds (Dockerfile.airgap uses COPY vendor/wheels)
 # Uncomment the line below for standard (non-airgap) builds to reduce context size:
 # vendor/
+# NOTE: integrations/ is intentionally NOT excluded — it is a first-class
+# package (see pyproject.toml [tool.hatch.build.targets.wheel] packages) that
+# hatchling must see at `pip install` time, and both Dockerfile and
+# Dockerfile.airgap COPY it into the image. Excluding it breaks the build with
+# `"/integrations": not found`.
 docs/
 benchmarks/
 tests/
@@ -30,5 +35,4 @@ tools/
 Samples/
 specs/
 examples/
-integrations/
 visualizer_runner*
