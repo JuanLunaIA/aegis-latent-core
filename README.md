@@ -2,7 +2,7 @@
 
 # Aegis Latent Core
 
-<img width="3306" height="1653" alt="Aegis Mission Control Dashboard" src="https://github.com/user-attachments/assets/949b1dce-bb52-4242-912f-cdcce074b411" />
+<img width="1920" height="1080" alt="Aegis Mission Control Dashboard" src="https://github.com/user-attachments/assets/949b1dce-bb52-4242-912f-cdcce074b411" />
 
 ### The AI Governance Proxy That Regulators Will Require and Enterprises Already Need
 
