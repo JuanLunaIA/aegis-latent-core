@@ -38,6 +38,30 @@ Standard application logs cannot satisfy this. They prove *that* a call was made
 
 ---
 
+## Find Your Path — Choose Your Profile
+
+Aegis serves every stakeholder. Jump directly to what matters for your role:
+
+| I am a… | Start here |
+|---|---|
+| **CEO / Board / Investor** | [ROI & Business Case](#the-roi--what-aegis-costs-vs-what-it-prevents) · [Pricing](COMMERCIAL.md) · [Full Prospectus](docs/PROSPECTUS.md) |
+| **CISO / Risk Officer** | [Security Guarantees](#security-guarantees) · [Threat Model](docs/security/THREAT_MODEL.md) · [Signing Schemes](#signing-schemes) |
+| **Compliance Officer** | [Compliance Coverage](#compliance-framework-coverage) · [Compliance Mapping](docs/compliance/COMPLIANCE_MAPPING.md) · [Exports](#compliance-exports) |
+| **Infrastructure / DevOps / SRE** | [5-min Quick Start](#quick-evaluation--5-minutes) · [Production Deploy](#production-deployment) · [Scaling Guide](docs/performance/SCALING_GUIDE.md) |
+| **Security Engineer / Pentester** | [Threat Lab](#threat-lab--live-detection-testing) · [WAF Pipeline](#waf-pipeline) · [Seccomp](#seccomp-enforcement-linux) |
+| **Financial Services** | [SEC 17a-4 / WORM / MiFID II](docs/compliance/COMPLIANCE_MAPPING.md#1-finance--banking--dx-finance) · [Compliance Exports](#compliance-exports) |
+| **Healthcare / Life Sciences** | [HIPAA §164.312(b) / Safe Harbor](docs/compliance/COMPLIANCE_MAPPING.md#2-healthcare--life-sciences--dx-healthcare) · [PHI De-identification](#operational-checklist) |
+| **Government / Defense** | [FedRAMP / DoD IL5/IL6 / CAC-PIV](docs/compliance/COMPLIANCE_MAPPING.md#3-government--defense--dx-gov) · [Air-Gap Deploy](#production-deployment) |
+| **Legal / Forensic** | [ISO 27037 / Daubert / Part 11](docs/compliance/COMPLIANCE_MAPPING.md#4-forensic--judicial--dx-forensic) · [Forensic Exports](#forensic-export-formats) |
+| **Pharma / GxP** | [GxP / Annex 11 / 21 CFR Part 11](docs/compliance/COMPLIANCE_MAPPING.md#5-pharma--gxp-computerised-systems) |
+| **Industrial / OT / SCADA** | [OT Protocol Detection](#threat-lab--live-detection-testing) · [IEC 62443](#compliance-framework-coverage) |
+| **Agriculture / Automation / Robotics** | [OT Scanner + Audit Chain](#threat-lab--live-detection-testing) · [Air-Gap Mode](#production-deployment) |
+| **SMB / Startup** | [5-min Docker Deploy](#quick-evaluation--5-minutes) · [Startup License](COMMERCIAL.md) |
+| **Principal Engineer / Architect** | [Architecture Overview](#architecture-overview) · [Deep Dive](docs/architecture/DEEP_DIVE.md) · [Rust Acceleration](#acceleration-tiers) |
+| **All users (printable)** | [English Prospectus (A4)](docs/PROSPECTUS.md) · [Prospecto en Español (A4)](docs/PROSPECTUS_ES.md) |
+
+---
+
 ## Table of Contents
 
 1. [What Aegis Delivers — Six Verifiable Guarantees](#what-aegis-delivers--six-verifiable-guarantees)
@@ -961,6 +985,9 @@ Full terms: [COMMERCIAL.md](COMMERCIAL.md)
 | Document | Audience | Contents |
 |----------|----------|---------|
 | **This README** | All | Architecture, security, performance, compliance, deployment, operations, commercial |
+| [`docs/PROSPECTUS.md`](docs/PROSPECTUS.md) | CEOs, CISOs, VCs, Engineers | Complete enterprise sales book (A4-printable, English) |
+| [`docs/PROSPECTUS_ES.md`](docs/PROSPECTUS_ES.md) | CEOs, CISOs, VCs, Ingenieros | Prospecto completo de ventas empresariales (A4, Español) |
+| [`docs/compliance/COMPLIANCE_MAPPING.md`](docs/compliance/COMPLIANCE_MAPPING.md) | Compliance Officers | Verified control-by-control mapping per regulated vertical |
 | [`docs/architecture/DEEP_DIVE.md`](docs/architecture/DEEP_DIVE.md) | Architects | Cryptographic flow, MMR, async persistence |
 | [`docs/security/THREAT_MODEL.md`](docs/security/THREAT_MODEL.md) | Security teams | STRIDE, mTLS, secret-leakage mitigation |
 | [`docs/performance/SCALING_GUIDE.md`](docs/performance/SCALING_GUIDE.md) | SRE / platform | Multi-replica sync, WAL tuning, Redis TLS |
@@ -970,7 +997,7 @@ Full terms: [COMMERCIAL.md](COMMERCIAL.md)
 | [`SECURITY.md`](SECURITY.md) | Security teams | Vulnerability reporting, key management policy |
 | [`COMMERCIAL.md`](COMMERCIAL.md) | Enterprise / Legal | Commercial license terms, SLA options, procurement process |
 | [`LICENSE`](LICENSE) | Legal | AGPL-3.0-only terms |
-| [`tools/visualizer/README.md`](tools/visualizer/README.md) | Operators | Mission Control 12-page dashboard |
+| [`tools/visualizer/README.md`](tools/visualizer/README.md) | Operators | Mission Control dashboard |
 | [`examples/demo.py`](examples/demo.py) | Evaluators | Self-contained 5-minute evaluation script |
 | [`benchmarks/`](benchmarks/) | Contributors | Reproduction scripts for all published benchmarks |
 
@@ -995,5 +1022,5 @@ Commercial licenses (without copyleft requirements) available — see [`COMMERCI
 
 ---
 
-*Aegis Latent Core v2.4.1 · Rust extension v3.0.0 · Python 3.11 / 3.12 / 3.13 · 5,451 tests · 95.18% coverage*  
+*Aegis Latent Core v2.4.1 · Rust extension v3.0.0 · reqwest 0.13 / hickory-proto 0.26.1 · Python 3.11 / 3.12 / 3.13 · 5,451 tests · 95.18% coverage*  
 *Copyright © 2026 Juan Luna. All rights reserved.*

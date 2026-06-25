@@ -24,7 +24,9 @@ GHSA-3v94-mw7p-v465
 RUSTSEC-2026-0118
 
 # GHSA-q2qq-hmj6-3wpp (RUSTSEC-2026-0119, MEDIUM): O(n^2) name compression during
-#   message encoding can exhaust CPU. Fixed in hickory-proto 0.26.1, but that
-#   bump is gated behind a reqwest / hickory-resolver release that pins it.
+#   message encoding can exhaust CPU.
+#   RESOLVED: reqwest 0.13.4 pulls in hickory-proto 0.26.1 which contains the fix.
+#   Entries kept here so Trivy does not alert on any cached/indexed Cargo.lock
+#   snapshot from before the upgrade; remove after the next Trivy cache refresh.
 GHSA-q2qq-hmj6-3wpp
 RUSTSEC-2026-0119
