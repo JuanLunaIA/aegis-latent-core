@@ -11,10 +11,12 @@ ignore = [
     # They are intentionally NOT ignored here so a regression would re-fail CI.
 
     # hickory-dns/hickory-proto: transitive via reqwest hickory-dns feature.
-    # RUSTSEC-2026-0118 has no fix available upstream; RUSTSEC-2026-0119 requires
-    # hickory-proto >=0.26.1 which reqwest has not yet released support for.
-    "RUSTSEC-2026-0118",  # hickory-dns
-    "RUSTSEC-2026-0119",  # hickory-proto CPU exhaustion (O(n²) name compression)
+    # RUSTSEC-2026-0118 — hickory-dns; no upstream fix released yet.
+    # RUSTSEC-2026-0119 — FIXED: reqwest 0.13.4 pulled in hickory-proto 0.26.1.
+    # Kept here so cargo-audit does not fail if the database still indexes old lock
+    # files; remove this line once cargo-audit confirms 0.26.1 is clean.
+    "RUSTSEC-2026-0118",  # hickory-dns — awaiting upstream fix
+    "RUSTSEC-2026-0119",  # hickory-proto ≥0.26.1 FIXED — safe to remove next audit
 
     # paste macro crate — unmaintained upstream, no CVE; used transitively by pqcrypto.
     "RUSTSEC-2024-0436",
