@@ -1,8 +1,11 @@
 <div align="center">
 
-# Aegis Latent Core
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.svg">
+  <img alt="Aegis Latent Core — the verifiable control plane for every LLM call" src="docs/assets/hero-light.svg" width="100%">
+</picture>
 
-<img width="1920" height="1080" alt="Aegis Mission Control Dashboard" src="https://github.com/user-attachments/assets/949b1dce-bb52-4242-912f-cdcce074b411" />
+# Aegis Latent Core
 
 ### The AI Governance Proxy That Regulators Will Require and Enterprises Already Need
 
@@ -35,6 +38,15 @@ Standard application logs cannot satisfy this. They prove *that* a call was made
 **Aegis Latent Core is the infrastructure layer that closes this gap** — installed between your application and any LLM provider in minutes, with zero changes to existing client code, generating a SHA-256 hash-chained, HMAC-signed audit ledger on every inference. It is already aligned to FedRAMP High, DoD IL5/IL6, HIPAA, SOC 2 Type II, IEC 62443, and ISO 27001 control families. It ships with 10 detection engines that catch prompt injection, malware, leaked credentials, classified material, SCADA command injection, and adversarial suffixes — live, before the request reaches the model.
 
 **In a world where AI governance is not optional, Aegis is the layer that makes it verifiable.**
+
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/trust-dark.svg">
+  <img alt="Aligned to the frameworks that govern regulated AI: FedRAMP High, DoD IL5/IL6, HIPAA, SOC 2 Type II, ISO/IEC 42001, NIST SP 800-53, FIPS 204, IEC 62443, GDPR, 21 CFR Part 11" src="docs/assets/trust-light.svg" width="100%">
+</picture>
+
+</div>
 
 ---
 
@@ -233,6 +245,15 @@ curl -s -X POST http://localhost:8081/api/scan \
 ---
 
 ## The Mechanics — How Aegis Works (Without the PhD)
+
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/flow-dark.svg">
+  <img alt="How Aegis works in three steps: install in minutes with one env var, govern every call through auth and a 10-engine WAF, then prove every inference with a cryptographically-signed audit node sealed off the hot path" src="docs/assets/flow-light.svg" width="100%">
+</picture>
+
+</div>
 
 ### Two-Path Execution: Your Train, Our Security Camera
 
@@ -830,6 +851,12 @@ Spans: `aegis.auth`, `aegis.waf`, `aegis.forward`, `aegis.audit.commit`
 ## Mission Control Dashboard
 
 A 12-page enterprise dashboard for visualizing every aspect of Aegis in real time. Run it locally alongside the proxy.
+
+<div align="center">
+
+<img width="1920" height="1080" alt="Aegis Mission Control Dashboard — live KPIs, throughput, threat lab, audit chain, and compliance pages" src="https://github.com/user-attachments/assets/949b1dce-bb52-4242-912f-cdcce074b411" />
+
+</div>
 
 ```bash
 pip install -r tools/visualizer/requirements.txt

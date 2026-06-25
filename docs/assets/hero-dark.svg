@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 440" width="1280" height="440" role="img" aria-label="Aegis Latent Core — the verifiable control plane for every LLM call">
+<defs>
+<linearGradient id="shield" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#161c26"/><stop offset="1" stop-color="#1c2330"/></linearGradient>
+<linearGradient id="seal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b7cff"/><stop offset="1" stop-color="#2bb6d6"/></linearGradient>
+<radialGradient id="glow" cx="0.5" cy="0.42" r="0.62"><stop offset="0" stop-color="#5b7cff" stop-opacity="0.16"/><stop offset="1" stop-color="#5b7cff" stop-opacity="0"/></radialGradient>
+</defs>
+<rect x="828" y="40" width="412" height="380" rx="180" fill="url(#glow)"/>
+<text x="64" y="98" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="3.5" fill="#5b7cff">AI&#160;&#160;GOVERNANCE&#160;&#160;PROXY</text>
+<text x="62" y="172" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="66" font-weight="800" letter-spacing="-1.5" fill="#eef2f8">Aegis Latent Core</text>
+<text x="64" y="224" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="23" font-weight="500" fill="#cdd5e2">The verifiable control plane for every LLM call.</text>
+<text x="64" y="258" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="17" font-weight="500" fill="#9aa4b6">OpenAI-compatible <tspan fill="#5f6a7e">·</tspan> zero code changes <tspan fill="#5f6a7e">·</tspan> cryptographically-signed audit chain</text>
+<rect x="64" y="296" width="204" height="38" rx="19" fill="#161c26" stroke="#27313f"/>
+<circle cx="86" cy="315" r="4.5" fill="#35c08a"/>
+<text x="102" y="320" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">5,451 tests passing</text>
+<rect x="280" y="296" width="172" height="38" rx="19" fill="#161c26" stroke="#27313f"/>
+<circle cx="302" cy="315" r="4.5" fill="#5b7cff"/>
+<text x="318" y="320" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">95.18% coverage</text>
+<rect x="464" y="296" width="188" height="38" rx="19" fill="#161c26" stroke="#27313f"/>
+<circle cx="486" cy="315" r="4.5" fill="#9483ff"/>
+<text x="502" y="320" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">10 threat engines</text>
+<rect x="664" y="296" width="204" height="38" rx="19" fill="#161c26" stroke="#27313f"/>
+<circle cx="686" cy="315" r="4.5" fill="#2bb6d6"/>
+<text x="702" y="320" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">post-quantum signed</text>
+<text x="64" y="392" font-family="'JetBrains Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace" font-size="13" fill="#5f6a7e">AGPLv3 + Commercial  ·  Python 3.11–3.13  ·  Rust-accelerated  ·  v2.4.1</text>
+<path d="M 1042 74 C 1098 92, 1134 96, 1164 96 L 1164 206 C 1164 300, 1112 350, 1042 384 C 972 350, 920 300, 920 206 L 920 96 C 950 96, 986 92, 1042 74 Z" fill="url(#shield)" stroke="#37425a" stroke-width="1.5"/>
+<path d="M 1042 92 C 1090 107, 1120 110, 1146 110 L 1146 204 C 1146 286, 1102 330, 1042 360 C 982 330, 938 286, 938 204 L 938 110 C 964 110, 994 107, 1042 92 Z" fill="none" stroke="#5b7cff" stroke-opacity="0.16" stroke-width="1.2"/>
+<rect x="975" y="150" width="134" height="32" rx="8" fill="#1c2330" stroke="#27313f"/>
+<rect x="985" y="158" width="16" height="16" rx="4" fill="#5b7cff" fill-opacity="0.16" stroke="#5b7cff" stroke-opacity="0.55"/>
+<line x1="1009" y1="163" x2="1095" y2="163" stroke="#5f6a7e" stroke-width="3" stroke-linecap="round" stroke-opacity="0.7"/>
+<line x1="1009" y1="172" x2="1065" y2="172" stroke="#37425a" stroke-width="3" stroke-linecap="round"/>
+<rect x="1036" y="165" width="12" height="16" rx="3" fill="none" stroke="#37425a" stroke-width="2"/>
+<rect x="975" y="196" width="134" height="32" rx="8" fill="#1c2330" stroke="#27313f"/>
+<rect x="985" y="204" width="16" height="16" rx="4" fill="#5b7cff" fill-opacity="0.16" stroke="#5b7cff" stroke-opacity="0.55"/>
+<line x1="1009" y1="209" x2="1095" y2="209" stroke="#5f6a7e" stroke-width="3" stroke-linecap="round" stroke-opacity="0.7"/>
+<line x1="1009" y1="218" x2="1065" y2="218" stroke="#37425a" stroke-width="3" stroke-linecap="round"/>
+<rect x="1036" y="211" width="12" height="16" rx="3" fill="none" stroke="#37425a" stroke-width="2"/>
+<rect x="975" y="242" width="134" height="32" rx="8" fill="#1c2330" stroke="#27313f"/>
+<rect x="985" y="250" width="16" height="16" rx="4" fill="#5b7cff" fill-opacity="0.16" stroke="#5b7cff" stroke-opacity="0.55"/>
+<line x1="1009" y1="255" x2="1095" y2="255" stroke="#5f6a7e" stroke-width="3" stroke-linecap="round" stroke-opacity="0.7"/>
+<line x1="1009" y1="264" x2="1065" y2="264" stroke="#37425a" stroke-width="3" stroke-linecap="round"/>
+<rect x="1036" y="273" width="12" height="13" rx="3" fill="none" stroke="#37425a" stroke-width="2"/>
+<rect x="993" y="286" width="98" height="20" rx="6" fill="#1c2330" stroke="#27313f" stroke-dasharray="3 4" opacity="0.7"/>
+<circle cx="1042" cy="92" r="30" fill="#161c26"/>
+<circle cx="1042" cy="92" r="26" fill="url(#seal)"/>
+<path d="M 1031 92 l 7 8 l 15 -16" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
