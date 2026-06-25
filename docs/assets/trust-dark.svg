@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 150" width="1280" height="150" role="img" aria-label="Aligned to the frameworks that govern regulated AI">
+<text x="640" y="38" text-anchor="middle" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="3" fill="#5f6a7e">ALIGNED TO THE FRAMEWORKS THAT GOVERN REGULATED AI</text>
+<rect x="130" y="62" width="164" height="38" rx="10" fill="#161c26" stroke="#27313f"/>
+<circle cx="152" cy="81" r="4.5" fill="#5b7cff"/>
+<text x="168" y="86" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">FedRAMP High</text>
+<rect x="308" y="62" width="155" height="38" rx="10" fill="#161c26" stroke="#27313f"/>
+<circle cx="330" cy="81" r="4.5" fill="#9483ff"/>
+<text x="346" y="86" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">DoD IL5/IL6</text>
+<rect x="477" y="62" width="99" height="38" rx="10" fill="#161c26" stroke="#27313f"/>
+<circle cx="499" cy="81" r="4.5" fill="#ef6b7c"/>
+<text x="515" y="86" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">HIPAA</text>
+<rect x="590" y="62" width="174" height="38" rx="10" fill="#161c26" stroke="#27313f"/>
+<circle cx="612" cy="81" r="4.5" fill="#35c08a"/>
+<text x="628" y="86" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">SOC 2 Type II</text>
+<rect x="778" y="62" width="174" height="38" rx="10" fill="#161c26" stroke="#27313f"/>
+<circle cx="800" cy="81" r="4.5" fill="#2bb6d6"/>
+<text x="816" y="86" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">ISO/IEC 42001</text>
+<rect x="966" y="62" width="183" height="38" rx="10" fill="#161c26" stroke="#27313f"/>
+<circle cx="988" cy="81" r="4.5" fill="#5b7cff"/>
+<text x="1004" y="86" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">NIST SP 800-53</text>
+<rect x="333" y="114" width="164" height="38" rx="10" fill="#161c26" stroke="#27313f"/>
+<circle cx="355" cy="133" r="4.5" fill="#e0a93a"/>
+<text x="371" y="138" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">FIPS 204 PQC</text>
+<rect x="511" y="114" width="136" height="38" rx="10" fill="#161c26" stroke="#27313f"/>
+<circle cx="533" cy="133" r="4.5" fill="#35c08a"/>
+<text x="549" y="138" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">IEC 62443</text>
+<rect x="661" y="114" width="89" height="38" rx="10" fill="#161c26" stroke="#27313f"/>
+<circle cx="683" cy="133" r="4.5" fill="#9483ff"/>
+<text x="699" y="138" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">GDPR</text>
+<rect x="764" y="114" width="183" height="38" rx="10" fill="#161c26" stroke="#27313f"/>
+<circle cx="786" cy="133" r="4.5" fill="#2bb6d6"/>
+<text x="802" y="138" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="600" fill="#cdd5e2">21 CFR Part 11</text>
+</svg>

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 408" width="1280" height="408" role="img" aria-label="How Aegis works — install, govern, prove">
+<defs><linearGradient id="fseal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2f5bea"/><stop offset="1" stop-color="#0e8caa"/></linearGradient></defs>
+<text x="640" y="42" text-anchor="middle" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="3" fill="#2f5bea">HOW AEGIS WORKS</text>
+<rect x="64" y="74" width="360" height="296" rx="16" fill="#ffffff" stroke="#e4e7ec"/>
+<rect x="64" y="74" width="360" height="5" rx="2.5" fill="#2f5bea" opacity="0.9"/>
+<text x="398" y="140" text-anchor="end" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="46" font-weight="800" fill="#eaedf2">01</text>
+<circle cx="114" cy="130" r="28" fill="#2f5bea" fill-opacity="0.10" stroke="#2f5bea" stroke-opacity="0.35"/>
+<g transform="translate(96,112) scale(1.5)" fill="none" stroke="#2f5bea" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M12 3 H19 a1 1 0 0 1 1 1 V20 a1 1 0 0 1 -1 1 H12 M3 12 H14 M10 8 l4 4 l-4 4"/>
+</g>
+<text x="92" y="206" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="21" font-weight="700" fill="#161d2c">Install in minutes</text>
+<rect x="92" y="220" width="34" height="3" rx="1.5" fill="#2f5bea"/>
+<text x="92" y="252" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="500" fill="#586173">Point one environment variable at</text>
+<text x="92" y="275" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="500" fill="#586173">Aegis. Every existing OpenAI-SDK call</text>
+<text x="92" y="298" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="500" fill="#586173">is governed — with zero application</text>
+<text x="92" y="321" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="500" fill="#586173">code changes.</text>
+<path d="M 437 213 L 448 222 L 437 231" fill="none" stroke="#d0d5dd" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="460" y="74" width="360" height="296" rx="16" fill="#ffffff" stroke="#e4e7ec"/>
+<rect x="460" y="74" width="360" height="5" rx="2.5" fill="#2f5bea" opacity="0.9"/>
+<text x="794" y="140" text-anchor="end" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="46" font-weight="800" fill="#eaedf2">02</text>
+<circle cx="510" cy="130" r="28" fill="#2f5bea" fill-opacity="0.10" stroke="#2f5bea" stroke-opacity="0.35"/>
+<g transform="translate(492,112) scale(1.5)" fill="none" stroke="#2f5bea" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M12 3 l8 3.2 V11 c0 4.6 -3.4 7.8 -8 9.6 C7.4 18.8 4 15.6 4 11 V6.2 Z"/>
+<path d="M8.6 11.2 l2.2 2.2 l4.6 -4.8"/>
+</g>
+<text x="488" y="206" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="21" font-weight="700" fill="#161d2c">Govern every call</text>
+<rect x="488" y="220" width="34" height="3" rx="1.5" fill="#2f5bea"/>
+<text x="488" y="252" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="500" fill="#586173">Each request clears authentication, a</text>
+<text x="488" y="275" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="500" fill="#586173">10-engine threat WAF and per-tenant</text>
+<text x="488" y="298" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="500" fill="#586173">rate limits before it ever reaches the</text>
+<text x="488" y="321" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="500" fill="#586173">model.</text>
+<path d="M 833 213 L 844 222 L 833 231" fill="none" stroke="#d0d5dd" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="856" y="74" width="360" height="296" rx="16" fill="#ffffff" stroke="#e4e7ec"/>
+<rect x="856" y="74" width="360" height="5" rx="2.5" fill="#2f5bea" opacity="0.9"/>
+<text x="1190" y="140" text-anchor="end" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="46" font-weight="800" fill="#eaedf2">03</text>
+<circle cx="906" cy="130" r="28" fill="#2f5bea" fill-opacity="0.10" stroke="#2f5bea" stroke-opacity="0.35"/>
+<g transform="translate(888,112) scale(1.5)" fill="none" stroke="#2f5bea" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="12" cy="9.5" r="6.3"/>
+<path d="M8.5 11.5 l2.4 2.4 l4.6 -5"/>
+<path d="M8.5 15 L6.7 21 l5.3 -2.6 l5.3 2.6 l-1.8 -6"/>
+</g>
+<text x="884" y="206" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="21" font-weight="700" fill="#161d2c">Prove every inference</text>
+<rect x="884" y="220" width="34" height="3" rx="1.5" fill="#2f5bea"/>
+<text x="884" y="252" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="500" fill="#586173">After the reply ships, a SHA-256</text>
+<text x="884" y="275" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="500" fill="#586173">hash-chained, HMAC + ML-DSA-signed</text>
+<text x="884" y="298" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="500" fill="#586173">audit node is sealed — entirely off</text>
+<text x="884" y="321" font-family="'Inter','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="500" fill="#586173">the hot path.</text>
+</svg>
