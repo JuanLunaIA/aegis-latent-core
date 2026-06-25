@@ -7,9 +7,9 @@ import asyncio
 import json
 import sys
 import time
+from collections.abc import AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -58,7 +58,7 @@ async def _sse_generator(queue: asyncio.Queue[str]) -> AsyncGenerator[str, None]
             try:
                 msg = await asyncio.wait_for(queue.get(), timeout=25.0)
                 yield msg
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 yield ": keepalive\n\n"  # Prevent proxy/load-balancer idle disconnects
     except asyncio.CancelledError:
         pass
@@ -68,6 +68,8 @@ async def _sse_generator(queue: asyncio.Queue[str]) -> AsyncGenerator[str, None]
                 _SSE_SUBSCRIBERS.remove(queue)
             except ValueError:
                 pass
+
+
 app.mount("/static", StaticFiles(directory=str(VIS_DIR / "static")), name="static")
 
 
