@@ -342,8 +342,8 @@ Aegis answers with a cryptographic proof: SHA-256 hash-chained, HMAC-signed, ML-
 
 | Deployment Model | Aegis Annual Cost | Build-It-Yourself Cost Estimate |
 |-----------------|-------------------|--------------------------------|
-| Self-Serve Enterprise | From $29,900 / yr | 1–2 compliance engineers × 6–12 months = $180,000–$480,000 |
-| Premium Sovereign | From $150,000 / yr | Dedicated team + legal review + annual audit = $500,000–$2,000,000 |
+| Business | From $2,999 / yr | ~5 compliance engineers × 6–12 months = $1,375,000 USD |
+| Enterprise | From $5,999 / yr | Dedicated team + legal review + annual audit = $ 3,437,500 USD |
 | OEM / Embedded | Negotiated | Full engineering + legal org build-out |
 
 The Aegis hash-chain, MMR, and ML-DSA signing infrastructure took over two years to build, audit, and validate across 5,451 tests. No bespoke application logging system replicates this in one sprint.
@@ -1026,8 +1026,8 @@ Aegis Latent Core is dual-licensed:
 |------|-----------|-----|-------------------|
 | **Evaluation** | Non-production PoC / testing | Email, best-effort | Free |
 | **Startup** | Single-org closed-source, < 1M req/mo | 72h security patch stream | From $9,900 |
-| **Self-Serve Enterprise** | Multi-org, automated compliance exports, SOC 2 / HIPAA evidence packs | 48h critical CVE patch; documentation portal access; no direct-access SLA | From $29,900 |
-| **Premium Sovereign** | Air-gapped, mission-critical, Gov/DoD, bespoke onboarding | P1: 4h ack · 1 business day remediation · direct founder access | From $150,000 |
+| **Self-Serve Enterprise** | Multi-org, automated compliance exports, SOC 2 / HIPAA evidence packs | 48h critical CVE patch; documentation portal access; no direct-access SLA | From $2,999 |
+| **Premium Sovereign** | Air-gapped, mission-critical, Gov/DoD, bespoke onboarding | P1: 4h ack · 1 business day remediation · direct founder access | From $5,999 |
 | **OEM / Embedded** | Redistribution / white-label with indemnities | Negotiated per MSA | Contact |
 
 **Contact for commercial licensing, procurement paperwork (SOW, ISO/SOC evidence), and enterprise discovery:**
