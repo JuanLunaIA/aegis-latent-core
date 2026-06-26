@@ -7,22 +7,22 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 # Aegis Latent Core — Commercial Licensing & Enterprise Offerings
 
 Aegis Latent Core is dual-licensed under **AGPLv3** (open-source) and a
-**Commercial License** for closed-source and enterprise deployments. This
+**Commercial License** for closed-source, proprietary, and enterprise deployments. This
 document covers: why the AGPL creates a hard commercial obligation, what tiers
-are available, how they are priced and enforced, and how to procure.
+are available, how they are priced, automated delivery mechanics, and how to procure.
 
 ---
 
 ## Part I — Intellectual Property & Ownership
 
 **Sole copyright holder.** Aegis Latent Core is the original work of
-**Juan Luna** (`juan.c.luna04@gmail.com`), who holds sole copyright in the
+**Juan Luna** (`juan.c.luna04@gmail.com`), who holds sole, undivided copyright in the
 project. See `NOTICE` and `AUTHORS`.
 
 **Exclusive right to commercialize.** As the sole copyright holder, Juan Luna
 reserves the exclusive right to license the software under proprietary
 commercial terms, to sublicense it, and to sell it as a component of
-closed-source or managed offerings. The AGPLv3 grant to the public does not
+closed-source, embedded, or managed offerings. The AGPLv3 grant to the public does not
 diminish this right.
 
 **Contributions are license-aligned.** All contributions are accepted under
@@ -51,7 +51,7 @@ network-use clause — **§13** — that the standard GPL does not:
 §13 is triggered the moment an organization:
 
 1. **Modifies** Aegis Latent Core in any way (configuration is modification;
-   so is wrapping it in a new service layer), **AND**
+   so is wrapping it in a new service layer, or passing proprietary prompts), **AND**
 2. **Operates it over a network** — including internal corporate networks, even
    if no external users interact with the service directly.
 
@@ -65,9 +65,9 @@ obtain a commercial license.
 The AGPL creates an **economically forced choice**:
 
 ```
-IF  deploy_aegis AND (modify_source OR cannot_disclose_modifications)
+IF  deploy_aegis AND (modify_source OR cannot_disclose_modifications_or_prompts)
 THEN
-    EITHER  publish all proprietary source code under AGPL-3.0
+    EITHER  publish all proprietary source code & prompts under AGPL-3.0
     OR      purchase a commercial license
 ```
 
@@ -83,10 +83,10 @@ An enterprise operating Aegis without a commercial license must, on request
 from any network user, provide the complete Corresponding Source of their
 version of Aegis — including:
 
-- All proprietary prompt engineering / system prompts passed through the proxy
-- All custom WAF rule additions
-- All internal configuration files that materially alter behavior
-- Any internal tooling that wraps or extends the proxy
+- All proprietary prompt engineering / system prompts passed through the proxy.
+- All custom WAF rule additions and threat models.
+- All internal configuration files that materially alter behavior.
+- Any internal tooling or orchestration frameworks that wrap or extend the proxy.
 
 For most enterprises, this is not commercially viable. The commercial license
 eliminates the obligation entirely.
@@ -95,16 +95,14 @@ eliminates the obligation entirely.
 
 ## Part III — License Tiers & Pricing
 
-All tiers are annual subscriptions. Payments are via invoice (net-30 or
-net-60 available for Enterprise and Sovereign tiers). Volume and multi-year
-discounts are available on request.
+All tiers (except Enterprise and Sovereign) feature **fully automated checkout and zero-touch license key delivery** via our Merchant of Record (LemonSqueezy/Stripe) integrated with Keygen.sh. Enterprise and Sovereign tiers are available via invoice.
 
 ---
 
 ### Tier 0 — Evaluation / Developer (Free)
 
-**Who it's for:** Individual engineers, PoC assessments, internal demos,
-regulated-sandbox testing. **Not for production** — no SLA, no compliance
+**Who it's for:** Individual engineers, PoC assessments, internal non-production demos,
+and sandbox testing. **Not for production** — no SLA, no compliance
 artifacts.
 
 | Feature | Included |
@@ -121,40 +119,56 @@ artifacts.
 
 ---
 
-### Tier 1 — Startup ($9,900 / year)
+### Tier 1 — Professional (Self-Serve) — $99 / month or $948 / year
 
-**Who it's for:** Startups and independent software vendors deploying Aegis
-as a closed-source component in a single product. Fewer than 1,000,000
-requests/month aggregate.
+**Who it's for:** Startups, independent developers, and small software teams deploying Aegis as a closed-source component in a single product. Under 500,000 requests/month aggregate.
 
 | Feature | Included |
 |---------|----------|
-| Commercial license (closed-source, single org) | Yes |
-| Production deployment rights | Yes — single product / single organization |
+| Commercial License (closed-source, single org) | Yes — AGPLv3 Exemption |
+| Production deployment rights | Yes — max 1 active production instance |
+| Automated License Delivery | Yes — instant key via LemonSqueezy/Stripe + Keygen.sh |
+| Monthly request quota | 500,000 requests/month |
+| Email / Discord support | 72-hour response target (business hours) |
 | Security patch stream | 72-hour notification for critical CVEs |
-| Monthly patch releases | Yes |
-| One (1) architecture review session (remote, 60 min) | Yes — first 90 days |
-| Email support | 48-hour response target (business hours) |
-| Compliance export artifacts (SBOM, attestation) | No |
-| Direct-access SLA | No |
+| Basic WAF & Rate Limiting | Yes |
+| Compliance export artifacts | No |
 
-**Overage:** requests/month > 1,000,000 → Tier 2 required.
+**Overage:** requests/month > 500,000 → Tier 2 required.
 
 ---
 
-### Tier 2 — Self-Serve Enterprise ($29,900 / year)
+### Tier 2 — Business (SME / Growth) — $299 / month or $2,988 / year
 
-**Who it's for:** Mid-market and enterprise organizations that need verifiable
-SOC 2 / HIPAA / ISO 27001 compliance artifacts without committing to a
-dedicated support engagement. The tier is deliberately documentation-heavy and
-interaction-light — all onboarding is self-service; there is no scheduled
-direct-access to the maintainer. This is the correct tier for teams with
-strong internal engineering capacity.
+**Who it's for:** Growing mid-market and small-to-medium enterprise (SME) organizations requiring basic regulatory compliance presets and cardholder-data scrubbing without dedicated contract negotiation.
 
 | Feature | Included |
 |---------|----------|
-| Commercial license (closed-source, unlimited nodes, single enterprise) | Yes |
+| Commercial License (closed-source, single org) | Yes — AGPLv3 Exemption |
+| Production deployment rights | Yes — max 3 active production instances |
+| Automated License Delivery | Yes — instant key via LemonSqueezy/Stripe + Keygen.sh |
+| Monthly request quota | 2,000,000 requests/month |
+| Regulatory Presets | Yes — HIPAA Safe Harbor, SEC Rule 17a-4, PCI-DSS v4.0 |
+| PCI-DSS PAN/CVV Masking | Yes — `AEGIS_PCI_SCRUB=true` |
+| HIPAA PHI De-identification | Yes — `AEGIS_PHI_DEIDENTIFY=true` |
+| Email / Discord support | 24-hour response target (business hours) |
+| Security patch stream | 48-hour critical CVE notification + patch |
+| Compliance export artifacts | No |
+
+**Overage:** requests/month > 2,000,000 → Tier 3 required.
+
+---
+
+### Tier 3 — Corporate Enterprise — $29,900 / year
+
+**Who it's for:** Mid-market and enterprise organizations that need verifiable
+SOC 2 / HIPAA / ISO 27001 compliance artifacts and unlimited replication capacity without committing to a dedicated, high-touch support engagement. Onboarding is self-service; there is no scheduled direct-access to the maintainer.
+
+| Feature | Included |
+|---------|----------|
+| Commercial license (closed-source, unlimited nodes, single enterprise) | Yes — AGPLv3 Exemption |
 | Production deployment rights | Yes — unlimited replicas within licensed entity |
+| Payment terms | Invoice (net-30 or net-60 available) |
 | Security patch stream | 48-hour critical CVE notification + patch |
 | Monthly patch releases | Yes |
 | Documentation portal access | Yes — private compliance runbooks, Helm playbooks, vertical-specific guides |
@@ -167,20 +181,13 @@ strong internal engineering capacity.
 | Direct-access SLA (phone / video calls) | **No** — documentation-only |
 | On-site or bespoke onboarding | **No** |
 
-**Why no direct-access SLA?** A solo founder cannot provide unscalable 1:1
-integration support at a price that makes $29,900 viable. The bet at this
-tier is: if the documentation, runbooks, and automated tooling cannot answer
-your engineering team's question, the question belongs in Tier 3. This
-keeps the tier honest, the price accessible, and the support quality high for
-those who self-select correctly.
-
 **Sub-processor agreement:** A DPA (Data Processing Addendum) and standard
 sub-processor addendum are available on request for GDPR Article 28 / HIPAA
 BAA requirements.
 
 ---
 
-### Tier 3 — Premium Sovereign ($150,000 / year base, negotiated)
+### Tier 4 — Premium Sovereign — $150,000 / year base (Negotiated)
 
 **Who it's for:** Defense contractors, government agencies, financial
 institutions under MiFID II / SEC Rule 17a-4, healthcare systems under
@@ -195,7 +202,7 @@ day or included in a scoped SOW.
 
 | Feature | Included |
 |---------|----------|
-| Commercial license (closed-source, unlimited nodes, unlimited subsidiaries within licensed group) | Yes |
+| Commercial license (closed-source, unlimited nodes, unlimited subsidiaries within licensed group) | Yes — AGPLv3 Exemption |
 | Production deployment rights | Yes |
 | Security patch stream | 4-hour critical CVE notification; 1 business day patch target |
 | Priority patch releases | Yes — out-of-band for P0 vulnerabilities |
@@ -225,7 +232,7 @@ day or included in a scoped SOW.
 
 ---
 
-### Tier 4 — OEM / Embedded (Negotiated)
+### Tier 5 — OEM / Embedded (Negotiated)
 
 **Who it's for:** Technology vendors who wish to redistribute Aegis as a
 component of their own product — bundled, white-labeled, or as an OEM module.
@@ -246,12 +253,12 @@ product, target market, estimated distribution volume, and timeline.
 
 ## Part IV — SLA Definitions and Escalation Matrix
 
-| Severity | Definition | Tier 1 | Tier 2 | Tier 3 |
-|---------|-----------|--------|--------|--------|
-| **P0 — System Down** | Proxy completely unavailable; audit chain not persisting | Email 48h | Email 24h | Pager / email 4h ack |
-| **P1 — Critical Security** | Exploitable vulnerability in auth, WAF, or audit chain | Patch notification 72h | Patch notification 48h | Notification 4h; patch target 1 BD |
-| **P2 — Degraded** | Non-critical functional defect; workaround available | Next monthly release | Next monthly release | Next patch release (≤ 14 days) |
-| **P3 — Advisory** | Performance, documentation, configuration guidance | Community (GitHub) | Documentation portal | Email; 24h response |
+| Severity | Definition | Tier 1 | Tier 2 | Tier 3 | Tier 4 |
+|---------|-----------|--------|--------|--------|--------|
+| **P0 — System Down** | Proxy completely unavailable; audit chain not persisting | Email 72h | Email 48h | Email 24h | Pager / email 4h ack |
+| **P1 — Critical Security** | Exploitable vulnerability in auth, WAF, or audit chain | Patch notification 72h | Patch notification 48h | Patch notification 48h | Notification 4h; patch target 1 BD |
+| **P2 — Degraded** | Non-critical functional defect; workaround available | Next monthly release | Next monthly release | Next monthly release | Next patch release (≤ 14 days) |
+| **P3 — Advisory** | Performance, documentation, configuration guidance | Community (Discord) | Email / Discord 48h | Documentation portal | Email; 24h response |
 
 **SLA clock runs business days (Monday–Friday, 09:00–17:00 US Eastern),
 excluding US federal holidays**, unless a 24×7 add-on is contracted.
@@ -260,21 +267,29 @@ excluding US federal holidays**, unless a 24×7 add-on is contracted.
 
 ## Part V — Engagement and Procurement Process
 
-Commercial engagements follow this flow:
+### For Tier 1 and Tier 2 (Self-Serve)
+
+1. **Instant Purchase:** Navigate to our self-serve checkout page (powered by LemonSqueezy/Stripe).
+2. **Automated License Generation:** Upon successful payment processing, LemonSqueezy triggers a secure webhook to our serverless handler.
+3. **Key Provisioning:** A cryptographically signed license key is generated via Keygen.sh and bound to your email address and chosen policy.
+4. **Immediate Delivery:** The key and private binary download instructions are sent to your inbox within seconds.
+5. **Activation:** Set `AEGIS_LICENSE_KEY=<your-key>` in your environment file.
+
+### For Tier 3 and Tier 4 (Enterprise & Sovereign)
 
 ```
 1. Initial inquiry (email below) → 2. NDA (optional) → 3. Technical discovery
-call (Tier 2+) → 4. Proposal & Scope of Work → 5. MSA / License Agreement
+call (Tier 3+) → 4. Proposal & Scope of Work → 5. MSA / License Agreement
 → 6. Invoice & Payment → 7. License key delivery + private repo access
-→ 8. Onboarding (Tier 3+)
+→ 8. Onboarding (Tier 4+)
 ```
 
 **Standard procurement timelines:**
-- Tier 1/2: 5–10 business days from first email to signed license
-- Tier 3/4: 15–30 business days (MSA negotiation, DPA/BAA review)
+- Tier 3: 5–10 business days from first email to signed license
+- Tier 4: 15–30 business days (MSA negotiation, DPA/BAA review)
 - Government / DoD (OTA / FAR-compliant): 30–90 days depending on vehicle
 
-**Required information for initial contact:**
+**Required information for initial contact (Tier 3 & 4):**
 
 ```
 Company name and primary contact (name, title, email)
@@ -282,7 +297,7 @@ Deployment model: SaaS / on-premises / hybrid / air-gapped
 Estimated request volume: req/month or req/day peak
 Target vertical: FinReg / Healthcare / Defense / Gov / Enterprise
 Compliance frameworks in scope: SOC 2 / HIPAA / FedRAMP / PCI / other
-Desired SLA tier: Tier 1 / 2 / 3 / OEM
+Desired SLA tier: Tier 3 / 4 / OEM
 Procurement path: direct / GSA Schedule / OTA / SEWP V / other
 Timeline: evaluation deadline, deployment target date
 ```
