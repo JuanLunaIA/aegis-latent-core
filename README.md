@@ -340,10 +340,9 @@ Aegis answers with a cryptographic proof: SHA-256 hash-chained, HMAC-signed, ML-
 
 ### Build vs. Buy
 
-| Deployment Model | Aegis Annual Cost | Build-It-Yourself Cost Estimate |
-|-----------------|-------------------|--------------------------------|
-| Business | From $2,999 / yr | ~5 compliance engineers × 6–12 months = $1,375,000 USD |
-| Enterprise | From $5,999 / yr | Dedicated team + legal review + annual audit = $ 3,437,500 USD |
+| Deployment Model | Aegis Cost | Build-It-Yourself Cost Estimate |
+|-----------------|-------------------|---------------------------------|
+| **Commercial License** | **$499 one-time** | ~5 compliance engineers × 6–12 months = $1,375,000 USD |
 | OEM / Embedded | Negotiated | Full engineering + legal org build-out |
 
 The Aegis hash-chain, MMR, and ML-DSA signing infrastructure took over two years to build, audit, and validate across 5,451 tests. No bespoke application logging system replicates this in one sprint.
@@ -1018,24 +1017,25 @@ assert result.integrity == True
 Aegis Latent Core is dual-licensed:
 
 - **AGPLv3 (open-source):** Free to use, modify, and distribute under copyleft obligations. Network deployment triggers source-disclosure requirements under AGPL §13.
-- **Commercial License:** Removes all copyleft requirements for closed-source and SaaS deployments. Includes SLAs, security patch stream, architecture review, and enterprise artifacts (signed SBOM, reproducible builds, attestation packages).
+- **Commercial License:** A single, permanent license that removes all copyleft requirements. One payment. Full access. Forever.
 
-### License Tiers
+### One License. Everything. No Subscriptions.
 
-| Tier | Deployment | SLA | Annual Investment |
-|------|-----------|-----|-------------------|
-| **Evaluation** | Non-production PoC / testing | Email, best-effort | Free |
-| **Professional** | Single-org closed-source, < 1M req/mo | 72h security patch stream | From $949.99 |
-| **Business** | Multi-org, automated compliance exports, SOC 2 / HIPAA evidence packs | 48h critical CVE patch; documentation portal access; no direct-access SLA | From $2,999.99 |
-| **Enterprise** | Air-gapped, mission-critical, Gov/DoD, bespoke onboarding | P1: 4h ack · 1 business day remediation · direct founder access | From $5,999.99 |
-| **OEM / Embedded** | Redistribution / white-label with indemnities | Negotiated per MSA | Contact |
+| | Commercial License — $499 USD (One-Time) |
+|---|---|
+| **AGPLv3 Exemption** | ✅ Permanent legal waiver for Aegis v2.x |
+| **Feature access** | ✅ 100% — every module, compliance preset, and integration |
+| **Deployment scope** | ✅ Unlimited servers, nodes, containers within your legal entity |
+| **Future v2.x updates** | ✅ Included at no additional cost |
+| **Payment model** | ✅ One-time purchase — no subscriptions, no renewals |
+| **Support** | ✅ Best-effort email access to the maintainer |
+| **DRM / telemetry** | ❌ None — fully air-gapped, offline-capable |
 
-**Contact for commercial licensing, procurement paperwork (SOW, ISO/SOC evidence), and enterprise discovery:**
+> **Open-source (AGPLv3):** Free to use for open-source projects, academic work, and local evaluation.
 
-> **Email:** juan.c.luna04@gmail.com  
-> **Include:** Company name, deployment model (SaaS/on-prem/hybrid), estimated node count and QPS, desired SLA, timeline.
+**To purchase:** Contact `juan.c.luna04@gmail.com` with your company name, country, and intended use case. You will receive checkout instructions and, upon payment, a personalized Certificate of AGPLv3 Exemption (PDF) within 1 business day.
 
-Full terms: [COMMERCIAL.md](COMMERCIAL.md)
+Full terms, OEM/white-label licensing, and buyer registration requirements: [COMMERCIAL.md](COMMERCIAL.md)
 
 ---
 
@@ -1087,7 +1087,7 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md). Key requirements:
 ## License
 
 **GNU Affero General Public License v3 (AGPL-3.0-only)** for open-source use.  
-Commercial licenses (without copyleft requirements) available — see [`COMMERCIAL.md`](COMMERCIAL.md).
+**Commercial License — $499 USD (one-time payment):** Permanently removes all copyleft requirements. Full feature access. No subscriptions. See [`COMMERCIAL.md`](COMMERCIAL.md) for complete terms and buyer registration requirements.
 
 ---
 
