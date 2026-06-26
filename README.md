@@ -1025,9 +1025,9 @@ Aegis Latent Core is dual-licensed:
 | Tier | Deployment | SLA | Annual Investment |
 |------|-----------|-----|-------------------|
 | **Evaluation** | Non-production PoC / testing | Email, best-effort | Free |
-| **Startup** | Single-org closed-source, < 1M req/mo | 72h security patch stream | From $9,900 |
-| **Self-Serve Enterprise** | Multi-org, automated compliance exports, SOC 2 / HIPAA evidence packs | 48h critical CVE patch; documentation portal access; no direct-access SLA | From $2,999 |
-| **Premium Sovereign** | Air-gapped, mission-critical, Gov/DoD, bespoke onboarding | P1: 4h ack · 1 business day remediation · direct founder access | From $5,999 |
+| **Professional** | Single-org closed-source, < 1M req/mo | 72h security patch stream | From $949.99 |
+| **Business** | Multi-org, automated compliance exports, SOC 2 / HIPAA evidence packs | 48h critical CVE patch; documentation portal access; no direct-access SLA | From $2,999.99 |
+| **Enterprise** | Air-gapped, mission-critical, Gov/DoD, bespoke onboarding | P1: 4h ack · 1 business day remediation · direct founder access | From $5,999.99 |
 | **OEM / Embedded** | Redistribution / white-label with indemnities | Negotiated per MSA | Contact |
 
 **Contact for commercial licensing, procurement paperwork (SOW, ISO/SOC evidence), and enterprise discovery:**
