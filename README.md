@@ -342,7 +342,7 @@ Aegis answers with a cryptographic proof: SHA-256 hash-chained, HMAC-signed, ML-
 
 | Deployment Model | Aegis Cost | Build-It-Yourself Cost Estimate |
 |-----------------|-------------------|---------------------------------|
-| **Commercial License** | **$499 one-time** | ~5 compliance engineers × 6–12 months = $1,375,000 USD |
+| **Commercial License** | **$1,990 one-time** | ~5 compliance engineers × 6–12 months = $1,375,000 USD |
 | OEM / Embedded | Negotiated | Full engineering + legal org build-out |
 
 The Aegis hash-chain, MMR, and ML-DSA signing infrastructure took over two years to build, audit, and validate across 5,451 tests. No bespoke application logging system replicates this in one sprint.
@@ -1021,7 +1021,7 @@ Aegis Latent Core is dual-licensed:
 
 ### One License. Everything. No Subscriptions.
 
-| | Commercial License — $499 USD (One-Time) |
+| | Commercial License — $1,990 USD (One-Time) |
 |---|---|
 | **AGPLv3 Exemption** | ✅ Permanent legal waiver for Aegis v2.x |
 | **Feature access** | ✅ 100% — every module, compliance preset, and integration |
@@ -1087,7 +1087,7 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md). Key requirements:
 ## License
 
 **GNU Affero General Public License v3 (AGPL-3.0-only)** for open-source use.  
-**Commercial License — $499 USD (one-time payment):** Permanently removes all copyleft requirements. Full feature access. No subscriptions. See [`COMMERCIAL.md`](COMMERCIAL.md) for complete terms and buyer registration requirements.
+**Commercial License — $1,990 USD (one-time payment):** Permanently removes all copyleft requirements. Full feature access. No subscriptions. See [`COMMERCIAL.md`](COMMERCIAL.md) for complete terms and buyer registration requirements.
 
 ---
 
