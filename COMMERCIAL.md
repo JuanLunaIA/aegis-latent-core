@@ -39,7 +39,7 @@ This is the honest scope. There are no artificial tier locks, no telemetry, and 
 
 ## Part III — The License: One Payment. Everything. Forever.
 
-> **Aegis Latent Core Commercial License — $499 USD (One-Time Payment / Pago Único)**
+> **Aegis Latent Core Commercial License — $1,990 USD (One-Time Payment / Pago Único)**
 
 **One payment. Full access. Permanent.**
 
