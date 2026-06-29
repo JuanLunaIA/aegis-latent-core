@@ -154,7 +154,7 @@ if ! "${SKIP_ENV_GEN}" && [[ ! -f "${ENV_FILE}" ]]; then
 
 AEGIS_PROVIDER=openai
 AEGIS_BACKEND_URL=https://api.openai.com
-AEGIS_BACKEND_API_KEY=        # TODO: Set your LLM provider API key here
+AEGIS_BACKEND_API_KEY=        # Set your LLM provider API key here (required)
 
 AEGIS_API_KEYS=${PROXY_KEY}
 AEGIS_AUDIT_API_KEYS=${AUDIT_KEY}

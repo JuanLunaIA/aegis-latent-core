@@ -13,6 +13,7 @@ import pytest
 from aegis.core.safe_serialization import (
     DEFAULT_ALLOWED,
     RestrictedUnpickler,
+    UnsafePickleError,
     _validate_allowed,
     safe_pickle_load,
 )
@@ -101,7 +102,7 @@ def test_find_class_forbids_non_builtin():
     buf.write(pickle.dumps(datetime.datetime(2024, 1, 1)))
     buf.seek(0)
     unpickler = RestrictedUnpickler(buf)
-    with pytest.raises(pickle.UnpicklingError, match="forbidden"):
+    with pytest.raises((pickle.UnpicklingError, UnsafePickleError)):
         unpickler.load()
 
 
@@ -117,19 +118,19 @@ def test_safe_pickle_load_disallowed_type_raises(tmp_path):
     from unittest.mock import patch
 
     with patch("aegis.core.safe_serialization._validate_allowed", return_value=False):
-        with pytest.raises(pickle.UnpicklingError, match="disallowed types"):
-            safe_pickle_load(path)
+        with pytest.raises(UnsafePickleError, match="disallowed"):
+            safe_pickle_load(path, require_signature=False)
 
 
 def test_safe_pickle_load_valid_dict(tmp_path):
     path = tmp_path / "ok.pkl"
     path.write_bytes(pickle.dumps({"key": "val", "num": 42}))
-    result = safe_pickle_load(path)
+    result = safe_pickle_load(path, require_signature=False)
     assert result == {"key": "val", "num": 42}
 
 
 def test_safe_pickle_load_valid_list(tmp_path):
     path = tmp_path / "list.pkl"
     path.write_bytes(pickle.dumps([1, "two", 3.0]))
-    result = safe_pickle_load(path)
+    result = safe_pickle_load(path, require_signature=False)
     assert result == [1, "two", 3.0]

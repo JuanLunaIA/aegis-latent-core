@@ -152,9 +152,9 @@ class _BoundedAnalyzerCache:
     cfg : AegisSettings
         Application configuration. KL/JS/entropy thresholds are read here
         so that environment-variable overrides are respected at runtime.
-        FIX-BLOCKER-02: previously, ResponseAnalyzer was instantiated with
-        hardcoded defaults (kl_threshold=2.0, js_threshold=0.5, etc.),
-        silently ignoring AegisSettings.kl_alert_threshold and siblings.
+        Note: Previously, ResponseAnalyzer was instantiated with hardcoded
+        defaults, silently ignoring AegisSettings.kl_alert_threshold and siblings.
+        This has been corrected to read thresholds from cfg when available.
     """
 
     def __init__(
@@ -182,7 +182,7 @@ class _BoundedAnalyzerCache:
                 evicted_id, _ = self._cache.popitem(last=False)
                 self._eviction_count += 1
                 logger.debug("_BoundedAnalyzerCache: evicted LRU session %s", evicted_id)
-            # FIX-BLOCKER-02: read thresholds from cfg when available.
+            # Read thresholds from cfg when available.
             if self._cfg is not None:
                 analyzer = ResponseAnalyzer(
                     session_id=session_id,
@@ -449,8 +449,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     state = _AppState()
     state.settings = cfg
     state.mtls_auth = None  # populated in lifespan when mtls_required or ssl_ca_certs is set
-    # FIX-APP-01: bounded LRU cache instead of unbounded plain dict.
-    # FIX-BLOCKER-02: cfg injected so ResponseAnalyzer reads thresholds from config.
+    # Bounded LRU cache instead of unbounded plain dict.
+    # cfg injected so ResponseAnalyzer reads thresholds from config.
     state.analyzers = _BoundedAnalyzerCache(maxsize=_MAX_ANALYZER_SESSIONS, cfg=cfg)
     state.alert_store = _AlertStore()
     state.proxy_auth = ProxyKeyAuth(cfg)
@@ -534,8 +534,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         # initialised its threads and file descriptors we lock the process down.
         # See the "Seccomp lockdown" block below and seccomp_guard.py.
 
-        # FIX-BLOCKER-01: LSM guard runs in advisory mode — a missing or
-        # inactive LSM profile is logged as a WARNING, never a fatal error.
+        # LSM guard runs in advisory mode — a missing or inactive LSM profile
+        # is logged as a WARNING, never a fatal error.
         # Rationale: most container, cloud, and development environments do not
         # have AppArmor/SELinux profiles loaded for arbitrary Python processes.
         # Crashing on startup prevents deployment in any such environment.

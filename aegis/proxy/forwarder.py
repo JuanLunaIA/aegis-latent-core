@@ -101,7 +101,7 @@ class LLMForwarder:
             connect=self._settings.backend_connect_timeout_seconds,
         )
 
-        # FIX-BLOCKER-03: apply SSL/mTLS settings from config.
+        # SSL/mTLS configuration for upstream connections.
         # ssl_ca_certs: custom CA bundle for verifying the upstream TLS certificate.
         # ssl_certfile + ssl_keyfile: client certificate for mTLS to the upstream.
         # When mtls_required=True and the cert files are not set, start() logs a

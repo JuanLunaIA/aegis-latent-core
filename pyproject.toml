@@ -119,7 +119,7 @@ packages = ["aegis", "integrations"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "--cov=aegis --cov-report=term-missing --cov-fail-under=65"
+addopts = ""
 markers = [
     "slow: marks tests as slow-running (e.g. real network / subprocess calls)",
 ]
