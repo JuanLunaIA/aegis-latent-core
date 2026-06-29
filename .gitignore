@@ -1,66 +1,49 @@
 ```
 # Dependencies
+*.lock
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.venv/
-venv/
-env/
-.env
-.env.local
-.env.*
-requirements.txt.bak
-requirements-dev.txt
-requirements-test.txt
-Pipfile
-Pipfile.lock
-poetry.lock
-.tox/
-.coverage
-coverage/
-htmlcov/
-.pytest_cache/
-.mypy_cache/
-.hypothesis/
-
-# Build and distribution artifacts
-build/
-dist/
-*.egg-info/
-*.egg
-*.whl
+.Python
 *.so
-*.dylib
-*.dll
-*.exe
-*.out
-*.o
-*.obj
-*.a
-*.lib
+.coverage
+htmlcov/
+.coverage.*
+.python-version
 
 # Logs
 *.log
 
-# OS generated files
-.DS_Store
-Thumbs.db
-.DS_Store?
-ehthumbs.db
-Icon?
-desktop.ini
+# Environment variables
+.env
+.env.local
+.env.*
 
-# Editor specific
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
+*.tmp
+
+# OS
 .DS_Store
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
+
+# Build and distribution
+dist/
+build/
+*.egg-info/
+.coverage
+htmlcov/
+.mypy_cache/
+.pytest_cache/
 ```
