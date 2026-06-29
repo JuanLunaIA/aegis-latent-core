@@ -163,8 +163,7 @@ class KernelHardener:
 
         # If we reach here, EFI vars exist but we couldn't determine Secure Boot state
         logger.warning(
-            "Could not definitively determine Secure Boot state. "
-            "Assuming disabled for safety."
+            "Could not definitively determine Secure Boot state. Assuming disabled for safety."
         )
         msg = "Secure Boot state undetermined; failing closed"
         if self.fail_secure:
@@ -268,9 +267,10 @@ class KernelHardener:
                 "mode": lockdown.mode,
                 "policy": lockdown.policy,
                 "required_mode": self.required_mode,
-                "meets_requirement": lockdown.enabled and (
-                    lockdown.mode == self.required_mode or
-                    (lockdown.mode == "confidentiality" and self.required_mode == "integrity")
+                "meets_requirement": lockdown.enabled
+                and (
+                    lockdown.mode == self.required_mode
+                    or (lockdown.mode == "confidentiality" and self.required_mode == "integrity")
                 ),
             },
             "fail_secure_mode": self.fail_secure,

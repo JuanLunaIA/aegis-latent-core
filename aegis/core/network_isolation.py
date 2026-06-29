@@ -247,9 +247,7 @@ class XDPNetworkIsolator:
             logger.debug("XDP isolation not active, nothing to remove")
             return True
 
-        rc, stdout, stderr = self._execute_bpftool(
-            ["net", "detach", "xdp", "dev", self.interface]
-        )
+        rc, stdout, stderr = self._execute_bpftool(["net", "detach", "xdp", "dev", self.interface])
 
         if rc == 0:
             self._is_active = False

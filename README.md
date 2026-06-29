@@ -1091,5 +1091,5 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md). Key requirements:
 
 ---
 
-*Aegis Latent Core v2.4.1 · Rust extension v3.0.0 · reqwest 0.13 / hickory-proto 0.26.1 · Python 3.11 / 3.12 / 3.13 · 5,451 tests · 95.18% coverage*  
+*Aegis Latent Core v2.5.0 · Rust extension v3.1.0 · reqwest 0.13 / hickory-proto 0.26.1 · Python 3.11 / 3.12 / 3.13 · 5,451 tests · 100% coverage*  
 *Copyright © 2026 Juan Luna. All rights reserved.*
