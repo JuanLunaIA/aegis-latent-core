@@ -162,7 +162,7 @@ jobs:
         # which reads the now-committed Cargo.lock with documented ignores.)
         # Report-only: findings surface as SARIF in the Security tab but do not
         # block the PR — the gating Python audit is the pip-audit job above.
-        uses: google/osv-scanner-action/osv-scanner-action@v2.0.2
+        uses: google/osv-scanner-action/osv-scanner-action@v2.3.8
         continue-on-error: true
         with:
           scan-args: |-
