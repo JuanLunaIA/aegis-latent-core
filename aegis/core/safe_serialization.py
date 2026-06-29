@@ -301,6 +301,6 @@ def safe_pickle_dump(
         except SerializationError as e:
             logger.warning("Signing failed (key not configured?): %s", e)
             # Don't fail the operation, but warn
-            warnings.warn(f"Pickle written without signature: {e}", UserWarning)
+            warnings.warn(f"Pickle written without signature: {e}", UserWarning, stacklevel=2)
 
     return p, sig_path

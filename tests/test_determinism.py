@@ -91,7 +91,7 @@ class TestIEC62443Determinism:
     )
     async def test_jitter_sigma_within_ci_bound(self):
         """σ < 100µs: baseline determinism on any POSIX system (CI-safe bound).
-        
+
         Note: This test is skipped in CI/sandbox environments where scheduling
         variance is unbounded due to shared resources. On dedicated hardware
         with real-time kernels, σ should be <10µs for IEC 62443 SL-3 compliance.
@@ -151,7 +151,7 @@ class TestIEC62443Determinism:
 
         Validates temporal stability: jitter must not drift under sustained load,
         which would indicate event-loop starvation or memory pressure.
-        
+
         Note: This test is skipped in CI/sandbox environments where kernel scheduler
         contention causes artificial drift. On dedicated hardware with CPU isolation,
         drift should be <10µs.

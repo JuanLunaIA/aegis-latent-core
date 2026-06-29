@@ -12,7 +12,6 @@ import logging
 import os
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +43,7 @@ class XDPNetworkIsolator:
     def __init__(
         self,
         interface: str = "enp0s25",
-        xdp_binary_path: Optional[str] = None,
+        xdp_binary_path: str | None = None,
         fail_secure: bool = True,
     ):
         """
@@ -60,7 +59,7 @@ class XDPNetworkIsolator:
         self.xdp_binary_path = xdp_binary_path or self.DEFAULT_XDP_BINARY_PATH
         self.fail_secure = fail_secure
         self._is_active = False
-        self._xdp_program_id: Optional[int] = None
+        self._xdp_program_id: int | None = None
 
     def _execute_bpftool(self, cmd: list[str], timeout: int = 10) -> tuple[int, str, str]:
         """

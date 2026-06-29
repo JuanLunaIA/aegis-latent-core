@@ -17,7 +17,6 @@ import logging
 import os
 import subprocess
 from dataclasses import dataclass
-from typing import Literal
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +37,12 @@ class KernelHardenerError(Exception):
 class KernelHardener:
     """
     Enforces Kernel Lockdown and Secure Boot requirements for the Aegis runtime.
-    
+
     This class provides comprehensive kernel security verification:
     - Secure Boot status via mokutil, bootctl, or direct EFI variable reading
     - Kernel lockdown mode via /sys/kernel/security/lockdown
     - Fail-secure behavior when required security features are absent
-    
+
     The system will fail closed (raise exceptions) if required security
     features are not present and fail_secure=True.
     """
@@ -55,7 +54,7 @@ class KernelHardener:
     def __init__(self, required_mode: str = "integrity", fail_secure: bool = True):
         """
         Initialize the Kernel Hardener.
-        
+
         Args:
             required_mode: Required lockdown mode ('integrity' or 'confidentiality').
             fail_secure: If True, raise exception when security requirements aren't met.
@@ -67,11 +66,11 @@ class KernelHardener:
     def _read_efi_variable(self, var_name: str, guid: str) -> bytes | None:
         """
         Read an EFI variable from sysfs.
-        
+
         Args:
             var_name: Name of the EFI variable.
             guid: GUID of the EFI variable namespace.
-            
+
         Returns:
             Raw bytes of the variable content, or None if unreadable.
         """
@@ -88,15 +87,15 @@ class KernelHardener:
     def check_secure_boot(self) -> tuple[bool, str]:
         """
         Checks if Secure Boot is enabled using multiple detection methods.
-        
+
         Detection methods tried in order:
         1. mokutil --sb-state (if available)
         2. bootctl status (systemd-boot)
         3. Direct EFI variable reading
-        
+
         Returns:
             Tuple of (is_enabled: bool, message: str)
-            
+
         Raises:
             KernelHardenerError: If Secure Boot is not detected and fail_secure=True.
         """
@@ -143,7 +142,7 @@ class KernelHardener:
         # SecureBoot EFI variable: GUID 8be4df61-93ca-11d2-aa0d-00e098032b8c
         secure_boot_guid = "8be4df61-93ca-11d2-aa0d-00e098032b8c"
         sb_data = self._read_efi_variable("SecureBoot", secure_boot_guid)
-        
+
         if sb_data is not None:
             # SecureBoot=1 means enabled, SecureBoot=0 means disabled
             is_enabled = sb_data[-1] == 1 if len(sb_data) >= 1 else False
@@ -175,7 +174,7 @@ class KernelHardener:
     def check_kernel_lockdown(self) -> LockdownState:
         """
         Reads the current kernel lockdown state from sysfs.
-        
+
         Returns:
             LockdownState dataclass with enabled status, mode, and policy.
         """
@@ -202,14 +201,14 @@ class KernelHardener:
     def enforce_hardening(self) -> bool:
         """
         Strictly validates that the system meets the minimum security baseline.
-        
+
         Verifies:
         1. Secure Boot is enabled
         2. Kernel lockdown is in the required mode or stricter
-        
+
         Returns:
             True if all checks pass, False otherwise.
-            
+
         Raises:
             KernelHardenerError: If any check fails and fail_secure=True.
         """
@@ -252,13 +251,13 @@ class KernelHardener:
     def get_security_status(self) -> dict:
         """
         Get comprehensive kernel security status.
-        
+
         Returns:
             Dictionary with detailed security posture information.
         """
         sb_ok, sb_msg = self.check_secure_boot()
         lockdown = self.check_kernel_lockdown()
-        
+
         return {
             "secure_boot": {
                 "enabled": sb_ok,

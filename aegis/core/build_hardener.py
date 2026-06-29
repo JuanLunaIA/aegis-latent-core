@@ -24,7 +24,7 @@ class BuildHardenerError(Exception):
 class BuildHardener:
     """
     Validates that the production binaries meet the 'Inexpugnable' hardening standards.
-    
+
     This class performs comprehensive binary security audits including:
     - Control Flow Integrity (CFI) verification
     - Full RELRO (RELocation Read-Only) verification
@@ -35,7 +35,7 @@ class BuildHardener:
     def __init__(self, fail_secure: bool = True):
         """
         Initialize the Build Hardener.
-        
+
         Args:
             fail_secure: If True, raise exception on validation failure.
                         If False, log warnings and return False.
@@ -46,13 +46,13 @@ class BuildHardener:
     def validate_binary_integrity(self, binary_path: str) -> bool:
         """
         Performs a full hardening audit of the binary.
-        
+
         Args:
             binary_path: Path to the binary to audit.
-            
+
         Returns:
             True if binary passes all hardening checks, False otherwise.
-            
+
         Raises:
             BuildHardenerError: If validation fails and fail_secure=True.
         """
@@ -103,19 +103,19 @@ class BuildHardener:
     def _verify_relro(self, binary_path: str) -> tuple[bool, str]:
         """
         Verify that the binary has Full RELRO enabled.
-        
+
         Full RELRO makes the GOT (Global Offset Table) read-only after relocation,
         preventing GOT overwrite attacks.
-        
+
         Args:
             binary_path: Path to the binary to check.
-            
+
         Returns:
             Tuple of (success: bool, message: str)
         """
         try:
             import subprocess
-            
+
             # Check for GNU_RELRO segment and BIND_NOW flag
             result = subprocess.run(
                 ["readelf", "-l", binary_path],
@@ -123,9 +123,9 @@ class BuildHardener:
                 text=True,
                 timeout=10,
             )
-            
+
             has_relro = "GNU_RELRO" in result.stdout
-            
+
             # Check for BIND_NOW in dynamic section
             result_dyn = subprocess.run(
                 ["readelf", "-d", binary_path],
@@ -134,14 +134,14 @@ class BuildHardener:
                 timeout=10,
             )
             has_bind_now = "BIND_NOW" in result_dyn.stdout or "(FLAGS)" in result_dyn.stdout and "NOW" in result_dyn.stdout
-            
+
             if has_relro and has_bind_now:
                 return True, "Full RELRO enabled (GNU_RELRO + BIND_NOW)"
             elif has_relro:
                 return False, "Partial RELRO only (missing BIND_NOW flag)"
             else:
                 return False, "No RELRO protection found"
-                
+
         except FileNotFoundError:
             logger.warning("readelf not found; cannot verify RELRO. Install binutils.")
             return False, "readelf tool not available"
@@ -154,18 +154,18 @@ class BuildHardener:
     def _verify_stack_canary(self, binary_path: str) -> tuple[bool, str]:
         """
         Verify that the binary has stack canary protection enabled.
-        
+
         Stack canaries detect buffer overflows before they can corrupt the return address.
-        
+
         Args:
             binary_path: Path to the binary to check.
-            
+
         Returns:
             Tuple of (success: bool, message: str)
         """
         try:
             import subprocess
-            
+
             # Check for __stack_chk_fail symbol which indicates stack canary usage
             result = subprocess.run(
                 ["nm", "-D", binary_path],
@@ -173,14 +173,14 @@ class BuildHardener:
                 text=True,
                 timeout=10,
             )
-            
+
             has_canary = "__stack_chk_fail" in result.stdout
-            
+
             if has_canary:
                 return True, "Stack canary protection enabled (__stack_chk_fail present)"
             else:
                 return False, "No stack canary protection detected (__stack_chk_fail missing)"
-                
+
         except FileNotFoundError:
             logger.warning("nm not found; cannot verify stack canary. Install binutils.")
             return False, "nm tool not available"
@@ -193,18 +193,18 @@ class BuildHardener:
     def _verify_pie(self, binary_path: str) -> tuple[bool, str]:
         """
         Verify that the binary is a Position Independent Executable (PIE).
-        
+
         PIE enables ASLR for the entire binary, making memory addresses unpredictable.
-        
+
         Args:
             binary_path: Path to the binary to check.
-            
+
         Returns:
             Tuple of (success: bool, message: str)
         """
         try:
             import subprocess
-            
+
             # Check if binary type is DYN (shared object / PIE)
             result = subprocess.run(
                 ["file", binary_path],
@@ -212,9 +212,9 @@ class BuildHardener:
                 text=True,
                 timeout=10,
             )
-            
+
             is_pie = "pie" in result.stdout.lower() or "shared object" in result.stdout.lower()
-            
+
             # Also verify with readelf header
             result_header = subprocess.run(
                 ["readelf", "-h", binary_path],
@@ -222,15 +222,15 @@ class BuildHardener:
                 text=True,
                 timeout=10,
             )
-            
+
             # Type should be DYN for PIE
             has_dyn_type = "Type:" in result_header.stdout and "DYN" in result_header.stdout
-            
+
             if is_pie or has_dyn_type:
                 return True, "PIE enabled (Position Independent Executable)"
             else:
                 return False, "PIE not enabled (binary is not position independent)"
-                
+
         except FileNotFoundError:
             logger.warning("file/readelf not found; cannot verify PIE. Install file/binutils.")
             return False, "file/readelf tools not available"

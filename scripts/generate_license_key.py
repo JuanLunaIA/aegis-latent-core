@@ -57,7 +57,7 @@ import os
 import secrets
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 # ── Tier definitions ──────────────────────────────────────────────────────────
@@ -110,7 +110,7 @@ def _load_master_key(secret_arg: str | None) -> bytes:
     else:
         # Generate ephemeral key for demo purposes — warn loudly
         print("WARNING: No master key found. Generating ephemeral key.", file=sys.stderr)
-        print(f"WARNING: Keys generated with ephemeral keys cannot be verified later.", file=sys.stderr)
+        print("WARNING: Keys generated with ephemeral keys cannot be verified later.", file=sys.stderr)
         print(f"WARNING: Store a persistent key at: {_DEFAULT_MASTER_KEY_FILE}", file=sys.stderr)
         raw = secrets.token_hex(32)
     try:
@@ -188,7 +188,7 @@ def verify_key(key: str, secret: str | None = None) -> tuple[bool, dict[str, Any
         now = int(time.time())
 
         if payload.get("exp", 0) < now:
-            exp_dt = datetime.fromtimestamp(payload["exp"], tz=timezone.utc).strftime("%Y-%m-%d")
+            exp_dt = datetime.fromtimestamp(payload["exp"], tz=UTC).strftime("%Y-%m-%d")
             return False, payload, f"License EXPIRED on {exp_dt}"
 
         return True, payload, ""
@@ -198,8 +198,8 @@ def verify_key(key: str, secret: str | None = None) -> tuple[bool, dict[str, Any
 
 
 def _print_key_info(payload: dict[str, Any], key: str) -> None:
-    exp_dt = datetime.fromtimestamp(payload["exp"], tz=timezone.utc).strftime("%Y-%m-%d")
-    iat_dt = datetime.fromtimestamp(payload["iat"], tz=timezone.utc).strftime("%Y-%m-%d")
+    exp_dt = datetime.fromtimestamp(payload["exp"], tz=UTC).strftime("%Y-%m-%d")
+    iat_dt = datetime.fromtimestamp(payload["iat"], tz=UTC).strftime("%Y-%m-%d")
     config = TIER_CONFIGS.get(payload["tier"], {})
     days_remaining = max(0, (payload["exp"] - int(time.time())) // 86400)
 
