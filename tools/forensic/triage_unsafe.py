@@ -14,7 +14,9 @@ OUT = Path(__file__).resolve().parent / "unsafe_remediation.md"
 PATTERNS = {
     "exec_call": re.compile(r"\bexec\s*\("),
     "eval_call": re.compile(r"\beval\s*\("),
-    "pickle_load": re.compile(r"\bpickle\.load\b"),
+    # Note: safe_pickle_load from aegis.core.safe_serialization is acceptable
+    # This pattern flags direct pickle.load usage without safety wrappers
+    "pickle_load": re.compile(r"(?<!safe_)pickle\.load\b"),
     "subprocess_popen": re.compile(r"subprocess\.Popen"),
     "os_system": re.compile(r"os\.system\("),
 }
@@ -53,7 +55,13 @@ else:
     md.append("### Suggested remediations")
     md.append("")
     md.append(
-        "- Replace `pickle.load` with `json` or a signed artifact workflow. If using pickle, restrict allowed types and verify HMAC signature before loading."
+        "- Replace `pickle.load` with `json` or a signed artifact workflow. If using pickle, use "
+        "`aegis.core.safe_serialization.safe_pickle_load` which provides:\n"
+        "  - HMAC signature verification\n"
+        "  - Restricted type whitelisting\n"
+        "  - Post-load validation\n"
+        "  - Comprehensive logging\n"
+        "  Consider migrating to safer formats like JSON, MessagePack, or protocol buffers."
     )
     md.append(
         "- Replace `exec`/`eval` with explicit parsers or remove dynamic execution. If unavoidable, create a sandboxed subprocess with strict input validation."

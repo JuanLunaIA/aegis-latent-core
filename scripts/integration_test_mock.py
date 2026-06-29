@@ -26,7 +26,6 @@ The sweep covers:
 from __future__ import annotations
 
 import argparse
-import asyncio
 import base64
 import json
 import os

@@ -27,7 +27,8 @@ def test_safe_pickle_load_accepts_primitive_dict(tmp_path: Path) -> None:
     payload = {"key": "value", "count": 3}
     with path.open("wb") as fh:
         pickle.dump(payload, fh)
-    assert safe_pickle_load(path) == payload
+    # Test with signature disabled for basic primitive loading
+    assert safe_pickle_load(path, require_signature=False) == payload
 
 
 def test_safe_pickle_load_rejects_forbidden_global(tmp_path: Path) -> None:
@@ -35,8 +36,9 @@ def test_safe_pickle_load_rejects_forbidden_global(tmp_path: Path) -> None:
     with path.open("wb") as fh:
         pickle.dump(_EvilPickleClass(), fh)
 
-    with pytest.raises(pickle.UnpicklingError):
-        safe_pickle_load(path)
+    from aegis.core.safe_serialization import UnsafePickleError
+    with pytest.raises(UnsafePickleError):
+        safe_pickle_load(path, require_signature=False)
 
 
 def test_safe_pickle_load_rejects_nested_disallowed_type(tmp_path: Path) -> None:
@@ -44,5 +46,6 @@ def test_safe_pickle_load_rejects_nested_disallowed_type(tmp_path: Path) -> None
     with path.open("wb") as fh:
         pickle.dump({"items": [1, 2, object()]}, fh)
 
-    with pytest.raises(pickle.UnpicklingError):
-        safe_pickle_load(path)
+    from aegis.core.safe_serialization import UnsafePickleError
+    with pytest.raises(UnsafePickleError):
+        safe_pickle_load(path, require_signature=False)

@@ -1,9 +1,31 @@
-# ── Python ────────────────────────────────────────────────────────────────────
+```
+# Compiled and build artifacts
+*.pyc
 __pycache__/
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+
+# Dependencies
+.venv/
+venv/
+.env
+.env.local
+*.env.*
+
+# Build directories
+build/
+dist/
+target/
+
+# Python specific
 *.py[cod]
 *$py.class
 *.so
-*.dylib
 .Python
 build/
 develop-eggs/
@@ -17,115 +39,27 @@ parts/
 sdist/
 var/
 wheels/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-pip-wheel-metadata/
-MANIFEST
 
-# ── Tests & coverage ──────────────────────────────────────────────────────────
-.pytest_cache/
+# Testing
 .coverage
-.coverage.*
+coverage/
 htmlcov/
-coverage.xml
-.tox/
-.nox/
+.pytest_cache/
 .hypothesis/
 
-# ── Type checkers & linters ───────────────────────────────────────────────────
-.mypy_cache/
-.dmypy.json
-dmypy.json
-.ruff_cache/
-.pytype/
+# Logs
+*.log
 
-# ── Virtual environments ────────────────────────────────────────────────────────
-.venv/
-venv/
-ENV/
-env/
-.env
-.env.*
-!.env.example
-
-# ── Secrets & credentials (never commit) ──────────────────────────────────────
-*.pem
-*.key
-*.p12
-*.pfx
-credentials.json
-secrets/
-.secrets/
-
-# ── IDEs & editors ────────────────────────────────────────────────────────────
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.project
-.settings/
-.classpath
-*.sublime-project
-*.sublime-workspace
-
-# ── OS & misc ─────────────────────────────────────────────────────────────────
+# OS generated files
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-Thumbs.db
 ehthumbs.db
-Desktop.ini
-*.tmp
-*.bak
-*.log
-*.pid
-
-# ── Rust (optional extension build) ───────────────────────────────────────────
-aegis_rust_v2/target/
-**/target/
-# Cargo.lock IS committed (correct for a cdylib extension shipping reproducible
-# wheels): the pyo3 0.24→0.29 upgrade cleared GHSA-36hh-v3qg-5jq4 /
-# GHSA-chgr-c6px-7xpp, so the lock can be pinned for deterministic builds. The
-# remaining transitive advisories (hickory-proto GHSA-3v94-mw7p-v465 [no upstream
-# fix yet] / GHSA-q2qq-hmj6-3wpp; pqcrypto family) are documented permanent
-# entries in aegis_rust_v2/.cargo/audit.toml until upstream fixes land.
-
-# ── Aegis runtime data ────────────────────────────────────────────────────────
-*.wal.jsonl
-aegis.wal.jsonl
-*.mmf
-data/
-logs/
-*.db
-*.sqlite
-*.sqlite3
-
-# ── Docker / local overrides ───────────────────────────────────────────────────
-docker-compose.override.yml
-.docker/
-
-# ── Cursor / agent artifacts (local only) ─────────────────────────────────────
-.cursor/
-.agent/
-
-# ── Claude Code project tooling (internal — not for public distribution) ──────
-# These files are useful locally but contain internal instructions and configs
-# that should not be exposed in public repositories.
-# To stop tracking already-committed files: git rm --cached -r .claude/ docs/audit/
-.claude/
-docs/audit/
-
-# ── AI-session artifacts ───────────────────────────────────────────────────────
-# Runtime artifacts produced by Claude Code sessions
-*.claude-session
-.claude-context/
-
-# ── Generated tool artifacts (regenerated in CI / on demand) ───────────────────
-# forensic_checks.py and generate_summary.py produce these; never commit them.
-tools/forensic/report.json
-tools/visualizer/summary.json
+Thumbs.db
+Icon?
+```

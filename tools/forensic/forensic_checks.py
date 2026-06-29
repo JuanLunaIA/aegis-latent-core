@@ -30,7 +30,9 @@ PATTERNS = {
     "eval_call": re.compile(r"\beval\s*\("),
     "subprocess_popen": re.compile(r"subprocess\.Popen"),
     "os_system": re.compile(r"os\.system\("),
-    "pickle_load": re.compile(r"pickle\.load\("),
+    # Note: safe_pickle_load from aegis.core.safe_serialization is acceptable
+    # This pattern flags direct pickle.load usage without safety wrappers
+    "pickle_load": re.compile(r"(?<!safe_)pickle\.load\("),
 }
 
 

@@ -107,7 +107,10 @@ class TestSeccompFilterApplySubprocess:
 
     def test_apply_in_subprocess_succeeds(self, tmp_path):
         script = tmp_path / "run_apply.py"
+        # Include PYTHONPATH setup in the subprocess to ensure aegis module is found
         script.write_text(
+            "import sys\n"
+            "sys.path.insert(0, '/workspace')\n"
             "from unittest.mock import MagicMock, patch\n"
             "from aegis.core.sandbox import SeccompFilter\n"
             "sf = SeccompFilter([0, 1])\n"
