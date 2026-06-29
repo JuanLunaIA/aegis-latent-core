@@ -37,6 +37,7 @@ def test_safe_pickle_load_rejects_forbidden_global(tmp_path: Path) -> None:
         pickle.dump(_EvilPickleClass(), fh)
 
     from aegis.core.safe_serialization import UnsafePickleError
+
     with pytest.raises(UnsafePickleError):
         safe_pickle_load(path, require_signature=False)
 
@@ -47,5 +48,6 @@ def test_safe_pickle_load_rejects_nested_disallowed_type(tmp_path: Path) -> None
         pickle.dump({"items": [1, 2, object()]}, fh)
 
     from aegis.core.safe_serialization import UnsafePickleError
+
     with pytest.raises(UnsafePickleError):
         safe_pickle_load(path, require_signature=False)

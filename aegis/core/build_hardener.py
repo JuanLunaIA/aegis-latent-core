@@ -97,7 +97,9 @@ class BuildHardener:
                 raise BuildHardenerError(error_msg)
             return False
 
-        logger.info("Binary hardening audit PASSED. Binary is resistant to ROP/JOP/GOT overwrite attacks.")
+        logger.info(
+            "Binary hardening audit PASSED. Binary is resistant to ROP/JOP/GOT overwrite attacks."
+        )
         return True
 
     def _verify_relro(self, binary_path: str) -> tuple[bool, str]:
@@ -133,7 +135,11 @@ class BuildHardener:
                 text=True,
                 timeout=10,
             )
-            has_bind_now = "BIND_NOW" in result_dyn.stdout or "(FLAGS)" in result_dyn.stdout and "NOW" in result_dyn.stdout
+            has_bind_now = (
+                "BIND_NOW" in result_dyn.stdout
+                or "(FLAGS)" in result_dyn.stdout
+                and "NOW" in result_dyn.stdout
+            )
 
             if has_relro and has_bind_now:
                 return True, "Full RELRO enabled (GNU_RELRO + BIND_NOW)"

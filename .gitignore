@@ -1,65 +1,66 @@
 ```
-# Compiled and build artifacts
-*.pyc
+# Dependencies
 __pycache__/
-*.o
-*.obj
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.env
+.env.local
+.env.*
+requirements.txt.bak
+requirements-dev.txt
+requirements-test.txt
+Pipfile
+Pipfile.lock
+poetry.lock
+.tox/
+.coverage
+coverage/
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+
+# Build and distribution artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
 *.so
 *.dylib
 *.dll
 *.exe
 *.out
-
-# Dependencies
-.venv/
-venv/
-.env
-.env.local
-*.env.*
-
-# Build directories
-build/
-dist/
-target/
-
-# Python specific
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Testing
-.coverage
-coverage/
-htmlcov/
-.pytest_cache/
-.hypothesis/
+*.o
+*.obj
+*.a
+*.lib
 
 # Logs
 *.log
 
 # OS generated files
 .DS_Store
+Thumbs.db
 .DS_Store?
+ehthumbs.db
+Icon?
+desktop.ini
+
+# Editor specific
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
 ._*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
 Thumbs.db
-Icon?
 ```
