@@ -38,7 +38,7 @@ jobs:
         with:
           fetch-depth: 0   # full history so hatchling can derive version from VCS
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -84,7 +84,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
