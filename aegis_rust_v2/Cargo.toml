@@ -44,8 +44,9 @@ tokio = { version = "1", features = ["full"] }
 # identity semantics — but statically links a from-source OpenSSL on Linux
 # instead of dynamically linking the host's libssl/libcrypto. This is what
 # makes the released wheels self-contained and cross-compilable for the full
-# manylinux/musllinux × {x86_64, aarch64, armv7} release matrix (no target-arch
-# system OpenSSL required at build or run time).
+# validated release matrix (x86_64 glibc; x86_64, aarch64, and armv7 musl;
+# macOS and Windows). The aarch64 glibc wheel remains blocked by the upstream
+# pqcrypto-internals cross-toolchain requirement documented in release CI.
 reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "native-tls", "native-tls-vendored", "http2", "hickory-dns"] }
 
 # Serialization
