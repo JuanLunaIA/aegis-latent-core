@@ -1,7 +1,11 @@
-# Backpressure and I/O Stall Runbook
+# Backpressure and I/O Stall Runbook — Aegis Latent Core v3.1.0
 
-**Scope:** Aegis local WAL and governed-request evidence path  
-**Audience:** platform engineering, SRE, security operations, release reviewers
+This runbook is for platform engineering, SRE, security operations and release reviewers who must diagnose storage or `fsync` stall without losing authoritative evidence. It describes the local injected seam, operator actions, recovery and residual risk. A `dm-delay` test remains a separate privileged lab operation.
+
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
+**Scope:** Aegis local WAL and governed-request evidence path
+**Audience:** Platform engineering, SRE, security operations and release reviewers
 
 ## Runtime contract
 
@@ -53,3 +57,11 @@ Rollback uses the previous signed/image-digest release and keeps the evidence ar
 ## Residual risk
 
 The injected seam validates the application’s lifecycle and correlation behavior. It does not prove that every filesystem, CSI driver, kernel, storage controller, cloud volume, encryption layer, or failure mode has the same ordering and durability semantics. Production acceptance requires the target deployment’s own storage and recovery evidence.
+
+## Related documents
+
+- [`../benchmarks/BENCHMARK_RESULTS.md`](../benchmarks/BENCHMARK_RESULTS.md)
+- [`../performance/SCALING_GUIDE.md`](../performance/SCALING_GUIDE.md)
+- [`ROLLBACK_RUNBOOK.md`](ROLLBACK_RUNBOOK.md)
+- [`../../DEPLOYMENT_GUIDE.md`](../../DEPLOYMENT_GUIDE.md)
+- [`../../README.md`](../../README.md)

@@ -1,71 +1,50 @@
-# Aegis Architecture
+# Aegis Architecture Index — v3.1.0
 
-Aegis is an **AI Governance and Evidence Gateway**. Its architectural center is not model inference; it is the controlled transition from an authenticated request to a policy decision, upstream response, durable evidence record, and observable terminal response.
+This index routes readers to the current architecture description, trust-boundary decisions, state machine, and related operational evidence. It is for engineers, security reviewers, and technical buyers who need a fast route into the system design. The linked documents describe the implemented repository boundary and its residual risks.
 
-## System boundary
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
+**Primary architecture document:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
+
+## Start with the full architecture
+
+Read [`docs/architecture/ARCHITECTURE.md`](ARCHITECTURE.md) for the system flow, request state machine, evidence model, trust boundaries, topology table, failure semantics and verification commands.
+
+## Architecture map
 
 ```mermaid
-flowchart LR
-    C[Client application] --> I[Ingress / TLS termination]
-    I --> G[Aegis FastAPI gateway]
-    G --> P[Policy + WAF + session checks]
-    P --> R[Rate limiter]
-    R --> E[Egress allowlist]
-    E --> U[Upstream model provider]
-    U --> G
-    G --> S[Signer / HSM / Vault / ML-DSA]
-    G --> W[Durable WAL or storage provider]
-    W --> V[Replay and integrity verification]
-    G --> Q[Bounded enrichment workers]
-    Q --> M[Metrics and alerts]
-    K[Secret manager / keyring] --> S
-    K --> G
+flowchart TD
+    A[README and product boundary] --> B[ARCHITECTURE.md]
+    B --> C[ADR-001 product category]
+    B --> D[THREAT_MODEL.md trust boundaries]
+    B --> E[DEPLOYMENT_GUIDE.md runtime contract]
+    B --> F[BENCHMARK_RESULTS.md measured behavior]
+    B --> G[CLAIMS_MATRIX.md public wording]
 ```
 
-## Trust boundaries
+The diagram shows the routing relationship between the root entry point and the documents that define implementation, decisions, runtime dependencies, measurements and public claim controls.
 
-| Boundary | Asset | Required control | Residual risk |
-|---|---|---|---|
-| Client → ingress | API credentials and request bytes | TLS, authentication, request-size bounds, trusted proxy configuration | Misconfigured ingress or forwarded headers can change the effective client boundary. |
-| Ingress → Aegis | Normalized HTTP request | Explicit HTTP/2 termination ownership, parser limits, WAF and canonicalization | HTTP/2 parser behavior before Aegis is outside the application boundary. |
-| Aegis → upstream | Provider credentials and governed request | Egress allowlist, TLS, upstream timeout/circuit controls, no credential logging | Provider availability and upstream-side retention remain external. |
-| Aegis → signer | Hashes and signing policy | HSM/Vault or protected keyring, key IDs, atomic reload, no secret logging | Secret manager, crypto implementation, and deployment custody require independent validation. |
-| Aegis → WAL/storage | Evidence records and chain links | Owner-only permissions, append-only policy, fsync/transaction commit, replay verification | Storage/controller semantics and backup immutability depend on deployment. |
-| Gateway → enrichment | Optional analysis work | Bounded queue, explicit rejection/metrics, no evidence dependency | Enrichment can be delayed or dropped without changing authoritative evidence. |
-| Operator → system | Configuration and release controls | Least privilege, signed release, provenance, audit events, rollback | Human procedures and access governance remain organizational controls. |
+## Existing decision records and references
 
-## Request state machine
+| Document | Question answered |
+|---|---|
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | How do requests, controls, evidence and failure states transition? |
+| [`ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md`](ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md) | Why is Aegis positioned as an evidence gateway rather than a generic AI platform? |
+| [`../security/THREAT_MODEL.md`](../security/THREAT_MODEL.md) | What are the assets, trust boundaries and residual risks? |
+| [`../../DEPLOYMENT_GUIDE.md`](../../DEPLOYMENT_GUIDE.md) | Which runtime prerequisites must be accepted? |
+| [`../CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md) | Which public statements are implemented, measured, dependent or blocked? |
+| [`../benchmarks/BENCHMARK_RESULTS.md`](../benchmarks/BENCHMARK_RESULTS.md) | What did the four market-hardening scenarios actually measure? |
+| [`../performance/SCALING_GUIDE.md`](../performance/SCALING_GUIDE.md) | Which topologies and performance boundaries are documented? |
 
-```text
-ADMITTED
-  -> POLICY_ALLOWED
-  -> UPSTREAM_COMPLETE
-  -> EVIDENCE_SIGNED
-  -> EVIDENCE_DURABLE
-  -> RESPONSE_EMITTED
+## Architecture boundary
 
-Any required-control failure before the evidence boundary
-  -> FAIL_CLOSED_REJECTION
-  -> DURABLE_ERROR_EVIDENCE when the evidence boundary is available
+Aegis does not claim global audit ordering, multi-region high availability, universal WAF coverage, constant-time cryptography, immutable storage by application code alone, provider-independent model safety, or regulatory certification. Those claims require separate architecture, evidence, owner and review.
 
-Optional enrichment failure
-  -> ENRICHMENT_REJECTED or ENRICHMENT_FAILED
-  -> authoritative evidence remains valid
-```
+## Related documents
 
-The invariant is: **a governed accepted response must map to exactly one durable authoritative evidence record within the declared scope**. A non-governed rejection before the evidence boundary must remain distinguishable from a governed terminal response.
-
-## Topology guidance
-
-A single worker with one durable WAL is the smallest verifiable topology. One worker per pod creates independent evidence bundles and must not be described as globally ordered. Three replicas can share a versioned signer keyring and exercise zero-restart rotation, but cross-replica ordering still requires a centralized writer or an explicitly designed ordering service.
-
-## Decision records
-
-- [`ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md`](ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md) defines the product category and claim boundary.
-- [`../CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md) controls public language.
-- [`../operations/BACKPRESSURE_RUNBOOK.md`](../operations/BACKPRESSURE_RUNBOOK.md) defines I/O stall and queue semantics.
-- [`../operations/KEY_ROTATION_RUNBOOK.md`](../operations/KEY_ROTATION_RUNBOOK.md) defines key overlap and rollback.
-
-## Design non-goals
-
-The architecture does not claim a universal WAF, universal regulatory compliance, immutable storage by application code alone, global multi-region order, constant-time cryptography, or provider-independent model safety. Each requires its own boundary, artifact, owner, and review.
+- [`../../README.md`](../../README.md)
+- [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- [`ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md`](ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md)
+- [`../CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)
+- [`../security/THREAT_MODEL.md`](../security/THREAT_MODEL.md)
+- [`../../DEPLOYMENT_GUIDE.md`](../../DEPLOYMENT_GUIDE.md)

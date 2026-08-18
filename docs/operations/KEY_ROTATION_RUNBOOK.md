@@ -1,6 +1,10 @@
 # Zero-Downtime Signing-Key Rotation Runbook
 
-**Scope:** Versioned HMAC keyring for enterprise self-hosted deployments  
+This runbook is for security operators and platform engineers rotating HMAC keys without a process restart. It defines the versioned keyring contract, overlap window, rollback and acceptance boundary. The local result does not prove a real secret-manager or orchestrator deployment.
+
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
+**Scope:** Versioned HMAC keyring for enterprise self-hosted deployments
 **Implementation:** `aegis_server.crypto.keyring.RotatingHMACSigner`
 
 ## Contract
@@ -46,7 +50,7 @@ The regression suite covers atomic reload, key ID selection, overlap verificatio
 
 ## Three-replica acceptance test
 
-The current repository contains the signer, deterministic unit contract, and `tools/benchmarks/run_key_rotation.py`. The local multi-instance artifact recorded 2,101 signatures across three independent signer instances, observed both `key-old` and `key-new`, reported zero failed commits, zero unverifiable records, atomic replacement, and `0o600` keyring permissions. This artifact is retained outside the source tree as `key_rotation_report_v1.json`; it is a local signer exercise, not a Kubernetes, secret-manager, clock-skew, or restart acceptance.
+The current repository contains the signer, deterministic unit contract, and `tools/benchmarks/run_key_rotation.py`. The retained v2 local multi-instance artifact recorded 2,239 signatures across three independent signer instances, observed both key IDs, reported zero failed commits, zero unverifiable records, atomic replacement, and `0o600` keyring permissions. This artifact is retained outside the source tree as `key_rotation_report_v2.json`; it is a local signer exercise, not a Kubernetes, secret-manager, clock-skew, or restart acceptance.
 
 A production three-replica run additionally requires a disposable orchestrated environment with three independent process lifecycles, the actual secret-manager propagation path, independent storage, staggered reload, one delayed replica, restart/replay, and rollback. The acceptance artifact must correlate every committed node with its replica, key ID, timestamp, signature verification result, and request ID.
 
@@ -59,3 +63,11 @@ Rollback atomically restores the prior valid keyring snapshot while the old key 
 ## Residual risk
 
 The file-backed implementation validates the application state machine. It does not prove secret-manager delivery, filesystem atomicity across a distributed mount, HSM policy, key destruction, replica clock synchronization, or customer-specific recovery behavior. Those properties require deployment evidence and qualified review.
+
+## Related documents
+
+- [`../benchmarks/BENCHMARK_RESULTS.md`](../benchmarks/BENCHMARK_RESULTS.md)
+- [`../PLATFORM_OPERATOR_GUIDE.md`](../PLATFORM_OPERATOR_GUIDE.md)
+- [`../FAQ_SECURITY.md`](../FAQ_SECURITY.md)
+- [`../../DEPLOYMENT_GUIDE.md`](../../DEPLOYMENT_GUIDE.md)
+- [`../../README.md`](../../README.md)

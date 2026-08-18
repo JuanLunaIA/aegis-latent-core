@@ -1,4 +1,10 @@
-# Security Policy
+# Security Policy — Aegis Latent Core v3.1.0
+
+This policy defines the vulnerability-reporting path, support boundary, production security baseline, runtime evidence rules and release security gates. It is for security researchers, customers, maintainers and operators. It is not a contractual SLA, certification, legal opinion or guarantee of future remediation.
+
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
+**Private reporting path:** GitHub Private Vulnerability Reporting
 
 ## Scope and support posture
 
@@ -6,11 +12,11 @@ Aegis Latent Core is security-sensitive infrastructure. The repository provides 
 
 | Version line | Support status |
 |---|---|
-| `3.1.x` | Market-hardening candidate in this branch; becomes the current public line only after the signed release gate and provenance pass. |
+| `3.1.x` | Published v3.1.0 market-hardening line; fixes remain subject to the project's actual operating capacity and supported-version policy. |
 | `3.0.x` | Published v3.0.1 baseline. Upgrade to the candidate line for new hardening; security fixes remain subject to the project’s actual operating capacity. |
 | `<3.0.0` | Historical releases. Upgrade before requesting support; no default security-fix commitment is made. |
 
-The immutable public baseline is [`v3.0.1`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.0.1). Supported behavior is defined by the current source, tests, deployment prerequisites, and release artifacts, not by historical prospectus language.
+The current immutable public release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). Supported behavior is defined by the current source, tests, deployment prerequisites and release artifacts, not by historical prospectus language.
 
 ## Reporting a vulnerability
 
@@ -82,4 +88,14 @@ The external-assurance sequence is maintained in [`docs/SECURITY_ASSURANCE_ROADM
 
 ## License and disclosure caveat
 
-The project is licensed under [`LICENSE`](LICENSE) and [`COMMERCIAL.md`](COMMERCIAL.md). License interpretation, contractual remedies, regulatory obligations, and legal strategy require counsel in the applicable jurisdiction.
+The project is licensed under [`LICENSE`](LICENSE) and [`COMMERCIAL.md`](COMMERCIAL.md). License interpretation, contractual remedies, regulatory obligations and legal strategy require counsel in the applicable jurisdiction.
+
+## Related documents
+
+- [`README.md`](README.md)
+- [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md)
+- [`docs/security/THREAT_MODEL.md`](docs/security/THREAT_MODEL.md)
+- [`docs/security/WAF_TESTING.md`](docs/security/WAF_TESTING.md)
+- [`docs/security/PQC_CONSTANT_TIME.md`](docs/security/PQC_CONSTANT_TIME.md)
+- [`docs/operations/ROLLBACK_RUNBOOK.md`](docs/operations/ROLLBACK_RUNBOOK.md)
+- [`COMMERCIAL.md`](COMMERCIAL.md)

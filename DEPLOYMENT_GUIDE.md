@@ -1,6 +1,10 @@
 # Aegis Latent Core 3.1.0 — Deployment Guide
 
-This guide describes the **implemented** deployment contract. It does not grant regulatory certification. A production deployment must pass the repository release gates and an environment-specific review of kernel, storage, network, identity, secrets, backup, and incident-response controls.
+This guide describes the implemented and configuration-dependent deployment contract for the published v3.1.0 release. It is for platform, SRE, security and procurement reviewers. It does not grant regulatory certification, create a production SLO or replace an environment-specific review of kernel, storage, network, identity, secrets, backup and incident-response controls.
+
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
+**Audience:** Platform operators, SRE, security and procurement reviewers
 
 ## 1. Strict runtime contract
 
@@ -106,7 +110,7 @@ PYTHONPATH=. .venv/bin/python tools/benchmarks/run_backpressure_stall.py \
   --output evidence/backpressure_stall_report.json
 ```
 
-The gate requires zero missing evidence IDs, zero duplicate IDs, valid chain integrity, and no silent drop. This is offered load and injected latency, not accepted production capacity. A `dm-delay` run is separate and must use a disposable device with verified isolation.
+The gate requires zero missing evidence IDs, zero duplicate IDs, valid chain integrity, and no silent drop. The retained candidate run recorded 10,000 offered requests, 10,000 durable commits, zero failures, zero missing IDs, zero duplicate IDs, valid chain integrity, and p99 commit latency of 1,189.89 ms. This is offered load and injected latency, not accepted production capacity. A `dm-delay` run is separate and remains unexecuted in the retained release evidence; it must use a disposable device with verified isolation.
 
 ### WAF evasion boundary
 
@@ -114,11 +118,11 @@ Run `tools/security/run_waf_corpus.py` against the pinned local corpus. The gate
 
 ### Key rotation
 
-Use the versioned keyring with a secret manager and run three replicas through activation, overlap verification, expiry, restart/replay, and rollback. The gate is zero failed durable commits during the declared valid rotation window and zero unverifiable records. If three replicas or the actual secret-manager path are not available, mark the result `UNVERIFIED`.
+Use the versioned keyring with a secret manager and run three replicas through activation, overlap verification, expiry, restart/replay, and rollback. The gate is zero failed durable commits during the declared valid rotation window and zero unverifiable records. The retained result covers three independent local signer instances and atomic keyring replacement, not a real orchestrator or secret-manager acceptance path. If the actual three-replica orchestrator and secret-manager path are not available, mark that deployment claim `UNVERIFIED`.
 
 ### ML-DSA timing
 
-A constant-time statement requires separate native `sign()` and `verify()` experiments with at least 1,000,000 balanced samples per declared operation, isolated CPU, pinned build, raw samples, p-value, effect size, and environment manifest. `p > 0.05` means only no detected leakage under that experiment; it is not a proof or certification. Until the artifact exists, the status is `UNVERIFIED`.
+A constant-time statement is not approved. The retained native experiment used 1,000,000 interleaved samples per declared operation with raw samples and a retained environment manifest. `sign` returned `p=0.8521504207157158`, which is non-detection under this experiment. `verify` returned `p=0.0` with a measured class-dependent difference, so the verify claim is blocked. A p-value does not prove constant-time execution, compiler resistance, microarchitectural resistance, or FIPS 140 validation.
 
 ## 9. Health, telemetry, and alerts
 
@@ -137,8 +141,20 @@ Use `/health` for liveness and `/ready` for readiness. Alert on evidence commit 
 | Recovery | WAL backup/restore passes integrity verification and the rollback artifact is identified by digest |
 | Operations | SLOs, alerts, on-call owner, incident runbook, key rotation, backup, and restore tests exist |
 
-The reconstructed repository baseline recorded `5374 passed, 80 skipped, 47 warnings in 23.35s`. Warnings remain release telemetry and must be triaged; they are not evidence that the deployment environment satisfies the kernel or infrastructure gates.
+The final v3.1.0 release run recorded `5442 passed, 37 skipped, 47 warnings` in approximately `68.08 s`, with `93.91%` measured coverage in the retained run. Warnings remain release telemetry and must be triaged; they are not evidence that the deployment environment satisfies the kernel or infrastructure gates. See the retained final pytest log and release-gate record.
 
 ## 11. Explicit non-goals
 
-Aegis is not, by itself, a FedRAMP authorization, HIPAA compliance determination, SOC 2 opinion, EU AI Act conformity assessment, GDPR legal basis, or court-admissibility ruling. Those require organizational and jurisdiction-specific controls, independent review, and an accountable owner.
+Aegis is not, by itself, a FedRAMP authorization, HIPAA compliance determination, SOC 2 opinion, EU AI Act conformity assessment, GDPR legal basis, or court-admissibility ruling. Those require organizational and jurisdiction-specific controls, independent review and an accountable owner.
+
+## Related documents
+
+- [`README.md`](README.md)
+- [`docs/DEVELOPER_QUICKSTART.md`](docs/DEVELOPER_QUICKSTART.md)
+- [`docs/PLATFORM_OPERATOR_GUIDE.md`](docs/PLATFORM_OPERATOR_GUIDE.md)
+- [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)
+- [`docs/operations/BACKPRESSURE_RUNBOOK.md`](docs/operations/BACKPRESSURE_RUNBOOK.md)
+- [`docs/operations/KEY_ROTATION_RUNBOOK.md`](docs/operations/KEY_ROTATION_RUNBOOK.md)
+- [`docs/operations/ROLLBACK_RUNBOOK.md`](docs/operations/ROLLBACK_RUNBOOK.md)
+- [`docs/security/THREAT_MODEL.md`](docs/security/THREAT_MODEL.md)
+- [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md)

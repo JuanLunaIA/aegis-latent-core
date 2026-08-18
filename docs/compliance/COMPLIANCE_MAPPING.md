@@ -1,238 +1,145 @@
-<!--
-Copyright (c) 2026 Juan Luna. All rights reserved.
-Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
--->
+# Compliance Contribution Map — Aegis Latent Core v3.1.0
 
-# Aegis — Cross-Domain Compliance Mapping (v3.0.1)
+This document explains which **implemented technical behaviors** may contribute evidence to a customer security, privacy, AI-governance, or audit program. It is written for compliance officers, security reviewers, procurement teams, and counsel. It does **not** determine compliance, certification, authorization, legal admissibility, or contractual sufficiency.
 
-> **Purpose.** Map each regulated industry vertical to the *specific, implemented*
-> Aegis controls that support it, with a direct pointer to the source code that
-> provides the control and the configuration toggle that enables it.
->
-> **Honesty contract.** This document follows the same epistemic policy as
-> [`docs/audit/CLAIMS_VERIFICATION.md`](../audit/CLAIMS_VERIFICATION.md). Every
-> row is labelled:
->
-> | Marker | Meaning |
-> |---|---|
-> | `[PROVEN]` | Implemented in code, covered by tests, verifiable from the cited file. |
-> | `[PARTIAL]` | Implemented for the stated scope, with an explicit documented boundary; not a full control by itself. |
->
-> Aegis is an **AI gateway / control plane**, not a turnkey compliance product.
-> It supplies *technical, tamper-evident audit and data-handling controls* on the
-> LLM request/response path. It does **not** discharge an organisation's full
-> regulatory obligation. Every section below states the boundary explicitly under
-> **"Customer responsibility."**
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
+**Owner:** Release owner and qualified customer reviewer
+**Canonical claim control:** [`docs/CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)
 
----
+> **Boundary.** Aegis is a technical gateway and evidence component. The deploying organization remains responsible for scope, lawful basis, policies, identity, access, retention, incident response, physical safeguards, personnel, vendor contracts, independent assessment, and jurisdiction-specific decisions.
 
-## How to read this document
+## Status vocabulary
 
-Each vertical lists:
+| Status | Meaning |
+|---|---|
+| `IMPLEMENTED` | The repository contains the behavior and a named test or implementation path. |
+| `MEASURED` | A retained artifact measures the behavior under a named workload and boundary. |
+| `CONFIGURATION-DEPENDENT` | The behavior requires a declared storage, signer, kernel, network, secret-manager, or topology control. |
+| `CUSTOMER-ASSESSMENT` | The behavior may contribute evidence, but the customer must assess scope, applicability, and operating effectiveness. |
+| `NOT_EVIDENCED` | The repository does not contain enough evidence to make the statement. |
 
-1. **Regulatory anchor** — the rule(s) the controls speak to.
-2. **What Aegis provides** — the implemented control, its source file, and the
-   environment toggle that enables it.
-3. **Customer responsibility** — what the deploying organisation must still own.
-   These boundaries are deliberate, not omissions.
+## Control contribution summary
 
-Configuration is via environment variables read by
-[`aegis/config.py`](../../aegis/config.py). All cryptographic signing uses
-`AEGIS_SIGNING_KEY` (HMAC-SHA256) or the Rust ML-DSA-65 path; the signing key is
-kept strictly separate from upstream API keys and from `AEGIS_PHI_MASTER_KEY`.
+| Control area | Aegis behavior | Repository evidence | Status | Customer boundary |
+|---|---|---|---|---|
+| Governed request lifecycle | Authenticated request, bounded body read, policy/WAF checks, upstream call, durable evidence commit, then governed response | `aegis/proxy/`, `aegis_server/main.py`, `aegis/core/crypto_audit.py`, `tests/test_enterprise_durable_evidence.py` | `IMPLEMENTED` | Customer must validate ingress, identity, provider contract, and deployment topology. |
+| Evidence integrity | Canonical hashes, predecessor linkage, Merkle metadata, signature metadata, WAL append and `fsync` path | `aegis/core/crypto_audit.py`, integrity tests, `verify_integrity()` | `IMPLEMENTED` | Tamper detection is not immutable external storage, WORM media, or protection from a privileged host administrator. |
+| Signing and key rotation | Versioned HMAC keyring, atomic replacement, active/overlap verification, expiry and non-secret `key_id` metadata | `aegis_server/crypto/keyring.py`, `tests/test_keyring_rotation.py`, `key_rotation_report_v2.json` | `MEASURED` / local scope | Secret-manager custody, replica propagation, clock discipline, backup, destruction and orchestration require customer evidence. HMAC is symmetric and classical. |
+| WAF and normalization | Application-layer normalization and pinned local corpus regression | `aegis/proxy/waf.py`, `tests/data/waf_corpus_v1.json`, `tools/security/run_waf_corpus.py`, `waf_corpus_report_v1_candidate.json` | `MEASURED` / local corpus | HTTP/2 frame parsing, proxy translation, pseudo-header ordering, H2C, continuation fragments and ingress differentials remain outside this artifact. |
+| Egress control | Canonical endpoint validation and application allowlist | `aegis/proxy/egress_guard.py`, egress tests | `IMPLEMENTED` | Network firewall, namespace isolation, cloud IAM, Kubernetes NetworkPolicy and provider-side controls remain required. |
+| Rate limiting | Distributed Redis limiter can fail closed when backend is unavailable; in-memory mode is development-only | `aegis/core/ratelimiter.py`, rate-limit tests, `DEPLOYMENT_GUIDE.md` | `CONFIGURATION-DEPENDENT` | Redis TLS, HA, credentials, capacity, failure recovery and fairness require environment testing. |
+| Kernel posture | Strict configuration can require Seccomp and AppArmor/SELinux checks | `aegis/core/seccomp_guard.py`, `aegis/core/lsm_guard.py`, deployment tests | `CONFIGURATION-DEPENDENT` | Startup checks are point-in-time assertions. They do not prove indefinite host integrity or kernel hardening. |
+| Backpressure | Injected 2 ms `fsync` delay under 10k offered requests preserved 10k durable records with valid chain | `tools/benchmarks/run_backpressure_stall.py`, `backpressure_stall_10k_report.json` | `MEASURED` / injected seam | p99 commit latency was 1,189.89 ms. This is not production capacity, a storage SLO, or `dm-delay` equivalence. |
+| Privacy minimization | Request and response bodies are represented by hashes in the WAL under the declared implementation path; tenant/session identifiers remain a configurable PII risk | `docs/privacy/DATA_RETENTION.md`, `aegis/core/crypto_audit.py`, configuration and tests | `CONFIGURATION-DEPENDENT` | Hashes can remain personal data in context. Customer must define purpose, lawful basis, retention, access, deletion/hold, transfer and subject-rights procedures. |
+| Export and replay | Exported bundles preserve evidence metadata and signing key ID; integrity can be checked offline under the named verifier | `aegis_server/compliance/exporter.py`, exporter tests | `IMPLEMENTED` | Offline verification does not establish authorship, legal admissibility, or the truth of upstream content. |
+| Incident evidence | WAL and retained JSON artifacts can support an incident record and replay workflow | `docs/operations/`, `docs/security/THREAT_MODEL.md`, NIST SP 800-61/800-86 references | `CUSTOMER-ASSESSMENT` | Customer must own incident handling, legal hold, acquisition, notification, chain of custody, and qualified review. |
 
----
+## Framework-specific contribution map
 
-## 1. Finance & Banking — `DX-Finance`
+### NIST AI RMF and Generative AI Profile
 
-**Regulatory anchor:** SEC Rule 17a-4(b), FINRA Rule 4511, MiFID II Art. 16(6)/25(1),
-Dodd-Frank §727 / CFTC Rule 45.2.
+NIST describes AI RMF as a voluntary framework for incorporating trustworthiness considerations into AI design, development, use, and evaluation. The Generative AI Profile is a companion resource for generative-AI risk management. [1] [2]
 
-| Control | Status | Evidence |
+| NIST function | Potential Aegis contribution | Evidence boundary |
 |---|---|---|
-| WORM (Write-Once Read-Many) sealing of WAL segments — app-level `WORMViolationError` on any mutate, plus OS-level `0o400` read-only bits | `[PROVEN]` | [`aegis/core/worm_ledger.py`](../../aegis/core/worm_ledger.py) — `WORMEnforcer.seal()` / `enforce_immutability()` / `delete_node()` |
-| SEC 17a-4 retention-period attestation bundle (3-yr accessible / 6-yr total), HMAC-SHA256 sealed per-segment and bundle-level | `[PROVEN]` | `WORMEnforcer.attest()`, `SEC_17A4_BROKER_DEALER`, `WORMAttestationBundle.verify_bundle_hmac()` |
-| MiFID II / Dodd-Frank communication record-keeping (5-yr+), content-hash-only records to minimise personal-data exposure | `[PROVEN]` | [`aegis/core/mifid_record_keeper.py`](../../aegis/core/mifid_record_keeper.py) — `MiFIDRecordKeeper.record_communication()` |
-| PCI-DSS v4.0 cardholder-data masking on the request/response path (PAN → last-4 per §3.4, CVV/track fully redacted) | `[PROVEN]` | `aegis/config.py` `AEGIS_PCI_SCRUB`; `aegis.core.pci_detector` |
-| Tamper-evident Merkle audit chain for every order/advice interaction | `[PROVEN]` | [`aegis/core/crypto_audit.py`](../../aegis/core/crypto_audit.py); `GET /v1/audit/integrity` |
+| GOVERN | Claim matrix, release gates, human review owner, security policy, incident and commercial boundaries | Aegis does not supply the organization's AI policy, accountability structure, or risk appetite. |
+| MAP | Request lifecycle, trust boundaries, provider and storage dependencies, threat model | The map covers the gateway boundary, not every customer model, data source, downstream decision, or impact. |
+| MEASURE | WAF corpus, timing experiment, backpressure run, test suite, integrity verification | Measures are local and bounded; they do not establish enterprise-wide model quality, fairness, availability, or misuse resistance. |
+| MANAGE | Fail-closed paths, durable error evidence, rollback and runbooks | Operating effectiveness, incident response, corrective action and residual-risk acceptance remain customer responsibilities. |
 
-**What Aegis provides.** A non-rewriteable ledger of LLM-mediated financial
-communications. Once `WORMEnforcer.seal()` is called on a closed WAL segment, the
-segment cannot be altered in-process (raises `WORMViolationError`) or by a
-non-root OS actor (`0o400`). `attest()` produces a regulator-submittable bundle
-carrying the retention deadlines and an HMAC over each seal sentinel.
+**Allowed wording:** “Aegis provides technical controls and evidence paths that may support a customer AI risk-management program.”
+**Blocked wording:** “Aegis is NIST AI RMF compliant” or “Aegis implements the NIST GenAI Profile.”
 
-**Customer responsibility.**
-- **Storage substrate.** App + OS WORM is defence-in-depth, *not* SEC-grade
-  non-erasable media on its own. The `WORMEnforcer` docstring is explicit: a root
-  actor can still bypass `0o400`. For 17a-4(f) you must place the sealed WAL on
-  WORM-capable hardware/object-lock storage (e.g. S3 Object Lock in compliance
-  mode, or `chattr +i` + immutable backups) and operate the designated-third-party
-  (D3P) access process.
-- **Retention scheduling & legal hold.** Aegis computes `purge_eligible_at`; your
-  retention system must enforce it.
-- **Surveillance/supervision** of the *content* of advice is out of scope — Aegis
-  records and seals; it does not adjudicate suitability.
+### NIST CSF 2.0 and NIST SP 800-53
 
----
+NIST CSF 2.0 provides a taxonomy for managing cybersecurity risk and publishes informative references and profiles. NIST warns that mappings are not always one-to-one and can be subjective. [11] [18]
 
-## 2. Healthcare & Life Sciences — `DX-Healthcare`
-
-**Regulatory anchor:** HIPAA Security Rule 45 CFR §164.312(b) (audit controls),
-HIPAA Privacy Rule 45 CFR §164.514(b) (Safe Harbor de-identification),
-NIST SP 800-188.
-
-| Control | Status | Evidence |
+| CSF 2.0 function | Contribution | Required customer evidence |
 |---|---|---|
-| §164.312(b) audit controls — cryptographically sealed SOC2/HIPAA export bundle (SHA-256 canonical chain hash + signer-scheme signature, offline re-verifiable) | `[PROVEN]` | [`aegis_server/compliance/exporter.py`](../../aegis_server/compliance/exporter.py) — `ComplianceExporter.export()` / `verify_bundle()` |
-| §164.514(b) Safe Harbor de-identification — 18 HIPAA identifier categories scrubbed on both request and response, regex (no NLP model required) | `[PROVEN]` | [`aegis/core/phi_deidentifier.py`](../../aegis/core/phi_deidentifier.py); `AEGIS_PHI_DEIDENTIFY` |
-| Structure-aware PHI redaction for HL7 v2 (segment+field, e.g. PID-5/PID-19) and FHIR R4/R5 (resourceType + JSON path) | `[PROVEN]` | [`aegis/core/hl7_fhir_phi_detector.py`](../../aegis/core/hl7_fhir_phi_detector.py) — `HL7FHIRPHIDetector.scrub()` |
-| PHI payload encryption at rest — AES-256-GCM under a per-tenant HKDF-SHA256 DEK, master key held separately from the signing key | `[PROVEN]` | `aegis/config.py` `AEGIS_PHI_MASTER_KEY`; `aegis.core.audit_node_encryptor` |
-| Differentially-private aggregate analytics (ε-DP Laplace) so published stats cannot re-identify a session | `[PROVEN]` | [`aegis/proxy/audit_api.py`](../../aegis/proxy/audit_api.py) `GET /v1/audit/analytics/dp`; `aegis.core.dp_analytics` |
+| Govern | Claims matrix, owner fields, security policy, release gates | Governance charter, risk acceptance, supplier governance and review records |
+| Identify | Asset/data/trust-boundary descriptions and dependency tables | Complete enterprise asset inventory and data-flow inventory |
+| Protect | Authentication, request bounds, egress validation, signer policy, kernel prerequisites | IAM, secrets, TLS, firewall, workload identity, storage and hardening evidence |
+| Detect | Integrity verification, WAF alerts, commit failures and telemetry recommendations | Central monitoring, alert tuning, response ownership and detection validation |
+| Respond | Failure-path evidence, incident runbooks, rollback criteria | NIST SP 800-61 lifecycle, incident team, communications and legal process |
+| Recover | WAL backup/restore and release rollback guidance | Restore tests, recovery objectives, backup immutability and business continuity |
 
-**What Aegis provides.** A §164.312(b)-aligned audit trail with tamper-evidence,
-plus inline Safe Harbor scrubbing that removes PHI from prompts *before* they
-reach a third-party LLM and from completions *before* they return to the client.
-`AEGIS_PHI_MASTER_KEY` is required (and must differ from `AEGIS_SIGNING_KEY`) when
-de-identification is enabled in a HIPAA deployment.
+**No one-to-one equivalence is claimed.** A customer or assessor must select the applicable controls and evaluate implementation and operating effectiveness.
 
-**Customer responsibility.**
-- **BAA & covered-entity obligations.** Aegis is a technical safeguard; you remain
-  the covered entity / business associate and must execute BAAs with your LLM
-  provider where applicable.
-- **Safe Harbor completeness.** Regex Safe Harbor catches the 18 enumerated
-  categories; free-text clinical narrative may carry residual identifiers that
-  pattern matching cannot guarantee to remove. For Expert Determination
-  (§164.514(b)(1)) you must engage a qualified statistician. The HL7/FHIR scrubber
-  redacts *mapped* fields only — bespoke extensions need mapping additions.
-- **Administrative & physical safeguards** (§164.308/§164.310) are out of scope.
+### ISO/IEC 42001 and ISO/IEC 27001
 
----
+ISO/IEC 42001 specifies requirements for establishing, implementing, maintaining and continually improving an Artificial Intelligence Management System. ISO's public page describes traceability, transparency and reliability as benefits. [14] ISO/IEC 27001 defines requirements for an Information Security Management System. [15]
 
-## 3. Government & Defense — `DX-Gov`
+Aegis can provide **technical evidence inputs** for an AIMS or ISMS, such as request lifecycle records, change/release evidence, integrity verification, and documented control boundaries. The repository does not establish the customer's management-system scope, risk treatment, internal audit, management review, competence, supplier controls, or certification.
 
-**Regulatory anchor:** DoD CC SRG IL5/IL6, DoDI 8520.02 (CAC), NIST SP 800-73-4
-(PIV/PIV-I), GSA FPKI, FedRAMP High (technical control families AU/AC/SC).
+**Allowed wording:** “Selected Aegis controls may support an ISO/IEC 42001 or ISO/IEC 27001 evidence package.”
+**Blocked wording:** “ISO certified,” “ISO compliant,” or “Aegis satisfies Clause X” without a customer-specific control assessment and qualified review.
 
-| Control | Status | Evidence |
+### SOC 2
+
+AICPA Trust Services Criteria cover Security, Availability, Processing Integrity, Confidentiality and Privacy for attestation or consulting engagements. [16]
+
+| Trust Services Criteria area | Possible evidence input | Missing organizational evidence |
 |---|---|---|
-| DoD CAC / GSA PIV client-certificate identity — policy-OID gate + Client-Auth EKU, EDIPI (CAC) / UUID (PIV-I) extraction from the mTLS cert | `[PROVEN]` | [`aegis/core/cac_piv.py`](../../aegis/core/cac_piv.py); `AEGIS_CAC_PIV_REQUIRED` |
-| Air-gapped egress containment — deny-all outbound except an explicit allow-list plus the configured upstream backend | `[PROVEN]` | `aegis/config.py` `AEGIS_AIRGAP_MODE` / `AEGIS_AIRGAP_ALLOWED_HOSTS`; `aegis.proxy.egress_guard` |
-| Air-gapped container image (no network base layers) | `[PROVEN]` | [`deploy/docker/Dockerfile.airgap`](../../deploy/docker/Dockerfile.airgap) |
-| Kernel-level containment — seccomp syscall filter + AppArmor profile | `[PARTIAL]` | [`deploy/apparmor/aegis.profile`](../../deploy/apparmor/aegis.profile); `deploy/network-isolation.yaml` |
-| Military classification-marker detection (e.g. spillage of classified banners into prompts) | `[PROVEN]` | [`aegis/core/classified_marker_detector.py`](../../aegis/core/classified_marker_detector.py) |
-| Post-quantum signing (FIPS 204 ML-DSA-65) on audit nodes | `[PARTIAL]` | Rust `aegis_rust` ML-DSA path; Ed25519 fallback marks bundle `legal_admissibility="Compromised"` (see [`CLAIMS_VERIFICATION.md`](../audit/CLAIMS_VERIFICATION.md) row L3) |
-| mTLS / TLS termination with client-cert verification | `[PARTIAL]` | `AEGIS_MTLS_REQUIRED`, `AEGIS_SSL_CA_CERTS`; per-request client-cert *identity assertion in auth* is the boundary (see L2) |
+| Security | Authentication, access boundaries, key handling, secure release gates | Entity-wide security program, personnel, change management, vendor management and testing |
+| Availability | Failure semantics, telemetry, backup/restore guidance | Availability design, capacity, SLOs, incident history, recovery testing and auditor opinion |
+| Processing integrity | Durable evidence gate, canonicalization and chain verification | End-to-end processing criteria, completeness population, auditor sampling and management assertion |
+| Confidentiality / Privacy | Hash-only WAL design under declared path, retention guidance | Data inventory, legal basis, contracts, retention/deletion processes, access reviews and privacy program |
 
-**What Aegis provides.** An air-gappable gateway that can require hardware-token
-(CAC/PIV) identity at the TLS edge, refuse all egress outside a sealed allow-list,
-and run under a restrictive AppArmor/seccomp profile suitable for IL5/IL6
-compartmentalisation.
+Aegis is not a SOC 2 report and does not imply one.
 
-**Customer responsibility.**
-- **ATO / authorisation boundary.** FedRAMP High and IL5/IL6 are *accreditation*
-  programmes. Aegis supplies specific technical controls (AU/AC/SC family
-  building blocks); the System Security Plan, continuous monitoring, personnel,
-  and physical controls remain yours.
-- **CAC/PIV chain validation.** `AEGIS_CAC_PIV_REQUIRED` validates the policy OID
-  and EKU; you must supply a trusted `AEGIS_SSL_CA_CERTS` bundle and operate CRL/OCSP
-  revocation checking at your TLS terminator.
-- **`[PARTIAL]` items** are scoped exactly as the linked CLAIMS rows state — do not
-  represent the Ed25519 fallback as PQC, or the AppArmor profile as a full MAC
-  policy without your own SELinux/AppArmor enforcement testing on the target host.
+### HIPAA Security Rule
 
----
+HHS publishes a crosswalk between NIST CSF and the HIPAA Security Rule and states that using NIST CSF does not guarantee HIPAA compliance. [12]
 
-## 4. Forensic & Judicial — `DX-Forensic`
+Aegis may provide evidence relevant to selected technical safeguards such as audit controls under 45 CFR §164.312(b), integrity controls under §164.312(c), and transmission controls under §164.312(e), when configured and operated in the customer's environment. That statement does not decide whether a customer is a covered entity or business associate, whether a BAA is required, whether a dataset is PHI, or whether the complete Security Rule is satisfied.
 
-**Regulatory anchor:** ISO/IEC 27037:2012 (digital evidence), Daubert /
-Fed. R. Evid. 702 (admissibility), 21 CFR Part 11 §11.50 (e-signature records).
+A customer must assess administrative, physical and technical safeguards, risk analysis, workforce controls, access procedures, contingency planning, breach response, BAAs and state-law requirements. Hashing a payload does not remove all privacy obligations because identifiers, timing, metadata and derived data can remain personal or regulated information.
 
-| Control | Status | Evidence |
-|---|---|---|
-| ISO/IEC 27037 evidence package — chain-of-custody manifest, acquisition metadata, SHA-256 hash declaration, evidence nodes, integrity seal; offline `verify_seal()` | `[PROVEN]` | [`aegis/core/iso27037_evidence.py`](../../aegis/core/iso27037_evidence.py) — `build_evidence_package()` |
-| Per-bundle legal-admissibility classification (Admissible / Conditional / Compromised) with justification, sealed | `[PROVEN]` | `iso27037_evidence.py` — `LegalAdmissibility` |
-| 21 CFR Part 11 §11.50 e-signature export — signer name, signature meaning, timestamp + cryptographic binding to the chain | `[PROVEN]` | [`aegis/proxy/audit_api.py`](../../aegis/proxy/audit_api.py) `GET /v1/audit/export/part11`; `crypto_audit.export_part11_signatures()` |
-| Forensic PDF report & DFIR export | `[PROVEN]` | [`aegis/core/forensic_pdf_report.py`](../../aegis/core/forensic_pdf_report.py), [`aegis/core/dfir_export.py`](../../aegis/core/dfir_export.py) |
-| Trusted timestamping (RFC 3161 TSA) and external anchoring | `[PARTIAL]` | [`aegis/core/tsa_provider.py`](../../aegis/core/tsa_provider.py), [`aegis/core/anchoring.py`](../../aegis/core/anchoring.py) — require an external TSA/anchor endpoint to be configured |
+### FedRAMP and federal environments
 
-**What Aegis provides.** Self-contained, offline-verifiable evidence packages: the
-`integrity_seal` is a SHA-256 over the canonical serialisation of every other
-field, so a third party with only the JSON file and `verify_seal()` can confirm
-the package was not altered post-export — the property an expert needs to satisfy
-Daubert authenticity and reliability prongs.
+Aegis has **no FedRAMP authorization** and no IL5/IL6 authorization. The historical FedRAMP RFC-0004 page found during research explicitly states that it is closed historical material and must not be applied. [17]
 
-**Customer responsibility.**
-- **EWF/E01 disk imaging.** Aegis seals the *audit-chain* evidence (LLM
-  interaction records), not raw-media forensic disk images. EWF/E01 acquisition of
-  host media is performed with dedicated forensic imagers (FTK Imager, `ewfacquire`)
-  and is **out of scope** for this gateway.
-- **PKCS#7/CMS SignedData.** The native bundle signature is HMAC-SHA256 or ML-DSA;
-  if your court process specifically demands a CMS detached signature, wrap the
-  exported bundle with your PKI's CMS signer — Aegis does not emit CMS containers.
-- **Custody discipline.** The chain-of-custody manifest records what you log into
-  it; the integrity of operator identities depends on your access controls.
+For a federal deployment, the customer must define the authorization boundary, system security plan, data flows, inherited controls, external connections, customer responsibilities, assessment path and agency authorization. Aegis can be evaluated as one component inside that boundary, but a local release artifact does not establish an ATO.
 
----
+### EU AI Act and GDPR
 
-## 5. Pharma / GxP Computerised Systems
+The EU AI Act is a jurisdiction-specific regulation whose applicability depends on system role, use, geography and relevant obligations. [16] GDPR analysis likewise depends on controller/processor role, purpose, lawful basis, data categories, transfers and rights. Aegis documentation can support a customer inventory, technical documentation and data-flow review. It does not establish conformity, legal basis, DPIA completion or a lawful transfer mechanism.
 
-**Regulatory anchor:** EU GMP Annex 11, GAMP 5 (2nd ed.), 21 CFR Part 11,
-21 CFR Part 211.
+## Evidence wording rules
 
-| Control | Status | Evidence |
-|---|---|---|
-| Change control + version-gated deployment gate (refuses deploy without an approved change record for the exact version) | `[PROVEN]` | [`aegis/core/gxp_qualification.py`](../../aegis/core/gxp_qualification.py) — `ChangeControlRegistry`, `DeploymentGate` |
-| Requirement → Design → Test → Evidence traceability matrix (GAMP 5 RTM) | `[PROVEN]` | `RequirementTraceMatrix` |
-| Performance Qualification sign-off, HMAC-SHA256 signed by approver | `[PROVEN]` | `PerformanceQualification`, `VendorQualificationPackage` |
-| Audit-trail lock-out (records cannot be altered/deleted after commitment) | `[PROVEN]` | `worm_ledger.py` `enforce_immutability()` cites Annex 11 §5 / NIST AU-9 |
+Use the following vocabulary in customer-facing documents:
 
-**Customer responsibility.** GAMP 5 validation is a *lifecycle process*. Aegis
-supplies code-tractable artefacts (change control, RTM, PQ sign-off) that slot into
-a supplier-qualification dossier; URS authorship, IQ/OQ execution on your
-infrastructure, and QA approval remain yours.
+| Prefer | Do not use |
+|---|---|
+| “contributes technical evidence to” | “satisfies compliance” |
+| “mapped to selected control objectives” | “certified” |
+| “customer assessment required” | “HIPAA compliant” |
+| “no FedRAMP authorization claimed” | “FedRAMP-ready” |
+| “may support an auditor evidence request” | “audit-proof” |
+| “offline integrity verification under the named verifier” | “court-admissible” |
+| “HMAC is symmetric and classical” | “non-repudiation” for HMAC |
 
----
+## Reviewer checklist
 
-## 6. Cross-cutting: SOC 2 Type II / ISO 27001
+A qualified reviewer should confirm the deployment scope, legal role, data categories, identity and access controls, secret-manager custody, storage immutability, retention and deletion process, backup/restore, incident response, provider terms, network boundary, customer configuration, and independent assessment requirements. This document supplies a starting map, not a legal conclusion.
 
-| Control | Status | Evidence |
-|---|---|---|
-| SOC2 CC6.1 / CC7.2 + ISO 27001 A.12.4 — sealed audit-trail export with completeness + tamper evidence | `[PROVEN]` | [`aegis_server/compliance/exporter.py`](../../aegis_server/compliance/exporter.py) |
-| Full-chain integrity sweep on demand | `[PROVEN]` | `GET /v1/audit/integrity` |
+## Related documents
 
-The same `ComplianceExporter` bundle serves SOC2, HIPAA §164.312(b), and ISO 27001
-A.12.4 — it is a general tamper-evident audit-evidence package, re-verifiable
-offline via `ComplianceExporter.verify_bundle()`.
+- [`docs/CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)
+- [`docs/privacy/DATA_RETENTION.md`](../privacy/DATA_RETENTION.md)
+- [`docs/security/THREAT_MODEL.md`](../security/THREAT_MODEL.md)
+- [`docs/BUYER_GUIDE_US.md`](../BUYER_GUIDE_US.md)
+- [`DEPLOYMENT_GUIDE.md`](../../DEPLOYMENT_GUIDE.md)
 
----
+## References
 
-## 7. SMBs / PyMEs — zero-configuration default path
-
-The defaults in `aegis/config.py` are safe-by-default for a single-node
-deployment: a local file WAL written `0o600`, `auth_disabled` permitted **only**
-when `debug_mode=True`, and no compliance toggle forced on. A small business runs
-the stock [`deploy/docker/docker-compose.yml`](../../deploy/docker/docker-compose.yml)
-and gets a working, audited gateway without touching any of the regime-specific
-flags above. Enabling a vertical is purely additive — set the env vars named in
-the relevant section.
-
----
-
-## Boundary summary (what Aegis is *not*)
-
-Aegis does not, and does not claim to:
-
-- adjudicate the **correctness, bias, or safety of upstream model outputs**;
-- protect against a **compromised host** with root (OS WORM is defence-in-depth,
-  not a hardware guarantee);
-- substitute for **accreditation/authorisation programmes** (FedRAMP ATO, SOC 2
-  attestation, GxP validation) — it supplies *technical evidence*, auditors and
-  assessors render the opinion;
-- emit **CMS/PKCS#7 containers or EWF/E01 disk images** natively;
-- discharge **administrative, physical, or personnel** safeguards.
-
-Every claim above maps to a cited file. If a control you need is not listed here
-with a `[PROVEN]` or scoped `[PARTIAL]` marker, treat it as **not provided** until
-it appears in this matrix.
+[1]: https://www.nist.gov/itl/ai-risk-management-framework "NIST AI Risk Management Framework"
+[2]: https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence "NIST AI RMF Generative AI Profile"
+[11]: https://csrc.nist.gov/pubs/cswp/29/the-nist-cybersecurity-framework-csf-20/final "NIST CSF 2.0"
+[12]: https://www.hhs.gov/hipaa/for-professionals/security/nist-security-hipaa-crosswalk/index.html "HHS/NIST HIPAA Security Rule crosswalk"
+[14]: https://www.iso.org/standard/42001 "ISO/IEC 42001:2023"
+[15]: https://www.iso.org/standard/27001 "ISO/IEC 27001:2022"
+[16]: https://www.aicpa-cima.com/resources/download/2017-trust-services-criteria-with-revised-points-of-focus-2022 "AICPA Trust Services Criteria"
+[17]: https://www.fedramp.gov/rfcs/0004/ "FedRAMP RFC-0004 historical page"
+[18]: https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final "NIST SP 800-53 Rev. 5"

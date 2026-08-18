@@ -1,4 +1,11 @@
-# Aegis Latent Core — US Product Brief
+# Product Brief — Aegis Latent Core v3.1.0
+
+This brief is for executive sponsors, economic buyers, platform leaders and security reviewers evaluating Aegis. It defines the product category, buyer problem, evidence wedge, initial ICP, proof sequence and non-goals. It is not a certification, legal opinion, production SLO, or binding commercial offer.
+
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
+**Positioning owner:** Product and release owner
+**Primary claim control:** [`docs/CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md)
 
 ## Category
 
@@ -6,31 +13,41 @@ Aegis Latent Core is an **OpenAI-compatible AI Governance and Evidence Gateway**
 
 ## The buyer problem
 
-AI platform teams need to move quickly across model providers while security, compliance, and legal teams need a stable control boundary. Provider dashboards and ordinary access logs vary by vendor and usually do not provide a single, replayable evidence contract for request hashes, response hashes, policy outcomes, signing metadata, and durability status.
+AI platform teams need to move across model providers while security, privacy, compliance and legal teams need a stable control boundary. Provider dashboards and ordinary access logs vary by vendor and do not necessarily provide a single, replayable evidence contract for request hashes, response hashes, policy outcomes, signing metadata and durability status.
 
-Aegis places a controlled gateway in that boundary. It authenticates the caller, enforces request and egress controls, evaluates WAF/session policy, applies distributed rate limiting, forwards to the selected provider, and commits a signed evidence record before the governed response is returned.
+Aegis places a controlled gateway in that boundary. It authenticates the caller, enforces request and egress controls, evaluates WAF/session policy, applies distributed rate limiting, forwards to the selected provider and commits a signed evidence record before the governed response is returned.
 
 ## Initial ICP
 
-The first buyer is a B2B SaaS, fintech, or regulated-enterprise platform/security team operating more than one LLM provider and requiring private deployment. The buyer has a platform owner, an AppSec or CISO sponsor, an AI/ML engineering owner, a compliance/legal reviewer, and procurement involvement. Healthcare, government, defense, industrial, and scientific deployments are expansion tracks, not proof of vertical compliance.
+The first buyer is a B2B SaaS, fintech or regulated-enterprise platform/security team operating more than one model provider and requiring private deployment. The committee commonly includes a platform owner, an AppSec or CISO sponsor, an AI/ML engineering owner, a privacy/compliance or legal reviewer, procurement and an executive sponsor. Healthcare, government, defense, industrial and scientific deployments are expansion tracks, not proof of vertical compliance.
 
-## What the product provides
+## Evidence wedge
+
+The product is evaluated through concrete artifacts rather than broad category language:
 
 | Capability | Buyer outcome | Evidence boundary |
 |---|---|---|
-| OpenAI-compatible gateway | Applications can adopt a stable internal control point without rewriting every provider integration. | API contract and integration tests. |
-| Durable signed evidence | Security and compliance teams can replay a record of the governed lifecycle under explicit storage and signer controls. | WAL/storage commit, hashes, signature, key ID, integrity verification. |
-| WAF and request controls | Prompt-injection and structural policy checks occur before upstream forwarding. | Application boundary and pinned corpus; ingress parser remains separate. |
-| Provider-independent policy | Egress, rate-limit, session, and evidence policies do not depend on one provider dashboard. | Gateway configuration and deployment tests. |
-| Private deployment | Customers can keep provider traffic and evidence inside their own infrastructure. | Customer topology, network, retention, and key-custody evidence. |
+| OpenAI-compatible gateway | Applications can adopt a stable internal control point without rewriting every provider integration. | API contract and integration tests; provider semantics still require validation. |
+| Durable signed evidence | Security and compliance teams can replay a record of the governed lifecycle under explicit storage and signer controls. | WAL commit, hashes, signature metadata, key ID and integrity verification. |
+| WAF and request controls | Application-layer prompt and structural policy checks occur before upstream forwarding. | Pinned corpus and application boundary; ingress parser remains separate. |
+| Provider-independent policy | Egress, rate-limit, session and evidence policies do not depend on one provider dashboard. | Gateway configuration and deployment tests. |
+| Private deployment | Customers can keep provider traffic and evidence inside their own infrastructure. | Customer topology, network, retention, backup and key-custody evidence. |
+
+## Measured boundaries
+
+The v3.1.0 release retained four market-hardening artifacts. The backpressure run preserved 10,000 durable records under a 2 ms injected `fsync` delay but recorded p99 commit latency of 1,189.89 ms. The WAF corpus contains 15 malicious and 8 benign cases. The key-rotation exercise covers three independent local signer instances. The ML-DSA timing experiment passed non-detection for `sign` but returned `p=0.0` for `verify`; no constant-time claim is approved.
 
 ## Proof sequence
 
-The recommended evaluation is local evaluation, evidence replay, controlled pilot, security review, procurement package, and production rollout. The pilot should preserve request/response test vectors, raw benchmark artifacts, a threat model, deployment prerequisites, SBOM/provenance, rollback instructions, and a list of controls not provided by Aegis.
+The recommended evaluation is local evaluation, evidence replay, controlled pilot, security review, procurement package and production rollout. The pilot should preserve request/response test vectors, raw benchmark artifacts, a threat model, deployment prerequisites, SBOM/provenance, rollback instructions and a list of controls not provided by Aegis.
+
+## Market context
+
+Portkey, Helicone, LiteLLM and Protect AI provide directional market signals around AI gateway, observability, routing, runtime controls, enterprise support and private deployment. Their public pages do not establish feature parity or Aegis buyer willingness to pay. Aegis should differentiate narrowly through the durable evidence boundary and reproducible failure semantics rather than generic “AI security platform” language.
 
 ## What Aegis is not
 
-Aegis is not an LLM, a complete model-safety system, a universal WAF, an authorization to process regulated data, a SOC 2 report, a HIPAA determination, a FedRAMP authorization, an EU AI Act conformity assessment, FIPS 140 validation, a court-admissibility ruling, or a substitute for customer identity, network, privacy, retention, or incident-response controls.
+Aegis is not an LLM, a complete model-safety system, a universal WAF, an authorization to process regulated data, a SOC 2 report, a HIPAA determination, a FedRAMP authorization, an EU AI Act conformity assessment, GDPR legal basis, FIPS 140 validation, a court-admissibility ruling, or a substitute for customer identity, network, privacy, retention or incident-response controls.
 
 ## Buyer diligence questions
 
@@ -38,4 +55,13 @@ A buyer should ask which HTTP/2 component owns normalization, which storage syst
 
 ## Procurement package
 
-The initial package should include the immutable release link, source and asset hashes, SPDX SBOM, provenance envelope, release-gate record, threat model, data-retention statement, deployment checklist, support matrix, vulnerability disclosure policy, rollback procedure, WAF corpus report, and benchmark limitations. Customer counsel and security reviewers remain the decision owners for contractual, legal, and compliance conclusions.
+The initial package should include the immutable release link, source and asset hashes, SPDX SBOM, provenance envelope, release-gate record, threat model, data-retention statement, deployment checklist, support matrix, vulnerability disclosure policy, rollback procedure, WAF corpus report and benchmark limitations. Customer counsel and security reviewers remain the decision owners for contractual, legal and compliance conclusions.
+
+## Related documents
+
+- [`README.md`](../README.md)
+- [`docs/BUYER_GUIDE_US.md`](BUYER_GUIDE_US.md)
+- [`docs/FAQ_PROCUREMENT.md`](FAQ_PROCUREMENT.md)
+- [`docs/COMMERCIAL_STRATEGY_US.md`](COMMERCIAL_STRATEGY_US.md)
+- [`docs/COMPLIANCE_MAPPING.md`](compliance/COMPLIANCE_MAPPING.md)
+- [`docs/CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md)

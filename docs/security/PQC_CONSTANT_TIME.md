@@ -1,6 +1,10 @@
-# ML-DSA Timing-Leakage Assessment
+# ML-DSA-65 Timing Assessment — Aegis Latent Core v3.1.0
 
-**Scope:** Native ML-DSA-65 sign and verify boundary  
+This document is for cryptography reviewers and security architects evaluating the native ML-DSA-65 timing boundary. It defines the experiment, statistical interpretation, retained result and blocked claims. It does not prove constant-time execution, side-channel absence, FIPS 140 validation or legal admissibility.
+
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
+**Scope:** Native ML-DSA-65 `sign` and `verify` boundary
 **Current assurance status:** No constant-time claim is approved
 
 ## Terminology correction
@@ -45,3 +49,10 @@ The source-level signer correctly refuses to fabricate ML-DSA signatures when th
 ## Falsification
 
 The claim is falsified within the declared envelope by a statistically significant class-dependent timing difference, a failed signature-class control, unexplained run divergence, sample imbalance, noisy or unisolated execution, missing raw samples, changed compiler/crate/build flags, or a reviewer finding that the measured function is not the deployed function.
+
+## Related documents
+
+- [`../benchmarks/BENCHMARK_RESULTS.md`](../benchmarks/BENCHMARK_RESULTS.md)
+- [`../CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)
+- [`../FAQ_SECURITY.md`](../FAQ_SECURITY.md)
+- [`../../README.md`](../../README.md)

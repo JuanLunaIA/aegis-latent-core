@@ -1,7 +1,11 @@
 # WAF Testing and Evasion Boundaries
 
-**Scope:** Aegis application-layer payload inspection  
-**Current artifact:** `evidence/market_hardening_v3_1/waf_corpus_report_v1.json` outside the source tree
+This document defines the application-layer WAF corpus, metrics, reproduction method and ingress boundary for security reviewers. It does not provide universal prompt-injection detection, HTTP/2 parser coverage, or a production WAF certification.
+
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
+**Scope:** Aegis application-layer payload inspection
+**Current artifact:** `evidence/market_hardening_v3_1/waf_corpus_report_v1_candidate.json` outside the source tree
 
 ## What is tested
 
@@ -30,7 +34,7 @@ The `<5%` threshold is a release threshold for the named corpus and configuratio
 
 ## Current result
 
-The v3.0.1 hardening corpus contains 15 executable malicious cases and 8 benign cases. The current local run recorded **0 bypasses and 0 false positives**, with the observed bypass rate below the corpus threshold. The Wilson interval remains wide because the corpus is small; the result is a regression signal, not statistical proof of universal detection coverage.
+The v3.1.0 candidate corpus contains 15 executable malicious cases and 8 benign cases. The current local run recorded **0 bypasses and 0 false positives**, with the observed bypass rate below the corpus threshold. The Wilson interval remains wide because the corpus is small; the result is a regression signal, not statistical proof of universal detection coverage.
 
 ## HTTP/2 and ingress boundary
 
@@ -45,3 +49,10 @@ A future privileged or integration suite must pin the ingress image, HTTP/2 libr
 ## Residual risk
 
 A WAF is one control at one protocol boundary. It does not replace authentication, authorization, output handling, model-specific safety, network egress policy, secrets management, tenant isolation, or incident response. False negatives remain possible outside the named corpus, especially for semantic, multilingual, encoded, multimodal, and provider-specific attack classes.
+
+## Related documents
+
+- [`../CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)
+- [`../benchmarks/BENCHMARK_RESULTS.md`](../benchmarks/BENCHMARK_RESULTS.md)
+- [`../FAQ_SECURITY.md`](../FAQ_SECURITY.md)
+- [`../../README.md`](../../README.md)

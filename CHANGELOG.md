@@ -2,6 +2,10 @@
 
 All notable changes to **Aegis Latent Core** are documented in this file.
 
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
+**Documentation verification baseline:** `v3.1.0`. Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
@@ -34,8 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Final verification
 
 - Final release checkout: `5,442 passed, 37 skipped, 47 warnings` in 68.08 s with `93.91%` line coverage; pytest exit status 0.
+- Documentation reconstruction added the US-English developer quickstart, platform operator guide, architecture document, benchmark result record, rollback runbook, privacy boundary, compliance contribution map, and technical/security/procurement FAQs.
 - Blocking static and supply-chain gates: Ruff check, Ruff format, Bandit, pip-audit requirements, pip-audit environment, `git diff --check`, Helm lint, and Cargo tests all exited status 0.
 - The ML-DSA timing gate remains intentionally non-green for `verify` (`p=0.0`); the release blocks any constant-time verification claim and retains the residual risk in the public security documentation.
+
+### Documentation boundary
+
+- Framework references use NIST, W3C, CISA, IETF, HHS, ISO, EUR-Lex and AICPA sources as review lenses. The repository does not claim SOC 2, HIPAA, FedRAMP, EU AI Act conformity, GDPR legal basis, FIPS 140 validation or court admissibility.
 
 ### Versioning
 
@@ -374,3 +383,11 @@ Industrial, Enterprise HA, Forensics), advancing the roadmap scorecard to
 [2.4.0]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v2.4.0
 [2.3.0]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v2.3.0
 [2.2.0]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v2.2.0
+
+## Related documents
+
+- [`README.md`](README.md)
+- [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md)
+- [`docs/benchmarks/BENCHMARK_RESULTS.md`](docs/benchmarks/BENCHMARK_RESULTS.md)
+- [`docs/SECURITY_ASSURANCE_ROADMAP.md`](docs/SECURITY_ASSURANCE_ROADMAP.md)
+- [`SECURITY.md`](SECURITY.md)

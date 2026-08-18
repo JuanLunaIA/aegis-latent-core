@@ -11,6 +11,9 @@ Aegis Latent Core is an OpenAI-compatible gateway that applies request policy, W
 [![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
 [![License](https://img.shields.io/badge/license-AGPLv3%20%2B%20commercial-blue.svg)](LICENSE)
 
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
+
 ## Who should evaluate Aegis
 
 Aegis is intended for platform, application-security, and AI-engineering teams operating more than one model provider or requiring provider-independent evidence for governed AI traffic. The initial commercial focus is B2B SaaS, fintech, and regulated enterprise platform teams that need private deployment and verifiable evidence but are not asking this repository to become a universal authorization or certification product.
@@ -59,7 +62,7 @@ The strict lifecycle is:
 | Control | Implemented behavior | Evidence and boundary |
 |---|---|---|
 | Evidence durability | The core proxy commits request/response evidence before a governed successful response and emits `X-Aegis-Evidence-Status: durable` on governed paths. | `tests/test_p0_release_gates.py`, proxy failure-path tests, WAL integrity tests. The target filesystem and storage provider still require deployment validation. |
-| Durable terminal errors | Upstream non-2xx responses, circuit-open paths, and network faults use the durable error-evidence path when the evidence boundary is available. | v3.0.1 release evidence. A storage failure after admission is a fail-closed operational incident, not a successful response. |
+| Durable terminal errors | Upstream non-2xx responses, circuit-open paths, and network faults use the durable error-evidence path when the evidence boundary is available. | `tests/test_enterprise_durable_evidence.py` and v3.1.0 release evidence. A storage failure after admission is a fail-closed operational incident, not a successful response. |
 | Chain integrity | Audit nodes bind predecessor, request hash, response hash, Merkle root, signature, and scheme metadata. | `aegis/core/crypto_audit.py` and `verify_integrity()`. Detection of tampering is not the same as immutable external storage. |
 | Strong signing | Strict ledgers reject the ephemeral Ed25519 fallback. HMAC-SHA256, configured HSM, or configured native signer must be available according to policy. | Signer tests and strict startup gates. HMAC is symmetric and does not provide third-party non-repudiation. |
 | Key rotation | The enterprise signer supports an atomic, versioned HMAC keyring with one active key, historical verify keys, explicit expiry, and non-secret `key_id` metadata. | `aegis_server/crypto/keyring.py`, `tests/test_keyring_rotation.py`. Three-replica deployment evidence remains required for a production claim. |
@@ -141,7 +144,7 @@ PYTHONPATH=. .venv/bin/python tools/benchmarks/run_backpressure_stall.py \
   --output evidence/backpressure_stall_report.json
 ```
 
-The current local run used 2,500 offered requests, recorded 2,500 durable commits, observed zero missing IDs, zero duplicate IDs, and valid chain integrity under a 2 ms injected `fsync` delay. That is a bounded fault-injection result. It is not a 10k requests-per-second production capacity claim. See [`docs/operations/BACKPRESSURE_RUNBOOK.md`](docs/operations/BACKPRESSURE_RUNBOOK.md).
+The retained v3.1.0 run offered 10,000 requests at 10,000 RPS with a 2 ms injected `fsync` delay. It recorded 10,000 durable commits, zero failures, zero missing IDs, zero duplicate IDs, and valid chain integrity. The observed p99 commit latency was 1,189.89 ms. This is a bounded fault-injection result with substantial queueing. It is not a production capacity or SLO claim. See [`docs/operations/BACKPRESSURE_RUNBOOK.md`](docs/operations/BACKPRESSURE_RUNBOOK.md).
 
 ## WAF and ingress boundary
 
@@ -178,7 +181,7 @@ See [`docs/benchmarks/README.md`](docs/benchmarks/README.md), [`docs/BENCHMARKS.
 
 The release process produces a lockfile, SBOM, dependency/advisory results, provenance envelope, release-gate record, repository manifest, asset hashes, and rollback instructions. The security policy is in [`SECURITY.md`](SECURITY.md); the public claim controls are in [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md). Vulnerability reports should use the private reporting path described in `SECURITY.md`, not public issue comments.
 
-The repository does not claim SOC 2, HIPAA, FedRAMP, EU AI Act conformity, GDPR compliance, FIPS 140 validation, or court admissibility by itself. It provides code and evidence paths that an organization may evaluate as part of a broader control system and independent assessment.
+The repository does not claim SOC 2, HIPAA, FedRAMP, EU AI Act conformity, GDPR compliance, FIPS 140 validation, or court admissibility by itself. It provides code and evidence paths that an organization may evaluate as part of a broader control system and independent assessment. Framework references are contribution mappings, not certifications or legal conclusions.
 
 ## Commercial path
 
@@ -198,6 +201,16 @@ Pricing hypotheses, cost-to-serve assumptions, procurement blockers, and buyer q
 
 | Path | Purpose |
 |---|---|
+| `docs/DEVELOPER_QUICKSTART.md` | Clone, install, run, test and extend the repository without weakening the evidence gate. |
+| `docs/PLATFORM_OPERATOR_GUIDE.md` | Deployment topology, storage, Redis, kernel posture, telemetry and rollback boundaries. |
+| `docs/FAQ_TECHNICAL.md` | Technical questions about lifecycle, failure semantics, WAF, timing and topology. |
+| `docs/FAQ_PROCUREMENT.md` | Procurement questions about support, licensing, pricing hypotheses and assurance boundaries. |
+| `docs/FAQ_SECURITY.md` | Security questions about FIPS, PQC, HTTP/2, WAF and supply chain. |
+| `docs/compliance/COMPLIANCE_MAPPING.md` | Framework contribution map with customer-assessment boundaries. |
+| `docs/privacy/DATA_RETENTION.md` | Persisted data, retention decisions, privacy risks and operator controls. |
+| `docs/architecture/ARCHITECTURE.md` | System boundary, request state machine and topology behavior. |
+| `docs/benchmarks/BENCHMARK_RESULTS.md` | Canonical v3.1.0 benchmark results and reproduction commands. |
+| `docs/operations/ROLLBACK_RUNBOOK.md` | Evidence-preserving rollback and recovery procedure. |
 | `aegis/proxy/app.py` | Core FastAPI proxy lifecycle, request controls, evidence gate, streaming policy, headers, and bounded enrichment. |
 | `aegis/proxy/waf.py` | Application-layer WAF and normalization pipeline. |
 | `aegis/proxy/egress_guard.py` | Canonical egress allowlist and endpoint validation. |
@@ -207,7 +220,7 @@ Pricing hypotheses, cost-to-serve assumptions, procurement blockers, and buyer q
 | `aegis/core/lsm_guard.py` | AppArmor/SELinux detection and strict assertion. |
 | `aegis_server/crypto/keyring.py` | Versioned HMAC keyring with atomic reload and overlap verification. |
 | `aegis_server/` | Enterprise persistence and compliance API lifecycle. |
-| `tests/test_p0_release_gates.py` | Blocking P0/P1 regression tests from the v3.0.1 release. |
+| `tests/test_p0_release_gates.py` | Blocking P0/P1 regression tests for the v3.1.0 release line. |
 | `tests/test_market_hardening_gates.py` | New WAF and fsync fault-injection regression gates. |
 | `tools/benchmarks/run_backpressure_stall.py` | Reproducible local WAL-stall benchmark. |
 | `tools/security/run_waf_corpus.py` | Reproducible local WAF corpus harness. |
@@ -224,11 +237,12 @@ Pricing hypotheses, cost-to-serve assumptions, procurement blockers, and buyer q
 
 | Audience | Start here |
 |---|---|
-| Developer | [`docs/REPOSITORY_MAP.md`](docs/REPOSITORY_MAP.md), [`CONTRIBUTING.md`](CONTRIBUTING.md), and the quickstart above. |
-| Operator | [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md), [`docs/operations/BACKPRESSURE_RUNBOOK.md`](docs/operations/BACKPRESSURE_RUNBOOK.md), and [`docs/operations/KEY_ROTATION_RUNBOOK.md`](docs/operations/KEY_ROTATION_RUNBOOK.md). |
-| Security reviewer | [`SECURITY.md`](SECURITY.md), [`docs/security/THREAT_MODEL.md`](docs/security/THREAT_MODEL.md), and [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md). |
-| Buyer and procurement | [`docs/PRODUCT_BRIEF_US.md`](docs/PRODUCT_BRIEF_US.md), [`docs/BUYER_GUIDE_US.md`](docs/BUYER_GUIDE_US.md), and [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md). |
-| Release owner | [`CHANGELOG.md`](CHANGELOG.md), [`docs/benchmarks/README.md`](docs/benchmarks/README.md), release artifacts, and the gate record. |
+| Developer | [`docs/DEVELOPER_QUICKSTART.md`](docs/DEVELOPER_QUICKSTART.md), [`docs/REPOSITORY_MAP.md`](docs/REPOSITORY_MAP.md), and [`CONTRIBUTING.md`](CONTRIBUTING.md). |
+| Platform operator | [`docs/PLATFORM_OPERATOR_GUIDE.md`](docs/PLATFORM_OPERATOR_GUIDE.md), [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md), and the operations runbooks. |
+| Security reviewer | [`SECURITY.md`](SECURITY.md), [`docs/security/THREAT_MODEL.md`](docs/security/THREAT_MODEL.md), [`docs/FAQ_SECURITY.md`](docs/FAQ_SECURITY.md), and [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md). |
+| Buyer and procurement | [`docs/PRODUCT_BRIEF_US.md`](docs/PRODUCT_BRIEF_US.md), [`docs/BUYER_GUIDE_US.md`](docs/BUYER_GUIDE_US.md), [`docs/FAQ_PROCUREMENT.md`](docs/FAQ_PROCUREMENT.md), and [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md). |
+| Compliance and privacy | [`docs/compliance/COMPLIANCE_MAPPING.md`](docs/compliance/COMPLIANCE_MAPPING.md) and [`docs/privacy/DATA_RETENTION.md`](docs/privacy/DATA_RETENTION.md). |
+| Release owner | [`CHANGELOG.md`](CHANGELOG.md), [`docs/benchmarks/BENCHMARK_RESULTS.md`](docs/benchmarks/BENCHMARK_RESULTS.md), release artifacts, and the gate record. |
 
 ## Non-goals and residual risk
 
@@ -242,4 +256,19 @@ The repository is licensed under the terms in [`LICENSE`](LICENSE) and [`COMMERC
 
 ## Current release
 
-The immutable published baseline is [`v3.0.1`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.0.1). The current market-hardening line is `3.1.0` candidate work; it remains unreleased until source, tests, supply-chain artifacts, GitHub checks, PQC residual-risk review, human review, and release provenance pass together.
+The current published release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). Its final release workflow completed successfully and its tag, `main`, and release source point to the same commit. The ML-DSA `verify` timing claim remains blocked because the retained experiment returned `p=0.0`; a published release is not evidence that every deployment prerequisite or external assurance requirement has been satisfied.
+
+## External reference boundaries
+
+The documentation uses NIST AI RMF, NIST CSF, NIST FIPS 204, W3C WCAG 2.2, CISA Secure by Design, IETF HTTP/2 and other primary sources as reference frameworks. These sources define terminology or review lenses. They do not certify Aegis or replace customer-specific legal, security, privacy or accessibility review.
+
+## Related documents
+
+- [`docs/DEVELOPER_QUICKSTART.md`](docs/DEVELOPER_QUICKSTART.md)
+- [`docs/PLATFORM_OPERATOR_GUIDE.md`](docs/PLATFORM_OPERATOR_GUIDE.md)
+- [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)
+- [`docs/FAQ_TECHNICAL.md`](docs/FAQ_TECHNICAL.md)
+- [`docs/FAQ_SECURITY.md`](docs/FAQ_SECURITY.md)
+- [`docs/FAQ_PROCUREMENT.md`](docs/FAQ_PROCUREMENT.md)
+- [`docs/compliance/COMPLIANCE_MAPPING.md`](docs/compliance/COMPLIANCE_MAPPING.md)
+- [`docs/privacy/DATA_RETENTION.md`](docs/privacy/DATA_RETENTION.md)

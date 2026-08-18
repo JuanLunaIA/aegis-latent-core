@@ -4,11 +4,14 @@ Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 -->
 
-# Aegis Latent Core — Threat Model
+# Aegis Latent Core — Threat Model v3.1.0
 
+This threat model is for AppSec reviewers, CISOs, platform engineers and incident responders. It uses a STRIDE-oriented data-flow review to identify assets, trust boundaries, failure behavior, mitigations and residual risk for the current gateway boundary. A target deployment review remains required.
+
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
 **Method:** STRIDE-oriented data-flow review with explicit residual risk
 **Scope:** Aegis gateway, signer/keyring, WAL/storage, ingress, and operator controls
-**Status:** Repository design baseline; target deployment review remains required
 
 ## Assets
 
@@ -77,10 +80,12 @@ Alert on evidence-commit failures, chain verification failures, missing or dupli
 
 Aegis does not claim protection against upstream provider compromise, signing-key exfiltration, process-memory reads before hashing, a compromised CA bundle, cold-boot or DMA extraction, novel jailbreak techniques outside the named corpus, network-layer volumetric DDoS, or a compromised host root account. Hardware TEE attestation, FIPS 140 module validation, and ZK-proof privacy remain open assurance items.
 
-## Cross-references
+## Related documents
 
 - [`../../README.md`](../../README.md) — product boundary and operational contract.
 - [`../CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md) — public claim controls.
 - [`../operations/BACKPRESSURE_RUNBOOK.md`](../operations/BACKPRESSURE_RUNBOOK.md) — I/O stall and recovery.
 - [`../operations/KEY_ROTATION_RUNBOOK.md`](../operations/KEY_ROTATION_RUNBOOK.md) — keyring rotation.
+- [`../operations/ROLLBACK_RUNBOOK.md`](../operations/ROLLBACK_RUNBOOK.md) — evidence-preserving rollback.
+- [`../compliance/COMPLIANCE_MAPPING.md`](../compliance/COMPLIANCE_MAPPING.md) — framework contribution map.
 - [`../SECURITY_ASSURANCE_ROADMAP.md`](../SECURITY_ASSURANCE_ROADMAP.md) — independent assurance sequence.

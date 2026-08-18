@@ -6,6 +6,11 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 # Contributing to Aegis Latent Core
 
+This document defines the contribution workflow, DCO sign-off, forward-looking CLA language, test expectations and public-claim review for Aegis. It is for prospective contributors, maintainers and organizations evaluating contribution rights. It is not legal advice.
+
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
+
 Thank you for your interest in contributing. This project is maintained by its
 sole copyright holder, **Juan Luna** (`juan.c.luna04@gmail.com`), and is
 distributed under a **dual-licensing model**: the GNU Affero General Public
@@ -192,6 +197,10 @@ copy of the CLA by email before merging.
    audit chain or WAL must pass `tests/test_security_fixes.py`.
 6. **Sign off and open a PR** (`git commit -s`), including the CLA acceptance line
    from §3.7.
+7. **Run documentation QA** when public claims, paths, benchmarks, or buyer language change:
+   ```bash
+   python tools/docs/verify_documentation.py --root .
+   ```
 
 ---
 
@@ -204,3 +213,12 @@ distributable by the project under AGPLv3 and the Proprietary Commercial License
 ---
 
 **Questions about contributing or licensing:** `juan.c.luna04@gmail.com`
+
+## Related documents
+
+- [`README.md`](README.md)
+- [`SECURITY.md`](SECURITY.md)
+- [`COMMERCIAL.md`](COMMERCIAL.md)
+- [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md)
+- [`docs/DEVELOPER_QUICKSTART.md`](docs/DEVELOPER_QUICKSTART.md)
+- [`tools/docs/verify_documentation.py`](tools/docs/verify_documentation.py)
