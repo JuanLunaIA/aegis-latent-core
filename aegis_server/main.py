@@ -149,7 +149,10 @@ async def lifespan(app: FastAPI):
     Shutdown:
         1. Close the ``StorageProvider`` (releases pool / file handles).
     """
-    settings: EnterpriseSettings = get_settings()
+    settings: EnterpriseSettings = (
+        getattr(app.state, "_enterprise_settings_override", None) or get_settings()
+    )
+    settings.validate_runtime_invariants()
 
     # ── Configure structured logging ──────────────────────────────────
     logging.basicConfig(
@@ -244,6 +247,7 @@ def create_app(settings: EnterpriseSettings | None = None) -> FastAPI:
         openapi_url="/openapi.json" if getattr(cfg, "debug_mode", False) else None,
         lifespan=lifespan,
     )
+    app.state._enterprise_settings_override = cfg
 
     # ── CORS ──────────────────────────────────────────────────────────
     if cfg.cors_origins:

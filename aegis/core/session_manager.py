@@ -1,7 +1,7 @@
 """
 session_manager.py - Session Lifecycle & Isolation Layer (Tier-4 Rust acceleration)
 
-Tier-4 upgrade (v3.0.0):
+Tier-4 upgrade (v3.0.1):
     When aegis_rust is compiled, session *metadata* (ID registry, request counts,
     last-seen timestamps, LRU eviction) is delegated to `RustSessionStore` — a
     DashMap-backed store with 64-way sharding.

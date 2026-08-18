@@ -232,6 +232,20 @@ class LSMGuard:
             return None
 
     @staticmethod
+    def assert_enforcing() -> None:
+        """Raise unless SELinux/AppArmor is active and enforcing."""
+        status = LSMGuard.detect()
+        if not status.active or status.mode != "enforcing":
+            raise RuntimeError(
+                f"LSM enforcement required: type={status.lsm_type.value} mode={status.mode}"
+            )
+        logger.info(
+            "LSM confinement active — lsm_type=%s mode=%s",
+            status.lsm_type.value,
+            status.mode,
+        )
+
+    @staticmethod
     def assert_enforcing_or_warn() -> None:
         """
         Emit a ``WARNING`` log when no enforcing LSM is detected.

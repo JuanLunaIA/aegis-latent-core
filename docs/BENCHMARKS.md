@@ -336,7 +336,7 @@ pip install -e ".[dev]"
 
 # ── 2. Full test suite + 65% coverage gate ───────────────────────────────────
 pytest tests/ -x -q --cov=aegis --cov-report=term-missing --cov-fail-under=65
-# Expected: 5,451 passed · 5 skipped · ≥65% coverage
+# Observed: 5,374 passed · 80 skipped · 93% line coverage
 
 # ── 3. No-simulation-markers ratchet (0 simulation debt) ─────────────────────
 pytest tests/test_no_simulation_markers.py -v

@@ -4,13 +4,13 @@ Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 -->
 
-# Aegis Latent Core v2.4.1
+# Aegis Latent Core v3.0.1
 ## The Enterprise AI Governance Proxy
 ### Complete Product Prospectus & Licensing Guide
 
 ---
 
-**Version:** 2.4.1 · **Rust Core:** 3.0.0 · **Date:** June 2026  
+**Version:** 3.0.1 · **Rust Core:** 3.0.1 · **Date:** June 2026<br>
 **Contact:** juan.c.luna04@gmail.com  
 **Website / Source:** https://github.com/JuanLunaIA/aegis-latent-core  
 **Licensing:** AGPLv3 (open-source) + Commercial License (enterprise)
@@ -43,7 +43,7 @@ and Aegis delivers out of the box:
    that records sealed today remain cryptographically valid for 30+ year
    retention requirements — even against future quantum computers.
 
-**Test evidence:** 5,451 automated tests pass. 95.18% branch coverage.
+**Test evidence:** 5,374 automated tests pass. 93% line coverage.
 Every claim in this document maps to a test you can run from the source code.
 
 ---
@@ -151,7 +151,7 @@ client = openai.OpenAI(api_key="sk-...")
 # After Aegis — the only change required:
 client = openai.OpenAI(
     api_key="sk-aegis-your-proxy-key",
-    base_url="http://aegis:8080/v1",   # ← one environment variable
+    base_url="http://aegis:8080/v1",  # ← one environment variable
 )
 ```
 
@@ -943,8 +943,8 @@ Produces a human-readable diagnostic report for self-serve troubleshooting.
 
 The Aegis hash-chain, Merkle Mountain Range, ML-DSA-65 signing, WAF stack,
 PHI de-identification, ISO 27037 evidence packaging, and 10 detection engines
-took over two years to build and are validated by 5,451 automated tests at
-95.18% branch coverage. No bespoke logging system replicates this in one
+took over two years to build and are validated by 5,374 automated tests at
+93% line coverage. No bespoke logging system replicates this in one
 sprint.
 
 | Model | Aegis Annual Cost | Build-Yourself Estimate |
@@ -986,8 +986,8 @@ numbers are estimated or projected. Full methodology:
 | Audit commit throughput (fsync per node) | **9,310 nodes/s** | 10,000 node benchmark |
 | HMAC-SHA256 signing | **242,600 ops/s** (4.1 µs/op) | 100,000 iterations |
 | Chain verification sweep | **88,350 nodes/s** (11.3 µs/node) | Full chain sweep |
-| Test suite | **5,451 passed · 5 skipped** | `pytest tests/ -q` |
-| Branch coverage | **95.18%** | `pytest --cov` |
+| Test suite | **5,374 passed · 5 skipped** | `pytest tests/ -q` |
+| Branch coverage | **93%** | `pytest --cov` |
 | Simulation debt | **0 modules** | Audited; all stubs replaced |
 
 ---
@@ -1050,7 +1050,7 @@ There is no third path.
 
 ## PART XI — VERIFIED CLAIMS MATRIX
 
-This prospectus is the commercial front-end of a codebase with 5,451
+This prospectus is the commercial front-end of a codebase with 5,374
 automated tests. Every claim below maps to a testable, auditable source.
 
 | Claim | Status | Verify With |
@@ -1079,7 +1079,7 @@ automated tests. Every claim below maps to a testable, auditable source.
 ### For Evaluators
 
 1. Clone the repository: `git clone https://github.com/JuanLunaIA/aegis-latent-core.git`
-2. Run the full test suite: `pytest tests/ -q` (5,451 tests in ~90 seconds)
+2. Run the full test suite: `pytest tests/ -q` (5,374 tests in ~90 seconds)
 3. Start with Docker Compose: `docker compose -f deploy/docker/docker-compose.yml up -d`
 4. Run self-diagnostics: `python tools/forensic/diagnose_aegis.py`
 5. Try the Threat Lab: open http://localhost:8081 and paste a prompt injection
@@ -1138,7 +1138,7 @@ For principal engineers performing architectural due diligence:
 
 ---
 
-*Aegis Latent Core v2.4.1 · reqwest 0.13.4 / hickory-proto 0.26.1 · Python 3.11 / 3.12 / 3.13*  
-*5,451 tests · 95.18% coverage · 0 simulation modules*  
+*Aegis Latent Core v3.0.1 · reqwest 0.13.4 / hickory-proto 0.26.1 · Python 3.11 / 3.12 / 3.13*<br>
+*5,374 tests · 93% line coverage · 0 simulation modules*<br>
 *Copyright © 2026 Juan Luna. All rights reserved.*  
 *Commercial licensing: juan.c.luna04@gmail.com*

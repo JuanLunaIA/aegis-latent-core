@@ -270,10 +270,12 @@ class CryptographicAuditLedger:
         # Backward-compat alias accepted but ignored (old API used async_mode)
         async_mode: bool = False,
         hsm_backend: HSMSigningBackend | None = None,
+        require_strong_signing: bool = False,
     ) -> None:
         self.persistence_path = persistence_path
         self._signing_key = signing_key
         self._hsm_backend = hsm_backend
+        self._require_strong_signing = require_strong_signing
         self.max_memory_nodes = max_memory_nodes
         self.max_forensic_bytes = max_forensic_bytes
         self.max_wal_bytes = max_wal_bytes
@@ -481,6 +483,9 @@ class CryptographicAuditLedger:
                 )
                 return False, i
 
+            if self._require_strong_signing and node.is_fallback:
+                logger.error("Integrity violation: fallback signature at node %d", i)
+                return False, i
             if self._signing_key and node.signature_scheme == "hmac-sha256":
                 payload = _build_signed_payload(
                     prev_hash=node.prev_hash,
@@ -703,6 +708,8 @@ class CryptographicAuditLedger:
             return sig, "", "hmac-sha256", False
 
         # ── 4. Ed25519 ephemeral fallback ─────────────────────────────────
+        if self._require_strong_signing:
+            raise RuntimeError("strong signing required; no verifiable signer is available")
         sig_hex, pub_hex, scheme = _ed25519_sign(data)
         return sig_hex, pub_hex, scheme, True
 

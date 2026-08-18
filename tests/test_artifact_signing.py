@@ -43,7 +43,7 @@ class TestHmacScheme:
 
     def test_sign_then_verify(self, artifact):
         signer = ArtifactSigner(secrets.token_bytes(32))
-        meta = signer.sign_artifact(artifact, version="2.4.1")
+        meta = signer.sign_artifact(artifact, version="3.0.1")
         assert meta.scheme == "hmac-sha512"
         assert meta.public_key == ""  # symmetric — no public key
         assert signer.verify_artifact(artifact, meta) is True
@@ -68,7 +68,7 @@ class TestMlDsaScheme:
     @requires_mldsa
     def test_sign_records_real_scheme_and_pubkey(self, artifact):
         signer = ArtifactSigner(scheme=SignatureScheme.ML_DSA_65)
-        meta = signer.sign_artifact(artifact, version="2.4.1")
+        meta = signer.sign_artifact(artifact, version="3.0.1")
         assert meta.scheme == "ml-dsa-65"
         # ML-DSA-65 public key is 1952 bytes → 3904 hex chars.
         assert len(bytes.fromhex(meta.public_key)) == 1952

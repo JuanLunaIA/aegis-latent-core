@@ -16,6 +16,7 @@ import logging
 import math
 import time
 from dataclasses import dataclass, field
+from threading import Lock
 from typing import Any
 
 import numpy as np
@@ -120,6 +121,7 @@ class ResponseAnalyzer:
         self._monitor = LogitEntropyMonitor(ema_alpha=ema_alpha)
         self._prev_logits: np.ndarray | None = None
         self._baseline_entropy: float | None = None
+        self._analysis_lock = Lock()
 
     def _make_alert(
         self,
@@ -144,6 +146,17 @@ class ResponseAnalyzer:
         )
 
     def analyze(
+        self,
+        request_id: str,
+        model: str,
+        logprobs_data: ChoiceLogprobs | list[ChoiceLogprobs] | None,
+        sampling_params: dict[str, Any] | None = None,
+    ) -> ResponseAnalysis:
+        """Analyze one response while serializing mutable per-session state."""
+        with self._analysis_lock:
+            return self._analyze_unlocked(request_id, model, logprobs_data, sampling_params)
+
+    def _analyze_unlocked(
         self,
         request_id: str,
         model: str,

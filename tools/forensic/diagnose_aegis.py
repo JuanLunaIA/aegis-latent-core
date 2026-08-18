@@ -25,6 +25,7 @@ Usage
     python tools/forensic/diagnose_aegis.py --url http://localhost:8080
     python tools/forensic/diagnose_aegis.py --json > report.json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -37,6 +38,7 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 # Add project root to path when run directly
 _ROOT = Path(__file__).resolve().parents[2]
@@ -73,6 +75,7 @@ def _section(title: str) -> None:
 
 # ── Individual checks ──────────────────────────────────────────────────────────
 
+
 def check_port(host: str, port: int, name: str) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(1.0)
@@ -80,19 +83,53 @@ def check_port(host: str, port: int, name: str) -> bool:
             s.connect((host, port))
             return _check(f"Port {port} ({name})", True, f"{host}:{port} is OPEN")
         except (ConnectionRefusedError, OSError):
-            return _check(f"Port {port} ({name})", False, f"{host}:{port} is CLOSED — is the service running?")
+            return _check(
+                f"Port {port} ({name})", False, f"{host}:{port} is CLOSED — is the service running?"
+            )
+
+
+_ALLOWED_HEALTH_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+_ALLOWED_HEALTH_PORTS = frozenset({80, 443, 8080, 8443})
+
+
+def _validated_health_target(base_url: str) -> tuple[str, str, int]:
+    """Return a canonical local health URL or reject it before any network I/O."""
+    parsed = urlsplit(base_url)
+    scheme = parsed.scheme.lower()
+    if scheme not in {"http", "https"}:
+        raise ValueError("health URL scheme must be http or https")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("health URL userinfo is not allowed")
+    if parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
+        raise ValueError("health URL must not contain a path, query, or fragment")
+    hostname = (parsed.hostname or "").lower().rstrip(".")
+    if hostname not in _ALLOWED_HEALTH_HOSTS:
+        raise ValueError("health URL host is not in the loopback allowlist")
+    try:
+        port = parsed.port or (443 if scheme == "https" else 80)
+    except ValueError as exc:
+        raise ValueError("health URL port is invalid") from exc
+    if port not in _ALLOWED_HEALTH_PORTS:
+        raise ValueError("health URL port is not in the allowlist")
+    authority = f"[{hostname}]" if ":" in hostname else hostname
+    if parsed.port is not None:
+        authority = f"{authority}:{port}"
+    return f"{scheme}://{authority}/health", hostname, port
 
 
 def check_http_health(base_url: str) -> bool:
     try:
         import urllib.request
-        req = urllib.request.Request(f"{base_url}/health")
-        with urllib.request.urlopen(req, timeout=3) as resp:
+
+        health_url, _, _ = _validated_health_target(base_url)
+        req = urllib.request.Request(health_url, method="GET")  # noqa: S310
+        # The URL is constrained by _validated_health_target before urlopen.
+        with urllib.request.urlopen(req, timeout=3) as resp:  # noqa: S310  # nosec B310
             body = json.loads(resp.read())
             status = body.get("status", "unknown")
             ok = status in ("healthy", "ok")
             return _check(
-                f"GET {base_url}/health",
+                f"GET {health_url}",
                 ok,
                 f"status={status} | version={body.get('version', '?')} | provider={body.get('provider', '?')}",
             )
@@ -211,6 +248,7 @@ def check_imports() -> bool:
 def check_rust_extension() -> bool:
     try:
         import aegis_rust  # type: ignore[import]
+
         ver = getattr(aegis_rust, "__version__", "unknown")
         _check("Rust extension (aegis_rust)", True, f"version={ver} — hardware acceleration ACTIVE")
         return True
@@ -231,9 +269,7 @@ def check_crypto_audit_chain() -> bool:
         signing_key = os.environ.get("AEGIS_SIGNING_KEY", "a" * 64)
         with tempfile.TemporaryDirectory() as tmpdir:
             wal = Path(tmpdir) / "diag.wal.jsonl"
-            ledger = CryptographicAuditLedger(
-                persistence_path=str(wal), signing_key=signing_key
-            )
+            ledger = CryptographicAuditLedger(persistence_path=str(wal), signing_key=signing_key)
             for i in range(5):
                 ledger.commit_forensic(
                     state_id=f"diag-{i}",
@@ -246,7 +282,8 @@ def check_crypto_audit_chain() -> bool:
             return _check(
                 "Crypto audit chain (5 nodes, verify_integrity)",
                 ok,
-                f"nodes=5 | valid={ok} | error_index={err_idx}" + ("" if ok else f" — CHAIN BROKEN at {err_idx}"),
+                f"nodes=5 | valid={ok} | error_index={err_idx}"
+                + ("" if ok else f" — CHAIN BROKEN at {err_idx}"),
             )
     except Exception as exc:
         return _check("Crypto audit chain", False, f"Exception: {exc}")
@@ -298,6 +335,7 @@ def check_pqc_signer() -> bool:
 
 # ── Report ─────────────────────────────────────────────────────────────────────
 
+
 def _print_report(as_json: bool) -> int:
     total = len(_results)
     passed = sum(1 for r in _results if r["status"] == "OK")
@@ -305,18 +343,32 @@ def _print_report(as_json: bool) -> int:
     failed = sum(1 for r in _results if r["status"] == "FAIL")
 
     if as_json:
-        print(json.dumps({
-            "aegis_version": "2.4.1",
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "summary": {"total": total, "passed": passed, "warned": warned, "failed": failed},
-            "checks": _results,
-        }, indent=2))
+        print(
+            json.dumps(
+                {
+                    "aegis_version": "3.0.1",
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "summary": {
+                        "total": total,
+                        "passed": passed,
+                        "warned": warned,
+                        "failed": failed,
+                    },
+                    "checks": _results,
+                },
+                indent=2,
+            )
+        )
         return 1 if failed > 0 else 0
 
-    print(f"\n{'═'*60}")
-    print(f"  Aegis v2.4.1 Diagnostic Report — {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}")
-    print(f"{'═'*60}")
-    print(f"  {_G}Passed{_NC}: {passed}  {_Y}Warned{_NC}: {warned}  {_R}Failed{_NC}: {failed}  (total: {total})")
+    print(f"\n{'═' * 60}")
+    print(
+        f"  Aegis v3.0.1 Diagnostic Report — {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}"
+    )
+    print(f"{'═' * 60}")
+    print(
+        f"  {_G}Passed{_NC}: {passed}  {_Y}Warned{_NC}: {warned}  {_R}Failed{_NC}: {failed}  (total: {total})"
+    )
     if failed > 0:
         print(f"\n  {_R}ACTION REQUIRED — {failed} check(s) failed.{_NC}")
         print("  Failed checks:")
@@ -333,16 +385,21 @@ def _print_report(as_json: bool) -> int:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Aegis v2.4.1 Self-Service Diagnostic Tool")
+    parser = argparse.ArgumentParser(description="Aegis v3.0.1 Self-Service Diagnostic Tool")
     parser.add_argument("--url", default="http://127.0.0.1:8080", help="Aegis proxy base URL")
-    parser.add_argument("--wal", default=os.environ.get("AEGIS_WAL_PATH", ""), help="WAL path to check")
+    parser.add_argument(
+        "--wal", default=os.environ.get("AEGIS_WAL_PATH", ""), help="WAL path to check"
+    )
     parser.add_argument("--json", action="store_true", help="Output JSON report")
-    parser.add_argument("--skip-live", action="store_true", help="Skip live HTTP checks (offline mode)")
+    parser.add_argument(
+        "--skip-live", action="store_true", help="Skip live HTTP checks (offline mode)"
+    )
     args = parser.parse_args()
 
     if not args.json:
-        print(f"\n{_B}Aegis Latent Core v2.4.1 — Self-Service Diagnostic{_NC}")
+        print(f"\n{_B}Aegis Latent Core v3.0.1 — Self-Service Diagnostic{_NC}")
         print(f"  {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}")
 
     _section("Python Module Imports")
@@ -369,13 +426,14 @@ def main() -> None:
 
     if not args.skip_live:
         _section("Live Service Health")
-        from urllib.parse import urlparse
-        parsed = urlparse(args.url)
-        host = parsed.hostname or "127.0.0.1"
-        port = parsed.port or 8080
-        if check_port(host, port, "Aegis proxy"):
-            check_http_health(args.url)
-        check_port(host, 8081, "Aegis visualizer (optional)")
+        try:
+            _, host, port = _validated_health_target(args.url)
+        except ValueError as exc:
+            _check("Health URL validation", False, str(exc))
+        else:
+            if check_port(host, port, "Aegis proxy"):
+                check_http_health(args.url)
+            check_port(host, 8081, "Aegis visualizer (optional)")
 
     sys.exit(_print_report(args.json))
 

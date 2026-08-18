@@ -396,8 +396,20 @@ class WAFHotReloader:
         except Exception as exc:
             logger.warning("WAFHotReloader: reload failed — keeping old patterns: %s", exc)
 
-    def _get_mtime(self) -> float:
+    def _get_mtime(self) -> tuple[int, int, int]:
+        """Return a change token resistant to coarse mtime resolution.
+
+        ``st_mtime`` alone can remain unchanged when two writes occur inside
+        one filesystem timestamp tick. Nanosecond mtime, size, and inode cover
+        normal in-place writes and atomic replacement without reading the
+        pattern file on every poll.
+        """
         try:
-            return os.stat(self._path).st_mtime
+            stat_result = os.stat(self._path)
+            return (
+                int(stat_result.st_mtime_ns),
+                int(stat_result.st_size),
+                int(stat_result.st_ino),
+            )
         except OSError:
-            return 0.0
+            return (0, 0, 0)

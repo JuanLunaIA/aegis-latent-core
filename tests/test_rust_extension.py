@@ -23,7 +23,7 @@ except ImportError:
 class TestAegisRustExtension:
     def test_import_and_version(self) -> None:
         assert hasattr(aegis_rust, "RustForwarder")
-        assert aegis_rust.__version__ == "3.0.0"
+        assert aegis_rust.__version__ == "3.0.1"
 
     def test_pqc_sign_verify_roundtrip(self) -> None:
         kp = aegis_rust.generate_pqc_keypair()

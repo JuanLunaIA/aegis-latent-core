@@ -174,6 +174,35 @@ class TestAuthentication:
 
 
 class TestChatCompletions:
+    def test_upstream_error_is_durably_evidenced(self, settings):
+        error_response = MagicMock(spec=httpx.Response)
+        error_response.status_code = 503
+        error_response.content = b'{"error":{"message":"controlled upstream failure"}}'
+        error_response.headers = {"content-type": "application/json"}
+        with patch("aegis.proxy.app.LLMForwarder") as mock_fwd_cls:
+            instance = mock_fwd_cls.return_value
+            instance.start = AsyncMock()
+            instance.stop = AsyncMock()
+            instance.forward_json = AsyncMock(return_value=error_response)
+            app = create_app(settings)
+            with TestClient(app) as client:
+                resp = client.post(
+                    "/v1/chat/completions",
+                    headers={"Authorization": "Bearer sk-test-key"},
+                    json={
+                        "model": "gpt-4o-mini",
+                        "messages": [{"role": "user", "content": "hello"}],
+                    },
+                )
+                assert resp.status_code == 503
+                assert resp.headers["x-aegis-evidence-status"] == "durable"
+                assert resp.headers["x-aegis-analysis-status"] == "not-applicable"
+                assert resp.headers["x-aegis-request-id"]
+                assert resp.headers["x-aegis-session-id"]
+                assert len(app.state.aegis.ledger.chain) == 1
+                assert app.state.aegis.ledger.chain[-1].endpoint == "chat.completions"
+                assert app.state.aegis.ledger.verify_integrity()[0] is True
+
     def test_response_contains_aegis_headers(self, settings, mock_upstream_response):
         with patch("aegis.proxy.app.LLMForwarder") as mock_fwd_cls:
             instance = mock_fwd_cls.return_value
@@ -194,6 +223,7 @@ class TestChatCompletions:
         assert "x-aegis-request-id" in resp.headers
         assert "x-aegis-session-id" in resp.headers
         assert "x-aegis-alert-count" in resp.headers
+        assert resp.headers["x-aegis-evidence-status"] == "durable"
 
     def test_logprobs_injected_into_upstream_call(self, settings, mock_upstream_response):
         with patch("aegis.proxy.app.LLMForwarder") as mock_fwd_cls:

@@ -125,6 +125,6 @@ fn aegis_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hash_audit_payload, m)?)?;
     m.add_function(wrap_pyfunction!(hash_sha256_fast, m)?)?;
 
-    m.add("__version__", "3.0.0")?;
+    m.add("__version__", "3.0.1")?;
     Ok(())
 }

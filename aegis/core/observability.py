@@ -23,13 +23,12 @@ the lifespan to configure the trace provider.
 
 Zero-forensic-latency claim
 ----------------------------
-AUDIT_COMMIT_DURATION measures only WAL fsync time (background task, NOT on
-the request path). REQUEST_DURATION.labels(stage="forward") measures only the
-upstream HTTP call. The two series are independent: comparing their p99 values
-proves (or refutes) the "zero forensic latency" isolation claim.
+AUDIT_COMMIT_DURATION measures WAL fsync time for the mandatory evidence gate.
+The request cannot complete successfully until this observation is durable.
+Response analysis is a separate bounded enrichment queue and is not required for
+basic evidence integrity.
 
-AUDIT_COMMIT_LAG adds queue-wait time, giving the full end-to-end delay
-between a request arriving and its record being durably committed.
+AUDIT_COMMIT_LAG measures request-arrival to durable-evidence completion.
 """
 
 from __future__ import annotations
@@ -79,15 +78,12 @@ if _PROM:
     )
     AUDIT_COMMIT_DURATION: Any = Histogram(
         "aegis_audit_commit_duration_seconds",
-        "Wall-clock time for one WAL fsync (background task, NOT on the request path). "
-        "Compare p99 here with REQUEST_DURATION{stage='forward'} to validate "
-        "the zero-forensic-latency isolation claim.",
+        "Wall-clock time for the mandatory durable evidence WAL fsync on the request gate.",
         buckets=(0.001, 0.005, 0.010, 0.025, 0.050, 0.100, 0.250, 0.500, 1.0, 5.0),
     )
     AUDIT_COMMIT_LAG: Any = Histogram(
         "aegis_audit_commit_lag_seconds",
-        "Wall-clock lag from request arrival to audit node committed "
-        "(queue wait + WAL fsync). Includes background-task scheduling overhead.",
+        "Wall-clock lag from request arrival to mandatory durable audit-node commit.",
         buckets=(0.010, 0.050, 0.100, 0.250, 0.500, 1.0, 2.5, 5.0, 10.0, 30.0),
     )
     AUDIT_CHAIN_NODES: Any = Gauge(
@@ -96,11 +92,23 @@ if _PROM:
     )
     AUDIT_PENDING_COMMITS: Any = Gauge(
         "aegis_audit_pending_commits",
-        "Background commit tasks currently in flight",
+        "Mandatory audit commits currently in flight",
     )
     AUDIT_COMMIT_ERRORS: Any = Counter(
         "aegis_audit_commit_errors_total",
-        "Failures to commit an audit node to the WAL (proxy continues — fail-open policy)",
+        "Mandatory audit commit failures; each failure rejects the governed request",
+    )
+    RATELIMIT_BACKEND_ERRORS: Any = Counter(
+        "aegis_ratelimit_backend_errors_total",
+        "Distributed rate-limit backend errors; affected requests are rejected",
+    )
+    ANALYSIS_QUEUE_REJECTIONS: Any = Counter(
+        "aegis_analysis_queue_rejections_total",
+        "Optional response-analysis jobs rejected because the bounded queue is full",
+    )
+    ANALYSIS_ERRORS: Any = Counter(
+        "aegis_analysis_errors_total",
+        "Optional asynchronous response-analysis failures",
     )
     CIRCUIT_BREAKER_OPENS: Any = Counter(
         "aegis_circuit_breaker_opens_total",
@@ -165,6 +173,9 @@ else:
     AUDIT_CHAIN_NODES = _NoopMetric()
     AUDIT_PENDING_COMMITS = _NoopMetric()
     AUDIT_COMMIT_ERRORS = _NoopMetric()
+    RATELIMIT_BACKEND_ERRORS = _NoopMetric()
+    ANALYSIS_QUEUE_REJECTIONS = _NoopMetric()
+    ANALYSIS_ERRORS = _NoopMetric()
     CIRCUIT_BREAKER_OPENS = _NoopMetric()
     CIRCUIT_BREAKER_STATE = _NoopMetric()
     WAL_REPLICATION_LAG = _NoopMetric()

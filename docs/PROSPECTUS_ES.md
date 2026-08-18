@@ -1,6 +1,6 @@
 <!-- Copyright (c) 2026 Juan Luna. All rights reserved. Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms. -->
 
-# AEGIS LATENT CORE v2.4.1
+# AEGIS LATENT CORE v3.0.1
 ## Prospecto Comercial Empresarial
 
 **Gobernanza Criptográfica para Inferencia de Inteligencia Artificial**
@@ -9,7 +9,7 @@
 
 *Documento de distribución confidencial — 25 de junio de 2026*
 
-*Versión del documento: 2.4.1-ES*
+*Versión del documento: 3.0.1-ES*
 
 *Contacto comercial: juan.c.luna04@gmail.com*
 
@@ -184,7 +184,7 @@ Construir un sistema equivalente a Aegis internamente requiere, como mínimo:
 | WAF con Aho-Corasick SIMD | Muy alta | 4-8 semanas |
 | 10 motores de detección especializados | Extrema | 3-6 meses |
 | Presets de cumplimiento por industria | Alta | 2-4 meses |
-| Suite de pruebas (5.451 tests, 95% cobertura) | Alta | Ongoing |
+| Suite de pruebas (5.374 tests, 93% cobertura de líneas) | Alta | Ongoing |
 | Extensión Rust con PyO3 | Muy alta | 2-3 meses |
 | Documentación de audit trail | Media | 4-6 semanas |
 
@@ -551,7 +551,7 @@ Los clientes enterprise —bancos, hospitales, agencias de gobierno, grandes cor
 
 *Sin Aegis:* El equipo de ventas llega a la revisión de seguridad. El CISO del cliente pregunta sobre auditoría de IA. El equipo responde que están "trabajando en ello". El ciclo de ventas se alarga 6 meses mientras se desarrolla el feature internamente, o se pierde el deal.
 
-*Con Aegis:* El equipo de ventas llega a la revisión de seguridad. El CISO del cliente pregunta sobre auditoría de IA. El equipo muestra el dashboard de auditoría, el export de compliance, los 5.451 tests pasando y la cobertura de 95.18%. El ciclo de ventas avanza.
+*Con Aegis:* El equipo de ventas llega a la revisión de seguridad. El CISO del cliente pregunta sobre auditoría de IA. El equipo muestra el dashboard de auditoría, el export de compliance, los 5.374 tests pasando y la cobertura de 93%. El ciclo de ventas avanza.
 
 **Casos de uso concretos para SaaS:**
 
@@ -888,7 +888,7 @@ docker compose -f deploy/docker/docker-compose.yml --env-file .env up -d
 
 # 5. Verificar
 curl -sf http://localhost:8080/health
-# → {"status":"healthy","version":"2.4.1"}
+# → {"status":"healthy","version":"3.0.1"}
 
 # 6. Dirigir tu aplicación al proxy
 export OPENAI_BASE_URL="http://localhost:8080/v1"
@@ -931,7 +931,7 @@ docker save python:3.11-slim | gzip > vendor/python-3.11-slim.tar.gz
 docker load < vendor/python-3.11-slim.tar.gz
 docker build --network=none \
     -f deploy/docker/Dockerfile.airgap \
-    -t aegis-latent-core:2.4.1-airgap .
+    -t aegis-latent-core:3.0.1-airgap .
 ```
 
 El resultado es una imagen completamente autónoma, sin dependencias de registros externos en tiempo de ejecución.
@@ -1051,7 +1051,7 @@ Todos los números a continuación son el resultado de ejecución real en el ent
 - RAM: ~16 GB
 - OS: Linux 6.18.5 x86_64
 - Python 3.11.15
-- aegis_rust 3.0.0 (Rust, compilación release con LTO)
+- aegis_rust 3.0.1 (Rust, compilación release con LTO)
 
 ### Overhead del camino caliente de respuesta
 
@@ -1114,13 +1114,13 @@ El pico de ~900 RPS es para un solo proceso. En producción con múltiples worke
 
 ## 13. EVIDENCIA DE CALIDAD: SUITE DE PRUEBAS
 
-### 5.451 tests pasando. 95,18% de cobertura de ramas.
+### 5.374 tests pasando. 93% de cobertura de líneas.
 
 Esta no es una afirmación de marketing. Es el resultado de ejecutar:
 
 ```bash
 pytest tests/ -x -q --cov=aegis --cov-report=term-missing --cov-fail-under=65
-# Resultado: 5,451 passed · 5 skipped · 95.18% branch coverage
+# Resultado: 5.374 passed · 5 skipped · 93% line coverage
 ```
 
 La suite de tests cubre:
@@ -1551,7 +1551,7 @@ Para consultas sobre:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     AEGIS LATENT CORE v2.4.1                    │
+│                     AEGIS LATENT CORE v3.0.1                    │
 │                                                                  │
 │  ┌──────────┐    ┌──────────────────────────────────────────┐   │
 │  │ Cliente  │───▶│          FastAPI + Uvicorn ASGI          │   │
@@ -1585,7 +1585,7 @@ Para consultas sobre:
 
 ---
 
-*Aegis Latent Core v2.4.1*
+*Aegis Latent Core v3.0.1*
 
 *Copyright (c) 2026 Juan Luna. Todos los derechos reservados.*
 
@@ -1603,4 +1603,4 @@ Para consultas sobre:
 
 ---
 
-*Documento generado: 25 de junio de 2026 · Versión 2.4.1-ES*
+*Documento generado: 25 de junio de 2026 · Versión 3.0.1-ES*

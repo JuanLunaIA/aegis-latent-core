@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.1] — 2026-08-17
+
+### Security and evidence
+
+- Upstream non-200 responses, circuit-open responses, and forwarding exceptions now commit signed durable request-response evidence before the terminal error is returned.
+- Successful, streaming, and terminal error responses expose `X-Aegis-Evidence-Status: durable` together with request/session identifiers for external verification.
+- Added regression coverage for chat and completions upstream errors, circuit-open behavior, and network forwarding faults.
+
+### Performance and verification
+
+- Added a live TCP workload harness covering mixed chat/health traffic, bounded concurrency, induced upstream latency, periodic 503 faults, and circuit-breaker opening.
+- Validated 400-request steady traffic, 1000-request burst traffic, periodic 503 faults, and ten-request breaker opening against the local checkout with zero missing evidence-status headers in the valid runs.
+- Bumped the Python package, Python entrypoints, Helm chart, Docker metadata, Rust crate, and maturin package to `3.0.1`.
+
+### Verification
+
+- Final checkout gate: `5374 passed, 80 skipped, 47 warnings`; Ruff lint/format, Bandit, pip-audit, and Helm lint exited with status 0.
+- Coverage gate: `93%` line coverage measured by `pytest-cov`; residual warnings remain documented telemetry.
+
+## [3.0.0] — 2026-08-14
+
+### Security and evidence
+
+- Production mode is now explicitly `strict` by default and rejects missing authentication, durable evidence, strong signing, request bounds, required kernel controls, or distributed rate limiting.
+- Redis rate-limit failures raise `RateLimitBackendUnavailable` and are rejected at the HTTP boundary instead of failing open.
+- Non-sandbox Seccomp failures raise; LSM exposes a fail-closed assertion for strict startup.
+- The forensic ledger accepts `require_strong_signing` and rejects the ephemeral Ed25519 fallback when enabled. The proxy persists and fsyncs request/response evidence before returning a successful governed response.
+
+### Performance and concurrency
+
+- Response analysis is dispatched through a bounded worker queue and is no longer executed synchronously on the client-visible request path.
+- Per-session analyzer state is serialized to prevent races in baseline, EMA, and previous-logit state.
+- Streaming responses are bounded and committed before SSE emission.
+
+### Configuration and supply chain
+
+- Backend URLs and air-gap allowlist entries reject unsupported schemes, userinfo, malformed ports, and non-canonical entries.
+- Enterprise lifespan uses the injected settings instance consistently.
+- `cryptography` is constrained to `>=50.0.0,<51.0.0`; `requirements.lock` pins `50.0.0` with official PyPI hashes to remediate the audited `CVE-2026-69247` / `PYSEC-2026-3552` affected range.
+- README, `.env.example`, and `DEPLOYMENT_GUIDE.md` now describe implemented behavior and residual risk instead of certification claims.
+
+### Verification
+
+- Isolated Python 3.12 baseline: `5373 passed, 80 skipped, 47 warnings in 24.17s`.
+
+
 ## [2.4.1] — 2026-06-24
 
 ### Summary
@@ -288,6 +334,8 @@ Industrial, Enterprise HA, Forensics), advancing the roadmap scorecard to
 - Concurrent `BackgroundTask` writes could fork the audit chain (no chain lock).
   *(Severity: Critical)*
 
+[3.0.1]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.0.1
+[3.0.0]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.0.0
 [2.4.1]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v2.4.1
 [2.4.0]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v2.4.0
 [2.3.0]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v2.3.0

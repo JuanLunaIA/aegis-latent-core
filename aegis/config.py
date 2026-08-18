@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
+from urllib.parse import urlparse
 
 from pydantic import AnyHttpUrl, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -289,6 +290,58 @@ class AegisSettings(BaseSettings):
         ),
     )
 
+    # ── Runtime enforcement and bounded resources ─────────────────────────
+    security_enforcement_mode: Literal["strict", "development"] = Field(
+        default="strict",
+        description=(
+            "strict is the only production mode: required auth, durable signed evidence, "
+            "distributed rate limiting, and privileged kernel controls. development is for "
+            "isolated tests/local work and must never be used for a production claim."
+        ),
+    )
+    require_durable_evidence: bool = Field(
+        default=True,
+        description="Reject governed requests when signed durable evidence cannot be committed.",
+    )
+    require_lsm: bool = Field(
+        default=True,
+        description="Require active AppArmor/SELinux confinement in strict runtime mode.",
+    )
+    require_seccomp: bool = Field(
+        default=True,
+        description="Require an active seccomp filter in strict runtime mode.",
+    )
+    max_request_body_bytes: int = Field(
+        default=1_048_576,
+        ge=1_024,
+        le=16_777_216,
+        description="Streaming HTTP body limit enforced before JSON parsing.",
+    )
+    analysis_queue_size: int = Field(
+        default=2_048,
+        ge=1,
+        le=100_000,
+        description="Bounded asynchronous response-analysis queue capacity.",
+    )
+    analysis_worker_count: int = Field(
+        default=2,
+        ge=1,
+        le=64,
+        description="Number of bounded response-analysis workers.",
+    )
+    analysis_sample_rate: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Fraction of successful responses submitted for asynchronous analysis.",
+    )
+    analysis_timeout_seconds: float = Field(
+        default=5.0,
+        ge=0.1,
+        le=60.0,
+        description="Maximum wall time for one asynchronous response analysis job.",
+    )
+
     # ── Telemetry ─────────────────────────────────────────────────────────
     force_logprobs: bool = Field(
         default=False,
@@ -562,6 +615,14 @@ class AegisSettings(BaseSettings):
             raise ValueError(f"AEGIS_PROVIDER must be one of {sorted(allowed)}, got {v!r}")
         return v_lower
 
+    @field_validator("security_enforcement_mode")
+    @classmethod
+    def _validate_security_enforcement_mode(cls, v: str) -> str:
+        value = v.strip().lower()
+        if value not in {"strict", "development"}:
+            raise ValueError("security_enforcement_mode must be 'strict' or 'development'")
+        return value
+
     @field_validator("rate_limit_backend")
     @classmethod
     def _validate_rate_limit_backend(cls, v: str) -> str:
@@ -582,7 +643,7 @@ class AegisSettings(BaseSettings):
 
     @model_validator(mode="after")
     def _enforce_auth_posture(self) -> AegisSettings:
-        """Refuse to disable authentication outside debug mode.
+        """Validate backend URL and refuse authentication disablement in production.
 
         The ``debug_mode`` field documents that auth cannot be silently disabled
         in production. This makes that promise enforceable: ``auth_disabled`` is
@@ -591,6 +652,11 @@ class AegisSettings(BaseSettings):
         the proxy and the ``/v1/audit/*`` endpoints with no credential check —
         a silent, config-only privilege escalation that no code path guards.
         """
+        parsed_backend = urlparse(str(self.backend_url))
+        if parsed_backend.scheme not in {"http", "https"} or not parsed_backend.hostname:
+            raise ValueError("backend_url must be an absolute http/https URL with a hostname")
+        if parsed_backend.username is not None or parsed_backend.password is not None:
+            raise ValueError("backend_url must not contain URL userinfo")
         if self.auth_disabled and not self.debug_mode:
             raise ValueError(
                 "auth_disabled=True requires debug_mode=True. Refusing to start "
@@ -599,6 +665,25 @@ class AegisSettings(BaseSettings):
                 "AEGIS_AUTH_DISABLED and configure AEGIS_API_KEYS for production."
             )
         return self
+
+    def validate_runtime_invariants(self) -> None:
+        """Raise before binding sockets when strict runtime invariants are absent."""
+        if self.security_enforcement_mode != "strict":
+            return
+        if self.debug_mode:
+            raise ValueError("strict runtime cannot enable debug_mode")
+        if self.auth_disabled:
+            raise ValueError("strict runtime cannot disable authentication")
+        if not self.require_durable_evidence:
+            raise ValueError("strict runtime requires require_durable_evidence=True")
+        if self.rate_limit_backend != "redis":
+            raise ValueError("strict runtime requires rate_limit_backend='redis'")
+        if not self.get_api_keys():
+            raise ValueError("strict runtime requires at least one AEGIS_API_KEYS value")
+        if not self.signing_key and not self.pkcs11_library_path:
+            raise ValueError("strict runtime requires signing_key or pkcs11_library_path")
+        if self.mtls_required and not self.ssl_ca_certs:
+            raise ValueError("mtls_required=True requires ssl_ca_certs")
 
     def get_api_keys(self) -> frozenset[str]:
         if not self.api_keys:

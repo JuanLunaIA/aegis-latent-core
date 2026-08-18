@@ -4,7 +4,7 @@ Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 -->
 
-# Aegis — Cross-Domain Compliance Mapping (v2.4.1)
+# Aegis — Cross-Domain Compliance Mapping (v3.0.1)
 
 > **Purpose.** Map each regulated industry vertical to the *specific, implemented*
 > Aegis controls that support it, with a direct pointer to the source code that

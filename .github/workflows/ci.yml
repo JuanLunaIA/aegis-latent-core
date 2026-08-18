@@ -61,6 +61,7 @@ jobs:
             integrations \
             tests \
             tools/visualizer \
+            tools/forensic \
             benchmarks
       - name: Ruff format check
         run: |
@@ -70,6 +71,7 @@ jobs:
             integrations \
             tests \
             tools/visualizer \
+            tools/forensic \
             benchmarks
 
   # ── Type check ────────────────────────────────────────────────────────────
@@ -109,6 +111,9 @@ jobs:
   test:
     name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-22.04
+    env:
+      # CI executes isolated tests; production defaults remain strict in the application.
+      AEGIS_SECURITY_ENFORCEMENT_MODE: development
     strategy:
       fail-fast: false
       matrix:
@@ -128,6 +133,10 @@ jobs:
             --cov-report=xml \
             --cov-report=term-missing \
             --cov-fail-under=65
+      - name: Dependency audit (test environment)
+        run: |
+          pip install pip-audit
+          pip-audit --progress-spinner off
       - name: Upload coverage
         if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4

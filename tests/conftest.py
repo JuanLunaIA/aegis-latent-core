@@ -21,8 +21,12 @@ exception), causing ``aegis_server.storage.dynamodb_provider`` to bind
 
 from __future__ import annotations
 
+import os
 import sys
 from unittest.mock import MagicMock
+
+# Tests are isolated development-mode consumers; production defaults remain strict.
+os.environ.setdefault("AEGIS_SECURITY_ENFORCEMENT_MODE", "development")
 
 
 class _StubClientError(Exception):

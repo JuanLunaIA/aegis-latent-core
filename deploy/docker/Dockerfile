@@ -2,16 +2,20 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 #
-# Aegis Latent Core v2.4.1 — production image (Python 3.12)
+# Aegis Latent Core v3.0.1 — strict production image (Python 3.12)
 #
-# Build:  docker build -f deploy/docker/Dockerfile -t aegis-latent-core:2.4.1 .
-# Run:    docker run -p 8080:8080 --env-file .env aegis-latent-core:2.4.1
+# Build: docker build -f deploy/docker/Dockerfile -t aegis-latent-core:3.0.1 .
+# Run with host-provided profiles and bounded privileges:
+# docker run --read-only --cap-drop=ALL --security-opt no-new-privileges=true \
+#   --security-opt seccomp=/etc/aegis/seccomp.json \
+#   --security-opt apparmor=aegis-latent-core \
+#   --tmpfs /tmp:rw,noexec,nosuid,size=64m -p 8080:8080 \
+#   --env-file .env -v /var/lib/aegis:/data aegis-latent-core:3.0.1
 #
 # Required env vars:
 #   AEGIS_BACKEND_API_KEY   — upstream LLM API key
 #   AEGIS_API_KEYS          — comma-separated proxy client keys
-#   AEGIS_SIGNING_KEY       — HMAC-SHA256 key for audit chain (generate with:
-#                             python -c 'import secrets; print(secrets.token_hex(32))')
+#   AEGIS_SIGNING_KEY       — dedicated strong signing key, at least 32 bytes
 #
 # Optional:
 #   AEGIS_PROVIDER          — openai | anthropic | gemini | openrouter (default: openai)
@@ -43,8 +47,8 @@ RUN pip install --no-cache-dir ".[storage-sqlite]"
 FROM python:3.12-slim
 
 LABEL org.opencontainers.image.title="Aegis Latent Core" \
-      org.opencontainers.image.version="2.4.1" \
-      org.opencontainers.image.description="Enterprise LLM proxy with cryptographic audit chain" \
+      org.opencontainers.image.version="3.0.1" \
+      org.opencontainers.image.description="Strict LLM gateway with durable signed forensic evidence" \
       org.opencontainers.image.licenses="AGPL-3.0"
 
 # Non-root user — principle of least privilege
@@ -60,6 +64,7 @@ COPY --from=builder /usr/local /usr/local
 COPY aegis ./aegis
 COPY aegis_server ./aegis_server
 COPY integrations ./integrations
+COPY deploy/seccomp/aegis.json /etc/aegis/seccomp.json
 
 # Persistent data directory — mount a volume here in production
 RUN mkdir -p /data && chown aegis:aegis /data
@@ -69,14 +74,19 @@ USER aegis
 # Runtime defaults (all overridable via env vars or --env-file)
 ENV AEGIS_LOG_LEVEL=INFO \
     AEGIS_WAL_PATH=/data/aegis.wal.jsonl \
-    AEGIS_RATE_LIMIT_BACKEND=memory \
+    AEGIS_SECURITY_ENFORCEMENT_MODE=strict \
+    AEGIS_REQUIRE_DURABLE_EVIDENCE=true \
+    AEGIS_REQUIRE_DISTRIBUTED_LIMITER=true \
+    AEGIS_REQUIRE_LSM=true \
+    AEGIS_REQUIRE_SECCOMP=true \
+    AEGIS_RATE_LIMIT_BACKEND=redis \
     AEGIS_DEBUG_MODE=false \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
 EXPOSE 8080
 
-# Deep healthcheck using the v2.4.1 /health endpoint
+# Deep healthcheck using the v3.0.1 /health endpoint
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD python -c "\
 import urllib.request, json, sys; \

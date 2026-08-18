@@ -40,6 +40,12 @@ class EnterpriseSettings(BaseSettings):
     )
 
     # ------------------------------------------------------------------
+    # Shared runtime enforcement
+    # ------------------------------------------------------------------
+    security_enforcement_mode: Literal["strict", "development"] = Field(default="strict")
+    require_durable_evidence: bool = Field(default=True)
+
+    # ------------------------------------------------------------------
     # Server
     # ------------------------------------------------------------------
     host: str = Field(default="0.0.0.0", description="Bind address.")
@@ -258,6 +264,23 @@ class EnterpriseSettings(BaseSettings):
     # ------------------------------------------------------------------
     # Convenience
     # ------------------------------------------------------------------
+
+    def validate_runtime_invariants(self) -> None:
+        """Fail before serving when enterprise evidence controls are incomplete."""
+        if self.security_enforcement_mode != "strict":
+            return
+        if self.auth_disabled:
+            raise ValueError("strict runtime cannot disable authentication")
+        if not self.require_durable_evidence:
+            raise ValueError("strict runtime requires durable evidence")
+        if not self.get_api_keys():
+            raise ValueError("strict runtime requires at least one API key")
+        if self.signer_provider == "hmac":
+            key = self.hmac_signing_key.get_secret_value()
+            if len(key.encode("utf-8")) < 32:
+                raise ValueError("strict runtime requires an HMAC key with at least 32 bytes")
+        if self.signer_provider == "vault" and not self.vault_url:
+            raise ValueError("strict runtime requires Vault signer URL")
 
     def get_api_keys(self) -> set[str]:
         """Return the set of valid proxy API keys (stripped, non-empty)."""

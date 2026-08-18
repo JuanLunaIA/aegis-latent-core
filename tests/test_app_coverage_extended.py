@@ -323,7 +323,7 @@ def test_health_provider_name_exception_returns_unavailable(tmp_path):
 
 
 def test_chat_circuit_open_returns_503(tmp_path):
-    """When forward_json raises CircuitOpenError, 503 is returned (lines 710-715)."""
+    """Circuit-open returns 503 only after durable error evidence is committed."""
     fwd_inst = _mock_forwarder()
     fwd_inst.forward_json = AsyncMock(side_effect=CircuitOpenError("circuit open"))
 
@@ -338,6 +338,12 @@ def test_chat_circuit_open_returns_503(tmp_path):
             )
     assert resp.status_code == 503
     assert "circuit breaker" in resp.json()["detail"].lower()
+    assert resp.headers["x-aegis-evidence-status"] == "durable"
+    assert resp.headers["x-aegis-request-id"]
+    assert any(
+        node.signature_meaning == "request-response-evidence" and node.response_hash
+        for node in app.state.aegis.ledger.chain
+    )
     try:
         app.state.aegis.ledger.close()
     except Exception:
@@ -347,21 +353,28 @@ def test_chat_circuit_open_returns_503(tmp_path):
 # ── Generic exception in forward (lines 716-718) ──────────────────────────────
 
 
-def test_chat_generic_forward_error_reraises(tmp_path):
-    """When forward_json raises a generic Exception, it is re-raised (lines 716-718)."""
+def test_chat_generic_forward_error_is_durably_rejected(tmp_path):
+    """Network faults return 503 only after durable error evidence is committed."""
     fwd_inst = _mock_forwarder()
     fwd_inst.forward_json = AsyncMock(side_effect=ConnectionError("network failure"))
 
     with patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst):
         cfg = _make_settings(tmp_path)
         app = create_app(cfg)
-        with TestClient(app, raise_server_exceptions=True) as client:
-            with pytest.raises(ConnectionError):
-                client.post(
-                    "/v1/chat/completions",
-                    headers={"Authorization": "Bearer sk-valid"},
-                    json={"model": "gpt-4", "messages": [{"role": "user", "content": "hi"}]},
-                )
+        with TestClient(app, raise_server_exceptions=False) as client:
+            resp = client.post(
+                "/v1/chat/completions",
+                headers={"Authorization": "Bearer sk-valid"},
+                json={"model": "gpt-4", "messages": [{"role": "user", "content": "hi"}]},
+            )
+    assert resp.status_code == 503
+    assert resp.json()["detail"] == "Upstream forwarding failed"
+    assert resp.headers["x-aegis-evidence-status"] == "durable"
+    assert resp.headers["x-aegis-request-id"]
+    assert any(
+        node.signature_meaning == "request-response-evidence" and node.response_hash
+        for node in app.state.aegis.ledger.chain
+    )
     try:
         app.state.aegis.ledger.close()
     except Exception:
@@ -371,8 +384,8 @@ def test_chat_generic_forward_error_reraises(tmp_path):
 # ── Non-200 upstream in /v1/chat/completions (lines 722-727) ─────────────────
 
 
-def test_chat_upstream_non_200_returned_as_is(tmp_path):
-    """When upstream returns non-200, it is forwarded to client (lines 722-727)."""
+def test_chat_upstream_non_200_is_durably_forwarded(tmp_path):
+    """Upstream non-200 is forwarded only after durable evidence is committed."""
     fwd_inst = _mock_forwarder()
     error_data = {"error": {"message": "Rate limit exceeded", "type": "rate_limit_error"}}
     fwd_inst.forward_json = AsyncMock(return_value=_mock_response(status_code=429, data=error_data))
@@ -387,6 +400,12 @@ def test_chat_upstream_non_200_returned_as_is(tmp_path):
                 json={"model": "gpt-4", "messages": [{"role": "user", "content": "hi"}]},
             )
     assert resp.status_code == 429
+    assert resp.headers["x-aegis-evidence-status"] == "durable"
+    assert resp.headers["x-aegis-request-id"]
+    assert any(
+        node.signature_meaning == "request-response-evidence" and node.response_hash
+        for node in app.state.aegis.ledger.chain
+    )
     try:
         app.state.aegis.ledger.close()
     except Exception:
@@ -463,7 +482,7 @@ def test_completions_endpoint_waf_block_returns_403(tmp_path):
 
 
 def test_completions_endpoint_circuit_open_returns_503(tmp_path):
-    """POST /v1/completions with CircuitOpenError → 503."""
+    """POST /v1/completions circuit-open → durable 503."""
     fwd_inst = _mock_forwarder()
     fwd_inst.forward_json = AsyncMock(side_effect=CircuitOpenError("circuit open"))
 
@@ -477,6 +496,14 @@ def test_completions_endpoint_circuit_open_returns_503(tmp_path):
                 json={"model": "gpt-3.5-turbo-instruct", "prompt": "Hello"},
             )
     assert resp.status_code == 503
+    assert resp.headers["x-aegis-evidence-status"] == "durable"
+    assert resp.headers["x-aegis-request-id"]
+    assert any(
+        node.signature_meaning == "request-response-evidence"
+        and node.response_hash
+        and node.endpoint == "completions"
+        for node in app.state.aegis.ledger.chain
+    )
     try:
         app.state.aegis.ledger.close()
     except Exception:
@@ -484,7 +511,7 @@ def test_completions_endpoint_circuit_open_returns_503(tmp_path):
 
 
 def test_completions_endpoint_non_200_upstream(tmp_path):
-    """POST /v1/completions with non-200 upstream → upstream status returned."""
+    """POST /v1/completions non-200 → durable upstream status."""
     fwd_inst = _mock_forwarder()
     fwd_inst.forward_json = AsyncMock(
         return_value=_mock_response(status_code=400, data={"error": "bad"})
@@ -500,6 +527,14 @@ def test_completions_endpoint_non_200_upstream(tmp_path):
                 json={"model": "gpt-3.5-turbo-instruct", "prompt": "Hello"},
             )
     assert resp.status_code == 400
+    assert resp.headers["x-aegis-evidence-status"] == "durable"
+    assert resp.headers["x-aegis-request-id"]
+    assert any(
+        node.signature_meaning == "request-response-evidence"
+        and node.response_hash
+        and node.endpoint == "completions"
+        for node in app.state.aegis.ledger.chain
+    )
     try:
         app.state.aegis.ledger.close()
     except Exception:

@@ -1,204 +1,114 @@
-# Production Deployment Guide — Aegis Latent Core
+# Aegis Latent Core deployment guide
 
-> Scope: how to deploy Aegis securely in production, what guarantees it
-> provides, and **what NOT to do**. Every recommendation is informed by the
-> STRIDE threat model in
-> [`docs/audit/SECURITY_AUDIT.md`](docs/audit/SECURITY_AUDIT.md) §7. Open
-> issues are from [`docs/audit/STATE.md`](docs/audit/STATE.md) §6 — read from
-> code, not inferred.
+This guide describes the **implemented** deployment contract. It does not grant regulatory certification. A production deployment must pass the repository release gates and an environment-specific review of kernel, storage, network, identity, secrets, backup, and incident-response controls.
 
----
+## 1. Strict runtime contract
 
-## 1. Prerequisites
-
-| Component | Minimum | Note |
-|---|---|---|
-| Python | 3.11+ | 3.12 recommended |
-| CPU | 2 vCPU | data plane is async; scale horizontally with replicas |
-| RAM | 512 MB + (≈ `max_memory_nodes` × ~1 KB) | in-memory chain is a bounded deque |
-| Storage | persistent for the WAL | **not** ephemeral — see §4 |
-| Outbound network | to the LLM provider | restrict with an allowlist if possible |
-
-The Rust extension is optional. Without it, the Python path is the verified
-reference (HMAC/Ed25519 signing, pure-Python MMR). With it, ML-DSA (PQC)
-becomes available and MMR throughput improves ~3× (see
-[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) §Claim 2).
-
----
-
-## 2. Minimum secure configuration
+Production MUST use:
 
 ```env
-# Auth keys for proxy clients and for audit endpoints (read-only).
-AEGIS_API_KEYS=<client-key-1>,<client-key-2>
-AEGIS_AUDIT_API_KEYS=<read-only-audit-key>
-
-# DEDICATED HMAC key for signing the chain (do not reuse AEGIS_API_KEYS).
-# Generate: python -c 'import secrets; print(secrets.token_hex(32))'
-AEGIS_SIGNING_KEY=<64-hex>
-
-# Upstream provider.
-AEGIS_PROVIDER=openai
-AEGIS_BACKEND_API_KEY=<provider-key>
-
-# WAL on persistent disk (see §4).
-AEGIS_WAL_PATH=/var/lib/aegis/aegis.wal.jsonl
-
-# Production: never debug, never auth disabled.
-AEGIS_DEBUG_MODE=false
+AEGIS_SECURITY_ENFORCEMENT_MODE=strict
+AEGIS_REQUIRE_DURABLE_EVIDENCE=true
+AEGIS_REQUIRE_LSM=true
+AEGIS_REQUIRE_SECCOMP=true
+AEGIS_REQUIRE_DISTRIBUTED_LIMITER=true
+AEGIS_RATE_LIMIT_BACKEND=redis
+AEGIS_MAX_REQUEST_BODY_BYTES=1048576
 ```
 
-An empty `AEGIS_SIGNING_KEY` downgrades `legal_admissibility` to
-`"Compromised"` (nodes sign with an ephemeral Ed25519 key). **Why it
-matters:** without a stable key external to the host, the HMAC signature is
-forgeable server-side and the chain loses probative value against a third
-party.
+Strict startup rejects disabled authentication, missing API keys, short HMAC material, missing required kernel enforcement, configured-but-unavailable PKCS#11 signing, and invalid backend URLs. A Redis outage does not open the request path: the rate limiter raises `RateLimitBackendUnavailable` and the HTTP layer returns `503`.
 
----
+A governed successful response is permitted only after the forensic ledger has persisted and fsynced the request/response evidence. If the evidence commit fails, the request fails. The response analyzer is a bounded enrichment path and cannot weaken this gate.
 
-## 3. Deployment topologies
+## 2. Prerequisites
 
-### 3a. Behind a TLS-terminating load balancer (recommended)
-
-```mermaid
-flowchart LR
-  Internet -->|TLS| LB["Ingress / LB (TLS termination)"]
-  LB -->|private network| Aegis["Aegis (N replicas)"]
-  Aegis -->|TLS| Provider["LLM Provider"]
-  Aegis --> WAL[("Persistent WAL")]
-  Aegis -.-> Redis[("Redis (distributed rate limit)")]
-```
-
-- Aegis listens on a private interface (`AEGIS_HOST=127.0.0.1` or internal
-  network).
-- The LB/ingress handles public TLS and, if applicable, client mTLS.
-- Multiple replicas share Redis for global rate limiting and a shared storage
-  backend (Postgres) for the chain, if multi-replica durability is required.
-
-### 3b. Aegis terminates TLS directly
-
-```env
-AEGIS_SSL_CERTFILE=/etc/certs/server.crt
-AEGIS_SSL_KEYFILE=/etc/certs/server.key
-# mTLS (require a client certificate):
-AEGIS_MTLS_REQUIRED=true
-AEGIS_SSL_CA_CERTS=/etc/certs/client-ca.crt
-```
-
-> Known limitation (L2 / I-05): certs are applied to uvicorn and the upstream
-> httpx client, but the **client-certificate identity is not asserted
-> per-request**. Do not use mTLS as the sole authorization control; combine it
-> with `AEGIS_API_KEYS`.
-
-### 3c. Docker
-
-```bash
-docker run -p 8080:8080 \
-  -v /var/lib/aegis:/var/lib/aegis \
-  -e AEGIS_PROVIDER=anthropic \
-  -e AEGIS_BACKEND_API_KEY=sk-ant-xxx \
-  -e AEGIS_API_KEYS=$PROXY_KEY \
-  -e AEGIS_AUDIT_API_KEYS=$AUDIT_KEY \
-  -e AEGIS_SIGNING_KEY=$SIGNING_KEY \
-  -e AEGIS_WAL_PATH=/var/lib/aegis/aegis.wal.jsonl \
-  --memory=1g --cpus=2 \
-  aegis-latent-core:2.4.1
-```
-
-Always set `--memory`/`--cpus` (requests+limits in K8s). The chain deque is
-bounded, but the WAL grows without automatic rotation (see §4).
-
----
-
-## 4. Persistence and custody
-
-| Topic | Action | Why |
-|---|---|---|
-| WAL on persistent disk | mounted volume, not `tmpfs`/ephemeral | the chain is rebuilt from the WAL on startup; losing it breaks audit continuity |
-| WAL permissions | Aegis creates it `0o600`; maintain a dedicated owner on the filesystem | the WAL stores **hashes** (tenant_id, model, req/resp hashes), not prompt bodies — but it is still sensitive metadata |
-| WAL backup | periodic consistent snapshot | a corrupt WAL halts reconstruction and sets `fault_state` |
-| Rotation | manual/operational today (open DoS risk) | no automatic rotation; monitor WAL size |
-| Key rotation | document the event in chain-of-custody notes | rotating `AEGIS_SIGNING_KEY` invalidates HMAC verification for all prior nodes |
-| Durable multi-replica storage | `aegis_server` with Postgres/SQLite + exporter | for SOC2/HIPAA compliance with independent verification |
-
----
-
-## 5. What NOT to do (anti-patterns)
-
-| ❌ Don't do this | Consequence | Correct approach |
-|---|---|---|
-| Expose `tools/visualizer/` to a public network | the visualizer runs local commands (`git`, pytest, scanning) and reveals internal structure | localhost only — development tool |
-| `AEGIS_DEBUG_MODE=true` in production | publishes `/docs`, `/redoc`, `/openapi.json` | `false` (default) |
-| `AEGIS_AUTH_DISABLED=true` outside dev | opens the proxy and audit endpoints to unauthenticated access | blocked by validator: requires `debug_mode=true` |
-| Reuse `AEGIS_API_KEYS` as `AEGIS_SIGNING_KEY` | couples auth key rotation with chain signing | use a dedicated signing key |
-| Leave `AEGIS_SIGNING_KEY` empty | `legal_admissibility="Compromised"` | always set it |
-| WAL on ephemeral storage | chain lost on restart | persistent volume |
-| Remote Redis without TLS (I-04) | rate-limit tokens / session IDs in cleartext | `ssl=True` + `ssl_cert_reqs=required` |
-| Rely on mTLS as the sole authorization (L2) | identity not asserted per-request | combine with API keys |
-| Expose `/v1/audit/*` without `AEGIS_AUDIT_API_KEYS` | forensic metadata readable without auth | separate read-only key |
-
----
-
-## 6. Threat model (STRIDE) and posture
-
-Summary from [`SECURITY_AUDIT.md`](docs/audit/SECURITY_AUDIT.md) §7:
-
-| Class | Residual risk | Deployment mitigation |
-|---|---|---|
-| **T**ampering | WAL editable by an attacker with FS access | signing covers `prev_hash` (reordering detected); keep the key off the WAL host |
-| **I**nfo disclosure | forensic metadata in the WAL | WAL `0o600`; stores hashes, not prompts |
-| **E**levation of privilege | bypass via `auth_disabled` config | blocked unless `debug_mode` is also set |
-| **R**epudiation | HMAC is symmetric → server-side forgery possible | use PQC/Ed25519 or Vault Transit for strong non-repudiation |
-| **D**oS | rate limiter fails open on Redis outage; SSE without size limit; WAL growth | operator controls: replica limits, WAL monitoring |
-
-**Open issues to watch** (unresolved, [`STATE.md`](docs/audit/STATE.md) §6):
-`I-01` `os.fsync()` under lock without timeout (a FS hang blocks the pipeline);
-`I-02` Vault auth has no explicit timeout; `I-03` no per-statement timeouts in
-storage; `I-04` Redis TLS not enforced by default.
-
----
-
-## 7. Observability and health
-
-| Endpoint | Use |
+| Component | Required condition |
 |---|---|
-| `GET /health` | liveness + subsystem state (ledger, analyzer cache); 503 if degraded |
-| `GET /ready` | readiness; 503 until lifespan startup completes |
-| `GET /metrics` | Prometheus (requires `metrics` extra) |
-| `GET /v1/audit/integrity` | chain verification (`AEGIS_AUDIT_API_KEYS` required) |
+| Python | 3.11 or newer, matching the lockfile and CI runtime |
+| Storage | Durable filesystem or enterprise storage; WAL must not be ephemeral |
+| Signer | HMAC key with at least 32 bytes, Vault/HSM, or reviewed PQC signer |
+| Rate limiter | TLS-protected Redis in strict multi-worker deployments |
+| Kernel | Seccomp filter and enforcing AppArmor/SELinux when required by configuration |
+| Network | Explicit upstream URL, outbound policy, and application-layer egress allowlist where air-gap mode is enabled |
+| Secrets | External secret manager or protected injection path; no secrets in images, repository, or WAL |
 
-Post-deploy smoke test:
+The Python fallback is a reference implementation, not a permission to omit production controls. The Rust extension may improve selected paths, but the strict gates do not rely on an optional accelerator being present.
+
+## 3. Installation and dependency gate
 
 ```bash
-AEGIS_BASE_URL=https://your-aegis ./scripts/smoke_test.sh
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install --require-hashes -r requirements.lock
+python -m compileall -q aegis aegis_server
+pytest -q
 ```
 
----
+`requirements.txt` sets security floors and `requirements.lock` pins versions and hashes. `cryptography` is pinned at `50.0.0`, outside the audited affected range for `CVE-2026-69247` / `PYSEC-2026-3552`. Run the dependency scanner and generate the SBOM before creating an image.
 
-## 8. Supply chain (CI/CD)
+## 4. Required configuration
 
-`.github/workflows/`:
+Start from `.env.example`. At minimum, set these values through the deployment secret/configuration system:
 
-- **`ci.yml`** — Ruff (lint/format), Mypy (type check scoped to `mypy-ci.ini`),
-  Bandit + `pip-audit` (security), Rust extension build/test, Docker image build.
-- **`release.yml`** — on tag (`git tag vX.Y.Z && git push --tags`): generates
-  `.whl`/`.tar.gz`, per-artifact **SHA-256** hashes, and publishes the Release.
-- **SBOM**: `scripts/generate_sbom.sh` (JSON dependency inventory).
-- **Image signing**: Cosign in the Docker pipeline.
+```env
+AEGIS_API_KEYS=<client-key>
+AEGIS_AUDIT_API_KEYS=<read-only-audit-key>
+AEGIS_SIGNING_KEY=<dedicated-secret-with-at-least-32-bytes>
+AEGIS_BACKEND_URL=https://<approved-upstream>/v1
+AEGIS_BACKEND_API_KEY=<provider-secret>
+AEGIS_RATE_LIMIT_BACKEND=redis
+AEGIS_REDIS_URL=rediss://<redis-host>:6380/0
+AEGIS_WAL_PATH=/var/lib/aegis/aegis.wal.jsonl
+```
 
-To publish a release: update `pyproject.toml`, tag, and let GitHub Actions
-do the rest.
+The backend URL must be absolute `http` or `https`, include a hostname, and contain no userinfo. When `AEGIS_AIRGAP_MODE=true`, every outbound destination must match the canonical allowlist. URL schemes, userinfo, malformed ports, and unsupported protocols are rejected.
 
----
+## 5. Deployment topology
 
-## 9. Go-live checklist
+A recommended topology places a TLS/mTLS ingress in front of Aegis, runs Aegis on a private network, places Redis on a protected TLS network, stores WAL data on durable storage, and restricts egress to approved upstreams. Multiple Aegis replicas require a distributed rate limiter and a shared, independently durable evidence strategy; a local WAL per replica is not a substitute for centralized custody.
 
-- [ ] `AEGIS_API_KEYS`, `AEGIS_AUDIT_API_KEYS`, `AEGIS_SIGNING_KEY` (dedicated) set.
-- [ ] `AEGIS_DEBUG_MODE=false`; `AEGIS_AUTH_DISABLED` absent.
-- [ ] WAL on a persistent volume with backup; `0o600` permissions verified.
-- [ ] Public TLS (LB or Aegis direct); Redis with TLS if remote.
-- [ ] Visualizer **not** exposed publicly.
-- [ ] `GET /ready` and `GET /health` return 200; `scripts/smoke_test.sh` passes.
-- [ ] `GET /v1/audit/integrity` → `valid=true`.
-- [ ] `AEGIS_SIGNING_KEY` rotation procedure documented in chain-of-custody notes.
-- [ ] CPU/memory limits set; WAL size monitoring active.
+The process should run with a read-only root filesystem, a dedicated non-root identity, dropped Linux capabilities, a Seccomp profile, an enforcing AppArmor/SELinux profile, bounded CPU and memory, and an explicit writable mount only for the evidence path. Network namespaces, nftables, cloud egress policies, and Kubernetes NetworkPolicy remain necessary defense-in-depth; the application EgressGuard does not replace them.
+
+## 6. Request and evidence lifecycle
+
+```text
+client
+  -> authentication
+  -> bounded body read and canonicalization
+  -> WAF/session policy
+  -> Redis rate-limit decision
+  -> upstream request
+  -> durable signed forensic commit
+  -> bounded response-analysis enqueue
+  -> client response
+```
+
+Non-stream responses carry `X-Aegis-Request-ID`, `X-Aegis-Session-ID`, `X-Aegis-Analysis-Status`, and a preliminary `X-Aegis-Alert-Count`. The alert count is `0` before queued enrichment completes; authoritative enrichment records must be read from the audit/enrichment store. Stream responses are buffered under the configured bound so they cannot escape before evidence persistence.
+
+## 7. Storage, backup, and key custody
+
+The WAL is opened with owner-only permissions and fsynced on each committed node. Configure rotation and monitoring before the active WAL reaches its operational limit. Backups must preserve the original bytes, metadata, timestamps, hashes, access history, and restore-test results. A restored chain must pass `verify_integrity()` before it is accepted as evidence.
+
+Key rotation is an evidence event. Retain the key identifier and verification material needed to validate historical records, or use a reviewed key-enveloping/signing architecture. HMAC is symmetric and therefore not equivalent to third-party non-repudiation; long-lived or high-value evidence should use an HSM/Vault or a reviewed hybrid/post-quantum design.
+
+## 8. Health, telemetry, and alerts
+
+Use `/health` for liveness and `/ready` for readiness. Alert on evidence commit failure, WAL fsync failure, integrity verification failure, Redis backend failure, queue saturation, upstream circuit opening, body-limit rejection spikes, and startup rejection caused by Seccomp or LSM posture. Preserve request IDs in structured logs and traces without logging raw secrets or unnecessary prompt content.
+
+## 9. Go-live gates
+
+| Gate | Required observable |
+|---|---|
+| Configuration | `strict` mode starts with authentication, durable evidence, strong signing, bounded body, required kernel controls, and distributed limiter |
+| Supply chain | hash-checked lockfile, SBOM, vulnerability scan, license review, image digest and signing evidence |
+| Functional | full test suite passes; P0/P1 failing-path tests pass |
+| Evidence | a successful governed request produces a verifiable signed WAL record before `2xx` |
+| Fault injection | signer, WAL, Redis, upstream, queue, Seccomp, and LSM failures reject or degrade only through documented fail-closed paths |
+| Recovery | WAL backup/restore passes integrity verification and the rollback artifact is identified by digest |
+| Operations | SLOs, alerts, on-call owner, incident runbook, key rotation, backup, and restore tests exist |
+
+The reconstructed repository baseline recorded `5374 passed, 80 skipped, 47 warnings in 23.35s`. Warnings remain release telemetry and must be triaged; they are not evidence that the deployment environment satisfies the kernel or infrastructure gates.
+
+## 10. Explicit non-goals
+
+Aegis is not, by itself, a FedRAMP authorization, HIPAA compliance determination, SOC 2 opinion, EU AI Act conformity assessment, GDPR legal basis, or court-admissibility ruling. Those require organizational and jurisdiction-specific controls, independent review, and an accountable owner.

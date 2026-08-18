@@ -1,7 +1,7 @@
 """
 aegis.proxy.waf — Web Application Firewall for LLM Payloads.
 
-Two-layer detection pipeline (v3.0.0 — Tier-4 Rust acceleration):
+Two-layer detection pipeline (v3.0.1 — Tier-4 Rust acceleration):
 
 Tier-4 WAF fast path (when aegis_rust is compiled):
   - RustWaf.scan_messages() runs an Aho-Corasick SIMD pre-filter on all message

@@ -13,7 +13,7 @@ serviceAccount:
 image:
   repository: ghcr.io/juanlunia/aegis-latent-core
   pullPolicy: IfNotPresent
-  tag: "2.4.1"
+  tag: "3.0.1"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -21,8 +21,20 @@ fullnameOverride: ""
 
 # ── Aegis configuration ───────────────────────────────────────────────────────
 aegis:
-  # URL of the upstream LLM backend
+  # URL of the upstream LLM backend; validated as absolute HTTP(S) without userinfo.
   backendUrl: "https://api.openai.com"
+  # Production runtime invariants; do not override for governed traffic.
+  securityEnforcementMode: "strict"
+  requireDurableEvidence: "true"
+  requireLsm: "true"
+  requireSeccomp: "true"
+  maxRequestBodyBytes: "1048576"
+  analysisQueueSize: "2048"
+  analysisWorkerCount: "2"
+  analysisSampleRate: "1.0"
+  analysisTimeoutSeconds: "5.0"
+  rateLimitBackend: "redis"
+  redisUrl: "redis://redis:6379"
   # Reference to a Secret containing AEGIS_BACKEND_API_KEY and AEGIS_API_KEYS
   # Create with: kubectl create secret generic aegis-keys \
   #   --from-literal=AEGIS_BACKEND_API_KEY=sk-... \

@@ -42,6 +42,28 @@ spec:
           env:
             - name: AEGIS_BACKEND_URL
               value: {{ .Values.aegis.backendUrl | quote }}
+            - name: AEGIS_SECURITY_ENFORCEMENT_MODE
+              value: {{ .Values.aegis.securityEnforcementMode | quote }}
+            - name: AEGIS_REQUIRE_DURABLE_EVIDENCE
+              value: {{ .Values.aegis.requireDurableEvidence | quote }}
+            - name: AEGIS_REQUIRE_LSM
+              value: {{ .Values.aegis.requireLsm | quote }}
+            - name: AEGIS_REQUIRE_SECCOMP
+              value: {{ .Values.aegis.requireSeccomp | quote }}
+            - name: AEGIS_MAX_REQUEST_BODY_BYTES
+              value: {{ .Values.aegis.maxRequestBodyBytes | quote }}
+            - name: AEGIS_ANALYSIS_QUEUE_SIZE
+              value: {{ .Values.aegis.analysisQueueSize | quote }}
+            - name: AEGIS_ANALYSIS_WORKER_COUNT
+              value: {{ .Values.aegis.analysisWorkerCount | quote }}
+            - name: AEGIS_ANALYSIS_SAMPLE_RATE
+              value: {{ .Values.aegis.analysisSampleRate | quote }}
+            - name: AEGIS_ANALYSIS_TIMEOUT_SECONDS
+              value: {{ .Values.aegis.analysisTimeoutSeconds | quote }}
+            - name: AEGIS_RATE_LIMIT_BACKEND
+              value: {{ .Values.aegis.rateLimitBackend | quote }}
+            - name: AEGIS_REDIS_URL
+              value: {{ .Values.aegis.redisUrl | quote }}
             - name: AEGIS_FORCE_LOGPROBS
               value: {{ .Values.aegis.forceLogprobs | quote }}
             - name: AEGIS_LOG_LEVEL

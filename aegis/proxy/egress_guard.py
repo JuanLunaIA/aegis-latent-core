@@ -40,6 +40,7 @@ environments, pair with:
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 from urllib.parse import urlparse
 
@@ -63,8 +64,34 @@ class EgressGuard:
     """
 
     def __init__(self, allowed_hosts: set[str], *, enabled: bool = True) -> None:
-        self._allowed: set[str] = {h.strip().lower() for h in allowed_hosts if h.strip()}
+        self._allowed = {self._canonical_allow_entry(h) for h in allowed_hosts if h.strip()}
         self._enabled = enabled
+
+    @staticmethod
+    def _canonical_allow_entry(entry: str) -> str:
+        value = entry.strip().lower()
+        if not value or "://" in value or any(ch in value for ch in "\r\n@/?#"):
+            raise ValueError(f"invalid egress allowlist entry: {entry!r}")
+        if value.startswith("["):
+            end = value.find("]")
+            if end < 0:
+                raise ValueError(f"invalid IPv6 allowlist entry: {entry!r}")
+            host = value[1:end]
+            suffix = value[end + 1 :]
+            if suffix and (not suffix.startswith(":") or not suffix[1:].isdigit()):
+                raise ValueError(f"invalid IPv6 port entry: {entry!r}")
+            ipaddress.ip_address(host)
+            if suffix and not 1 <= int(suffix[1:]) <= 65535:
+                raise ValueError(f"invalid port in allowlist entry: {entry!r}")
+            return value
+        if value.count(":") > 1:
+            ipaddress.ip_address(value)
+            return value
+        if ":" in value:
+            host, port = value.rsplit(":", 1)
+            if not host or not port.isdigit() or not 1 <= int(port) <= 65535:
+                raise ValueError(f"invalid port in allowlist entry: {entry!r}")
+        return value
 
     @property
     def enabled(self) -> bool:
@@ -86,8 +113,17 @@ class EgressGuard:
             return
 
         parsed = urlparse(url)
+        if parsed.scheme.lower() not in {"http", "https"}:
+            raise EgressBlockedError("only http/https egress is permitted")
+        if parsed.username is not None or parsed.password is not None:
+            raise EgressBlockedError("userinfo in outbound URLs is forbidden")
         host = (parsed.hostname or "").lower()
-        port = parsed.port
+        if not host:
+            raise EgressBlockedError("outbound URL must include a hostname")
+        try:
+            port = parsed.port
+        except ValueError as exc:
+            raise EgressBlockedError("outbound URL contains an invalid port") from exc
 
         candidates = {host}
         if port:
@@ -142,15 +178,18 @@ def build_egress_guard(
     for entry in allowed_hosts_csv.split(","):
         entry = entry.strip()
         if entry:
-            allowed.add(entry.lower())
+            allowed.add(EgressGuard._canonical_allow_entry(entry))
 
     # Always allow the configured upstream
     if upstream_url:
         parsed = urlparse(upstream_url)
-        if parsed.hostname:
-            allowed.add(parsed.hostname.lower())
-            if parsed.port:
-                allowed.add(f"{parsed.hostname.lower()}:{parsed.port}")
+        if parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname:
+            raise ValueError("backend_url must be an absolute http/https URL with a hostname")
+        if parsed.username is not None or parsed.password is not None:
+            raise ValueError("backend_url must not contain URL userinfo")
+        allowed.add(EgressGuard._canonical_allow_entry(parsed.hostname))
+        if parsed.port:
+            allowed.add(EgressGuard._canonical_allow_entry(f"{parsed.hostname}:{parsed.port}"))
 
     guard = EgressGuard(allowed, enabled=True)
     logger.info(

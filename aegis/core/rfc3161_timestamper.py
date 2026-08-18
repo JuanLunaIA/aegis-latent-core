@@ -61,6 +61,7 @@ import logging
 import os
 import secrets
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,23 @@ _SHA256_OID = "2.16.840.1.101.3.4.2.1"
 _CONTENT_TYPE = "application/timestamp-query"
 _RESPONSE_TYPE = "application/timestamp-reply"
 _DEFAULT_TSA_TIMEOUT = 10
+
+
+def _validate_http_endpoint(value: str) -> str:
+    parsed = urlsplit(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("TSA URL must use http:// or https:// with a hostname")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("TSA URL must not contain userinfo")
+    if parsed.query or parsed.fragment:
+        raise ValueError("TSA URL must not contain query or fragment components")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("TSA URL port is invalid") from exc
+    if port is not None and not 1 <= port <= 65535:
+        raise ValueError("TSA URL port is outside the valid range")
+    return value
 
 
 # ── Minimal DER encoder ───────────────────────────────────────────────────────
@@ -332,7 +350,7 @@ class RFC3161Timestamper:
     ) -> None:
         if tsa_url is None:
             tsa_url = os.environ.get("AEGIS_TSA_URL", "")
-        self.tsa_url = tsa_url
+        self.tsa_url = _validate_http_endpoint(tsa_url) if tsa_url else ""
 
         if timeout is None:
             raw = os.environ.get("AEGIS_TSA_TIMEOUT", str(_DEFAULT_TSA_TIMEOUT))
@@ -511,7 +529,7 @@ class RFC3161Timestamper:
                 headers={"Content-Type": _CONTENT_TYPE},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310  # nosec B310
                 return resp.read()
 
         with httpx.Client(timeout=self.timeout) as client:

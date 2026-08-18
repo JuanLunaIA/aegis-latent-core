@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from aegis.core.lsm_guard import LSMGuard
 
 # ── _detect_sandbox ───────────────────────────────────────────────────────────
@@ -121,6 +123,24 @@ def test_check_apparmor_exception_returns_false():
     guard = LSMGuard.__new__(LSMGuard)
     with patch("os.path.exists", side_effect=OSError("permission denied")):
         assert guard._check_apparmor() is False
+
+
+# ── strict enforcement ────────────────────────────────────────────────────────
+
+
+def test_assert_enforcing_fails_when_unconfined():
+    status = type(
+        "Status",
+        (),
+        {
+            "active": False,
+            "mode": "unknown",
+            "lsm_type": type("Type", (), {"value": "none"})(),
+        },
+    )()
+    with patch.object(LSMGuard, "detect", staticmethod(lambda: status)):
+        with pytest.raises(RuntimeError, match="LSM enforcement required"):
+            LSMGuard.assert_enforcing()
 
 
 # ── verify_confinement ────────────────────────────────────────────────────────

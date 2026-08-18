@@ -13,6 +13,7 @@ import pytest
 from aegis.core.ratelimiter import (
     DistributedRateLimiter,
     InMemoryRateLimiter,
+    RateLimitBackendUnavailable,
     create_rate_limiter,
 )
 
@@ -126,15 +127,14 @@ async def test_distributed_check_limit_blocks_when_redis_returns_0():
 
 
 @pytest.mark.asyncio
-async def test_distributed_check_limit_allows_on_redis_failure(caplog):
+async def test_distributed_check_limit_rejects_on_redis_failure(caplog):
     limiter = DistributedRateLimiter(redis_url="redis://localhost:6379")
     limiter.redis = MagicMock()
     limiter.redis.eval = AsyncMock(side_effect=ConnectionError("Redis down"))
-    with caplog.at_level(logging.WARNING, logger="aegis.core.ratelimiter"):
-        result = await limiter.check_limit("user-fail")
-    # Fail-open: allow the request when Redis is unavailable
-    assert result is True
-    assert any("Redis" in m or "rate limit" in m.lower() for m in caplog.messages)
+    with caplog.at_level(logging.ERROR, logger="aegis.core.ratelimiter"):
+        with pytest.raises(RateLimitBackendUnavailable):
+            await limiter.check_limit("user-fail")
+    assert any("rate-limit" in m.lower() or "redis" in m.lower() for m in caplog.messages)
 
 
 @pytest.mark.asyncio
@@ -188,8 +188,8 @@ def test_create_rate_limiter_redis():
 
 
 @pytest.mark.asyncio
-async def test_redis_failure_logs_error_and_allows(caplog):
-    """Redis unavailability bypasses rate limiting — must be logged at ERROR level."""
+async def test_redis_failure_logs_error_and_rejects(caplog):
+    """Redis unavailability must reject the request and be logged at ERROR level."""
     redis_mock = AsyncMock()
     redis_mock.eval.side_effect = ConnectionError("Redis is down")
 
@@ -201,10 +201,8 @@ async def test_redis_failure_logs_error_and_allows(caplog):
     limiter.redis = redis_mock
 
     with caplog.at_level(logging.ERROR, logger="aegis.core.ratelimiter"):
-        result = await limiter.check_limit("session-x")
+        with pytest.raises(RateLimitBackendUnavailable):
+            await limiter.check_limit("session-x")
 
-    # Fail-open: must allow the request
-    assert result is True
-    # But must log at ERROR (not silently swallow or only warn)
     error_msgs = [r.message for r in caplog.records if r.levelno >= logging.ERROR]
-    assert any("bypass" in m.lower() or "bypassed" in m.lower() for m in error_msgs)
+    assert any("rate-limit" in m.lower() or "redis" in m.lower() for m in error_msgs)

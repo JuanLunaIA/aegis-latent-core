@@ -1,60 +1,68 @@
-# Aegis Latent Core — Docker Compose
-# Usage:
-#   cp .env.example .env && editor .env
-#   docker compose up -d
+# Aegis Latent Core 3.0.1 strict deployment
+# This compose file intentionally fails when required secrets and infrastructure
+# variables are absent. It does not provision an insecure plaintext Redis.
 #
-# To point at OpenAI:   AEGIS_BACKEND_URL=https://api.openai.com
-# To point at Ollama:   AEGIS_BACKEND_URL=http://ollama:11434
-# To point at vLLM:     AEGIS_BACKEND_URL=http://vllm:8000
+# Required before startup:
+#   AEGIS_BACKEND_URL, AEGIS_BACKEND_API_KEY, AEGIS_API_KEYS,
+#   AEGIS_AUDIT_API_KEYS, AEGIS_SIGNING_KEY, AEGIS_REDIS_URL.
 
 services:
   aegis:
-    image: ghcr.io/juanlunia/aegis-latent-core:latest
+    image: ghcr.io/juanlunia/aegis-latent-core:3.0.1
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
     restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+      - apparmor=aegis-latent-core
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
     ports:
       - "${AEGIS_PORT:-8080}:8080"
     volumes:
       - aegis-wal:/data
     environment:
-      AEGIS_BACKEND_URL: ${AEGIS_BACKEND_URL:-http://host.docker.internal:11434}
-      AEGIS_BACKEND_API_KEY: ${AEGIS_BACKEND_API_KEY:-}
-      AEGIS_API_KEYS: ${AEGIS_API_KEYS:-}
-      AEGIS_AUDIT_API_KEYS: ${AEGIS_AUDIT_API_KEYS:-}
+      AEGIS_SECURITY_ENFORCEMENT_MODE: strict
+      AEGIS_REQUIRE_DURABLE_EVIDENCE: "true"
+      AEGIS_REQUIRE_DISTRIBUTED_LIMITER: "true"
+      AEGIS_REQUIRE_LSM: "true"
+      AEGIS_REQUIRE_SECCOMP: "true"
+      AEGIS_MAX_REQUEST_BODY_BYTES: "${AEGIS_MAX_REQUEST_BODY_BYTES:-1048576}"
+      AEGIS_BACKEND_URL: ${AEGIS_BACKEND_URL:?set AEGIS_BACKEND_URL}
+      AEGIS_BACKEND_API_KEY: ${AEGIS_BACKEND_API_KEY:?set AEGIS_BACKEND_API_KEY}
+      AEGIS_API_KEYS: ${AEGIS_API_KEYS:?set AEGIS_API_KEYS}
+      AEGIS_AUDIT_API_KEYS: ${AEGIS_AUDIT_API_KEYS:?set AEGIS_AUDIT_API_KEYS}
+      AEGIS_SIGNING_KEY: ${AEGIS_SIGNING_KEY:?set AEGIS_SIGNING_KEY}
+      AEGIS_REDIS_URL: ${AEGIS_REDIS_URL:?set AEGIS_REDIS_URL}
+      AEGIS_RATE_LIMIT_BACKEND: redis
       AEGIS_WAL_PATH: /data/aegis.wal.jsonl
       AEGIS_LOG_LEVEL: ${AEGIS_LOG_LEVEL:-INFO}
       AEGIS_FORCE_LOGPROBS: ${AEGIS_FORCE_LOGPROBS:-true}
-      AEGIS_KL_ALERT_THRESHOLD: ${AEGIS_KL_ALERT_THRESHOLD:-2.0}
-      AEGIS_WEBHOOK_URL: ${AEGIS_WEBHOOK_URL:-}
+      AEGIS_DEBUG_MODE: "false"
     healthcheck:
       test:
         [
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=4)",
         ]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 15s
     networks:
       - aegis-net
-
-  # Optional: local Ollama backend
-  # ollama:
-  #   image: ollama/ollama:latest
-  #   ports: ["11434:11434"]
-  #   volumes: [ollama-models:/root/.ollama]
-  #   networks: [aegis-net]
 
 volumes:
   aegis-wal:
     driver: local
-  # ollama-models:
 
 networks:
   aegis-net:
     driver: bridge
+    internal: true

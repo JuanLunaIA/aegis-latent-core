@@ -115,7 +115,7 @@ def build_bootstrap() -> dict:
     bootstrap = {
         "project": "aegis-latent-core",
         "git_head": "1aed8ea",
-        "version": "2.4.1",
+        "version": "3.0.1",
         "code": {
             "python_files": 97,
             "rust_files": 11,
@@ -178,7 +178,7 @@ def build_bootstrap() -> dict:
                 {
                     "name": "Rust extension",
                     "status": "ok",
-                    "detail": "v3.0.0 · PQC / MMR / forwarder",
+                    "detail": "v3.0.1 · PQC / MMR / forwarder",
                 },
                 {
                     "name": "PQC signing (ML-DSA-65)",

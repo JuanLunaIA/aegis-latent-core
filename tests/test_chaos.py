@@ -256,8 +256,7 @@ class TestUpstreamTimeout:
 
 
 class TestAuditCommitChaos:
-    """Verify that background audit commit failures increment the error counter
-    and do not crash the proxy (fail-open audit policy)."""
+    """Verify that evidence failures remain observable and fail closed."""
 
     def test_commit_error_counter_accessible(self):
         from aegis.core.observability import AUDIT_COMMIT_ERRORS
@@ -265,26 +264,25 @@ class TestAuditCommitChaos:
         # Must be callable without raising.
         AUDIT_COMMIT_ERRORS.inc()
 
-    async def test_background_commit_exception_does_not_propagate(self, tmp_path):
-        """An exception in the background commit task must not surface to the caller."""
+    async def test_evidence_commit_failure_is_observable(self, tmp_path):
+        """A durable evidence failure must propagate to the governed caller."""
         from aegis.core.crypto_audit import CryptographicAuditLedger
 
-        ledger = CryptographicAuditLedger(str(tmp_path / "wal.jsonl"))
-
-        async def _failing_background():
-            raise RuntimeError("Simulated audit write failure")
-
-        # Simulate a background task that fails.
-        task = asyncio.create_task(_failing_background())
-
-        # The task will raise but since it's fire-and-forget the caller is unaffected.
-        try:
-            await asyncio.wait_for(task, timeout=1.0)
-        except RuntimeError:
-            pass  # expected — background exception must not propagate
-
-        # Proxy-level state is unaffected.
-        assert len(ledger.chain) >= 0
+        ledger = CryptographicAuditLedger(
+            str(tmp_path / "wal.jsonl"),
+            signing_key="a" * 64,
+            require_strong_signing=True,
+        )
+        with patch.object(ledger, "commit_forensic", side_effect=RuntimeError("WAL failure")):
+            with pytest.raises(RuntimeError, match="WAL failure"):
+                await asyncio.to_thread(
+                    ledger.commit_forensic,
+                    state_id="r1",
+                    request_bytes=b"{}",
+                    response_bytes=b"{}",
+                )
+        assert len(ledger.chain) == 0
+        ledger.close()
 
     def test_ledger_chain_consistent_after_wal_error(self, tmp_path, monkeypatch):
         """Chain integrity is maintained even if some WAL writes fail."""

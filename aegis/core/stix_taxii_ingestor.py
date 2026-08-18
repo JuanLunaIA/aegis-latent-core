@@ -73,6 +73,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,24 @@ _AEGIS_LABEL = "aegis-adversarial-prompt"
 _PROMPT_LABELS = {_AEGIS_LABEL, "adversarial-prompt", "jailbreak", "prompt-injection"}
 _DEFAULT_TIMEOUT = 15
 _DEFAULT_MAX_OBJECTS = 1000
+
+
+def _validate_http_endpoint(value: str) -> str:
+    parsed = urlsplit(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("TAXII URL must use http:// or https:// with a hostname")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("TAXII URL must not contain userinfo")
+    if parsed.query or parsed.fragment:
+        raise ValueError("TAXII URL must not contain query or fragment components")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("TAXII URL port is invalid") from exc
+    if port is not None and not 1 <= port <= 65535:
+        raise ValueError("TAXII URL port is outside the valid range")
+    return value
+
 
 # Regex to extract string literals from STIX patterning expressions
 # e.g.  [domain-name:value = 'evil.com']  or  [url:value MATCHES 'pattern']
@@ -310,7 +329,7 @@ class STIXTAXIIIngestor:
     ) -> None:
         if taxii_url is None:
             taxii_url = os.environ.get("AEGIS_TAXII_URL", "")
-        self.taxii_url = taxii_url.rstrip("/")
+        self.taxii_url = _validate_http_endpoint(taxii_url).rstrip("/") if taxii_url else ""
 
         if api_token is None:
             api_token = os.environ.get("AEGIS_TAXII_TOKEN", "")
@@ -491,6 +510,7 @@ class STIXTAXIIIngestor:
         return h
 
     def _get_json(self, url: str) -> dict[str, object]:
+        url = _validate_http_endpoint(url)
         try:
             import httpx
 
@@ -503,7 +523,7 @@ class STIXTAXIIIngestor:
             import urllib.request
 
             req = urllib.request.Request(url, headers=self._headers())  # noqa: S310
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310  # nosec B310
                 return json.loads(resp.read().decode())
 
     def _discover_api_root(self) -> str:

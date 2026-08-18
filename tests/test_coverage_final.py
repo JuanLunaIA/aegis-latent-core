@@ -158,6 +158,10 @@ def _seccomp_settings(tmp_path) -> AegisSettings:
     return AegisSettings(
         backend_api_key="sk-test",
         api_keys="sk-key",
+        security_enforcement_mode="strict",
+        require_lsm=False,
+        rate_limit_backend="redis",
+        signing_key="a" * 64,
         wal_path=str(tmp_path / "seccomp.wal.jsonl"),
     )
 

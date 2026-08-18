@@ -187,9 +187,11 @@ class SeccompGuard:
             self._is_enforced = True
             return True
 
-        except Exception as e:
-            logger.error("Seccomp application failed: %s. Entering degraded mode.", e)
+        except Exception as exc:
+            logger.error("Seccomp application failed: %s", exc)
             self._degraded_mode = True
+            if not self._is_sandbox:
+                raise RuntimeError("Seccomp enforcement failed outside sandbox") from exc
             return False
 
     @property

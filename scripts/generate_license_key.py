@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
-"""generate_license_key.py — HMAC-SHA256 license key generator for Aegis v2.4.1.
+"""generate_license_key.py — HMAC-SHA256 license key generator for Aegis v3.0.1.
 
 Generates cryptographically signed, self-contained trial and commercial license
 keys that embed the licensee metadata, tier, and expiry date. The key is opaque
@@ -46,6 +46,7 @@ SECURITY NOTE: The --secret value is the master HMAC key. Any party with
 this key can forge valid license keys. Keep it in a secrets manager (Vault,
 1Password, AWS Secrets Manager) and never commit it to VCS.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -76,21 +77,40 @@ TIER_CONFIGS: dict[str, dict[str, Any]] = {
     },
     "self-serve-enterprise": {
         "display": "Self-Serve Enterprise",
-        "features": ["audit", "waf", "rate_limit", "providers", "compliance_exports", "sbom", "pqc"],
+        "features": [
+            "audit",
+            "waf",
+            "rate_limit",
+            "providers",
+            "compliance_exports",
+            "sbom",
+            "pqc",
+        ],
         "max_nodes": 500_000,
         "default_days": 365,
     },
     "premium-sovereign": {
         "display": "Premium Sovereign",
-        "features": ["audit", "waf", "rate_limit", "providers", "compliance_exports", "sbom", "pqc",
-                     "fedramp", "dod_il5", "airgap", "custom_sla"],
+        "features": [
+            "audit",
+            "waf",
+            "rate_limit",
+            "providers",
+            "compliance_exports",
+            "sbom",
+            "pqc",
+            "fedramp",
+            "dod_il5",
+            "airgap",
+            "custom_sla",
+        ],
         "max_nodes": 5_000_000,
         "default_days": 365,
     },
     "oem": {
         "display": "OEM / Embedded",
         "features": ["*"],  # All features; redistribution rights in MSA
-        "max_nodes": -1,    # Unlimited
+        "max_nodes": -1,  # Unlimited
         "default_days": 365,
     },
 }
@@ -110,7 +130,9 @@ def _load_master_key(secret_arg: str | None) -> bytes:
     else:
         # Generate ephemeral key for demo purposes — warn loudly
         print("WARNING: No master key found. Generating ephemeral key.", file=sys.stderr)
-        print("WARNING: Keys generated with ephemeral keys cannot be verified later.", file=sys.stderr)
+        print(
+            "WARNING: Keys generated with ephemeral keys cannot be verified later.", file=sys.stderr
+        )
         print(f"WARNING: Store a persistent key at: {_DEFAULT_MASTER_KEY_FILE}", file=sys.stderr)
         raw = secrets.token_hex(32)
     try:
@@ -211,7 +233,11 @@ def _print_key_info(payload: dict[str, Any], key: str) -> None:
     print(f"  Tier:          {config.get('display', payload['tier'])}")
     print(f"  Issued:        {iat_dt}")
     print(f"  Expires:       {exp_dt} ({days_remaining} days remaining)")
-    print(f"  Max nodes:     {payload['max_nodes']:,}" if payload['max_nodes'] > 0 else "  Max nodes:     Unlimited")
+    print(
+        f"  Max nodes:     {payload['max_nodes']:,}"
+        if payload["max_nodes"] > 0
+        else "  Max nodes:     Unlimited"
+    )
     print(f"  Features:      {', '.join(payload['feat'])}")
     print()
     print("  KEY (set as AEGIS_LICENSE_KEY environment variable):")
@@ -223,9 +249,10 @@ def _print_key_info(payload: dict[str, Any], key: str) -> None:
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Aegis v2.4.1 License Key Generator / Verifier",
+        description="Aegis v3.0.1 License Key Generator / Verifier",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sub = parser.add_subparsers(dest="command")
@@ -233,8 +260,14 @@ def main() -> None:
     gen = sub.add_parser("generate", aliases=["gen", "g"], help="Generate a new license key")
     gen.add_argument("--org", required=True, help="Licensee organization name")
     gen.add_argument("--tier", required=True, choices=list(TIER_CONFIGS), help="License tier")
-    gen.add_argument("--days", type=int, default=None, help="Days until expiry (default: tier-specific)")
-    gen.add_argument("--secret", default=None, help="Master HMAC key (hex). Default: $AEGIS_LICENSE_MASTER_KEY or ~/.aegis/license_master_key.hex")
+    gen.add_argument(
+        "--days", type=int, default=None, help="Days until expiry (default: tier-specific)"
+    )
+    gen.add_argument(
+        "--secret",
+        default=None,
+        help="Master HMAC key (hex). Default: $AEGIS_LICENSE_MASTER_KEY or ~/.aegis/license_master_key.hex",
+    )
     gen.add_argument("--id", default=None, help="Custom license ID")
 
     ver = sub.add_parser("verify", aliases=["v"], help="Verify an existing license key")
@@ -246,7 +279,9 @@ def main() -> None:
     sub.add_parser("gen-master-key", help="Generate a new master HMAC key for secure storage")
 
     # Also support positional --verify shorthand
-    parser.add_argument("--verify", metavar="KEY", default=None, help="Verify a license key (shorthand)")
+    parser.add_argument(
+        "--verify", metavar="KEY", default=None, help="Verify a license key (shorthand)"
+    )
     parser.add_argument("--org", default=None)
     parser.add_argument("--tier", default=None, choices=list(TIER_CONFIGS))
     parser.add_argument("--days", type=int, default=None)
@@ -263,7 +298,7 @@ def main() -> None:
         _print_key_info(payload, key)
 
     elif args.command in ("verify", "v") or args.verify:
-        key = (args.key if args.command in ("verify", "v") else args.verify)
+        key = args.key if args.command in ("verify", "v") else args.verify
         valid, payload, err = verify_key(key, args.secret)
         if valid:
             print("\n✓ License key is VALID\n")
@@ -276,7 +311,9 @@ def main() -> None:
         print("\nAvailable Aegis license tiers:\n")
         for slug, cfg in TIER_CONFIGS.items():
             print(f"  {slug:30s} {cfg['display']}")
-            print(f"    Features:  {', '.join(cfg['features'][:5])}{',...' if len(cfg['features']) > 5 else ''}")
+            print(
+                f"    Features:  {', '.join(cfg['features'][:5])}{',...' if len(cfg['features']) > 5 else ''}"
+            )
             max_nodes_str = "Unlimited" if cfg["max_nodes"] < 0 else f"{cfg['max_nodes']:,}"
             print(f"    Max nodes: {max_nodes_str}")
             print(f"    Default:   {cfg['default_days']} days")
@@ -285,7 +322,9 @@ def main() -> None:
     elif args.command == "gen-master-key":
         key_hex = secrets.token_hex(32)
         print("\n# Aegis License Master Key (64 hex chars / 32 bytes / 256 bits)")
-        print("# Store in: Vault, 1Password, AWS Secrets Manager, or ~/.aegis/license_master_key.hex (chmod 600)")
+        print(
+            "# Store in: Vault, 1Password, AWS Secrets Manager, or ~/.aegis/license_master_key.hex (chmod 600)"
+        )
         print("# NEVER commit to VCS.")
         print()
         print(key_hex)

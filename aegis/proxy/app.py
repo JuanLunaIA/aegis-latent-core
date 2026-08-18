@@ -12,6 +12,8 @@ import uuid
 from collections import OrderedDict
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from secrets import randbelow
 from threading import Lock
 from typing import Annotated, Any
 
@@ -30,11 +32,11 @@ from aegis.core.hsm import HSMSigningBackend
 from aegis.core.normalization import canonical_normalize
 from aegis.core.pci_detector import PCIScrubber
 from aegis.core.phi_deidentifier import PHIDeidentifier
-from aegis.core.ratelimiter import create_rate_limiter
+from aegis.core.ratelimiter import RateLimitBackendUnavailable, create_rate_limiter
 from aegis.core.secrets import VaultManager
 from aegis.core.session_manager import SessionLifecycleManager
 from aegis.core.waf_session import WAFSessionTracker
-from aegis.proxy.analyzer import ResponseAnalysis, ResponseAnalyzer
+from aegis.proxy.analyzer import ResponseAnalyzer
 from aegis.proxy.attestation_api import build_attestation_router
 from aegis.proxy.audit_api import build_audit_router
 from aegis.proxy.dependencies import validate_proxy_auth
@@ -78,6 +80,42 @@ def _spawn_background(coro: Any) -> asyncio.Task[Any]:
 # Mirrors the cap in SessionLifecycleManager to prevent unbounded memory growth
 # when callers omit the x-session-id header (UUID-per-request path).
 _MAX_ANALYZER_SESSIONS = 4_096
+
+
+class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
+    """Reject oversized bodies before JSON parsing or provider forwarding."""
+
+    def __init__(self, app: Any, max_body_bytes: int) -> None:
+        super().__init__(app)
+        self._max_body_bytes = max_body_bytes
+
+    async def dispatch(self, request: Request, call_next: Any) -> Response:
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                declared = int(content_length)
+            except ValueError:
+                return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length"})
+            if declared < 0 or declared > self._max_body_bytes:
+                return JSONResponse(status_code=413, content={"detail": "Request body too large"})
+        received = 0
+        original_receive = request.receive
+
+        async def bounded_receive() -> dict[str, Any]:
+            nonlocal received
+            message = await original_receive()
+            if message.get("type") == "http.request":
+                chunk = message.get("body", b"")
+                received += len(chunk)
+                if received > self._max_body_bytes:
+                    raise HTTPException(status_code=413, detail="Request body too large")
+            return message
+
+        request._receive = bounded_receive  # type: ignore[attr-defined]
+        try:
+            return await call_next(request)
+        except HTTPException as exc:
+            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 class RequestSmugglingProtectionMiddleware(BaseHTTPMiddleware):
@@ -128,6 +166,68 @@ class _AlertStore:
         async with self._lock:
             items = list(self._buf)
         return items[-n:]
+
+
+@dataclass(frozen=True)
+class _AnalysisJob:
+    request_id: str
+    session_id: str
+    model: str
+    logprobs_data: list[Any]
+    sampling_params: dict[str, Any]
+    raw_body: bytes
+    response_bytes: bytes
+    tenant_id: str
+    phi_scrubbed: bool
+    scrub_method: str
+    analysis_timeout_seconds: float
+
+
+async def _analysis_worker(state: _AppState) -> None:
+    """Run optional response enrichment outside the client-visible request path."""
+    while True:
+        job = await state.analysis_queue.get()
+        try:
+            analyzer = state.get_analyzer(job.session_id)
+            analysis = await asyncio.wait_for(
+                asyncio.to_thread(
+                    analyzer.analyze,
+                    request_id=job.request_id,
+                    model=job.model,
+                    logprobs_data=job.logprobs_data,
+                    sampling_params=job.sampling_params,
+                ),
+                timeout=job.analysis_timeout_seconds,
+            )
+            enrichment_params = dict(analysis.sampling_params)
+            enrichment_params.update(
+                {
+                    "analysis_of": job.request_id,
+                    "alerts": len(analysis.alerts),
+                    "analysis_status": "complete",
+                }
+            )
+            await asyncio.to_thread(
+                state.ledger.commit_state,
+                state_id=f"{job.request_id}:analysis",
+                entropy=analysis.mean_entropy,
+                payload=job.response_bytes[:65_536],
+                tenant_id=job.tenant_id,
+                sampling_params=enrichment_params,
+                phi_scrubbed=job.phi_scrubbed,
+                scrub_method=job.scrub_method,
+                signer_name=job.session_id,
+                signature_meaning="analysis-enrichment",
+            )
+            for alert in analysis.alerts:
+                await state.alert_store.append(alert)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            observability.ANALYSIS_ERRORS.inc()
+            logger.exception("asynchronous response analysis failed")
+        finally:
+            state.analysis_queue.task_done()
 
 
 # FIX-APP-01: Bounded LRU cache for ResponseAnalyzer instances.
@@ -222,6 +322,8 @@ class _AppState:
     # FIX-APP-01: replaced plain dict with bounded LRU cache.
     analyzers: _BoundedAnalyzerCache
     alert_store: _AlertStore
+    analysis_queue: asyncio.Queue[_AnalysisJob]
+    analysis_workers: list[asyncio.Task[Any]]
     proxy_auth: ProxyKeyAuth
     audit_auth: AuditKeyAuth
     settings: AegisSettings
@@ -453,6 +555,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     # cfg injected so ResponseAnalyzer reads thresholds from config.
     state.analyzers = _BoundedAnalyzerCache(maxsize=_MAX_ANALYZER_SESSIONS, cfg=cfg)
     state.alert_store = _AlertStore()
+    state.analysis_queue = asyncio.Queue(maxsize=cfg.analysis_queue_size)
+    state.analysis_workers = []
     state.proxy_auth = ProxyKeyAuth(cfg)
     state.audit_auth = AuditKeyAuth(cfg)
     state.waf = AegisWAF(strict_mode=cfg.waf_strict_mode)
@@ -478,9 +582,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         if _hsm_backend.available:
             logger.info("HSM/PKCS#11 signing enabled (library=%s)", cfg.pkcs11_library_path)
         else:
+            if cfg.security_enforcement_mode == "strict":
+                raise RuntimeError(
+                    "strict runtime cannot fall back from configured PKCS#11 signing backend"
+                )
             logger.warning(
-                "HSM/PKCS#11 library configured (%s) but backend not available; "
-                "falling back to HMAC-SHA256 signing.",
+                "HSM/PKCS#11 library configured (%s) but backend not available in development mode",
                 cfg.pkcs11_library_path,
             )
 
@@ -499,6 +606,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         max_memory_nodes=cfg.max_memory_nodes,
         max_wal_bytes=cfg.max_wal_bytes,
         hsm_backend=_hsm_backend,
+        require_strong_signing=cfg.security_enforcement_mode == "strict",
     )
     state.ratelimiter = create_rate_limiter(cfg)
 
@@ -521,6 +629,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        cfg.validate_runtime_invariants()
         logging.basicConfig(
             level=getattr(logging, cfg.log_level),
             format="%(asctime)s %(levelname)s %(name)s — %(message)s",
@@ -534,28 +643,25 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         # initialised its threads and file descriptors we lock the process down.
         # See the "Seccomp lockdown" block below and seccomp_guard.py.
 
-        # LSM guard runs in advisory mode — a missing or inactive LSM profile
-        # is logged as a WARNING, never a fatal error.
-        # Rationale: most container, cloud, and development environments do not
-        # have AppArmor/SELinux profiles loaded for arbitrary Python processes.
-        # Crashing on startup prevents deployment in any such environment.
-        # Operators who require hard LSM enforcement MUST validate the profile
-        # externally (e.g. `aa-status`, `getenforce`) before starting Aegis.
         lsm = None
         try:
             from aegis.core.lsm_guard import LSMGuard
 
             lsm = LSMGuard()
+            if cfg.security_enforcement_mode == "strict" and cfg.require_lsm:
+                lsm.assert_enforcing()
             if not lsm.verify_confinement():
-                logger.warning(
-                    "LSM confinement NOT detected (AppArmor/SELinux profile absent or inactive). "
-                    "Aegis is running in DAC-only mode. "
-                    "For hardened deployments, load an LSM profile before starting the server."
-                )
+                if cfg.security_enforcement_mode == "strict" and cfg.require_lsm:
+                    raise RuntimeError(
+                        "strict runtime requires active AppArmor/SELinux confinement"
+                    )
+                logger.warning("LSM confinement unavailable; development runtime continues")
             else:
                 logger.info("LSM confinement verified — AppArmor/SELinux profile active.")
         except Exception as exc:
-            logger.warning("LSM module unavailable (%s). Continuing in degraded mode.", exc)
+            if cfg.security_enforcement_mode == "strict" and cfg.require_lsm:
+                raise RuntimeError(f"LSM enforcement required but unavailable: {exc}") from exc
+            logger.warning("LSM module unavailable in development runtime: %s", exc)
 
         cfg.wal_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -589,6 +695,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         state.forwarder = LLMForwarder(forwarder_cfg, provider=provider, egress_guard=egress_guard)
         await state.forwarder.start()
         state.sessions = SessionLifecycleManager(max_sessions=4_096)
+        state.analysis_workers = [
+            asyncio.create_task(_analysis_worker(state), name=f"aegis-analysis-{index}")
+            for index in range(cfg.analysis_worker_count)
+        ]
 
         # I-05: wire mTLS identity validation when the operator enables it.
         # Without this block state.mtls_auth stays None and the mTLS code path
@@ -623,21 +733,21 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
             guard = SeccompGuard()
             if not guard.apply_filter():
-                if not guard.is_sandbox:
-                    raise RuntimeError(
-                        "CRITICAL: Seccomp enforcement failed in non-sandbox environment."
-                    )
-                logger.warning(
-                    "Seccomp filter could not be applied (degraded mode - sandbox detected)"
-                )
+                if cfg.security_enforcement_mode == "strict" and cfg.require_seccomp:
+                    raise RuntimeError("strict runtime requires an active seccomp filter")
+                logger.warning("Seccomp unavailable; development runtime continues")
         except Exception as exc:
-            if guard is not None and not guard.is_sandbox:
-                raise RuntimeError(f"CRITICAL: Seccomp initialization failed: {exc}") from exc
-            logger.warning("Seccomp enforcement skipped: %s", exc)
+            if cfg.security_enforcement_mode == "strict" and cfg.require_seccomp:
+                raise RuntimeError(f"Seccomp enforcement required but unavailable: {exc}") from exc
+            logger.warning("Seccomp unavailable in development runtime: %s", exc)
 
         app.state.aegis = state
         yield
 
+        for worker in state.analysis_workers:
+            worker.cancel()
+        if state.analysis_workers:
+            await asyncio.gather(*state.analysis_workers, return_exceptions=True)
         await state.forwarder.stop()
         await state.ratelimiter.close()
         state.sessions.close()
@@ -669,6 +779,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             allow_headers=["*"],
         )
 
+    app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=cfg.max_request_body_bytes)
     app.add_middleware(RequestSmugglingProtectionMiddleware)
 
     dmz_networks = cfg.get_dmz_networks()
@@ -690,29 +801,19 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             """Prometheus metrics endpoint. Available when prometheus-client is installed."""
             return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
-    async def _commit_and_alert(
+    async def _commit_evidence(
         rid: str,
         sid: str,
-        analysis: ResponseAnalysis,
         raw_body: bytes,
-        request_start: float = 0.0,
+        response_bytes: bytes,
+        model: str,
+        request_start: float,
+        response_complete: bool,
         phi_scrubbed: bool = False,
         scrub_method: str = "",
-        signer_name: str = "",
-        signature_meaning: str = "",
+        endpoint: str = "chat.completions",
     ) -> None:
-        """Commit one audit node and fire alerts.
-
-        Fail-open policy: audit storage failures are logged as ERROR and
-        counted (aegis_audit_commit_errors_total) but do NOT propagate to
-        the caller. The proxy continues serving. Callers must monitor the
-        error counter; /health reflects ledger._fault_state for degraded
-        posture detection.
-
-        Privacy: when cfg.pii_redact_tenant_id is True the session/user
-        identifier is replaced with its SHA-256 prefix before being written
-        to the WAL. This makes the WAL GDPR-pseudonymous for tenant IDs.
-        """
+        """Commit mandatory request-response evidence before any terminal response."""
         # PII redaction: replace tenant_id with a one-way hash prefix when
         # the operator has enabled it. The full session_id is retained in
         # memory for analysis; only the durable WAL record is pseudonymous.
@@ -723,35 +824,115 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         commit_start = time.perf_counter()
         try:
-            # Run the synchronous ledger commit (which calls os.fsync) in a
-            # thread pool so the event loop is not stalled during disk I/O.
-            # The ledger's internal threading.Lock makes this thread-safe.
+            # The ledger remains synchronous by design; to_thread preserves
+            # event-loop availability while this durability gate is awaited.
             await asyncio.to_thread(
-                state.ledger.commit_state,
+                state.ledger.commit_forensic,
                 state_id=rid,
-                entropy=analysis.mean_entropy,
-                payload=raw_body[:65536],
+                request_bytes=raw_body,
+                response_bytes=response_bytes,
+                entropy=0.0,
                 tenant_id=audit_sid,
-                sampling_params=analysis.sampling_params,
+                model=model,
+                endpoint=endpoint,
+                sampling_params={
+                    "evidence_status": "durable",
+                    "response_complete": response_complete,
+                },
                 phi_scrubbed=phi_scrubbed,
                 scrub_method=scrub_method,
-                signer_name=signer_name,
-                signature_meaning=signature_meaning,
+                signer_name=sid,
+                signature_meaning="request-response-evidence",
             )
             commit_elapsed = time.perf_counter() - commit_start
             observability.AUDIT_COMMIT_DURATION.observe(commit_elapsed)
             observability.AUDIT_CHAIN_NODES.set(len(state.ledger.chain))
-            if request_start > 0.0:
-                observability.AUDIT_COMMIT_LAG.observe(time.perf_counter() - request_start)
-            for alert in analysis.alerts:
-                await state.alert_store.append(alert)
+            observability.AUDIT_COMMIT_LAG.observe(time.perf_counter() - request_start)
         except Exception as exc:
             observability.AUDIT_COMMIT_ERRORS.inc()
-            logger.error(
-                "Audit commit failed (fail-open: proxy continues serving). "
-                "Monitor aegis_audit_commit_errors_total and /health. Error: %s",
-                exc,
+            logger.exception("mandatory durable evidence commit failed")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Durable evidence unavailable; governed request rejected",
+            ) from exc
+
+    async def _durable_error_response(
+        *,
+        request_id: str,
+        session_id: str,
+        raw_body: bytes,
+        model: str,
+        request_start: float,
+        status_code: int,
+        content: bytes,
+        endpoint: str = "chat.completions",
+    ) -> Response:
+        """Persist an error response before exposing it to the caller."""
+        await _commit_evidence(
+            request_id,
+            session_id,
+            raw_body,
+            content,
+            model,
+            request_start,
+            response_complete=True,
+            endpoint=endpoint,
+        )
+        error_response = Response(
+            content=content,
+            status_code=status_code,
+            media_type="application/json",
+        )
+        error_response.headers.update(
+            {
+                "X-Aegis-Request-ID": request_id,
+                "X-Aegis-Session-ID": session_id,
+                "X-Aegis-Evidence-Status": "durable",
+                "X-Aegis-Analysis-Status": "not-applicable",
+            }
+        )
+        return error_response
+
+    def _enqueue_analysis(
+        rid: str,
+        sid: str,
+        model: str,
+        logprobs_data: list[Any],
+        sampling_params: dict[str, Any],
+        raw_body: bytes,
+        response_bytes: bytes,
+        phi_scrubbed: bool,
+        scrub_method: str,
+    ) -> bool:
+        """Submit optional response enrichment without weakening evidence integrity."""
+        if (
+            cfg.analysis_sample_rate <= 0.0
+            or randbelow(1_000_000) / 1_000_000 > cfg.analysis_sample_rate
+        ):
+            return False
+        try:
+            state.analysis_queue.put_nowait(
+                _AnalysisJob(
+                    request_id=rid,
+                    session_id=sid,
+                    model=model,
+                    logprobs_data=logprobs_data,
+                    sampling_params=sampling_params,
+                    raw_body=raw_body,
+                    response_bytes=response_bytes,
+                    tenant_id=hashlib.sha256(sid.encode()).hexdigest()[:16]
+                    if cfg.pii_redact_tenant_id
+                    else sid,
+                    phi_scrubbed=phi_scrubbed,
+                    scrub_method=scrub_method,
+                    analysis_timeout_seconds=cfg.analysis_timeout_seconds,
+                )
             )
+            return True
+        except asyncio.QueueFull:
+            observability.ANALYSIS_QUEUE_REJECTIONS.inc()
+            logger.warning("response analysis queue full; durable evidence remains complete")
+            return False
 
     @app.get("/health")
     async def health() -> JSONResponse:
@@ -876,14 +1057,20 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 detail=f"Behavioral WAF: {session_waf.reason}",
             )
 
-        if not await state.ratelimiter.check_limit(session_id):
+        try:
+            allowed_by_rate = await state.ratelimiter.check_limit(session_id)
+        except RateLimitBackendUnavailable as exc:
+            observability.RATELIMIT_BACKEND_ERRORS.inc()
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Rate-limit backend unavailable; request rejected",
+            ) from exc
+        if not allowed_by_rate:
             observability.RATELIMIT_REJECTIONS.inc()
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Rate limit exceeded for this session",
             )
-
-        analyzer = state.get_analyzer(session_id)
 
         if not hasattr(state, "forwarder") or state.forwarder is None:
             raise HTTPException(
@@ -900,64 +1087,54 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             body["top_logprobs"] = cfg.top_logprobs
 
         if body.get("stream", False):
-
-            async def _stream_chat() -> AsyncIterator[bytes]:
-                accumulated: list = []
-                upstream_done = False
-                try:
-                    async for raw, parsed in state.forwarder.stream_sse(
-                        "/v1/chat/completions", body
-                    ):
-                        if raw.strip() == b"data: [DONE]":
-                            upstream_done = True
-                            yield b"data: [DONE]\n\n"
-                            continue
-                        if raw.startswith(b"data:"):
-                            yield raw if raw.endswith(b"\n") else raw + b"\n"
-                        elif raw.strip():
-                            yield b"data: " + raw + b"\n"
-
-                        if parsed:
-                            lp = parsed.get("choices", [{}])[0].get("logprobs")
-                            if lp and lp.get("content"):
-                                accumulated.extend(lp["content"])
-
-                    if not upstream_done:
-                        yield b"data: [DONE]\n\n"
-                finally:
-                    # Commit the audit node even when the client disconnects
-                    # mid-stream: asyncio raises GeneratorExit/CancelledError at
-                    # the yield above, so any post-loop commit would be skipped,
-                    # leaving partially-delivered responses out of the audit
-                    # chain. The commit covers exactly what was accumulated.
-                    # Scheduled via _spawn_background so it survives cancellation
-                    # of this generator's task on disconnect.
-                    logprobs = (
-                        _extract_logprobs({"choices": [{"logprobs": {"content": accumulated}}]})
-                        if accumulated
-                        else None
-                    )
-                    analysis = analyzer.analyze(
-                        request_id=request_id,
-                        model=body.get("model", "unknown"),
-                        logprobs_data=logprobs,
-                        sampling_params={"temperature": body.get("temperature")},
-                    )
-                    _spawn_background(
-                        _commit_and_alert(
-                            request_id,
-                            session_id,
-                            analysis,
-                            raw_body,
-                            request_start,
-                            phi_scrubbed=_phi_scrubbed,
-                            scrub_method=_scrub_method,
-                            signer_name=session_id,
-                            signature_meaning="authored",
-                        )
-                    )
-
-            return StreamingResponse(_stream_chat(), media_type="text/event-stream")
+            buffered_chunks: list[bytes] = []
+            accumulated: list[Any] = []
+            upstream_done = False
+            async for raw, parsed in state.forwarder.stream_sse("/v1/chat/completions", body):
+                if raw.strip() == b"data: [DONE]":
+                    upstream_done = True
+                    buffered_chunks.append(b"data: [DONE]\n\n")
+                    continue
+                chunk = raw if raw.startswith(b"data:") else b"data: " + raw
+                buffered_chunks.append(chunk if chunk.endswith(b"\n") else chunk + b"\n")
+                if parsed:
+                    lp = parsed.get("choices", [{}])[0].get("logprobs")
+                    if lp and lp.get("content"):
+                        accumulated.extend(lp["content"])
+            if not upstream_done:
+                buffered_chunks.append(b"data: [DONE]\n\n")
+            response_bytes = b"".join(buffered_chunks)
+            await _commit_evidence(
+                request_id,
+                session_id,
+                raw_body,
+                response_bytes,
+                body.get("model", "unknown"),
+                request_start,
+                response_complete=upstream_done,
+                phi_scrubbed=_phi_scrubbed,
+                scrub_method=_scrub_method,
+            )
+            queued = _enqueue_analysis(
+                request_id,
+                session_id,
+                body.get("model", "unknown"),
+                accumulated,
+                {"temperature": body.get("temperature")},
+                raw_body,
+                response_bytes,
+                _phi_scrubbed,
+                _scrub_method,
+            )
+            return StreamingResponse(
+                iter(buffered_chunks),
+                media_type="text/event-stream",
+                headers={
+                    "X-Aegis-Request-ID": request_id,
+                    "X-Aegis-Evidence-Status": "durable",
+                    "X-Aegis-Analysis-Status": "queued" if queued else "not-sampled",
+                },
+            )
 
         forward_timer = observability.StageTimer()
         try:
@@ -965,15 +1142,29 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 "aegis.forward", provider=cfg.provider, endpoint="chat.completions"
             ):
                 upstream = await state.forwarder.forward_json("/v1/chat/completions", body)
-        except CircuitOpenError as exc:
+        except CircuitOpenError:
             observability.FORWARD_ERRORS.labels(stage="circuit_open").inc()
-            raise HTTPException(
+            return await _durable_error_response(
+                request_id=request_id,
+                session_id=session_id,
+                raw_body=raw_body,
+                model=body.get("model", "unknown"),
+                request_start=request_start,
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Upstream temporarily unavailable (circuit breaker OPEN)",
-            ) from exc
+                content=b'{"detail":"Upstream temporarily unavailable (circuit breaker OPEN)"}',
+            )
         except Exception:
             observability.FORWARD_ERRORS.labels(stage="network").inc()
-            raise
+            logger.exception("upstream forwarding failed")
+            return await _durable_error_response(
+                request_id=request_id,
+                session_id=session_id,
+                raw_body=raw_body,
+                model=body.get("model", "unknown"),
+                request_start=request_start,
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content=b'{"detail":"Upstream forwarding failed"}',
+            )
         forward_timer.record("forward")
 
         if upstream.status_code != 200:
@@ -982,56 +1173,66 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 endpoint="chat_completions",
                 status_class=f"{upstream.status_code // 100}xx",
             ).inc()
-            return Response(content=upstream.content, status_code=upstream.status_code)
+            return await _durable_error_response(
+                request_id=request_id,
+                session_id=session_id,
+                raw_body=raw_body,
+                model=body.get("model", "unknown"),
+                request_start=request_start,
+                status_code=upstream.status_code,
+                content=upstream.content,
+            )
 
         resp_json = upstream.json()
         # PHI de-identification on the hot response path: scrub before returning to client.
         resp_json = _apply_phi_scrub_response(resp_json, state)
         # PCI-DSS cardholder-data scrubbing on the hot response path.
         resp_json = _apply_pci_scrub_response(resp_json, state)
-        analysis = analyzer.analyze(
-            request_id=request_id,
-            model=body.get("model", "unknown"),
-            logprobs_data=_extract_logprobs(resp_json),
-            sampling_params={"temperature": body.get("temperature")},
-        )
-
-        _spawn_background(
-            _commit_and_alert(
-                request_id,
-                session_id,
-                analysis,
-                raw_body,
-                request_start,
-                phi_scrubbed=_phi_scrubbed,
-                scrub_method=_scrub_method,
-                signer_name=session_id,
-                signature_meaning="authored",
-            )
-        )
-
-        observability.REQUEST_TOTAL.labels(
-            method="POST", endpoint="chat_completions", status_class="2xx"
-        ).inc()
-        # Total end-to-end latency (client-visible). Background commit is NOT
-        # included here — it runs after the response is returned, proving the
-        # "zero forensic latency" claim is measurable via separate metrics.
-        observability.REQUEST_DURATION.labels(stage="total").observe(
-            time.perf_counter() - request_start
-        )
-
-        trace_id = observability.current_trace_id()
         resp_content = (
             json.dumps(resp_json).encode()
             if (state._phi_scrubber or state._pci_scrubber)
             else upstream.content
         )
+        await _commit_evidence(
+            request_id,
+            session_id,
+            raw_body,
+            resp_content,
+            body.get("model", "unknown"),
+            request_start,
+            response_complete=True,
+            phi_scrubbed=_phi_scrubbed,
+            scrub_method=_scrub_method,
+        )
+        queued = _enqueue_analysis(
+            request_id,
+            session_id,
+            body.get("model", "unknown"),
+            _extract_logprobs(resp_json),
+            {"temperature": body.get("temperature")},
+            raw_body,
+            resp_content,
+            _phi_scrubbed,
+            _scrub_method,
+        )
+
+        observability.REQUEST_TOTAL.labels(
+            method="POST", endpoint="chat_completions", status_class="2xx"
+        ).inc()
+        # Total end-to-end latency includes the mandatory evidence gate.
+        observability.REQUEST_DURATION.labels(stage="total").observe(
+            time.perf_counter() - request_start
+        )
+
+        trace_id = observability.current_trace_id()
         resp = Response(content=resp_content, status_code=200)
         resp.headers.update(
             {
                 "X-Aegis-Request-ID": request_id,
                 "X-Aegis-Session-ID": session_id,
-                "X-Aegis-Alert-Count": str(len(analysis.alerts)),
+                "X-Aegis-Alert-Count": "0",
+                "X-Aegis-Evidence-Status": "durable",
+                "X-Aegis-Analysis-Status": "queued" if queued else "not-sampled",
             }
         )
         if trace_id:
@@ -1079,7 +1280,15 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 detail=f"Behavioral WAF: {session_waf.reason}",
             )
 
-        if not await state.ratelimiter.check_limit(session_id):
+        try:
+            allowed_by_rate = await state.ratelimiter.check_limit(session_id)
+        except RateLimitBackendUnavailable as exc:
+            observability.RATELIMIT_BACKEND_ERRORS.inc()
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Rate-limit backend unavailable; request rejected",
+            ) from exc
+        if not allowed_by_rate:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Rate limit exceeded for this session",
@@ -1088,28 +1297,69 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         completions_start = time.perf_counter()
         try:
             upstream = await state.forwarder.forward_json("/v1/completions", body)
-        except CircuitOpenError as exc:
+        except CircuitOpenError:
             observability.FORWARD_ERRORS.labels(stage="circuit_open").inc()
-            raise HTTPException(
+            return await _durable_error_response(
+                request_id=request_id,
+                session_id=session_id,
+                raw_body=raw_body,
+                model=body.get("model", "unknown"),
+                request_start=completions_start,
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Upstream temporarily unavailable (circuit breaker OPEN)",
-            ) from exc
+                content=b'{"detail":"Upstream temporarily unavailable (circuit breaker OPEN)"}',
+                endpoint="completions",
+            )
+        except Exception:
+            observability.FORWARD_ERRORS.labels(stage="network").inc()
+            logger.exception("upstream completions forwarding failed")
+            return await _durable_error_response(
+                request_id=request_id,
+                session_id=session_id,
+                raw_body=raw_body,
+                model=body.get("model", "unknown"),
+                request_start=completions_start,
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content=b'{"detail":"Upstream forwarding failed"}',
+                endpoint="completions",
+            )
         if upstream.status_code != 200:
-            return Response(content=upstream.content, status_code=upstream.status_code)
+            return await _durable_error_response(
+                request_id=request_id,
+                session_id=session_id,
+                raw_body=raw_body,
+                model=body.get("model", "unknown"),
+                request_start=completions_start,
+                status_code=upstream.status_code,
+                content=upstream.content,
+                endpoint="completions",
+            )
 
-        analyzer = state.get_analyzer(session_id)
-        analysis = analyzer.analyze(
-            request_id=request_id,
-            model=body.get("model", "unknown"),
-            logprobs_data=None,
-            sampling_params={"endpoint": "completions", "model": body.get("model")},
+        await _commit_evidence(
+            request_id,
+            session_id,
+            raw_body,
+            upstream.content,
+            body.get("model", "unknown"),
+            completions_start,
+            response_complete=True,
+            endpoint="completions",
         )
-        _spawn_background(
-            _commit_and_alert(request_id, session_id, analysis, raw_body, completions_start)
+        queued = _enqueue_analysis(
+            request_id,
+            session_id,
+            body.get("model", "unknown"),
+            [],
+            {"endpoint": "completions", "model": body.get("model")},
+            raw_body,
+            upstream.content,
+            False,
+            "",
         )
 
         resp = Response(content=upstream.content, status_code=200)
         resp.headers["X-Aegis-Request-ID"] = request_id
+        resp.headers["X-Aegis-Evidence-Status"] = "durable"
+        resp.headers["X-Aegis-Analysis-Status"] = "queued" if queued else "not-sampled"
         return resp
 
     return app

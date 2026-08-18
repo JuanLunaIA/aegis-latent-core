@@ -1,7 +1,7 @@
 """
 aegis.core.ratelimiter — Rate limiting with Redis (distributed) or in-memory fallback.
 
-Tier-4 Rust acceleration (v3.0.0):
+Tier-4 Rust acceleration (v3.0.1):
     When aegis_rust is compiled, `create_rate_limiter` returns a
     `RustBackedRateLimiter` for the "memory" backend.  It replaces
     `asyncio.Lock` with a lock-free atomic CAS token bucket implemented in
@@ -25,6 +25,10 @@ from aegis.config import AegisSettings
 from aegis.core.rust_integration import new_rust_rate_limiter
 
 logger = logging.getLogger(__name__)
+
+
+class RateLimitBackendUnavailable(RuntimeError):  # noqa: N818
+    """Raised when the configured distributed limiter cannot make a decision."""
 
 
 class RateLimiter(Protocol):
@@ -147,13 +151,9 @@ class DistributedRateLimiter:
                 now,
             )
             return result == 1
-        except Exception as e:
-            # Fail-open: Redis unavailability must not bring down the proxy.
-            # This is a security-relevant event (rate limiting bypassed) — log as ERROR.
-            logger.error(
-                "Redis rate limit check failed — rate limiting BYPASSED for this request: %s", e
-            )
-            return True
+        except Exception as exc:
+            logger.error("Redis rate-limit decision unavailable; request must be rejected: %s", exc)
+            raise RateLimitBackendUnavailable("distributed rate-limit backend unavailable") from exc
 
     async def close(self) -> None:
         await self.redis.aclose()

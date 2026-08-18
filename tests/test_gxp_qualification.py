@@ -85,9 +85,9 @@ class TestChangeControl:
 
     def test_submit_stores_fields(self):
         cc = ChangeControlRegistry()
-        rec = _submit(cc, title="T", target_version="3.0.0", gxp_impact=True)
+        rec = _submit(cc, title="T", target_version="3.0.1", gxp_impact=True)
         assert rec.title == "T"
-        assert rec.target_version == "3.0.0"
+        assert rec.target_version == "3.0.1"
         assert rec.gxp_impact is True
 
     def test_description_truncated(self):

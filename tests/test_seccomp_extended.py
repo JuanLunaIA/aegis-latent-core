@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from aegis.core.seccomp_guard import SeccompGuard
 
 # ── _detect_sandbox — return False ────────────────────────────────────────────
@@ -61,9 +63,9 @@ def test_apply_filter_non_sandbox_libc_not_found():
     import ctypes.util as _ctu
 
     with patch.object(_ctu, "find_library", return_value=None):
-        result = guard.apply_filter()
+        with pytest.raises(RuntimeError, match="Seccomp enforcement failed"):
+            guard.apply_filter()
 
-    assert result is False
     assert guard._degraded_mode is True
 
 
@@ -86,9 +88,9 @@ def test_apply_filter_non_sandbox_prctl_fails():
         patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
         patch("ctypes.CDLL", return_value=mock_libc),
     ):
-        result = guard.apply_filter()
+        with pytest.raises(RuntimeError, match="Seccomp enforcement failed"):
+            guard.apply_filter()
 
-    assert result is False
     assert guard._degraded_mode is True
 
 
@@ -177,9 +179,9 @@ def test_apply_filter_non_sandbox_filter_load_fails():
         patch("ctypes.CDLL", return_value=mock_libc),
         patch("aegis.core.sandbox_l1.SeccompSandbox", return_value=mock_sb),
     ):
-        result = guard.apply_filter()
+        with pytest.raises(RuntimeError, match="Seccomp enforcement failed"):
+            guard.apply_filter()
 
-    assert result is False
     assert guard._degraded_mode is True
     assert guard._is_enforced is False
 
