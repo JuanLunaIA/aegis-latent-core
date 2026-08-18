@@ -149,7 +149,12 @@ jobs:
           # `auto` is a no-op on macOS/Windows; the container image is only
           # consulted for the Linux targets above.
           manylinux: ${{ matrix.platform.manylinux || 'auto' }}
-          args: --release --out dist --features extension-module
+          maturin-version: v1.11.5
+          before-script-linux: |
+            if command -v yum >/dev/null 2>&1; then
+              yum install -y perl-IPC-Cmd
+            fi
+          args: --release --locked --compatibility pypi --out dist --features extension-module
 
       - name: Verify wheel was produced
         shell: bash
@@ -221,7 +226,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: v${{ needs.validate.outputs.version }}
           name: "Aegis Latent Core v${{ needs.validate.outputs.version }}"
           body_path: release_body.md
           draft: false
