@@ -149,6 +149,7 @@ jobs:
           # `auto` is a no-op on macOS/Windows; the container image is only
           # consulted for the Linux targets above.
           manylinux: ${{ matrix.platform.manylinux || 'auto' }}
+          docker-options: --env CFLAGS=-std=gnu99
           maturin-version: v1.11.5
           before-script-linux: |
             if command -v yum >/dev/null 2>&1; then
