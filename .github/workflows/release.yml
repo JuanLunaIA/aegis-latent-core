@@ -121,7 +121,9 @@ jobs:
         platform:
           # ── Linux glibc (manylinux2014) ──
           - { runner: ubuntu-22.04,  target: x86_64-unknown-linux-gnu,        manylinux: "2014" }
-          - { runner: ubuntu-22.04,  target: aarch64-unknown-linux-gnu,       manylinux: "2014" }
+          # manylinux 2_28 supplies a GCC that accepts the ML-DSA dependency's
+          # armv8.2-a+sha3 target flags; the 2014 cross image fails in C99.
+          - { runner: ubuntu-22.04,  target: aarch64-unknown-linux-gnu,       manylinux: "2_28" }
           # ── Linux musl (static — air-gapped / edge / industrial) ──
           - { runner: ubuntu-22.04,  target: x86_64-unknown-linux-musl,       manylinux: musllinux_1_2 }
           - { runner: ubuntu-22.04,  target: aarch64-unknown-linux-musl,      manylinux: musllinux_1_2 }
@@ -155,7 +157,7 @@ jobs:
             if command -v yum >/dev/null 2>&1; then
               yum install -y perl-IPC-Cmd perl-Time-Piece
             fi
-          args: --release --locked --compatibility pypi --out dist --features extension-module
+          args: --release --locked --compatibility pypi -i python3.12 --out dist --features extension-module
 
       - name: Verify wheel was produced
         shell: bash
