@@ -4,11 +4,13 @@ Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 -->
 
-# Aegis Latent Core 3.1.0 Candidate
+# Aegis Latent Core 3.1.0
 ## AI Governance and Evidence Gateway
 
 **Audiencia:** equipos de plataforma, AppSec, AI engineering, compliance, legal y procurement
-**Estado:** prospecto de producto y guía de evaluación; no es certificación, dictamen legal ni oferta comercial vinculante.
+**Estado:** release publicado y prospecto de producto; no es certificación, dictamen legal, SLO ni oferta comercial vinculante.
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
 
 ## Resumen ejecutivo
 
@@ -29,7 +31,7 @@ El producto central es un **límite de evidencia**. No convierte automáticament
 
 ## Evidencia de resiliencia y WAF
 
-El candidate v3.1.0 ejecutó un harness local con 10.000 requests ofrecidos a 10k RPS y 2 ms de `fsync` inyectado: observó 10.000 commits durables, cero fallos, cero IDs faltantes, cero duplicados e integridad válida; el p99 de commit fue 1.189,89 ms. Es un fault injection acotado, no capacidad aceptada de producción ni un SLO.
+El release v3.1.0 conserva un harness local con 10.000 requests ofrecidos a 10k RPS y 2 ms de `fsync` inyectado: observó 10.000 commits durables, cero fallos, cero IDs faltantes, cero duplicados e integridad válida; el p99 de commit fue 1.189,89 ms. Es un fault injection acotado, no capacidad aceptada de producción ni un SLO.
 
 El corpus WAF local contiene 15 casos maliciosos y 8 benignos. El resultado observado fue cero bypasses y cero falsos positivos para ese corpus. El intervalo estadístico sigue siendo amplio porque la muestra es pequeña. HTTP/2 fragmentation y `nuclei-templates/waf-bypass` no están ejecutados en ese resultado.
 
@@ -50,3 +52,11 @@ El modelo comercial se organiza como Community/OSS, Team/Pilot, Production, Ente
 Aegis no es un LLM, un WAF universal, un sistema universal de model safety, un firewall de red, un secret manager, un servicio de backup inmutable, una certificadora, un dictamen de admisibilidad ni un reemplazo de identity, privacy, retention, compliance o incident response. La topología actual tampoco afirma orden global cross-replica o HA multi-region. `zk_proof` y public anchoring siguen siendo superficies abiertas o dependientes de backend.
 
 La fuente comercial y técnica canónica para nuevos lectores es el README US-English y [`docs/PROSPECTUS.md`](PROSPECTUS.md).
+
+## Documentos relacionados
+
+- [`README.md`](../README.md)
+- [`docs/CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md)
+- [`docs/COMPLIANCE_MAPPING.md`](compliance/COMPLIANCE_MAPPING.md)
+- [`docs/FAQ_PROCUREMENT.md`](FAQ_PROCUREMENT.md)
+- [`docs/SECURITY_ASSURANCE_ROADMAP.md`](SECURITY_ASSURANCE_ROADMAP.md)

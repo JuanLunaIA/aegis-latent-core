@@ -73,7 +73,7 @@ PYTHONPATH=. .venv/bin/python tools/benchmarks/run_key_rotation.py \
 pytest -q tests/test_keyring_rotation.py
 ```
 
-The candidate evidence covered three independent local signer instances, atomic keyring replacement, old/new key IDs, zero failed local commits and zero unverifiable records. It did not prove secret-manager propagation, orchestrator restart behavior, clock-skew tolerance, or multi-region storage.
+The retained v3.1.0 evidence covers three independent local signer instances, atomic keyring replacement, old/new key IDs, zero failed local commits and zero unverifiable records. It does not prove secret-manager propagation, orchestrator restart behavior, clock-skew tolerance or multi-region storage.
 
 ## Exercise WAF and backpressure
 

@@ -6,7 +6,9 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 # Aegis Latent Core — Engineering and Market Roadmap
 
-**Status:** v3.1.0 market-hardening candidate
+**Status:** Published v3.1.0 release line with open deployment and assurance work
+**Last verified:** 2026-08-18 UTC
+**Release baseline:** `v3.1.0`
 **Purpose:** Single source of truth for work that is implemented, measured, deployment-dependent, or still open.
 
 ## Status rules
@@ -23,7 +25,7 @@ A checkbox may not be changed to `[x]` because a stub, dashboard sample, docstri
 
 ## Current public baseline
 
-The current immutable public release is `v3.0.1`. Its release evidence includes 5,374 passing tests, 80 skipped tests, 47 warnings, 93% line coverage, clean blocking Bandit and pip-audit gates, Helm lint success, SBOM, provenance, release-gate record, and asset hashes. The v3.1.0 work below is a candidate until its full source, tests, scans, release artifacts, GitHub checks, review, and provenance pass together.
+The current immutable public release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). Its release pipeline completed with source, wheels, provenance, hashes and GitHub checks. The historical `v3.0.1` release remains available for provenance; it is not the current capability baseline. The open items below are deployment, assurance, independent-review or future-product work and must not be represented as shipped capabilities.
 
 ## Completed core controls
 
@@ -39,7 +41,7 @@ The current immutable public release is `v3.0.1`. Its release evidence includes 
 
 Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), git history, module docs, and release assets. This file tracks current decision status rather than repeating every historical patch.
 
-## v3.1.0 market-hardening candidate
+## v3.1.0 market-hardening release
 
 ### Documentation and claim governance
 
@@ -111,4 +113,13 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 
 ## Release gate
 
-No market-facing release is publishable until the affected source and tests pass, version anchors are coherent, the claim matrix is updated, the documentation has no stronger language than the artifacts, the SBOM and dependency gates are clean or explicitly excepted, release provenance is regenerated, rollback and kill criteria are documented, and a qualified reviewer accepts the residual risk.
+The v3.1.0 release passed its declared publication gate. Future market-facing releases remain blocked until the affected source and tests pass, version anchors are coherent, the claim matrix is updated, documentation has no stronger language than the artifacts, the SBOM and dependency gates are clean or explicitly excepted, release provenance is regenerated, rollback and kill criteria are documented, and a qualified reviewer accepts the residual risk.
+
+## Related documents
+
+- [`README.md`](../README.md)
+- [`docs/CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md)
+- [`docs/BENCHMARKS.md`](BENCHMARKS.md)
+- [`docs/SECURITY_ASSURANCE_ROADMAP.md`](SECURITY_ASSURANCE_ROADMAP.md)
+- [`docs/COMMERCIAL_STRATEGY_US.md`](COMMERCIAL_STRATEGY_US.md)
+- [`DEPLOYMENT_GUIDE.md`](../DEPLOYMENT_GUIDE.md)
