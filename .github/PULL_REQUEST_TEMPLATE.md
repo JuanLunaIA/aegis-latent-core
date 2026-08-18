@@ -1,30 +1,46 @@
-## Summary
+## Change summary
 
-<!-- One-sentence description of what this PR does. -->
+Describe the mechanism-level change and the affected trust boundary.
 
 ## Type of change
 
-- [ ] Bug fix (non-breaking change that fixes an issue)
-- [ ] New feature (non-breaking change that adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Breaking change
 - [ ] Security fix
 - [ ] Documentation update
 - [ ] Refactor / code quality
 
-## Checklist
+## Evidence contract
 
-- [ ] `ruff check .` passes with zero violations
-- [ ] `mypy aegis/` passes with zero errors
-- [ ] `pytest tests/ --cov=aegis --cov-fail-under=85` passes
-- [ ] `bandit -r aegis/ -c pyproject.toml -ll` passes
-- [ ] New tests added for changed behavior (if applicable)
-- [ ] `CHANGELOG.md` updated under `[Unreleased]`
-- [ ] `SECURITY.md` updated if any security-relevant change
+- [ ] I updated `docs/CLAIMS_MATRIX.md` for every new or changed public claim.
+- [ ] I identified the exact artifact, test, log, or benchmark supporting the claim.
+- [ ] I stated what the evidence does **not** establish.
+- [ ] I did not include credentials, customer payloads, private endpoints, or synthetic telemetry presented as runtime evidence.
+
+## Verification
+
+- [ ] `pytest` passes for the affected scope.
+- [ ] `ruff check .` passes.
+- [ ] `ruff format --check .` passes.
+- [ ] `bandit -r aegis aegis_server -lll` passes or a reviewed exception is documented.
+- [ ] `pip-audit` and relevant lockfile checks pass.
+- [ ] Rust, Helm, container, or benchmark gates were run when affected.
+- [ ] Raw artifacts are attached or linked for performance/security measurements.
+
+## Security and operations
+
+- [ ] Threat model and residual risk are updated.
+- [ ] Failure behavior is fail-closed where the evidence boundary requires it.
+- [ ] Rollback, blast radius, observability, and kill criteria are documented.
+- [ ] New secrets and sensitive data are absent from the diff.
+
+## Release impact
+
+- [ ] Version and changelog updates are included when behavior or public claims change.
+- [ ] Commercial and buyer-facing language does not imply certification, SLO, legal admissibility, or customer references without evidence.
+- [ ] Human reviewer/owner: `@JuanLunaIA`
 
 ## Test plan
 
-<!-- Describe how you tested this change. Include commands run. -->
-
-## Security considerations
-
-<!-- Any security implications? Briefly describe attack surface changes, if any. -->
+List the exact commands run and link retained artifacts.

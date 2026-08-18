@@ -1,7 +1,7 @@
 """
 aegis.proxy.waf — Web Application Firewall for LLM Payloads.
 
-Two-layer detection pipeline (v3.0.1 — Tier-4 Rust acceleration):
+Two-layer detection pipeline (v3.1.0 — Tier-4 Rust acceleration):
 
 Tier-4 WAF fast path (when aegis_rust is compiled):
   - RustWaf.scan_messages() runs an Aho-Corasick SIMD pre-filter on all message
@@ -136,6 +136,12 @@ class AegisWAF:
             re.compile(
                 r"act\s+as\b.{0,30}?\b(unrestricted|uncensored|different|another)\b.{0,20}?\b"
                 r"(AI|model|assistant|bot|LLM)",
+                re.IGNORECASE | re.DOTALL,
+            ),
+            # Persona override without the exact "act as" wording.
+            re.compile(
+                r"(you\s+are|roleplay\s+as)\b.{0,40}?\b"
+                r"(unrestricted|uncensored|without\s+restrictions|no\s+restrictions)\b",
                 re.IGNORECASE | re.DOTALL,
             ),
             # Template injection: {{ }} and full-width Unicode variants (after NFKC norm)

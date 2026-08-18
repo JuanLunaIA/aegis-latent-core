@@ -1,391 +1,106 @@
-# Aegis Performance Benchmarks
+<!--
+Copyright (c) 2026 Juan Luna. All rights reserved.
+Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+-->
 
-Measured on **2026-06-20** (Claims 1–2), **2026-06-21** (Claim 3, live HTTP load),
-**2026-06-24** (Claim 4, audit-chain throughput — v2.4.1 release verification),
-and **2026-06-25** (Claim 1 re-run — forwarding latency with v2.4.1 SSE changes; Claim 4
-re-run — crypto audit throughput with N=1,000 k=3).
-All numbers are from actual execution — none are invented.
-See [Reproducing](#reproducing) for exact commands to re-run.
+# Aegis Latent Core — Benchmark and Measurement Record
 
----
+**Status:** v3.1.0 market-hardening candidate
 
-## Hardware and Software Environment
+This document is the canonical interpretation guide for repository benchmarks. A benchmark is evidence only for its declared workload, environment, code boundary, sample method, and artifact. It is not a production SLO, capacity guarantee, certification, or universal security result.
 
-| Property | Value |
+## Measurement contract
+
+Every performance or security measurement must record the workload, environment, warmup, sample count, statistic, code boundary, command, raw or derived artifact, exit status, timestamp, and SHA-256. Changes to source, compiler, dependency, storage, corpus, runtime flags, or measurement method invalidate prior claims until the affected experiment is rerun.
+
+| Field | Required content |
 |---|---|
-| CPU | Intel(R) Xeon(R) Processor @ 2.80GHz |
-| Cores | 4 |
-| RAM | ~16 GB |
-| OS | Linux 6.18.5 x86_64 (glibc 2.39) |
-| Python | 3.11.15 (GCC 13.3.0) |
-| FastAPI | 0.137.2 |
-| httpx | 0.28.1 |
-| anyio | 4.14.0 |
-| starlette | 1.3.1 |
-| numpy | 2.4.6 |
-| aegis_rust | 3.0.0 (Rust extension, release build with LTO) |
+| Workload | Request shape, payload size, provider behavior, concurrency, offered load, and duration. |
+| Environment | CPU model and affinity, kernel, Python/Rust/compiler/library versions, storage, container/runtime, and relevant security controls. |
+| Warmup | Explicit warmup duration and cache state. |
+| Samples | Count, class balance, seed or deterministic generator, rejected samples, and failures. |
+| Statistics | p50/p95/p99/max, confidence interval or p-value where applicable, outlier policy, and effect size. |
+| Boundary | Dispatch-only, proxy client-visible, upstream-inclusive, WAL durability, WAF application boundary, keyring lifecycle, or native crypto function. |
+| Artifact | Raw data, summary report, command, exit status, timestamp, and SHA-256. |
 
----
+## Candidate results
 
-## Claim 1 — Zero Forensic Latency
+The following results were executed in the current sandbox against the v3.1.0 candidate checkout. They are bounded measurements, not production claims.
 
-**Claim (from source):** `_commit_and_alert` runs via `asyncio.create_task()` and executes
-after the HTTP response is returned to the client. The client sees no added I/O wait from the
-audit commit.
-
-**Measurement methodology:** `benchmarks/bench_forwarding.py` runs two sub-benchmarks:
-
-### Part 1: `_spawn_background()` Hot-Path Overhead (direct micro-benchmark)
-
-Measures the **complete scheduling block** executed on the response hot path per request,
-replicating all bookkeeping from `aegis/proxy/app.py:_spawn_background`:
-`asyncio.create_task()` + `_BACKGROUND_TASKS.add(task)` + gauge update +
-`task.add_done_callback(_on_done)`. The task coroutine itself executes outside the measured
-window (after the response is already returned).
-
-| Metric | 2026-06-20 (original) | 2026-06-25 (re-run, v2.4.1) |
-|---|---|---|
-| p50 | 2.43 µs | **2.70 µs** |
-| p99 | 6.78 µs | **12.90 µs** |
-| mean | 2.59 µs | **3.67 µs** |
-| σ | 1.66 µs | **3.63 µs** |
-| n | 5,000 | 5,000 |
-
-**[PROVEN] 2026-06-25 re-run:** `bench_forwarding.py --warmup 100 --n 500`. The p50 is
-2.70 µs and p99 is 12.90 µs — consistent with the June-20 baseline within measurement noise.
-The wider σ on the 2026-06-25 run (3.63 µs vs 1.66 µs) reflects OS scheduler jitter on a
-shared dev host; the median is stable.
-
-**Revised claim wording:** *"The audit commit adds no I/O wait to the client-visible response.
-The full scheduling block (`create_task` + bookkeeping) is ~2.7 µs p50 / 12.9 µs p99 in the
-benchmark environment (2026-06-25 re-run)."*
-
-### Part 2: WAF+HTTP Round-Trip Latency (ASGI in-process mock upstream)
-
-Full end-to-end client-visible latency through the WAF inspection and HTTP stack, with the
-upstream mocked in-process (0 ms network latency). Background tasks drained every 10
-requests to isolate per-request overhead.
-
-**2026-06-25 re-run** (`--warmup 100 --n 500`):
-
-| Condition | p50 | p95 | p99 | mean | σ | n |
-|---|---|---|---|---|---|---|
-| WITH_BG (`asyncio.create_task` active) | **0.654 ms** | **1.479 ms** | **1.829 ms** | **0.788 ms** | **0.313 ms** | 500 |
-| NO_BG (no `create_task`, floor latency) | **0.614 ms** | **1.049 ms** | **1.588 ms** | **0.683 ms** | **0.213 ms** | 500 |
-
-**Statistical test (2026-06-25):**
-- Welch t = 6.22 | p-value = 0.000000 | Cohen's d = 0.3931 (small effect)
-- Δp50 = **+39.75 µs** (WITH_BG minus NO_BG)
-
-Note: The 2026-06-25 re-run shows higher absolute latency than 2026-06-20 due to a higher
-base-system load on the shared dev host (confirmed by `vmstat`: CPU steal visible). The
-Cohen's d effect size (0.39, "small") is comparable to the June-20 run (0.062, "negligible")
-in context — the Δp50 is OS-load-dependent, not a regression in the Aegis code path.
-
-**Interpretation [INFERENCE]:** Under concurrent production traffic, background tasks from
-one client's request interleave with other clients' request servicing — the per-client
-observable cost approaches the Part 1 value (~2.7 µs scheduling call only).
-
-**Verdict for the "zero forensic latency" claim:**
-- **Definitionally true:** the commit coroutine runs after the ASGI framework returns the
-  response object to the transport layer. No `await commit` appears before the `return
-  JSONResponse(...)` call in the request handler.
-- **Measured overhead on hot path (2026-06-25):** `_spawn_background()` = 2.70 µs p50, 12.90 µs p99.
-- **End-to-end overhead:** Δp50 ≈ +39.75 µs vs floor latency on a loaded dev host.
-
----
-
-## Claim 2 — Rust Extension Performance (MMR)
-
-**Claim (from source):** The Rust extension (`aegis_rust_v2`) yields significant
-performance gains over the Python fallback for MMR operations.
-
-### Python MerkleMountainRange throughput
-
-| N (leaves) | Throughput | µs / leaf |
-|---|---|---|
-| 100 | 332,460 leaves/s | 3.008 µs |
-| 1,000 | 292,050 leaves/s | 3.424 µs |
-| 10,000 | 250,650 leaves/s | 3.990 µs |
-| 100,000 | 212,180 leaves/s | 4.713 µs |
-
-Methodology: k=5 independent trials per N. Best-of-k reported (Google Benchmark min
-methodology — eliminates OS scheduling noise). Leaf payload: 32 bytes (SHA-256 of index).
-
-**Throughput degrades ~36% from N=100 to N=100,000 [INFERENCE]:** Peak merging is O(log N)
-amortised per leaf, but hash(str + str) allocates two new Python str objects per internal node.
-At N=100,000 the GC pressure from ~200,000 node objects is measurable.
-
-### Rust MmrAccumulator throughput
-
-Built with `maturin build --release` (LTO, `codegen-units=1`) and installed via wheel.
-`aegis_rust v3.0.0`, CPython 3.11, x86_64 Linux.
-
-| N (leaves) | Python leaves/s | Rust leaves/s | Speedup |
+| Experiment | Observed result | What it establishes | What remains unproven |
 |---|---|---|---|
-| 100 | 332,460 | 958,510 | 2.88× |
-| 1,000 | 292,050 | 814,000 | 2.79× |
-| 10,000 | 250,650 | 760,260 | 3.03× |
-| 100,000 | 212,180 | 709,240 | 3.34× |
+| Full Python regression | 5,442 passed, 37 skipped, 47 warnings in 68.08 s; 93.91% line coverage | The current Python test suite passed in the named environment. | Other Python versions, kernels, providers, and deployment topologies. |
+| Rust unit tests | 26 passed, 0 failed; doc-tests 0 passed | The Rust unit suite passed with Cargo 1.97.1 and the committed lockfile. | Cross-compilation, released wheels on every target, and production runtime behavior. |
+| WAF corpus | 15 malicious and 8 benign cases; 0 bypasses; 0 false positives; Wilson 95% upper bound approximately 20.39% for bypass rate | The pinned corpus passed the application-layer regression gate. | Universal prompt-injection detection, HTTP/2 parser differentials, ingress normalization, and Nuclei coverage. |
+| Backpressure | 10,000 requests offered at 10,000 RPS with 2 ms injected `fsync` delay; 10,000 durable commits; 0 failures; 0 missing IDs; 0 duplicates; valid chain | No-silent-drop and chain-correlation behavior under the injected application seam. | Accepted capacity, production SLO, `dm-delay` block-device equivalence, cloud volume semantics, and recovery of every failure mode. |
+| Backpressure latency | Total runtime 32.36878035601694 s; p50 202.13615702232346 ms; p95 614.082946034614 ms; p99 1189.8909930023365 ms; max 3208.868669986259 ms | The offered load produces substantial queueing while preserving evidence integrity. | Any claim that the gateway is low-latency or accepts 10k RPS in production. |
+| Key rotation | 2,239 records across three independent local signer instances; 0 failed commits; 0 unverifiable records; old and new key IDs observed; keyring mode `0o600` | Atomic local snapshot replacement, overlap verification, key ID metadata, and no-restart signer behavior within the local harness. | Kubernetes/secret-manager propagation, independent process restart, clock skew, distributed storage, and rollback under orchestration. |
+| ML-DSA sign timing | 1,000,000 interleaved samples; `p=0.8521504207157158`; validity control passed | No statistically significant timing difference was detected for `sign` under the named experiment. | Constant-time proof, compiler/microarchitecture leakage, FIPS 140 validation, and independent review. |
+| ML-DSA verify timing | 1,000,000 interleaved samples; `p=0.0`; measured mean delta 540.5259299977988 ns | The declared verify experiment detected a class-dependent timing difference at this boundary. | Root cause, exploitability, secret leakage relevance, and whether an alternative verifier boundary removes the effect. The constant-time claim is blocked. |
+| WAF gate implementation | Script gate requires zero critical bypasses, observed bypass below 5%, and zero false positives | The executable gate matches the stricter regression test and public claim. | Corpus completeness and actual ingress parser behavior. |
 
-**Aggregate: avg 3.01× speedup · max 3.34× speedup [PROVEN]**
+## Reproducible commands
 
-The speedup is consistent and grows with N. The dominant cost in Python is SHA-256
-via `hashlib` (Python wrapper → C) plus per-leaf `bytes` allocation; Rust calls `sha2`
-directly with no allocator pressure per leaf and avoids the PyO3 round-trip for the
-inner loop.
-
-**Interpretation:** The Rust extension is measurably faster for bulk MMR operations
-(~3× on average). Claims of "significant performance gains" are accurate at this level.
-For very small N (<100), PyO3 call overhead approaches the per-leaf computation cost.
-
----
-
-## Claim 3 — Live Single-Node HTTP Server Throughput
-
-**Measured 2026-06-21.** First published single-node throughput numbers (the README
-previously noted these were "not yet published").
-
-**Methodology:** A real `uvicorn` server hosting `create_proxy_app()` was launched on
-`127.0.0.1:8080`, then driven over loopback TCP by `benchmarks/bench_http_load.py`
-(async `httpx` client). Target endpoint: `GET /health` — exercises the full ASGI
-middleware stack (request-smuggling guard, auth shim, routing) plus the live ledger
-and analyzer-cache health checks on every request. Latency is wall-clock per request;
-server CPU is `utime+stime` deltas from `/proc/<pid>/stat`; RSS is sampled from
-`/proc/<pid>/status` at 10 Hz.
-
-> **Server topology caveat:** measurements are from a **single** uvicorn worker driving
-> the Rust `aegis_rust` Tokio runtime (4 threads). The `--workers 4` multiprocess model
-> could not be measured in this container: the seccomp `clone`/`clone3` lockdown applied
-> at end-of-startup terminates forked workers (expected behaviour of the hardening
-> filter, see `aegis/core/seccomp_guard.py`). Production multi-worker deployments run
-> one process per core behind a load balancer — see
-> [`docs/performance/SCALING_GUIDE.md`](performance/SCALING_GUIDE.md).
-
-### Per-request latency and concurrency sweep
-
-| Concurrency | Throughput (RPS) | p50 | p99 | max | Server CPU | n |
-|---|---|---|---|---|---|---|
-| 1 | 650.1 | **1.494 ms** | **2.019 ms** | 21.3 ms | 35.7 % | 20,000 |
-| 4 | **902.0** | 4.051 ms | 10.99 ms | 120.8 ms | 43.1 % | 20,000 |
-| 32 | 339.3 | 65.2 ms | 424 ms | — | 18.7 % | 8,000 |
-| 128 | 246.9 | 297.6 ms | 4,256 ms | — | 13.8 % | 8,000 |
-
-**Interpretation [PROVEN]:**
-- **Clean per-request cost (c=1):** 1.49 ms p50 / 2.02 ms p99 for a full-stack `/health`
-  round-trip over loopback — this is the realistic floor including TCP, ASGI, middleware,
-  and live health checks (heavier than the in-process mock-upstream figure in Claim 1).
-- **Peak single-worker throughput ≈ 900 RPS at c=4**, matching the 4-thread Rust runtime
-  and 4 cores. The server is **never CPU-bound** (peak ~43 % ≈ 1.7 cores).
-- **Throughput degrades past c≈4** while latency climbs by ~200× from c=1 to c=128. With
-  CPU idle, this is **event-loop head-of-line blocking** (GIL contention between the
-  CPython request loop and the Rust Tokio threads, plus synchronous health-check work),
-  **not** compute saturation.
-
-**Scaling implication [INFERENCE]:** single-worker throughput is bounded by event-loop
-serialization, so the throughput lever is **horizontal** — one worker process per core
-and replicas behind a load balancer — not raising per-worker concurrency. This is the
-empirical basis for the horizontally-scaled design target; it does **not** by itself
-prove the ">1 B RPM" figure, which remains an unmeasured multi-node architectural goal.
-
-### Endurance / stability run
-
-| Property | Value |
-|---|---|
-| Requests | 100,000 (concurrency 256) |
-| Duration | 362.9 s (~6 min sustained overload) |
-| Errors | **0** (100 % success) |
-| Throughput | 275.6 RPS (overloaded regime, past saturation) |
-| Server peak RSS | **101.5 MiB** (flat start-to-finish — no leak) |
-| Server CPU | 15.1 % avg |
-
-**Interpretation [PROVEN]:** under 6 minutes of deliberate overload (c=256, well past the
-c≈4 saturation point) the server returned **zero errors**, held memory **flat at 101.5 MiB**,
-and degraded gracefully (latency rose, throughput held — no collapse, no OOM, no leak).
-
----
-
-## Claim 4 — Cryptographic Audit Chain Throughput
-
-**Originally measured 2026-06-24; re-run 2026-06-25 (v2.4.1 final).** Quantifies the cost
-of the core forensic guarantees G1 (tamper-evident chain) and G3 (unforgeable HMAC signatures).
-
-**Methodology:** `benchmarks/bench_crypto_audit.py` runs three phases over N ops, k trials,
-best-of-k reported (Google Benchmark min). The commit and verify phases use a real
-`CryptographicAuditLedger` backed by a temp-dir WAL (0o600, **fsync per node**) — the
-numbers include genuine durable-write cost, not an in-memory mock.
-
-**2026-06-25 re-run** (`bench_crypto_audit.py --n 1000 --k 3`):
-
-| Phase | Throughput | Latency / op |
-|---|---|---|
-| HMAC-SHA256 node sign (crypto-only, no I/O) | **242,600 ops/s** | **4.122 µs** |
-| `commit_forensic()` end-to-end (HMAC + MMR leaf + WAL fsync) | **9,310 commits/s** | **107.4 µs** |
-| `verify_integrity()` (full hash-chain sweep) | **88,350 nodes/s** | **11.318 µs** |
-
-> **Variance note:** The 2026-06-25 `commit_forensic()` throughput (9,310/s, 107 µs) is
-> substantially higher than the 2026-06-24 run (693/s, 1,442 µs). The explanation is
-> storage I/O conditions: the June-24 run was on a nearly-full tmpfs that triggered
-> synchronous writeback; the June-25 run used a fresh tmpfs with no cache pressure. Both
-> numbers are [PROVEN] on this host under their respective conditions. For production
-> planning, treat the **conservative** (lower) number (693–9,310/s depending on storage
-> subsystem) as the sustainable range. With NVMe + fsync, expect 1k–10k commits/s.
-
-**Interpretation [PROVEN]:**
-- **Signature cost is negligible:** HMAC-SHA256 runs at 242k+ ops/s (4.1 µs). The
-  cryptographic signing is not the bottleneck in either run.
-- **Durable commit is fsync-bound:** the `commit_forensic()` throughput is dominated by WAL
-  fsync latency, which varies by storage subsystem. This is the **sustainable background
-  commit rate**; because commits are dispatched after the response returns (Claim 1), this
-  fsync cost is **off** the client hot path.
-- **Verification is fast:** offline chain verification sweeps 88,350+ nodes/s (11.3 µs/node);
-  a 1-million-node chain re-verifies in ~11 s on this host.
-
-**Scaling implication [INFERENCE]:** to raise sustained commit throughput beyond the
-single-WAL fsync ceiling, batch multiple forensic records per fsync or shard the WAL by
-tenant — the signing and MMR costs leave ample headroom. The Rust mmap WAL (`aegis_rust_v2`)
-targets exactly this fsync ceiling.
-
----
-
-## Claims Without Benchmarks
-
-The following speedup claims appear in source code docstrings but have **not** been benchmarked.
-They represent design targets or architectural reasoning. Do not cite these as measured values.
-
-| Component | Claimed speedup | Claimed mechanism |
-|-----------|----------------|-------------------|
-| HTTP Forwarder (Rust vs httpx) | ~12× throughput | Connection pool reuse + HTTP/2 + Tokio |
-| WAF Aho-Corasick (Rust vs Python re) | ~25× throughput | SIMD multi-pattern scan vs regex interpreter |
-| Rate limiter (CAS vs asyncio.Lock) | ~100× latency | Lock-free CAS vs mutex-gated event-loop call |
-| WAL append (mmap vs fsync) | ~40–100× latency | Memory-mapped write vs kernel fsync |
-
-Contributions of benchmarks for these components are welcome — see [`benchmarks/`](../benchmarks/).
-
----
-
-## Reproducing
+### Python and static gates
 
 ```bash
-# Clone and install
-git clone https://github.com/juanlunaia/aegis-latent-core
-cd aegis-latent-core
-pip install -e ".[dev]"
-
-# Forwarding latency benchmark (zero forensic latency claim)
-python -m benchmarks.bench_forwarding --warmup 200 --n 2000
-
-# MMR throughput benchmark (Python baseline — no Rust required)
-python -m benchmarks.bench_mmr
-
-# Cryptographic audit chain throughput (Claim 4 — commit + verify, real WAL fsync)
-python -m benchmarks.bench_crypto_audit --n 2000 --k 5
-
-# For Rust MMR benchmark (requires Rust toolchain + maturin):
-cd aegis_rust_v2
-maturin develop --release
-cd ..
-python -m benchmarks.bench_mmr
-
-# Live single-node HTTP throughput (Claim 3) — launch the server, then drive load:
-AEGIS_SIGNING_KEY=$(python -c 'import secrets;print(secrets.token_hex(32))') \
-AEGIS_DEBUG_MODE=1 AEGIS_AUTH_DISABLED=1 HERMES_SANDBOX=true \
-  uvicorn aegis.proxy.app:create_proxy_app --factory \
-  --host 127.0.0.1 --port 8080 --workers 1 &
-# wait for GET /health to return 200, then (server PID = $!):
-python -m benchmarks.bench_http_load \
-  --url http://127.0.0.1:8080/health \
-  --total 20000 --concurrency 4 --warmup 1000 --server-pid $!
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. .venv/bin/pytest -q
+.venv/bin/ruff check .
+.venv/bin/ruff format --check .
+.venv/bin/bandit -r aegis aegis_server -lll
+pip-audit --progress-spinner off
+/home/ubuntu/aegis-rebuild/helm-bin/helm lint deploy/helm
+cargo test --manifest-path aegis_rust_v2/Cargo.toml --locked
 ```
 
-A third party running these commands on equivalent hardware (x86-64 @ 2.8+ GHz,
-Python 3.11/3.12, Linux) should obtain results within ±25% of the values above.
-Larger deviations indicate hardware or OS scheduling differences — re-run with
-`--warmup 500 --n 5000` for tighter confidence.
-
----
-
-## Confidence Intervals
-
-p50/p95/p99 are empirical percentiles from n=2,000 samples (Part 2). For a 95% confidence
-interval on the p99 estimate, the margin of error is approximately:
-
-```
-±1.96 × sqrt(p99 × (1 - p99) / n) × range ≈ ±0.020 ms at p99=0.95, n=2000
-```
-
-The reported p50 values are stable to ±0.01 ms across repeated runs in the same environment.
-
----
-
-*Generated by `benchmarks/bench_forwarding.py`, `benchmarks/bench_mmr.py`, and
-`benchmarks/bench_crypto_audit.py`.
-Epistemic tags per CLAUDE.md I-03: [PROVEN] = executor output, [INFERENCE] = deduction
-from proven facts, [SPECULATIVE] = unverified condition.*
-
----
-
-## v2.4.1 Release Validation — Terminal Commands
-
-Run these in order to reproduce the release-gate evidence before tagging.
+### WAF corpus
 
 ```bash
-# ── 1. Environment setup ─────────────────────────────────────────────────────
-git clone https://github.com/JuanLunaIA/aegis-latent-core && cd aegis-latent-core
-pip install -e ".[dev]"
-
-# ── 2. Full test suite + 65% coverage gate ───────────────────────────────────
-pytest tests/ -x -q --cov=aegis --cov-report=term-missing --cov-fail-under=65
-# Observed: 5,374 passed · 80 skipped · 93% line coverage
-
-# ── 3. No-simulation-markers ratchet (0 simulation debt) ─────────────────────
-pytest tests/test_no_simulation_markers.py -v
-# Expected: PASSED — len(KNOWN_SIMULATION_DEBT) == 0
-
-# ── 4. Cryptographic chain integrity ────────────────────────────────────────
-pytest tests/test_crypto_audit.py tests/test_security_fixes.py -v
-# Expected: all PASSED — hash chain, HMAC signatures, tampering detection
-
-# ── 5. PQC signer (real ML-DSA-65 via Rust backend) ─────────────────────────
-pytest tests/test_pqc_signer.py -v
-# Expected: all PASSED — real keypair, sign/verify, forgery/tamper rejection
-
-# ── 6. WAF bypass resistance ─────────────────────────────────────────────────
-pytest tests/test_waf_unit.py tests/test_waf_integration.py -v
-# Expected: all PASSED — NFKC normalization, homoglyph evasion, zero-width strips
-
-# ── 7. Static analysis gate ──────────────────────────────────────────────────
-ruff check aegis aegis_server integrations tests tools/visualizer benchmarks
-ruff format --check aegis aegis_server integrations tests tools/visualizer benchmarks
-bandit -r aegis/ aegis_server/ -c pyproject.toml -lll
-mypy --ignore-missing-imports aegis/core/crypto_audit.py aegis/proxy/waf.py aegis/auth/apikey.py
-# Expected: zero errors on all three tools
-
-# ── 8. Rust extension (cargo test) ───────────────────────────────────────────
-cargo test --manifest-path aegis_rust_v2/Cargo.toml --all-features
-# Expected: 26 tests pass
-
-# ── 9. Forwarding latency benchmark (zero forensic latency claim) ─────────────
-python -m benchmarks.bench_forwarding --warmup 200 --n 2000
-# Expected: _spawn_background() p50 ≈ 2.4 µs; WAF+HTTP round-trip p50 ≈ 0.30 ms
-
-# ── 10. Audit-chain throughput (Claim 4) ─────────────────────────────────────
-python -m benchmarks.bench_crypto_audit --n 2000 --k 5
-# Expected: commit throughput ≥ 3,500 nodes/s (Python pure); verify sweep passes
-
-# ── 11. 5-minute self-contained evaluation (mock upstream) ───────────────────
-python -m examples.demo
-# Expected: "RESULT: 5/5 checks OK"
-
-# ── 12. Build distribution artifacts ────────────────────────────────────────
-python -m build          # produces dist/*.whl and dist/*.tar.gz (pure Python)
-# For Rust abi3 wheel (requires Rust toolchain):
-cd aegis_rust_v2 && maturin build --release --features extension-module && cd ..
-# Expected: dist/aegis_latent_core-2.4.1-py3-none-any.whl
-#           aegis_rust_v2/dist/aegis_rust-3.0.0-cp311-abi3-<platform>.whl
-
-# ── 13. Docker image build (optional) ────────────────────────────────────────
-docker build -f deploy/docker/Dockerfile -t aegis-latent-core:2.4.1 .
-docker run --rm aegis-latent-core:2.4.1 python -m examples.demo
-# Expected: "RESULT: 5/5 checks OK"
+PYTHONPATH=. .venv/bin/python tools/security/run_waf_corpus.py \
+  --output evidence/waf_corpus_report.json
 ```
+
+The harness loads the pinned `tests/data/waf_corpus_v1.json`, reports per-case verdicts and a Wilson interval, and exits non-zero when the executable gate fails. HTTP/2 fragmentation and `nuclei-templates/waf-bypass` are deliberately separate authorized-ingress exercises.
+
+### Backpressure and WAL stall
+
+```bash
+PYTHONPATH=. .venv/bin/python tools/benchmarks/run_backpressure_stall.py \
+  --duration-s 1.0 --offered-rps 10000 --fsync-delay-ms 2 --max-workers 64 \
+  --output evidence/backpressure_stall_10k_report.json
+```
+
+The harness injects delay through `fsync_fn`; production defaults remain `os.fsync`. The gate means **hot-path blocking on the durable commit with no silent evidence drop**. It explicitly does not mean accepted throughput.
+
+A `dm-delay` experiment is a separate privileged lab operation. It must use a disposable loop-backed block device or namespace, explicit capability checks, and a retained chain-of-custody record. It must never attach to host, production, or user data volumes. If those constraints cannot be proven, the result is `NOT_EXECUTED`.
+
+### Key rotation
+
+```bash
+PYTHONPATH=. .venv/bin/python tools/benchmarks/run_key_rotation.py \
+  --duration-s 0.5 --output evidence/key_rotation_report.json
+```
+
+The local exercise uses three independent signer instances, atomic replacement, overlap verification, key IDs, and owner-only file permissions. A production acceptance must additionally exercise the actual secret manager, three process lifecycles, restart/replay, delayed propagation, independent storage, clock behavior, and rollback.
+
+### Native ML-DSA timing
+
+```bash
+PYTHONPATH=. .venv/bin/python tools/benchmarks/run_pqc_timing.py \
+  --operation both --samples 1000000 --warmup 10000 \
+  --output evidence/pqc_timing_report.json \
+  --raw-output evidence/pqc_timing_raw.jsonl
+```
+
+The harness measures the current Python-to-Rust boundary, including public-key/signature decoding performed by the binding. It returns `2` and writes `UNAVAILABLE` when the real backend is absent. A p-value above 0.05 is **non-detection under the experiment**, not proof of constant-time execution. The retained candidate passed the `sign` experiment and failed the `verify` experiment.
+
+## Release language controls
+
+Use **“measured under the named workload”**, **“no statistically significant difference detected under the named experiment”**, and **“offered load”**. Do not use “zero latency,” “zero overhead,” “10k RPS capacity,” “1B RPM,” “constant-time,” “universal WAF,” or “production SLO” without a matching artifact, boundary, environment, owner-approved gate, and qualified review.
+
+Historical benchmark material from releases before v3.0.1 is not a current capability statement. The immutable v3.0.1 release artifacts remain available at the [GitHub release](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.0.1); the v3.1.0 line is a candidate until source, tests, supply-chain scans, GitHub checks, human review, and provenance pass together.
+
+## Artifact and rollback requirements
+
+Every benchmark artifact must be written outside the source tree or attached to the release, hashed with SHA-256, and linked from the provenance envelope. Preserve the raw report and environment metadata read-only. A failed gate blocks the related claim; it must not be hidden by substituting a shorter workload, a different boundary, or a more favorable run.

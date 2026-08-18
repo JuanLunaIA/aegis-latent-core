@@ -178,9 +178,22 @@ class EnterpriseSettings(BaseSettings):
     hmac_signing_key: SecretStr = Field(
         default=SecretStr(""),
         description=(
-            "HMAC signing key.  Required when signer_provider=hmac.  "
-            "Minimum 32 bytes of entropy.  Never use the default."
+            "HMAC signing key.  Required when signer_provider=hmac and no keyring "
+            "path is configured.  Minimum 32 bytes of entropy.  Never use the default."
         ),
+    )
+    hmac_keyring_path: str = Field(
+        default="",
+        description=(
+            "Optional owner-readable JSON keyring for zero-restart HMAC rotation. "
+            "When set, it takes precedence over hmac_signing_key."
+        ),
+    )
+    hmac_keyring_reload_interval_s: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=300.0,
+        description="Minimum interval between keyring metadata reload attempts.",
     )
 
     # HashiCorp Vault Transit
@@ -276,6 +289,8 @@ class EnterpriseSettings(BaseSettings):
         if not self.get_api_keys():
             raise ValueError("strict runtime requires at least one API key")
         if self.signer_provider == "hmac":
+            if self.hmac_keyring_path:
+                return
             key = self.hmac_signing_key.get_secret_value()
             if len(key.encode("utf-8")) < 32:
                 raise ValueError("strict runtime requires an HMAC key with at least 32 bytes")

@@ -10,5 +10,5 @@ Sub-packages:
     compliance — SOC2 / HIPAA cryptographically sealed export bundles.
 """
 
-__version__ = "3.0.1"
+__version__ = "3.1.0"
 __all__ = ["__version__"]

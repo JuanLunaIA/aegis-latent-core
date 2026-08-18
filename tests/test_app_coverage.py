@@ -135,7 +135,7 @@ async def test_health_returns_schema_fields(tmp_wal):
         assert "ledger" in body
         assert "analyzer_cache" in body
         assert "version" in body
-        assert body["version"] == "3.0.1"
+        assert body["version"] == "3.1.0"
     finally:
         _close_app_ledger(app)
 

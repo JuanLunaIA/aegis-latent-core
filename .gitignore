@@ -1,49 +1,52 @@
-```
-# Dependencies
-*.lock
-
-# Virtual environments
-.venv/
-venv/
-env/
-
-# Python
+# Python bytecode and caches
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
 .Python
 *.so
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
 .coverage
-htmlcov/
 .coverage.*
-.python-version
+htmlcov/
 
-# Logs
-*.log
+# Virtual environments and local package builds
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
 
-# Environment variables
+# Local configuration and secrets
 .env
-.env.local
 .env.*
+!.env.example
+*.pem
+*.key
+*.p12
 
-# IDE
+# Logs and local runtime state
+*.log
+*.pid
+*.sqlite
+*.sqlite3
+*.wal
+*.wal.jsonl
+/tmp/
+
+# IDE and OS files
 .vscode/
 .idea/
 *.swp
 *.swo
 *.tmp
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Build and distribution
-dist/
-build/
-*.egg-info/
-.coverage
-htmlcov/
-.mypy_cache/
-.pytest_cache/
-```
+# Generated local reports and visualizer outputs
+tools/forensic/report.json
+tools/visualizer/summary.json
+tools/visualizer/gallery/

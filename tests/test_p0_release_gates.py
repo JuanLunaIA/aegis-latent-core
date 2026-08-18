@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
 
 import asyncio
@@ -7,6 +10,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from aegis.config import AegisSettings
+from aegis.core import crypto_audit as crypto_audit_module
 from aegis.core.crypto_audit import CryptographicAuditLedger
 from aegis.core.ratelimiter import DistributedRateLimiter, RateLimitBackendUnavailable
 from aegis.proxy.app import RequestBodyLimitMiddleware
@@ -35,7 +39,10 @@ def test_strict_runtime_accepts_explicit_controls(tmp_path: Path) -> None:
     cfg.validate_runtime_invariants()
 
 
-def test_strong_ledger_rejects_ephemeral_fallback(tmp_path: Path) -> None:
+def test_strong_ledger_rejects_ephemeral_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(crypto_audit_module, "RUST_AVAILABLE", False)
     ledger = CryptographicAuditLedger(
         persistence_path=str(tmp_path / "strict.wal"),
         signing_key="",

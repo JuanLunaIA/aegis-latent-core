@@ -1,0 +1,58 @@
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+name: PQC Timing Assessment
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Native operation to measure"
+        required: true
+        default: both
+        type: choice
+        options:
+          - sign
+          - verify
+          - both
+
+permissions:
+  contents: read
+
+jobs:
+  timing:
+    name: ML-DSA timing (${{ inputs.operation }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install package and build tooling
+        run: |
+          python -m pip install -e ".[dev]"
+          python -m pip install maturin
+      - name: Build and install native extension
+        working-directory: aegis_rust_v2
+        env:
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+        run: maturin develop --release --features extension-module
+      - name: Run 1M-sample timing assessment
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          mkdir -p evidence
+          python tools/benchmarks/run_pqc_timing.py \
+            --operation "${{ inputs.operation }}" \
+            --samples 1000000 \
+            --warmup 10000 \
+            --output evidence/pqc_timing_report.json \
+            --raw-output evidence/pqc_timing_raw.jsonl
+      - name: Upload timing artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pqc-timing-${{ inputs.operation }}
+          path: evidence/pqc_timing_*

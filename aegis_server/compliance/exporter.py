@@ -116,6 +116,9 @@ class ExportResult:
     integrity_valid: bool
     """``True`` iff ``StorageProvider.check_integrity()`` reported no broken links."""
 
+    signing_key_id: str = "static"
+    """Non-secret version identifier for the key used to seal the bundle."""
+
 
 class ComplianceExporter:
     """
@@ -261,7 +264,9 @@ class ComplianceExporter:
 
         # ── 5. Sign ───────────────────────────────────────────────────
         try:
-            bundle_signature: str = await self._signer.sign_payload(chain_hash.encode("ascii"))
+            bundle_signature, signing_key_id = await self._signer.sign_payload_with_metadata(
+                chain_hash.encode("ascii")
+            )
         except Exception as exc:
             raise RuntimeError(
                 f"ComplianceExporter: signing failed for export_id={export_id}: {exc}"
@@ -285,6 +290,7 @@ class ComplianceExporter:
                     "chain_hash": chain_hash,
                     "bundle_signature": bundle_signature,
                     "signer_scheme": self._signer.scheme,
+                    "signing_key_id": signing_key_id,
                     "integrity_report": integrity_report,
                     "integrity_status": ("VALID" if integrity_valid else "INTEGRITY_FAILURE"),
                 },
@@ -315,6 +321,7 @@ class ComplianceExporter:
             signer_scheme=self._signer.scheme,
             generated_at=generated_at,
             integrity_valid=integrity_valid,
+            signing_key_id=signing_key_id,
         )
 
     async def export_range_paginated(

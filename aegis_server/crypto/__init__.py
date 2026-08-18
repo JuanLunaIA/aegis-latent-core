@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from aegis_server.crypto.base import LocalHMACSigner, SignerProvider
+from aegis_server.crypto.keyring import RotatingHMACSigner
 
 if TYPE_CHECKING:
     from aegis_server.config import EnterpriseSettings
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
 __all__ = [
     "SignerProvider",
     "LocalHMACSigner",
+    "RotatingHMACSigner",
     "VaultSigner",
     "get_signer",
 ]
@@ -85,10 +87,15 @@ def get_signer(settings: EnterpriseSettings) -> SignerProvider:
         )
 
     if backend == "hmac":
+        if getattr(settings, "hmac_keyring_path", ""):
+            return RotatingHMACSigner(
+                settings.hmac_keyring_path,
+                reload_interval_s=settings.hmac_keyring_reload_interval_s,
+            )
         key = settings.hmac_signing_key.get_secret_value()
         if not key:
             raise ValueError(
-                "AEGIS_HMAC_SIGNING_KEY is required when "
+                "AEGIS_HMAC_SIGNING_KEY or AEGIS_HMAC_KEYRING_PATH is required when "
                 "AEGIS_SIGNER_PROVIDER=hmac.  "
                 "Generate one with: python -c "
                 '"from aegis_server.crypto import LocalHMACSigner; '

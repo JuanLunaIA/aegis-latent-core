@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] — 2026-08-18
+
+### Product and documentation
+
+- Repositioned the public product as an AI Governance and Evidence Gateway with a complete US-English README, repository map, buyer guide, product brief, commercial strategy, and explicit claim boundaries.
+- Replaced stale v2.x security and commercial language with a current support policy, disclosure path, deployment boundary, licensing summary, procurement blockers, and assurance roadmap.
+- Marked `Samples/` dashboards as static demo-only artifacts with synthetic telemetry; sample values are not runtime, customer, cryptographic, compliance, or capacity evidence.
+
+### Security and evidence
+
+- Added a versioned HMAC keyring with atomic reload, one active key, overlap verification keys, expiry, non-secret `key_id` metadata, and fail-closed initial loading.
+- Added exporter metadata for the signing key ID used for compliance bundles.
+- Added an injectable `fsync_fn` seam to the WAL ledger for deterministic authorized fault injection while retaining `os.fsync` as the production default.
+- Expanded WAF critical coverage for persona overrides and added a pinned local corpus with observed bypass and false-positive metrics.
+
+### Verification harnesses
+
+- Added a backpressure/fsync-stall harness for offered 10k requests/s, durable request correlation, missing/duplicate evidence detection, latency percentiles, and WAL integrity. The candidate run committed 10,000 of 10,000 offered requests with zero failures, zero missing/duplicate IDs, valid chain integrity, and 1,189.89 ms p99 commit latency; accepted capacity is not claimed.
+- Added WAF corpus reporting with corpus SHA-256, per-case verdicts, Wilson 95% interval, zero observed bypasses, zero false positives, and explicit HTTP/2/Nuclei non-execution boundaries.
+- Added a three-instance local key-rotation exercise; 2,239 signatures were recorded with zero failed commits and zero unverifiable records. Secret-manager, orchestrator, and clock-skew acceptance remain open.
+- Added a native ML-DSA timing harness with 1,000,000 samples per operation. `sign` met the declared non-detection threshold (`p=0.8521504207157158`); `verify` did not (`p=0.0`), so no constant-time claim is approved.
+- Added regression tests for key rotation, WAF corpus behavior, and fsync fault injection.
+- Documented that a local result is not a production SLO, accepted-capacity claim, universal WAF guarantee, constant-time proof, or certification.
+
+### Final verification
+
+- Final release checkout: `5,442 passed, 37 skipped, 47 warnings` in 68.08 s with `93.91%` line coverage; pytest exit status 0.
+- Blocking static and supply-chain gates: Ruff check, Ruff format, Bandit, pip-audit requirements, pip-audit environment, `git diff --check`, Helm lint, and Cargo tests all exited status 0.
+- The ML-DSA timing gate remains intentionally non-green for `verify` (`p=0.0`); the release blocks any constant-time verification claim and retains the residual risk in the public security documentation.
+
+### Versioning
+
+- Bumped active Python, Rust, package, Docker, Helm, and script version anchors to `3.1.0`.
+
 ## [3.0.1] — 2026-08-17
 
 ### Security and evidence

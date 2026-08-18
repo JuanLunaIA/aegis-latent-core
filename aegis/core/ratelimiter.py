@@ -1,7 +1,7 @@
 """
 aegis.core.ratelimiter — Rate limiting with Redis (distributed) or in-memory fallback.
 
-Tier-4 Rust acceleration (v3.0.1):
+Tier-4 Rust acceleration (v3.1.0):
     When aegis_rust is compiled, `create_rate_limiter` returns a
     `RustBackedRateLimiter` for the "memory" backend.  It replaces
     `asyncio.Lock` with a lock-free atomic CAS token bucket implemented in

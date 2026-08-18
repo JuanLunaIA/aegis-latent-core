@@ -27,9 +27,7 @@ jobs:
   codeql:
     name: CodeQL (${{ matrix.language }})
     runs-on: ubuntu-22.04
-    # GitHub's default CodeQL setup conflicts with advanced workflow setup.
-    # continue-on-error lets the other security jobs proceed regardless.
-    continue-on-error: true
+    # Findings and analysis failures are release-relevant; this job is blocking.
     strategy:
       fail-fast: false
       matrix:
@@ -124,10 +122,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image for scanning
-        run: |
-          docker build -f deploy/docker/Dockerfile -t aegis-scan:latest . || true
-
       - name: Scan filesystem (no Docker build needed)
         uses: aquasecurity/trivy-action@master
         with:
@@ -136,7 +130,7 @@ jobs:
           format: sarif
           output: trivy-fs.sarif
           severity: CRITICAL,HIGH
-          exit-code: "0"   # report but don't block
+          exit-code: "1"   # block HIGH/CRITICAL findings
           # Trivy does NOT read aegis_rust_v2/.cargo/audit.toml, so the
           # owner-accepted, documented Rust advisories (hickory-proto) are
           # mirrored in the repo-root .trivyignore. Keep the two lists in sync.
@@ -160,10 +154,8 @@ jobs:
         # Scans the committed requirements.txt against the OSV database.
         # (Rust crates are covered by the dedicated cargo-audit job below,
         # which reads the now-committed Cargo.lock with documented ignores.)
-        # Report-only: findings surface as SARIF in the Security tab but do not
-        # block the PR — the gating Python audit is the pip-audit job above.
+        # Findings are release-relevant and block the PR.
         uses: google/osv-scanner-action/osv-scanner-action@v2.3.8
-        continue-on-error: true
         with:
           scan-args: |-
             --lockfile=requirements.txt

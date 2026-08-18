@@ -62,6 +62,8 @@ jobs:
             tests \
             tools/visualizer \
             tools/forensic \
+            tools/benchmarks \
+            tools/security \
             benchmarks
       - name: Ruff format check
         run: |
@@ -72,6 +74,8 @@ jobs:
             tests \
             tools/visualizer \
             tools/forensic \
+            tools/benchmarks \
+            tools/security \
             benchmarks
 
   # ── Type check ────────────────────────────────────────────────────────────
@@ -143,6 +147,58 @@ jobs:
         with:
           files: coverage.xml
           fail_ci_if_error: false
+
+  # ── Market hardening harnesses ─────────────────────────────────────────────
+  market-hardening:
+    name: Market Hardening Gates
+    runs-on: ubuntu-22.04
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install package and test dependencies
+        run: pip install -e ".[dev]"
+      - name: Run pinned WAF corpus
+        run: |
+          python tools/security/run_waf_corpus.py --output /tmp/aegis-waf-report.json
+      - name: Run WAL backpressure fault injection
+        run: |
+          python tools/benchmarks/run_backpressure_stall.py \
+            --duration-s 0.25 --offered-rps 10000 --fsync-delay-ms 2 --max-workers 64 \
+            --output /tmp/aegis-backpressure-report.json
+      - name: Run local three-instance key rotation exercise
+        run: |
+          python tools/benchmarks/run_key_rotation.py \
+            --duration-s 0.5 --output /tmp/aegis-key-rotation-report.json
+      - name: Assert machine-readable gates
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          reports = [
+              Path('/tmp/aegis-waf-report.json'),
+              Path('/tmp/aegis-backpressure-report.json'),
+              Path('/tmp/aegis-key-rotation-report.json'),
+          ]
+          failed = []
+          for path in reports:
+              report = json.loads(path.read_text(encoding='utf-8'))
+              if report.get('gate', {}).get('passed') is not True:
+                  failed.append(str(path))
+          if failed:
+              raise SystemExit(f'failed market-hardening gates: {failed}')
+          print('market-hardening gates passed:', ', '.join(str(path) for path in reports))
+          PY
+      - name: Upload market-hardening artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-hardening-reports
+          path: /tmp/aegis-*-report.json
 
   # ── Rust extension ────────────────────────────────────────────────────────
   rust:

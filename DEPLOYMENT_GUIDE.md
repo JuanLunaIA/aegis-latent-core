@@ -1,4 +1,4 @@
-# Aegis Latent Core deployment guide
+# Aegis Latent Core 3.1.0 — Deployment Guide
 
 This guide describes the **implemented** deployment contract. It does not grant regulatory certification. A production deployment must pass the repository release gates and an environment-specific review of kernel, storage, network, identity, secrets, backup, and incident-response controls.
 
@@ -26,7 +26,7 @@ A governed successful response is permitted only after the forensic ledger has p
 |---|---|
 | Python | 3.11 or newer, matching the lockfile and CI runtime |
 | Storage | Durable filesystem or enterprise storage; WAL must not be ephemeral |
-| Signer | HMAC key with at least 32 bytes, Vault/HSM, or reviewed PQC signer |
+| Signer | HMAC key with at least 32 bytes, versioned keyring, Vault/HSM, or reviewed PQC signer |
 | Rate limiter | TLS-protected Redis in strict multi-worker deployments |
 | Kernel | Seccomp filter and enforcing AppArmor/SELinux when required by configuration |
 | Network | Explicit upstream URL, outbound policy, and application-layer egress allowlist where air-gap mode is enabled |
@@ -54,6 +54,9 @@ Start from `.env.example`. At minimum, set these values through the deployment s
 AEGIS_API_KEYS=<client-key>
 AEGIS_AUDIT_API_KEYS=<read-only-audit-key>
 AEGIS_SIGNING_KEY=<dedicated-secret-with-at-least-32-bytes>
+# Or use the versioned keyring for zero-restart HMAC rotation:
+# AEGIS_HMAC_KEYRING_PATH=/var/lib/aegis/secrets/hmac-keyring.json
+# AEGIS_HMAC_KEYRING_RELOAD_INTERVAL_S=1
 AEGIS_BACKEND_URL=https://<approved-upstream>/v1
 AEGIS_BACKEND_API_KEY=<provider-secret>
 AEGIS_RATE_LIMIT_BACKEND=redis
@@ -89,13 +92,39 @@ Non-stream responses carry `X-Aegis-Request-ID`, `X-Aegis-Session-ID`, `X-Aegis-
 
 The WAL is opened with owner-only permissions and fsynced on each committed node. Configure rotation and monitoring before the active WAL reaches its operational limit. Backups must preserve the original bytes, metadata, timestamps, hashes, access history, and restore-test results. A restored chain must pass `verify_integrity()` before it is accepted as evidence.
 
-Key rotation is an evidence event. Retain the key identifier and verification material needed to validate historical records, or use a reviewed key-enveloping/signing architecture. HMAC is symmetric and therefore not equivalent to third-party non-repudiation; long-lived or high-value evidence should use an HSM/Vault or a reviewed hybrid/post-quantum design.
+Key rotation is an evidence event. The versioned keyring has exactly one active key, supports non-expired verification overlap, records a non-secret key ID, validates a complete snapshot before atomic activation, and retains the last valid snapshot when a replacement is malformed. Use [`docs/operations/KEY_ROTATION_RUNBOOK.md`](docs/operations/KEY_ROTATION_RUNBOOK.md) for the sequence and rollback. A three-replica zero-downtime claim requires a real orchestrated run; unit tests alone are not deployment evidence. HMAC is symmetric and therefore not equivalent to third-party non-repudiation; long-lived or high-value evidence should use an HSM/Vault or a reviewed hybrid/post-quantum design.
 
-## 8. Health, telemetry, and alerts
+## 8. Required market-hardening scenarios
+
+### Backpressure under I/O stall
+
+Run the repository harness against an isolated local ledger:
+
+```bash
+PYTHONPATH=. .venv/bin/python tools/benchmarks/run_backpressure_stall.py \
+  --duration-s 0.25 --offered-rps 10000 --fsync-delay-ms 2 --max-workers 64 \
+  --output evidence/backpressure_stall_report.json
+```
+
+The gate requires zero missing evidence IDs, zero duplicate IDs, valid chain integrity, and no silent drop. This is offered load and injected latency, not accepted production capacity. A `dm-delay` run is separate and must use a disposable device with verified isolation.
+
+### WAF evasion boundary
+
+Run `tools/security/run_waf_corpus.py` against the pinned local corpus. The gate is zero critical bypasses and an observed bypass rate below 5% for that corpus. HTTP/2 fragmentation and `nuclei-templates/waf-bypass` are not passed by this application-layer run; they require a pinned authorized ingress target and retained artifacts.
+
+### Key rotation
+
+Use the versioned keyring with a secret manager and run three replicas through activation, overlap verification, expiry, restart/replay, and rollback. The gate is zero failed durable commits during the declared valid rotation window and zero unverifiable records. If three replicas or the actual secret-manager path are not available, mark the result `UNVERIFIED`.
+
+### ML-DSA timing
+
+A constant-time statement requires separate native `sign()` and `verify()` experiments with at least 1,000,000 balanced samples per declared operation, isolated CPU, pinned build, raw samples, p-value, effect size, and environment manifest. `p > 0.05` means only no detected leakage under that experiment; it is not a proof or certification. Until the artifact exists, the status is `UNVERIFIED`.
+
+## 9. Health, telemetry, and alerts
 
 Use `/health` for liveness and `/ready` for readiness. Alert on evidence commit failure, WAL fsync failure, integrity verification failure, Redis backend failure, queue saturation, upstream circuit opening, body-limit rejection spikes, and startup rejection caused by Seccomp or LSM posture. Preserve request IDs in structured logs and traces without logging raw secrets or unnecessary prompt content.
 
-## 9. Go-live gates
+## 10. Go-live gates
 
 | Gate | Required observable |
 |---|---|
@@ -103,12 +132,13 @@ Use `/health` for liveness and `/ready` for readiness. Alert on evidence commit 
 | Supply chain | hash-checked lockfile, SBOM, vulnerability scan, license review, image digest and signing evidence |
 | Functional | full test suite passes; P0/P1 failing-path tests pass |
 | Evidence | a successful governed request produces a verifiable signed WAL record before `2xx` |
-| Fault injection | signer, WAL, Redis, upstream, queue, Seccomp, and LSM failures reject or degrade only through documented fail-closed paths |
+| Fault injection | signer, WAL, Redis, upstream, queue, Seccomp, LSM, WAF, and fsync-stall failures reject or degrade only through documented fail-closed paths |
+| Scenario acceptance | backpressure, WAF corpus, three-replica key rotation, and native ML-DSA timing are separately measured with explicit `UNVERIFIED` boundaries when unavailable |
 | Recovery | WAL backup/restore passes integrity verification and the rollback artifact is identified by digest |
 | Operations | SLOs, alerts, on-call owner, incident runbook, key rotation, backup, and restore tests exist |
 
 The reconstructed repository baseline recorded `5374 passed, 80 skipped, 47 warnings in 23.35s`. Warnings remain release telemetry and must be triaged; they are not evidence that the deployment environment satisfies the kernel or infrastructure gates.
 
-## 10. Explicit non-goals
+## 11. Explicit non-goals
 
 Aegis is not, by itself, a FedRAMP authorization, HIPAA compliance determination, SOC 2 opinion, EU AI Act conformity assessment, GDPR legal basis, or court-admissibility ruling. Those require organizational and jurisdiction-specific controls, independent review, and an accountable owner.

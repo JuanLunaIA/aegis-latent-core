@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
-"""integration_test_mock.py — comprehensive local verification harness for Aegis v3.0.1.
+"""integration_test_mock.py — comprehensive local verification harness for Aegis v3.1.0.
 
 Spins up a pytest-httpserver mock upstream, starts the Aegis proxy against it,
 then drives a full payload matrix through the proxy and asserts on every response.
@@ -236,7 +236,7 @@ def _run_sweep(base_url: str, api_key: str, timeout: float = 5.0) -> None:
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
     print(f"\n{'=' * 72}")
-    print(f"  Aegis v3.0.1 Integration Sweep — {len(PAYLOAD_MATRIX)} payloads")
+    print(f"  Aegis v3.1.0 Integration Sweep — {len(PAYLOAD_MATRIX)} payloads")
     print(f"  Target: {base_url}  Key: {api_key[:12]}...")
     print(f"{'=' * 72}\n")
 
@@ -475,7 +475,7 @@ if _pytest_available():
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Aegis v3.0.1 integration sweep — drives PAYLOAD_MATRIX against a running proxy"
+        description="Aegis v3.1.0 integration sweep — drives PAYLOAD_MATRIX against a running proxy"
     )
     parser.add_argument(
         "--sweep",

@@ -67,6 +67,15 @@ class SignerProvider(abc.ABC):
                           Vault unreachable after all retries, etc.).
         """
 
+    @property
+    def key_id(self) -> str:
+        """Stable identifier for active signing material; never secret material."""
+        return "static"
+
+    async def sign_payload_with_metadata(self, data: bytes) -> tuple[str, str]:
+        """Return ``(signature_hex, key_id)`` for auditable rotation metadata."""
+        return await self.sign_payload(data), self.key_id
+
     async def verify(self, data: bytes, signature_hex: str) -> bool:
         """
         Verify a signature produced by this provider.

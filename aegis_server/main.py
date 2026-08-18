@@ -9,21 +9,20 @@ This module wires together every sub-system of the enterprise layer:
     StorageProvider  ──► audit node persistence (SQLite / PostgreSQL / DynamoDB)
     SignerProvider   ──► signing (HMAC-SHA256 / Vault Transit)
     ComplianceExporter ─► SOC2/HIPAA sealed bundles
-    BackgroundTasks  ──► off-path analytics (entropy, KL, crypto commit)
+    BackgroundTasks  ──► optional response enrichment only
 
 Request lifecycle (non-streaming)
 ----------------------------------
 1. WAF + auth middleware (existing aegis.proxy.waf / auth layers).
 2. Proxy handler forwards request to upstream LLM backend via httpx.
-3. Response is returned to the caller *immediately* — zero added latency.
-4. A ``BackgroundTask`` is enqueued to:
-   a. Deserialise the response JSON (potentially large when logprobs=True).
-   b. Compute Shannon entropy, KL divergence, MoE gate metrics off-path.
-   c. Sign the Merkle root via the configured ``SignerProvider``.
-   d. Persist the ``StorageNode`` via the configured ``StorageProvider``.
+3. The handler computes and commits signed evidence through the configured
+   ``StorageProvider`` before returning a governed response.
+4. Optional enrichment may run after the authoritative evidence commit, but it
+   cannot replace or invalidate that record.
 
-This ensures the forensic pipeline never adds measurable latency to the
-user-facing request/response cycle.
+The enterprise surface intentionally pays the durable commit cost. It must not
+claim zero added latency or return a governed successful response without an
+authoritative evidence record.
 
 Dependency injection
 --------------------
@@ -373,12 +372,17 @@ async def _run_forensic_analytics(
     signer: SignerProvider,
     force_logprobs: bool,
     app_state: Any = None,
-) -> None:
+    upstream_status: int | None = None,
+    require_durable: bool = False,
+) -> bool:
     """
-    Off-path forensic analytics task — runs via FastAPI BackgroundTasks.
+    Compute forensic analytics and persist one evidence node.
 
-    This function is intentionally designed to never raise unhandled exceptions:
-    any failure is logged as ERROR but must not crash the worker process.
+    Legacy callers may use this as optional enrichment (``require_durable=False``),
+    where signing/storage failures are logged and the function returns ``False``.
+    Governed enterprise responses use ``require_durable=True``; any signing or
+    storage failure then prevents the response from being returned as successful.
+    The function never raises an unhandled analytics exception.
 
     Steps:
     1. Parse response JSON; warn on oversized payloads.
@@ -386,8 +390,8 @@ async def _run_forensic_analytics(
     3. Compute Shannon entropy of the response text.
     4. Hash request + response bytes.
     5. Build ``node_data`` forensic metadata dict.
-    6. Sign the Merkle root (node_data hash used as proxy MMR root).
-    7. Persist the node to storage.
+    6. Sign the Merkle root.
+    7. Persist the node to storage before a governed response is emitted.
 
     Args:
         request_id:    Unique request identifier (UUID4).
@@ -538,6 +542,8 @@ async def _run_forensic_analytics(
         "logprobs_present": bool(token_trail),
         "force_logprobs": force_logprobs,
         "usage": response_json.get("usage", {}),
+        "upstream_status": upstream_status,
+        "evidence_authority": "durable" if require_durable else "enrichment",
     }
 
     # ── 6. Sign the Merkle root ───────────────────────────────────────
@@ -546,11 +552,12 @@ async def _run_forensic_analytics(
         signature = await signer.sign_payload(merkle_root.encode())
     except Exception as exc:
         logger.error(
-            "request_id=%s: signing failed in background task: %s — "
-            "node will be persisted unsigned.",
+            "request_id=%s: signing failed in analytics path: %s",
             request_id,
             exc,
         )
+        if require_durable:
+            return False
         node_data["is_fallback"] = True
 
     # ── 7. Persist node ───────────────────────────────────────────────
@@ -579,10 +586,12 @@ async def _run_forensic_analytics(
         )
     except Exception as exc:
         logger.error(
-            "request_id=%s: storage.write_node failed in background task: %s",
+            "request_id=%s: storage.write_node failed in analytics path: %s",
             request_id,
             exc,
         )
+        return False
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -821,12 +830,11 @@ def _enterprise_router():
 
     @router.post(
         "/proxy/chat/completions",
-        summary="Proxied chat completions with off-path forensics",
+        summary="Proxied chat completions with durable evidence",
         description=(
-            "Forwards the request to the configured upstream LLM endpoint and "
-            "returns the response immediately.  Forensic analytics (entropy, "
-            "KL divergence, chain commit) run off-path via a BackgroundTask — "
-            "zero latency added to the user-facing request."
+            "Forwards the request to the configured upstream LLM endpoint, commits "
+            "signed durable evidence, and returns only after the evidence boundary. "
+            "Optional enrichment must never replace this commit."
         ),
         include_in_schema=True,
     )
@@ -875,6 +883,40 @@ def _enterprise_router():
         upstream_status = 502
         upstream_resp_headers: dict[str, str] = {}
 
+        async def durable_error_response(status_code: int, message: str) -> JSONResponse:
+            error_bytes = json.dumps({"error": message}, separators=(",", ":")).encode("utf-8")
+            durable = await _run_forensic_analytics(
+                request_id=request_id,
+                request_bytes=request_bytes,
+                response_bytes=error_bytes,
+                client_id=client_id,
+                model=model,
+                endpoint="chat.completions",
+                storage=storage,
+                signer=signer,
+                force_logprobs=False,
+                app_state=request.app.state,
+                upstream_status=status_code,
+                require_durable=True,
+            )
+            if not durable:
+                return JSONResponse(
+                    status_code=503,
+                    content={"error": "durable evidence unavailable"},
+                    headers={
+                        "X-Aegis-Request-ID": request_id,
+                        "X-Aegis-Evidence-Status": "unavailable",
+                    },
+                )
+            return JSONResponse(
+                status_code=status_code,
+                content={"error": message},
+                headers={
+                    "X-Aegis-Request-ID": request_id,
+                    "X-Aegis-Evidence-Status": "durable",
+                },
+            )
+
         try:
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(
@@ -894,22 +936,12 @@ def _enterprise_router():
                 upstream_resp_headers = dict(resp.headers)
         except httpx.TimeoutException as exc:
             logger.error("request_id=%s: upstream timeout: %s", request_id, exc)
-            return JSONResponse(
-                status_code=504,
-                content={"error": "upstream LLM backend timed out"},
-                headers={"X-Aegis-Request-ID": request_id},
-            )
+            return await durable_error_response(504, "upstream LLM backend timed out")
         except httpx.RequestError as exc:
             logger.error("request_id=%s: upstream connection error: %s", request_id, exc)
-            return JSONResponse(
-                status_code=502,
-                content={"error": "upstream LLM backend unreachable"},
-                headers={"X-Aegis-Request-ID": request_id},
-            )
+            return await durable_error_response(502, "upstream LLM backend unreachable")
 
-        # Enqueue off-path analytics — response already available to return
-        background_tasks.add_task(
-            _run_forensic_analytics,
+        durable = await _run_forensic_analytics(
             request_id=request_id,
             request_bytes=request_bytes,
             response_bytes=response_bytes,
@@ -920,9 +952,20 @@ def _enterprise_router():
             signer=signer,
             force_logprobs=settings.force_logprobs,
             app_state=request.app.state,
+            upstream_status=upstream_status,
+            require_durable=True,
         )
+        if not durable:
+            return JSONResponse(
+                status_code=503,
+                content={"error": "durable evidence unavailable"},
+                headers={
+                    "X-Aegis-Request-ID": request_id,
+                    "X-Aegis-Evidence-Status": "unavailable",
+                },
+            )
 
-        # Return upstream response verbatim + Aegis headers
+        # Return upstream response verbatim only after durable evidence commit.
         # Strip hop-by-hop headers that must not be forwarded
         _HOP_BY_HOP = frozenset(
             {
@@ -940,6 +983,7 @@ def _enterprise_router():
             k: v for k, v in upstream_resp_headers.items() if k.lower() not in _HOP_BY_HOP
         }
         forward_headers["X-Aegis-Request-ID"] = request_id
+        forward_headers["X-Aegis-Evidence-Status"] = "durable"
 
         return Response(
             content=response_bytes,

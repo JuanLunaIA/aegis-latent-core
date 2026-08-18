@@ -1,164 +1,85 @@
-
 # Security Policy
 
-## Supported Versions
+## Scope and support posture
 
-| Version | Supported          |
-| :------ | :----------------- |
-| 2.4.x   | ✅ Active           |
-| 2.3.x   | ⚠️ Security patches only |
-| 2.2.x   | ⚠️ Security patches only |
-| 2.1.x   | ❌ End of life      |
-| 2.0.x   | ❌ End of life      |
-| < 2.0   | ❌ End of life      |
+Aegis Latent Core is security-sensitive infrastructure. The repository provides defensive controls and evidence paths; it does not certify a deployment, replace customer security governance, or establish legal admissibility.
 
-## Reporting a Vulnerability
+| Version line | Support status |
+|---|---|
+| `3.1.x` | Market-hardening candidate in this branch; becomes the current public line only after the signed release gate and provenance pass. |
+| `3.0.x` | Published v3.0.1 baseline. Upgrade to the candidate line for new hardening; security fixes remain subject to the project’s actual operating capacity. |
+| `<3.0.0` | Historical releases. Upgrade before requesting support; no default security-fix commitment is made. |
 
-**Do not open a public GitHub issue for security vulnerabilities.**
+The immutable public baseline is [`v3.0.1`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.0.1). Supported behavior is defined by the current source, tests, deployment prerequisites, and release artifacts, not by historical prospectus language.
 
-Use [GitHub Security Advisories](https://github.com/JuanLunaIA/aegis-latent-core/security/advisories/new) on the **JuanLunaIA/aegis-latent-core** repository. For sensitive disclosures, contact the maintainer through GitHub private channels.
+## Reporting a vulnerability
 
-### Response Timeline
+**Do not open a public GitHub issue for a security vulnerability.** Use [GitHub Private Vulnerability Reporting](https://github.com/JuanLunaIA/aegis-latent-core/security/advisories/new) when available. If that path is unavailable, use the maintainer contact shown in the repository profile and include only the minimum reproduction data required for triage. Do not send credentials, customer data, live targets, or secrets.
 
-| Milestone              | Target           |
-| :--------------------- | :--------------- |
-| Acknowledgment         | 48 hours         |
-| Severity assessment    | 5 business days  |
-| Mitigation or plan     | 14 days (critical: 7 days) |
-| Public disclosure      | After patch ships |
+Please include the affected release or commit, deployment boundary, prerequisites, reproducible steps in an authorized environment, impact, and any safe mitigation. Reports may be credited in release notes unless anonymity is requested.
 
-We follow coordinated disclosure. Reports may be credited in the changelog unless the reporter requests anonymity.
+The following are target response objectives for coordinated disclosure, not a contractual SLA until a support agreement names an accountable operations owner:
 
-### Dependency Vulnerability SLA
+| Milestone | Target |
+|---|---|
+| Acknowledgment | 2 business days |
+| Initial severity assessment | 5 business days |
+| Mitigation or remediation plan | 14 days; 7 days for confirmed critical impact where a safe mitigation exists |
+| Public disclosure | After a fix or coordinated disclosure decision |
 
-Dependency advisories are surfaced automatically and continuously:
+## Dependency and supply-chain policy
 
-- **Dependabot** (`.github/dependabot.yml`) opens update PRs for every ecosystem in the tree — Python (`pip`), Rust (`cargo`), GitHub Actions, and the container base image. Dependabot raises **security** update PRs immediately, independent of the weekly routine-bump schedule.
-- **CI gates** fail the build on any known advisory: `pip-audit` against both the pinned `requirements.txt` and the resolved/installed environment, `osv-scanner` over `requirements.txt` + `Cargo.lock`, and `cargo-audit` for Rust crates.
+The repository uses pinned dependency resolution, an SBOM, vulnerability scans, and release provenance. CI should block on known critical/high vulnerabilities when a fix is available and must record justified exceptions when upstream remediation does not yet exist. Each exception requires an owner, rationale, compensating control, review date, and removal condition.
 
-Remediation targets, measured from advisory publication (or Dependabot PR open, whichever is first):
+Release reviewers should verify `requirements.lock`, `Cargo.lock`, the SPDX SBOM, action references, container base images, and the release asset manifest. A clean scan is evidence about the scanned dependency set at a point in time; it is not a perpetual absence-of-vulnerability guarantee.
 
-| Severity              | Triage   | Fix merged to `main`        |
-| :-------------------- | :------- | :-------------------------- |
-| CRITICAL              | 24 hours | 72 hours                    |
-| HIGH                  | 48 hours | 7 days                      |
-| MEDIUM                | 5 days   | 30 days                     |
-| LOW / informational   | best-effort | next routine bump cycle  |
+## Production security baseline
 
-A Dependabot security PR for a HIGH/CRITICAL advisory is reviewed, its CI run (including the audit gates above) confirmed green, and merged within the window. When a fix is not yet available upstream, the advisory is documented with a temporary, justified `--ignore`/`--ignore-vuln` entry and tracked until a fixed release exists.
+Strict mode is the production-oriented posture. It requires authentication, durable evidence, strong signing, bounded request bodies, distributed rate limiting, durable storage, and the configured kernel controls. Development or sandbox modes must be explicit and must not be used as production evidence.
 
----
+The minimum deployment controls are:
 
-## Deployment Security Checklist
+```env
+AEGIS_SECURITY_ENFORCEMENT_MODE=strict
+AEGIS_API_KEYS=<secret-manager-managed-value>
+AEGIS_REQUIRE_DURABLE_EVIDENCE=true
+AEGIS_REQUIRE_DISTRIBUTED_LIMITER=true
+AEGIS_RATE_LIMIT_BACKEND=redis
+AEGIS_REDIS_URL=rediss://redis.internal:6380/0
+AEGIS_REQUIRE_LSM=true
+AEGIS_REQUIRE_SECCOMP=true
+AEGIS_MAX_REQUEST_BODY_BYTES=1048576
+AEGIS_DEBUG_MODE=false
+```
 
-### Authentication
+Use a secret manager or approved HSM/Vault integration. Never commit `.env` files, PEM files, bearer tokens, provider credentials, raw WAL records, or customer payloads. Restrict WAL and keyring files to the service owner and preserve them read-only during incident handling.
 
-- Always set `AEGIS_API_KEYS` in production. Never set `AEGIS_AUTH_DISABLED=true` outside local development.
-- Use a high-entropy signing key: `python -c 'import secrets; print(secrets.token_hex(32))'` and store the output in `AEGIS_SIGNING_KEY`. An empty or missing signing key causes audit nodes to fall back to ephemeral Ed25519 keys, reducing legal admissibility to `"Compromised"`.
-- Restrict audit API access with separate `AEGIS_AUDIT_API_KEYS` (read-only principals should not share keys with write paths).
+## Signing and key rotation
 
-### TLS / mTLS (v2.3.0+)
+HMAC-SHA256 is symmetric and classical. It is suitable only when the deployment accepts shared-secret verification and has a documented custody model. For key rotation, use [`docs/operations/KEY_ROTATION_RUNBOOK.md`](docs/operations/KEY_ROTATION_RUNBOOK.md) and the versioned keyring implementation. The keyring uses one active key, historical verify keys with explicit expiry, atomic reload, and non-secret `key_id` metadata. A malformed replacement must leave the prior valid snapshot active or fail closed; it must never produce an unsigned record.
 
-- Enable TLS termination at the Aegis layer for any deployment that does not place it behind a TLS-terminating proxy:
-  ```env
-  AEGIS_SSL_CERTFILE=/etc/certs/server.crt
-  AEGIS_SSL_KEYFILE=/etc/certs/server.key
-  ```
-- To enforce mutual TLS (require a client certificate from callers):
-  ```env
-  AEGIS_MTLS_REQUIRED=true
-  AEGIS_SSL_CA_CERTS=/etc/certs/client-ca.crt
-  ```
-- To use a custom CA bundle when connecting to an upstream LLM provider:
-  ```env
-  AEGIS_SSL_CA_CERTS=/etc/certs/upstream-ca.crt
-  ```
-  If `AEGIS_MTLS_REQUIRED=true` but `AEGIS_SSL_CERTFILE` and `AEGIS_SSL_KEYFILE` are not set, Aegis logs a `WARNING` and proceeds without a client certificate.
+The native ML-DSA-65 path is available only when the real Rust extension is present. It does not silently return a simulated signature. Native availability is not a claim of constant-time execution, FIPS 140 validation, or legal admissibility. The timing assessment boundary is documented in [`docs/security/PQC_CONSTANT_TIME.md`](docs/security/PQC_CONSTANT_TIME.md).
 
-### Secrets Management
+## Network and ingress boundary
 
-- Never commit `.env`, PEM files, or any `*.wal.jsonl` file containing real audit data to version control.
-- Rotate `AEGIS_SIGNING_KEY` using a documented key-rotation procedure; an unannounced rotation will break the HMAC chain. Document the rotation event in your chain-of-custody notes.
-- Use `AEGIS_DEBUG_MODE=false` (default) in all non-development environments. Debug mode exposes `/docs`, `/redoc`, and `/openapi.json`.
+Terminate TLS at a controlled ingress or at Aegis and document which component owns HTTP/2 parsing and normalization. Use mTLS where the customer threat model requires caller certificates. Configure upstream TLS validation and egress allowlists. Application-layer endpoint validation does not replace firewall policy, network namespaces, Kubernetes NetworkPolicy, cloud IAM, or provider-side controls.
 
-### LSM Hardening (v2.3.0+)
+The WAF operates at the application boundary. The pinned local corpus and its limitations are documented in [`docs/security/WAF_TESTING.md`](docs/security/WAF_TESTING.md). HTTP/2 fragmentation and ingress parser differential tests remain a separate acceptance requirement.
 
-As of v2.3.0, the LSM guard runs in **advisory mode**: missing AppArmor or SELinux profiles emit a `WARNING` but do not crash the server. For hardened deployments requiring hard LSM enforcement:
+## Runtime evidence and sample material
 
-1. Load an AppArmor or SELinux profile before starting Aegis.
-2. Verify confinement externally: `aa-status` (AppArmor) or `getenforce` (SELinux).
-3. Use a process supervisor or init system that fails the unit on non-zero exit if enforcement is mandatory for your threat model.
+Aegis runtime evidence must come from live control paths, test fixtures, or retained benchmark artifacts. `Samples/01-overview.html` is a static dashboard demo and may contain synthetic display values to illustrate layout and interaction. Its values, hashes, counts, provider names, and timestamps must never be presented as production telemetry, customer activity, cryptographic proof, or release evidence.
 
-### Entropy & WAF Tuning
+The repository’s real-vs-unavailable contract is fail-closed for security-sensitive capabilities. When a dependency such as native ML-DSA, Seccomp, an HSM, a TPM, or an external audit tool is absent, the capability must report unavailable or refuse the operation. A demo sample is not an exception to this rule because it is not on the governed runtime path.
 
-- Tune `AEGIS_ENTROPY_ALERT_THRESHOLD_BITS` to match your model's expected entropy range before deploying alerting integrations.
-- In high-security environments, set `AEGIS_WAF_STRICT_MODE=true`. In strict mode, the WAF applies hard blocks on critical injection patterns regardless of score threshold.
-- KL divergence and Jensen-Shannon divergence thresholds (`AEGIS_KL_ALERT_THRESHOLD`, `AEGIS_JS_ALERT_THRESHOLD`) are now respected at runtime via `AegisSettings` (fixed in v2.3.0); verify your values if upgrading from v2.2.0.
+## Security-relevant release gates
 
-### Network Exposure
+A release is blocked when a governed accepted response lacks durable evidence in the declared scope, chain verification fails, a critical WAF corpus case bypasses, a valid rotation loses or invalidates a record, a security scan fails without a reviewed exception, a runtime control is absent in strict mode, or public documentation overstates the evidence. Release artifacts must include tests, SBOM, provenance, hashes, rollback instructions, and residual risks.
 
-- Bind to `127.0.0.1` or a private interface unless a load balancer or ingress controller handles public-facing TLS termination.
-- Restrict `/v1/audit/*` endpoints to trusted internal networks or require `AEGIS_AUDIT_API_KEYS`.
-- The visualizer server (`tools/visualizer/`) is a local development tool. Never expose it to public networks.
+## Security assurance roadmap
 
----
+The external-assurance sequence is maintained in [`docs/SECURITY_ASSURANCE_ROADMAP.md`](docs/SECURITY_ASSURANCE_ROADMAP.md). It separates repository evidence from independent code review, penetration testing, crypto review, disaster-recovery evidence, customer pilot results, and certification or attestation work owned by qualified external parties.
 
-## Simulated vs. Real Controls
+## License and disclosure caveat
 
-Aegis ships **no simulated security controls**. A 2026-06-24 full-tree audit found
-~20% of `aegis/core` modules returning success without performing the advertised
-function (fake PQC signatures, hardcoded enclave measurements, randomly-generated
-"telemetry", etc.). Every one has since been replaced with a real implementation
-or an honest, hardware-gated stub that **fails closed** when its dependency is
-absent — never fabricating assurance. This is enforced two ways:
-
-- **Regression ratchet** — `tests/test_no_simulation_markers.py` fails CI if any
-  `aegis/` module reintroduces a simulation marker (`KNOWN_SIMULATION_DEBT` is
-  empty and the test asserts the count stays `0`).
-- **Live capability report** — `GET /v1/attestation/capabilities` (behind audit
-  auth) reports each control's status in the running deployment as `REAL`,
-  `UNAVAILABLE`, or `SIMULATED`, with a `simulation_debt` count that must be `0`.
-
-Many controls depend on hardware or external tooling. Where that dependency is
-absent, the control reports `UNAVAILABLE` and refuses to run — it does **not**
-silently degrade to a fake. The matrix below shows each control, its dependency,
-and what it does when the dependency is missing.
-
-| Control | Module | Requires | When dependency absent |
-| :------ | :----- | :------- | :--------------------- |
-| ML-DSA-65 signing | `pqc_signer` | Rust `aegis_rust` ext | `UNAVAILABLE`; `sign()` raises (no fake signature) |
-| Audit signing (HMAC-SHA256) | `crypto_audit` | stdlib | always `REAL` |
-| Hybrid PQC TLS (X25519+ML-KEM) | `pqc_tls` | `cryptography` + ML-KEM | refuses classical-only downgrade |
-| Seccomp syscall filter | `sandbox_l1` | libseccomp | `UNAVAILABLE`; filter not loaded |
-| TPM PCR root-of-trust | `tpm` | tpm2-tools + TPM device | labelled **software** PCR (not a hardware RoT) |
-| Trusted-boot attestation | `boot_attestation` | signed vendor manifest + TPM | manifest signature always verified; live PCR check needs a TPM |
-| Hardware-bound session tokens | `hardware_token` | TPM device + tpm2-tools | software HMAC binding (no PCR seal) when TPM/tools absent |
-| TEE enclave attestation | `tee_manager` / `enclave_provider` | SGX/SEV/TDX device | `UNAVAILABLE`; operations raise |
-| eBPF runtime monitor | `ebpf_monitor` | `bpftool` + CAP_BPF | probes stay inactive; no fabricated telemetry |
-| DPDK kernel-bypass datapath | `dpdk_engine` | hugepages + dpdk-devbind | `UNAVAILABLE`; no packets (no fake packets) |
-| Dynamic firewall segmentation | `xdp_dynamic_segmentation` | nftables/iptables | application-layer only (no kernel drop) |
-| CFI binary inspection | `cfi_manager` | pyelftools / readelf | `UNAVAILABLE` |
-| MTE detection | `mte_guard` | ARM MTE hardware | honest `False` on x86/non-ARM |
-| Fuzzing harness | `fuzzing_harness` | `cargo` + cargo-fuzz | `UNAVAILABLE` (no fake clean run) |
-| Dependency CVE audit | `dependency_audit` | `pip-audit` | raises (no fake clean result) |
-| Reproducible-build verify | `build_reproducibility` | `cargo` | raises (no fake match) |
-| Transparency log | `transparency_log` | stdlib (JSONL) | always `REAL` |
-| Public root anchoring | `blockchain_anchor` | configured anchor backend (RFC3161/OTS) | `publish_root` fails closed — never fabricates a tx/proof |
-
-> The `zk_proof` audit-inclusion proof is still an honest stub (it sets
-> `is_stub == True` and does not claim ZK soundness); integrating a real proving
-> system is tracked in `docs/ROADMAP.md` (DX-Forensic).
-
----
-
-## Known Security-Relevant Fixes
-
-| Version | Fix | Severity |
-| :------ | :-- | :------- |
-| 2.4.0 | `aegis_server.crypto` eagerly imported `hvac` at package level, breaking the HMAC-only compliance export path on installs without the optional `vault` extra; `VaultSigner` is now lazy-imported | Low |
-| 2.3.0 | mTLS settings were defined in `AegisSettings` but never applied to the uvicorn listener or the upstream `httpx` client | High |
-| 2.3.0 | `ResponseAnalyzer` thresholds were hardcoded, ignoring `AegisSettings`; alerting could not be tuned at runtime | Medium |
-| 2.2.0 | Audit chain signing key derived from the first sorted API key; unannounced rotation silently invalidated the chain | High |
-| 2.2.0 | `/docs` and `/redoc` exposed unconditionally in all deployment modes | Medium |
-| 2.2.0 | `prev_hash` always pointed to the genesis node due to wrong `ORDER BY` direction in `list_nodes()` | Critical |
-| 2.2.0 | Concurrent `BackgroundTask` writes could fork the audit chain (no chain lock) | Critical |
+The project is licensed under [`LICENSE`](LICENSE) and [`COMMERCIAL.md`](COMMERCIAL.md). License interpretation, contractual remedies, regulatory obligations, and legal strategy require counsel in the applicable jurisdiction.

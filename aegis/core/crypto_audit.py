@@ -46,6 +46,7 @@ import logging
 import os
 import time
 from collections import deque
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from threading import Lock
 from typing import Any
@@ -271,9 +272,11 @@ class CryptographicAuditLedger:
         async_mode: bool = False,
         hsm_backend: HSMSigningBackend | None = None,
         require_strong_signing: bool = False,
+        fsync_fn: Callable[[int], None] | None = None,
     ) -> None:
         self.persistence_path = persistence_path
         self._signing_key = signing_key
+        self._fsync = fsync_fn or os.fsync
         self._hsm_backend = hsm_backend
         self._require_strong_signing = require_strong_signing
         self.max_memory_nodes = max_memory_nodes
@@ -545,7 +548,7 @@ class CryptographicAuditLedger:
             if self._wal_handle is not None:
                 try:
                     self._wal_handle.flush()
-                    os.fsync(self._wal_handle.fileno())
+                    self._fsync(self._wal_handle.fileno())
                 except OSError:
                     pass
                 self._wal_handle.close()
@@ -647,7 +650,7 @@ class CryptographicAuditLedger:
         if self._wal_handle is not None:
             try:
                 self._wal_handle.flush()
-                os.fsync(self._wal_handle.fileno())
+                self._fsync(self._wal_handle.fileno())
             except OSError:
                 pass
             self._wal_handle.close()
@@ -720,7 +723,7 @@ class CryptographicAuditLedger:
         if self._wal_handle is not None:
             self._wal_handle.write(line)
             self._wal_handle.flush()
-            os.fsync(self._wal_handle.fileno())
+            self._fsync(self._wal_handle.fileno())
             self._wal_bytes += nbytes
         else:
             # Safety fallback: _open_wal() failed at init time.
@@ -738,7 +741,7 @@ class CryptographicAuditLedger:
             with os.fdopen(fd, "a") as f:
                 f.write(line)
                 f.flush()
-                os.fsync(f.fileno())
+                self._fsync(f.fileno())
             try:
                 self._wal_bytes = os.path.getsize(self.persistence_path)
             except OSError:

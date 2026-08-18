@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
-"""generate_license_key.py — HMAC-SHA256 license key generator for Aegis v3.0.1.
+"""generate_license_key.py — HMAC-SHA256 license key generator for Aegis v3.1.0.
 
 Generates cryptographically signed, self-contained trial and commercial license
 keys that embed the licensee metadata, tier, and expiry date. The key is opaque
@@ -252,7 +252,7 @@ def _print_key_info(payload: dict[str, Any], key: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Aegis v3.0.1 License Key Generator / Verifier",
+        description="Aegis v3.1.0 License Key Generator / Verifier",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sub = parser.add_subparsers(dest="command")

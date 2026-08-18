@@ -1,0 +1,13 @@
+# Aegis Latent Core ownership
+# A single accountable owner is declared until the project has a staffed review team.
+* @JuanLunaIA
+
+/.github/ @JuanLunaIA
+/aegis/ @JuanLunaIA
+/aegis_server/ @JuanLunaIA
+/aegis_rust_v2/ @JuanLunaIA
+/deploy/ @JuanLunaIA
+/docs/security/ @JuanLunaIA
+/docs/operations/ @JuanLunaIA
+/COMMERCIAL.md @JuanLunaIA
+/SECURITY.md @JuanLunaIA
