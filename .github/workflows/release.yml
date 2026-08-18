@@ -152,7 +152,7 @@ jobs:
           maturin-version: v1.11.5
           before-script-linux: |
             if command -v yum >/dev/null 2>&1; then
-              yum install -y perl-IPC-Cmd
+              yum install -y perl-IPC-Cmd perl-Time-Piece
             fi
           args: --release --locked --compatibility pypi --out dist --features extension-module
 
