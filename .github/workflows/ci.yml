@@ -41,6 +41,35 @@ jobs:
             exit 1
           fi
 
+  # ── Formal verification ───────────────────────────────────────────────────
+  formal-verification:
+    name: Formal Verification (Z3, Lean, TLC)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install pinned formal toolchain
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq z3
+          curl --proto '=https' --tlsv1.2 -sSf \
+            https://raw.githubusercontent.com/leanprover/elan/464c9d28395000a2a0128e07081e4956d50eced2/elan-init.sh \
+            -o /tmp/elan-init.sh
+          sh /tmp/elan-init.sh -y --default-toolchain leanprover/lean4:v4.33.0
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          mkdir -p .tools
+          curl --proto '=https' --tlsv1.2 -fL \
+            https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar \
+            -o .tools/tla2tools.jar
+          echo "ab323b79802aedc3203b3f9af37c6aca3ed43f4e0225b36f2aa77b26de46c05f  .tools/tla2tools.jar" \
+            | sha256sum -c -
+      - name: Check bounded safety models
+        run: scripts/verify_formal_artifacts.sh
+
   # ── Lint & format ─────────────────────────────────────────────────────────
   lint:
     name: Lint & Format

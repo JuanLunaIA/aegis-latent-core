@@ -2,7 +2,7 @@
 
 **Status:** v3.1.0 market-hardening release evidence baseline
 **Canonical language:** US English
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-20 UTC
 **Release baseline:** `v3.1.0`
 **Owner:** Release owner + qualified security reviewer
 **Machine-readable ledger:** `evidence/market_hardening_v3_1/claims_ledger_v3_1_0.json` (generated outside the source tree)
@@ -32,6 +32,7 @@ Aegis is an **OpenAI-compatible AI Governance and Evidence Gateway**. It sits be
 | Governed successful and terminal error responses expose durable evidence status. | `IMPLEMENTED` | `tests/test_enterprise_durable_evidence.py`, proxy failure-path tests, and v3.1.0 release evidence | Falsified by any accepted governed response without a durable evidence record in the declared test scope. |
 | Streaming responses are buffered under the configured bound and are not emitted before the evidence gate. | `IMPLEMENTED` | Proxy streaming tests and deployment lifecycle | Large responses beyond the bound must follow the documented rejection/failure path. |
 | The ledger detects tampering or chain-link changes through canonical hashes and signatures. | `IMPLEMENTED` | `aegis/core/crypto_audit.py`, `verify_integrity()`, crypto tests | Integrity detection is not proof that an external storage system is immutable. |
+| The declared finite-state abstractions preserve commit-before-emission, append-only ledger prefixes, and session-to-ledger binding. | `MEASURED` | `scripts/verify_formal_artifacts.sh`, `specs/aegis_invariants.tla`, `specs/aegis_ledger_immutability.tla`, `specs/aegis_session_manager.tla`, `specs/AegisVerification.lean`, and `specs/aegis_invariants.smt2` | Falsified by a Z3 result other than `unsat`, a Lean type-check failure, or a TLC counterexample in the configured bounds. This is not a refinement proof of the Python/Rust implementation or target filesystem. |
 | HMAC-SHA256, HSM/Vault, or a reviewed PQC signer can satisfy the configured signing policy. | `CONFIGURATION-DEPENDENT` | Signer configuration and tests | HMAC is symmetric and classical; it is not third-party non-repudiation or PQ resistance. |
 | The enterprise HMAC signer can reload an atomic versioned keyring without restart. | `IMPLEMENTED` | `aegis_server/crypto/keyring.py`, `tests/test_keyring_rotation.py` | Three-replica propagation, secret-manager custody, clock behavior, and failure recovery require deployment evidence. |
 | Compliance export bundles retain the non-secret signing key ID used for sealing. | `IMPLEMENTED` | `aegis_server/compliance/exporter.py`, exporter tests | Key ID metadata does not disclose key material or prove custody. |

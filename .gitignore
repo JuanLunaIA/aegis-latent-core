@@ -14,11 +14,16 @@ htmlcov/
 
 # Virtual environments and local package builds
 .venv/
+.wheel-smoke/
 venv/
 env/
 dist/
 build/
 *.egg-info/
+
+# Rust and formal-tool build caches
+aegis_rust_v2/target/
+.tools/
 
 # Local configuration and secrets
 .env

@@ -11,7 +11,7 @@
 //! | `RustRateLimiter`          | Python asyncio.Lock token bucket   | ~100×        |
 //! | `RustSessionStore`         | Python OrderedDict + RLock         | ~15×         |
 //! | `AuditRingBuffer`          | Python asyncio.create_task         | <1 µs enqueue|
-//! | `RustWal`                  | Python os.fsync() under Lock       | ~40×         |
+//! | `RustWal`                  | Python os.fsync() under Lock       | benchmark required |
 //! | `hash_blake3` / etc.       | Python hashlib.sha256              | ~10×         |
 //! | `generate_pqc_keypair`     | —                                  | ML-DSA-65    |
 
