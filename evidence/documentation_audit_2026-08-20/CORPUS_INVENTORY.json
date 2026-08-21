@@ -125,8 +125,8 @@
       "line_count": 427,
       "nfc": true,
       "path": ".github/workflows/ci.yml",
-      "sha256": "b94c64922ed6f7750519ff0d7f0775756d5f8e0cfea0920d46873d04a2692042",
-      "size_bytes": 17806,
+      "sha256": "a233349c09696de3b48b755665e7d0ef52a0c01ad55e9cfa3b31b9267f2c68ba",
+      "size_bytes": 17846,
       "text": true
     },
     {
@@ -3008,11 +3008,11 @@
     },
     {
       "lf_only": true,
-      "line_count": 9,
+      "line_count": 11,
       "nfc": true,
       "path": "evidence/remediation_2026-08-21/GITHUB_PR95_DIAGNOSTIC.md",
-      "sha256": "778ba840cd5a62d79f76d9681ad9c47b9a258e6860f916819d61ab5eb37ec828",
-      "size_bytes": 1570,
+      "sha256": "6db70cdd6e5cff586f13fdc9dbb18299452846f94c4146fb713b02d18a4cb2c7",
+      "size_bytes": 2294,
       "text": true
     },
     {
@@ -3101,13 +3101,13 @@
     },
     {
       "path": "evidence/remediation_2026-08-21/remediation_manifest.cbor",
-      "sha256": "5a28197f7853ce536696a7a9e9d0a9e31f52f4a4f761bedef54988123f051e48",
-      "size_bytes": 6076,
+      "sha256": "6edb00c7231dad3755d5094864cdedb5bd67d66e81e43afedb9872387c3a7853",
+      "size_bytes": 2820,
       "text": false
     },
     {
       "path": "evidence/remediation_2026-08-21/remediation_manifest.cid",
-      "sha256": "bd9d62c12b767bf6159a0735ddd6a7e82daad8d6dff62b1d512cc61652e9ec84",
+      "sha256": "ad86786954a82afb94adaf6aff30a66defdc4a6e899ed49dd9571b28636b2e39",
       "size_bytes": 60,
       "text": false
     },
@@ -3116,13 +3116,13 @@
       "line_count": 1,
       "nfc": true,
       "path": "evidence/remediation_2026-08-21/remediation_manifest.json",
-      "sha256": "df01464bcab5ab69aa68d668c38a27a0dd45c53e2e836a74249fd012c9e86a0e",
-      "size_bytes": 6636,
+      "sha256": "c908dbc61cc49eae3d78c66c5af2e3785ba837ace50152db31c1331f6cdf16b8",
+      "size_bytes": 3121,
       "text": true
     },
     {
       "path": "evidence/remediation_2026-08-21/remediation_manifest.sha256",
-      "sha256": "41a0b7e5fc56497f50eff0a87a2806794d8bcc65a20b1a9d0c3cb391558e1b48",
+      "sha256": "119b5619dd9a45c2dd53e855c426e55f25a8cc9f278059973b12ef3cbbc246e5",
       "size_bytes": 65,
       "text": false
     },
@@ -5450,6 +5450,6 @@
     }
   ],
   "schema": "aegis-documentation-corpus-audit-v1",
-  "source_commit": "3f84245c5d62132d0aee68755009e021b3138415",
+  "source_commit": "6dee4c8b08294a2318582aa180e43dabae231f51",
   "utf8_failures": []
 }

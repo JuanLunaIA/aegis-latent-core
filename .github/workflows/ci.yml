@@ -170,10 +170,10 @@ jobs:
             --cov-report=xml \
             --cov-report=term-missing \
             --cov-fail-under=65
-      - name: Dependency audit (test environment)
+      - name: Dependency audit (runtime manifest)
         run: |
           set +e
-          timeout 120s python -m pip_audit \
+          timeout 120s python -m pip_audit -r requirements.txt \
             --progress-spinner off --timeout 30 > /tmp/pip-audit.log 2>&1
           audit_status=$?
           set -e
@@ -184,7 +184,7 @@ jobs:
           if [ "$audit_status" -ne 0 ]; then
             echo "::warning::pip-audit operational failure; retrying once after 5 seconds"
             sleep 5
-            timeout 120s python -m pip_audit \
+            timeout 120s python -m pip_audit -r requirements.txt \
               --progress-spinner off --timeout 30
           fi
       - name: Upload coverage
