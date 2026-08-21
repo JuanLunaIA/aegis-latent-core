@@ -119,7 +119,10 @@ impl RustWaf {
                 ))
             })?;
 
-        Ok(RustWaf { critical_ac, soft_ac })
+        Ok(RustWaf {
+            critical_ac,
+            soft_ac,
+        })
     }
 
     /// Scan a single text payload. O(n + m) where n = text length, m = pattern set.
@@ -200,7 +203,7 @@ fn strip_zero_width(s: &str) -> String {
                 | 0xFEFF  // BOM / zero-width no-break space
                 | 0x00AD  // soft hyphen
                 | 0x2060  // word joiner
-                | 0x180E  // Mongolian vowel separator
+                | 0x180E // Mongolian vowel separator
             ) {
                 ' '
             } else {

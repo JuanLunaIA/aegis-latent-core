@@ -1,9 +1,9 @@
 """
-aegis.core.forensic_pdf_report — Domain 5.3 court-ready forensic report generator.
+aegis.core.forensic_pdf_report — structured forensic report generator.
 
-Generates structured forensic reports as JSON and human-readable text suitable
-for downstream PDF rendering. Reports are court-admissible, contain all required
-forensic fields, and are sealed with a SHA-256 integrity hash over all content.
+Generates structured forensic reports as JSON and human-readable text for
+downstream rendering. Reports contain technical integrity fields and a SHA-256
+content seal; they do not determine custody completeness or legal admissibility.
 
 Usage::
 
@@ -67,7 +67,7 @@ class AuditNodeSummary:
 
 @dataclass
 class ForensicReport:
-    """Court-ready forensic examination report.
+    """Structured forensic examination report.
 
     Fields are sealed by a SHA-256 integrity hash computed over all non-seal
     fields in canonical (sorted-key) JSON form. The seal must be verified by
@@ -119,7 +119,7 @@ class ForensicReport:
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     def to_text(self) -> str:  # noqa: PLR0912
-        """Return a human-readable court-ready narrative text report."""
+        """Return a human-readable forensic narrative text report."""
         lines: list[str] = []
 
         # ── Cover page ────────────────────────────────────────────────────
@@ -151,7 +151,7 @@ class ForensicReport:
 
 
 class ForensicReportBuilder:
-    """Builds court-ready forensic reports from audit chain data.
+    """Build forensic reports from audit chain data.
 
     Parameters
     ----------
@@ -467,18 +467,14 @@ class ForensicReportBuilder:
             )
         )
 
-        # ── Section 6: Legal Admissibility Assessment ─────────────────────
+        # ── Section 6: technical integrity and legal-review boundary ───────
         if legal_admissibility == "Admissible":
             admissibility_detail = (
-                "The digital evidence represented in this report meets the standard "
-                "criteria for legal admissibility: (1) the evidence was collected by "
-                "an automated system with no human intervention in the record creation "
-                "process; (2) each record is individually signed using a cryptographic "
-                "scheme (HMAC-SHA256 or ML-DSA-65) that binds the content to the signing "
-                "epoch; (3) the chain linkage provides tamper evidence for any post-hoc "
-                "modification; (4) the chain integrity status is VERIFIED. "
-                "This evidence is suitable for production in legal proceedings subject "
-                "to applicable rules of evidence in the relevant jurisdiction."
+                "The caller supplied the classification 'Admissible'. The code has not "
+                "made a legal determination. Hashes, signatures, and chain linkage may "
+                "support a qualified examiner and counsel, but do not establish lawful "
+                "acquisition, complete custody, authenticity of identity, relevance, "
+                "hearsay treatment, or admissibility."
             )
         elif legal_admissibility == "Compromised":
             admissibility_detail = (
@@ -490,18 +486,14 @@ class ForensicReportBuilder:
             )
         else:  # Conditional
             admissibility_detail = (
-                "The digital evidence in this report is conditionally admissible, "
-                "subject to: (1) independent verification of the chain integrity by "
-                "a qualified digital forensics examiner; (2) production of the signing "
-                "key material (or HSM attestation) to the requesting party under "
-                "appropriate legal process; (3) confirmation that the acquisition "
-                "was conducted in accordance with ISO/IEC 27037 digital evidence "
-                "handling standards. Once these conditions are satisfied, the evidence "
-                "is expected to meet the admissibility standard."
+                "The caller supplied the classification 'Conditional'. Independent "
+                "technical verification, complete custody review, tool validation, and "
+                "qualified legal analysis remain required. Passing those checks still "
+                "does not predetermine a tribunal's ruling."
             )
 
         admissibility_content = (
-            f"Admissibility Status: {legal_admissibility}\n"
+            f"Caller-Supplied Legal Review Label: {legal_admissibility}\n"
             f"Chain Integrity: {integrity_status}\n\n"
             f"{admissibility_detail}\n\n"
             f"Standards Reference:\n"
@@ -513,7 +505,7 @@ class ForensicReportBuilder:
 
         sections.append(
             ReportSection(
-                title="Legal Admissibility Assessment",
+                title="Technical Integrity and Legal Review Boundary",
                 content=admissibility_content,
                 section_id="legal_admissibility",
                 page_hint=6,

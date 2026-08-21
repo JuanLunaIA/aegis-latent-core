@@ -49,12 +49,7 @@ impl BucketState {
     /// `refill_per_ms`: millitokens added per millisecond.
     /// Conversion: tokens/sec = millitokens/ms (1 token/sec × 1000 milli/token ÷ 1000 ms/sec).
     /// So `refill_per_ms = refill_rate` (tokens/sec) — no scaling required.
-    fn try_consume(
-        &self,
-        capacity_milli: i64,
-        refill_per_ms: i64,
-        cost_milli: i64,
-    ) -> bool {
+    fn try_consume(&self, capacity_milli: i64, refill_per_ms: i64, cost_milli: i64) -> bool {
         // ── Refill phase ──────────────────────────────────────────────────
         let now_ms = now_millis();
         let last = self.last_refill_ms.load(Ordering::Relaxed);

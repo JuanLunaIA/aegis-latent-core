@@ -1,10 +1,10 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
-"""aegis.core.gxp_qualification — GxP computerised-system qualification hooks.
+"""aegis.core.gxp_qualification — GxP-oriented qualification support hooks.
 
-Implements the code-tractable parts of a GxP (GMP/GLP/GCP) Performance
-Qualification programme for an AI control plane operating in a regulated
+Provides code-tractable records that may contribute to a customer-controlled
+GxP (GMP/GLP/GCP) qualification programme for an AI control plane in a regulated
 life-sciences environment (pharma manufacturing, clinical, laboratory):
 
 - **Change control** (:class:`ChangeControlRegistry` + :class:`DeploymentGate`):
@@ -25,7 +25,8 @@ life-sciences environment (pharma manufacturing, clinical, laboratory):
 All sign-offs and bundles are signed with **HMAC-SHA256** keyed by
 ``AEGIS_SIGNING_KEY`` (kept separate from API keys), so an auditor can verify
 that an approval record or qualification report has not been altered after
-sign-off.  No plaintext signatures are used.
+sign-off by a holder of that symmetric key. This is not an independently
+attributable electronic signature, validated state, or regulatory conclusion.
 
 Regulatory basis
 ----------------

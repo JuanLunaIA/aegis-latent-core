@@ -4,8 +4,9 @@
 """
 aegis.core.mlkem_session — FIPS 203 ML-KEM (Kyber-1024) session key bootstrap.
 
-Provides Kyber-1024 key encapsulation for ephemeral session key establishment
-in compliance with NIST FIPS 203.  A responder generates a keypair; the
+Provides an optional Kyber-1024/ML-KEM-1024-style helper for ephemeral session
+key establishment. The repository does not establish FIPS validation or
+production protocol integration. A responder generates a keypair; the
 initiator encapsulates against the public key, producing a shared secret and
 ciphertext; the responder decapsulates to recover the same shared secret.
 

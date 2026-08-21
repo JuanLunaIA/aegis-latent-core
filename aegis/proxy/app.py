@@ -1028,7 +1028,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         # FIX-APP-02: pass state instead of cfg so the function uses the cached singletons.
         _apply_request_entropy_guard(request, body, state)
 
-        # PHI de-identification on the hot request path (NIST SP 800-188 Safe Harbor).
+        # Best-effort PHI identifier redaction on the hot request path.
         # Scrubs 18 HIPAA identifier categories from message content before forwarding.
         # raw_body (used for audit) retains the original; body is the scrubbed copy.
         body, _phi_scrubbed, _scrub_method = _apply_phi_scrub_request(body, state)

@@ -1,11 +1,11 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
-"""aegis.core.iso27037_evidence — ISO/IEC 27037 compliant digital evidence packages.
+"""aegis.core.iso27037_evidence — ISO/IEC 27037-oriented evidence packages.
 
-Implements the ISO/IEC 27037:2012 (Guidelines for identification, collection,
-acquisition and preservation of digital evidence) evidence package format for
-the Aegis audit ledger.
+Provides package fields that may support an ISO/IEC 27037:2012 handling process
+for the Aegis audit ledger. It does not establish standards conformity, examiner
+competence, chain-of-custody completeness, or legal admissibility.
 
 An evidence package contains five mandatory ISO/IEC 27037 elements:
 
@@ -70,13 +70,13 @@ _STANDARD_REF: str = "ISO/IEC 27037:2012"
 
 
 class LegalAdmissibility(StrEnum):
-    """Per-bundle legal admissibility classification.
+    """Operator-supplied technical review classification.
 
     Values map to evidential weight under ISO/IEC 27037:2012 §9.3:
 
     Admissible
         Chain integrity verified; all nodes signed; no tampering detected.
-        Suitable for court presentation without qualification.
+        Technical integrity checks passed; legal use still requires qualified review.
     Conditional
         Minor integrity concerns (e.g. partial WAL loss, signing-key rotation
         during capture window) that do not invalidate core evidence but require
@@ -240,7 +240,7 @@ class EvidenceNode:
 
 @dataclass
 class EvidencePackage:
-    """ISO/IEC 27037 compliant evidence package.
+    """ISO/IEC 27037-oriented evidence package.
 
     Attributes
     ----------
@@ -348,7 +348,7 @@ def build_evidence_package(
     legal_admissibility_override: LegalAdmissibility | None = None,
     legal_admissibility_justification: str = "",
 ) -> EvidencePackage:
-    """Build an ISO/IEC 27037 compliant evidence package from *ledger*.
+    """Build an ISO/IEC 27037-oriented evidence package from *ledger*.
 
     The package is self-contained: all cryptographic commitments, chain-
     linkage hashes, and signatures from the audit ledger are embedded.

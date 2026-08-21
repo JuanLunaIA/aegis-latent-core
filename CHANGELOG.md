@@ -2,7 +2,7 @@
 
 All notable changes to **Aegis Latent Core** are documented in this file.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-20 UTC
 **Release baseline:** `v3.1.0`
 **Documentation verification baseline:** `v3.1.0`. Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
@@ -10,6 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Institutional documentation and claim controls
+
+- Added a six-volume institutional suite covering mechanistic architecture, cryptography and forensics, threat modeling, operations, regulatory review, and commercial procurement, plus a claim-evidence graph, unsupported-claims report, document-control record, and deterministic corpus audit.
+- Corrected positive regulatory and evidentiary wording in code documentation: regex PHI handling is best-effort redaction, application sealed segments are not regulatory WORM, GxP objects are support hooks rather than validation, and software-generated integrity labels do not determine legal admissibility.
+- Corrected the canonical streaming boundary: upstream streams are fully buffered before the evidence gate, but no accumulated streaming-response byte ceiling is currently implemented.
+- Added `cbor2>=5.9.0` to development dependencies after local dependency auditing detected advisories in the previously installed generation-only version.
+
+### Formal and native WAL hardening
+
+- Added bounded Z3, Lean, and TLC artifacts with pinned reproducible execution and explicit non-refinement boundaries.
+- Serialized native WAL reserve/write/flush publication, added checked arithmetic and recovery CRC validation, and added concurrent/rejected-append regressions.
 
 ## [3.1.0] — 2026-08-18
 
@@ -28,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Verification harnesses
 
-- Added a backpressure/fsync-stall harness for offered 10k requests/s, durable request correlation, missing/duplicate evidence detection, latency percentiles, and WAL integrity. The candidate run committed 10,000 of 10,000 offered requests with zero failures, zero missing/duplicate IDs, valid chain integrity, and 1,189.89 ms p99 commit latency; accepted capacity is not claimed.
+- Added a backpressure/fsync-stall harness for offered 10k requests/s, durable request correlation, missing/duplicate evidence detection, latency percentiles, and WAL integrity. The retained run offered traffic for 0.25 seconds and committed 2,500 of 2,500 requests with zero failures, zero missing/duplicate IDs, valid chain integrity, and 836.3514210795984 ms p99 commit latency; accepted capacity is not claimed.
 - Added WAF corpus reporting with corpus SHA-256, per-case verdicts, Wilson 95% interval, zero observed bypasses, zero false positives, and explicit HTTP/2/Nuclei non-execution boundaries.
 - Added a three-instance local key-rotation exercise; 2,239 signatures were recorded with zero failed commits and zero unverifiable records. Secret-manager, orchestrator, and clock-skew acceptance remain open.
 - Added a native ML-DSA timing harness with 1,000,000 samples per operation. `sign` met the declared non-detection threshold (`p=0.8521504207157158`); `verify` did not (`p=0.0`), so no constant-time claim is approved.

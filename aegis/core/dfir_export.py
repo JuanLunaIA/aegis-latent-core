@@ -3,17 +3,18 @@
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """aegis.core.dfir_export — DFIR-compatible evidence bundle export formats.
 
-Produces two DFIR-standard encapsulations of an Aegis evidence package:
+Produces two DFIR-oriented encapsulations of an Aegis evidence package:
 
 1. **PKCS#7 SignedData** (RFC 2315 / CMS RFC 5652): wraps the evidence JSON in
    a CMS SignedData envelope signed with an ephemeral ECDSA P-256 key and a
-   self-signed X.509 certificate.  Suitable for court submission as a
-   cryptographically attested evidence file.
+   self-signed X.509 certificate. The generated identity is not externally
+   trusted and does not establish authenticity, custody, or admissibility.
 
 2. **EWF / E01** (Expert Witness Format v1): encapsulates evidence bytes in the
    EnCase-compatible binary container format.  Includes case metadata, one
    512-byte-aligned data segment, Adler-32 CRCs on all section descriptors, and
-   an MD5 + SHA-256 hash section.  Compatible with libewf / FTK Imager readers.
+   an MD5 + SHA-256 hash section. Interoperability with independent EWF tools is
+   not claimed without a retained compatibility test for the exact release.
 
 Usage::
 

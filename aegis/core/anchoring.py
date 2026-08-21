@@ -1,8 +1,8 @@
 """
 aegis.core.anchoring — external root anchoring orchestration.
 
-Anchors Merkle roots into immutable storage for legal admissibility. WORM storage
-is always written (in-process durable store); public anchoring is attempted via
+Anchors Merkle roots into a local append-oriented store. This does not establish
+regulatory WORM, privileged-actor immutability, or legal admissibility. Public anchoring is attempted via
 the configured :class:`~aegis.core.blockchain_anchor.BlockchainAnchorProvider`
 backend and is recorded honestly as available or unavailable — no fabricated
 blockchain proof is ever produced.
@@ -40,9 +40,9 @@ class AnchorProof:
 
 class AnchorManager:
     """
-    Orchestrates anchoring of Merkle roots across immutable providers.
+    Orchestrates anchoring of Merkle roots across configured providers.
 
-    WORM storage is the always-available durable anchor; public/external anchoring
+    The local store is the always-available process-level anchor; public/external anchoring
     is layered on top when a real backend is configured.
     """
 

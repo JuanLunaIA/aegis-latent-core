@@ -570,11 +570,11 @@ class AegisSettings(BaseSettings):
     phi_deidentify: bool = Field(
         default=False,
         description=(
-            "When True, apply real-time PHI de-identification (NIST SP 800-188 Safe Harbor) "
+            "When True, apply best-effort regex PHI identifier redaction "
             "to request message content before forwarding to the upstream LLM, and to response "
             "content before returning to the client. Scrubs 18 HIPAA identifier categories via "
             "regex (names, DOB, SSN, MRN, phone, email, IP, URL, etc.). Does not require an "
-            "NLP model. Enable for HIPAA-regulated deployments."
+            "NLP model. This is not a HIPAA Safe Harbor or Expert Determination conclusion."
         ),
     )
     pci_scrub: bool = Field(
@@ -593,7 +593,7 @@ class AegisSettings(BaseSettings):
         description=(
             "When True, replace tenant_id (session/user identifier) in the WAL with "
             "a one-way SHA-256 prefix before committing to the audit chain. "
-            "Enables GDPR/CCPA compliance for deployments where session IDs are "
+            "Supports data-minimization review where session IDs are "
             "considered personal data. Does not affect in-flight analysis — only "
             "the durable WAL record. Cannot be reversed without the original ID."
         ),

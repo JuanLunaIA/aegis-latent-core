@@ -4,7 +4,7 @@
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """Build the 2026-08-20 execution provenance envelope.
 
-Dependencies: cbor2>=5.6 (generation only)
+Dependencies: cbor2>=5.9.0 (generation only)
 Exposed artifacts: manifest.json, manifest.cbor, manifest.sha256, manifest.cid
 """
 
@@ -26,7 +26,7 @@ MANIFEST_JSON = OUTPUT_DIR / "manifest.json"
 MANIFEST_CBOR = OUTPUT_DIR / "manifest.cbor"
 MANIFEST_SHA256 = OUTPUT_DIR / "manifest.sha256"
 MANIFEST_CID = OUTPUT_DIR / "manifest.cid"
-EXECUTION_TIMESTAMP = "2026-08-20T06:22:42.000Z"
+EXECUTION_TIMESTAMP = "2026-08-21T02:00:00.000Z"
 SOURCE_ZIP_SHA256 = "be46695cf76523e69e794b47c8bb464ca9fa57b5e8daff401e2f275824415308"
 
 
@@ -152,7 +152,7 @@ def main() -> None:
             "formal_gate": "passed",
             "python_suite": {"passed": 5442, "skipped": 37, "warnings": 47},
             "rust_suite": {"passed": 28, "failed": 0},
-            "wheel_sha256": "e349999f8121bf02045a988df624cc4c0b03c49808282b0a1bf6dd4cedddb232",
+            "wheel_sha256": "71040c5b81b306f07bc70661e9ab74225f75898f192e25f0b45ae3eb7a96f7a7",
         },
         "schema": "aegis-execution-provenance-v1",
         "timestamp_utc": EXECUTION_TIMESTAMP,

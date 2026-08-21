@@ -25,20 +25,22 @@ mod mmr;
 mod pqc;
 mod rate_limit;
 mod session;
-mod wal;
 mod waf;
+mod wal;
 
 use audit::AuditRingBuffer;
 use forwarder::{warmup_runtime, RustForwarder};
-use hasher::{hash_audit_payload, hash_blake3, hash_sha256_fast, keyed_hash_blake3, keyed_hash_blake3_bytes};
+use hasher::{
+    hash_audit_payload, hash_blake3, hash_sha256_fast, keyed_hash_blake3, keyed_hash_blake3_bytes,
+};
 use ledger::{blake3_hash, blake3_keyed_hash, hash_sha256, hmac_sign};
 use mmr::MmrAccumulator;
 use pqc::{generate_pqc_keypair, keypair_from_bytes, verify_pqc_signature, PqcKeypair};
 use pyo3::{prelude::*, types::PyBytes, wrap_pyfunction};
 use rate_limit::RustRateLimiter;
 use session::RustSessionStore;
-use wal::RustWal;
 use waf::{RustWaf, WafResult};
+use wal::RustWal;
 
 /// HTTP response compatible with httpx.Response usage in the proxy.
 #[pyclass]
@@ -62,9 +64,8 @@ impl HttpResponse {
 
     fn json(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let json_mod = py.import("json")?;
-        let text = std::str::from_utf8(&self.content).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string())
-        })?;
+        let text = std::str::from_utf8(&self.content)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
         Ok(json_mod.call_method1("loads", (text,))?.unbind())
     }
 

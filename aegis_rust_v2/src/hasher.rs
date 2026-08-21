@@ -65,7 +65,14 @@ pub fn hash_audit_payload(
     response_hash: &str,
 ) -> String {
     let mut h = blake3::Hasher::new();
-    for field in &[prev_hash, state_id, timestamp, merkle_root, request_hash, response_hash] {
+    for field in &[
+        prev_hash,
+        state_id,
+        timestamp,
+        merkle_root,
+        request_hash,
+        response_hash,
+    ] {
         h.update(field.as_bytes());
         h.update(b"\x00");
     }
