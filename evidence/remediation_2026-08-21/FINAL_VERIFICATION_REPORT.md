@@ -2,12 +2,12 @@
 
 **Date:** 2026-08-21 UTC  
 **Repository:** `JuanLunaIA/aegis-latent-core`  
-**Final verified `main` commit:** `43677edca6d39a2b4078187d3676d5a286627846`  
+**Verified remediation implementation baseline:** `43677edca6d39a2b4078187d3676d5a286627846`
 **Prepared by:** Manus AI
 
 ## Executive decision
 
-**Gate result: CONDITIONAL PASS.** `[ESTABLISHED]` The code, Python 3.11 remediation, bounded SSE behavior, formal gates, source SBOM, container build, GitHub Actions SHA pinning, selected-action allowlist, signed-commit requirement, and administrator branch-protection enforcement are merged to `main` and have passed actual GitHub Actions executions.[1] [2] [3] [4] [5] The final `main` commit is GitHub-verified with a valid signature.
+**Gate result: CONDITIONAL PASS.** `[ESTABLISHED]` The code, Python 3.11 remediation, bounded SSE behavior, formal gates, source SBOM, container build, GitHub Actions SHA pinning, selected-action allowlist, signed-commit requirement, and administrator branch-protection enforcement are merged to `main` and have passed actual GitHub Actions executions.[1] [2] [3] [4] [5] The implementation-baseline commit is GitHub-verified with a valid signature.
 
 The qualification is external authority, not a failing repository control. `[UNRESOLVED]` The active GitHub integration receives HTTP 403 from the Dependabot, code-scanning, and secret-scanning alert-list endpoints. Therefore, this report does **not** claim that the open-alert count is zero. The public Security page exposes the repository security policy but not the private alert inventories.[6]
 
@@ -33,9 +33,9 @@ The SBOM defect was mechanistic: `anchore/sbom-action` treated the `.tar.gz` pas
 
 ## Actual CI evidence
 
-### Final `main` execution
+### Remediation-baseline `main` execution
 
-`CI` run `32448725497` completed successfully on the final commit.[3] The original post-merge attempt passed all 14 jobs after the SBOM source fix. A later active rerun under selected-action enforcement exposed omitted transitive composite actions; after restricting the allowlist to the observed closure, attempt 3 completed successfully.
+`CI` run `32448725497` completed successfully on the implementation baseline.[3] The original post-merge attempt passed all 14 jobs after the SBOM source fix. A later active rerun under selected-action enforcement exposed omitted transitive composite actions; after restricting the allowlist to the observed closure, attempt 3 completed successfully.
 
 | Job | Final conclusion |
 |---|---|
