@@ -1,16 +1,16 @@
 # Documentation Corpus Audit
 
 **Status:** PASS
-**Source commit:** `931b3c05a0386a329e744ba9e29883a79a15cf2c`
+**Source commit:** `3f84245c5d62132d0aee68755009e021b3138415`
 **Scope:** Git-tracked and untracked, non-ignored repository files present at execution time.
 
 ## Deterministic counts
 
 | Metric | Count |
 |---|---:|
-| Files | 604 |
-| UTF-8 text files | 555 |
-| Markdown files | 63 |
+| Files | 609 |
+| UTF-8 text files | 557 |
+| Markdown files | 64 |
 | Institutional files | 10 |
 | Exact duplicate groups | 5 |
 | Repeated heading groups | 4 |
