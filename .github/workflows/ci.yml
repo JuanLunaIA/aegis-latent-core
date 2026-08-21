@@ -341,7 +341,7 @@ jobs:
   sbom:
     name: Generate SBOM
     runs-on: ubuntu-22.04
-    if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'pull_request' || github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: [test, security, market-hardening]
     permissions:
       contents: read
@@ -350,13 +350,18 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Build source artifact
-        run: git archive --format=tar.gz --output="aegis-source-${GITHUB_SHA}.tar.gz" HEAD
+        run: |
+          set -euo pipefail
+          mkdir sbom-root
+          git archive --format=tar.gz --output="aegis-source-${GITHUB_SHA}.tar.gz" HEAD
+          tar -xzf "aegis-source-${GITHUB_SHA}.tar.gz" -C sbom-root
       - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
-          path: aegis-source-${{ github.sha }}.tar.gz
+          path: sbom-root
           format: spdx-json
           output-file: sbom.spdx.json
       - name: Attest source SBOM
+        if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         uses: actions/attest-sbom@bd218ad0dbcb3e146bd073d1d9c6d78e08aa8a0b # v2
         with:
           subject-path: aegis-source-${{ github.sha }}.tar.gz
