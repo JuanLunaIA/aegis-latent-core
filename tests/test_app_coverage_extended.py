@@ -5,8 +5,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
+import threading
+import time
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -27,6 +31,7 @@ def _make_settings(tmp_path, **overrides) -> AegisSettings:
         log_level="WARNING",
         auth_disabled=False,
         waf_strict_mode=False,
+        analysis_sample_rate=0.0,
     )
     defaults.update(overrides)
     return AegisSettings(**defaults)
@@ -65,6 +70,101 @@ def _mock_response(status_code=200, data=None):
     resp.json.return_value = data
     resp.headers = {"content-type": "application/json"}
     return resp
+
+
+# ── Analysis worker cancellation regression ──────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_analysis_worker_exits_when_inner_wait_consumes_cancellation(monkeypatch):
+    """A pending cancellation must stop the worker before it re-enters queue.get()."""
+    from aegis.proxy import app as app_mod
+
+    started = asyncio.Event()
+    queue: asyncio.Queue = asyncio.Queue()
+    original_wait_for = asyncio.wait_for
+
+    async def _consume_cancel(awaitable, timeout):
+        del timeout
+        started.set()
+        try:
+            await asyncio.sleep(60)
+        except asyncio.CancelledError:
+            close = getattr(awaitable, "close", None)
+            if close is not None:
+                close()
+            return SimpleNamespace(sampling_params={}, alerts=[], mean_entropy=0.0)
+
+    monkeypatch.setattr(app_mod.asyncio, "wait_for", _consume_cancel)
+    state = SimpleNamespace(
+        analysis_queue=queue,
+        get_analyzer=lambda _session_id: MagicMock(),
+        ledger=MagicMock(),
+        alert_store=SimpleNamespace(append=AsyncMock()),
+    )
+    queue.put_nowait(
+        app_mod._AnalysisJob(
+            request_id="request-1",
+            session_id="session-1",
+            model="test",
+            logprobs_data=[],
+            sampling_params={},
+            raw_body=b"{}",
+            response_bytes=b"{}",
+            tenant_id="tenant-1",
+            phi_scrubbed=False,
+            scrub_method="none",
+            analysis_timeout_seconds=1.0,
+        )
+    )
+
+    worker = asyncio.create_task(app_mod._analysis_worker(state))
+    await original_wait_for(started.wait(), timeout=1.0)
+    worker.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await original_wait_for(worker, timeout=1.0)
+    await original_wait_for(queue.join(), timeout=1.0)
+
+
+def test_lifespan_shutdown_with_inflight_analysis_is_bounded(tmp_path):
+    """Closing TestClient with a to_thread analysis in flight must terminate."""
+    from aegis.proxy import app as app_mod
+
+    started = threading.Event()
+    release = threading.Event()
+    fwd_inst = _mock_forwarder()
+    fwd_inst.forward_json = AsyncMock(return_value=_mock_response())
+
+    class _BlockingAnalyzer:
+        def analyze(self, **_kwargs):
+            started.set()
+            assert release.wait(timeout=2.0)
+            return SimpleNamespace(sampling_params={}, alerts=[], mean_entropy=0.0)
+
+    with (
+        patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst),
+        patch.object(app_mod._AppState, "get_analyzer", return_value=_BlockingAnalyzer()),
+    ):
+        cfg = _make_settings(
+            tmp_path,
+            analysis_sample_rate=1.0,
+            analysis_shutdown_timeout_seconds=0.5,
+        )
+        app = create_app(cfg)
+        timer = threading.Timer(0.1, release.set)
+        start = time.monotonic()
+        with TestClient(app) as client:
+            resp = client.post(
+                "/v1/chat/completions",
+                headers={"Authorization": "Bearer sk-valid"},
+                json={"model": "gpt-4", "messages": [{"role": "user", "content": "hi"}]},
+            )
+            assert resp.status_code == 200
+            assert started.wait(timeout=1.0)
+            timer.start()
+        timer.join(timeout=1.0)
+
+    assert time.monotonic() - start < 1.5
 
 
 # ── ImportError for entropy modules (lines 333-336) ──────────────────────────
@@ -637,6 +737,90 @@ def test_chat_streaming_non_data_raw_bytes(tmp_path):
         app.state.aegis.ledger.close()
     except Exception:
         pass
+
+
+def test_chat_streaming_allows_response_within_byte_limit(tmp_path):
+    """The normalized SSE body and terminal marker may equal but not exceed the cap."""
+    fwd_inst = _mock_forwarder()
+
+    async def _sse_gen():
+        yield b"x" * 990, None
+        yield b"data: [DONE]", None
+
+    fwd_inst.stream_sse = MagicMock(return_value=_sse_gen())
+    with patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst):
+        cfg = _make_settings(tmp_path, max_stream_response_bytes=1_024)
+        app = create_app(cfg)
+        with TestClient(app) as client:
+            resp = client.post(
+                "/v1/chat/completions",
+                headers={"Authorization": "Bearer sk-valid"},
+                json={"model": "gpt-4", "messages": [], "stream": True},
+            )
+
+    assert resp.status_code == 200
+    assert len(resp.content) <= 1_024
+    assert resp.headers["X-Aegis-Evidence-Status"] == "durable"
+
+
+def test_chat_streaming_rejects_response_over_byte_limit_and_closes_upstream(tmp_path):
+    """A chunk crossing the cap fails closed without consuming further upstream data."""
+    fwd_inst = _mock_forwarder()
+    stream_state = {"closed": False, "after_limit": False}
+
+    async def _sse_gen():
+        try:
+            yield b"x" * 1_024, None
+            stream_state["after_limit"] = True
+            yield b"must-not-be-consumed", None
+        finally:
+            stream_state["closed"] = True
+
+    fwd_inst.stream_sse = MagicMock(return_value=_sse_gen())
+    with patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst):
+        cfg = _make_settings(tmp_path, max_stream_response_bytes=1_024)
+        app = create_app(cfg)
+        with TestClient(app) as client:
+            resp = client.post(
+                "/v1/chat/completions",
+                headers={"Authorization": "Bearer sk-valid"},
+                json={"model": "gpt-4", "messages": [], "stream": True},
+            )
+
+    assert resp.status_code == 502
+    assert resp.json() == {"detail": "Upstream streaming response exceeded configured byte limit"}
+    assert resp.headers["X-Aegis-Evidence-Status"] == "durable"
+    assert stream_state == {"closed": True, "after_limit": False}
+
+
+def test_chat_streaming_rejects_slow_drip_after_total_deadline(tmp_path):
+    """A total stream deadline closes an upstream that evades per-read timeouts."""
+    fwd_inst = _mock_forwarder()
+    stream_state = {"closed": False}
+
+    async def _sse_gen():
+        try:
+            yield b"data: first", None
+            await asyncio.sleep(1.0)
+            yield b"data: late", None
+        finally:
+            stream_state["closed"] = True
+
+    fwd_inst.stream_sse = MagicMock(return_value=_sse_gen())
+    with patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst):
+        cfg = _make_settings(tmp_path, max_stream_duration_seconds=0.1)
+        app = create_app(cfg)
+        with TestClient(app) as client:
+            resp = client.post(
+                "/v1/chat/completions",
+                headers={"Authorization": "Bearer sk-valid"},
+                json={"model": "gpt-4", "messages": [], "stream": True},
+            )
+
+    assert resp.status_code == 504
+    assert resp.json() == {"detail": "Upstream streaming response exceeded configured duration"}
+    assert resp.headers["X-Aegis-Evidence-Status"] == "durable"
+    assert stream_state["closed"] is True
 
 
 # ── mTLS init exception + fallback (lines 423-432) ───────────────────────────

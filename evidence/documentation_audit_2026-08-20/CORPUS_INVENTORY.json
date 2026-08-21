@@ -1,18 +1,25 @@
 {
   "counts": {
-    "all_files": 589,
+    "all_files": 604,
     "crlf_files": 0,
-    "exact_duplicate_groups": 2,
+    "exact_duplicate_groups": 5,
     "institutional_files": 10,
     "institutional_placeholders": 0,
-    "markdown_files": 59,
+    "markdown_files": 63,
     "non_nfc_files": 0,
     "repeated_heading_groups": 4,
-    "text_files": 542,
+    "text_files": 555,
     "utf8_failures": 0
   },
   "crlf_files": [],
   "exact_duplicates": [
+    {
+      "paths": [
+        "evidence/github_status_baseline_2026-08-20/actions_permissions.json",
+        "evidence/remediation_2026-08-21/github-before/actions_permissions.json"
+      ],
+      "sha256": "0bffee97e4ad52676c0127aacb5b4b304a2675f5c524de641acf1326e0b0e857"
+    },
     {
       "paths": [
         "evidence/github_status_baseline_2026-08-20/code_scanning_alerts.stderr.txt",
@@ -20,6 +27,20 @@
         "evidence/github_status_baseline_2026-08-20/secret_scanning_alerts.stderr.txt"
       ],
       "sha256": "67522825656fb8092ae4db6a436b2aad857054a3f7b587f46c1725d77df82871"
+    },
+    {
+      "paths": [
+        "evidence/github_status_baseline_2026-08-20/branch_protection.json",
+        "evidence/remediation_2026-08-21/github-before/branch_protection.json"
+      ],
+      "sha256": "738014a2fa96c05e3e5a36a3a193f8c7e0aef587a636b6c78ce56ce5579fab32"
+    },
+    {
+      "paths": [
+        "evidence/remediation_2026-08-21/repository_after_dependabot.json",
+        "evidence/remediation_2026-08-21/repository_after_secret_scanning.json"
+      ],
+      "sha256": "beef0e8a66cc89e05f04a0310edcc53d094b2431b650ccd06b91783a0728d01f"
     },
     {
       "paths": [
@@ -101,20 +122,20 @@
     },
     {
       "lf_only": true,
-      "line_count": 397,
+      "line_count": 414,
       "nfc": true,
       "path": ".github/workflows/ci.yml",
-      "sha256": "83c205d579ff085e1a18d5cf6be263649d278b68a49f15b207e597d3343a6f74",
-      "size_bytes": 15106,
+      "sha256": "a9abcc0ef10571f9b0f851584b67f47b375c74e67b43c1f23afc80169b32ffff",
+      "size_bytes": 17284,
       "text": true
     },
     {
       "lf_only": true,
-      "line_count": 89,
+      "line_count": 90,
       "nfc": true,
       "path": ".github/workflows/forensic.yml",
-      "sha256": "b362e320a89c4f0fdb2d5bc1a126e0db11e69b9d71d31ae118b39e3275cd6291",
-      "size_bytes": 2679,
+      "sha256": "d0a1ca558e07c0df47cdf0ed95589e852313a5551855c368fc7b7ad7fd9e2cd1",
+      "size_bytes": 2928,
       "text": true
     },
     {
@@ -122,8 +143,8 @@
       "line_count": 59,
       "nfc": true,
       "path": ".github/workflows/pqc-timing.yml",
-      "sha256": "99afd890c30171d93e7b13861e2383203425076bb8cf8931c096c16b0c125f17",
-      "size_bytes": 1808,
+      "sha256": "ac1c611998cfc39d2e8d5fe55df223d37af9256a924909f2a0de315e9784aac2",
+      "size_bytes": 1980,
       "text": true
     },
     {
@@ -131,8 +152,8 @@
       "line_count": 105,
       "nfc": true,
       "path": ".github/workflows/publish.yml",
-      "sha256": "922a260ae6b7d58c504d415595eaade03be1f1b592b6b09a8bf93097a448e992",
-      "size_bytes": 3329,
+      "sha256": "703136af971854da12e6fc93017c7e10a2996a1b767730ed630f7f40669eef5f",
+      "size_bytes": 3587,
       "text": true
     },
     {
@@ -140,8 +161,8 @@
       "line_count": 244,
       "nfc": true,
       "path": ".github/workflows/release.yml",
-      "sha256": "d6d4c62f982b221e01f5382387fb80f13dae32fd98f23fc26bdb0ad153758073",
-      "size_bytes": 9297,
+      "sha256": "e6c859c610dede810fae5f4fbfb3aba00800c2fc2e76fba656429a466e8a83e0",
+      "size_bytes": 9813,
       "text": true
     },
     {
@@ -149,8 +170,8 @@
       "line_count": 196,
       "nfc": true,
       "path": ".github/workflows/security.yml",
-      "sha256": "da4db2f295afa7fadbd04641830c23f41a9f857aef1fd957a550375f58812f2a",
-      "size_bytes": 6666,
+      "sha256": "3b890595919f8f79002a2d7dbd0d64837f772cc0c04d3d7c4d8603b2874a3994",
+      "size_bytes": 7397,
       "text": true
     },
     {
@@ -182,11 +203,11 @@
     },
     {
       "lf_only": true,
-      "line_count": 405,
+      "line_count": 413,
       "nfc": true,
       "path": "CHANGELOG.md",
-      "sha256": "9f2a2c22a182d213a399470ebd5a505fd34d7538887e2dfb2ffa92d1b5599386",
-      "size_bytes": 25029,
+      "sha256": "8620d6bbd400379b2b623e78b66fe251edcc0e221f3c511c46e5ce396c354d56",
+      "size_bytes": 25855,
       "text": true
     },
     {
@@ -443,11 +464,11 @@
     },
     {
       "lf_only": true,
-      "line_count": 740,
+      "line_count": 761,
       "nfc": true,
       "path": "aegis/config.py",
-      "sha256": "95c6d62560e4e1ac568b91099ec76e190169427a7b08d29cf18040f939d47945",
-      "size_bytes": 31546,
+      "sha256": "101ad7ad308e31e89d7ef276795abcc0a15a0b7487a4ca79044e65cacdea84db",
+      "size_bytes": 32281,
       "text": true
     },
     {
@@ -1700,11 +1721,11 @@
     },
     {
       "lf_only": true,
-      "line_count": 1401,
+      "line_count": 1462,
       "nfc": true,
       "path": "aegis/proxy/app.py",
-      "sha256": "a66374c12983bd713c776edc36a39f5f6937d2c2fd98b21d9a3653addd0d0f8e",
-      "size_bytes": 56329,
+      "sha256": "88b4b4a381489007fba70f32312f6614bd5ab9d6cdc6e4f07583c266af32ca1e",
+      "size_bytes": 59709,
       "text": true
     },
     {
@@ -1808,7 +1829,7 @@
     },
     {
       "path": "aegis_rust_v2/Cargo.lock",
-      "sha256": "62076cc9f3ee09e6697886f4e90f4413c77067e16a82bd0cf84a1544331cd874",
+      "sha256": "7125b1c230831318179f0c4a8693dbe7e811f27242cf7d3d1a6e2789f5af656d",
       "size_bytes": 60576,
       "text": false
     },
@@ -2363,8 +2384,8 @@
       "line_count": 76,
       "nfc": true,
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "18c11d04cbb00f3827e434b4641eea7a7fd8b9576dd3a4d5524f584aecf6ecfc",
-      "size_bytes": 10724,
+      "sha256": "19bf7a48c575b8073485c2da8f48b0ea045cef847147e06394f46406e84166e5",
+      "size_bytes": 10864,
       "text": true
     },
     {
@@ -2648,8 +2669,8 @@
       "line_count": 381,
       "nfc": true,
       "path": "docs/institutional/DOC-01_ENTERPRISE_ARCHITECTURE.md",
-      "sha256": "c67b8b99cdac17df9470d80bd40255755f8a32ada01940a5a89a0d2d4a7fe96f",
-      "size_bytes": 58739,
+      "sha256": "60f5b758235b9403a4184f18a94bc80846bbf96005421ae468e26c63417bad8e",
+      "size_bytes": 59019,
       "text": true
     },
     {
@@ -2657,8 +2678,8 @@
       "line_count": 264,
       "nfc": true,
       "path": "docs/institutional/DOC-02_CRYPTOGRAPHIC_FORENSIC_BLUEPRINT.md",
-      "sha256": "9164e897acc303b1ac85fba18aa5836c1156a26bbb35c6768706e821fe9c7f1f",
-      "size_bytes": 43807,
+      "sha256": "b58e1bb9b3445ce2a08e5727aac38cc09bbc0cfa7bed2700c0e19ff234643972",
+      "size_bytes": 43795,
       "text": true
     },
     {
@@ -2666,8 +2687,8 @@
       "line_count": 166,
       "nfc": true,
       "path": "docs/institutional/DOC-03_THREAT_MODEL.md",
-      "sha256": "ae11c546c49a5ac5068069f439cc2b17e11d91437be8bcda66395a8be06d82a7",
-      "size_bytes": 36578,
+      "sha256": "7e16f9bf249639f3ed5ae71fca3470ba48e8dc9a4df6a6eb878cdaaefb68d319",
+      "size_bytes": 36568,
       "text": true
     },
     {
@@ -2675,8 +2696,8 @@
       "line_count": 382,
       "nfc": true,
       "path": "docs/institutional/DOC-04_OPERATIONS_PLAYBOOK.md",
-      "sha256": "242e1b4634dd9a4f6683a76faa6b7ccfcf73dbe9433eedce913853f92d0350a3",
-      "size_bytes": 49912,
+      "sha256": "43f34e6be04f402b6a986a7eb74d15653ce5a3bff47a3adb3220faa0f4ce8405",
+      "size_bytes": 49900,
       "text": true
     },
     {
@@ -2693,8 +2714,8 @@
       "line_count": 326,
       "nfc": true,
       "path": "docs/institutional/DOC-06_COMMERCIAL_PROCUREMENT.md",
-      "sha256": "e90b39ee52f671ba019bf7a6dfb95a3d79854c0eae46afd3128236876bb1b06f",
-      "size_bytes": 58131,
+      "sha256": "0c7e16e3c90ae43a6937d41d9cc3fd28134a360e5c08a0609ef6bfbcd3faaa62",
+      "size_bytes": 58123,
       "text": true
     },
     {
@@ -2720,8 +2741,8 @@
       "line_count": 61,
       "nfc": true,
       "path": "docs/institutional/UNSUPPORTED_CLAIMS.md",
-      "sha256": "f63a16a57cd3ae9f7428634449f9222b69151ddd9eaf960ac5b3b38137c0eba1",
-      "size_bytes": 9661,
+      "sha256": "faf8db6e8d196d0a11a5eccbe45f3ea97f6037b86d230e308159c51a52a4f432",
+      "size_bytes": 9805,
       "text": true
     },
     {
@@ -2825,13 +2846,13 @@
     },
     {
       "path": "evidence/execution_2026-08-20/manifest.cbor",
-      "sha256": "b547123bc4a233d6df2705a7ab05b7a48053a8cdcb65b9d76c74af18c0c19506",
-      "size_bytes": 4025,
+      "sha256": "246b53d172593a0321390c0cd1b9b21217f425582861901d390933d11a968e3f",
+      "size_bytes": 8763,
       "text": false
     },
     {
       "path": "evidence/execution_2026-08-20/manifest.cid",
-      "sha256": "b0c1c51036c024c3729d62be0315e56a1bde90699003fde6b50803799bd7e085",
+      "sha256": "2262bf00ee9e88671c5158f82a7f10fc2b331e36d2c9b4ec4d0b7209c66b188e",
       "size_bytes": 60,
       "text": false
     },
@@ -2840,13 +2861,13 @@
       "line_count": 1,
       "nfc": true,
       "path": "evidence/execution_2026-08-20/manifest.json",
-      "sha256": "3aa6951e688f4752a53e7c08ea39dc58c8b1c8066365d14804382ce15475d61a",
-      "size_bytes": 4409,
+      "sha256": "fc673ea8ab63a30f5892f157aa63a75ef3953de98b8e6a04a09804ee958395b7",
+      "size_bytes": 9543,
       "text": true
     },
     {
       "path": "evidence/execution_2026-08-20/manifest.sha256",
-      "sha256": "393ba5aaca22325ea88008f9478661d0f8fef2898a5660e409340bca1c4045d9",
+      "sha256": "5f5a3236f63cfc3ab027269a355f737b260e1481829478face4f8f8e2189444d",
       "size_bytes": 65,
       "text": false
     },
@@ -2879,11 +2900,11 @@
     },
     {
       "lf_only": true,
-      "line_count": 1,
+      "line_count": 1205,
       "nfc": true,
       "path": "evidence/github_status_baseline_2026-08-20/actions_runs.json",
-      "sha256": "dad8d77b8114ab45c0a778d9b8c23617d8dad9a811638767615e312a96b93c8c",
-      "size_bytes": 1395596,
+      "sha256": "47335af673867d58c76aa00a7f1d7b6589f560bcd3ecba578070db433d5b91a2",
+      "size_bytes": 43903,
       "text": true
     },
     {
@@ -2978,6 +2999,117 @@
     },
     {
       "lf_only": true,
+      "line_count": 28,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/DIAGNOSTIC_BASELINE.md",
+      "sha256": "91670425708f87ec2da6a9297a4fd03ae40e214bc95f1b6390f71d37ac9a5de9",
+      "size_bytes": 3255,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 36,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/IMPLEMENTATION_MANIFEST.md",
+      "sha256": "610915e9bf3a7de0eda17e26a777ab901e3a9fd44a4bcd0ccdca8c0b16e2c2b9",
+      "size_bytes": 4273,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 19,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/INJECTION_CONTAINMENT.md",
+      "sha256": "2d6198fceb2cd5fc934f91465ca8fe71c8cd7d057c248383a9f925923013b87e",
+      "size_bytes": 1878,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 32,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/SUPPLY_CHAIN_ASSESSMENT.md",
+      "sha256": "577090b1ddf4802829b9e2393fb0c3f765fd735e4cca5fc66a5769a473551bdd",
+      "size_bytes": 3316,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/automated_security_fixes_after.json",
+      "sha256": "0ff62c42295fc2725047cf32340e12c912af1d99c7ea5ec8902519de6ae3a477",
+      "size_bytes": 31,
+      "text": true
+    },
+    {
+      "path": "evidence/remediation_2026-08-21/dependabot_labels_after.jsonl",
+      "sha256": "a5b61f84c17053dd3c15bbd12c6c26c457d46c7d63601aa1cf85d45698faa80c",
+      "size_bytes": 414,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/github-before/actions_permissions.json",
+      "sha256": "0bffee97e4ad52676c0127aacb5b4b304a2675f5c524de641acf1326e0b0e857",
+      "size_bytes": 69,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/github-before/automated_security_fixes.json",
+      "sha256": "8a0a15ba9d18fbed2294a579cbae9c005dd2fc71b83c56a28e7f55f984e8771f",
+      "size_bytes": 32,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/github-before/branch_protection.json",
+      "sha256": "738014a2fa96c05e3e5a36a3a193f8c7e0aef587a636b6c78ce56ce5579fab32",
+      "size_bytes": 1691,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/github-before/labels.json",
+      "sha256": "2f7a409de87e7129b099b03489d64e4ce43c75cb3dffe4fee55009749c6086a0",
+      "size_bytes": 4587,
+      "text": true
+    },
+    {
+      "path": "evidence/remediation_2026-08-21/native_wheel.sha256",
+      "sha256": "7e734f6c7ebee4e9f4477631c2152ad3c68771a6ed842ce98ab838e11817f298",
+      "size_bytes": 134,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/repository_after_dependabot.json",
+      "sha256": "beef0e8a66cc89e05f04a0310edcc53d094b2431b650ccd06b91783a0728d01f",
+      "size_bytes": 6861,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/repository_after_secret_scanning.json",
+      "sha256": "beef0e8a66cc89e05f04a0310edcc53d094b2431b650ccd06b91783a0728d01f",
+      "size_bytes": 6861,
+      "text": true
+    },
+    {
+      "lf_only": true,
       "line_count": 46,
       "nfc": true,
       "path": "examples/README.md",
@@ -3059,11 +3191,11 @@
     },
     {
       "lf_only": true,
-      "line_count": 208,
+      "line_count": 215,
       "nfc": true,
       "path": "pyproject.toml",
-      "sha256": "9d886e008bcd27822f4eafbd2f1848ad2140c9e6563747e9e52a47af2db2cf97",
-      "size_bytes": 8239,
+      "sha256": "147a4106b9005d8e945961e47ce38f009daa5942cc35cc8d0a4629847e1e2f39",
+      "size_bytes": 8798,
       "text": true
     },
     {
@@ -3086,7 +3218,7 @@
     },
     {
       "path": "requirements.lock",
-      "sha256": "20cab791c98a1e34dafa8d9369c4540ba93f1823cd2edfb4b2497d0d3c459dc7",
+      "sha256": "762bec839585370d082e638955c40e3352dfac9148decdf0c37b71120fa75a86",
       "size_bytes": 82131,
       "text": false
     },
@@ -3131,8 +3263,17 @@
       "line_count": 176,
       "nfc": true,
       "path": "scripts/build_execution_manifest.py",
-      "sha256": "640c30c06b3497cc120ee2886ca0ebc08524d037230dea0f876f153a4ee9ff80",
+      "sha256": "9ca6c19f5273485c3107541040d7801285338766f5dc51d4aad10dc645651f08",
       "size_bytes": 6496,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 189,
+      "nfc": true,
+      "path": "scripts/build_remediation_manifest.py",
+      "sha256": "da03f6aec997330bc626b1060b4c781fa291244e7eeb542da5347321aaaf4f77",
+      "size_bytes": 6664,
       "text": true
     },
     {
@@ -3146,11 +3287,11 @@
     },
     {
       "lf_only": true,
-      "line_count": 83,
+      "line_count": 114,
       "nfc": true,
       "path": "scripts/collect_github_security_status.sh",
-      "sha256": "2706c6d22476a5a698032ae7654cc9cbc39a69b80982af8790ad9ffea2d57444",
-      "size_bytes": 2990,
+      "sha256": "57e933d3ddafbc0fd2d7bf9e0d8f56071faf74b41962a5ab6fa5462e02d0ecf3",
+      "size_bytes": 4121,
       "text": true
     },
     {
@@ -3214,6 +3355,15 @@
       "path": "scripts/verify_formal_artifacts.sh",
       "sha256": "d8078fd07b808ecd612d2c3192ea1894778712a8ec6d03ea20156898665f5d6b",
       "size_bytes": 1400,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 44,
+      "nfc": true,
+      "path": "scripts/verify_github_action_pins.py",
+      "sha256": "5faa89595711796801568997f4e0a0ece150d3c4ed8ebbba9fa6190c0e233aa2",
+      "size_bytes": 1549,
       "text": true
     },
     {
@@ -3389,11 +3539,11 @@
     },
     {
       "lf_only": true,
-      "line_count": 996,
+      "line_count": 1180,
       "nfc": true,
       "path": "tests/test_app_coverage_extended.py",
-      "sha256": "f713f72e682455ae87f147226a018f176d833109630d0f57d469c76fbf4c0300",
-      "size_bytes": 38829,
+      "sha256": "cc0355a2fef62340789d73cabb5e4e601e043f88eac34661bd769ac88eebd685",
+      "size_bytes": 45696,
       "text": true
     },
     {
@@ -4373,8 +4523,8 @@
       "line_count": 299,
       "nfc": true,
       "path": "tests/test_pinned_ca_bundle.py",
-      "sha256": "8a5087d549a68e024202a5ffb09d40f90eef2167d70c1ecb9354723680d42310",
-      "size_bytes": 11451,
+      "sha256": "1bec963e5830e0bb25f191675100ad706a8a2350ca0723ad6288a2fc002e7396",
+      "size_bytes": 11469,
       "text": true
     },
     {
@@ -4706,8 +4856,8 @@
       "line_count": 213,
       "nfc": true,
       "path": "tests/test_sqlite_additional.py",
-      "sha256": "012d8053b545190587d720d5d640ebca79b1068ba3ce73d5d088880591ca3449",
-      "size_bytes": 7396,
+      "sha256": "19abd259e2daefdc707fdefea530c663109f402e6acb04f40e53dfa894a817db",
+      "size_bytes": 7405,
       "text": true
     },
     {
@@ -5197,11 +5347,11 @@
     {
       "heading": "fixed",
       "locators": [
-        "CHANGELOG.md:254",
-        "CHANGELOG.md:331",
-        "CHANGELOG.md:364",
+        "CHANGELOG.md:262",
+        "CHANGELOG.md:339",
         "CHANGELOG.md:372",
-        "CHANGELOG.md:381"
+        "CHANGELOG.md:380",
+        "CHANGELOG.md:389"
       ]
     },
     {
@@ -5218,7 +5368,7 @@
     {
       "heading": "related documents",
       "locators": [
-        "CHANGELOG.md:399",
+        "CHANGELOG.md:407",
         "COMMERCIAL.md:54",
         "CONTRIBUTING.md:217",
         "DEPLOYMENT_GUIDE.md:150",
@@ -5257,13 +5407,13 @@
       "heading": "verification",
       "locators": [
         ".github/PULL_REQUEST_TEMPLATE.md:21",
-        "CHANGELOG.md:79",
-        "CHANGELOG.md:106",
+        "CHANGELOG.md:87",
+        "CHANGELOG.md:114",
         "docs/architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md:44"
       ]
     }
   ],
   "schema": "aegis-documentation-corpus-audit-v1",
-  "source_commit": "c1c1bb706ceebfa33dfe32c051e913a063c5d357",
+  "source_commit": "931b3c05a0386a329e744ba9e29883a79a15cf2c",
   "utf8_failures": []
 }

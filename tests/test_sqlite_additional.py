@@ -22,7 +22,7 @@ async def _write(p: SQLiteStorageProvider, node_id: str, prev_hash: str) -> None
 
     await p.write_node(
         node_id=node_id,
-        timestamp=datetime.datetime.utcnow().isoformat(),
+        timestamp=datetime.datetime.now(datetime.UTC).isoformat(),
         node_data={"prev_hash": prev_hash},
         request_hash="rh",
         response_hash="rh2",

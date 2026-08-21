@@ -1,0 +1,25 @@
+{
+  "color": "0366d6",
+  "description": "Dependency updates",
+  "name": "dependencies"
+}
+{
+  "color": "3572A5",
+  "description": "Python ecosystem",
+  "name": "python"
+}
+{
+  "color": "dea584",
+  "description": "Rust ecosystem",
+  "name": "rust"
+}
+{
+  "color": "1d76db",
+  "description": "Continuous integration",
+  "name": "ci"
+}
+{
+  "color": "0db7ed",
+  "description": "Container ecosystem",
+  "name": "docker"
+}

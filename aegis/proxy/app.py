@@ -11,7 +11,7 @@ import time
 import uuid
 from collections import OrderedDict
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import aclosing, asynccontextmanager
 from dataclasses import dataclass
 from secrets import randbelow
 from threading import Lock
@@ -228,6 +228,13 @@ async def _analysis_worker(state: _AppState) -> None:
             logger.exception("asynchronous response analysis failed")
         finally:
             state.analysis_queue.task_done()
+            # CPython 3.11 can retain a pending cancellation across a
+            # wait_for(to_thread(...)) boundary.  Do not re-enter queue.get()
+            # after shutdown requested cancellation, even if an inner await
+            # consumed the first CancelledError delivery.
+            current = asyncio.current_task()
+            if current is not None and current.cancelling():
+                raise asyncio.CancelledError
 
 
 # FIX-APP-01: Bounded LRU cache for ResponseAnalyzer instances.
@@ -747,7 +754,18 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         for worker in state.analysis_workers:
             worker.cancel()
         if state.analysis_workers:
-            await asyncio.gather(*state.analysis_workers, return_exceptions=True)
+            try:
+                async with asyncio.timeout(cfg.analysis_shutdown_timeout_seconds):
+                    await asyncio.gather(*state.analysis_workers, return_exceptions=True)
+            except TimeoutError:
+                pending_workers = [
+                    worker.get_name() for worker in state.analysis_workers if not worker.done()
+                ]
+                logger.error(
+                    "analysis worker shutdown exceeded %.3fs; pending=%s",
+                    cfg.analysis_shutdown_timeout_seconds,
+                    pending_workers,
+                )
         await state.forwarder.stop()
         await state.ratelimiter.close()
         state.sessions.close()
@@ -1087,23 +1105,66 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             body["top_logprobs"] = cfg.top_logprobs
 
         if body.get("stream", False):
-            buffered_chunks: list[bytes] = []
+            buffered_response = bytearray()
             accumulated: list[Any] = []
             upstream_done = False
-            async for raw, parsed in state.forwarder.stream_sse("/v1/chat/completions", body):
-                if raw.strip() == b"data: [DONE]":
-                    upstream_done = True
-                    buffered_chunks.append(b"data: [DONE]\n\n")
-                    continue
-                chunk = raw if raw.startswith(b"data:") else b"data: " + raw
-                buffered_chunks.append(chunk if chunk.endswith(b"\n") else chunk + b"\n")
-                if parsed:
-                    lp = parsed.get("choices", [{}])[0].get("logprobs")
-                    if lp and lp.get("content"):
-                        accumulated.extend(lp["content"])
+            stream_limit_exceeded = False
+            stream = state.forwarder.stream_sse("/v1/chat/completions", body)
+            try:
+                async with asyncio.timeout(cfg.max_stream_duration_seconds), aclosing(stream):
+                    async for raw, parsed in stream:
+                        if raw.strip() == b"data: [DONE]":
+                            upstream_done = True
+                            chunk = b"data: [DONE]\n\n"
+                        else:
+                            chunk = raw if raw.startswith(b"data:") else b"data: " + raw
+                            if not chunk.endswith(b"\n"):
+                                chunk += b"\n"
+                        if len(buffered_response) + len(chunk) > cfg.max_stream_response_bytes:
+                            observability.FORWARD_ERRORS.labels(stage="response_too_large").inc()
+                            stream_limit_exceeded = True
+                            break
+                        buffered_response.extend(chunk)
+                        if parsed:
+                            lp = parsed.get("choices", [{}])[0].get("logprobs")
+                            if lp and lp.get("content"):
+                                accumulated.extend(lp["content"])
+            except TimeoutError:
+                observability.FORWARD_ERRORS.labels(stage="stream_timeout").inc()
+                return await _durable_error_response(
+                    request_id=request_id,
+                    session_id=session_id,
+                    raw_body=raw_body,
+                    model=body.get("model", "unknown"),
+                    request_start=request_start,
+                    status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                    content=b'{"detail":"Upstream streaming response exceeded configured duration"}',
+                )
+            if stream_limit_exceeded:
+                return await _durable_error_response(
+                    request_id=request_id,
+                    session_id=session_id,
+                    raw_body=raw_body,
+                    model=body.get("model", "unknown"),
+                    request_start=request_start,
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    content=b'{"detail":"Upstream streaming response exceeded configured byte limit"}',
+                )
             if not upstream_done:
-                buffered_chunks.append(b"data: [DONE]\n\n")
-            response_bytes = b"".join(buffered_chunks)
+                terminal_chunk = b"data: [DONE]\n\n"
+                if len(buffered_response) + len(terminal_chunk) > cfg.max_stream_response_bytes:
+                    observability.FORWARD_ERRORS.labels(stage="response_too_large").inc()
+                    return await _durable_error_response(
+                        request_id=request_id,
+                        session_id=session_id,
+                        raw_body=raw_body,
+                        model=body.get("model", "unknown"),
+                        request_start=request_start,
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        content=b'{"detail":"Upstream streaming response exceeded configured byte limit"}',
+                    )
+                buffered_response.extend(terminal_chunk)
+            response_bytes = bytes(buffered_response)
             await _commit_evidence(
                 request_id,
                 session_id,
@@ -1127,7 +1188,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 _scrub_method,
             )
             return StreamingResponse(
-                iter(buffered_chunks),
+                iter((response_bytes,)),
                 media_type="text/event-stream",
                 headers={
                     "X-Aegis-Request-ID": request_id,

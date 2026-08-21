@@ -27,15 +27,16 @@ jobs:
   forensic:
     name: Forensic checks (Python ${{ matrix.python-version }})
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -46,7 +47,7 @@ jobs:
             build-essential pkg-config libssl-dev libsqlite3-dev python3-dev
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
 
       - name: Install Python dev dependencies
         run: |
@@ -74,14 +75,14 @@ jobs:
         run: pip-audit -r requirements.txt --progress-spinner off
 
       - name: Run full test suite
-        run: pytest -q --tb=short
+        run: python -X faulthandler -m pytest -q --tb=short -o faulthandler_timeout=60
 
       - name: Run forensic checks script
         run: python tools/forensic/forensic_checks.py
 
       - name: Upload forensic artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: forensic-report-py${{ matrix.python-version }}
           path: |

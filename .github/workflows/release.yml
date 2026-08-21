@@ -34,7 +34,7 @@ jobs:
     outputs:
       version: ${{ steps.ver.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Extract version from pyproject.toml
         id: ver
@@ -66,11 +66,11 @@ jobs:
     runs-on: ubuntu-22.04
     needs: validate
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_BUILD_VERSION }}
           cache: pip
@@ -92,7 +92,7 @@ jobs:
           done
           cat *.sha256
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: python-dist
           path: dist/
@@ -136,14 +136,14 @@ jobs:
           # ── Windows (native, MSVC) ──
           - { runner: windows-2022,  target: x86_64-pc-windows-msvc }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_BUILD_VERSION }}
 
       - name: Build abi3 wheel
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
         env:
           # Allow building an abi3-py311 wheel against a newer interpreter.
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
@@ -165,7 +165,7 @@ jobs:
         shell: bash
         run: ls -lh aegis_rust_v2/dist/*.whl
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: rust-dist-${{ matrix.platform.target }}
           path: aegis_rust_v2/dist/
@@ -180,12 +180,12 @@ jobs:
       id-token: write   # for artifact attestation
       attestations: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           path: release-assets/
 
@@ -203,7 +203,7 @@ jobs:
           ls -lh
 
       - name: Attest build artifacts (SLSA Level 2)
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1
         with:
           subject-path: "release/*.whl,release/*.tar.gz"
 
@@ -229,7 +229,7 @@ jobs:
           VERSION: ${{ needs.validate.outputs.version }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: v${{ needs.validate.outputs.version }}
           name: "Aegis Latent Core v${{ needs.validate.outputs.version }}"
