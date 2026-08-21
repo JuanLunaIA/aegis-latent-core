@@ -211,6 +211,7 @@ Pricing hypotheses, cost-to-serve assumptions, procurement blockers, and buyer q
 | `docs/architecture/ARCHITECTURE.md` | System boundary, request state machine and topology behavior. |
 | `docs/benchmarks/BENCHMARK_RESULTS.md` | Canonical v3.1.0 benchmark results and reproduction commands. |
 | `docs/operations/ROLLBACK_RUNBOOK.md` | Evidence-preserving rollback and recovery procedure. |
+| `docs/institutional/README.md` | Six-volume institutional architecture, security, operations, regulatory, and procurement review suite with claim controls. |
 | `aegis/proxy/app.py` | Core FastAPI proxy lifecycle, request controls, evidence gate, streaming policy, headers, and bounded enrichment. |
 | `aegis/proxy/waf.py` | Application-layer WAF and normalization pipeline. |
 | `aegis/proxy/egress_guard.py` | Canonical egress allowlist and endpoint validation. |
@@ -242,6 +243,7 @@ Pricing hypotheses, cost-to-serve assumptions, procurement blockers, and buyer q
 | Security reviewer | [`SECURITY.md`](SECURITY.md), [`docs/security/THREAT_MODEL.md`](docs/security/THREAT_MODEL.md), [`docs/FAQ_SECURITY.md`](docs/FAQ_SECURITY.md), and [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md). |
 | Buyer and procurement | [`docs/PRODUCT_BRIEF_US.md`](docs/PRODUCT_BRIEF_US.md), [`docs/BUYER_GUIDE_US.md`](docs/BUYER_GUIDE_US.md), [`docs/FAQ_PROCUREMENT.md`](docs/FAQ_PROCUREMENT.md), and [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md). |
 | Compliance and privacy | [`docs/compliance/COMPLIANCE_MAPPING.md`](docs/compliance/COMPLIANCE_MAPPING.md) and [`docs/privacy/DATA_RETENTION.md`](docs/privacy/DATA_RETENTION.md). |
+| Institutional reviewer | [`docs/institutional/README.md`](docs/institutional/README.md), its claim-evidence graph, unsupported-claims report, and document-control record. |
 | Release owner | [`CHANGELOG.md`](CHANGELOG.md), [`docs/benchmarks/BENCHMARK_RESULTS.md`](docs/benchmarks/BENCHMARK_RESULTS.md), release artifacts, and the gate record. |
 
 ## Non-goals and residual risk

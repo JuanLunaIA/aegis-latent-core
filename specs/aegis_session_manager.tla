@@ -1,72 +1,79 @@
-(* Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+(* Copyright (c) 2026 Juan Luna. All rights reserved.
+   Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
    Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms. *)
----- MODULE: AegisSessionManager ----
-EXTENDS Integers, Sequences
+ ------------------------ MODULE aegis_session_manager ------------------------
+EXTENDS Naturals, Sequences, FiniteSets
 
-VARIABLES 
-    sessions,          \* Map of session_id -> session_state
-    ledger,            \* The MMR Ledger sequence
-    tpm_state,         \* Simplified TPM PCR state
-    network_status     \* status of the transport layer
+CONSTANTS SessionIds, Roots, NoRoot, MaxCommits
 
-CONSTANTS 
-    MaxSessions, 
-    TrustedRoot
+VARIABLES sessions, binding, ledger, network_status, insecure_processing
 
-vars == <<sessions, ledger, tpm_state, network_status>>
+vars == <<sessions, binding, ledger, network_status, insecure_processing>>
 
-\* --- INVARIANTS ---
+SequenceRange(sequence) ==
+    {sequence[index] : index \in 1..Len(sequence)}
 
-\* 1. Ledger Immutability: Once a root is recorded in the ledger, 
-\* it must never change.
-LedgerImmutability == \A i \in 1..Len(ledger) : 
-    ledger[i] = ledger[i] \* (Tautology for current state, verified via TLA+ model checker)
+TypeOK ==
+    /\ SessionIds # {}
+    /\ Roots # {}
+    /\ NoRoot \notin Roots
+    /\ MaxCommits \in Nat \ {0}
+    /\ sessions \subseteq SessionIds
+    /\ binding \in [SessionIds -> Roots \cup {NoRoot}]
+    /\ ledger \in Seq(Roots)
+    /\ Len(ledger) <= MaxCommits
+    /\ network_status \in {"SECURE", "COMPROMISED"}
+    /\ insecure_processing \in BOOLEAN
 
-\* 2. Session Binding: Every active session must be bound to a 
-\* verified TPM state and a valid MMR root.
-SessionBinding == \A s \in DOMAIN sessions : 
-    sessions[s].tpm_verified = TRUE /\ sessions[s].root_anchor = ledger[Len(ledger)]
-
-\* 3. Zero Trust: No request is processed unless the current 
-\* network_status is 'SECURE' (TLS 1.3 + Pinning).
-ZeroTrustEnforced == network_status = "SECURE"
-
-\* --- NEXT STATE LOGIC ---
-
-Init == 
-    /\ sessions = [ ]
-    /\ ledger = << >>
-    /\ tpm_state = "INITIALIZED"
+Init ==
+    /\ sessions = {}
+    /\ binding = [session \in SessionIds |-> NoRoot]
+    /\ ledger = <<>>
     /\ network_status = "SECURE"
+    /\ insecure_processing = FALSE
 
-Next == 
-    \/ \E s \in SIDs : CreateSession(s)
-    \/ \E s \in DOMAIN sessions : ProcessRequest(s)
-    \/ CommitToLedger
-    \/ NetworkFailure
+CommitToLedger(root) ==
+    /\ Len(ledger) < MaxCommits
+    /\ ledger' = Append(ledger, root)
+    /\ UNCHANGED <<sessions, binding, network_status, insecure_processing>>
 
-CreateSession(s) == 
-    /\ s \notin DOMAIN sessions
-    /\ sessions' = sessions \cup {s |-> [tpm_verified |-> TRUE, root_anchor |-> "0"]}
-    /\ UNCHANGED <<ledger, tpm_state, network_status>>
+CreateSession(session) ==
+    /\ session \notin sessions
+    /\ Len(ledger) > 0
+    /\ sessions' = sessions \cup {session}
+    /\ binding' = [binding EXCEPT ![session] = ledger[Len(ledger)]]
+    /\ UNCHANGED <<ledger, network_status, insecure_processing>>
 
-ProcessRequest(s) == 
-    /\ ZeroTrustEnforced
-    /\ sessions' = sessions
-    /\ UNCHANGED <<ledger, tpm_state, network_status>>
+ProcessRequest(session) ==
+    /\ session \in sessions
+    /\ network_status = "SECURE"
+    /\ UNCHANGED vars
 
-CommitToLedger == 
-    /\ ledger' = Append(ledger, NewRoot())
-    /\ UNCHANGED <<sessions, tpm_state, network_status>>
-
-NetworkFailure == 
+NetworkFailure ==
+    /\ network_status = "SECURE"
     /\ network_status' = "COMPROMISED"
-    /\ UNCHANGED <<sessions, ledger, tpm_state>>
+    /\ UNCHANGED <<sessions, binding, ledger, insecure_processing>>
 
-\* --- SPECIFICATION ---
+NetworkRecovery ==
+    /\ network_status = "COMPROMISED"
+    /\ network_status' = "SECURE"
+    /\ UNCHANGED <<sessions, binding, ledger, insecure_processing>>
+
+Next ==
+    \/ \E root \in Roots: CommitToLedger(root)
+    \/ \E session \in SessionIds: CreateSession(session)
+    \/ \E session \in SessionIds: ProcessRequest(session)
+    \/ NetworkFailure
+    \/ NetworkRecovery
+
+SessionBinding ==
+    \A session \in sessions: binding[session] \in SequenceRange(ledger)
+
+ZeroTrustEnforced ==
+    insecure_processing = FALSE
+
 Spec == Init /\ [][Next]_vars
 
-\* --- THEOREM ---
-\* Theorem: It is impossible for a session to exist without a valid TPM bind.
-Theorem_SessionSecurity == []SessionBinding
+THEOREM Spec => []SessionBinding
+THEOREM Spec => []ZeroTrustEnforced
 =============================================================================

@@ -1,10 +1,12 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
-"""Real-time PHI de-identification — NIST SP 800-188 Safe Harbor method.
+"""Best-effort PHI identifier redaction using deterministic regex patterns.
 
-Scrubs the 18 HIPAA Safe Harbor identifier categories from text using
-pre-compiled regex patterns.  No external NLP dependencies are required;
+Targets textual forms associated with HIPAA Safe Harbor identifier categories
+using pre-compiled regex patterns. It does not implement or establish the
+complete 45 CFR 164.514(b)(2) Safe Harbor method, Expert Determination, or
+NIST SP 800-188 de-identification process. No external NLP dependencies are required;
 the module is a pure-Python, stateless, thread-safe scrubber suitable for
 the hot request/response path.
 
@@ -39,7 +41,7 @@ class _Pattern(NamedTuple):
     flags: int = re.IGNORECASE
 
 
-# NIST SP 800-188 / HIPAA Safe Harbor identifier patterns.
+# Best-effort textual patterns inspired by HIPAA Safe Harbor identifier categories.
 # Each entry carries the category label used in the REDACTED token.
 #
 # ORDER IS CRITICAL: label-anchored patterns (NPI, MRN, LICENSE…) must appear
@@ -225,7 +227,7 @@ class ScrubResult:
 
 
 class PHIDeidentifier:
-    """Stateless, thread-safe PHI scrubber for the NIST SP 800-188 Safe Harbor categories.
+    """Stateless, thread-safe best-effort PHI identifier scrubber.
 
     Compile once at application start-up; call ``scrub()`` on every text fragment.
     """

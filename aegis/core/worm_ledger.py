@@ -1,18 +1,17 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
-"""aegis.core.worm_ledger — WORM (Write-Once Read-Many) storage enforcement.
+"""aegis.core.worm_ledger — application-level sealed-segment enforcement.
 
-Implements storage-layer immutability for WAL segments: once a segment is
-sealed, it is protected at both application level (``WORMViolationError`` on
-any delete/overwrite attempt) and OS level (``0o400`` read-only permissions for
-non-root processes).
+Applies application-level overwrite/delete checks and owner read-only mode to
+sealed WAL segments. These controls do not resist a privileged actor and do not
+establish regulatory WORM media.
 
-Also provides SEC Rule 17a-4 / FINRA 4511 retention-period enforcement and
+Also provides configurable retention labels inspired by SEC Rule 17a-4 / FINRA 4511 and
 evidence export via :class:`RetentionPolicy`, :class:`WORMAttestationBundle`,
 and :meth:`WORMEnforcer.attest`.
 
-Compliance targets
+Review references
 ------------------
 - SEC Rule 17a-4(b)(1)–(4): broker-dealer records retained 3 years accessible
   (first 2 years in an easily accessible place), 6 years total, on

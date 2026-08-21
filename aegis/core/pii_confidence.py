@@ -3,7 +3,7 @@
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """aegis.core.pii_confidence — PII confidence scoring per response with block/flag/log actions.
 
-Wraps the NIST SP 800-188 Safe Harbor regex engine in
+Wraps the best-effort PHI identifier regex engine in
 :mod:`aegis.core.phi_deidentifier` with a configurable action-threshold layer:
 
 * **BLOCK** — highest-confidence PII entity ≥ ``block_threshold``; response
@@ -18,13 +18,13 @@ This module is transport-agnostic: the FastAPI response path calls
 :class:`PIIConfidenceResult` to decide whether to return an error, add a
 warning header, or allow the response unmodified.
 
-HIPAA / 21 CFR Part 11 rationale
-----------------------------------
-Under HIPAA minimum-necessary (§164.514), even a de-identified response may
+Privacy risk rationale
+----------------------
+Even a redacted response may
 contain residual PII with non-zero detection confidence.  A fixed action (always
 scrub or always pass) is too coarse for regulated pipelines.  The
 threshold-based model lets each deployment tune the boundary between
-productivity and safety.
+productivity and safety. It does not establish HIPAA de-identification or Part 11 compliance.
 
 Usage::
 

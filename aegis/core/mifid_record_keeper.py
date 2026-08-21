@@ -185,10 +185,10 @@ class CommunicationRecord:
 
 @dataclass
 class FinancialCommsExport:
-    """Full compliance export: a set of communication records + bundle HMAC.
+    """Technical export: a set of communication records plus bundle HMAC.
 
-    Suitable for submission to regulators or for long-term archival alongside
-    the WORM-sealed WAL segments.
+    A qualified reviewer may assess the export for a regulator or archival
+    process. Local sealed WAL segments do not establish regulatory WORM.
 
     Attributes
     ----------

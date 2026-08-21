@@ -201,7 +201,7 @@ def test_section_legal_admissibility_title(
 ) -> None:
     report = builder.build_from_nodes(three_nodes)
     titles = [s.title for s in report.sections]
-    assert "Legal Admissibility Assessment" in titles
+    assert "Technical Integrity and Legal Review Boundary" in titles
 
 
 # ── to_text() ────────────────────────────────────────────────────────────────
@@ -238,7 +238,7 @@ def test_to_text_contains_section_headings(
     text = report.to_text()
     assert "EXECUTIVE SUMMARY" in text
     assert "CHAIN INTEGRITY VERIFICATION" in text
-    assert "LEGAL ADMISSIBILITY ASSESSMENT" in text
+    assert "TECHNICAL INTEGRITY AND LEGAL REVIEW BOUNDARY" in text
 
 
 def test_to_text_contains_integrity_seal(

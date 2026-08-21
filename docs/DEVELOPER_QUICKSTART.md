@@ -19,10 +19,11 @@ cd aegis-latent-core
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --require-hashes -r requirements.lock
+python -m pip install -e ".[dev]"
 python -m compileall -q aegis aegis_server
 ```
 
-The lockfile is the controlled dependency input for the documented path. Do not replace it with an unpinned install when reproducing release evidence.
+The lockfile is the controlled runtime dependency input. The development extras are currently minimum-version ranges rather than a hash-locked test-toolchain input; record the resolved environment when reproducing test evidence. Do not replace the runtime lockfile with an unpinned install.
 
 ## Run the release tests
 
@@ -35,6 +36,16 @@ pytest -q tests/test_market_hardening_gates.py
 ```
 
 The final v3.1.0 release run recorded 5,442 passed, 37 skipped and 47 warnings. The retained log and release-gate artifact are outside the source tree. A fresh local run can differ by Python version, native extension availability, filesystem, operating system and optional services.
+
+## Run the bounded formal models
+
+The formal gate requires Z3, Lean 4.33.0, Java 21, and the TLA+ Tools v1.8.0 JAR at `.tools/tla2tools.jar`. The CI workflow downloads the JAR and verifies its SHA-256 digest before execution. With those prerequisites installed, run:
+
+```bash
+scripts/verify_formal_artifacts.sh
+```
+
+The gate checks a QF_BV token-bucket contradiction with Z3, proves the durable-emission transition invariant inductively with Lean, and exhaustively explores finite TLC models for commit-before-emission, append-only ledger prefixes, and session-to-ledger binding. These are bounded abstractions: they do not prove filesystem durability, cryptographic constant-time behavior, Python/Rust refinement, multi-process ordering, or the absence of implementation defects outside the modeled transitions.
 
 ## Start a local evaluation gateway
 

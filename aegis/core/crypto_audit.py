@@ -5,7 +5,7 @@ Architecture:
   - CryptographicAuditLedger: append-only Merkle chain backed by WAL.
   - AuditNode: immutable record with forensic fields, HMAC/PQC signature,
     and a computed node_hash linking the chain.
-  - Signing: HMAC-SHA256 when signing_key is provided (default, "High" admissibility).
+  - Signing: HMAC-SHA256 when signing_key is provided; no legal conclusion is implied.
     PQC-ML-DSA via aegis_rust extension when available.
   - WAL: line-delimited JSON; crash-consistent via fsync after each write.
   - Memory: collections.deque(maxlen=N) — O(1) eviction, no pop(0) overhead.
@@ -507,9 +507,9 @@ class CryptographicAuditLedger:
         return True, None
 
     def export_part11_signatures(self) -> list[dict[str, Any]]:
-        """Return 21 CFR Part 11 §11.50-compliant signature records for all nodes.
+        """Return signature annotation fields that may support a Part 11 review.
 
-        Each record includes the three mandatory Part 11 fields:
+        Each record includes three fields associated with 21 CFR 11.50 review:
         - ``signer_name``      — printed name of the signer
         - ``signature_meaning``— human-readable meaning (authored/reviewed/approved)
         - ``timestamp_iso``    — date and time when the signature was executed (UTC ISO-8601)

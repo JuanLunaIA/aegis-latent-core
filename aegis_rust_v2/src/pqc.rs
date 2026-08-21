@@ -27,8 +27,9 @@ impl PqcKeypair {
     }
 
     fn sign<'py>(&self, py: Python<'py>, data: &[u8]) -> PyResult<Bound<'py, PyBytes>> {
-        let sk = mldsa65::SecretKey::from_bytes(&self.private_key)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("invalid secret key: {e}")))?;
+        let sk = mldsa65::SecretKey::from_bytes(&self.private_key).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("invalid secret key: {e}"))
+        })?;
         let sig = mldsa65::detached_sign(data, &sk);
         Ok(PyBytes::new(py, sig.as_bytes()))
     }
@@ -58,10 +59,12 @@ pub fn generate_pqc_keypair() -> PyResult<PqcKeypair> {
 /// with `ValueError` rather than silently accepted.
 #[pyfunction]
 pub fn keypair_from_bytes(public_key: &[u8], private_key: &[u8]) -> PyResult<PqcKeypair> {
-    mldsa65::PublicKey::from_bytes(public_key)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("invalid public key: {e}")))?;
-    mldsa65::SecretKey::from_bytes(private_key)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("invalid secret key: {e}")))?;
+    mldsa65::PublicKey::from_bytes(public_key).map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("invalid public key: {e}"))
+    })?;
+    mldsa65::SecretKey::from_bytes(private_key).map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("invalid secret key: {e}"))
+    })?;
     Ok(PqcKeypair {
         public_key: public_key.to_vec(),
         private_key: private_key.to_vec(),
@@ -70,10 +73,12 @@ pub fn keypair_from_bytes(public_key: &[u8], private_key: &[u8]) -> PyResult<Pqc
 
 #[pyfunction]
 pub fn verify_pqc_signature(data: &[u8], signature: &[u8], public_key: &[u8]) -> PyResult<bool> {
-    let pk = mldsa65::PublicKey::from_bytes(public_key)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("invalid public key: {e}")))?;
-    let sig = mldsa65::DetachedSignature::from_bytes(signature)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("invalid signature: {e}")))?;
+    let pk = mldsa65::PublicKey::from_bytes(public_key).map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("invalid public key: {e}"))
+    })?;
+    let sig = mldsa65::DetachedSignature::from_bytes(signature).map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("invalid signature: {e}"))
+    })?;
     Ok(mldsa65::verify_detached_signature(&sig, data, &pk).is_ok())
 }
 

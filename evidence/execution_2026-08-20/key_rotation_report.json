@@ -1,0 +1,25 @@
+{
+  "duration_s": 0.5,
+  "failed_commits": 0,
+  "failures": [],
+  "gate": {
+    "deployment_boundary": "LOCAL_ONLY; three process replicas, secret-manager propagation, clock skew, and orchestrator restart are NOT_EXECUTED",
+    "passed": true,
+    "zero_failed_commits": true,
+    "zero_unverifiable_records": true
+  },
+  "generated_at_utc": "2026-08-20T06:18:06Z",
+  "key_ids_observed": {
+    "key-new": 1332,
+    "key-old": 701
+  },
+  "keyring_mode": "0o600",
+  "keyring_sha256": "c791055ea731dba0b63fae4e3565ff6e81864d93307cb441f802576dc4bfb597",
+  "records": 2033,
+  "replicas": 3,
+  "repository": "JuanLunaIA/aegis-latent-core",
+  "rotation_observed": true,
+  "schema": "aegis-key-rotation-report-v1",
+  "scope": "three independent local signer instances; atomic keyring replacement; no Kubernetes or secret-manager claim",
+  "unverifiable_records": 0
+}

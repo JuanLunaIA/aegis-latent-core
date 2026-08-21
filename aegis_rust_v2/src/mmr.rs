@@ -113,7 +113,6 @@ impl MmrAccumulator {
         let combined: String = peak_refs.iter().map(|p| p.hash.as_str()).collect();
         sha256_hex(combined.as_bytes())
     }
-
 }
 
 #[cfg(test)]

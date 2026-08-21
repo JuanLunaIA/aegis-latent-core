@@ -1,0 +1,42 @@
+{
+  "repository": "JuanLunaIA/aegis-latent-core",
+  "schema": "aegis-github-security-status-v1",
+  "sources": {
+    "actions_permissions": {
+      "status": "AVAILABLE"
+    },
+    "actions_runs": {
+      "items": 1342,
+      "status": "AVAILABLE"
+    },
+    "branch_protection": {
+      "status": "AVAILABLE"
+    },
+    "code_scanning_alerts": {
+      "endpoint": "repos/JuanLunaIA/aegis-latent-core/code-scanning/alerts?state=open&per_page=100",
+      "status": "UNAVAILABLE",
+      "stderr_file": "code_scanning_alerts.stderr.txt"
+    },
+    "dependabot_alerts": {
+      "endpoint": "repos/JuanLunaIA/aegis-latent-core/dependabot/alerts?state=open&per_page=100",
+      "status": "UNAVAILABLE",
+      "stderr_file": "dependabot_alerts.stderr.txt"
+    },
+    "repository": {
+      "status": "AVAILABLE"
+    },
+    "secret_scanning_alerts": {
+      "endpoint": "repos/JuanLunaIA/aegis-latent-core/secret-scanning/alerts?state=open&per_page=100",
+      "status": "UNAVAILABLE",
+      "stderr_file": "secret_scanning_alerts.stderr.txt"
+    },
+    "security_advisories": {
+      "items": 0,
+      "status": "AVAILABLE"
+    },
+    "workflows": {
+      "items": 10,
+      "status": "AVAILABLE"
+    }
+  }
+}

@@ -3,13 +3,13 @@
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """aegis.core.hl7_fhir_phi_detector — HL7 v2 / FHIR structured PHI detection.
 
-Extends the Safe Harbor regex approach in :mod:`aegis.core.phi_deidentifier`
+Extends the best-effort regex approach in :mod:`aegis.core.phi_deidentifier`
 with **structure-aware** de-identification for the two dominant clinical
 message formats:
 
 - **HL7 v2**: pipe-delimited messages.  PHI is redacted by *segment+field
   position* (e.g. PID-5 = patient name, PID-19 = SSN) rather than by
-  pattern-scanning the full text — catching identifiers that Safe Harbor regex
+  pattern-scanning the full text — catching identifiers that generic regex
   would miss because they lack the expected surrounding tokens.
 - **FHIR (R4 / R5)**: JSON resources.  PHI is redacted by *resource-type +
   JSON field path* (e.g. ``Patient.name``, ``Patient.birthDate``) so that
@@ -18,8 +18,8 @@ message formats:
 
 Regulatory basis
 -----------------
-- **HIPAA Privacy Rule 45 CFR § 164.514(b)**: Safe Harbor de-identification —
-  18 identifier categories must be removed.
+- **HIPAA Privacy Rule 45 CFR § 164.514(b)**: a review reference only; complete
+  Safe Harbor or Expert Determination is not established by these field rules.
 - **HIPAA Security Rule 45 CFR § 164.312**: technical safeguards; de-ID is
   a recognised implementation specification.
 - **EU GDPR Recital 26 / Art. 25**: de-identification as a privacy-by-design
