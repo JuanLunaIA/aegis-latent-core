@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Merged PR #95 as signed squash commit `8907a6db75cff2a3bd6a551ef7983f53bda17027` and the SBOM correction PR #96 as signed squash commit `43677edca6d39a2b4078187d3676d5a286627846`.
 - Final GitHub Python 3.11.16 execution: `5,392 passed, 83 skipped in 64.34s`, `92%` line coverage, followed by a clean locked-runtime dependency audit.
-- Final `main` CI passed all 14 jobs, including Python 3.11/3.12/3.13, formal verification, Market Hardening, source SBOM, Docker provenance/SBOM, and keyless image signing.
+- Remediation-baseline `main` CI passed all 14 jobs, including Python 3.11/3.12/3.13, formal verification, Market Hardening, source SBOM, Docker provenance/SBOM, and keyless image signing.
 - Final Security workflow passed CodeQL, Bandit, dependency audit, Trivy, OSV Scanner, and Cargo Audit; Forensic CI also passed under the selected-action policy.
 - Private Dependabot, code-scanning, and secret-scanning alert inventories remain unenumerated because the active integration token returns HTTP 403; this is recorded as missing authority rather than a zero-alert result.
 
