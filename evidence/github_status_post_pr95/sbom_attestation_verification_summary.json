@@ -1,0 +1,60 @@
+[
+  {
+    "mediaType": "application/vnd.dev.sigstore.verificationresult+json;version=0.1",
+    "verifiedIdentity": {
+      "subjectAlternativeName": {
+        "subjectAlternativeName": "",
+        "regexp": "^https://github\\.com/JuanLunaIA/aegis-latent-core/\\.github/workflows/ci\\.yml"
+      },
+      "issuer": {
+        "issuer": "",
+        "regexp": ".*"
+      }
+    },
+    "verifiedTimestamps": [
+      {
+        "type": "Tlog",
+        "uri": "https://rekor.sigstore.dev",
+        "timestamp": "2026-08-21T12:27:53Z"
+      }
+    ],
+    "predicateType": "https://spdx.dev/Document/v2.3",
+    "subject": [
+      {
+        "name": "aegis-source-43677edca6d39a2b4078187d3676d5a286627846.tar.gz",
+        "digest": {
+          "sha256": "67a5ced5cebc1a525e407cc4cbfcc85f0d87aac1cb059317c0871e4c1d2f0562"
+        }
+      }
+    ]
+  },
+  {
+    "mediaType": "application/vnd.dev.sigstore.verificationresult+json;version=0.1",
+    "verifiedIdentity": {
+      "subjectAlternativeName": {
+        "subjectAlternativeName": "",
+        "regexp": "^https://github\\.com/JuanLunaIA/aegis-latent-core/\\.github/workflows/ci\\.yml"
+      },
+      "issuer": {
+        "issuer": "",
+        "regexp": ".*"
+      }
+    },
+    "verifiedTimestamps": [
+      {
+        "type": "Tlog",
+        "uri": "https://rekor.sigstore.dev",
+        "timestamp": "2026-08-21T04:59:41Z"
+      }
+    ],
+    "predicateType": "https://spdx.dev/Document/v2.3",
+    "subject": [
+      {
+        "name": "aegis-source-43677edca6d39a2b4078187d3676d5a286627846.tar.gz",
+        "digest": {
+          "sha256": "67a5ced5cebc1a525e407cc4cbfcc85f0d87aac1cb059317c0871e4c1d2f0562"
+        }
+      }
+    ]
+  }
+]

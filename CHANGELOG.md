@@ -15,9 +15,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Hardened asynchronous analysis-worker cancellation and bounded lifespan shutdown after reproducing the Python 3.11 `TestClient` teardown hang.
 - Added per-response byte and total-duration limits to buffered SSE handling, with durable 502/504 failure evidence and upstream-generator closure tests.
-- Replaced all 75 remote GitHub Action references with full 40-character commit SHAs and added a CI gate that rejects mutable Action references.
+- Replaced all 76 remote GitHub Action references with full 40-character commit SHAs and added a CI gate that rejects mutable Action references.
 - Replaced repository-owned `datetime.utcnow()` test calls with UTC-aware timestamps and narrowly filtered three identified third-party transition warnings.
 - Added explicit CI job timeouts and faulthandler stack dumps so a future non-progress condition terminates with diagnostic evidence.
+- Corrected the source-SBOM job to catalog an extracted deterministic archive, validated SPDX generation on pull requests, and verified the post-merge Sigstore attestation for the exact source digest.
+- Enabled repository-level SHA enforcement and a selected allowlist of 31 direct and observed transitive Action paths; active reruns of CI, Security, and Forensic CI pass under the hardened policy.
+- Expanded `main` branch protection to 13 required CI contexts, including Python 3.11 and source SBOM, and enabled signed-commit and administrator enforcement.
+
+### Final remediation verification
+
+- Merged PR #95 as signed squash commit `8907a6db75cff2a3bd6a551ef7983f53bda17027` and the SBOM correction PR #96 as signed squash commit `43677edca6d39a2b4078187d3676d5a286627846`.
+- Final GitHub Python 3.11.16 execution: `5,392 passed, 83 skipped in 64.34s`, `92%` line coverage, followed by a clean locked-runtime dependency audit.
+- Final `main` CI passed all 14 jobs, including Python 3.11/3.12/3.13, formal verification, Market Hardening, source SBOM, Docker provenance/SBOM, and keyless image signing.
+- Final Security workflow passed CodeQL, Bandit, dependency audit, Trivy, OSV Scanner, and Cargo Audit; Forensic CI also passed under the selected-action policy.
+- Private Dependabot, code-scanning, and secret-scanning alert inventories remain unenumerated because the active integration token returns HTTP 403; this is recorded as missing authority rather than a zero-alert result.
 
 ### Institutional documentation and claim controls
 

@@ -1,0 +1,21 @@
+{
+  "default_branch": "main",
+  "security_and_analysis": {
+    "dependabot_security_updates": {
+      "status": "enabled"
+    },
+    "secret_scanning": {
+      "status": "enabled"
+    },
+    "secret_scanning_non_provider_patterns": {
+      "status": "disabled"
+    },
+    "secret_scanning_push_protection": {
+      "status": "enabled"
+    },
+    "secret_scanning_validity_checks": {
+      "status": "disabled"
+    }
+  },
+  "visibility": "public"
+}

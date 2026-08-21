@@ -1,0 +1,59 @@
+{
+  "jobs": [
+    {
+      "completed_at": "2026-08-21T12:29:18Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725428/job/96770447671",
+      "id": 96770447671,
+      "name": "Trivy Container Scan",
+      "started_at": "2026-08-21T12:28:54Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:50:32Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725428/job/96770448569",
+      "id": 96770448569,
+      "name": "Cargo Audit",
+      "started_at": "2026-08-21T05:50:13Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:50:39Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725428/job/96770448925",
+      "id": 96770448925,
+      "name": "Bandit SAST",
+      "started_at": "2026-08-21T05:50:13Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:52:03Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725428/job/96770449103",
+      "id": 96770449103,
+      "name": "CodeQL (python)",
+      "started_at": "2026-08-21T05:50:13Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:50:33Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725428/job/96770470522",
+      "id": 96770470522,
+      "name": "OSV Scanner",
+      "started_at": "2026-08-21T05:50:13Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:50:56Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725428/job/96770473630",
+      "id": 96770473630,
+      "name": "Dependency Audit",
+      "started_at": "2026-08-21T05:50:13Z",
+      "status": "completed"
+    }
+  ],
+  "total_count": 6
+}

@@ -1,0 +1,91 @@
+{
+  "repository": "JuanLunaIA/aegis-latent-core",
+  "schema": "aegis-github-security-status-v1",
+  "sources": {
+    "actions_permissions": {
+      "status": "AVAILABLE"
+    },
+    "actions_permissions_before_hardening": {
+      "status": "AVAILABLE"
+    },
+    "actions_permissions_final": {
+      "status": "AVAILABLE"
+    },
+    "actions_runs": {
+      "items": 1373,
+      "status": "AVAILABLE"
+    },
+    "branch_protection": {
+      "status": "AVAILABLE"
+    },
+    "branch_protection_before_hardening": {
+      "status": "AVAILABLE"
+    },
+    "branch_protection_final": {
+      "status": "AVAILABLE"
+    },
+    "code_scanning_alerts": {
+      "endpoint": "repos/JuanLunaIA/aegis-latent-core/code-scanning/alerts?state=open&per_page=100",
+      "status": "UNAVAILABLE",
+      "stderr_file": "code_scanning_alerts.stderr.txt"
+    },
+    "dependabot_alerts": {
+      "endpoint": "repos/JuanLunaIA/aegis-latent-core/dependabot/alerts?state=open&per_page=100",
+      "status": "UNAVAILABLE",
+      "stderr_file": "dependabot_alerts.stderr.txt"
+    },
+    "repository": {
+      "status": "AVAILABLE"
+    },
+    "repository_security_final": {
+      "status": "AVAILABLE"
+    },
+    "run_32448725428_final": {
+      "status": "AVAILABLE"
+    },
+    "run_32448725428_jobs_final": {
+      "items": 6,
+      "status": "AVAILABLE"
+    },
+    "run_32448725435_final": {
+      "status": "AVAILABLE"
+    },
+    "run_32448725435_jobs_final": {
+      "items": 3,
+      "status": "AVAILABLE"
+    },
+    "run_32448725497_final": {
+      "status": "AVAILABLE"
+    },
+    "run_32448725497_jobs_final": {
+      "items": 14,
+      "status": "AVAILABLE"
+    },
+    "sbom_artifact_hashes": {
+      "status": "AVAILABLE"
+    },
+    "sbom_attestation_verification_summary": {
+      "items": 2,
+      "status": "AVAILABLE"
+    },
+    "secret_scanning_alerts": {
+      "endpoint": "repos/JuanLunaIA/aegis-latent-core/secret-scanning/alerts?state=open&per_page=100",
+      "status": "UNAVAILABLE",
+      "stderr_file": "secret_scanning_alerts.stderr.txt"
+    },
+    "security_advisories": {
+      "items": 0,
+      "status": "AVAILABLE"
+    },
+    "selected_actions_final": {
+      "status": "AVAILABLE"
+    },
+    "selected_actions_intermediate_25_patterns": {
+      "status": "AVAILABLE"
+    },
+    "workflows": {
+      "items": 10,
+      "status": "AVAILABLE"
+    }
+  }
+}
