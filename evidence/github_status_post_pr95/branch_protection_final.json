@@ -1,0 +1,113 @@
+{
+  "allow_deletions": {
+    "enabled": false
+  },
+  "allow_force_pushes": {
+    "enabled": false
+  },
+  "allow_fork_syncing": {
+    "enabled": false
+  },
+  "block_creations": {
+    "enabled": false
+  },
+  "enforce_admins": {
+    "enabled": true,
+    "url": "https://api.github.com/repos/JuanLunaIA/aegis-latent-core/branches/main/protection/enforce_admins"
+  },
+  "lock_branch": {
+    "enabled": false
+  },
+  "required_conversation_resolution": {
+    "enabled": true
+  },
+  "required_linear_history": {
+    "enabled": true
+  },
+  "required_pull_request_reviews": {
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": true,
+    "require_last_push_approval": false,
+    "required_approving_review_count": 1,
+    "url": "https://api.github.com/repos/JuanLunaIA/aegis-latent-core/branches/main/protection/required_pull_request_reviews"
+  },
+  "required_signatures": {
+    "enabled": true,
+    "url": "https://api.github.com/repos/JuanLunaIA/aegis-latent-core/branches/main/protection/required_signatures"
+  },
+  "required_status_checks": {
+    "checks": [
+      {
+        "app_id": null,
+        "context": "CI / Lint & Format"
+      },
+      {
+        "app_id": null,
+        "context": "CI / Test (Python 3.12)"
+      },
+      {
+        "app_id": null,
+        "context": "CI / Security Scan"
+      },
+      {
+        "app_id": null,
+        "context": "CI / Rust Extension"
+      },
+      {
+        "app_id": null,
+        "context": "CI / Helm Lint"
+      },
+      {
+        "app_id": null,
+        "context": "CI / Market Hardening Gates"
+      },
+      {
+        "app_id": null,
+        "context": "CI / License Headers"
+      },
+      {
+        "app_id": null,
+        "context": "CI / Formal Verification (Z3, Lean, TLC)"
+      },
+      {
+        "app_id": null,
+        "context": "CI / Type Check"
+      },
+      {
+        "app_id": null,
+        "context": "CI / Test (Python 3.11)"
+      },
+      {
+        "app_id": null,
+        "context": "CI / Test (Python 3.13)"
+      },
+      {
+        "app_id": null,
+        "context": "CI / Lock File Integrity"
+      },
+      {
+        "app_id": null,
+        "context": "CI / Generate SBOM"
+      }
+    ],
+    "contexts": [
+      "CI / Lint & Format",
+      "CI / Test (Python 3.12)",
+      "CI / Security Scan",
+      "CI / Rust Extension",
+      "CI / Helm Lint",
+      "CI / Market Hardening Gates",
+      "CI / License Headers",
+      "CI / Formal Verification (Z3, Lean, TLC)",
+      "CI / Type Check",
+      "CI / Test (Python 3.11)",
+      "CI / Test (Python 3.13)",
+      "CI / Lock File Integrity",
+      "CI / Generate SBOM"
+    ],
+    "contexts_url": "https://api.github.com/repos/JuanLunaIA/aegis-latent-core/branches/main/protection/required_status_checks/contexts",
+    "strict": true,
+    "url": "https://api.github.com/repos/JuanLunaIA/aegis-latent-core/branches/main/protection/required_status_checks"
+  },
+  "url": "https://api.github.com/repos/JuanLunaIA/aegis-latent-core/branches/main/protection"
+}

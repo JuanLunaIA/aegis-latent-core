@@ -1,0 +1,131 @@
+{
+  "jobs": [
+    {
+      "completed_at": "2026-08-21T05:50:54Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770161747",
+      "id": 96770161747,
+      "name": "Formal Verification (Z3, Lean, TLC)",
+      "started_at": "2026-08-21T05:50:12Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:52:13Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770162018",
+      "id": 96770162018,
+      "name": "Test (Python 3.12)",
+      "started_at": "2026-08-21T05:50:12Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T12:27:56Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770162246",
+      "id": 96770162246,
+      "name": "Generate SBOM",
+      "started_at": "2026-08-21T12:27:44Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:51:56Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770162324",
+      "id": 96770162324,
+      "name": "Test (Python 3.11)",
+      "started_at": "2026-08-21T05:50:12Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:53:02Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770163050",
+      "id": 96770163050,
+      "name": "Market Hardening Gates",
+      "started_at": "2026-08-21T05:52:17Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:55:53Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770163370",
+      "id": 96770163370,
+      "name": "Docker Build & Push",
+      "started_at": "2026-08-21T05:55:17Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:50:22Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770184379",
+      "id": 96770184379,
+      "name": "Lint & Format",
+      "started_at": "2026-08-21T05:50:12Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:50:18Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770185452",
+      "id": 96770185452,
+      "name": "Helm Lint",
+      "started_at": "2026-08-21T05:50:12Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:55:15Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770188589",
+      "id": 96770188589,
+      "name": "Rust Extension",
+      "started_at": "2026-08-21T05:50:12Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:52:04Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770193331",
+      "id": 96770193331,
+      "name": "Test (Python 3.13)",
+      "started_at": "2026-08-21T05:50:14Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:51:04Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770193551",
+      "id": 96770193551,
+      "name": "Lock File Integrity",
+      "started_at": "2026-08-21T05:50:12Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:50:52Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770195725",
+      "id": 96770195725,
+      "name": "Type Check",
+      "started_at": "2026-08-21T05:50:12Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:51:08Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770197692",
+      "id": 96770197692,
+      "name": "Security Scan",
+      "started_at": "2026-08-21T05:50:12Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:50:19Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725497/job/96770198952",
+      "id": 96770198952,
+      "name": "License Headers",
+      "started_at": "2026-08-21T05:50:12Z",
+      "status": "completed"
+    }
+  ],
+  "total_count": 14
+}

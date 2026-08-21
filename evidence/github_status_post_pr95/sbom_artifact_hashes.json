@@ -1,0 +1,12 @@
+{
+  "commit": "43677edca6d39a2b4078187d3676d5a286627846",
+  "sbom": {
+    "name": "sbom.spdx.json",
+    "predicate_type": "https://spdx.dev/Document/v2.3",
+    "sha256": "dde2021093e2b4fae4cf8b9f5b7740843b5c8aab5acab8c60bcb48d70576b1cc"
+  },
+  "source_archive": {
+    "name": "aegis-source-43677edca6d39a2b4078187d3676d5a286627846.tar.gz",
+    "sha256": "67a5ced5cebc1a525e407cc4cbfcc85f0d87aac1cb059317c0871e4c1d2f0562"
+  }
+}

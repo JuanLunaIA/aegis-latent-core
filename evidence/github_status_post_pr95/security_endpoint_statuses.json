@@ -1,0 +1,26 @@
+{
+  "code_scanning_alerts_status": 403,
+  "dependabot_alerts_status": 403,
+  "interpretation": "HTTP 403 is missing integration authority and is not a zero-alert result; HTTP 204 confirms vulnerability alerts are enabled without a response body.",
+  "observed_security_and_analysis_after_patch": {
+    "dependabot_security_updates": {
+      "status": "enabled"
+    },
+    "secret_scanning": {
+      "status": "enabled"
+    },
+    "secret_scanning_non_provider_patterns": {
+      "status": "disabled"
+    },
+    "secret_scanning_push_protection": {
+      "status": "enabled"
+    },
+    "secret_scanning_validity_checks": {
+      "status": "disabled"
+    }
+  },
+  "repository_read_after_patch_status": 200,
+  "secret_scanning_alerts_status": 403,
+  "secret_scanning_optional_features_patch_status": 200,
+  "vulnerability_alerts_status": 204
+}

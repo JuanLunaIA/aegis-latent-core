@@ -1,0 +1,32 @@
+{
+  "jobs": [
+    {
+      "completed_at": "2026-08-21T05:58:41Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725435/job/96682141955",
+      "id": 96682141955,
+      "name": "Forensic checks (Python 3.11)",
+      "started_at": "2026-08-21T05:50:13Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:58:52Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725435/job/96682142114",
+      "id": 96682142114,
+      "name": "Forensic checks (Python 3.12)",
+      "started_at": "2026-08-21T05:50:20Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-21T05:59:07Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/JuanLunaIA/aegis-latent-core/actions/runs/32448725435/job/96682142123",
+      "id": 96682142123,
+      "name": "Forensic checks (Python 3.13)",
+      "started_at": "2026-08-21T05:50:14Z",
+      "status": "completed"
+    }
+  ],
+  "total_count": 3
+}
