@@ -317,6 +317,21 @@ class AegisSettings(BaseSettings):
         le=16_777_216,
         description="Streaming HTTP body limit enforced before JSON parsing.",
     )
+    max_stream_response_bytes: int = Field(
+        default=16_777_216,
+        ge=1_024,
+        le=268_435_456,
+        description=(
+            "Maximum buffered upstream SSE response size before the request is rejected. "
+            "The proxy buffers before evidence commit, so this is an egress memory bound."
+        ),
+    )
+    max_stream_duration_seconds: float = Field(
+        default=60.0,
+        ge=0.1,
+        le=900.0,
+        description="Total wall-clock deadline for consuming one upstream SSE response.",
+    )
     analysis_queue_size: int = Field(
         default=2_048,
         ge=1,
@@ -340,6 +355,12 @@ class AegisSettings(BaseSettings):
         ge=0.1,
         le=60.0,
         description="Maximum wall time for one asynchronous response analysis job.",
+    )
+    analysis_shutdown_timeout_seconds: float = Field(
+        default=2.0,
+        ge=0.1,
+        le=30.0,
+        description="Maximum shutdown wait for cancelled response-analysis workers.",
     )
 
     # ── Telemetry ─────────────────────────────────────────────────────────

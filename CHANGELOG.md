@@ -2,7 +2,7 @@
 
 All notable changes to **Aegis Latent Core** are documented in this file.
 
-**Last verified:** 2026-08-20 UTC
+**Last verified:** 2026-08-21 UTC
 **Release baseline:** `v3.1.0`
 **Documentation verification baseline:** `v3.1.0`. Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
@@ -11,11 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### CI reliability and supply-chain hardening
+
+- Hardened asynchronous analysis-worker cancellation and bounded lifespan shutdown after reproducing the Python 3.11 `TestClient` teardown hang.
+- Added per-response byte and total-duration limits to buffered SSE handling, with durable 502/504 failure evidence and upstream-generator closure tests.
+- Replaced all 75 remote GitHub Action references with full 40-character commit SHAs and added a CI gate that rejects mutable Action references.
+- Replaced repository-owned `datetime.utcnow()` test calls with UTC-aware timestamps and narrowly filtered three identified third-party transition warnings.
+- Added explicit CI job timeouts and faulthandler stack dumps so a future non-progress condition terminates with diagnostic evidence.
+
 ### Institutional documentation and claim controls
 
 - Added a six-volume institutional suite covering mechanistic architecture, cryptography and forensics, threat modeling, operations, regulatory review, and commercial procurement, plus a claim-evidence graph, unsupported-claims report, document-control record, and deterministic corpus audit.
 - Corrected positive regulatory and evidentiary wording in code documentation: regex PHI handling is best-effort redaction, application sealed segments are not regulatory WORM, GxP objects are support hooks rather than validation, and software-generated integrity labels do not determine legal admissibility.
-- Corrected the canonical streaming boundary: upstream streams are fully buffered before the evidence gate, but no accumulated streaming-response byte ceiling is currently implemented.
+- Corrected the canonical streaming boundary: upstream streams are fully buffered before the evidence gate. The buffer now has configured byte and total-duration limits; aggregate concurrent memory remains deployment-dependent.
 - Added `cbor2>=5.9.0` to development dependencies after local dependency auditing detected advisories in the previously installed generation-only version.
 
 ### Formal and native WAL hardening

@@ -93,6 +93,7 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.10",
     "bandit>=1.7",
+    "pip-audit>=2.10,<3",
     "cbor2>=5.9.0",
     "aiosqlite>=0.20.0",
     "cachetools>=5.3.0",
@@ -123,6 +124,13 @@ testpaths = ["tests"]
 addopts = ""
 markers = [
     "slow: marks tests as slow-running (e.g. real network / subprocess calls)",
+]
+filterwarnings = [
+    # Third-party transition warnings. Keep message/category/module exact so
+    # unrelated deprecations remain visible and fail future -W error gates.
+    "ignore:^Using `httpx` with `starlette\\.testclient` is deprecated; install `httpx2` instead\\.$:starlette.exceptions.StarletteDeprecationWarning:fastapi.testclient",
+    "ignore:^tagMap is deprecated\\. Please use TAG_MAP instead\\.$:DeprecationWarning:ldap3.utils.asn1",
+    "ignore:^typeMap is deprecated\\. Please use TYPE_MAP instead\\.$:DeprecationWarning:ldap3.utils.asn1",
 ]
 
 [tool.ruff]
