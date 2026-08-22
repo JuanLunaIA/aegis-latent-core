@@ -1,0 +1,64 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+[build-system]
+requires = ["hatchling==1.28.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aegis-sdk"
+version = "3.1.0"
+description = "Typed Aegis gateway clients and portable MMR proof verification"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "AGPL-3.0-only OR LicenseRef-Proprietary"}
+authors = [{name = "Juan Luna"}]
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/JuanLunaIA/aegis-latent-core"
+Repository = "https://github.com/JuanLunaIA/aegis-latent-core/tree/main/sdk/python"
+Issues = "https://github.com/JuanLunaIA/aegis-latent-core/issues"
+
+[project.optional-dependencies]
+openai = ["openai>=2.52,<3", "httpx>=0.27,<1"]
+anthropic = ["anthropic>=1,<2"]
+all = ["aegis-sdk[openai,anthropic]"]
+dev = [
+  "aegis-sdk[all]",
+  "mypy>=1.10,<2",
+  "pytest>=8,<9",
+  "pytest-asyncio>=0.23,<2",
+  "ruff>=0.4,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aegis_sdk"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/aegis_sdk", "tests", "README.md", "pyproject.toml"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "S", "B", "A", "COM", "C4", "PT"]
+ignore = ["COM812", "E501", "S101"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["aegis_sdk"]
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

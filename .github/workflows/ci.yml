@@ -57,18 +57,31 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y -qq z3
+          sudo apt-get install -y -qq ant z3
           curl --proto '=https' --tlsv1.2 -sSf \
             https://raw.githubusercontent.com/leanprover/elan/464c9d28395000a2a0128e07081e4956d50eced2/elan-init.sh \
             -o /tmp/elan-init.sh
           sh /tmp/elan-init.sh -y --default-toolchain leanprover/lean4:v4.33.0
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          TLA_REVISION=0894c3407f4717fec7cc18bde3bf3c857fa47333
+          rm -rf /tmp/tlaplus-src
+          git init -q /tmp/tlaplus-src
+          git -C /tmp/tlaplus-src remote add origin https://github.com/tlaplus/tlaplus.git
+          git -C /tmp/tlaplus-src fetch --depth 1 origin "$TLA_REVISION"
+          git -C /tmp/tlaplus-src checkout --detach FETCH_HEAD
+          test "$(git -C /tmp/tlaplus-src rev-parse HEAD)" = "$TLA_REVISION"
+          ant -f /tmp/tlaplus-src/tlatools/org.lamport.tlatools/customBuild.xml \
+            -Dgit.branch=detached \
+            -Dgit.tag= \
+            -Dgit.revision="$TLA_REVISION" \
+            -Dgit.shortRevision="${TLA_REVISION:0:7}" \
+            -Dgit.commitsCount=unknown \
+            compile compile-test dist
           mkdir -p .tools
-          curl --proto '=https' --tlsv1.2 -fL \
-            https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar \
-            -o .tools/tla2tools.jar
-          echo "ab323b79802aedc3203b3f9af37c6aca3ed43f4e0225b36f2aa77b26de46c05f  .tools/tla2tools.jar" \
-            | sha256sum -c -
+          cp /tmp/tlaplus-src/tlatools/org.lamport.tlatools/dist/tla2tools.jar \
+            .tools/tla2tools.jar
+          unzip -p .tools/tla2tools.jar META-INF/MANIFEST.MF \
+            | grep -F "X-Git-Revision: $TLA_REVISION"
       - name: Check bounded safety models
         run: scripts/verify_formal_artifacts.sh
 
@@ -140,7 +153,85 @@ jobs:
             aegis/core/telemetry.py \
             aegis/proxy/waf.py \
             aegis/proxy/schemas.py \
-            aegis/proxy/forwarder.py
+            aegis/proxy/forwarder.py \
+            aegis/proxy/streaming.py \
+            aegis/proxy/audit_api.py
+
+  # ── Public SDK contract gates ───────────────────────────────────────────────
+  sdk-python:
+    name: Python SDK
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install SDK and test toolchain
+        run: pip install -e "./sdk/python[dev]" build
+      - name: Lint, typecheck, and test official-client compatibility
+        working-directory: sdk/python
+        run: |
+          ruff check src tests
+          mypy --config-file pyproject.toml
+          pytest -q
+      - name: Build standalone SDK distribution
+        run: python -m build sdk/python
+
+  sdk-typescript:
+    name: TypeScript SDK
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+      - name: Install locked dependencies
+        working-directory: sdk/typescript
+        run: npm ci --ignore-scripts
+      - name: Typecheck, cross-language vectors, build, and audit
+        working-directory: sdk/typescript
+        run: |
+          npm run check
+          npm audit --audit-level=high
+          npm pack --dry-run
+
+  dashboard:
+    name: Audit Dashboard
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      AEGIS_PRIMARY_BASE_URL: "http://127.0.0.1:8000"
+      AEGIS_DASHBOARD_API_KEY: "ci-build-placeholder"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            sdk/typescript/package-lock.json
+            dashboard/package-lock.json
+      - name: Build local TypeScript verifier package
+        working-directory: sdk/typescript
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+      - name: Install dashboard dependencies
+        working-directory: dashboard
+        run: npm ci --ignore-scripts
+      - name: Typecheck, accessibility tests, production build, and audit
+        working-directory: dashboard
+        run: |
+          npm run typecheck
+          npm test
+          npm run build
+          npm audit --audit-level=high
 
   # ── Tests ─────────────────────────────────────────────────────────────────
   test:

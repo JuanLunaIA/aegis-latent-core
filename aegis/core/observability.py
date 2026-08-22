@@ -149,6 +149,22 @@ if _PROM:
             0.010_000,  # 10 ms
         ),
     )
+    STREAM_DURATION: Any = Histogram(
+        "aegis_stream_duration_seconds",
+        "Terminal stream duration by provider and outcome.",
+        ["provider", "outcome"],
+        buckets=(0.010, 0.050, 0.100, 0.250, 0.500, 1.0, 2.5, 5.0, 10.0, 30.0, 120.0),
+    )
+    STREAM_TOKENS: Any = Counter(
+        "aegis_stream_tokens_total",
+        "Provider-reported or event-counted streaming tokens by provider.",
+        ["provider"],
+    )
+    STREAM_REDACTIONS: Any = Counter(
+        "aegis_stream_redactions_total",
+        "Incremental streaming redactions by bounded entity category and provider.",
+        ["provider", "entity"],
+    )
 else:
     # No-op stubs — identical API surface so callers never branch on _PROM.
     # All methods are silent no-ops; the proxy runs identically when
@@ -178,6 +194,9 @@ else:
     ANALYSIS_ERRORS = _NoopMetric()
     CIRCUIT_BREAKER_OPENS = _NoopMetric()
     CIRCUIT_BREAKER_STATE = _NoopMetric()
+    STREAM_DURATION = _NoopMetric()
+    STREAM_TOKENS = _NoopMetric()
+    STREAM_REDACTIONS = _NoopMetric()
     WAL_REPLICATION_LAG = _NoopMetric()
     SCHEDULING_JITTER = _NoopMetric()
 

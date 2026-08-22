@@ -39,6 +39,7 @@ FIX-CAL-01: WAL file handle lifecycle.
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
 
+import copy
 import hashlib
 import hmac
 import json
@@ -52,11 +53,12 @@ from threading import Lock
 from typing import Any
 
 import numpy as np
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from aegis.core.forensic import build_merkle_leaf, sha256_hex
+from aegis.core.forensic import build_merkle_leaf, build_stream_merkle_leaf, sha256_hex
 from aegis.core.hsm import HSMSigningBackend, HSMUnavailableError
-from aegis.core.mmr import MerkleMountainRange
+from aegis.core.mmr import MerkleMountainRange, MMRInclusionProofV1
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +113,11 @@ class AuditNode:
     signature_meaning: str = ""
     # EU Annex 11 §4.8 migration traceability
     audit_trail_version: str = "1"
+    # Portable MMR inclusion snapshot. Empty on legacy WAL records.
+    mmr_leaf_hash: str = ""
+    mmr_leaf_index: int = -1
+    mmr_leaf_count: int = 0
+    mmr_proof: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         self.__creation_hash__: str = self.node_hash
@@ -168,6 +175,10 @@ class AuditNode:
             "signer_name": "",
             "signature_meaning": "",
             "audit_trail_version": "1",
+            "mmr_leaf_hash": "",
+            "mmr_leaf_index": -1,
+            "mmr_leaf_count": 0,
+            "mmr_proof": None,
         }
         # Remove legacy field if present
         data.pop("payload", None)
@@ -283,6 +294,7 @@ class CryptographicAuditLedger:
         self.max_forensic_bytes = max_forensic_bytes
         self.max_wal_bytes = max_wal_bytes
         self.chain: deque[AuditNode] = deque(maxlen=max_memory_nodes)
+        self._window_anchor_hash = "0" * 64
         self._lock = Lock()
         self._wal_handle = None
         self._wal_bytes = 0
@@ -310,6 +322,16 @@ class CryptographicAuditLedger:
         """Paths of rotated, immutable WAL archive segments (oldest first)."""
         with self._lock:
             return self._segment_paths()
+
+    @property
+    def window_anchor_hash(self) -> str:
+        """Hash immediately preceding the first retained in-memory node."""
+        return self._window_anchor_hash
+
+    def _append_memory_node(self, node: AuditNode) -> None:
+        if self.chain.maxlen is not None and len(self.chain) == self.chain.maxlen:
+            self._window_anchor_hash = self.chain[0].node_hash
+        self.chain.append(node)
 
     # ── Core API ───────────────────────────────────────────────────────────
 
@@ -378,7 +400,12 @@ class CryptographicAuditLedger:
         with self._lock:
             prev_hash = self.chain[-1].node_hash if self.chain else "0" * 64
             timestamp = time.time()
+            mmr_before = copy.deepcopy(self._mmr)
             merkle_root = self._mmr.add_leaf(leaf)
+            mmr_leaf_count = self._mmr.get_leaf_count()
+            mmr_leaf_index = mmr_leaf_count - 1
+            mmr_leaf_hash = sha256_hex(leaf)
+            mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
 
             # Sign over prev_hash + merkle_root + request/response hashes so the
             # signature binds chain linkage, not merkle_root alone (see
@@ -389,7 +416,12 @@ class CryptographicAuditLedger:
                 request_hash=req_hash,
                 response_hash=resp_hash,
             )
-            signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
+            try:
+                signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
+            except Exception:
+                self._mmr = mmr_before
+                self._fault_state = "signing_failed"
+                raise
 
             node = AuditNode(
                 state_id=state_id,
@@ -412,10 +444,19 @@ class CryptographicAuditLedger:
                 scrub_method=scrub_method,
                 signer_name=signer_name,
                 signature_meaning=signature_meaning,
+                mmr_leaf_hash=mmr_leaf_hash,
+                mmr_leaf_index=mmr_leaf_index,
+                mmr_leaf_count=mmr_leaf_count,
+                mmr_proof=mmr_proof,
             )
 
-            self._persist_node(node)
-            self.chain.append(node)
+            try:
+                self._persist_node(node)
+            except Exception:
+                self._mmr = mmr_before
+                self._fault_state = "wal_persist_failed"
+                raise
+            self._append_memory_node(node)
             return node
 
     def commit_state(
@@ -450,6 +491,146 @@ class CryptographicAuditLedger:
             signature_meaning=signature_meaning,
         )
 
+    def commit_forensic_summary(
+        self,
+        *,
+        state_id: str,
+        request_bytes: bytes,
+        response_hash: str,
+        response_size: int,
+        response_preview: bytes,
+        terminal_outcome: str,
+        final_marker_included: bool,
+        token_count: int,
+        elapsed_seconds: float,
+        redaction_hits: dict[str, int] | None = None,
+        tenant_id: str = "default",
+        model: str = "unknown",
+        endpoint: str = "chat.completions",
+        phi_scrubbed: bool = False,
+        scrub_method: str = "",
+        signer_name: str = "",
+        signature_meaning: str = "stream-terminal-evidence",
+    ) -> AuditNode:
+        """Commit one terminal record for an incrementally hashed response.
+
+        The caller supplies the SHA-256 digest and bounded preview accumulated at
+        the ASGI body-iterator boundary.  No full response is retained or reread.
+        """
+        allowed_outcomes = {
+            "complete",
+            "client_disconnected",
+            "upstream_error",
+            "upstream_incomplete",
+            "timeout",
+            "byte_limit",
+            "event_limit",
+            "privacy_failure",
+            "shutdown_cancelled",
+        }
+        if "\x00" in state_id:
+            raise ValueError("state_id containing NULL byte is rejected")
+        if len(request_bytes) > MAX_PAYLOAD_BYTES:
+            raise ValueError("request_bytes exceeds 1 MiB hard cap")
+        if len(response_hash) != 64 or any(ch not in "0123456789abcdef" for ch in response_hash):
+            raise ValueError("response_hash must be a lowercase SHA-256 hex digest")
+        if response_size < 0 or token_count < 0:
+            raise ValueError("response_size and token_count must be non-negative")
+        if not np.isfinite(elapsed_seconds) or elapsed_seconds < 0:
+            raise ValueError("elapsed_seconds must be finite and non-negative")
+        if len(response_preview) > self.max_forensic_bytes:
+            raise ValueError("response_preview exceeds max_forensic_bytes")
+        if terminal_outcome not in allowed_outcomes:
+            raise ValueError("unsupported terminal_outcome")
+        hits = dict(redaction_hits or {})
+        if any(not key or not isinstance(value, int) or value < 0 for key, value in hits.items()):
+            raise ValueError("redaction_hits must contain non-negative integer counts")
+
+        request_hash = sha256_hex(request_bytes)
+        request_preview = request_bytes[: self.max_forensic_bytes]
+        leaf = build_stream_merkle_leaf(
+            state_id=state_id,
+            request_hash=request_hash,
+            response_hash=response_hash,
+            request_size=len(request_bytes),
+            response_size=response_size,
+            request_preview=request_preview,
+            response_preview=response_preview,
+            model=model,
+            endpoint=endpoint,
+            terminal_outcome=terminal_outcome,
+            final_marker_included=final_marker_included,
+            token_count=token_count,
+            redaction_hits=hits,
+        )
+        params: dict[str, Any] = {
+            "evidence_status": "durable-terminal",
+            "elapsed_seconds": elapsed_seconds,
+            "final_marker_included": final_marker_included,
+            "leaf_version": 2,
+            "redaction_hits": dict(sorted(hits.items())),
+            "response_size": response_size,
+            "terminal_outcome": terminal_outcome,
+            "token_count": token_count,
+        }
+
+        with self._lock:
+            prev_hash = self.chain[-1].node_hash if self.chain else "0" * 64
+            timestamp = time.time()
+            mmr_before = copy.deepcopy(self._mmr)
+            merkle_root = self._mmr.add_leaf(leaf)
+            mmr_leaf_count = self._mmr.get_leaf_count()
+            mmr_leaf_index = mmr_leaf_count - 1
+            mmr_leaf_hash = sha256_hex(leaf)
+            mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
+            signed_payload = _build_signed_payload(
+                prev_hash=prev_hash,
+                merkle_root=merkle_root,
+                request_hash=request_hash,
+                response_hash=response_hash,
+            )
+            try:
+                signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
+            except Exception:
+                self._mmr = mmr_before
+                self._fault_state = "signing_failed"
+                raise
+            node = AuditNode(
+                state_id=state_id,
+                timestamp=timestamp,
+                entropy=0.0,
+                tenant_id=tenant_id,
+                sampling_params=params,
+                prev_hash=prev_hash,
+                merkle_root=merkle_root,
+                signature=signature,
+                signature_scheme=scheme,
+                public_key=pub_key_hex,
+                request_hash=request_hash,
+                response_hash=response_hash,
+                model=model,
+                endpoint=endpoint,
+                token_trail_count=token_count,
+                is_fallback=is_fallback,
+                phi_scrubbed=phi_scrubbed or bool(hits),
+                scrub_method=scrub_method,
+                signer_name=signer_name,
+                signature_meaning=signature_meaning,
+                audit_trail_version="2",
+                mmr_leaf_hash=mmr_leaf_hash,
+                mmr_leaf_index=mmr_leaf_index,
+                mmr_leaf_count=mmr_leaf_count,
+                mmr_proof=mmr_proof,
+            )
+            try:
+                self._persist_node(node)
+            except Exception:
+                self._mmr = mmr_before
+                self._fault_state = "wal_persist_failed"
+                raise
+            self._append_memory_node(node)
+            return node
+
     def verify_integrity(self) -> tuple[bool, int | None]:
         """O(N) full-chain integrity sweep.
 
@@ -463,6 +644,7 @@ class CryptographicAuditLedger:
         """
         with self._lock:
             chain_list = list(self.chain)
+            window_anchor = self._window_anchor_hash
 
         for i, node in enumerate(chain_list):
             creation_hash = getattr(node, "__creation_hash__", None)
@@ -476,7 +658,7 @@ class CryptographicAuditLedger:
                 )
                 return False, i
 
-            expected_prev = "0" * 64 if i == 0 else chain_list[i - 1].node_hash
+            expected_prev = window_anchor if i == 0 else chain_list[i - 1].node_hash
             if node.prev_hash != expected_prev:
                 logger.error(
                     "Integrity violation: node %d prev_hash mismatch (expected %s, got %s)",
@@ -503,8 +685,63 @@ class CryptographicAuditLedger:
                 ):
                     logger.error("Integrity violation: node %d HMAC signature invalid", i)
                     return False, i
+            if node.mmr_proof is not None:
+                try:
+                    proof = MMRInclusionProofV1.from_dict(node.mmr_proof)
+                except (TypeError, ValueError, KeyError):
+                    logger.error("Integrity violation: node %d malformed MMR proof", i)
+                    return False, i
+                if (
+                    proof.leaf_index != node.mmr_leaf_index
+                    or proof.leaf_count != node.mmr_leaf_count
+                    or not MerkleMountainRange.verify_portable_inclusion_hash(
+                        node.mmr_leaf_hash, proof, node.merkle_root
+                    )
+                ):
+                    logger.error("Integrity violation: node %d invalid MMR proof", i)
+                    return False, i
 
         return True, None
+
+    def signature_status(self, node: AuditNode) -> str:
+        """Return ``valid``, ``invalid``, or ``unverified`` for one node."""
+        payload = _build_signed_payload(
+            prev_hash=node.prev_hash,
+            merkle_root=node.merkle_root,
+            request_hash=node.request_hash,
+            response_hash=node.response_hash,
+        )
+        try:
+            if node.signature_scheme == "hmac-sha256":
+                if not self._signing_key:
+                    return "unverified"
+                return (
+                    "valid"
+                    if _hmac_verify(self._signing_key, payload, node.signature)
+                    else "invalid"
+                )
+            if node.signature_scheme == "ed25519-fallback":
+                public_key = ed25519.Ed25519PublicKey.from_public_bytes(
+                    bytes.fromhex(node.public_key)
+                )
+                public_key.verify(bytes.fromhex(node.signature), payload)
+                return "valid"
+            if node.signature_scheme == "pqc-ml-dsa" and RUST_AVAILABLE:
+                return (
+                    "valid"
+                    if aegis_rust.verify_pqc_signature(  # type: ignore[name-defined]
+                        payload,
+                        bytes.fromhex(node.signature),
+                        bytes.fromhex(node.public_key),
+                    )
+                    else "invalid"
+                )
+        except (ValueError, TypeError, InvalidSignature):
+            return "invalid"
+        except Exception:
+            logger.exception("node signature verification failed")
+            return "unverified"
+        return "unverified"
 
     def export_part11_signatures(self) -> list[dict[str, Any]]:
         """Return signature annotation fields that may support a Part 11 review.
@@ -766,6 +1003,7 @@ class CryptographicAuditLedger:
 
         count = 0
         stop = False
+        portable_suffix: list[tuple[str, str, str]] = []
         for path in files:
             logger.info("Reconstructing ledger from %s", path)
             with open(path) as f:
@@ -776,7 +1014,13 @@ class CryptographicAuditLedger:
                     try:
                         data = json.loads(raw)
                         node = AuditNode.from_dict(data)
-                        self.chain.append(node)
+                        if node.mmr_leaf_hash:
+                            portable_suffix.append(
+                                (node.mmr_leaf_hash, node.merkle_root, node.state_id)
+                            )
+                        else:
+                            portable_suffix.clear()
+                        self._append_memory_node(node)
                         count += 1
                     except (json.JSONDecodeError, TypeError, KeyError) as exc:
                         logger.error(
@@ -792,6 +1036,12 @@ class CryptographicAuditLedger:
                 break
 
         logger.info("Reconstructed %d nodes from WAL.", count)
+        for leaf_hash, expected_root, state_id in portable_suffix:
+            rebuilt_root = self._mmr.add_leaf_hash(leaf_hash)
+            if rebuilt_root != expected_root:
+                logger.error("portable MMR replay root mismatch at state_id=%s", state_id)
+                self._fault_state = "mmr_replay_mismatch"
+                break
 
 
 # ── Compat shims kept for import compatibility ────────────────────────────────

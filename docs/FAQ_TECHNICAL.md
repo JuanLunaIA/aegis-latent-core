@@ -9,7 +9,7 @@ This FAQ answers implementation and operating questions for developers and platf
 
 ## What does Aegis do?
 
-Aegis is an OpenAI-compatible AI Governance and Evidence Gateway. It applies configured request controls, forwards admitted traffic to an upstream provider, commits a signed evidence record to a WAL, and returns a governed response only after the durable evidence path succeeds.
+Aegis is an OpenAI-compatible AI Governance and Evidence Gateway. It applies configured request controls and forwards admitted traffic to an upstream provider. Non-streaming governed outcomes return after their evidence commit. Admitted SSE emits sanitized events incrementally, then emits its terminal marker only after the one terminal summary commit succeeds.
 
 ## Is Aegis an LLM?
 
@@ -17,7 +17,7 @@ No. Aegis does not generate model output, determine whether an upstream answer i
 
 ## What does durable mean?
 
-In the declared local implementation, durable means the evidence record was appended, flushed and synchronized through the configured WAL path before governed response completion. It does not prove power-loss durability, replicated cloud-volume semantics, immutable backup, or external retention.
+In the declared local implementation, durable means the evidence record was appended, flushed and synchronized through the configured WAL path before a non-streaming governed response returns or an SSE terminal marker is emitted. Initial SSE headers say `pending-terminal`, not `durable`. This does not prove power-loss durability, replicated cloud-volume semantics, immutable backup, or external retention.
 
 ## Are request and response bodies stored?
 
@@ -37,7 +37,7 @@ The gateway records the terminal outcome through the configured durable error-ev
 
 ## Are streaming responses emitted immediately?
 
-The documented governed path buffers a streaming response under the configured limit before the durable evidence gate. A response larger than the bound must follow the configured rejection or failure path. Provider-specific streaming semantics still require integration testing.
+Yes, after finite de-identification holdback and queueing: the governed path incrementally emits sanitized canonical SSE events through a bounded, byte-accounted queue. It computes SHA-256 over the exact emitted bytes and makes one terminal summary WAL commit. The terminal marker (`[DONE]` or the provider-specific equivalent) is emitted only after that commit succeeds; initial headers therefore report evidence and proof as `pending-terminal`, and the linked proof endpoint is queried after termination. Backpressure, queue-byte, queue-event, event-size, cumulative-output, de-identification-window, preview, and duration bounds apply to each admitted stream, while aggregate retained memory scales with concurrent streams. See `tests/test_proxy_streaming.py` and `specs/aegis_stream_buffer.smt2`. Provider-specific semantics still require integration testing.
 
 ## Does the local WAF cover HTTP/2 evasion?
 

@@ -6,35 +6,50 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 # Aegis Latent Core — Architecture Deep Dive
 
-> Cryptographic flow · Merkle Mountain Range · asynchronous persistence.
+> Cryptographic flow · Merkle Mountain Range · terminal evidence persistence.
 > This document is one of the system "laws" referenced by the top-level
 > [`README.md`](../../README.md). It describes **what the code does**, not what
 > it aspires to do. Unmeasured or unimplemented items are marked explicitly.
 
 ---
 
-## 1. Two-Path Execution Model
+## 1. Authoritative and Optional Execution Paths
 
-Aegis splits every request into a **hot path** (client-visible, latency-critical)
-and a **background path** (forensic, zero client wait). The split is the central
-architectural decision and everything else follows from it.
+Aegis separates **authoritative evidence persistence** from optional forensic
+enrichment. For admitted non-streaming outcomes, the handler awaits the WAL evidence
+commit before returning the governed response. Optional analysis may be queued only
+after that authoritative operation and is not part of the durability claim.
 
+Admitted SSE uses a different lifecycle. `BoundedStreamProxy` incrementally sanitizes
+and emits canonical events through an item- and byte-bounded queue while maintaining a
+SHA-256 digest over the exact bytes emitted. It retains only bounded queue contents, a
+finite de-identification window, an event, and a preview rather than the full logical
+stream. At termination it performs one summary WAL commit; the terminal marker is
+withheld until that commit succeeds.
+
+```text
+client -> admission controls -> upstream
+                              -> non-stream response -> authoritative WAL commit -> response
+                              -> SSE sanitize -> bounded queue -> incremental events
+                                                      -> terminal summary WAL commit
+                                                      -> terminal marker
+                              -> optional enrichment queue (non-authoritative)
 ```
-        ┌──────────────────────── HOT PATH (awaited) ───────────────────────┐
-client →│ smuggling guard → auth → WAF → rate-limit → adapter → forwarder →  │→ upstream
-        └───────────────────────────────────┬───────────────────────────────┘
-                                             │ _spawn_background()  (~2.4 µs p50)
-                                             ▼
-        ┌──────────────────── BACKGROUND PATH (asyncio.create_task) ─────────┐
-        │ ResponseAnalyzer → CryptographicAuditLedger → MMR → Write-Ahead Log│
-        └────────────────────────────────────────────────────────────────────┘
-```
 
-The response is returned to the transport **before** the background coroutine runs.
-The only audit work on the hot path is the scheduling block measured at
-**2.43 µs p50 / 6.78 µs p99** ([BENCHMARKS Claim 1](../BENCHMARKS.md#claim-1--zero-forensic-latency)).
+Streaming response headers initially report `X-Aegis-Evidence-Status` and
+`X-Aegis-Proof-Status` as `pending-terminal` and link the proof endpoint. The proof is
+retrieved after terminal commit; it is not available in the initial streaming headers.
+Backpressure, queue-byte, queue-event, event-size, cumulative-output,
+de-identification-window, preview, and total-duration limits apply to each admitted
+stream. Aggregate retained memory scales with concurrent admitted streams and must be
+controlled by deployment admission/concurrency policy.
 
-Source of truth: `aegis/proxy/app.py::_spawn_background`.
+Sources of truth: `aegis/proxy/app.py`, `aegis/proxy/streaming.py`,
+`tests/test_proxy_streaming.py`, and the per-stream arithmetic contract in
+`specs/aegis_stream_buffer.smt2`. The scheduling figures in
+[BENCHMARKS Claim 1](../BENCHMARKS.md#claim-1--zero-forensic-latency) characterize an
+optional background-dispatch microbenchmark, not the authoritative evidence path or
+end-to-end proxy latency.
 
 ---
 
@@ -157,9 +172,12 @@ Implemented in `aegis/core/crypto_audit.py` (persistence) with a Rust mmap WAL
 
 ### 4.3 Crash recovery
 
-On startup `_load_from_wal()` replays every segment, re-linking the hash chain. A
-process killed mid-flight loses at most the in-flight background commit (which never
-reached the client anyway); committed nodes are durable once their CRC frame is fsynced.
+On startup `_load_from_wal()` replays every segment and re-links the hash chain within
+the implementation boundary. A process killed during non-streaming persistence does not
+produce a governed success from that path. During SSE, non-terminal events may already
+have reached the client, but the terminal marker is withheld if terminal summary commit
+does not complete. `fsync` completion is a process-observed storage acknowledgement, not
+a guarantee of power-loss survival on every target filesystem or device.
 
 ---
 

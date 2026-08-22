@@ -39,7 +39,7 @@ The final v3.1.0 release run recorded 5,442 passed, 37 skipped and 47 warnings. 
 
 ## Run the bounded formal models
 
-The formal gate requires Z3, Lean 4.33.0, Java 21, and the TLA+ Tools v1.8.0 JAR at `.tools/tla2tools.jar`. The CI workflow downloads the JAR and verifies its SHA-256 digest before execution. With those prerequisites installed, run:
+The formal gate requires Z3, Lean 4.33.0, Java 21, and a TLA+ Tools JAR at `.tools/tla2tools.jar` whose manifest identifies source revision `0894c3407f4717fec7cc18bde3bf3c857fa47333`. CI checks out that exact Git object, builds the JAR, and verifies its manifest; it does not trust the mutable upstream release-asset URL. With those prerequisites installed, run:
 
 ```bash
 scripts/verify_formal_artifacts.sh

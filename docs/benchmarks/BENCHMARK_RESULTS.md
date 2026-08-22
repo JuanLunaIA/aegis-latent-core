@@ -2,10 +2,10 @@
 
 This document records the retained v3.1.0 market-hardening measurements. It is for engineers, security reviewers, and procurement evaluators who need reproducible numbers and explicit boundaries. These measurements are evidence for named workloads; they are not production capacity, availability SLOs, universal detection rates, or cryptographic proofs.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
 **Canonical methodology:** [`docs/benchmarks/README.md`](README.md)
-**Artifact directory:** `/home/ubuntu/aegis-rebuild/evidence/market_hardening_v3_1/`
+**Artifact locations:** retained release evidence plus repository-scoped artifacts under [`evidence/`](../../evidence/)
 
 ## Result summary
 
@@ -17,6 +17,7 @@ This document records the retained v3.1.0 market-hardening measurements. It is f
 | Key rotation | 2,239 records across 3 independent local signer instances | 0 failed commits; 0 unverifiable records; both key IDs observed; keyring mode `0o600` | Local atomic replacement and overlap path behaved as intended | `PASS` for local harness |
 | ML-DSA `sign` timing | 1,000,000 interleaved samples | `p=0.8521504207157158` | No statistically significant difference detected under the named experiment | Measured; not a proof |
 | ML-DSA `verify` timing | 1,000,000 interleaved samples | `p=0.0`; mean class difference approximately 540.526 ns | The experiment detected a class-dependent timing difference at this boundary | `FAIL`; claim blocked |
+| Bounded SSE transformation | 7 rounds × 1,000 deterministic events on the recorded sandbox host | first-byte p50 2.030 ms, p95 2.295 ms; duration p50 316.892 ms; 3,155.654 events/s p50; queue high-water 664 bytes / 8 items; `tracemalloc` peak 141,338 bytes | In-process transform only; excludes network, provider and durable-WAL latency | Measured, not an SLO |
 
 ## Reproduction commands
 
@@ -38,9 +39,18 @@ PYTHONPATH=. .venv/bin/python tools/benchmarks/run_key_rotation.py \
 # Native ML-DSA timing; retained candidate uses 1,000,000 samples per operation
 PYTHONPATH=. .venv/bin/python tools/benchmarks/run_pqc_timing.py \
   --samples 1000000 --output evidence/pqc_timing_report.json
+
+# Bounded in-process SSE transform
+PYTHONPATH=. .venv/bin/python benchmarks/bench_streaming_sse.py \
+  --events 1000 --rounds 7 \
+  > evidence/commercial_phase2_streaming_benchmark.json
 ```
 
 The commands require the corresponding local environment and may produce different timings. Preserve the raw report, environment manifest, tool version, CPU information, source commit and UTC timestamp with every rerun.
+
+## Bounded SSE method
+
+The harness drives `BoundedStreamProxy` from a deterministic in-process async iterator, consumes the transformed output without accumulating it, and records the first yielded byte, total duration, queue high-water marks, terminal outcome, and Python allocation peak. The 2026-08-22 artifact reports exactly one `complete` terminal commit in every round. The benchmark does not open a socket, call a provider, execute a durable ledger commit, or model concurrent clients. Consequently, its throughput and latency values cannot be used as gateway capacity, provider latency, production SLO, or “zero overhead” evidence.
 
 ## Backpressure method
 

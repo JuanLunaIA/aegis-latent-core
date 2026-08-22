@@ -32,8 +32,8 @@ Several repository narratives overstate the current mechanism and must not be ca
 | Supplied or existing assertion | Audited correction | Basis |
 |---|---|---|
 | Every request follows a durable commit-before-emission path. | The core gateway durably records admitted upstream successes, admitted upstream non-2xx responses, circuit-open responses, and caught forwarding exceptions. Authentication, malformed JSON, WAF, behavioral-WAF, rate-limit, body-limit, and readiness rejections occur before the evidence helper and are not durably recorded by this handler. | `aegis/proxy/app.py:1004-1080,1144-1206,1242-1346`; named tests `tests/test_proxy.py::TestAuthentication::test_missing_auth_returns_401`, `tests/test_proxy.py::TestChatCompletions::test_invalid_json_returns_400`, and `tests/test_app_coverage_extended.py::test_chat_generic_forward_error_is_durably_rejected`. |
-| Streaming is buffered under a configured response bound. | Implemented on 2026-08-21: streaming remains fully buffered before commit and client emission, with distinct per-response byte and total-duration limits. Crossing either bound returns a durably evidenced 502/504 and closes the upstream iterator. These controls do not establish an aggregate concurrent-memory bound. | `aegis/config.py`; buffered-stream handling in `aegis/proxy/app.py`; `tests/test_app_coverage_extended.py::test_chat_streaming_allows_response_within_byte_limit`, `test_chat_streaming_rejects_response_over_byte_limit_and_closes_upstream`, and `test_chat_streaming_rejects_slow_drip_after_total_deadline`. |
-| The system has a hot path that emits before background audit persistence. | This is stale for the authoritative core proxy path. `_commit_evidence` is awaited before constructing successful, upstream-error, or buffered streaming responses. Only optional enrichment is queued afterward. | `aegis/proxy/app.py:804-894,1107-1137,1147-1240`; `tests/test_proxy.py::TestChatCompletions::test_response_contains_aegis_headers`; `tests/test_app_coverage_extended.py::test_chat_upstream_non_200_is_durably_forwarded`. The contrary text is in `docs/architecture/DEEP_DIVE.md:16-37`. |
+| Streaming is fully buffered before evidence commit and client emission. | Corrected on 2026-08-21: admitted SSE incrementally emits sanitized canonical events through an item- and byte-bounded queue. SHA-256 covers the exact emitted bytes; one terminal summary is committed to the WAL; and only the terminal marker is withheld until that commit succeeds. Initial evidence/proof headers are `pending-terminal`, with proof retrieval from the linked endpoint after termination. The configured backpressure, byte, event, and duration bounds are per admitted stream, so aggregate retained memory scales with concurrency. | `aegis/proxy/streaming.py`; stream integration in `aegis/proxy/app.py`; `aegis/config.py`; `tests/test_proxy_streaming.py`; per-stream arithmetic contract `specs/aegis_stream_buffer.smt2`. |
+| The system has a universal hot path that emits all response bytes before background audit persistence. | This conflates authoritative evidence with optional enrichment. Non-streaming admitted outcomes await authoritative evidence before return. SSE incrementally emits non-terminal sanitized events, then awaits one authoritative terminal summary commit before emitting the terminal marker. Optional enrichment may be queued separately and is not part of the durable claim. | `aegis/proxy/app.py`; `aegis/proxy/streaming.py`; `tests/test_proxy.py::TestChatCompletions::test_response_contains_aegis_headers`; `tests/test_proxy_streaming.py::test_success_hashes_exact_output_and_commits_before_done`, `test_first_event_arrives_before_upstream_second_event`, and `test_commit_failure_omits_done`; corrected `docs/architecture/DEEP_DIVE.md`. |
 | WAL archive segments are immutable. | Rotation renames segments and applies owner-only mode `0o600`; this is access restriction, not filesystem or object-lock immutability. A privileged actor can still alter or delete files unless an external storage control prevents it. | `aegis/core/crypto_audit.py:641-679`; claim boundary in `docs/CLAIMS_MATRIX.md:34`. |
 | Replay reconstructs the complete cryptographic accumulator. | Replay reconstructs the bounded in-memory deque of stored nodes but does not replay leaves into the in-memory `MerkleMountainRange`. After restart, subsequent MMR roots begin from a fresh accumulator. Full cross-restart MMR continuity is therefore not established by this class. | `aegis/core/crypto_audit.py:285-296,756-794`; `_load_from_wal` appends nodes but does not call `_mmr.add_leaf`. |
 | A multi-worker PostgreSQL enterprise deployment has an atomic chain append. | PostgreSQL persists individual rows, but `get_latest_node()` and `write_node()` are separate operations with no advisory lock or atomic compare-and-append transaction. The source itself calls for advisory locking. DynamoDB has the same read-then-write chain race; SQLite's lock covers only `write_node`, not the preceding read. | `aegis_server/main.py:499-576`; `aegis_server/storage/postgres_provider.py:215-283`; `aegis_server/storage/dynamodb_provider.py:173-258`; `aegis_server/storage/sqlite_provider.py:216-294`. |
@@ -51,33 +51,38 @@ UNTRUSTED / EXTERNAL                                                CUSTOMER-CON
    |
    | HTTP(S), credentials, payload
    v
-+------------------+     +-----------------------------------------------+
-| Ingress / LB     |---->| Aegis process boundary                       |
-| TLS, HTTP parse  |     |                                               |
-+------------------+     | auth -> bounds -> normalize -> WAF -> limiter |
-                         |                         |                     |
-                         |                         v                     |
-                         |                  upstream adapter ------------+----> Model provider
-                         |                         |                     |       external trust
-                         |                         v                     |
-                         |                 terminal bytes                |
-                         |                         |                     |
-                         |          sign -> append/commit -> ack         |
-                         |                         |                     |
-                         |                         +----> emit response   |
-                         |                         |                     |
-                         |                         +----> optional queue  |
-                         +-------------------------|---------------------+
-                                                   |
-                         +-------------------------+---------------------+
-                         | Evidence dependency boundary                 |
-                         | Core: local/shared JSONL WAL + signer         |
-                         | Enterprise: SQLite/PostgreSQL/DynamoDB + signer|
-                         +-----------------------------------------------+
-                                                   |
-                                                   v
-                                      backup, archive, custody, verifier
-                                      separate operational boundary
++------------------+     +------------------------------------------------+
+| Ingress / LB     |---->| Aegis process boundary                         |
+| TLS, HTTP parse  |     |                                                |
++------------------+     | auth -> bounds -> normalize -> WAF -> limiter  |
+                         |                         |                      |
+                         |                         v                      |
+                         |                  upstream adapter -------------+----> Model provider
+                         |                         |                      |       external trust
+                         |             +-----------+-----------+          |
+                         |             |                       |          |
+                         |       non-stream bytes      sanitized SSE      |
+                         |             |               bounded queue      |
+                         |             v                       |          |
+                         |       evidence commit        incremental emit  |
+                         |             |                       |          |
+                         |             v               terminal summary  |
+                         |       emit response          evidence commit   |
+                         |                                     |          |
+                         |                              terminal marker    |
+                         |                                     |          |
+                         |                         optional queue          |
+                         +-----------------------------|------------------+
+                                                       |
+                         +-----------------------------+------------------+
+                         | Evidence dependency boundary                   |
+                         | Core: local/shared JSONL WAL + signer           |
+                         | Enterprise: SQLite/PostgreSQL/DynamoDB + signer |
+                         +------------------------------------------------+
+                                                       |
+                                                       v
+                                          backup, archive, custody, verifier
+                                          separate operational boundary
 ```
 
 The application boundary does not include the ingress parser, upstream provider, Redis service, host kernel, filesystem controller, external database durability configuration, KMS/HSM availability, backup system, or evidence custodian. `fsync` in the core ledger means that the process requested synchronization of a file descriptor; it is not proof of stable-media survival after power loss. An acknowledged database or cloud write similarly inherits the configured backend's transaction, replication, and consistency semantics.
@@ -103,34 +108,29 @@ The following state machine describes the reachable core handler behavior more p
                                                            v
                                                     [UPSTREAM PENDING]
                                                            |
-                   +---------------------------------------+-------------------+
-                   |                                       |                   |
-                   v                                       v                   v
-          [SUCCESS BYTES]                         [UPSTREAM ERROR]       [STREAM BUFFERING]
-                   |                              or caught fault              |
-                   |                                       |                  | full in-memory
-                   +-----------------------+---------------+                  | accumulation
-                                           |                                  v
-                                           v                         [STREAM TERMINAL BYTES]
-                                   [EVIDENCE PENDING]                         |
-                                           ^----------------------------------+
-                                           |
-                              sign -> append -> flush -> fsync
-                                           |
-                         +-----------------+-------------------+
-                         |                                     |
-                         v                                     v
-               [EVIDENCE COMMITTED]                   [COMMIT FAILURE]
-                         |                                     |
-                         | enqueue optional analysis           | HTTP 503 / exception path;
-                         |                                     | no durable-status success
-                         v                                     v
-                 [RESPONSE EMITTED]                       [TERMINATED]
-                         |
-                         v
-                [OPTIONAL ENRICHMENT]
-                may complete, fail, time out,
-                be unsampled, or be rejected
+                  +----------------------------------------+------------------+
+                  |                                        |                  |
+                  v                                        v                  v
+         [SUCCESS BYTES]                          [UPSTREAM ERROR]      [SSE SANITIZE]
+                  |                               or caught fault             |
+                  +------------------------+---------------+          [BOUNDED QUEUE]
+                                           |                              |
+                                           v                              v
+                                  [EVIDENCE PENDING]              [INCREMENTAL EVENTS]
+                                           |                              |
+                              sign -> append -> flush -> fsync             v
+                                           |                     [TERMINAL SUMMARY]
+                         +-----------------+-------------------+            |
+                         |                                     |            v
+                         v                                     v    [EVIDENCE PENDING]
+               [EVIDENCE COMMITTED]                   [COMMIT FAILURE]      |
+                         |                                     |             v
+                         v                                     v    [TERMINAL COMMITTED]
+                 [RESPONSE EMITTED]                       [TERMINATED]       |
+                         |                                               marker
+                         +--------------------+-----------------------------+
+                                              v
+                                     [OPTIONAL ENRICHMENT]
 ```
 
 ### 4.2 Transition table
@@ -144,11 +144,12 @@ The following state machine describes the reachable core handler behavior more p
 | `CONTROLLED` | Provider call starts | `UPSTREAM PENDING` | No | `aegis/proxy/app.py:1089-1106,1139-1145,1297-1300` | `tests/test_proxy.py::TestChatCompletions::test_logprobs_injected_into_upstream_call` |
 | `UPSTREAM PENDING` | Non-streaming 200 bytes received | `SUCCESS BYTES` | No | `aegis/proxy/app.py:1186-1195` | `tests/test_proxy.py::TestChatCompletions::test_response_contains_aegis_headers` |
 | `UPSTREAM PENDING` | Non-2xx, circuit-open, or caught forwarding exception | `UPSTREAM ERROR` | No | `aegis/proxy/app.py:1145-1184,1300-1335` | `tests/test_app_coverage_extended.py::test_chat_generic_forward_error_is_durably_rejected`; `test_chat_upstream_non_200_is_durably_forwarded` |
-| `UPSTREAM PENDING` | Streaming chunks arrive | `STREAM BUFFERING` | No; nothing is yielded to client | Buffered-stream handling in `aegis/proxy/app.py` | Provider termination tests plus byte/deadline regressions in `tests/test_app_coverage_extended.py`. |
-| Terminal bytes | `_commit_evidence` calls `commit_forensic` in a worker thread | `EVIDENCE PENDING` | Pending | `aegis/proxy/app.py:804-857`; `aegis/core/crypto_audit.py:316-419` | `tests/test_market_hardening_gates.py::test_ledger_fsync_injection_preserves_durable_commit_and_integrity` |
+| `UPSTREAM PENDING` | SSE events arrive | `SSE SANITIZE` / `BOUNDED QUEUE` / `INCREMENTAL EVENTS` | Initial headers are `pending-terminal`; no terminal node yet | `aegis/proxy/app.py`; `aegis/proxy/streaming.py` | `tests/test_proxy_streaming.py::test_first_event_arrives_before_upstream_second_event`, split-redaction tests, and `test_large_logical_stream_retained_memory_is_bounded`. |
+| Non-streaming terminal bytes, or an SSE terminal summary containing exact emitted-byte hash and outcome | The applicable commit helper runs in a worker thread | `EVIDENCE PENDING` | Pending | `aegis/proxy/app.py`; `aegis/proxy/streaming.py`; `aegis/core/crypto_audit.py` | `tests/test_market_hardening_gates.py::test_ledger_fsync_injection_preserves_durable_commit_and_integrity`; `tests/test_proxy_streaming.py::test_success_hashes_exact_output_and_commits_before_done`. |
 | `EVIDENCE PENDING` | JSON line write, flush, and `fsync` return; node then enters deque | `EVIDENCE COMMITTED` | Process-observed commit complete | `aegis/core/crypto_audit.py:417-419,719-754` | `tests/test_forensic.py::TestCryptographicAuditLedger::test_commit_forensic_request_and_response`; fsync test above |
 | `EVIDENCE PENDING` | Signer, write, flush, or `fsync` raises | `COMMIT FAILURE` | No durable claim | `aegis/proxy/app.py:851-857` | Core handler lacks a direct injected-commit-failure response test; enterprise equivalent is `tests/test_enterprise_durable_evidence.py::test_storage_failure_fails_closed_and_does_not_claim_durable`. |
-| `EVIDENCE COMMITTED` | Response object or `StreamingResponse` is returned | `RESPONSE EMITTED` | Header states `durable` | `aegis/proxy/app.py:1129-1137,1227-1240,1359-1363` | `tests/test_proxy.py::TestChatCompletions::test_response_contains_aegis_headers`; `tests/test_app_coverage_extended.py::test_chat_upstream_non_200_is_durably_forwarded` |
+| `EVIDENCE COMMITTED` | Non-streaming response is returned | `RESPONSE EMITTED` | Header states `durable` | Non-streaming branches in `aegis/proxy/app.py` | `tests/test_proxy.py::TestChatCompletions::test_response_contains_aegis_headers`; `tests/test_app_coverage_extended.py::test_chat_upstream_non_200_is_durably_forwarded`. |
+| `TERMINAL SUMMARY` | One summary WAL commit succeeds | `TERMINAL COMMITTED` then terminal marker emitted | Initial stream headers remain `pending-terminal`; proof becomes retrievable from the linked endpoint | `aegis/proxy/app.py`; `aegis/proxy/streaming.py:213-220,413-428` | `tests/test_proxy_streaming.py::test_success_hashes_exact_output_and_commits_before_done`, `test_commit_failure_omits_done`, and `test_prehashed_terminal_commit_binds_outcome_and_replays`. |
 | `EVIDENCE COMMITTED` | Optional queue accepts, rejects, or skips job | `OPTIONAL ENRICHMENT` or terminal | Authoritative node unchanged | `aegis/proxy/app.py:186-230,896-935` | Queue behavior is covered in app tests; no claim depends on enrichment completion. |
 
 ### 4.3 Causal commit-before-emission ordering
@@ -170,9 +171,9 @@ await upstream bytes
     -> construct and return HTTP response
 ```
 
-The corresponding streaming path consumes the upstream async iterator into a byte- and time-bounded `bytearray`, awaits the same commit helper, and only then constructs a `StreamingResponse` over the completed bytes. This establishes **program-order commit-before-ASGI-response construction within one handler invocation**, subject to the storage call returning normally. It does not establish stable-media durability, client receipt, aggregate concurrent-memory bounds, global ordering, or correctness under multiple unsynchronized processes.
+The corresponding streaming path constructs a `StreamingResponse` with `pending-terminal` evidence/proof headers, incrementally sanitizes and emits canonical events through a bounded byte-accounted queue, and updates SHA-256 over the exact bytes yielded. At terminal outcome it invokes exactly one summary commit and yields the terminal marker only after that commit returns. This establishes **terminal-commit-before-terminal-marker**, not commit-before-every-SSE-event. The configured backpressure, queue-byte, queue-event, event-size, cumulative-output, de-identification-window, preview, and duration bounds apply per admitted stream; aggregate retained memory scales with concurrent admitted streams. These properties do not establish stable-media durability, client receipt, global ordering, or correctness under multiple unsynchronized processes. `tests/test_proxy_streaming.py` exercises ordering, exact-byte hashing, redaction, limit, cancellation, commit-failure, and retained-memory behavior; `specs/aegis_stream_buffer.smt2` checks only the declared per-stream retained-byte arithmetic.
 
-The core handler also records `response_complete=False` when upstream streaming ends without an explicit `[DONE]`, but appends a synthetic `[DONE]` and emits the buffered response after commit (`aegis/proxy/app.py:1093-1117`). Therefore, a `durable` header means the emitted bytes were committed; it does not necessarily mean the upstream stream completed normally.
+If the upstream ends without its terminal marker, the stream finalizes once with `terminal_outcome="upstream_incomplete"`, does not synthesize or emit the terminal marker, and records the hash and size of bytes actually emitted. Initial headers remain `pending-terminal`; callers retrieve proof after terminal commit through the linked proof endpoint. A completed terminal summary therefore binds the observed terminal outcome and exact emitted bytes but does not imply that the upstream completed normally.
 
 ## 5. Evidence and cryptographic data model
 
@@ -180,7 +181,7 @@ For a core ledger node `n_i`, the implementation computes:
 
 ```text
 request_hash_i  = SHA256(raw_request_bytes)
-response_hash_i = SHA256(terminal_response_bytes), or empty for request-only records
+response_hash_i = SHA256(non-streaming response bytes or exact emitted SSE bytes), or empty for request-only records
 prev_hash_i     = node_hash_(i-1), or 64 zeroes for the process view's genesis
 signed_payload  = prev_hash_i | merkle_root_i | request_hash_i | response_hash_i
 node_hash_i     = SHA256(prev_hash_i | state_id_i | timestamp_i | entropy_i |
@@ -291,8 +292,8 @@ Every material claim below has a stable identifier, status, exact locator, assum
 | DOC01-LIFE-001 | For a core non-streaming admitted success, the handler awaits JSONL WAL persistence before constructing the HTTP response. | `IMPLEMENTED` | `aegis/proxy/app.py:1196-1240`; `aegis/core/crypto_audit.py:378-419,719-754`; `tests/test_proxy.py::TestChatCompletions::test_response_contains_aegis_headers`; `tests/test_market_hardening_gates.py::test_ledger_fsync_injection_preserves_durable_commit_and_integrity` | One ledger instance, successful signer and storage calls | Instrumented trace shows response construction or ASGI send before `_persist_node` returns | Single handler and process-local causal order | Release owner |
 | DOC01-LIFE-002 | Caught core upstream faults and non-2xx results are committed before their durable-status response is returned. | `IMPLEMENTED` | `aegis/proxy/app.py:1145-1184`; `tests/test_app_coverage_extended.py::test_chat_generic_forward_error_is_durably_rejected`; `test_chat_upstream_non_200_is_durably_forwarded`; `tests/test_proxy.py::TestChatCompletions::test_upstream_error_is_durably_evidenced` | Error occurs after admission and is handled by the named branches | A returned caught upstream error bears `durable` but no corresponding node exists | Core chat/completions admitted path only | Application owner |
 | DOC01-LIFE-003 | Pre-admission rejections are universally durably evidenced. | `ROADMAP` | Current counter-locators: `aegis/proxy/app.py:1004-1080`; `tests/test_proxy.py::TestAuthentication::test_missing_auth_returns_401`; `test_invalid_json_returns_400` | A future rejection-evidence policy defines safe metadata and privacy handling | Any rejection class returns without required rejection evidence after the policy is enabled | Not implemented today | Security and privacy owners |
-| DOC01-STRM-001 | Core streaming bytes are withheld until the upstream iterator terminates and the evidence helper returns. | `IMPLEMENTED` | `aegis/proxy/app.py:1089-1137`; provider termination tests in `tests/test_provider_contracts.py` | Stream fits process memory and iterator terminates without an uncaught exception | An ASGI body chunk is observed before evidence commit completion | One streaming handler invocation | Application owner |
-| DOC01-STRM-002 | Core streaming buffering has configured per-response byte and total-duration bounds. | `IMPLEMENTED` | `aegis/config.py`; bounded buffered-stream handling in `aegis/proxy/app.py`; byte/deadline regressions in `tests/test_app_coverage_extended.py` | Limits are positive and the admitted request reaches the streaming branch | A stream over the declared bound is accumulated/emitted, outlives the deadline, or its iterator is not closed | One request; aggregate concurrency remains deployment-dependent | Reliability owner |
+| DOC01-STRM-001 | Core SSE incrementally emits sanitized canonical events, hashes the exact emitted bytes, commits one terminal summary, and emits the terminal marker only after that commit succeeds. | `IMPLEMENTED` | `aegis/proxy/app.py`; `aegis/proxy/streaming.py`; `tests/test_proxy_streaming.py::test_success_hashes_exact_output_and_commits_before_done`, `test_first_event_arrives_before_upstream_second_event`, `test_split_phi_is_redacted_before_hash_and_delivery`, and `test_commit_failure_omits_done` | Admitted supported SSE protocol and successful terminal persistence for terminal-marker emission | Terminal marker precedes commit, digest differs from delivered bytes, unsanitized detected content is emitted, or more than one terminal summary is committed | One streaming handler invocation; initial evidence/proof headers are `pending-terminal` and proof retrieval is post-terminal | Application owner |
+| DOC01-STRM-002 | Core SSE retained memory is bounded per admitted stream by byte- and item-accounted queueing plus finite event, de-identification-window, and preview storage; cumulative-output and duration policies also terminate a stream. | `IMPLEMENTED` | `aegis/config.py`; `aegis/proxy/streaming.py`; `tests/test_proxy_streaming.py::test_byte_limit_closes_without_done_and_commits_once`, `test_timeout_and_oversized_event_fail_without_done`, and `test_large_logical_stream_retained_memory_is_bounded`; `specs/aegis_stream_buffer.smt2` | Positive validated limits and one admitted stream | Queue items/bytes, event size, retained-byte expression, cumulative output, or duration exceeds its configured per-stream bound, or upstream is not closed on termination | Per admitted stream only; aggregate retained memory scales with concurrency and requires deployment admission budgeting | Reliability owner |
 | DOC01-LEDG-001 | The core ledger serializes node creation and JSONL persistence among callers sharing one ledger instance. | `IMPLEMENTED` | `aegis/core/crypto_audit.py:285-290,378-419`; `tests/test_production_stresses.py::TestProductionStresses::test_NEW_03_Concurrent_Latency`; fsync regression above | All writers share the same Python object and lock | Same-instance concurrent calls create broken predecessor links or missing committed records | Single process and ledger instance | Python concurrency reviewer |
 | DOC01-LEDG-002 | `verify_integrity()` detects in-memory node mutation, predecessor mismatch, and invalid HMAC for the retained deque. | `IMPLEMENTED` | `aegis/core/crypto_audit.py:453-507`; `tests/test_forensic.py::TestCryptographicAuditLedger::test_integrity_detects_tamper`; `tests/test_property_based.py::test_ledger_integrity_property` | HMAC key available for HMAC records; retained window has valid genesis semantics | Named tamper remains undetected inside the supported window | In-memory retained deque, not external immutable custody | Cryptography owner |
 | DOC01-LEDG-003 | Core WAL `fsync` returned during a local injected seam and the record remained present and verifiable. | `MEASURED` | `tests/test_market_hardening_gates.py::test_ledger_fsync_injection_preserves_durable_commit_and_integrity`; `evidence/execution_2026-08-20/backpressure_stall_report.json` | Named local environment and injected 2 ms delay | Reproduction reports missing/duplicate records, failures, or invalid integrity | Local fault-injection result, not target storage capacity | Performance and storage owners |
@@ -312,9 +313,9 @@ Existing tests should remain release gates. Proposed tests are classified as `RO
 
 | Test ID | Test vector | Expected safety result | Existing locator or required artifact | Status | Kill criterion | Owner |
 |---|---|---|---|---|---|---|
-| DOC01-FALS-001 | Inject a core ledger write/flush/`fsync` exception during non-streaming success, upstream non-2xx, and streaming completion. | No response claims `durable`; no successful governed response is emitted. | Direct core handler test is absent; enterprise analogue: `tests/test_enterprise_durable_evidence.py::test_storage_failure_fails_closed_and_does_not_claim_durable`. | `ROADMAP` | Any `2xx` or durable-status upstream response escapes after failed commit. | Release owner |
-| DOC01-FALS-002 | Instrument ASGI `send`, `_persist_node` return, and response creation for concurrent success/error/stream requests. | Every emitted governed response has a preceding successful commit event for the same request ID. | Required trace-refinement harness; gap noted in `docs/formal/FORMAL_VERIFICATION.md:44-46`. | `ROADMAP` | One response event precedes or lacks its commit event. | Formal and application owners |
-| DOC01-FALS-003 | Feed a streaming response beyond a declared byte ceiling and a never-terminating stream. | Bounded memory and deterministic evidenced failure. | No bound exists in `aegis/proxy/app.py:1089-1137`. | `ROADMAP` | RSS grows without bound or request never reaches a bounded termination policy. | Reliability owner |
+| DOC01-FALS-001 | Inject a core ledger write/flush/`fsync` exception during non-streaming success, upstream non-2xx, and SSE terminal completion. | Non-streaming paths do not claim `durable`; SSE may already have emitted non-terminal events but must omit the terminal marker. | SSE unit coverage: `tests/test_proxy_streaming.py::test_commit_failure_omits_done`; direct integrated core-handler commit-failure coverage remains absent; enterprise analogue: `tests/test_enterprise_durable_evidence.py::test_storage_failure_fails_closed_and_does_not_claim_durable`. | `IMPLEMENTED` for the stream proxy unit boundary; integrated handler injection remains `ROADMAP` | A stream terminal marker escapes after failed terminal commit, or a non-streaming response claims `durable` after failed commit. | Release owner |
+| DOC01-FALS-002 | Instrument ASGI `send`, `_persist_node` return, and response creation for concurrent success/error/SSE requests. | Non-streaming response send follows commit; SSE non-terminal events may precede terminal commit, but its terminal marker must follow the one matching summary commit. | Required trace-refinement harness; gap noted in `docs/formal/FORMAL_VERIFICATION.md`. | `ROADMAP` | A non-streaming response precedes commit, an SSE terminal marker precedes terminal commit, or a request receives duplicate/mismatched terminal commits. | Formal and application owners |
+| DOC01-FALS-003 | Feed an SSE response beyond declared queue, event, cumulative-output, or duration limits, and exercise a large logical stream with a slow consumer. | Per-stream retained state stays within its declared accounting bounds; termination closes upstream, commits one terminal outcome, and omits the terminal marker on failure. | `tests/test_proxy_streaming.py::test_byte_limit_closes_without_done_and_commits_once`, `test_timeout_and_oversized_event_fail_without_done`, and `test_large_logical_stream_retained_memory_is_bounded`; `specs/aegis_stream_buffer.smt2`. | `IMPLEMENTED` at the stream-proxy test boundary | A per-stream bound is exceeded, upstream remains open, terminal commit count differs from one, or a failure emits the terminal marker. | Reliability owner |
 | DOC01-FALS-004 | Start two Uvicorn workers against one core WAL and issue synchronized commits. | Deployment must be rejected, or every record must form one recoverable chain if an inter-process protocol is later added. | No current test. | `ROADMAP` | Forked predecessor, corrupt JSONL, missing record, duplicate ID, or MMR divergence. | Platform owner |
 | DOC01-FALS-005 | Restart after multiple core commits and append one more record; independently recompute the MMR over all historical leaves. | Stored new root equals full-history root. | Current `_load_from_wal` at `aegis/core/crypto_audit.py:756-794` does not rebuild MMR. | `ROADMAP` | Post-restart root differs from full-history root. | Cryptography owner |
 | DOC01-FALS-006 | Commit more than `max_memory_nodes`, then run `verify_integrity()` and separately verify the complete WAL. | Supported verifier has explicit window semantics and does not report a false genesis failure. | No current rollover regression. | `ROADMAP` | False integrity alarm or unexamined records are presented as a full-chain pass. | Evidence owner |
@@ -333,7 +334,7 @@ The following architecture conditions are required for an approved single-proces
 2. The WAL path is on storage whose `fsync`, capacity, recovery, and backup behavior has been accepted in the target environment.
 3. Strict mode starts successfully with an approved signer and Redis dependency.
 4. The process is removed from readiness when `ledger._fault_state` is not healthy, and operational routing respects the readiness/health distinction. The current `/ready` endpoint checks only forwarder initialization (`aegis/proxy/app.py:987-1002`), so an external probe must not treat it as ledger-health acceptance without remediation.
-5. Streaming response sizes and durations are constrained at an upstream or ingress boundary until an application-level response bound is implemented.
+5. Configure and validate the application-level per-stream queue-item, queue-byte, event-size, cumulative-output, de-identification-window, preview, and duration bounds; separately cap aggregate admitted-stream concurrency because total retained memory scales with concurrent streams.
 6. Rotated files are treated as ordinary owner-only files unless an external immutable-storage control is configured and tested.
 7. Evidence verification reports its retained-window scope and does not label `verify_integrity()` as a complete WAL verification after deque eviction.
 
@@ -344,7 +345,7 @@ For enterprise external storage, approval additionally requires a chain-head ser
 | Risk ID | Residual risk | Consequence | Current detection or mitigation | Required disposition | Owner |
 |---|---|---|---|---|---|
 | DOC01-RISK-001 | Core process-local locking does not coordinate multi-worker or multi-pod writers. | Forked or unparsable shared WAL; invalid global-chain claim. | Scaling guide warns of independent sequences. | Enforce one writer per WAL and correct Helm defaults, or implement inter-process serialization. | Platform owner |
-| DOC01-RISK-002 | Aggregate streaming memory scales with concurrent admitted requests even though each response is bounded. | Concurrent near-limit responses can create memory pressure before evidence commit. | Per-response byte/deadline limits, deterministic 502/504 evidence, and upstream closure regressions. | Set deployment concurrency/admission budgets and test aggregate RSS under the target topology. | Reliability owner |
+| DOC01-RISK-002 | Aggregate streaming memory scales with concurrent admitted requests even though each stream has bounded retained state. | Concurrent streams near their queue/window/preview limits can create aggregate memory pressure. | Per-stream byte- and item-accounted queue, event/window/preview bounds, cumulative-output and duration policies, upstream closure, and one terminal summary commit; `tests/test_proxy_streaming.py` and `specs/aegis_stream_buffer.smt2`. | Set deployment concurrency/admission budgets and test aggregate RSS under the target topology; the arithmetic contract does not prove an aggregate concurrency bound. | Reliability owner |
 | DOC01-RISK-003 | Startup WAL corruption is fail-open for subsequent commits. | New evidence can be appended after an untrusted prefix; health and traffic semantics diverge. | `/health` exposes `wal_corrupt`; named reliability test confirms continued writes. | Strict-mode quarantine and recovery workflow. | Incident-response owner |
 | DOC01-RISK-004 | Core MMR state is not rebuilt during JSONL replay. | Post-restart roots do not represent the full pre-restart accumulator history. | Hash-chain predecessor remains loaded, but MMR continuity is absent. | Persist/rebuild peaks and add restart proof test. | Cryptography owner |
 | DOC01-RISK-005 | Bounded deque verification can lose genesis context and covers only retained nodes. | False integrity failure after rollover or overstatement of full-history validation. | None in the named release tests. | Implement checkpoint/window-aware verification and full-WAL verifier. | Evidence owner |
@@ -365,8 +366,8 @@ The following repository records were used as the primary audit basis:
 | Production lifecycle | `aegis/proxy/app.py`; `aegis/core/crypto_audit.py`; `aegis_server/main.py` | Handler order, response construction, WAL persistence, external storage acknowledgement |
 | Configuration and deployment | `aegis/config.py`; `aegis_server/config.py`; `deploy/helm/values.yaml`; `deploy/helm/templates/deployment.yaml`; `deploy/helm/templates/pvc.yaml` | Strict-mode assumptions, workers, replicas, volumes, operational boundaries |
 | Storage implementations | `aegis_server/storage/base.py`; `sqlite_provider.py`; `postgres_provider.py`; `dynamodb_provider.py` | Transaction acknowledgement and concurrent chain-head limitations |
-| Named regressions | `tests/test_proxy.py`; `tests/test_app_coverage_extended.py`; `tests/test_enterprise_durable_evidence.py`; `tests/test_market_hardening_gates.py`; `tests/test_p0_release_gates.py`; provider storage tests | Implemented behavior and negative-path boundaries |
-| Formal records | `specs/*`; `scripts/verify_formal_artifacts.sh`; `docs/formal/FORMAL_VERIFICATION.md` | Abstract invariants, finite bounds, and explicit refinement gap |
+| Named regressions | `tests/test_proxy.py`; `tests/test_proxy_streaming.py`; `tests/test_app_coverage_extended.py`; `tests/test_enterprise_durable_evidence.py`; `tests/test_market_hardening_gates.py`; `tests/test_p0_release_gates.py`; provider storage tests | Implemented behavior and negative-path boundaries, including incremental SSE ordering, exact-byte hash, terminal commit, and per-stream bounds |
+| Formal records | `specs/*`, including `specs/aegis_stream_buffer.smt2`; `scripts/verify_formal_artifacts.sh`; `docs/formal/FORMAL_VERIFICATION.md` | Abstract invariants, per-stream retained-byte arithmetic, finite bounds, and explicit refinement gap |
 | Measured evidence | `evidence/execution_2026-08-20/manifest.json`; `backpressure_stall_report.json`; `AEGIS_EXECUTION_REPORT_2026-08-20.md` | Executed suite context and bounded local observations |
 | Claim controls | `docs/CLAIMS_MATRIX.md`; `docs/architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md` | Approved vocabulary, non-goals, legal and market boundaries |
 
@@ -376,6 +377,6 @@ A reviewer must block release of a material architecture claim when its locator 
 
 DOC-01 approves the following narrow architecture statement:
 
-> In a supported single-process core deployment with one writer per accepted WAL path, the audited handlers await their evidence persistence helper before constructing admitted successful, handled upstream-error, and fully buffered streaming responses. The Python ledger serializes callers sharing one ledger instance and calls write, flush, and `fsync` before returning the commit. Optional enrichment occurs after the authoritative commit. External durability, multi-process ordering, cross-pod ordering, full-history verification, and legal conclusions require additional controls or remain roadmap work.
+> In a supported single-process core deployment with one writer per accepted WAL path, admitted non-streaming outcomes await authoritative evidence persistence before return. Admitted SSE incrementally emits sanitized canonical events through a bounded byte-accounted queue, hashes the exact emitted bytes, writes one terminal summary WAL record, and emits the terminal marker only after that commit succeeds. Initial SSE evidence/proof headers are `pending-terminal`, and proof is retrieved post-terminal from the linked endpoint. Stream backpressure, byte, event, and duration bounds apply per admitted stream; aggregate retained memory scales with concurrency. The Python ledger serializes callers sharing one ledger instance and calls write, flush, and `fsync` before returning a commit. Optional enrichment is non-authoritative. External durability, multi-process ordering, cross-pod ordering, aggregate admission, full-history verification, and legal conclusions require additional controls or remain roadmap work.
 
 Any broader statement requires a matching claim row, exact locator, named test or measured artifact, operational boundary, falsification criterion, and accountable human owner.

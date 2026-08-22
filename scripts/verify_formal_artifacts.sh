@@ -6,6 +6,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TLA_JAR="${TLA_JAR:-$ROOT/.tools/tla2tools.jar}"
+TLA_SOURCE_REVISION="${TLA_SOURCE_REVISION:-0894c3407f4717fec7cc18bde3bf3c857fa47333}"
 MODEL_TIMEOUT_SECONDS="${MODEL_TIMEOUT_SECONDS:-60}"
 
 command -v z3 >/dev/null 2>&1 || {
@@ -20,14 +21,26 @@ command -v lean >/dev/null 2>&1 || {
   printf 'TLA+ tools jar not found: %s\n' "$TLA_JAR" >&2
   exit 127
 }
+command -v unzip >/dev/null 2>&1 || {
+  printf 'unzip is required to verify TLA+ tool provenance\n' >&2
+  exit 127
+}
+unzip -p "$TLA_JAR" META-INF/MANIFEST.MF \
+  | grep -F "X-Git-Revision: $TLA_SOURCE_REVISION" >/dev/null || {
+  printf 'TLA+ tools source revision mismatch; expected %s\n' "$TLA_SOURCE_REVISION" >&2
+  exit 1
+}
 
 printf 'z3_version=%s\n' "$(z3 --version)"
 printf 'lean_version=%s\n' "$(lean --version | head -n 1)"
 printf 'tla_jar_sha256=%s\n' "$(sha256sum "$TLA_JAR" | cut -d' ' -f1)"
+printf 'tla_source_revision=%s\n' "$TLA_SOURCE_REVISION"
 
-z3_result="$(z3 "$ROOT/specs/aegis_invariants.smt2")"
-printf 'z3_result=%s\n' "$z3_result"
-[[ "$z3_result" == "unsat" ]]
+for proof in aegis_invariants aegis_stream_buffer; do
+  z3_result="$(z3 "$ROOT/specs/${proof}.smt2")"
+  printf 'z3_proof=%s z3_result=%s\n' "$proof" "$z3_result"
+  [[ "$z3_result" == "unsat" ]]
+done
 
 timeout "${MODEL_TIMEOUT_SECONDS}s" lean "$ROOT/specs/AegisVerification.lean"
 printf 'lean_result=verified\n'

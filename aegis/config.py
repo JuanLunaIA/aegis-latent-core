@@ -322,9 +322,33 @@ class AegisSettings(BaseSettings):
         ge=1_024,
         le=268_435_456,
         description=(
-            "Maximum buffered upstream SSE response size before the request is rejected. "
-            "The proxy buffers before evidence commit, so this is an egress memory bound."
+            "Maximum cumulative canonical SSE response bytes before upstream is aborted. "
+            "This is a total-output policy limit, not the retained-memory strategy."
         ),
+    )
+    stream_queue_max_items: int = Field(
+        default=64,
+        ge=1,
+        le=1_024,
+        description="Maximum number of canonical SSE events retained per active stream.",
+    )
+    stream_queue_max_bytes: int = Field(
+        default=1_048_576,
+        ge=1_024,
+        le=16_777_216,
+        description="Maximum canonical SSE bytes retained in one stream queue.",
+    )
+    max_stream_event_bytes: int = Field(
+        default=65_536,
+        ge=256,
+        le=1_048_576,
+        description="Maximum accepted upstream or canonical SSE event size.",
+    )
+    stream_deidentifier_window_chars: int = Field(
+        default=128,
+        ge=64,
+        le=4_096,
+        description="Finite logical-text holdback for cross-event PHI/PCI interception.",
     )
     max_stream_duration_seconds: float = Field(
         default=60.0,
@@ -685,6 +709,8 @@ class AegisSettings(BaseSettings):
                 "AEGIS_DEBUG_MODE=true for local development, or remove "
                 "AEGIS_AUTH_DISABLED and configure AEGIS_API_KEYS for production."
             )
+        if self.max_stream_event_bytes > self.stream_queue_max_bytes:
+            raise ValueError("max_stream_event_bytes must not exceed stream_queue_max_bytes")
         return self
 
     def validate_runtime_invariants(self) -> None:

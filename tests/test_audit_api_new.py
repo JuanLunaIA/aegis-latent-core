@@ -5,13 +5,18 @@
 
 from __future__ import annotations
 
+import io
 import time
+import zipfile
+from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import httpx
 import pytest
 from fastapi import FastAPI
 
+from aegis.core.crypto_audit import CryptographicAuditLedger
 from aegis.proxy.audit_api import build_audit_router
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -45,6 +50,7 @@ def _make_ledger(nodes=None, integrity=(True, None)):
 
 def _make_app(ledger) -> FastAPI:
     app = FastAPI()
+    app.state.aegis = SimpleNamespace(settings=SimpleNamespace(api_key_scopes=""))
 
     # Bypass auth: override validate_audit_auth to always return "test"
 
@@ -62,6 +68,40 @@ def _make_app(ledger) -> FastAPI:
     app.dependency_overrides[validate_audit_auth] = lambda: "test"
 
     return app
+
+
+@pytest.mark.asyncio
+async def test_forensic_export_returns_verifiable_zip(tmp_path):
+    ledger = CryptographicAuditLedger(
+        persistence_path=str(tmp_path / "audit.jsonl"),
+        signing_key="test-signing-key",
+    )
+    ledger.commit_forensic(
+        state_id="export-1",
+        request_bytes=b"request",
+        response_bytes=b"response",
+        tenant_id="tenant-a",
+    )
+    app = _make_app(ledger)
+    now = datetime.now(UTC)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/v1/audit/forensics/export",
+            json={
+                "start_time": (now - timedelta(minutes=1)).isoformat(),
+                "end_time": (now + timedelta(minutes=1)).isoformat(),
+                "operator": "Examiner A",
+                "acquisition_reason": "Authorized test",
+            },
+        )
+    ledger.close()
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/zip"
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        assert "VERIFY.sh" in archive.namelist()
+        assert "ledger_slice.cbor" in archive.namelist()
 
 
 # ── /health ───────────────────────────────────────────────────────────────────
