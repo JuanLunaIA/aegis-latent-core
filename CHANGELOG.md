@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened asynchronous analysis-worker cancellation and bounded lifespan shutdown after reproducing the Python 3.11 `TestClient` teardown hang.
 - Added per-response byte and total-duration limits to buffered SSE handling, with durable 502/504 failure evidence and upstream-generator closure tests.
 - Replaced all 76 remote GitHub Action references with full 40-character commit SHAs and added a CI gate that rejects mutable Action references.
+- Removed the mutable TLA+ `v1.8.0` release-asset URL from the formal trust path after the upstream lightweight tag and JAR changed in place; CI now builds from verified source commit `0894c3407f4717fec7cc18bde3bf3c857fa47333` and checks the embedded revision.
 - Replaced repository-owned `datetime.utcnow()` test calls with UTC-aware timestamps and narrowly filtered three identified third-party transition warnings.
 - Added explicit CI job timeouts and faulthandler stack dumps so a future non-progress condition terminates with diagnostic evidence.
 - Corrected the source-SBOM job to catalog an extracted deterministic archive, validated SPDX generation on pull requests, and verified the post-merge Sigstore attestation for the exact source digest.

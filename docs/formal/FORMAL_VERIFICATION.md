@@ -7,7 +7,7 @@
 
 ## Objective and claim boundary
 
-The formal gate checks four narrow safety claims. It does not certify the product, prove target-filesystem durability, establish constant-time cryptography, or prove that the implementation refines the models. In particular, the lifecycle models do not represent incremental SSE event emission; their abstract `EMITTED` transition corresponds only to an outcome whose modeled commit has completed and must not be read as proof that all SSE events are withheld. The executable entry point is `scripts/verify_formal_artifacts.sh`; CI installs the declared toolchains, verifies the TLA+ Tools JAR digest, and fails closed on a non-zero solver exit, timeout, counterexample, type-check failure, or unexpected Z3 result.
+The formal gate checks four narrow safety claims. It does not certify the product, prove target-filesystem durability, establish constant-time cryptography, or prove that the implementation refines the models. In particular, the lifecycle models do not represent incremental SSE event emission; their abstract `EMITTED` transition corresponds only to an outcome whose modeled commit has completed and must not be read as proof that all SSE events are withheld. The executable entry point is `scripts/verify_formal_artifacts.sh`; CI installs the declared toolchains, builds TLA+ Tools from an exact Git object, verifies the JAR source revision, and fails closed on a non-zero solver exit, timeout, counterexample, type-check failure, or unexpected Z3 result.
 
 | Artifact | Property | Bound or logical scope | Falsification observable |
 |---|---|---|---|
@@ -19,7 +19,7 @@ The formal gate checks four narrow safety claims. It does not certify the produc
 
 ## Executed result
 
-The gate ran with Z3 4.8.12, Lean 4.33.0, Java 21, and TLA+ Tools v1.8.0. The downloaded TLA+ Tools JAR had SHA-256 `ab323b79802aedc3203b3f9af37c6aca3ed43f4e0225b36f2aa77b26de46c05f`.
+The gate runs with Z3 4.8.12, Lean 4.33.0, Java 21, and TLA+ Tools built from source revision `0894c3407f4717fec7cc18bde3bf3c857fa47333`. CI verifies the checked-out Git object and the resulting JAR manifest before model checking. The release-asset URL previously used for `v1.8.0` was removed from the trust path because the upstream lightweight tag and asset changed while retaining the same URL; a mutable download cannot satisfy this gate's provenance contract.
 
 | Check | Result | State-space evidence |
 |---|---|---|
