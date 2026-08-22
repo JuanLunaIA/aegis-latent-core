@@ -7,7 +7,7 @@
 
 ## Objective and claim boundary
 
-The formal gate checks four narrow safety claims. It does not certify the product, prove target-filesystem durability, establish constant-time cryptography, or prove that the implementation refines the models. The executable entry point is `scripts/verify_formal_artifacts.sh`; CI installs the declared toolchains, verifies the TLA+ Tools JAR digest, and fails closed on a non-zero solver exit, timeout, counterexample, type-check failure, or unexpected Z3 result.
+The formal gate checks four narrow safety claims. It does not certify the product, prove target-filesystem durability, establish constant-time cryptography, or prove that the implementation refines the models. In particular, the lifecycle models do not represent incremental SSE event emission; their abstract `EMITTED` transition corresponds only to an outcome whose modeled commit has completed and must not be read as proof that all SSE events are withheld. The executable entry point is `scripts/verify_formal_artifacts.sh`; CI installs the declared toolchains, verifies the TLA+ Tools JAR digest, and fails closed on a non-zero solver exit, timeout, counterexample, type-check failure, or unexpected Z3 result.
 
 | Artifact | Property | Bound or logical scope | Falsification observable |
 |---|---|---|---|
@@ -31,7 +31,7 @@ The gate ran with Z3 4.8.12, Lean 4.33.0, Java 21, and TLA+ Tools v1.8.0. The do
 
 ## Mechanistic trace
 
-A request moves from `RECEIVED` to `CONTROLLED`, then `UPSTREAM`, `COMMITTED`, and finally `EMITTED`. The only modeled transition that inserts an identifier into `response_emitted` requires the source state `COMMITTED`; the commit transition appends that identifier to `wal_log`. TLC enumerates every reachable interleaving inside the finite constants and checks `response_emitted ⊆ SequenceRange(wal_log)` in each state. Lean independently proves the corresponding phase-level implication by induction over the reachable-state derivation. Z3 checks a separate arithmetic safety property and does not prove the request lifecycle.
+In the abstract lifecycle, a request moves from `RECEIVED` to `CONTROLLED`, then `UPSTREAM`, `COMMITTED`, and finally `EMITTED`. The only modeled transition that inserts an identifier into `response_emitted` requires the source state `COMMITTED`; the commit transition appends that identifier to `wal_log`. TLC enumerates every reachable interleaving inside the finite constants and checks `response_emitted ⊆ SequenceRange(wal_log)` in each state. This abstraction fits complete non-streaming outcomes and the SSE terminal-marker transition, but it omits preceding incremental sanitized SSE events. Lean independently proves the corresponding phase-level implication by induction over the reachable-state derivation. Z3 checks separate arithmetic safety properties and does not prove the request lifecycle. The per-stream retained-memory arithmetic contract is separately encoded in `specs/aegis_stream_buffer.smt2`; it is not an implementation refinement proof.
 
 ## CHOKE perturbation record
 

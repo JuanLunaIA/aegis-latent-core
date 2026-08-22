@@ -31,6 +31,7 @@ Every published number must identify the source commit, date, hardware, operatin
 | WAF corpus | Corpus-scoped bypass and false-positive metrics at the application boundary | Universal prompt-injection detection or ingress HTTP/2 parser coverage |
 | Backpressure fault injection | Evidence correlation and fail-closed behavior under an injected `fsync` stall | Production storage failure equivalence |
 | Native ML-DSA timing | Timing non-detection under a declared experiment, if executed and passed | Proof of constant-time execution or certification |
+| Bounded SSE transformation | First-byte timing, local event throughput and memory high-water marks for the named deterministic in-process stream | Provider/network latency, durable-WAL latency or production capacity |
 
 ## Current result index
 
@@ -40,6 +41,7 @@ Every published number must identify the source commit, date, hardware, operatin
 | Backpressure | `tools/benchmarks/run_backpressure_stall.py` | `backpressure_stall_10k_report.json` | 10k offered requests and 2 ms injected `fsync`; p99 1,189.89 ms; no production capacity claim |
 | Key rotation | `tools/benchmarks/run_key_rotation.py` | `key_rotation_report_v2.json` | Three independent local signer instances; no real orchestrator/secret-manager acceptance |
 | ML-DSA timing | `tools/benchmarks/run_pqc_timing.py` | `pqc_timing_report_v2.json` | 1M samples per operation; `sign` non-detection, `verify` failure; no constant-time claim |
+| Bounded SSE transformation | `benchmarks/bench_streaming_sse.py` | `evidence/commercial_phase2_streaming_benchmark.json` | Seven local rounds of 1,000 events; excludes network and WAL durability latency |
 
 ## Reproduction commands
 
@@ -59,6 +61,10 @@ PYTHONPATH=. .venv/bin/python tools/benchmarks/run_pqc_timing.py \
   --operation both --samples 1000000 --warmup 10000 \
   --output evidence/pqc_timing_report.json \
   --raw-output evidence/pqc_timing_raw.jsonl
+
+PYTHONPATH=. .venv/bin/python benchmarks/bench_streaming_sse.py \
+  --events 1000 --rounds 7 \
+  > evidence/commercial_phase2_streaming_benchmark.json
 ```
 
 The commands require the corresponding local environment and may produce different timings. Preserve command output and environment metadata with every rerun. Do not overwrite a prior evidence artifact without preserving its hash and provenance.

@@ -43,6 +43,7 @@ from aegis.config import AegisSettings
 from aegis.core.circuit_breaker import CircuitBreaker
 from aegis.providers.base import ProviderAdapter
 from aegis.providers.openai_provider import OpenAIAdapter
+from aegis.proxy.streaming import StreamEventLimitError
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,64 @@ try:
 except ImportError:
     HAS_RUST = False
     logger.debug("aegis_rust extension not installed; using httpx forwarder")
+
+
+async def _iter_bounded_lines(
+    response: httpx.Response, *, max_line_bytes: int
+) -> AsyncIterator[bytes]:
+    """Yield HTTP body lines without permitting an unbounded unterminated line."""
+    if max_line_bytes < 1:
+        raise ValueError("max_line_bytes must be positive")
+    instance_attrs = vars(response)
+    aiter_bytes = getattr(response, "aiter_bytes", None)
+    if aiter_bytes is None or (
+        "aiter_lines" in instance_attrs and "aiter_bytes" not in instance_attrs
+    ):
+        aiter_lines = getattr(response, "aiter_lines", None)
+        if aiter_lines is None:
+            raise TypeError("streaming response exposes neither aiter_bytes nor aiter_lines")
+        async for line in aiter_lines():
+            encoded = line.encode("utf-8") if isinstance(line, str) else bytes(line)
+            if len(encoded) > max_line_bytes:
+                raise StreamEventLimitError("upstream SSE line exceeds configured limit")
+            yield encoded
+        return
+    pending = bytearray()
+    chunk_size = min(max_line_bytes, 16_384)
+    async for chunk in aiter_bytes(chunk_size=chunk_size):
+        pending.extend(chunk)
+        while True:
+            newline = pending.find(b"\n")
+            if newline < 0:
+                break
+            if newline > max_line_bytes:
+                raise StreamEventLimitError("upstream SSE line exceeds configured limit")
+            line = bytes(pending[:newline])
+            del pending[: newline + 1]
+            if line.endswith(b"\r"):
+                line = line[:-1]
+            yield line
+        if len(pending) > max_line_bytes:
+            raise StreamEventLimitError("unterminated upstream SSE line exceeds configured limit")
+    if pending:
+        if len(pending) > max_line_bytes:
+            raise StreamEventLimitError("terminal upstream SSE line exceeds configured limit")
+        yield bytes(pending)
+
+
+def _native_sse_event(lines: list[bytes]) -> tuple[bytes, Any]:
+    raw = b"\n".join(lines) + b"\n\n"
+    parsed: Any = None
+    for line in lines:
+        if not line.startswith(b"data:"):
+            continue
+        payload = line[5:].strip()
+        try:
+            parsed = json.loads(payload)
+        except json.JSONDecodeError:
+            parsed = None
+        break
+    return raw, parsed
 
 
 class LLMForwarder:
@@ -256,6 +315,64 @@ class LLMForwarder:
             content=translated,
         )
 
+    async def forward_native_anthropic(
+        self,
+        body: dict[str, Any],
+        extra_headers: dict[str, str] | None = None,
+    ) -> httpx.Response:
+        """Forward an Anthropic Messages body without public-shape translation."""
+        if self._provider.name != "anthropic":
+            raise ValueError("native Anthropic ingress requires AEGIS_PROVIDER=anthropic")
+        assert self._client is not None, "LLMForwarder.start() was not called"
+        if self._egress_guard is not None:
+            self._egress_guard.check(self._settings.backend_url_str)
+        self._circuit_breaker.check()
+        try:
+            response = await self._client.post("/v1/messages", json=body, headers=extra_headers)
+        except (httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError):
+            self._circuit_breaker.record_failure()
+            raise
+        if response.status_code >= 500:
+            self._circuit_breaker.record_failure()
+        else:
+            self._circuit_breaker.record_success()
+        return response
+
+    async def stream_native_anthropic(
+        self,
+        body: dict[str, Any],
+        extra_headers: dict[str, str] | None = None,
+    ) -> AsyncIterator[tuple[bytes, Any]]:
+        """Yield complete native Anthropic SSE events under an event-byte cap."""
+        if self._provider.name != "anthropic":
+            raise ValueError("native Anthropic ingress requires AEGIS_PROVIDER=anthropic")
+        assert self._client is not None, "LLMForwarder.start() was not called"
+        self._circuit_breaker.check()
+        async with self._client.stream(
+            "POST", "/v1/messages", json=body, headers=extra_headers
+        ) as response:
+            response.raise_for_status()
+            self._circuit_breaker.record_success()
+            event_lines: list[bytes] = []
+            event_size = 0
+            async for line in _iter_bounded_lines(
+                response, max_line_bytes=self._settings.max_stream_event_bytes
+            ):
+                if line:
+                    event_size += len(line) + 1
+                    if event_size > self._settings.max_stream_event_bytes:
+                        raise StreamEventLimitError(
+                            "native Anthropic SSE event exceeds configured limit"
+                        )
+                    event_lines.append(line)
+                    continue
+                if event_lines:
+                    yield _native_sse_event(event_lines)
+                    event_lines = []
+                    event_size = 0
+            if event_lines:
+                yield _native_sse_event(event_lines)
+
     async def stream_sse(
         self,
         path: str,
@@ -316,8 +433,10 @@ class LLMForwarder:
                     self._circuit_breaker.record_failure()
                 raise
             self._circuit_breaker.record_success()
-            async for raw_line in resp.aiter_lines():
-                line = raw_line.strip()
+            async for raw_line in _iter_bounded_lines(
+                resp, max_line_bytes=self._settings.max_stream_event_bytes
+            ):
+                line = raw_line.decode("utf-8", errors="replace").strip()
                 if not line:
                     yield (b"\n", None)
                     continue
@@ -351,8 +470,10 @@ class LLMForwarder:
                 "POST", provider_path, json=provider_body, headers=extra_headers
             ) as resp:
                 resp.raise_for_status()
-                async for line in resp.aiter_lines():
-                    yield line
+                async for line in _iter_bounded_lines(
+                    resp, max_line_bytes=self._settings.max_stream_event_bytes
+                ):
+                    yield line.decode("utf-8", errors="replace")
 
         translated = self._provider.translate_stream(
             _raw_line_iter(),

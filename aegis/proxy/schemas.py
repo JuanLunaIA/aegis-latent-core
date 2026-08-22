@@ -10,6 +10,7 @@ Extra fields are forwarded transparently (model_config extra='allow').
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -144,6 +145,46 @@ class AuditNodeOut(BaseModel):
     node_hash: str
     tenant_id: str
     sampling_params: dict[str, Any]
+    merkle_root: str
+    signature_scheme: str
+    signature_status: str
+    model: str
+    endpoint: str
+    phi_scrubbed: bool
+    token_count: int
+    latency_ms: float | None
+    terminal_outcome: str | None
+    redaction_hits: dict[str, int]
+    cid: str
+
+
+class MMRProofOut(BaseModel):
+    state_id: str
+    node_hash: str
+    leaf_hash: str
+    leaf_index: int
+    leaf_count: int
+    root: str
+    proof: dict[str, Any]
+    signature_scheme: str
+    signature_status: str
+
+
+class RawEvidenceOut(BaseModel):
+    node_hash: str
+    cid: str
+    media_type: str = "application/vnd.ipld.dag-cbor"
+    jcs_json: str
+    dag_cbor_base64: str
+    dag_cbor_sha256: str
+
+
+class ForensicExportRequest(BaseModel):
+    start_time: datetime
+    end_time: datetime
+    operator: str = Field(min_length=1, max_length=200)
+    acquisition_reason: str = Field(min_length=1, max_length=500)
+    tenant_id: str | None = Field(default=None, min_length=1, max_length=200)
 
 
 class AuditSessionOut(BaseModel):
@@ -160,6 +201,9 @@ class IntegrityReport(BaseModel):
     node_count: int
     tail_hash: str
     legal_admissibility: str
+    scope: str = "retained-memory-window"
+    window_anchor_hash: str = ""
+    full_history_retained: bool = False
 
 
 class ControlCapabilityOut(BaseModel):

@@ -1,0 +1,115 @@
+{
+  "benchmark": "bounded-stream-proxy-in-process-v1",
+  "claim_scope": "local in-process transformation only; excludes network and durable WAL latency",
+  "duration_ms": {
+    "p50": 316.8915379792452,
+    "p95": 323.25791707262397
+  },
+  "environment": {
+    "machine": "x86_64",
+    "platform": "Linux-6.1.102-x86_64-with-glibc2.39",
+    "processor": "x86_64",
+    "python": "3.11.15 (main, Jul 23 2026, 14:43:45) [Clang 22.1.3 ]"
+  },
+  "events_per_round": 1000,
+  "events_per_second": {
+    "p50": 3155.6538441411303
+  },
+  "first_byte_ms": {
+    "p50": 2.030345960520208,
+    "p95": 2.2945780074223876
+  },
+  "generated_at": "2026-08-22T02:37:35.568057+00:00",
+  "max_proxy_queue_bytes": 664,
+  "max_proxy_queue_items": 8,
+  "max_tracemalloc_peak_bytes": 141338,
+  "rounds": 7,
+  "runs": [
+    {
+      "chunks": 1001,
+      "duration_ms": 322.5083330180496,
+      "events": 1000,
+      "events_per_second": 3100.695075509983,
+      "first_byte_ms": 2.2945780074223876,
+      "output_bytes": 82904,
+      "proxy_peak_queue_bytes": 664,
+      "proxy_peak_queue_items": 8,
+      "terminal_outcome": "complete",
+      "tracemalloc_peak_bytes": 141338
+    },
+    {
+      "chunks": 1001,
+      "duration_ms": 314.67696698382497,
+      "events": 1000,
+      "events_per_second": 3177.862077370925,
+      "first_byte_ms": 2.030345960520208,
+      "output_bytes": 82904,
+      "proxy_peak_queue_bytes": 664,
+      "proxy_peak_queue_items": 8,
+      "terminal_outcome": "complete",
+      "tracemalloc_peak_bytes": 139140
+    },
+    {
+      "chunks": 1001,
+      "duration_ms": 316.8915379792452,
+      "events": 1000,
+      "events_per_second": 3155.6538441411303,
+      "first_byte_ms": 2.046538982540369,
+      "output_bytes": 82904,
+      "proxy_peak_queue_bytes": 664,
+      "proxy_peak_queue_items": 8,
+      "terminal_outcome": "complete",
+      "tracemalloc_peak_bytes": 139436
+    },
+    {
+      "chunks": 1001,
+      "duration_ms": 312.58368701674044,
+      "events": 1000,
+      "events_per_second": 3199.1432743783744,
+      "first_byte_ms": 2.0080709364265203,
+      "output_bytes": 82904,
+      "proxy_peak_queue_bytes": 664,
+      "proxy_peak_queue_items": 8,
+      "terminal_outcome": "complete",
+      "tracemalloc_peak_bytes": 139012
+    },
+    {
+      "chunks": 1001,
+      "duration_ms": 318.7291029607877,
+      "events": 1000,
+      "events_per_second": 3137.4605918023967,
+      "first_byte_ms": 2.016642945818603,
+      "output_bytes": 82904,
+      "proxy_peak_queue_bytes": 664,
+      "proxy_peak_queue_items": 8,
+      "terminal_outcome": "complete",
+      "tracemalloc_peak_bytes": 138636
+    },
+    {
+      "chunks": 1001,
+      "duration_ms": 314.1070280689746,
+      "events": 1000,
+      "events_per_second": 3183.628224263771,
+      "first_byte_ms": 2.0231109810993075,
+      "output_bytes": 82904,
+      "proxy_peak_queue_bytes": 664,
+      "proxy_peak_queue_items": 8,
+      "terminal_outcome": "complete",
+      "tracemalloc_peak_bytes": 138364
+    },
+    {
+      "chunks": 1001,
+      "duration_ms": 323.25791707262397,
+      "events": 1000,
+      "events_per_second": 3093.505053351369,
+      "first_byte_ms": 2.0647250348702073,
+      "output_bytes": 82904,
+      "proxy_peak_queue_bytes": 664,
+      "proxy_peak_queue_items": 8,
+      "terminal_outcome": "complete",
+      "tracemalloc_peak_bytes": 139356
+    }
+  ],
+  "source_state": "working-tree measurement; bind to the merge commit before release use",
+  "warmup_rounds": 0
+}

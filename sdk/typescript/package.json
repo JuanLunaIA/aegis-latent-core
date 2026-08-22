@@ -1,0 +1,95 @@
+{
+  "name": "@aegis-latent/sdk",
+  "version": "3.1.0",
+  "description": "Edge-compatible Aegis MMR verification and provider instrumentation",
+  "type": "module",
+  "license": "AGPL-3.0-only OR LicenseRef-Proprietary",
+  "homepage": "https://github.com/JuanLunaIA/aegis-latent-core#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JuanLunaIA/aegis-latent-core.git",
+    "directory": "sdk/typescript"
+  },
+  "bugs": {
+    "url": "https://github.com/JuanLunaIA/aegis-latent-core/issues"
+  },
+  "keywords": [
+    "aegis",
+    "mmr",
+    "audit",
+    "openai",
+    "anthropic",
+    "edge"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./proof": {
+      "types": "./dist/proof.d.ts",
+      "import": "./dist/proof.js"
+    },
+    "./providers": {
+      "types": "./dist/providers.d.ts",
+      "import": "./dist/providers.js"
+    },
+    "./gateway": {
+      "types": "./dist/gateway.d.ts",
+      "import": "./dist/gateway.js"
+    },
+    "./openai": {
+      "types": "./dist/openai.d.ts",
+      "import": "./dist/openai.js"
+    },
+    "./anthropic": {
+      "types": "./dist/anthropic.d.ts",
+      "import": "./dist/anthropic.js"
+    },
+    "./verifier": {
+      "types": "./dist/verifier.d.ts",
+      "import": "./dist/verifier.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.120.0",
+    "@types/node": "22.20.1",
+    "openai": "^6.49.0",
+    "typescript": "5.7.3",
+    "vitest": "3.2.7"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": ">=0.39 <1",
+    "openai": ">=4 <7"
+  },
+  "peerDependenciesMeta": {
+    "openai": {
+      "optional": true
+    },
+    "@anthropic-ai/sdk": {
+      "optional": true
+    }
+  }
+}

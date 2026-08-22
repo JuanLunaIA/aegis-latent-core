@@ -25,9 +25,11 @@ printf 'z3_version=%s\n' "$(z3 --version)"
 printf 'lean_version=%s\n' "$(lean --version | head -n 1)"
 printf 'tla_jar_sha256=%s\n' "$(sha256sum "$TLA_JAR" | cut -d' ' -f1)"
 
-z3_result="$(z3 "$ROOT/specs/aegis_invariants.smt2")"
-printf 'z3_result=%s\n' "$z3_result"
-[[ "$z3_result" == "unsat" ]]
+for proof in aegis_invariants aegis_stream_buffer; do
+  z3_result="$(z3 "$ROOT/specs/${proof}.smt2")"
+  printf 'z3_proof=%s z3_result=%s\n' "$proof" "$z3_result"
+  [[ "$z3_result" == "unsat" ]]
+done
 
 timeout "${MODEL_TIMEOUT_SECONDS}s" lean "$ROOT/specs/AegisVerification.lean"
 printf 'lean_result=verified\n'

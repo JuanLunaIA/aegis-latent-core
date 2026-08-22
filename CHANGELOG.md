@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Commercial expansion Phase 2/3
+
+- Replaced whole-response SSE buffering with an incremental, byte-bounded streaming proxy that applies bounded-window PHI/PCI redaction, hashes forwarded bytes online, propagates backpressure, commits terminal evidence exactly once, and supports native Anthropic `/v1/messages` ingress.
+- Added portable MMR inclusion proofs, corrected leaf-ordinal mapping for multi-peak trees, exposed authenticated proof retrieval and non-streaming proof headers, and added deterministic cross-language golden vectors plus the `aegis-mmr-inclusion-v1` protocol specification.
+- Added standalone Python and TypeScript SDKs with gateway-compatible OpenAI and Anthropic client integration and stateless MMR proof verification while preserving provider-native request and response types.
+- Added a read-only Next.js 16 and React 19 forensic dashboard with server-side credential isolation, explicit unavailable/error/empty states, real gateway data only, accessible ledger views, browser-side proof verification, and Prometheus-backed metrics visualization.
+- Added a scoped forensic export workflow producing bounded ZIP bundles with RFC 8785 JCS manifests, deterministic RFC 8949 DAG-CBOR ledger slices, CIDv1 identifiers, portable MMR proofs, a technical PDF certificate, and an offline `VERIFY.sh`; the output explicitly does not claim certification or legal admissibility.
+- Added provider-native RustWal terminal frames, streaming duration/token/redaction telemetry, a local MMR verification sandbox, raw canonical evidence inspection, and server-side ledger filters for tenant, model, endpoint, policy events, failures, and latency.
+- Added the bounded-stream Z3 model, streaming and portable-proof regression suites, SDK and dashboard CI jobs, production builds, accessibility checks, and real-backend visual QA evidence.
+- Added and executed a seven-round, 1,000-event in-process SSE benchmark with retained JSON evidence and explicit exclusion of network and durable-WAL latency.
+
 ### CI reliability and supply-chain hardening
 
 - Hardened asynchronous analysis-worker cancellation and bounded lifespan shutdown after reproducing the Python 3.11 `TestClient` teardown hang.
@@ -34,8 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added a six-volume institutional suite covering mechanistic architecture, cryptography and forensics, threat modeling, operations, regulatory review, and commercial procurement, plus a claim-evidence graph, unsupported-claims report, document-control record, and deterministic corpus audit.
 - Corrected positive regulatory and evidentiary wording in code documentation: regex PHI handling is best-effort redaction, application sealed segments are not regulatory WORM, GxP objects are support hooks rather than validation, and software-generated integrity labels do not determine legal admissibility.
-- Corrected the canonical streaming boundary: upstream streams are fully buffered before the evidence gate. The buffer now has configured byte and total-duration limits; aggregate concurrent memory remains deployment-dependent.
-- Added `cbor2>=5.9.0` to development dependencies after local dependency auditing detected advisories in the previously installed generation-only version.
+- Superseded the interim whole-response streaming buffer with the incremental bounded streaming contract documented above; aggregate concurrent memory remains deployment-dependent on configured per-stream queue/window limits and active stream count.
+- Added `cbor2>=5.9.0` to runtime dependencies for deterministic DAG-CBOR evidence export after local dependency auditing detected advisories in the previously installed generation-only version.
 
 ### Formal and native WAL hardening
 

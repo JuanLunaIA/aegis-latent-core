@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 import json
 import logging
@@ -11,7 +12,7 @@ import time
 import uuid
 from collections import OrderedDict
 from collections.abc import AsyncIterator
-from contextlib import aclosing, asynccontextmanager
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from secrets import randbelow
 from threading import Lock
@@ -27,7 +28,7 @@ from aegis.auth.apikey import AuditKeyAuth, ProxyKeyAuth
 from aegis.config import AegisSettings, get_settings
 from aegis.core import observability
 from aegis.core.circuit_breaker import CircuitOpenError
-from aegis.core.crypto_audit import CryptographicAuditLedger
+from aegis.core.crypto_audit import AuditNode, CryptographicAuditLedger
 from aegis.core.hsm import HSMSigningBackend
 from aegis.core.normalization import canonical_normalize
 from aegis.core.pci_detector import PCIScrubber
@@ -43,6 +44,7 @@ from aegis.proxy.dependencies import validate_proxy_auth
 from aegis.proxy.dmz_middleware import DMZSourceIPMiddleware
 from aegis.proxy.forwarder import LLMForwarder
 from aegis.proxy.schemas import AlertOut
+from aegis.proxy.streaming import BoundedStreamProxy, StreamEvidenceSummary
 from aegis.proxy.waf import AegisWAF
 
 logger = logging.getLogger(__name__)
@@ -109,7 +111,7 @@ class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
                 received += len(chunk)
                 if received > self._max_body_bytes:
                     raise HTTPException(status_code=413, detail="Request body too large")
-            return message
+            return dict(message)
 
         request._receive = bounded_receive  # type: ignore[attr-defined]
         try:
@@ -540,6 +542,44 @@ def _apply_pci_scrub_response(resp_json: dict, state: _AppState) -> dict:
     return resp_json
 
 
+def _scrub_anthropic_payload(
+    payload: dict[str, Any], state: _AppState
+) -> tuple[dict[str, Any], bool, str]:
+    """Scrub native Anthropic text/content/system fields without changing shape."""
+    changed = False
+    methods: set[str] = set()
+
+    def scrub_text(text: str) -> str:
+        nonlocal changed
+        result = text
+        if state._phi_scrubber is not None:
+            phi = state._phi_scrubber.scrub(result)
+            if phi.phi_detected:
+                result = phi.text
+                changed = True
+                methods.add("safe_harbor_regex")
+        if state._pci_scrubber is not None:
+            pci = state._pci_scrubber.scan(result)
+            if pci.chd_detected:
+                result = pci.text
+                changed = True
+                methods.add("pci_pan_mask")
+        return result
+
+    def visit(value: Any, key: str = "") -> Any:
+        if isinstance(value, dict):
+            return {child_key: visit(child, child_key) for child_key, child in value.items()}
+        if isinstance(value, list):
+            return [visit(child, key) for child in value]
+        if isinstance(value, str) and key in {"content", "system", "text"}:
+            return scrub_text(value)
+        return value
+
+    result = visit(payload)
+    assert isinstance(result, dict)
+    return result, changed, "+".join(sorted(methods))
+
+
 def _extract_logprobs(resp_json: dict) -> list:
     try:
         return resp_json.get("choices", [])[0].get("logprobs", {}).get("content", [])
@@ -615,6 +655,32 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         hsm_backend=_hsm_backend,
         require_strong_signing=cfg.security_enforcement_mode == "strict",
     )
+    state.native_stream_wal = None
+    try:
+        import aegis_rust  # type: ignore[import]
+
+        native_path = f"{cfg.wal_path}.stream.rwal"
+        state.native_stream_wal = aegis_rust.RustWal.open(native_path, 256 * 1024 * 1024)
+        logger.info("Native Rust streaming WAL enabled: %s", native_path)
+    except (ImportError, OSError, RuntimeError, ValueError) as exc:
+        logger.warning(
+            "Native Rust streaming WAL unavailable; JSONL WAL remains authoritative: %s", exc
+        )
+
+    def _commit_stream_evidence(**kwargs: Any) -> Any:
+        """Commit once to the ledger and append one CRC-framed native WAL record."""
+        node = state.ledger.commit_forensic_summary(**kwargs)
+        if state.native_stream_wal is not None:
+            frame = {
+                "frame_type": "aegis-stream-terminal-v1",
+                "node": node.to_dict(),
+                "node_hash": node.node_hash,
+            }
+            state.native_stream_wal.append(
+                json.dumps(frame, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            )
+        return node
+
     state.ratelimiter = create_rate_limiter(cfg)
 
     # FIX-APP-02: pre-initialise entropy guard singletons.
@@ -795,6 +861,20 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
+            expose_headers=[
+                "Link",
+                "X-Aegis-Analysis-Status",
+                "X-Aegis-Evidence-Status",
+                "X-Aegis-MMR-Format",
+                "X-Aegis-MMR-Leaf",
+                "X-Aegis-MMR-Leaf-Count",
+                "X-Aegis-MMR-Leaf-Index",
+                "X-Aegis-MMR-Proof",
+                "X-Aegis-MMR-Root",
+                "X-Aegis-Proof-Status",
+                "X-Aegis-Request-ID",
+                "X-Aegis-Session-ID",
+            ],
         )
 
     app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=cfg.max_request_body_bytes)
@@ -830,21 +910,23 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         phi_scrubbed: bool = False,
         scrub_method: str = "",
         endpoint: str = "chat.completions",
-    ) -> None:
+        tenant_id: str | None = None,
+    ) -> AuditNode:
         """Commit mandatory request-response evidence before any terminal response."""
         # PII redaction: replace tenant_id with a one-way hash prefix when
         # the operator has enabled it. The full session_id is retained in
         # memory for analysis; only the durable WAL record is pseudonymous.
+        audit_identity = tenant_id or sid
         if cfg.pii_redact_tenant_id:
-            audit_sid = hashlib.sha256(sid.encode()).hexdigest()[:16]
+            audit_sid = hashlib.sha256(audit_identity.encode()).hexdigest()[:16]
         else:
-            audit_sid = sid
+            audit_sid = audit_identity
 
         commit_start = time.perf_counter()
         try:
             # The ledger remains synchronous by design; to_thread preserves
             # event-loop availability while this durability gate is awaited.
-            await asyncio.to_thread(
+            node = await asyncio.to_thread(
                 state.ledger.commit_forensic,
                 state_id=rid,
                 request_bytes=raw_body,
@@ -866,6 +948,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             observability.AUDIT_COMMIT_DURATION.observe(commit_elapsed)
             observability.AUDIT_CHAIN_NODES.set(len(state.ledger.chain))
             observability.AUDIT_COMMIT_LAG.observe(time.perf_counter() - request_start)
+            return node
         except Exception as exc:
             observability.AUDIT_COMMIT_ERRORS.inc()
             logger.exception("mandatory durable evidence commit failed")
@@ -873,6 +956,26 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Durable evidence unavailable; governed request rejected",
             ) from exc
+
+    def _proof_headers(node: AuditNode) -> dict[str, str]:
+        if node.mmr_proof is None or not node.mmr_leaf_hash:
+            return {}
+        proof_json = json.dumps(
+            node.mmr_proof, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+        ).encode("utf-8")
+        proof_value = base64.urlsafe_b64encode(proof_json).decode("ascii").rstrip("=")
+        return {
+            "X-Aegis-MMR-Format": "aegis-mmr-inclusion-v1",
+            "X-Aegis-MMR-Leaf": node.mmr_leaf_hash,
+            "X-Aegis-MMR-Leaf-Index": str(node.mmr_leaf_index),
+            "X-Aegis-MMR-Leaf-Count": str(node.mmr_leaf_count),
+            "X-Aegis-MMR-Proof": proof_value,
+            "X-Aegis-MMR-Root": node.merkle_root,
+            "Link": (
+                f'</v1/audit/proofs/{node.state_id}>; rel="aegis-inclusion-proof"; '
+                'type="application/json"'
+            ),
+        }
 
     async def _durable_error_response(
         *,
@@ -884,9 +987,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         status_code: int,
         content: bytes,
         endpoint: str = "chat.completions",
+        tenant_id: str | None = None,
     ) -> Response:
         """Persist an error response before exposing it to the caller."""
-        await _commit_evidence(
+        node = await _commit_evidence(
             request_id,
             session_id,
             raw_body,
@@ -895,6 +999,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             request_start,
             response_complete=True,
             endpoint=endpoint,
+            tenant_id=tenant_id,
         )
         error_response = Response(
             content=content,
@@ -909,6 +1014,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 "X-Aegis-Analysis-Status": "not-applicable",
             }
         )
+        error_response.headers.update(_proof_headers(node))
         return error_response
 
     def _enqueue_analysis(
@@ -1056,7 +1162,13 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         if _pci_scrubbed:
             _scrub_method = (_scrub_method + "+pci_pan_mask").lstrip("+")
 
-        session_id = request.headers.get("x-session-id") or body.get("user") or str(uuid.uuid4())
+        session_id = (
+            request.headers.get("x-aegis-session-id")
+            or request.headers.get("x-session-id")
+            or body.get("user")
+            or str(uuid.uuid4())
+        )
+        tenant_id = request.headers.get("x-aegis-tenant-id") or session_id
         request_id = str(uuid.uuid4())
 
         # Multi-turn behavioral WAF check (Domain 5.1): accumulate per-session WAF
@@ -1105,95 +1217,80 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             body["top_logprobs"] = cfg.top_logprobs
 
         if body.get("stream", False):
-            buffered_response = bytearray()
-            accumulated: list[Any] = []
-            upstream_done = False
-            stream_limit_exceeded = False
             stream = state.forwarder.stream_sse("/v1/chat/completions", body)
-            try:
-                async with asyncio.timeout(cfg.max_stream_duration_seconds), aclosing(stream):
-                    async for raw, parsed in stream:
-                        if raw.strip() == b"data: [DONE]":
-                            upstream_done = True
-                            chunk = b"data: [DONE]\n\n"
-                        else:
-                            chunk = raw if raw.startswith(b"data:") else b"data: " + raw
-                            if not chunk.endswith(b"\n"):
-                                chunk += b"\n"
-                        if len(buffered_response) + len(chunk) > cfg.max_stream_response_bytes:
-                            observability.FORWARD_ERRORS.labels(stage="response_too_large").inc()
-                            stream_limit_exceeded = True
-                            break
-                        buffered_response.extend(chunk)
-                        if parsed:
-                            lp = parsed.get("choices", [{}])[0].get("logprobs")
-                            if lp and lp.get("content"):
-                                accumulated.extend(lp["content"])
-            except TimeoutError:
-                observability.FORWARD_ERRORS.labels(stage="stream_timeout").inc()
-                return await _durable_error_response(
-                    request_id=request_id,
-                    session_id=session_id,
-                    raw_body=raw_body,
-                    model=body.get("model", "unknown"),
-                    request_start=request_start,
-                    status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                    content=b'{"detail":"Upstream streaming response exceeded configured duration"}',
+
+            async def _commit_stream_terminal(summary: StreamEvidenceSummary) -> None:
+                audit_sid = (
+                    hashlib.sha256(tenant_id.encode()).hexdigest()[:16]
+                    if cfg.pii_redact_tenant_id
+                    else tenant_id
                 )
-            if stream_limit_exceeded:
-                return await _durable_error_response(
-                    request_id=request_id,
-                    session_id=session_id,
-                    raw_body=raw_body,
-                    model=body.get("model", "unknown"),
-                    request_start=request_start,
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    content=b'{"detail":"Upstream streaming response exceeded configured byte limit"}',
-                )
-            if not upstream_done:
-                terminal_chunk = b"data: [DONE]\n\n"
-                if len(buffered_response) + len(terminal_chunk) > cfg.max_stream_response_bytes:
-                    observability.FORWARD_ERRORS.labels(stage="response_too_large").inc()
-                    return await _durable_error_response(
-                        request_id=request_id,
-                        session_id=session_id,
-                        raw_body=raw_body,
+                commit_start = time.perf_counter()
+                try:
+                    await asyncio.to_thread(
+                        _commit_stream_evidence,
+                        state_id=request_id,
+                        request_bytes=raw_body,
+                        response_hash=summary.response_hash,
+                        response_size=summary.response_size,
+                        response_preview=summary.response_preview,
+                        terminal_outcome=summary.terminal_outcome,
+                        final_marker_included=summary.final_marker_included,
+                        token_count=summary.token_count,
+                        elapsed_seconds=summary.elapsed_seconds,
+                        redaction_hits=summary.redaction_hits,
+                        tenant_id=audit_sid,
                         model=body.get("model", "unknown"),
-                        request_start=request_start,
-                        status_code=status.HTTP_502_BAD_GATEWAY,
-                        content=b'{"detail":"Upstream streaming response exceeded configured byte limit"}',
+                        endpoint="chat.completions",
+                        phi_scrubbed=_phi_scrubbed or bool(summary.redaction_hits),
+                        scrub_method=(
+                            (_scrub_method + "+stream_window_regex").lstrip("+")
+                            if summary.redaction_hits
+                            else _scrub_method
+                        ),
+                        signer_name=session_id,
+                        signature_meaning="stream-terminal-evidence",
                     )
-                buffered_response.extend(terminal_chunk)
-            response_bytes = bytes(buffered_response)
-            await _commit_evidence(
-                request_id,
-                session_id,
-                raw_body,
-                response_bytes,
-                body.get("model", "unknown"),
-                request_start,
-                response_complete=upstream_done,
-                phi_scrubbed=_phi_scrubbed,
-                scrub_method=_scrub_method,
-            )
-            queued = _enqueue_analysis(
-                request_id,
-                session_id,
-                body.get("model", "unknown"),
-                accumulated,
-                {"temperature": body.get("temperature")},
-                raw_body,
-                response_bytes,
-                _phi_scrubbed,
-                _scrub_method,
+                    observability.STREAM_DURATION.labels(
+                        provider="openai", outcome=summary.terminal_outcome
+                    ).observe(summary.elapsed_seconds)
+                    observability.STREAM_TOKENS.labels(provider="openai").inc(summary.token_count)
+                    for entity, count in summary.redaction_hits.items():
+                        observability.STREAM_REDACTIONS.labels(
+                            provider="openai", entity=entity
+                        ).inc(count)
+                    observability.AUDIT_COMMIT_DURATION.observe(time.perf_counter() - commit_start)
+                    observability.AUDIT_CHAIN_NODES.set(len(state.ledger.chain))
+                    observability.AUDIT_COMMIT_LAG.observe(time.perf_counter() - request_start)
+                except Exception:
+                    observability.AUDIT_COMMIT_ERRORS.inc()
+                    raise
+
+            bounded_stream = BoundedStreamProxy(
+                stream,
+                terminal_commit=_commit_stream_terminal,
+                max_response_bytes=cfg.max_stream_response_bytes,
+                max_duration_seconds=cfg.max_stream_duration_seconds,
+                max_event_bytes=cfg.max_stream_event_bytes,
+                queue_max_items=cfg.stream_queue_max_items,
+                queue_max_bytes=cfg.stream_queue_max_bytes,
+                deidentifier_window_chars=cfg.stream_deidentifier_window_chars,
+                enable_phi=state._phi_scrubber is not None,
+                enable_pci=state._pci_scrubber is not None,
             )
             return StreamingResponse(
-                iter((response_bytes,)),
+                bounded_stream,
                 media_type="text/event-stream",
                 headers={
                     "X-Aegis-Request-ID": request_id,
-                    "X-Aegis-Evidence-Status": "durable",
-                    "X-Aegis-Analysis-Status": "queued" if queued else "not-sampled",
+                    "X-Aegis-Session-ID": session_id,
+                    "X-Aegis-Evidence-Status": "pending-terminal",
+                    "X-Aegis-Analysis-Status": "not-sampled",
+                    "X-Aegis-Proof-Status": "pending-terminal",
+                    "Link": (
+                        f"</v1/audit/proofs/{request_id}>; "
+                        'rel="aegis-inclusion-proof"; type="application/json"'
+                    ),
                 },
             )
 
@@ -1254,7 +1351,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             if (state._phi_scrubber or state._pci_scrubber)
             else upstream.content
         )
-        await _commit_evidence(
+        evidence_node = await _commit_evidence(
             request_id,
             session_id,
             raw_body,
@@ -1264,6 +1361,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             response_complete=True,
             phi_scrubbed=_phi_scrubbed,
             scrub_method=_scrub_method,
+            tenant_id=tenant_id,
         )
         queued = _enqueue_analysis(
             request_id,
@@ -1296,9 +1394,203 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 "X-Aegis-Analysis-Status": "queued" if queued else "not-sampled",
             }
         )
+        resp.headers.update(_proof_headers(evidence_node))
         if trace_id:
             resp.headers["X-Trace-ID"] = trace_id
         return resp
+
+    @app.post("/v1/messages")
+    async def anthropic_messages(
+        request: Request,
+        _key: Annotated[str, Depends(validate_proxy_auth)],
+    ) -> Response:
+        request_start = time.perf_counter()
+        raw_body = await request.body()
+        try:
+            parsed = canonical_normalize(json.loads(raw_body))
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=400, detail="Invalid JSON") from exc
+        if not isinstance(parsed, dict):
+            raise HTTPException(status_code=400, detail="Anthropic request must be an object")
+        body: dict[str, Any] = parsed
+        if not isinstance(body.get("model"), str) or not isinstance(body.get("messages"), list):
+            raise HTTPException(status_code=422, detail="model and messages are required")
+        max_tokens = body.get("max_tokens")
+        if not isinstance(max_tokens, int) or isinstance(max_tokens, bool) or max_tokens < 1:
+            raise HTTPException(status_code=422, detail="max_tokens must be a positive integer")
+
+        waf_result = state.waf.inspect_payload(body)
+        if not waf_result.allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Payload rejected by WAF: {waf_result.reason}",
+            )
+        _apply_request_entropy_guard(request, body, state)
+        body, request_scrubbed, scrub_method = _scrub_anthropic_payload(body, state)
+
+        session_id = (
+            request.headers.get("x-aegis-session-id")
+            or request.headers.get("x-session-id")
+            or str(uuid.uuid4())
+        )
+        tenant_id = request.headers.get("x-aegis-tenant-id") or session_id
+        request_id = str(uuid.uuid4())
+        try:
+            allowed_by_rate = await state.ratelimiter.check_limit(session_id)
+        except RateLimitBackendUnavailable as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Rate-limit backend unavailable; request rejected",
+            ) from exc
+        if not allowed_by_rate:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Rate limit exceeded for this session",
+            )
+        if state.forwarder.provider.name != "anthropic":
+            return await _durable_error_response(
+                request_id=request_id,
+                session_id=session_id,
+                raw_body=raw_body,
+                model=body["model"],
+                request_start=request_start,
+                status_code=status.HTTP_409_CONFLICT,
+                content=b'{"detail":"Native Anthropic ingress requires AEGIS_PROVIDER=anthropic"}',
+                endpoint="anthropic.messages",
+                tenant_id=tenant_id,
+            )
+
+        if body.get("stream") is True:
+            upstream_stream = state.forwarder.stream_native_anthropic(body)
+            terminal_marker = b'event: message_stop\ndata: {"type":"message_stop"}\n\n'
+
+            async def _commit_anthropic_terminal(summary: StreamEvidenceSummary) -> None:
+                audit_tenant = (
+                    hashlib.sha256(tenant_id.encode()).hexdigest()[:16]
+                    if cfg.pii_redact_tenant_id
+                    else tenant_id
+                )
+                await asyncio.to_thread(
+                    _commit_stream_evidence,
+                    state_id=request_id,
+                    request_bytes=raw_body,
+                    response_hash=summary.response_hash,
+                    response_size=summary.response_size,
+                    response_preview=summary.response_preview,
+                    terminal_outcome=summary.terminal_outcome,
+                    final_marker_included=summary.final_marker_included,
+                    token_count=summary.token_count,
+                    elapsed_seconds=summary.elapsed_seconds,
+                    redaction_hits=summary.redaction_hits,
+                    tenant_id=audit_tenant,
+                    model=body["model"],
+                    endpoint="anthropic.messages",
+                    phi_scrubbed=request_scrubbed or bool(summary.redaction_hits),
+                    scrub_method=scrub_method,
+                    signer_name=session_id,
+                    signature_meaning="stream-terminal-evidence",
+                )
+                observability.STREAM_DURATION.labels(
+                    provider="anthropic", outcome=summary.terminal_outcome
+                ).observe(summary.elapsed_seconds)
+                observability.STREAM_TOKENS.labels(provider="anthropic").inc(summary.token_count)
+                for entity, count in summary.redaction_hits.items():
+                    observability.STREAM_REDACTIONS.labels(provider="anthropic", entity=entity).inc(
+                        count
+                    )
+
+            bounded = BoundedStreamProxy(
+                upstream_stream,
+                terminal_commit=_commit_anthropic_terminal,
+                max_response_bytes=cfg.max_stream_response_bytes,
+                max_duration_seconds=cfg.max_stream_duration_seconds,
+                max_event_bytes=cfg.max_stream_event_bytes,
+                queue_max_items=cfg.stream_queue_max_items,
+                queue_max_bytes=cfg.stream_queue_max_bytes,
+                deidentifier_window_chars=cfg.stream_deidentifier_window_chars,
+                enable_phi=state._phi_scrubber is not None,
+                enable_pci=state._pci_scrubber is not None,
+                protocol="anthropic",
+                terminal_predicate=lambda _raw, event: (
+                    isinstance(event, dict) and event.get("type") == "message_stop"
+                ),
+                terminal_marker=terminal_marker,
+            )
+            return StreamingResponse(
+                bounded,
+                media_type="text/event-stream",
+                headers={
+                    "X-Aegis-Request-ID": request_id,
+                    "X-Aegis-Session-ID": session_id,
+                    "X-Aegis-Evidence-Status": "pending-terminal",
+                    "X-Aegis-Proof-Status": "pending-terminal",
+                    "Link": (
+                        f"</v1/audit/proofs/{request_id}>; "
+                        'rel="aegis-inclusion-proof"; type="application/json"'
+                    ),
+                },
+            )
+
+        try:
+            upstream = await state.forwarder.forward_native_anthropic(body)
+        except CircuitOpenError:
+            return await _durable_error_response(
+                request_id=request_id,
+                session_id=session_id,
+                raw_body=raw_body,
+                model=body["model"],
+                request_start=request_start,
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content=b'{"type":"error","error":{"type":"overloaded_error","message":"Upstream temporarily unavailable"}}',
+                endpoint="anthropic.messages",
+                tenant_id=tenant_id,
+            )
+        except Exception:
+            logger.exception("native Anthropic forwarding failed")
+            return await _durable_error_response(
+                request_id=request_id,
+                session_id=session_id,
+                raw_body=raw_body,
+                model=body["model"],
+                request_start=request_start,
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content=b'{"type":"error","error":{"type":"api_error","message":"Upstream forwarding failed"}}',
+                endpoint="anthropic.messages",
+                tenant_id=tenant_id,
+            )
+        response_json = upstream.json()
+        response_json, response_scrubbed, response_scrub_method = _scrub_anthropic_payload(
+            response_json, state
+        )
+        response_content = json.dumps(
+            response_json, separators=(",", ":"), ensure_ascii=True
+        ).encode("utf-8")
+        evidence_node = await _commit_evidence(
+            request_id,
+            session_id,
+            raw_body,
+            response_content,
+            body["model"],
+            request_start,
+            response_complete=True,
+            phi_scrubbed=request_scrubbed or response_scrubbed,
+            scrub_method="+".join(part for part in (scrub_method, response_scrub_method) if part),
+            endpoint="anthropic.messages",
+            tenant_id=tenant_id,
+        )
+        response = Response(
+            content=response_content,
+            status_code=upstream.status_code,
+            media_type="application/json",
+            headers={
+                "X-Aegis-Request-ID": request_id,
+                "X-Aegis-Session-ID": session_id,
+                "X-Aegis-Evidence-Status": "durable",
+                "X-Aegis-Analysis-Status": "not-sampled",
+            },
+        )
+        response.headers.update(_proof_headers(evidence_node))
+        return response
 
     @app.post("/v1/completions")
     async def completions(
@@ -1325,7 +1617,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Proxy not ready: forwarder has not been initialized.",
             )
-        session_id = request.headers.get("x-session-id", str(uuid.uuid4()))
+        session_id = (
+            request.headers.get("x-aegis-session-id")
+            or request.headers.get("x-session-id")
+            or str(uuid.uuid4())
+        )
+        tenant_id = request.headers.get("x-aegis-tenant-id") or session_id
         request_id = str(uuid.uuid4())
 
         session_waf = state.waf_session_tracker.record_and_check(
@@ -1395,7 +1692,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 endpoint="completions",
             )
 
-        await _commit_evidence(
+        evidence_node = await _commit_evidence(
             request_id,
             session_id,
             raw_body,
@@ -1404,6 +1701,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             completions_start,
             response_complete=True,
             endpoint="completions",
+            tenant_id=tenant_id,
         )
         queued = _enqueue_analysis(
             request_id,
@@ -1419,8 +1717,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         resp = Response(content=upstream.content, status_code=200)
         resp.headers["X-Aegis-Request-ID"] = request_id
+        resp.headers["X-Aegis-Session-ID"] = session_id
         resp.headers["X-Aegis-Evidence-Status"] = "durable"
         resp.headers["X-Aegis-Analysis-Status"] = "queued" if queued else "not-sampled"
+        resp.headers.update(_proof_headers(evidence_node))
         return resp
 
     return app

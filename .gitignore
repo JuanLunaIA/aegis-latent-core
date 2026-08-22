@@ -12,6 +12,12 @@ __pycache__/
 .coverage.*
 htmlcov/
 
+# Node.js and Next.js generated state
+node_modules/
+.next/
+*.tsbuildinfo
+coverage/
+
 # Virtual environments and local package builds
 .venv/
 .wheel-smoke/
@@ -40,6 +46,7 @@ aegis_rust_v2/target/
 *.sqlite3
 *.wal
 *.wal.jsonl
+*.rwal
 /tmp/
 
 # IDE and OS files

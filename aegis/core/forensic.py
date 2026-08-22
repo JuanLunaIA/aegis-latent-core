@@ -74,6 +74,42 @@ def build_merkle_leaf(
     return json.dumps(envelope, sort_keys=True, separators=(",", ":")).encode()
 
 
+def build_stream_merkle_leaf(
+    *,
+    state_id: str,
+    request_hash: str,
+    response_hash: str,
+    request_size: int,
+    response_size: int,
+    request_preview: bytes,
+    response_preview: bytes,
+    model: str,
+    endpoint: str,
+    terminal_outcome: str,
+    final_marker_included: bool,
+    token_count: int,
+    redaction_hits: dict[str, int],
+) -> bytes:
+    """Canonical version-2 MMR leaf for an incrementally hashed stream."""
+    envelope = {
+        "endpoint": endpoint,
+        "final_marker_included": final_marker_included,
+        "leaf_version": 2,
+        "model": model,
+        "redaction_hits": dict(sorted(redaction_hits.items())),
+        "request_hash": request_hash,
+        "request_preview_hex": request_preview.hex(),
+        "request_size": request_size,
+        "response_hash": response_hash,
+        "response_preview_hex": response_preview.hex(),
+        "response_size": response_size,
+        "state_id": state_id,
+        "terminal_outcome": terminal_outcome,
+        "token_count": token_count,
+    }
+    return json.dumps(envelope, sort_keys=True, separators=(",", ":")).encode()
+
+
 def extract_usage(resp_json: dict[str, Any] | None) -> dict[str, int]:
     if not resp_json:
         return {}

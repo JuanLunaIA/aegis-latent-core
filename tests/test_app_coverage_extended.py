@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import sys
 import threading
@@ -391,6 +392,77 @@ def test_pii_redact_tenant_id_hashes_session(tmp_path):
         pass
 
 
+def test_chat_returns_portable_mmr_proof_and_audit_lookup(tmp_path):
+    fwd_inst = _mock_forwarder()
+    fwd_inst.forward_json = AsyncMock(return_value=_mock_response())
+
+    with patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst):
+        app = create_app(_make_settings(tmp_path))
+        with TestClient(app) as client:
+            response = client.post(
+                "/v1/chat/completions",
+                headers={"Authorization": "Bearer sk-valid"},
+                json={"model": "gpt-4", "messages": [{"role": "user", "content": "hi"}]},
+            )
+            request_id = response.headers["X-Aegis-Request-ID"]
+            proof_padding = "=" * (-len(response.headers["X-Aegis-MMR-Proof"]) % 4)
+            proof = json.loads(
+                base64.urlsafe_b64decode(response.headers["X-Aegis-MMR-Proof"] + proof_padding)
+            )
+            lookup = client.get(
+                f"/v1/audit/proofs/{request_id}",
+                headers={"Authorization": "Bearer sk-valid"},
+            )
+
+    assert response.status_code == 200
+    assert response.headers["X-Aegis-MMR-Format"] == "aegis-mmr-inclusion-v1"
+    assert proof["root"] == response.headers["X-Aegis-MMR-Root"]
+    assert proof["leaf_index"] == 0
+    assert lookup.status_code == 200
+    assert lookup.json()["proof"] == proof
+    assert lookup.json()["leaf_hash"] == response.headers["X-Aegis-MMR-Leaf"]
+
+
+def test_native_anthropic_ingress_preserves_shape_tenant_and_proof(tmp_path):
+    fwd_inst = _mock_forwarder()
+    fwd_inst.provider.name = "anthropic"
+    native_response = {
+        "id": "msg-test",
+        "type": "message",
+        "role": "assistant",
+        "model": "claude-test",
+        "content": [{"type": "text", "text": "Hello"}],
+        "stop_reason": "end_turn",
+        "stop_sequence": None,
+        "usage": {"input_tokens": 1, "output_tokens": 1},
+    }
+    fwd_inst.forward_native_anthropic = AsyncMock(return_value=_mock_response(data=native_response))
+
+    with patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst):
+        app = create_app(_make_settings(tmp_path, provider="anthropic"))
+        with TestClient(app) as client:
+            response = client.post(
+                "/v1/messages",
+                headers={
+                    "Authorization": "Bearer sk-valid",
+                    "X-Aegis-Tenant-ID": "tenant-native",
+                    "X-Aegis-Session-ID": "session-native",
+                },
+                json={
+                    "model": "claude-test",
+                    "max_tokens": 64,
+                    "messages": [{"role": "user", "content": "Hello"}],
+                },
+            )
+
+    assert response.status_code == 200
+    assert response.json() == native_response
+    assert response.headers["X-Aegis-Session-ID"] == "session-native"
+    assert response.headers["X-Aegis-MMR-Format"] == "aegis-mmr-inclusion-v1"
+    assert app.state.aegis.ledger.chain[-1].tenant_id == "tenant-native"
+    assert app.state.aegis.ledger.chain[-1].endpoint == "anthropic.messages"
+
+
 # ── provider_name exception silenced (lines 558-559) ─────────────────────────
 
 
@@ -760,7 +832,9 @@ def test_chat_streaming_allows_response_within_byte_limit(tmp_path):
 
     assert resp.status_code == 200
     assert len(resp.content) <= 1_024
-    assert resp.headers["X-Aegis-Evidence-Status"] == "durable"
+    assert resp.headers["X-Aegis-Evidence-Status"] == "pending-terminal"
+    assert resp.content.endswith(b"data: [DONE]\n\n")
+    assert app.state.aegis.ledger.chain[-1].sampling_params["terminal_outcome"] == "complete"
 
 
 def test_chat_streaming_rejects_response_over_byte_limit_and_closes_upstream(tmp_path):
@@ -787,10 +861,11 @@ def test_chat_streaming_rejects_response_over_byte_limit_and_closes_upstream(tmp
                 json={"model": "gpt-4", "messages": [], "stream": True},
             )
 
-    assert resp.status_code == 502
-    assert resp.json() == {"detail": "Upstream streaming response exceeded configured byte limit"}
-    assert resp.headers["X-Aegis-Evidence-Status"] == "durable"
+    assert resp.status_code == 200
+    assert b"data: [DONE]" not in resp.content
+    assert resp.headers["X-Aegis-Evidence-Status"] == "pending-terminal"
     assert stream_state == {"closed": True, "after_limit": False}
+    assert app.state.aegis.ledger.chain[-1].sampling_params["terminal_outcome"] == "byte_limit"
 
 
 def test_chat_streaming_rejects_slow_drip_after_total_deadline(tmp_path):
@@ -817,10 +892,12 @@ def test_chat_streaming_rejects_slow_drip_after_total_deadline(tmp_path):
                 json={"model": "gpt-4", "messages": [], "stream": True},
             )
 
-    assert resp.status_code == 504
-    assert resp.json() == {"detail": "Upstream streaming response exceeded configured duration"}
-    assert resp.headers["X-Aegis-Evidence-Status"] == "durable"
+    assert resp.status_code == 200
+    assert b"first" in resp.content
+    assert b"data: [DONE]" not in resp.content
+    assert resp.headers["X-Aegis-Evidence-Status"] == "pending-terminal"
     assert stream_state["closed"] is True
+    assert app.state.aegis.ledger.chain[-1].sampling_params["terminal_outcome"] == "timeout"
 
 
 # ── mTLS init exception + fallback (lines 423-432) ───────────────────────────

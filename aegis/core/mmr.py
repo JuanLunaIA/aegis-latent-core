@@ -11,9 +11,18 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+def _is_sha256_hex(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
 
 
 @dataclass
@@ -26,15 +35,72 @@ class MMRNode:
     parent: int | None = None
 
 
+@dataclass(frozen=True)
+class MMRProofStep:
+    sibling_hash: str
+    direction: str
+
+
+@dataclass(frozen=True)
+class MMRPeak:
+    height: int
+    hash: str
+
+
+@dataclass(frozen=True)
+class MMRInclusionProofV1:
+    """Self-contained proof for the established ASCII-hex MMR algorithm."""
+
+    version: str
+    algorithm: str
+    leaf_index: int
+    leaf_count: int
+    peak_index: int
+    path: tuple[MMRProofStep, ...]
+    peaks: tuple[MMRPeak, ...]
+    root: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> MMRInclusionProofV1:
+        required = {
+            "version",
+            "algorithm",
+            "leaf_index",
+            "leaf_count",
+            "peak_index",
+            "path",
+            "peaks",
+            "root",
+        }
+        if set(value) != required:
+            raise ValueError("MMR proof fields do not match the v1 schema")
+        path = tuple(MMRProofStep(**item) for item in value["path"])
+        peaks = tuple(MMRPeak(**item) for item in value["peaks"])
+        return cls(
+            version=value["version"],
+            algorithm=value["algorithm"],
+            leaf_index=value["leaf_index"],
+            leaf_count=value["leaf_count"],
+            peak_index=value["peak_index"],
+            path=path,
+            peaks=peaks,
+            root=value["root"],
+        )
+
+
 class MerkleMountainRange:
     """
     A production-hardened Merkle Mountain Range (MMR) implementation.
     Provides O(log N) inclusion proofs and O(log N) consistency proofs.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.nodes: list[MMRNode] = []
         self.peaks: list[MMRNode] = []
+        self._leaf_node_indices: list[int] = []
         self._leaf_count = 0
 
     def add_leaf(self, data: bytes) -> str:
@@ -42,8 +108,15 @@ class MerkleMountainRange:
         Appends a new leaf and performs peak merging to maintain the MMR property.
         """
         leaf_hash = hashlib.sha256(data).hexdigest()
+        return self.add_leaf_hash(leaf_hash)
+
+    def add_leaf_hash(self, leaf_hash: str) -> str:
+        """Append a validated prehashed leaf for deterministic WAL replay."""
+        if not _is_sha256_hex(leaf_hash):
+            raise ValueError("leaf_hash must be a lowercase SHA-256 hex digest")
         new_node = MMRNode(hash=leaf_hash, height=0, index=len(self.nodes))
         self.nodes.append(new_node)
+        self._leaf_node_indices.append(new_node.index)
         self._leaf_count += 1
 
         current_node = new_node
@@ -89,6 +162,10 @@ class MerkleMountainRange:
         combined = "".join([p.hash for p in sorted_peaks]).encode()
         return hashlib.sha256(combined).hexdigest()
 
+    def get_leaf_count(self) -> int:
+        """Return the number of logical leaves appended to this MMR."""
+        return self._leaf_count
+
     def get_inclusion_proof(self, leaf_index: int) -> list[tuple[str, str]]:
         """
         Generates a Merkle inclusion proof for a leaf at the given index.
@@ -98,7 +175,7 @@ class MerkleMountainRange:
             raise IndexError("Leaf index out of range")
 
         proof: list[tuple[str, str]] = []
-        current_idx = leaf_index
+        current_idx = self._leaf_node_indices[leaf_index]
 
         # Traverse up from the leaf to the highest peak it belongs to
         while True:
@@ -120,18 +197,120 @@ class MerkleMountainRange:
 
         return proof
 
+    def get_portable_inclusion_proof(self, leaf_index: int) -> MMRInclusionProofV1:
+        """Return a proof verifiable without access to this MMR instance."""
+        if leaf_index < 0 or leaf_index >= self._leaf_count:
+            raise IndexError("Leaf index out of range")
+        path = tuple(
+            MMRProofStep(sibling_hash=sibling_hash, direction=direction)
+            for sibling_hash, direction in self.get_inclusion_proof(leaf_index)
+        )
+        node = self.nodes[self._leaf_node_indices[leaf_index]]
+        while node.parent is not None:
+            node = self.nodes[node.parent]
+        canonical_peaks = sorted(self.peaks, key=lambda peak: peak.height, reverse=True)
+        peak_index = next(
+            index for index, peak in enumerate(canonical_peaks) if peak.index == node.index
+        )
+        peaks = tuple(MMRPeak(height=peak.height, hash=peak.hash) for peak in canonical_peaks)
+        return MMRInclusionProofV1(
+            version="aegis-mmr-inclusion-v1",
+            algorithm="sha256-asciihex",
+            leaf_index=leaf_index,
+            leaf_count=self._leaf_count,
+            peak_index=peak_index,
+            path=path,
+            peaks=peaks,
+            root=self.get_root_hash(),
+        )
+
+    @staticmethod
+    def verify_portable_inclusion(
+        leaf_data: bytes,
+        proof: MMRInclusionProofV1,
+        trusted_root: str,
+    ) -> bool:
+        """Strictly verify a self-contained v1 inclusion proof."""
+        return MerkleMountainRange.verify_portable_inclusion_hash(
+            hashlib.sha256(leaf_data).hexdigest(), proof, trusted_root
+        )
+
+    @staticmethod
+    def verify_portable_inclusion_hash(
+        leaf_hash: str,
+        proof: MMRInclusionProofV1,
+        trusted_root: str,
+    ) -> bool:
+        """Strictly verify a v1 proof using a non-sensitive leaf digest."""
+        if not _is_sha256_hex(leaf_hash):
+            return False
+        if proof.version != "aegis-mmr-inclusion-v1":
+            return False
+        if proof.algorithm != "sha256-asciihex":
+            return False
+        if proof.leaf_count < 1 or not (0 <= proof.leaf_index < proof.leaf_count):
+            return False
+        if not _is_sha256_hex(trusted_root) or proof.root != trusted_root:
+            return False
+        if len(proof.peaks) != proof.leaf_count.bit_count():
+            return False
+        if not (0 <= proof.peak_index < len(proof.peaks)):
+            return False
+        expected_heights = [
+            bit
+            for bit in range(proof.leaf_count.bit_length() - 1, -1, -1)
+            if proof.leaf_count & (1 << bit)
+        ]
+        if [peak.height for peak in proof.peaks] != expected_heights:
+            return False
+        if any(not _is_sha256_hex(peak.hash) for peak in proof.peaks):
+            return False
+
+        mountain_start = sum(1 << height for height in expected_heights[: proof.peak_index])
+        mountain_height = expected_heights[proof.peak_index]
+        mountain_size = 1 << mountain_height
+        if not mountain_start <= proof.leaf_index < mountain_start + mountain_size:
+            return False
+        local_index = proof.leaf_index - mountain_start
+        if len(proof.path) != mountain_height:
+            return False
+
+        current_hash = leaf_hash
+        for level, step in enumerate(proof.path):
+            if not _is_sha256_hex(step.sibling_hash) or step.direction not in {"L", "R"}:
+                return False
+            expected_direction = "R" if ((local_index >> level) & 1) == 0 else "L"
+            if step.direction != expected_direction:
+                return False
+            combined = (
+                current_hash + step.sibling_hash
+                if step.direction == "R"
+                else step.sibling_hash + current_hash
+            )
+            current_hash = hashlib.sha256(combined.encode("ascii")).hexdigest()
+        if current_hash != proof.peaks[proof.peak_index].hash:
+            return False
+        actual_root = hashlib.sha256(
+            "".join(peak.hash for peak in proof.peaks).encode("ascii")
+        ).hexdigest()
+        return actual_root == trusted_root
+
     def verify_inclusion(
         self, leaf_data: bytes, leaf_index: int, proof: list[tuple[str, str]], root: str
     ) -> bool:
         """
         Verifies that leaf_data is part of the MMR root.
         """
+        if leaf_index < 0 or leaf_index >= self._leaf_count or not _is_sha256_hex(root):
+            return False
         current_hash = hashlib.sha256(leaf_data).hexdigest()
 
         for sibling_hash, direction in proof:
+            if not _is_sha256_hex(sibling_hash) or direction not in {"L", "R"}:
+                return False
             if direction == "R":
                 combined = (current_hash + sibling_hash).encode()
-            else:
+            elif direction == "L":
                 combined = (sibling_hash + current_hash).encode()
             current_hash = hashlib.sha256(combined).hexdigest()
 
@@ -286,7 +465,7 @@ try:
             while keeping a Python replica for proofs and verification.
             """
 
-            def __init__(self):
+            def __init__(self) -> None:
                 self._rust = aegis_rust.MmrAccumulator()
                 self._py = MerkleMountainRange()
 
@@ -305,10 +484,19 @@ try:
             def get_inclusion_proof(self, leaf_index: int):
                 return self._py.get_inclusion_proof(leaf_index)
 
+            def get_portable_inclusion_proof(self, leaf_index: int):
+                return self._py.get_portable_inclusion_proof(leaf_index)
+
             def verify_inclusion(
                 self, leaf_data: bytes, leaf_index: int, proof: list[tuple[str, str]], root: str
             ) -> bool:
                 return self._py.verify_inclusion(leaf_data, leaf_index, proof, root)
+
+            @staticmethod
+            def verify_portable_inclusion(
+                leaf_data: bytes, proof: MMRInclusionProofV1, trusted_root: str
+            ) -> bool:
+                return MerkleMountainRange.verify_portable_inclusion(leaf_data, proof, trusted_root)
 
             def get_consistency_proof(self, old_root: str, old_count: int):
                 return self._py.get_consistency_proof(old_root, old_count)

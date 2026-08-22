@@ -44,6 +44,7 @@ dependencies = [
     "redis>=5.0.0",
     "requests>=2.31.0",
     "cryptography>=50.0.0,<51.0.0",
+    "cbor2>=5.9.0",
     # Rate-limiter TTL eviction (MEDIUM-01 fix). Soft dependency — graceful
     # fallback to plain dict with a one-time warning when not installed.
     "cachetools>=5.3.0",
@@ -94,7 +95,6 @@ dev = [
     "mypy>=1.10",
     "bandit>=1.7",
     "pip-audit>=2.10,<3",
-    "cbor2>=5.9.0",
     "aiosqlite>=0.20.0",
     "cachetools>=5.3.0",
     "ldap3>=2.9.1",
