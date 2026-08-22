@@ -5,8 +5,8 @@
 
 from __future__ import annotations
 
-import time
 import io
+import time
 import zipfile
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -16,8 +16,8 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from aegis.proxy.audit_api import build_audit_router
 from aegis.core.crypto_audit import CryptographicAuditLedger
+from aegis.proxy.audit_api import build_audit_router
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
