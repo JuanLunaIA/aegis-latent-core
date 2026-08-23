@@ -1,11 +1,16 @@
-# Product Brief — Aegis Latent Core v3.1.0
+# Product Brief — Aegis Latent Core
 
 This brief is for executive sponsors, economic buyers, platform leaders and security reviewers evaluating Aegis. It defines the product category, buyer problem, evidence wedge, initial ICP, proof sequence and non-goals. It is not a certification, legal opinion, production SLO, or binding commercial offer.
 
-**Last verified:** 2026-08-18 UTC
-**Release baseline:** `v3.1.0`
+**Last verified:** 2026-08-22 UTC
+**Release baseline:** published `v3.1.0`
+**Current-main baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
 **Positioning owner:** Product and release owner
 **Primary claim control:** [`docs/CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md)
+
+## Baseline note
+
+The published release is **v3.1.0**. Current main after PR #99 adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded forensic ZIP export, and an auxiliary `RustWal` stream segment. These current-main capabilities are not attributed to the v3.1.0 tag.
 
 ## Category
 
@@ -15,7 +20,7 @@ Aegis Latent Core is an **OpenAI-compatible AI Governance and Evidence Gateway**
 
 AI platform teams need to move across model providers while security, privacy, compliance and legal teams need a stable control boundary. Provider dashboards and ordinary access logs vary by vendor and do not necessarily provide a single, replayable evidence contract for request hashes, response hashes, policy outcomes, signing metadata and durability status.
 
-Aegis places a controlled gateway in that boundary. It authenticates the caller, enforces request and egress controls, evaluates WAF/session policy, applies distributed rate limiting, forwards to the selected provider and commits a signed evidence record before the governed response is returned.
+Aegis places a controlled gateway in that boundary. It authenticates the caller, enforces request and egress controls, evaluates WAF/session policy, applies distributed rate limiting and forwards to the selected provider. For non-streaming calls, it commits signed evidence before returning the governed response and can return durable MMR proof headers. For SSE, the initial status is `pending-terminal`; a bounded relay commits one signed terminal summary before the protocol terminal marker, with proof retrieval after termination.
 
 ## Initial ICP
 
@@ -27,15 +32,18 @@ The product is evaluated through concrete artifacts rather than broad category l
 
 | Capability | Buyer outcome | Evidence boundary |
 |---|---|---|
-| OpenAI-compatible gateway | Applications can adopt a stable internal control point without rewriting every provider integration. | API contract and integration tests; provider semantics still require validation. |
+| Provider ingress and SDK integration | Current main supports the OpenAI-compatible surface and native Anthropic `POST /v1/messages`. Python provides drop-in official-client subclasses; TypeScript uses provider-native wrappers with official SDK peer dependencies. | Supported routes and integration tests; provider semantics still require validation. These additions are not attributed to v3.1.0. |
 | Durable signed evidence | Security and compliance teams can replay a record of the governed lifecycle under explicit storage and signer controls. | WAL commit, hashes, signature metadata, key ID and integrity verification. |
 | WAF and request controls | Application-layer prompt and structural policy checks occur before upstream forwarding. | Pinned corpus and application boundary; ingress parser remains separate. |
 | Provider-independent policy | Egress, rate-limit, session and evidence policies do not depend on one provider dashboard. | Gateway configuration and deployment tests. |
+| Portable proof and forensic review | Current main provides MMR inclusion proofs, a read-only dashboard, and bounded ZIP export with JCS, DAG-CBOR, CIDv1, PDF and `VERIFY.sh`. | Proof roots require an independent trust anchor; exports are technical evidence, not legal-admissibility determinations. |
 | Private deployment | Customers can keep provider traffic and evidence inside their own infrastructure. | Customer topology, network, retention, backup and key-custody evidence. |
 
 ## Measured boundaries
 
-The v3.1.0 release retained four market-hardening artifacts. The backpressure run preserved 10,000 durable records under a 2 ms injected `fsync` delay but recorded p99 commit latency of 1,189.89 ms. The WAF corpus contains 15 malicious and 8 benign cases. The key-rotation exercise covers three independent local signer instances. The ML-DSA timing experiment passed non-detection for `sign` but returned `p=0.0` for `verify`; no constant-time claim is approved.
+The published v3.1.0 release retained four market-hardening artifacts. The backpressure run preserved 10,000 durable records under a 2 ms injected `fsync` delay but recorded p99 commit latency of 1,189.89 ms. The WAF corpus contains 15 malicious and 8 benign cases. The key-rotation exercise covers three independent local signer instances. The ML-DSA timing experiment passed non-detection for `sign` but returned `p=0.0` for `verify`; no constant-time claim is approved.
+
+Current main separately retains a bounded in-process SSE benchmark of 7 rounds × 1,000 deterministic events. It excludes network, provider and durable-WAL latency and is not capacity or SLO evidence. The auxiliary native `RustWal` segment is likewise not the replay authority; the JSONL ledger remains authoritative.
 
 ## Proof sequence
 

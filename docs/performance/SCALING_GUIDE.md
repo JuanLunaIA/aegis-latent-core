@@ -2,8 +2,9 @@
 
 This guide explains how to scale Aegis without confusing horizontal fan-out, storage capacity, queueing and provider behavior. It is for platform engineers and SREs. The guide provides sizing hypotheses and telemetry requirements; it does not publish a production capacity number or SLO.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
+**Current main verified:** `45d95188d40792639fdd654369765a7233bef09a` (post-release; not the `v3.1.0` tag)
 **Audience:** Platform engineering and SRE
 **Primary runtime contract:** [`DEPLOYMENT_GUIDE.md`](../../DEPLOYMENT_GUIDE.md)
 
@@ -30,6 +31,8 @@ The WAL is the durability backbone. Monitor active bytes, rotated segments, writ
 
 The retained backpressure run offered 10,000 requests at 10,000 RPS with a 2 ms injected `fsync` delay. It preserved 10,000 durable records with zero failures, missing IDs or duplicates, but observed p99 commit latency of 1,189.89 ms. The mechanism preserved evidence while queueing increased tail latency. This is not a capacity claim.
 
+For SSE, memory is not proportional to retaining the complete response. Each `BoundedStreamProxy` has an item-and-byte-bounded queue, finite de-identification holdback and bounded preview while SHA-256 is updated incrementally over emitted bytes. Size aggregate stream memory from concurrent streams and `stream_queue_max_bytes`, `stream_queue_max_items`, `max_stream_event_bytes` and `stream_deidentifier_window_chars`; also include Python object overhead and downstream socket buffering. A limit breach closes upstream and produces a terminal failure outcome rather than growing without bound.
+
 ## Resource dimensions
 
 | Dimension | Primary bottleneck | Telemetry | Scaling response |
@@ -39,7 +42,7 @@ The retained backpressure run offered 10,000 requests at 10,000 RPS with a 2 ms 
 | Upstream | Provider latency and errors | Upstream latency, status, circuit state | Provider capacity or routing policy |
 | Redis limiter | Connection/command latency and partitions | Redis latency, failures, pool use | HA Redis, pool tuning and fail-closed testing |
 | Enrichment | Queue depth and worker time | Queue depth, rejection, analysis latency | Bound work, scale optional workers or disable optional path |
-| Memory | In-memory chain, response buffering, caches | RSS, heap, queue bytes, response size | Bound inputs, rotate WAL, tune cache, add replicas |
+| Memory | In-memory chain, per-stream byte-bounded queues/holdback/previews, caches | RSS, heap, configured queue bytes, stream concurrency | Bound inputs and events, tune stream queue/holdback, rotate WAL, add replicas |
 
 ## Benchmark before sizing
 
@@ -70,6 +73,8 @@ Strict Seccomp and LSM/AppArmor/SELinux profiles can affect process creation, fi
 | Queue saturation | Optional analysis or authoritative pressure | Preserve the evidence gate; bound or reject optional work |
 | Redis failures | Distributed limiter unavailable | Fail closed and repair dependency |
 | Upstream circuit open | Provider path degraded | Follow provider incident path; do not claim Aegis capacity |
+| `aegis_stream_duration_seconds{provider,outcome}` tail or limit outcomes rise | Slow provider/consumer or limits are being reached | Correlate provider, concurrency and configured bounds before scaling |
+| `aegis_stream_tokens_total{provider}` or `aegis_stream_redactions_total{provider,entity}` shifts | Stream traffic mix or redaction behavior changed | Validate against request mix and privacy policy; never inspect through raw-content logs |
 | WAL growth | Rotation/archive lag | Verify free space, archive and retention policy |
 | Integrity failure | Evidence trust boundary violated | Stop affected scope, preserve bytes and escalate |
 

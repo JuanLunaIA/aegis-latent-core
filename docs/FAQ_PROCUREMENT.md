@@ -1,11 +1,16 @@
-# Procurement FAQ — Aegis Latent Core v3.1.0
+# Procurement FAQ — Aegis Latent Core
 
 This FAQ is for procurement officers, economic buyers, legal teams, CISOs and evaluation committees. It explains what the repository can support, what requires a commercial agreement or customer assessment, and which questions must be answered before a quote. It is not a binding offer or legal advice.
 
-**Last verified:** 2026-08-18 UTC
-**Release baseline:** `v3.1.0`
+**Last verified:** 2026-08-22 UTC
+**Release baseline:** published `v3.1.0`
+**Current-main baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
 **Audience:** Procurement, legal, security and executive sponsors
 **Commercial documents:** [`COMMERCIAL.md`](../COMMERCIAL.md), [`docs/COMMERCIAL_STRATEGY_US.md`](COMMERCIAL_STRATEGY_US.md)
+
+## Which product baseline is being evaluated?
+
+The published release is **v3.1.0**. Current main after PR #99 is commit `45d95188d40792639fdd654369765a7233bef09a`. Its bounded SSE `pending-terminal` flow, native Anthropic `POST /v1/messages`, Python and TypeScript SDKs, portable MMR proofs, forensic dashboard and bounded ZIP export are not features of the v3.1.0 tag. Procurement documents, security evidence and acceptance tests must name one baseline rather than combining them.
 
 ## What category is this product?
 
@@ -25,7 +30,7 @@ The repository states an AGPLv3 plus commercial licensing structure. The actual 
 
 ## Is pricing fixed?
 
-No. The published ranges are hypotheses for validation, not binding offers. The documented directional packages are a free community path, a time-boxed pilot, commercial self-hosted production terms, and an enterprise tier only when accountable support and legal capacity exist.
+No. The retained internal hypotheses are Team/Pilot USD 10,000–30,000, Production USD 40,000–100,000, and Enterprise USD 100,000–250,000+. They are not list prices, observed ACV, vertical ACV, a valuation, or binding offers. The documented directional packages are a free community path, a time-boxed pilot, commercial self-hosted production terms, and an enterprise tier only when accountable support and legal capacity exist.
 
 | Package | Directional scope | Price status |
 |---|---|---|
@@ -58,6 +63,12 @@ The release includes source, tests, claims matrix, dependency and supply-chain a
 ## Can procurement rely on the benchmark numbers?
 
 Procurement can use them as evaluation inputs, not universal promises. The backpressure artifact preserved 10,000 durable records under an injected seam but recorded p99 commit latency of 1,189.89 ms. The WAF corpus is small. The key-rotation run is local. The timing experiment is not a proof of constant-time behavior.
+
+## What current-main integration and evidence artifacts are available?
+
+Current main supports native Anthropic `POST /v1/messages` in addition to the OpenAI-compatible ingress. The Python SDK is drop-in through official-client subclasses. TypeScript uses provider-native wrappers and options, with the official provider packages as peer dependencies; it does not replace their models or normalize their payloads. Non-streaming responses can return durable status and `X-Aegis-MMR-*` proof headers. Streaming responses begin `pending-terminal`, commit one terminal summary before the protocol terminal marker, and expose post-terminal proof retrieval.
+
+The read-only forensic dashboard can request a bounded ZIP containing a JCS manifest, canonical DAG-CBOR ledger slice with CIDv1, MMR proof JSON, a technical PDF certificate and `VERIFY.sh`.
 
 ## Does an export have legal admissibility?
 

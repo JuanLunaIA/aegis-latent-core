@@ -2,7 +2,7 @@
 
 This document defines how Aegis benchmark results must be interpreted and routes readers to the retained v3.1.0 results. It is for engineers, security reviewers, release owners and procurement evaluators. A benchmark is evidence only for its declared workload, environment, code boundary, sample method and artifact.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
 **Detailed results:** [`BENCHMARK_RESULTS.md`](BENCHMARK_RESULTS.md)
 **Historical interpretation:** [`../BENCHMARKS.md`](../BENCHMARKS.md)

@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import re
@@ -15,9 +16,6 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_DIR = ROOT / "evidence" / "documentation_audit_2026-08-20"
-INVENTORY_JSON = OUTPUT_DIR / "CORPUS_INVENTORY.json"
-AUDIT_MD = OUTPUT_DIR / "CORPUS_AUDIT.md"
 TEXT_SUFFIXES = {
     ".cfg",
     ".env",
@@ -55,7 +53,45 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def git_output(*args: str) -> str:
+    return subprocess.run(  # noqa: S603
+        ("git", *args),
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def git_bytes(*args: str) -> bytes:
+    return subprocess.run(  # noqa: S603
+        ("git", *args),
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+    ).stdout
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Output directory, absolute or relative to the repository root.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
+    output_dir = args.output_dir
+    if not output_dir.is_absolute():
+        output_dir = ROOT / output_dir
+    output_dir = output_dir.resolve()
+    inventory_json = output_dir / "CORPUS_INVENTORY.json"
+    audit_md = output_dir / "CORPUS_AUDIT.md"
+
     files: list[dict[str, object]] = []
     duplicate_index: dict[str, list[str]] = defaultdict(list)
     heading_index: dict[str, list[str]] = defaultdict(list)
@@ -66,7 +102,7 @@ def main() -> None:
 
     for relative in repository_paths():
         absolute = ROOT / relative
-        if OUTPUT_DIR in absolute.parents:
+        if output_dir in absolute.parents:
             continue
         if not absolute.is_file():
             continue
@@ -130,13 +166,9 @@ def main() -> None:
     ]
     inventory = {
         "schema": "aegis-documentation-corpus-audit-v1",
-        "source_commit": subprocess.run(  # noqa: S603
-            ("git", "rev-parse", "HEAD"),
-            cwd=ROOT,
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip(),
+        "source_commit": git_output("rev-parse", "HEAD"),
+        "source_worktree_dirty": bool(git_output("status", "--porcelain")),
+        "tracked_patch_sha256": sha256(git_bytes("diff", "HEAD", "--binary")),
         "counts": {
             "all_files": len(files),
             "text_files": sum(bool(record["text"]) for record in files),
@@ -157,19 +189,31 @@ def main() -> None:
         "institutional_placeholders": institutional_placeholders,
         "files": files,
     }
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    INVENTORY_JSON.write_text(
+    output_dir.mkdir(parents=True, exist_ok=True)
+    inventory_json.write_text(
         json.dumps(inventory, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
         newline="\n",
     )
 
+    post_write_mismatches = [
+        str(record["path"])
+        for record in files
+        if not (ROOT / str(record["path"])).is_file()
+        or sha256((ROOT / str(record["path"])).read_bytes()) != record["sha256"]
+    ]
     counts = inventory["counts"]
-    status = "PASS" if not institutional_placeholders and not utf8_failures else "FAIL"
+    status = (
+        "PASS"
+        if not institutional_placeholders and not utf8_failures and not post_write_mismatches
+        else "FAIL"
+    )
     report = f"""# Documentation Corpus Audit
 
 **Status:** {status}
 **Source commit:** `{inventory["source_commit"]}`
+**Source worktree dirty:** `{str(inventory["source_worktree_dirty"]).lower()}`
+**Tracked patch SHA-256:** `{inventory["tracked_patch_sha256"]}`
 **Scope:** Git-tracked and untracked, non-ignored repository files present at execution time.
 
 ## Deterministic counts
@@ -186,6 +230,7 @@ def main() -> None:
 | Non-NFC text files | {counts["non_nfc_files"]} |
 | CRLF-containing text files | {counts["crlf_files"]} |
 | Placeholder markers in institutional documents | {counts["institutional_placeholders"]} |
+| Post-write hash mismatches | {len(post_write_mismatches)} |
 
 ## Interpretation boundary
 
@@ -193,9 +238,9 @@ Exact-byte duplication and repeated headings are discovery signals, not automati
 
 ## Falsification criterion
 
-This audit passes only if every declared text file is inventory-addressable and the institutional suite contains no `TODO`, `FIXME`, `TBD`, `PLACEHOLDER`, or literal ellipsis marker. Re-running `python scripts/audit_documentation_corpus.py` must reproduce the same file hashes when repository bytes are unchanged.
+This audit passes only if every declared text file is inventory-addressable and unchanged through report emission, and the institutional suite contains no `TODO`, `FIXME`, `TBD`, `PLACEHOLDER`, or literal ellipsis marker. Re-running `python scripts/audit_documentation_corpus.py --output-dir <new-or-current-audit-directory>` must reproduce the same file hashes and tracked-patch digest when repository bytes are unchanged.
 """
-    AUDIT_MD.write_text(report, encoding="utf-8", newline="\n")
+    audit_md.write_text(report, encoding="utf-8", newline="\n")
     print(json.dumps(counts, sort_keys=True))
     print(f"status={status}")
 

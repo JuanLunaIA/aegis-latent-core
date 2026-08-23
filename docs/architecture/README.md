@@ -2,7 +2,7 @@
 
 This index routes readers to the current architecture description, trust-boundary decisions, state machine, and related operational evidence. It is for engineers, security reviewers, and technical buyers who need a fast route into the system design. The linked documents describe the implemented repository boundary and its residual risks.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
 **Primary architecture document:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 

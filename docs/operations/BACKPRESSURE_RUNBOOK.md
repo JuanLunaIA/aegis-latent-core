@@ -2,14 +2,15 @@
 
 This runbook is for platform engineering, SRE, security operations and release reviewers who must diagnose storage or `fsync` stall without losing authoritative evidence. It describes the local injected seam, operator actions, recovery and residual risk. A `dm-delay` test remains a separate privileged lab operation.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
+**Current main verified:** `45d95188d40792639fdd654369765a7233bef09a` (post-release; not the `v3.1.0` tag)
 **Scope:** Aegis local WAL and governed-request evidence path
 **Audience:** Platform engineering, SRE, security operations and release reviewers
 
 ## Runtime contract
 
-A governed request must not return a successful response before its authoritative evidence record has been durably committed. The durable path is intentionally synchronous with respect to the request lifecycle: request admission, policy evaluation, response capture, signing, WAL write, flush, and `fsync` occur before the terminal governed response. This preserves evidence integrity at the cost of blocking throughput when storage stalls.
+A non-streaming governed request must not return its response before authoritative evidence has been durably committed. SSE is incremental: sanitized non-terminal events can be emitted while evidence is `pending-terminal`, but `[DONE]` or Anthropic `message_stop` is withheld until the one terminal summary commit completes. This preserves terminal evidence integrity at the cost of terminal latency when storage stalls; it does not claim that already-emitted events can be recalled.
 
 The optional enrichment path may be bounded and rejected when saturated. It must never be used as a substitute for the authoritative evidence record. A response that cannot obtain durable evidence must fail closed according to the configured error contract and emit durable error evidence when the storage boundary is still available.
 
@@ -20,8 +21,13 @@ The optional enrichment path may be bounded and rejected when saturated. It must
 | `aegis_wal_backpressure_active=1` | WAL entry or byte threshold is active. | Stop increasing offered load; inspect storage latency and age of oldest evidence. |
 | WAL `fsync` latency p95/p99 rising | Durable commit is the bottleneck. | Check filesystem, volume, encryption layer, and host I/O queue. |
 | Queue depth or inflight commits rising | Offered load exceeds durable commit rate. | Apply upstream rate limiting or shed before the evidence boundary. |
+| `aegis_stream_duration_seconds{provider,outcome}` shifts toward limit outcomes | Streams are reaching duration or size bounds. | Inspect provider behavior and declared limits; do not raise bounds without memory and privacy review. |
+| `aegis_stream_redactions_total{provider,entity}` changes unexpectedly | Incremental de-identification behavior or traffic mix changed. | Correlate with deployment changes without logging raw stream content. |
+| `aegis_native_stream_wal_errors_total` increases | The auxiliary CRC-framed stream copy failed after an authoritative JSONL commit. | Preserve JSONL, inspect capacity/I/O, rotate or repair the auxiliary segment and restart under change control. Do not treat the auxiliary gap as loss of the JSONL record. |
 | Durable evidence count below accepted governed count | Evidence invariant violation. | Block release/traffic, preserve WAL, and start incident response. |
 | WAL integrity failure or duplicate/missing request IDs | Chain or correlation failure. | Freeze writes if possible, preserve artifacts read-only, and execute rollback. |
+
+`AEGIS_STREAM_QUEUE_MAX_ITEMS` and `AEGIS_STREAM_QUEUE_MAX_BYTES` jointly bound each active stream queue. `AEGIS_MAX_STREAM_EVENT_BYTES` bounds both upstream and canonical events and must not exceed the queue byte budget. `AEGIS_STREAM_DEIDENTIFIER_WINDOW_CHARS` bounds logical-text holdback. `BoundedStreamProxy` computes response SHA-256 incrementally; it does not buffer the complete response. A byte, event or duration limit closes upstream immediately, commits one terminal failure outcome and omits the success terminal marker.
 
 ## Fault-injection procedure
 

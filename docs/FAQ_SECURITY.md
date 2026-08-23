@@ -2,7 +2,7 @@
 
 This FAQ is for application-security reviewers, cryptography reviewers, CISOs and security procurement teams. It states the implemented mechanism, the evidence path and the residual risk for common security questions. It does not replace the threat model, security policy, independent assessment or customer controls.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
 **Audience:** AppSec, cryptography, security architecture and procurement
 **Primary security document:** [`SECURITY.md`](../SECURITY.md)
@@ -10,6 +10,12 @@ This FAQ is for application-security reviewers, cryptography reviewers, CISOs an
 ## Is Aegis secure?
 
 That word is too broad to be a useful claim. Aegis implements named controls such as request bounds, application-layer WAF checks, egress validation, signing, WAL integrity, fail-closed paths and strict startup prerequisites. Each control has a residual risk and deployment dependency. The claims matrix is the normative public boundary.
+
+## Are the Phase 2/3 streaming, SDK, proof, export, and dashboard modules part of v3.1.0?
+No. They are implemented on current `main` after PR #99 and are covered by the code, test, CI, and bounded evidence locators in `docs/CLAIMS_MATRIX.md`. The immutable `v3.1.0` tag and its release assets pre-date those modules. A future release and its own publication evidence are required before they can be described as release-tagged capabilities.
+
+## Do regulatory mappings certify Aegis?
+No. NIST AI RMF is a voluntary framework. ISO/IEC 42001 is an AI management-system standard, not a certification of this repository. Under the EU AI Act, Article 6 with the applicable annexes governs high-risk classification analysis, Article 12 addresses logging for applicable high-risk systems, and Article 9 addresses risk management rather than classification. GDPR Article 5(1)(c) data minimisation, Article 5(1)(e) storage limitation, Article 25 data protection by design/default, and Article 32 security of processing are distinct obligations. Repository controls may contribute evidence, but qualified customer review remains necessary.
 
 ## Is Aegis FIPS validated?
 

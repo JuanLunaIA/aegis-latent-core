@@ -1,11 +1,15 @@
-# Aegis Latent Core v3.1.0
+# Aegis Latent Core
 ## AI Governance and Evidence Gateway
 
 This prospectus is for US enterprise platform, AppSec, AI engineering, compliance, legal and procurement teams evaluating Aegis. It explains the product category, evidence wedge, measured boundaries and recommended evaluation path. It is not a certification, legal opinion, production SLO, warranty or binding commercial offer.
 
-**Last verified:** 2026-08-18 UTC
-**Release baseline:** `v3.1.0`
-**Current release:** [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0)
+**Last verified:** 2026-08-22 UTC
+**Published release baseline:** [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0)
+**Current-main baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
+
+## Baseline note
+
+The published release is **v3.1.0**. Current main after PR #99 adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP export, and an auxiliary `RustWal` stream segment. These current-main capabilities are not part of the v3.1.0 tag.
 
 ## Executive brief
 
@@ -21,13 +25,14 @@ Teams routing AI requests through multiple providers often need a stable interna
 
 | Capability | What it does | Boundary |
 |---|---|---|
-| OpenAI-compatible gateway | Provides a stable client-facing integration surface for supported request types. | Provider-specific behavior and streaming parameters still require integration tests. |
+| Provider ingress | Provides an OpenAI-compatible surface; current main also preserves native Anthropic `POST /v1/messages` wire types. | Provider-specific behavior and streaming parameters still require integration tests; Anthropic ingress is not attributed to v3.1.0. |
 | Durable signed evidence | Hashes and signs governed records, appends to a WAL, flushes and synchronizes before the governed success path. | Storage, backup, host and external immutability remain deployment controls. |
 | Durable error evidence | Records upstream non-2xx, circuit-open and network-fault evidence where the evidence boundary remains available. | Storage failure after admission is a fail-closed incident, not evidence of success. |
 | WAF and request policy | Normalizes text, blocks critical patterns, guards structure and applies weighted local analysis. | Application-layer boundary; ingress HTTP/2 parser behavior is separate. |
 | Egress and rate limiting | Validates endpoint forms and fails closed when the distributed limiter is unavailable in strict mode. | Network policy and Redis/HA behavior remain customer-owned. |
 | Bounded enrichment | Runs optional response analysis in bounded workers after authoritative evidence exists. | Enrichment may be rejected or delayed without weakening evidence. |
 | Key rotation | Supports an atomic versioned HMAC keyring with overlap, expiry and non-secret key IDs. | Three-replica propagation and secret-manager custody require deployment evidence. |
+| Portable proof and forensic export | Current main stores portable MMR proofs and provides a read-only dashboard plus bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP export. | A trusted root must come from an independent channel; the PDF is a technical report, not a certification. |
 
 ## Integration example
 
@@ -44,15 +49,17 @@ The customer must validate the actual provider, model parameters, streaming beha
 
 ## Evidence contract
 
-A governed response is returned with `X-Aegis-Evidence-Status: durable` when the authoritative evidence path has completed under the configured contract. Request and session identifiers allow correlation. The response-analysis alert count may be preliminary because enrichment runs after the durable commit; authoritative enrichment is read from its evidence store.
+A non-streaming governed response is returned with `X-Aegis-Evidence-Status: durable` when the authoritative evidence path has completed under the configured contract, and current main can include `X-Aegis-MMR-*` proof headers. A stream instead starts with `X-Aegis-Evidence-Status: pending-terminal`; its bounded relay commits one terminal summary before the protocol terminal marker, and proof retrieval occurs after termination. Request and session identifiers allow correlation. The response-analysis alert count may be preliminary because enrichment runs after the durable commit; authoritative enrichment is read from its evidence store.
 
-The ledger supports integrity verification through chain linkage, hashes, signatures, WAL replay and export manifests. HMAC-SHA256 is symmetric and classical. Native ML-DSA-65 is configuration-dependent and does not, by itself, establish constant-time execution, FIPS 140 validation or legal admissibility.
+The ledger supports integrity verification through chain linkage, hashes, signatures, WAL replay and export manifests. The current-main Python SDK is drop-in through official-client subclasses; TypeScript integration remains provider-native and declares the official provider SDKs as peer dependencies. HMAC-SHA256 is symmetric and classical. Native ML-DSA-65 is configuration-dependent and does not, by itself, establish constant-time execution, FIPS 140 validation or legal admissibility.
 
 ## Performance and resilience evidence
 
 The release separates dispatch microbenchmarks, end-to-end proxy behavior, upstream latency, WAL durability, WAF corpus metrics and native crypto timing. The background dispatch measurement in [`docs/BENCHMARKS.md`](BENCHMARKS.md) is not end-to-end latency.
 
 The v3.1.0 backpressure run offered 10,000 requests at 10,000 RPS with a 2 ms injected `fsync` delay and observed 10,000 durable records, zero failures, zero missing IDs, zero duplicate IDs and valid chain integrity. It observed p99 commit latency of 1,189.89 ms. This demonstrates tested correlation under an injected seam; it is not accepted production capacity or an SLO.
+
+Current main also retains an in-process bounded SSE benchmark (7 rounds × 1,000 deterministic events). It excludes network, provider and durable-WAL latency and is not capacity or SLO evidence. Its optional native `RustWal` stream segment is auxiliary; the JSONL ledger remains the replay authority.
 
 The local WAF corpus contains 15 malicious and 8 benign cases. The run observed zero bypasses and zero false positives for that pinned corpus, with a wide confidence interval because the corpus is small. HTTP/2 fragmentation and `nuclei-templates/waf-bypass` are not represented by that application-layer result.
 

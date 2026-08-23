@@ -2,7 +2,7 @@
 
 This document explains which **implemented technical behaviors** may contribute evidence to a customer security, privacy, AI-governance, or audit program. It is written for compliance officers, security reviewers, procurement teams, and counsel. It does **not** determine compliance, certification, authorization, legal admissibility, or contractual sufficiency.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
 **Owner:** Release owner and qualified customer reviewer
 **Canonical claim control:** [`docs/CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)
@@ -68,7 +68,7 @@ NIST CSF 2.0 provides a taxonomy for managing cybersecurity risk and publishes i
 
 ### ISO/IEC 42001 and ISO/IEC 27001
 
-ISO/IEC 42001 specifies requirements for establishing, implementing, maintaining and continually improving an Artificial Intelligence Management System. ISO's public page describes traceability, transparency and reliability as benefits. [14] ISO/IEC 27001 defines requirements for an Information Security Management System. [15]
+ISO/IEC 42001 is a management-system standard: it specifies requirements for establishing, implementing, maintaining and continually improving an Artificial Intelligence Management System. ISO's public page describes traceability, transparency and reliability as benefits. [14] ISO/IEC 27001 defines requirements for an Information Security Management System. [15] The presence of mapped repository controls is neither an ISO/IEC 42001 management system nor certification of this repository.
 
 Aegis can provide **technical evidence inputs** for an AIMS or ISMS, such as request lifecycle records, change/release evidence, integrity verification, and documented control boundaries. The repository does not establish the customer's management-system scope, risk treatment, internal audit, management review, competence, supplier controls, or certification.
 
@@ -104,7 +104,9 @@ For a federal deployment, the customer must define the authorization boundary, s
 
 ### EU AI Act and GDPR
 
-The EU AI Act is a jurisdiction-specific regulation whose applicability depends on system role, use, geography and relevant obligations. [16] GDPR analysis likewise depends on controller/processor role, purpose, lawful basis, data categories, transfers and rights. Aegis documentation can support a customer inventory, technical documentation and data-flow review. It does not establish conformity, legal basis, DPIA completion or a lawful transfer mechanism.
+The EU AI Act is a jurisdiction-specific regulation whose applicability depends on system role, intended purpose, use, geography and relevant dates. Classification of a high-risk AI system must be analyzed under Article 6 together with the applicable Annex I or Annex III category and exceptions; Article 9 then concerns the risk-management system for systems already in scope and is **not** the basis for high-risk classification. For applicable high-risk systems, Article 12 addresses automatic event logging over the system lifetime. Aegis records may contribute technical inputs to that logging analysis, but do not establish classification, conformity, required log content, retention period, provider/deployer roles, or operating effectiveness. [19]
+
+GDPR control discussions must keep distinct obligations distinct: Article 5(1)(c) addresses data minimisation, Article 5(1)(e) storage limitation, Article 25 data protection by design and by default, and Article 32 security of processing. Hashing, queue bounds, WAL rotation guidance, and security controls may contribute to a customer assessment, but they do not establish lawful basis, anonymisation, compliance, DPIA completion, or a lawful transfer mechanism. [20]
 
 ## Evidence wording rules
 
@@ -143,3 +145,5 @@ A qualified reviewer should confirm the deployment scope, legal role, data categ
 [16]: https://www.aicpa-cima.com/resources/download/2017-trust-services-criteria-with-revised-points-of-focus-2022 "AICPA Trust Services Criteria"
 [17]: https://www.fedramp.gov/rfcs/0004/ "FedRAMP RFC-0004 historical page"
 [18]: https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final "NIST SP 800-53 Rev. 5"
+[19]: https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng "Regulation (EU) 2024/1689 (EU AI Act), Articles 6, 9 and 12 and Annexes I/III"
+[20]: https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng "GDPR, Articles 5(1)(c), 5(1)(e), 25 and 32"

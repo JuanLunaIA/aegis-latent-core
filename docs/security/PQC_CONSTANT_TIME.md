@@ -2,7 +2,7 @@
 
 This document is for cryptography reviewers and security architects evaluating the native ML-DSA-65 timing boundary. It defines the experiment, statistical interpretation, retained result and blocked claims. It does not prove constant-time execution, side-channel absence, FIPS 140 validation or legal admissibility.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
 **Scope:** Native ML-DSA-65 `sign` and `verify` boundary
 **Current assurance status:** No constant-time claim is approved

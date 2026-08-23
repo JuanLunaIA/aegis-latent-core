@@ -108,9 +108,9 @@ GAMP 5 is risk-based industry guidance. A usable customer package needs intended
 
 **Falsification:** a production authorization is denied if the exact deployed version lacks approved change evidence, trace links, executed qualification evidence, deviation disposition, quality approval, and a retained record set under the customer's controlled process.
 
-### 5.5 EU AI Act Articles 13 and 14
+### 5.5 EU AI Act Articles 6, 9, 12, 13 and 14
 
-`[LEGAL-REVIEW-REQUIRED]` Articles 13 and 14 apply to high-risk AI systems within the regulation's role and classification scheme. Aegis is a gateway component and is not automatically the provider of the upstream AI system. Its documentation and records may support transparency, instructions, monitoring, and oversight, but do not establish the classification, conformity assessment, or division of obligations.
+`[LEGAL-REVIEW-REQUIRED]` High-risk classification analysis belongs under Article 6 together with the applicable Annex I or Annex III category and exceptions. Article 9 governs the risk-management system for high-risk systems and is not itself the classification basis. Article 12 addresses automatic event logging for applicable high-risk systems; Articles 13 and 14 address transparency/instructions and human oversight. Aegis is a gateway component and is not automatically the provider of the upstream AI system. Its documentation and records may contribute technical inputs, but do not establish classification, required log content or retention, conformity assessment, or division of obligations.
 
 The target package must identify provider and deployer roles, intended purpose, foreseeable misuse, performance characteristics, limitations, input specifications, changes, logs, monitoring, human authority, competence, ability to interpret and override outputs, incident escalation, and effective dates. A gateway log cannot substitute for provider instructions or prove that a human can understand and control a model-dependent decision.
 

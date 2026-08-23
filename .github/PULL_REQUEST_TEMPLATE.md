@@ -25,6 +25,9 @@ Describe the mechanism-level change and the affected trust boundary.
 - [ ] `ruff format --check .` passes.
 - [ ] `bandit -r aegis aegis_server -lll` passes or a reviewed exception is documented.
 - [ ] `pip-audit` and relevant lockfile checks pass.
+- [ ] If `sdk/python/**` changed: SDK Ruff, strict mypy, pytest and package build pass.
+- [ ] If `sdk/typescript/**` changed: `npm ci`, typecheck, tests, build, audit and pack dry-run pass.
+- [ ] If `dashboard/**` changed: TypeScript SDK build, dashboard typecheck, tests, production build and audit pass.
 - [ ] Rust, Helm, container, or benchmark gates were run when affected.
 - [ ] Raw artifacts are attached or linked for performance/security measurements.
 

@@ -2,8 +2,9 @@
 
 This FAQ answers implementation and operating questions for developers and platform engineers. Each answer states the current boundary and links to the implementation or verification path. It is not a substitute for the architecture or deployment guides.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
+**Current main verified:** `45d95188d40792639fdd654369765a7233bef09a` (post-release; not the `v3.1.0` tag)
 **Audience:** Developers, platform engineers and technical evaluators
 **Root document:** [`README.md`](../README.md)
 
@@ -46,6 +47,22 @@ No. The pinned application-layer corpus covers 15 malicious and 8 benign cases. 
 ## Does the WAF guarantee zero bypasses?
 
 No. The retained corpus observed zero bypasses and zero false positives, but the corpus is small and its confidence interval is wide. The result is a regression signal for the named corpus, not universal detection coverage.
+
+## How are portable MMR proofs delivered?
+
+Durable non-streaming responses expose the `aegis-mmr-inclusion-v1` format, leaf, logical index/count, base64url proof and root in `X-Aegis-MMR-*` headers. Both non-streaming and SSE responses link to authenticated `GET /v1/audit/proofs/{request_id}`. Because SSE headers cannot change after emission begins, its proof status is initially `pending-terminal`; query the linked endpoint after terminal commit. Python and TypeScript SDK verifiers consume the same portable format and do not require the gateway's in-memory MMR state. See [`docs/api/MMR_PROOF_V1.md`](api/MMR_PROOF_V1.md).
+
+## Are the SDKs provider-native?
+
+Yes. The Python `aegis_sdk.openai.OpenAI`/`AsyncOpenAI` and `aegis_sdk.anthropic.Anthropic`/`AsyncAnthropic` classes subclass the official clients. TypeScript exposes equivalent wrappers at `@aegis-latent/sdk/openai` and `@aegis-latent/sdk/anthropic`. OpenAI traffic uses `/v1/chat/completions`; native Anthropic messages use `/v1/messages` and require `AEGIS_PROVIDER=anthropic`.
+
+## Is the native Rust WAL the replay authority?
+
+No. The JSONL WAL remains authoritative for replay and recovery. When the native extension is available, Aegis opens `<wal_path>.stream.rwal` as an optional auxiliary `RustWal` segment and appends a CRC-framed copy after the JSONL terminal stream node commits. If that auxiliary append fails, the process increments `aegis_native_stream_wal_errors_total`, logs and disables the segment, and preserves the already-authoritative JSONL outcome and client terminal marker.
+
+## How is the forensic dashboard authenticated and exported?
+
+The Next.js dashboard keeps `AEGIS_DASHBOARD_API_KEY` inside `server-only` route handlers and uses `AEGIS_PRIMARY_BASE_URL` for backend requests. Do not expose the key through a browser bundle or `NEXT_PUBLIC_*`. The forensic export route returns a bounded ZIP containing integrity files, `manifest.json` and `VERIFY.sh`; it is technical integrity evidence, not a legal-admissibility decision.
 
 ## Does HMAC provide non-repudiation?
 

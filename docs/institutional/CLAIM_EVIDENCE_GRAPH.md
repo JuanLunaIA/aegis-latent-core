@@ -1,7 +1,9 @@
 # Institutional Claim-Evidence Graph
 
 **Graph version:** 1.0
-**Source cutoff:** 2026-08-20 UTC
+**Source cutoff:** 2026-08-22 UTC
+**Release baseline:** published `v3.1.0`
+**Current-main review baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
 **Normative status authority:** `docs/CLAIMS_MATRIX.md`
 
 ## Graph contract

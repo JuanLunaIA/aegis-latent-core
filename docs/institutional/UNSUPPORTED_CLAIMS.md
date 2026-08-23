@@ -1,6 +1,8 @@
 # Unsupported Claims and Contradiction Report
 
-**Review date:** 2026-08-20 UTC
+**Review date:** 2026-08-22 UTC
+**Release baseline:** published `v3.1.0`
+**Current-main review baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
 **Disposition:** Claims below are blocked, downgraded, or require qualified review.
 **Input posture:** The pasted documentation suite was treated as untrusted source material.
 
@@ -42,6 +44,12 @@ The supplied content was not a formally proven or cryptographically attested doc
 | `UC-028` | Pricing, ROI, customers, market validation, or procurement readiness are established. | Repository materials contain hypotheses, not executed orders, validated quotes, customer-approved outcomes, or cost-to-serve evidence. | `ROADMAP`. |
 | `UC-029` | The supplied UUID, script hash, confidence, CHOKE PASS, and exit code form valid provenance. | No corresponding script, execution trace, input digest, signature, or reproducible byte identity was supplied. | `UNVERIFIED`; replace with locally generated JCS/DAG-CBOR manifest after final validation. |
 | `UC-030` | Exact-byte documentation deduplication alone establishes consistency. | Semantic contradictions can persist across different bytes; repeated headings can be legitimate. | Use claim graph, source hierarchy, targeted review, and executable gates. |
+| `UC-031` | PR #99 makes Aegis a complete enterprise AI security platform with no direct competitor. | The merge adds material gateway, SDK, proof, dashboard and export capabilities but no validated market-wide parity study, complete security control plane or managed service. | Keep the category **AI Governance and Evidence Gateway**; competitive differentiation remains a hypothesis. |
+| `UC-032` | The project has a USD 1.5M–2.2M engineering replacement cost or USD 8M–14M startup/IP valuation. | No work-breakdown estimate, loaded rates, audited IP rights, revenue, traction, financing data, adjusted comparables or independent valuation exists. | `UNVERIFIED`; do not publish a replacement cost or valuation without a reproducible model and qualified review. |
+| `UC-033` | Healthcare, banking and defense ACV bands are established. | No customer contracts, paid-pilot outcomes or vertical ACV dataset is cited. Existing package bands are internal cross-segment hypotheses only. | `ROADMAP`; distinguish pilot fee, annual-price hypothesis, observed ACV and valuation. |
+| `UC-034` | The forensic ZIP is ISO/IEC 27037 conformant or Daubert-certified. | Canonical bytes, hashes and verification scripts are technical inputs; they do not validate acquisition procedure, examiner competence, full custody or legal admissibility. Daubert is a judicial reliability framework, not a software-package certification. | `LEGAL-REVIEW-REQUIRED`; call the output a bounded technical integrity package. |
+| `UC-035` | Workflow hardening proves immutable dependencies or SLSA Level 3+. | Pinned Actions, lockfiles, SBOM, provenance and Cosign are artifact-specific controls; the repository has no retained SLSA Level 3 assessment. | Verify each subject digest and workflow run; do not claim SLSA 3+. |
+| `UC-036` | Aegis is defense-grade, enterprise tier-1, mandatory infrastructure or production-ready at 10k RPS with zero overhead. | No customer deployment acceptance, production SLO, support operation, independent assurance or end-to-end capacity result establishes those claims. | `ROADMAP`; publish only named benchmark results with workload and exclusions. |
 
 ## Residual high-risk language
 

@@ -14,11 +14,11 @@ npm run build
 npm start
 ```
 
-`AEGIS_DASHBOARD_API_KEY` is read only by explicit server route handlers and is never returned to browser JavaScript. Deploy behind an authenticated reverse proxy. Use a dedicated least-privilege audit key; this dashboard contains no mutation or export actions.
+The current implementation reads `AEGIS_DASHBOARD_API_KEY` only in explicit server route handlers; the no-fabrication test also rejects exposure through a `NEXT_PUBLIC_*` variable. Deploy behind an authenticated reverse proxy and use a dedicated least-privilege audit key. The dashboard does not mutate ledger records, but its Forensics page can request and download a bounded evidence ZIP through the same-origin server route. That operation requires the backend `audit:export` scope and should be treated as sensitive data export.
 
 ## Surfaces
 
-The Overview reads `/health`, `/ready`, `/v1/audit/health`, and `/v1/audit/integrity`. The Ledger reads the real offset-based retained memory window and offers a bounded-DOM virtual view plus a native-table accessibility mode. The MMR page retrieves `/v1/audit/proofs/{state_id}` and runs the shared TypeScript verifier in the browser. Metrics parses an allowlist from the current `/metrics` scrape and never represents a snapshot as history.
+The Overview reads `/health`, `/ready`, `/v1/audit/health`, and `/v1/audit/integrity`. The Ledger reads the real offset-based retained memory window and offers a bounded-DOM virtual view plus a native-table accessibility mode. The MMR page retrieves `/v1/audit/proofs/{state_id}` and runs the shared TypeScript verifier in the browser. Metrics parses an allowlist from the current `/metrics` scrape and never represents a snapshot as history. Forensics proxies `POST /v1/audit/forensics/export` server-side and returns the bounded ZIP without exposing the backend bearer token to client code.
 
 ## Honest limitations
 

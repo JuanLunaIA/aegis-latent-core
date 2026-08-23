@@ -2,7 +2,7 @@
 
 This document describes what Aegis may persist, what remains in memory, and which retention and privacy decisions belong to the deploying organization. It is for privacy engineers, security reviewers, platform operators, and counsel. It is not a GDPR or HIPAA determination, a records-of-processing notice, or legal advice.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
 **Owner:** Deployment owner with privacy and legal review
 **Related claim control:** [`docs/CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)
@@ -64,6 +64,10 @@ Retention is an operator policy. Aegis does not select a universally correct per
 | Export retention | Compliance/security owner | Recipients, access scope, integrity hashes, revocation and disposal |
 
 Do not copy an example period from this document into a production policy without a customer-specific review. Financial, healthcare, government, litigation, employment and cross-border contexts can impose different requirements.
+
+## GDPR reference boundary
+
+For GDPR-oriented review, **Article 5(1)(c)** addresses data minimisation, **Article 5(1)(e)** addresses storage limitation, **Article 25** addresses data protection by design and by default, and **Article 32** addresses security of processing. These are related but non-interchangeable obligations. Hash-only evidence fields may reduce plaintext retention for a declared path; rotation guidance may support a storage-limitation process; design defaults and technical safeguards may support Articles 25 and 32. None of those implementation facts establishes anonymisation, lawful basis, a retention schedule, or GDPR compliance. [3]
 
 ## Privacy control mapping without legal conclusion
 

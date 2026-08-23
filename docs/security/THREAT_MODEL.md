@@ -8,7 +8,7 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 This threat model is for AppSec reviewers, CISOs, platform engineers and incident responders. It uses a STRIDE-oriented data-flow review to identify assets, trust boundaries, failure behavior, mitigations and residual risk for the current gateway boundary. A target deployment review remains required.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
 **Method:** STRIDE-oriented data-flow review with explicit residual risk
 **Scope:** Aegis gateway, signer/keyring, WAL/storage, ingress, and operator controls

@@ -2,7 +2,7 @@
 
 This runbook is for release operators and incident commanders who must stop or revert an Aegis deployment without destroying evidence continuity. It covers decision gates, preservation, rollback execution, verification, and escalation. It does not replace the customer's incident-response, legal-hold, disaster-recovery, or change-management process.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
 **Audience:** Release operators, SRE and incident commanders
 **Related policy:** [`SECURITY.md`](../../SECURITY.md)

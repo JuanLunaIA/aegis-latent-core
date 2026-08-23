@@ -2,8 +2,9 @@
 
 This guide describes the implemented and configuration-dependent deployment contract for the published v3.1.0 release. It is for platform, SRE, security and procurement reviewers. It does not grant regulatory certification, create a production SLO or replace an environment-specific review of kernel, storage, network, identity, secrets, backup and incident-response controls.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
+**Current main verified:** `45d95188d40792639fdd654369765a7233bef09a` (post-release; not the `v3.1.0` tag)
 **Audience:** Platform operators, SRE, security and procurement reviewers
 
 ## 1. Strict runtime contract
@@ -66,6 +67,10 @@ AEGIS_BACKEND_API_KEY=<provider-secret>
 AEGIS_RATE_LIMIT_BACKEND=redis
 AEGIS_REDIS_URL=rediss://<redis-host>:6380/0
 AEGIS_WAL_PATH=/var/lib/aegis/aegis.wal.jsonl
+AEGIS_STREAM_QUEUE_MAX_ITEMS=64
+AEGIS_STREAM_QUEUE_MAX_BYTES=1048576
+AEGIS_MAX_STREAM_EVENT_BYTES=65536
+AEGIS_STREAM_DEIDENTIFIER_WINDOW_CHARS=128
 ```
 
 The backend URL must be absolute `http` or `https`, include a hostname, and contain no userinfo. When `AEGIS_AIRGAP_MODE=true`, every outbound destination must match the canonical allowlist. URL schemes, userinfo, malformed ports, and unsupported protocols are rejected.
@@ -90,11 +95,15 @@ client
   -> client response
 ```
 
-Non-stream responses carry `X-Aegis-Request-ID`, `X-Aegis-Session-ID`, `X-Aegis-Analysis-Status`, and a preliminary `X-Aegis-Alert-Count`. The alert count is `0` before queued enrichment completes; authoritative enrichment records must be read from the audit/enrichment store. Stream responses are buffered under the configured bound so they cannot escape before evidence persistence.
+Non-stream responses carry `X-Aegis-Request-ID`, `X-Aegis-Session-ID`, `X-Aegis-Analysis-Status`, and a preliminary `X-Aegis-Alert-Count`. The alert count is `0` before queued enrichment completes; authoritative enrichment records must be read from the audit/enrichment store.
+
+SSE is not fully buffered. `BoundedStreamProxy` emits sanitized canonical events incrementally through a queue bounded by item count and retained bytes, computes SHA-256 incrementally over the exact emitted bytes, and retains only a bounded preview plus finite de-identification holdback. Initial `X-Aegis-Evidence-Status` and `X-Aegis-Proof-Status` are `pending-terminal`. The proxy performs exactly one terminal summary commit before emitting OpenAI `[DONE]` or Anthropic `message_stop`; limit and error outcomes close upstream, commit once and omit that success marker. The `Link` header points to authenticated `GET /v1/audit/proofs/{request_id}` for post-terminal proof lookup.
+
+OpenAI-compatible clients use `/v1/chat/completions`. Native Anthropic clients use `/v1/messages`, which requires `AEGIS_PROVIDER=anthropic`. The provider-native Python and TypeScript SDK wrappers preserve the official clients' resources, streaming iterators and errors while changing routing and Aegis headers.
 
 ## 7. Storage, backup, and key custody
 
-The WAL is opened with owner-only permissions and fsynced on each committed node. Configure rotation and monitoring before the active WAL reaches its operational limit. Backups must preserve the original bytes, metadata, timestamps, hashes, access history, and restore-test results. A restored chain must pass `verify_integrity()` before it is accepted as evidence.
+The authoritative JSONL WAL is opened with owner-only permissions and fsynced on each committed node. When the native extension is available, `<wal_path>.stream.rwal` is an optional 256 MiB CRC-framed `RustWal` copy of committed stream terminal nodes; JSONL remains the replay authority. Configure rotation and monitoring before the active WAL reaches its operational limit. Backups must preserve the original bytes, metadata, timestamps, hashes, access history, and restore-test results. A restored chain must pass `verify_integrity()` before it is accepted as evidence.
 
 Key rotation is an evidence event. The versioned keyring has exactly one active key, supports non-expired verification overlap, records a non-secret key ID, validates a complete snapshot before atomic activation, and retains the last valid snapshot when a replacement is malformed. Use [`docs/operations/KEY_ROTATION_RUNBOOK.md`](docs/operations/KEY_ROTATION_RUNBOOK.md) for the sequence and rollback. A three-replica zero-downtime claim requires a real orchestrated run; unit tests alone are not deployment evidence. HMAC is symmetric and therefore not equivalent to third-party non-repudiation; long-lived or high-value evidence should use an HSM/Vault or a reviewed hybrid/post-quantum design.
 
@@ -126,7 +135,9 @@ A constant-time statement is not approved. The retained native experiment used 1
 
 ## 9. Health, telemetry, and alerts
 
-Use `/health` for liveness and `/ready` for readiness. Alert on evidence commit failure, WAL fsync failure, integrity verification failure, Redis backend failure, queue saturation, upstream circuit opening, body-limit rejection spikes, and startup rejection caused by Seccomp or LSM posture. Preserve request IDs in structured logs and traces without logging raw secrets or unnecessary prompt content.
+Use `/health` for liveness and `/ready` for readiness. The implemented streaming metric series are `aegis_stream_duration_seconds{provider,outcome}`, `aegis_stream_tokens_total{provider}`, and `aegis_stream_redactions_total{provider,entity}`. Alert on evidence commit failure, WAL fsync failure, integrity verification failure, Redis backend failure, queue saturation observed through resource behavior, upstream circuit opening, body-limit rejection spikes, and startup rejection caused by Seccomp or LSM posture. Preserve request IDs in structured logs and traces without logging raw secrets or unnecessary prompt content.
+
+The optional Next.js forensic dashboard must keep `AEGIS_DASHBOARD_API_KEY` server-only and use `AEGIS_PRIMARY_BASE_URL` from its server environment. Its route handlers proxy bounded, `no-store` requests; never publish the key as `NEXT_PUBLIC_*`. The export UI proxies `POST /v1/audit/forensics/export` and downloads an `application/zip` bundle containing `manifest.json` and `VERIFY.sh`.
 
 ## 10. Go-live gates
 

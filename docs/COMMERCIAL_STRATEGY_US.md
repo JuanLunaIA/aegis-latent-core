@@ -1,11 +1,16 @@
-# US Commercial Strategy — Aegis Latent Core v3.1.0
+# US Commercial Strategy — Aegis Latent Core
 
 This document describes a US-market positioning and packaging hypothesis for Aegis Latent Core. It is for commercial stakeholders, founders, product owners, procurement and support planners. It is not a binding offer, a forecast, legal advice, or evidence of market validation.
 
-**Last verified:** 2026-08-18 UTC
-**Release baseline:** `v3.1.0`
+**Last verified:** 2026-08-22 UTC
+**Release baseline:** published `v3.1.0`
+**Current-main baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
 **Market scope:** United States, self-hosted enterprise AI infrastructure
 **Positioning decision:** [`docs/architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md`](architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md)
+
+## Baseline discipline
+
+The published product baseline is **v3.1.0**. Current main after PR #99 adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` exports, an auxiliary `RustWal` stream segment, and a bounded in-process SSE benchmark. These are current-main implementation and evidence items, not v3.1.0 release claims. Any proposal must identify the exact deliverable baseline.
 
 ## Positioning
 
@@ -37,7 +42,7 @@ The sales motion is **local evaluation → evidence replay → controlled pilot 
 | Enterprise | Multiple environments or regulated procurement | Security review support, architecture assistance, negotiated response targets, private deployment guidance and procurement artifacts | `$100k–$250k+` annual hypothesis | No 24/7 or sovereign claim without staffing, contract and tested operating model |
 | Sovereign / OEM | Air-gapped, embedded, redistribution or escrow | Dedicated contract, redistribution rights, escrow/assurance terms and specialized support | Custom only | Not a current default offer; requires legal, support and assurance capacity |
 
-The ranges are illustrative hypotheses, not market facts or commitments. They require buyer interviews, comparable quotes, support-cost modeling and paid-pilot evidence.
+The ranges are **internal hypotheses only**. They are not public list prices, observed ACV, vertical ACV, replacement-cost evidence, or a company/IP valuation. They require buyer interviews, normalized comparable quotes, support-cost modeling and paid-pilot evidence. The underlying primary-source review is [`evidence/documentation_audit_2026-08-22/PRICING_BENCHMARK.md`](../evidence/documentation_audit_2026-08-22/PRICING_BENCHMARK.md); it finds that the public comparables do not support deriving an Aegis list price, observed ACV, or valuation.
 
 ## Cost-to-serve model
 
@@ -91,6 +96,7 @@ The commercial owner should measure pilot-to-production conversion, time to firs
 - [`docs/FAQ_PROCUREMENT.md`](FAQ_PROCUREMENT.md)
 - [`COMMERCIAL.md`](../COMMERCIAL.md)
 - [`docs/CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md)
+- [`evidence/documentation_audit_2026-08-22/PRICING_BENCHMARK.md`](../evidence/documentation_audit_2026-08-22/PRICING_BENCHMARK.md)
 
 ## References
 

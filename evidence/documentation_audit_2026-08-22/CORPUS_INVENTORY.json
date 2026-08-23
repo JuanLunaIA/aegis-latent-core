@@ -1,0 +1,6329 @@
+{
+  "counts": {
+    "all_files": 716,
+    "crlf_files": 0,
+    "exact_duplicate_groups": 10,
+    "institutional_files": 10,
+    "institutional_placeholders": 0,
+    "markdown_files": 71,
+    "non_nfc_files": 0,
+    "repeated_heading_groups": 4,
+    "text_files": 620,
+    "utf8_failures": 0
+  },
+  "crlf_files": [],
+  "exact_duplicates": [
+    {
+      "paths": [
+        "evidence/github_status_baseline_2026-08-20/actions_permissions.json",
+        "evidence/remediation_2026-08-21/github-before/actions_permissions.json"
+      ],
+      "sha256": "0bffee97e4ad52676c0127aacb5b4b304a2675f5c524de641acf1326e0b0e857"
+    },
+    {
+      "paths": [
+        "evidence/github_status_baseline_2026-08-20/secret_scanning_alerts.json",
+        "evidence/github_status_post_pr95/secret_scanning_alerts.json"
+      ],
+      "sha256": "18b8565a477fb90fb580c392f232dfcc872bb6fbc1cafbf6b1ed71b34c315876"
+    },
+    {
+      "paths": [
+        "evidence/github_status_baseline_2026-08-20/workflows.json",
+        "evidence/github_status_post_pr95/workflows.json"
+      ],
+      "sha256": "25d65cd05f863b1602d18a46d2aab28079b6af9f3ea16321f535235c65e9d5e9"
+    },
+    {
+      "paths": [
+        "evidence/github_status_baseline_2026-08-20/security_advisories.json",
+        "evidence/github_status_post_pr95/security_advisories.json"
+      ],
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "paths": [
+        "evidence/github_status_baseline_2026-08-20/code_scanning_alerts.stderr.txt",
+        "evidence/github_status_baseline_2026-08-20/dependabot_alerts.stderr.txt",
+        "evidence/github_status_baseline_2026-08-20/secret_scanning_alerts.stderr.txt",
+        "evidence/github_status_post_pr95/code_scanning_alerts.stderr.txt",
+        "evidence/github_status_post_pr95/dependabot_alerts.stderr.txt",
+        "evidence/github_status_post_pr95/secret_scanning_alerts.stderr.txt"
+      ],
+      "sha256": "67522825656fb8092ae4db6a436b2aad857054a3f7b587f46c1725d77df82871"
+    },
+    {
+      "paths": [
+        "evidence/github_status_baseline_2026-08-20/branch_protection.json",
+        "evidence/remediation_2026-08-21/github-before/branch_protection.json"
+      ],
+      "sha256": "738014a2fa96c05e3e5a36a3a193f8c7e0aef587a636b6c78ce56ce5579fab32"
+    },
+    {
+      "paths": [
+        "evidence/github_status_baseline_2026-08-20/code_scanning_alerts.json",
+        "evidence/github_status_post_pr95/code_scanning_alerts.json"
+      ],
+      "sha256": "9c58cc55fe238b29bc2d14713ed76284bf16e4eeb1336f174ff82ce969c7fd16"
+    },
+    {
+      "paths": [
+        "evidence/remediation_2026-08-21/repository_after_dependabot.json",
+        "evidence/remediation_2026-08-21/repository_after_secret_scanning.json"
+      ],
+      "sha256": "beef0e8a66cc89e05f04a0310edcc53d094b2431b650ccd06b91783a0728d01f"
+    },
+    {
+      "paths": [
+        "evidence/github_status_baseline_2026-08-20/dependabot_alerts.json",
+        "evidence/github_status_post_pr95/dependabot_alerts.json"
+      ],
+      "sha256": "db7eddf511b9436a0bc2fe86adb854a7bca91fd477b1e749cee016aeff5f4092"
+    },
+    {
+      "paths": [
+        "benchmarks/__init__.py",
+        "integrations/__init__.py"
+      ],
+      "sha256": "fe5699aade045b5ffd5dec0c0071bc9f26aed67b45d9642e272af6a28d1c9117"
+    }
+  ],
+  "files": [
+    {
+      "lf_only": true,
+      "line_count": 7,
+      "nfc": true,
+      "path": ".bolt/mcp.json",
+      "sha256": "5d2c70e56efe18c212678901ede075c02ca982810aaff52eeb4ec7112f95759b",
+      "size_bytes": 70,
+      "text": true
+    },
+    {
+      "path": ".coverage",
+      "sha256": "438af7a8ef1d8472aa86f2850c8f93d5f58318e7decb74e2e691df47633b6f3c",
+      "size_bytes": 61440,
+      "text": false
+    },
+    {
+      "path": ".dockerignore",
+      "sha256": "20f4a111bbb5164838ea1e68e33edbb1b3ca17139bab23eab1b6b13ecfd6827f",
+      "size_bytes": 987,
+      "text": false
+    },
+    {
+      "path": ".env.example",
+      "sha256": "2d6c84414f6fd7c6eb3014765686eb8b70ab0477ec3934423158a5d5f3f1737d",
+      "size_bytes": 2662,
+      "text": false
+    },
+    {
+      "path": ".github/CODEOWNERS",
+      "sha256": "8ab0aafd24a119fc06308ebf2924aa3ff55bbba95869fe1207808267e6c06e11",
+      "size_bytes": 359,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 42,
+      "nfc": true,
+      "path": ".github/ISSUE_TEMPLATE/bug_report.md",
+      "sha256": "67f04dcd7b80742f95961764522f70c943cdbd36c6dd7dfd1684cdbdb548e2fb",
+      "size_bytes": 1109,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 9,
+      "nfc": true,
+      "path": ".github/ISSUE_TEMPLATE/security_report.md",
+      "sha256": "caf81ac3add8d7b1e4b5e68fbfde7e0827ae2cea619b7c98a67f557f32a53b04",
+      "size_bytes": 290,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 49,
+      "nfc": true,
+      "path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "sha256": "2a08d6bc951244f2ba80bcfb006d63d10a673b60059c88c607467b522360fd82",
+      "size_bytes": 2005,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 72,
+      "nfc": true,
+      "path": ".github/dependabot.yml",
+      "sha256": "aa400814718922f451d340c354ef94e47efc4f74fbb342d3e49ab2c2a62e638e",
+      "size_bytes": 2623,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 523,
+      "nfc": true,
+      "path": ".github/workflows/ci.yml",
+      "sha256": "07a84aea80683e0b542c57af06d07b5d2c55dd757d36933c9371397b7a08ebb0",
+      "size_bytes": 21623,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 90,
+      "nfc": true,
+      "path": ".github/workflows/forensic.yml",
+      "sha256": "4f799591f8c8c368c3ecb03b34236365b49b4357ffac737a18830689ab100f66",
+      "size_bytes": 2928,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 59,
+      "nfc": true,
+      "path": ".github/workflows/pqc-timing.yml",
+      "sha256": "4e5965829e4df24b0936fb98b87982a6bcee38739580a5204b74540cce4e1604",
+      "size_bytes": 1980,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 105,
+      "nfc": true,
+      "path": ".github/workflows/publish.yml",
+      "sha256": "244254b3d9aa57c71904ba1f9a715b7f9080a4f5f5dd30d4045f313cef362cec",
+      "size_bytes": 3587,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 244,
+      "nfc": true,
+      "path": ".github/workflows/release.yml",
+      "sha256": "a51f15e3e55f7e3a4d332821ab087fad7ccedea11e1bb29e0438628cd44572f8",
+      "size_bytes": 9813,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 196,
+      "nfc": true,
+      "path": ".github/workflows/security.yml",
+      "sha256": "dc63e3b05533d7050fd04cdf58d4ec4a76cebf21fb7dffad24f4cb5f7b156c95",
+      "size_bytes": 7397,
+      "text": true
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "892b555c7a059714d0acbc3f13e5ded080b0da428a5a485c310d58a3f9458af9",
+      "size_bytes": 786,
+      "text": false
+    },
+    {
+      "path": ".trivyignore",
+      "sha256": "96a60f9f8d732e63ead4e07d7518cec833f75ff8dffd9a8e1119299e8aeb1ece",
+      "size_bytes": 1763,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 109,
+      "nfc": true,
+      "path": "AEGIS_EXECUTION_REPORT_2026-08-20.md",
+      "sha256": "6c0c5b3b5086eeb2023c3c92a3072efe21a91d26bc345a341715d34412141282",
+      "size_bytes": 11900,
+      "text": true
+    },
+    {
+      "path": "AUTHORS",
+      "sha256": "868150785980d38db6aba0491c5ab1d624000d8625b971c0708b5ea8a5bb288e",
+      "size_bytes": 615,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 441,
+      "nfc": true,
+      "path": "CHANGELOG.md",
+      "sha256": "9dd2ccd72d7d3364b907dc7ab840726527302debe63c39097d470f666c12aa50",
+      "size_bytes": 30278,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 72,
+      "nfc": true,
+      "path": "COMMERCIAL.md",
+      "sha256": "c2b59e5b4e5f252ae4bafe7c79e7e8cc2199f19f35b7cb5ae02f5564387ca412",
+      "size_bytes": 7232,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 237,
+      "nfc": true,
+      "path": "CONTRIBUTING.md",
+      "sha256": "f7cbdfed1c2831f4146ee0ee7ca563041d839e8536347daaab01885eed566c64",
+      "size_bytes": 10108,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 171,
+      "nfc": true,
+      "path": "DEPLOYMENT_GUIDE.md",
+      "sha256": "821d72248235b17b1f04659d8b955d8d149d97a8520611d2dc8194c0de11cf20",
+      "size_bytes": 13592,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 636,
+      "nfc": true,
+      "path": "LICENSE",
+      "sha256": "c81dcf9f3237487822edd890ac2c58e202cf69dd0d68541c8633f10fb4dd5d2c",
+      "size_bytes": 33134,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 73,
+      "nfc": true,
+      "path": "Makefile",
+      "sha256": "42b6de20e910237edc221cabef55e8f18ebdaaa59c9e237de2e314588c15bd22",
+      "size_bytes": 2368,
+      "text": true
+    },
+    {
+      "path": "NOTICE",
+      "sha256": "154dc12afdefce753d4d1604be14f954757c57461e0fc2d3d98d60342986467c",
+      "size_bytes": 1360,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 330,
+      "nfc": true,
+      "path": "README.md",
+      "sha256": "e53d98a9fe8785e4b1c91242f37920532f7037a325de481d5b5c2cebd260b22e",
+      "size_bytes": 32236,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 101,
+      "nfc": true,
+      "path": "SECURITY.md",
+      "sha256": "5f04711564add1d7a071495b51dd818feb97e6d7a447f7ea800084ec6606affb",
+      "size_bytes": 8414,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 219,
+      "nfc": true,
+      "path": "SECURITY_AUDIT_EXECUTION_LOG.md",
+      "sha256": "9c4823c54a2644ae68e492bcbb35e60b54dedac22856b129ed240ea44353225f",
+      "size_bytes": 11158,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 81,
+      "nfc": true,
+      "path": "SECURITY_AUDIT_REPORT.md",
+      "sha256": "019b6ef71032ba522a50e02ef5f6c0895f395a33119c4227378d40aeb8310760",
+      "size_bytes": 5419,
+      "text": true
+    },
+    {
+      "path": "Samples/01-overview.html",
+      "sha256": "0adbc958554a87aa52f542ff8f420c18a264efaad22a76262bd8f6322e9009d2",
+      "size_bytes": 150068,
+      "text": false
+    },
+    {
+      "path": "Samples/02-performance.html",
+      "sha256": "9e8332bc67b14feadb6bb13eaec92281a1da1167c5f23a7ea56426f1a1366f29",
+      "size_bytes": 150074,
+      "text": false
+    },
+    {
+      "path": "Samples/03-providers.html",
+      "sha256": "f8a9362532eb85eb863764cd8f6e13473e9b61f0137cb55f5491fd09cd954d87",
+      "size_bytes": 150070,
+      "text": false
+    },
+    {
+      "path": "Samples/04-health.html",
+      "sha256": "008810ece2d63d3f6d5ff50f7532964e8c8661263d5b00785457df8252f122e9",
+      "size_bytes": 150064,
+      "text": false
+    },
+    {
+      "path": "Samples/05-threatlab.html",
+      "sha256": "9550a4185c310b6e01581a8116ebdb50f9d642ed62896e2eb22e72b83e5becdb",
+      "size_bytes": 150070,
+      "text": false
+    },
+    {
+      "path": "Samples/06-detectors.html",
+      "sha256": "857aa1f91f1b353d3a9c7b3d344563687b168626d60b6fe8fae0cbb80a313192",
+      "size_bytes": 150070,
+      "text": false
+    },
+    {
+      "path": "Samples/07-waf.html",
+      "sha256": "6b7cde77bea09ee4d67164d8c98a804c8e792916f990930e36430282ab84267d",
+      "size_bytes": 150058,
+      "text": false
+    },
+    {
+      "path": "Samples/08-audit.html",
+      "sha256": "3f491239e8bbf30c3b0c3264ccf2747bd71c4ded2a2a248b66fcc19fd113ea62",
+      "size_bytes": 150062,
+      "text": false
+    },
+    {
+      "path": "Samples/09-forensics.html",
+      "sha256": "f51e7596344982207ccd89cd963a5d7b364a166b2d9994389e02ef48486fa797",
+      "size_bytes": 150070,
+      "text": false
+    },
+    {
+      "path": "Samples/10-compliance.html",
+      "sha256": "063a6156de5f18b750f47c6c4f3945b9e0b65255f3fb5c87fae09aabe65b8430",
+      "size_bytes": 150072,
+      "text": false
+    },
+    {
+      "path": "Samples/11-architecture.html",
+      "sha256": "14600e62bfbe49f480567e3b11a0c318c61490a19ed8cf5da6ebfa8b844ba85f",
+      "size_bytes": 150076,
+      "text": false
+    },
+    {
+      "path": "Samples/12-code.html",
+      "sha256": "8700f878656c836b243a00490bd420ab8ec8bed6e60a29332c003ae45abbb701",
+      "size_bytes": 150060,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 36,
+      "nfc": true,
+      "path": "Samples/README.md",
+      "sha256": "e8a014bab6191bfd5d4d6192d69f96f378bd43f65c2cae7a4828b3cc7dc1f2ff",
+      "size_bytes": 1978,
+      "text": true
+    },
+    {
+      "path": "Samples/index.html",
+      "sha256": "1a83111c630e22852a3c660a214a79ce876613a05a2e1f8a8be8093d64d86b74",
+      "size_bytes": 150141,
+      "text": false
+    },
+    {
+      "path": "aegis.wal.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 7,
+      "nfc": true,
+      "path": "aegis/__init__.py",
+      "sha256": "cf5373653ab067642ed655fcfd362b5e4521d6c567f6d1970dafc40e2aa09280",
+      "size_bytes": 312,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 5,
+      "nfc": true,
+      "path": "aegis/auth/__init__.py",
+      "sha256": "4b56d13c96e066d8106aac811cb2e0da711da663cc1ceabfe129ce226347b4d3",
+      "size_bytes": 257,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 341,
+      "nfc": true,
+      "path": "aegis/auth/abac.py",
+      "sha256": "51257b720f13ed5d587b9b735d494b4d12bb5118a647f3e8c56bc43256484e76",
+      "size_bytes": 13553,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 144,
+      "nfc": true,
+      "path": "aegis/auth/apikey.py",
+      "sha256": "0aa4b5380da8afba0b3acfa4ba63ddc132663d098fe1fef153d027b824326268",
+      "size_bytes": 5187,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 495,
+      "nfc": true,
+      "path": "aegis/auth/ldap_auth.py",
+      "sha256": "0cee9052bb8c9f572f02acddd813c5c3bc49087c435ea33652028657eb6a9274",
+      "size_bytes": 18464,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 466,
+      "nfc": true,
+      "path": "aegis/auth/rbac.py",
+      "sha256": "b305a86ac156addbdac96a84d4a0f60bd2d1822caf1f9f7c9277291551c0148f",
+      "size_bytes": 16861,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 960,
+      "nfc": true,
+      "path": "aegis/auth/scim.py",
+      "sha256": "3a5041bc94cecf098d2effeb747295cf524b3cea37e3e8dffe222ef32237445f",
+      "size_bytes": 36589,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 193,
+      "nfc": true,
+      "path": "aegis/auth/scopes.py",
+      "sha256": "1391cbf0be895cd8e66d8e3ef7560c5df449d8d23e7e19bd334b90e5aa761416",
+      "size_bytes": 6273,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 787,
+      "nfc": true,
+      "path": "aegis/config.py",
+      "sha256": "ee7dab68dfefd5a8a72679931867b07e96cfb01c1893efb061d0f21a52091b15",
+      "size_bytes": 33212,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 64,
+      "nfc": true,
+      "path": "aegis/core/__init__.py",
+      "sha256": "2fde5a87af46ab448e9447f970cf6c9bcd3a3cebd25269c26b86703358f0ff14",
+      "size_bytes": 2172,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 136,
+      "nfc": true,
+      "path": "aegis/core/adversarial_filter.py",
+      "sha256": "6d827c64f7259bf4ff3c62d151bc1e44c950bb711f533ed57ed6c6d9c3b28489",
+      "size_bytes": 4939,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 260,
+      "nfc": true,
+      "path": "aegis/core/adversarial_suffix_detector.py",
+      "sha256": "f2aba9b65fa1b3131dede7abc71c51a7a388324a4a4a496412a518e78a64836e",
+      "size_bytes": 10879,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 340,
+      "nfc": true,
+      "path": "aegis/core/ae_keyword_detector.py",
+      "sha256": "16a2f5af02b3dd1e5952105e2ccb41c0c9b0fba64c2ad0c31a270bc684cac2bd",
+      "size_bytes": 12124,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 120,
+      "nfc": true,
+      "path": "aegis/core/anchoring.py",
+      "sha256": "a993f1221a2fb39e64cc9bc11db6fa3c29363bdef7d4df9a2dd9784fa4a84b81",
+      "size_bytes": 4262,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 525,
+      "nfc": true,
+      "path": "aegis/core/archival_bundle.py",
+      "sha256": "8c9956510b7f8cca64805964f38d2e78504186754effef7b7d58665a9690c55a",
+      "size_bytes": 18640,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 169,
+      "nfc": true,
+      "path": "aegis/core/artifact_signing.py",
+      "sha256": "2f5fc30294623c8818f66cc22fb9a95727e1708938e00998ac47b4e05ce615c5",
+      "size_bytes": 6653,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 376,
+      "nfc": true,
+      "path": "aegis/core/atlas_tactic_mapper.py",
+      "sha256": "9d533e21469c6bf57d6475250826bd63ebc8320ce7c1d58bb2040aa92a0339fb",
+      "size_bytes": 13412,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 344,
+      "nfc": true,
+      "path": "aegis/core/attestation_capabilities.py",
+      "sha256": "d171dc2333262f33a7d40c1fd242ebaaec48e8089852ffcf08baa56018ffb9c8",
+      "size_bytes": 11488,
+      "text": true
+    },
+    {
+      "path": "aegis/core/audit_node.proto",
+      "sha256": "dab86ede63d30291d6d41dbd6e2db19c4834e23db9769451b0d6415a902a9722",
+      "size_bytes": 517,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 228,
+      "nfc": true,
+      "path": "aegis/core/audit_node_encryptor.py",
+      "sha256": "b0181e8a4c4bc30bef17b0e56a65a6c9fc1a1e25b1b6024797eca2ea488c6636",
+      "size_bytes": 8646,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 27,
+      "nfc": true,
+      "path": "aegis/core/audit_node_pb2.py",
+      "sha256": "1a377aa334ab4bde7bd7513fd815accce8e921afd70e0ac198596a4eaa5f6a44",
+      "size_bytes": 1375,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 139,
+      "nfc": true,
+      "path": "aegis/core/blockchain_anchor.py",
+      "sha256": "a21918465155317e8c2f6879d107d2240940352035ea1bcb989339b4f3f901bb",
+      "size_bytes": 5158,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 203,
+      "nfc": true,
+      "path": "aegis/core/boot_attestation.py",
+      "sha256": "1487691c97721ee5a6a450d9e5df7755e6abe67f5254e3aa7b2dd841ca63e5b7",
+      "size_bytes": 8013,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 54,
+      "nfc": true,
+      "path": "aegis/core/boot_guard.py",
+      "sha256": "48af1d9d87ba73468dec85b9898659c12c78afbb74f1fa04379b5b1cd9505929",
+      "size_bytes": 1827,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 247,
+      "nfc": true,
+      "path": "aegis/core/build_hardener.py",
+      "sha256": "5c339861c0334816f586e8fb2c40492cada585a5041041c96c0f1548da1096b2",
+      "size_bytes": 8732,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 144,
+      "nfc": true,
+      "path": "aegis/core/build_reproducibility.py",
+      "sha256": "5396ad301a0e5cb6ea68ca3ebba06f2ea249c9147ea664ea90056b84abd8a765",
+      "size_bytes": 5340,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 190,
+      "nfc": true,
+      "path": "aegis/core/cac_piv.py",
+      "sha256": "003d5e08911a632c46821b177e06d49e8101844b37e21982c28c80507842c1f9",
+      "size_bytes": 8179,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 402,
+      "nfc": true,
+      "path": "aegis/core/cds_guard.py",
+      "sha256": "f9ef2d8bc9d92f1e9194c7fed6005842662ee2fe410a7a28df5bb0324c606105",
+      "size_bytes": 14225,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 276,
+      "nfc": true,
+      "path": "aegis/core/cfi_manager.py",
+      "sha256": "87744f0fcc411cb30cfcab8842a2b245bb775da0c968046501369286cad8f12c",
+      "size_bytes": 10447,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 388,
+      "nfc": true,
+      "path": "aegis/core/cgroups_quota.py",
+      "sha256": "4fe88908634df9d7bbbe0d3e8f76d7787fb3e3ef56117f7742ef3d56a7545bef",
+      "size_bytes": 14180,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 171,
+      "nfc": true,
+      "path": "aegis/core/circuit_breaker.py",
+      "sha256": "3334df039206890c06336ba0b905abde3ddb595d7c6b00a3f7ed5b16d1eae2a5",
+      "size_bytes": 6184,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 296,
+      "nfc": true,
+      "path": "aegis/core/classified_marker_detector.py",
+      "sha256": "52993dda4bc01e048d90daa05e2eafa1b2f41c0668059819ace8de4fd4edc914",
+      "size_bytes": 12912,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 346,
+      "nfc": true,
+      "path": "aegis/core/clinical_claim_detector.py",
+      "sha256": "e4158fa41e18070f70521e4226d893d8af550d65655f4f055aa179d65bdb4c8a",
+      "size_bytes": 13803,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 308,
+      "nfc": true,
+      "path": "aegis/core/clock_integrity.py",
+      "sha256": "5aa7efab7e5572cc17dbf94ee3ca6d4835b9561e071332609b2f0d8c41514c43",
+      "size_bytes": 11439,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 298,
+      "nfc": true,
+      "path": "aegis/core/cnsa_negotiation.py",
+      "sha256": "82c650a24d97c01b52ec7487b0fc97e31c1cba252134279437b1951ca6ed27d1",
+      "size_bytes": 11802,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 186,
+      "nfc": true,
+      "path": "aegis/core/codeql_config.py",
+      "sha256": "5d5820602445ea7acc93cde9d051e11074d44cdeeef7af3021f3bdea452fe1e2",
+      "size_bytes": 6595,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 290,
+      "nfc": true,
+      "path": "aegis/core/conversation_graph.py",
+      "sha256": "cb0e23059502f4f3a97830e77f8bbb2f03abc51bc0ddbd8cbcf24a195c005618",
+      "size_bytes": 11840,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 262,
+      "nfc": true,
+      "path": "aegis/core/cpu_affinity.py",
+      "sha256": "00cc9c237a054bcf5803aa57ae920e26484f6fd157299507c77747541c782496",
+      "size_bytes": 9584,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 240,
+      "nfc": true,
+      "path": "aegis/core/crdt_ordering.py",
+      "sha256": "07211afca3b7db5b3c5f1bb6824e75042d158d99d287672b2ede8869f164acdf",
+      "size_bytes": 9591,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 434,
+      "nfc": true,
+      "path": "aegis/core/cross_session_correlator.py",
+      "sha256": "651e518c6c6a51448d55049db4debf4dda17f656a9f52e24b93ee5df6f63d633",
+      "size_bytes": 16068,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1058,
+      "nfc": true,
+      "path": "aegis/core/crypto_audit.py",
+      "sha256": "8939500f12bbac8bbac9782a4d4dbd5071eeff70497f90c18bca72a2c478b870",
+      "size_bytes": 44236,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 256,
+      "nfc": true,
+      "path": "aegis/core/custody_transfer.py",
+      "sha256": "75ea702a8243e908a957d5c6d9a9b18982336cdbd5ef58a8c125335cdabc747c",
+      "size_bytes": 9431,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 246,
+      "nfc": true,
+      "path": "aegis/core/decode_pipeline.py",
+      "sha256": "9e9672eef634548a75de5cc5e26dd61a094b510b64bcb9bf3eb1667b6ee56308",
+      "size_bytes": 9245,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 331,
+      "nfc": true,
+      "path": "aegis/core/dependency_audit.py",
+      "sha256": "3f597fa75e9e1b182a873e8223117fa79ffc3d42d581f8afb1280333893350ea",
+      "size_bytes": 12296,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 480,
+      "nfc": true,
+      "path": "aegis/core/dfir_export.py",
+      "sha256": "3c965aa8a7166d46035d80707576f5223b3711eb6613edfd4b3429a1c5cd2e22",
+      "size_bytes": 18058,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 501,
+      "nfc": true,
+      "path": "aegis/core/dosage_hallucination.py",
+      "sha256": "bc6a9b62ce52e32194f2fefab896aa8ffdf34e1d1a3fe20e72f93dba4ced134f",
+      "size_bytes": 20108,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 200,
+      "nfc": true,
+      "path": "aegis/core/dp_analytics.py",
+      "sha256": "2eab46625f1982768bcf21ead0a3c367d18be1e654d7db075709fdcc114a59dd",
+      "size_bytes": 7436,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 144,
+      "nfc": true,
+      "path": "aegis/core/dpdk_engine.py",
+      "sha256": "643b177383316c6c0e3beff385fe63658fac9a5ddc1ff31afb1ce5386e4d97b0",
+      "size_bytes": 5468,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 164,
+      "nfc": true,
+      "path": "aegis/core/ebpf_monitor.py",
+      "sha256": "c70749e299b0ba3b0bdcd700ecde3ef25ceef2637715498f670ce69d8fe2ca6e",
+      "size_bytes": 5799,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 108,
+      "nfc": true,
+      "path": "aegis/core/enclave_provider.py",
+      "sha256": "acf290249278294995352edb22c259040f2a1093553b61567b6126e75f839468",
+      "size_bytes": 3972,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 74,
+      "nfc": true,
+      "path": "aegis/core/entropy_analysis.py",
+      "sha256": "8be90698be88a9c6c89f5ea802e3661eb341d039a5169c055dd167fda39af35a",
+      "size_bytes": 2510,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 335,
+      "nfc": true,
+      "path": "aegis/core/export_audit_log.py",
+      "sha256": "e4cf0f4fbc3991706d21c994d474743ed3be9c1226a88b2df4d3451bca0fbdad",
+      "size_bytes": 11814,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 121,
+      "nfc": true,
+      "path": "aegis/core/forensic.py",
+      "sha256": "d545b41f9972d4b4fe9ee66a9cb295452739ebc23295ab6457999e33978df87e",
+      "size_bytes": 3798,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 309,
+      "nfc": true,
+      "path": "aegis/core/forensic_bundle.py",
+      "sha256": "b4e4fc28796906c1dad87354b4807ef0345695a04d08a05fc644585d00f81228",
+      "size_bytes": 12949,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 515,
+      "nfc": true,
+      "path": "aegis/core/forensic_pdf_report.py",
+      "sha256": "1434aa0e89528bb220bd7c1aeca51747ccd50c53688ea07d05c81dfedab33103",
+      "size_bytes": 22349,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 151,
+      "nfc": true,
+      "path": "aegis/core/forensic_sealing.py",
+      "sha256": "95fcac4d846ff5d070463f2f337aecaff8c8ebd9ffcdca5db7f5559239139eab",
+      "size_bytes": 6054,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 102,
+      "nfc": true,
+      "path": "aegis/core/formal_proofs.py",
+      "sha256": "714281bb9112eca3431fd05c783fdbe9b9eccbc8e5fbdbebf856134b6c30827f",
+      "size_bytes": 4048,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 79,
+      "nfc": true,
+      "path": "aegis/core/formal_specs.py",
+      "sha256": "8ad13935977e3f97acc24a0203af2bb69f34088dd234bd4c340efcf53f4b2912",
+      "size_bytes": 3119,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 127,
+      "nfc": true,
+      "path": "aegis/core/fuzzing_harness.py",
+      "sha256": "105e5df4842b779ae3cf1fc1271187c89c66de4a4a92bc200b6bacf1847257d6",
+      "size_bytes": 4412,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 479,
+      "nfc": true,
+      "path": "aegis/core/gossip_wal_sync.py",
+      "sha256": "c06d4c15b3b67567e98135bf204b92e8464fa1b155b1232f1a074a7bc6b297e2",
+      "size_bytes": 18821,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 739,
+      "nfc": true,
+      "path": "aegis/core/gxp_qualification.py",
+      "sha256": "046f3a3d232503545221ea54bed6321540f32c029320e42bb3796b85bf8d1763",
+      "size_bytes": 26364,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 539,
+      "nfc": true,
+      "path": "aegis/core/hardware_token.py",
+      "sha256": "75032620b6bdfef600648a95a01e311f4a97e4bab6d7cf264e1128de95be1527",
+      "size_bytes": 20051,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 474,
+      "nfc": true,
+      "path": "aegis/core/hl7_fhir_phi_detector.py",
+      "sha256": "85bc9eeb8559a30bd6476c18c72cf0d71a7c7276d3076bec8f2301c1ad9d7026",
+      "size_bytes": 17058,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 228,
+      "nfc": true,
+      "path": "aegis/core/homoglyph_normalizer.py",
+      "sha256": "f6d5e5cc48894d073b67603b43550aa9979247a50b10e7e69b33a4d72bb6dfd9",
+      "size_bytes": 9368,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 398,
+      "nfc": true,
+      "path": "aegis/core/hsm.py",
+      "sha256": "d6f7f92497a7ee94a2ac1ae3fec3ce712fb2a4ade010179c91db4b82325499c9",
+      "size_bytes": 14807,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 462,
+      "nfc": true,
+      "path": "aegis/core/icd_snomed_detector.py",
+      "sha256": "e4294475a71a1faeea367ec413b6489bd3768f8fb781ab1555ecfa750deedee7",
+      "size_bytes": 16497,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 133,
+      "nfc": true,
+      "path": "aegis/core/identity.py",
+      "sha256": "8cea4353091c25aa970a2974312b80470d3ba1fcee1681d6c2510206291089e8",
+      "size_bytes": 5103,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 274,
+      "nfc": true,
+      "path": "aegis/core/intermittent_connectivity.py",
+      "sha256": "a5ca7286e36f954b8b78f5dbaf7385fcf8a5140ec99cf2ec29b1da8ca88ae226",
+      "size_bytes": 10189,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 320,
+      "nfc": true,
+      "path": "aegis/core/ioc_correlator.py",
+      "sha256": "910334189e9cebd5584cc836b5cf74a847c261249a2dc59b2f67eeb91c8ca5cd",
+      "size_bytes": 10414,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 500,
+      "nfc": true,
+      "path": "aegis/core/iso27037_evidence.py",
+      "sha256": "ca6f7de20583f3cb70d3e3a8cb0ff595bfb19c7df51a21020c8efc45d26d1830",
+      "size_bytes": 18124,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 304,
+      "nfc": true,
+      "path": "aegis/core/kernel_hardener.py",
+      "sha256": "a189e16d69ec2cab342b2f95496096b141466ed3c4c89ab18f371537d88d5e47",
+      "size_bytes": 11543,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 87,
+      "nfc": true,
+      "path": "aegis/core/leak_detector.py",
+      "sha256": "cbf465e2e4551bed0350e5ceb5c1dc8970d75566e455a7d04a4f6efdc278a80e",
+      "size_bytes": 3190,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 328,
+      "nfc": true,
+      "path": "aegis/core/lsm_guard.py",
+      "sha256": "91b86bdebe115e15a562eba8f9c6056d643947545fec05cd2691fdc617194fa3",
+      "size_bytes": 11928,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 234,
+      "nfc": true,
+      "path": "aegis/core/manyshot_detector.py",
+      "sha256": "68aa95d70477b0031769b6c276a44f7e912e9c9ac6e18c2f3729d961da1200a8",
+      "size_bytes": 8432,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 593,
+      "nfc": true,
+      "path": "aegis/core/market_abuse_detector.py",
+      "sha256": "0c923a818fd2ba95ddb5083fe2ba921efa7484b3595394a81006004e436dcc1f",
+      "size_bytes": 20455,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 88,
+      "nfc": true,
+      "path": "aegis/core/math_utils.py",
+      "sha256": "63019e017dec64a5c7e570a90486f225556d214b5dfa238598f004b05e633dfb",
+      "size_bytes": 2899,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 109,
+      "nfc": true,
+      "path": "aegis/core/memory.py",
+      "sha256": "2658fd56a3ea42aca9039fce8c772cb06c00bbf3de00d92bfba3dcd9cdd152fc",
+      "size_bytes": 4021,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 170,
+      "nfc": true,
+      "path": "aegis/core/memory_invariants.py",
+      "sha256": "893668525b4adfb5c7d2fba6ef8dbfe73789e8b0a17b37f9b7db695195e7e2fd",
+      "size_bytes": 6219,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 393,
+      "nfc": true,
+      "path": "aegis/core/mifid_record_keeper.py",
+      "sha256": "f89feff4f0d987457f1227526064d8e427b0448d04834fdd2ee6d071e964e097",
+      "size_bytes": 14335,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 178,
+      "nfc": true,
+      "path": "aegis/core/mlkem_session.py",
+      "sha256": "3842b9e1ad6df12c441935669df1d56104f205a49d3241072d26733118571eca",
+      "size_bytes": 7006,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 509,
+      "nfc": true,
+      "path": "aegis/core/mmr.py",
+      "sha256": "746123b8db8e7e71ce33e00ff23d89b06349d030891a966966f2c4c63c248b6e",
+      "size_bytes": 19896,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 404,
+      "nfc": true,
+      "path": "aegis/core/model_decision_explainer.py",
+      "sha256": "5bf0309a9518e5a2831a417d583a6b94b23b5f50352825766c8be944aaf09acd",
+      "size_bytes": 14818,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 598,
+      "nfc": true,
+      "path": "aegis/core/model_risk_governance.py",
+      "sha256": "83353b756440a35634af7af2af2ddfe7bf8ed467610efd5f3942e99867e505d5",
+      "size_bytes": 21622,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 138,
+      "nfc": true,
+      "path": "aegis/core/moe_monitor.py",
+      "sha256": "bf7aa5f406873858f0fa9a79cf1573742769dce139bb1e73943909aa1348f804",
+      "size_bytes": 5502,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 176,
+      "nfc": true,
+      "path": "aegis/core/mte_guard.py",
+      "sha256": "a49f720f654a8238f0052f1e326e0900a4b7519b0bd1a5d3f508bfdc027abdcd",
+      "size_bytes": 6277,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 284,
+      "nfc": true,
+      "path": "aegis/core/network_isolation.py",
+      "sha256": "750d7429d3ceae2ec0547d49a986de0663a984acc3de2e146a24f64cff1551fb",
+      "size_bytes": 10562,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 43,
+      "nfc": true,
+      "path": "aegis/core/normalization.py",
+      "sha256": "d773669960490c29d8b630f03866d7c5085229509fb49160b7fdc5263e4e9f6a",
+      "size_bytes": 1524,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 316,
+      "nfc": true,
+      "path": "aegis/core/observability.py",
+      "sha256": "c2876bce350e07724b1e20cbc4b74b3c7f1c8bef06b9822f29d13dd5eb41518e",
+      "size_bytes": 12009,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 344,
+      "nfc": true,
+      "path": "aegis/core/offline_license.py",
+      "sha256": "ff1fac4e0163da16999852bb215087f970963ff635b7a15fe8fd16fde1d37102",
+      "size_bytes": 12161,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 536,
+      "nfc": true,
+      "path": "aegis/core/operator_seal.py",
+      "sha256": "ab3cd0d6cf2bd450ee45dcd1ba8478a2b759708e0b2a124ac11e3bf3d3d6e8b4",
+      "size_bytes": 20904,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 370,
+      "nfc": true,
+      "path": "aegis/core/ot_protocol_scanner.py",
+      "sha256": "dee969f71da8a26adcfb078d873df270207b4576bbe079046c19b744279ebbb6",
+      "size_bytes": 12648,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 174,
+      "nfc": true,
+      "path": "aegis/core/panic_mode.py",
+      "sha256": "3f4b45b8938eb3bd3ec5f77f2d775e06d307039b971c506ff3258e1a5acee978",
+      "size_bytes": 6867,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 195,
+      "nfc": true,
+      "path": "aegis/core/pci_detector.py",
+      "sha256": "a9d8da4da99ee5818c4dc89fd8e0cc2d19394c723acfe891a5d3e6d144a50672",
+      "size_bytes": 6822,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 305,
+      "nfc": true,
+      "path": "aegis/core/phi_deidentifier.py",
+      "sha256": "b2d38323a7c8baf121b1cbfad1f3f13adddcaf0d153591ece1309de0a9004fd6",
+      "size_bytes": 12693,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 137,
+      "nfc": true,
+      "path": "aegis/core/phi_encryption.py",
+      "sha256": "f2ea8c07ae46b81f682a7db4e608b85721ab66627b116cd834d807eb575a5bcf",
+      "size_bytes": 5125,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 281,
+      "nfc": true,
+      "path": "aegis/core/pii_confidence.py",
+      "sha256": "1b2cae63c8afccd0be498a567fa822a6b97d6224a3ef47746dfa43a3731027a7",
+      "size_bytes": 10572,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 350,
+      "nfc": true,
+      "path": "aegis/core/pinned_ca_bundle.py",
+      "sha256": "f9708387668057627f74411308f163399274839a70c12f8ea2f4f09058c9ac9e",
+      "size_bytes": 12775,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 237,
+      "nfc": true,
+      "path": "aegis/core/pqc_signer.py",
+      "sha256": "df96272089347dd8bf9c04c874ca065584b2243a2ab9df7c8397d8332713890d",
+      "size_bytes": 9979,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 204,
+      "nfc": true,
+      "path": "aegis/core/pqc_tls.py",
+      "sha256": "d33f0c21338154f24c8be193077d3dea9bcd2c2c6ae1981230312b093ebaa956",
+      "size_bytes": 8134,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 248,
+      "nfc": true,
+      "path": "aegis/core/process_hardening.py",
+      "sha256": "a6f081577338e7b0820438ed36c4cd1a7bb45f86e50d114439f96c38edee7a8e",
+      "size_bytes": 9213,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 517,
+      "nfc": true,
+      "path": "aegis/core/raft_consensus.py",
+      "sha256": "cd43a93ac41bbadaa7004b023df44a43d29f83ee3982a716c74e172fe5e3aa87",
+      "size_bytes": 20050,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 454,
+      "nfc": true,
+      "path": "aegis/core/rag_injection_scanner.py",
+      "sha256": "011b9fc8d0318790a4f4b75cfafde21e23d5fab3e51b0d609bc9c632c3887b64",
+      "size_bytes": 17741,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 216,
+      "nfc": true,
+      "path": "aegis/core/ratelimiter.py",
+      "sha256": "c25989f794fd5493101a8fba94316a55178709cc86cb6f9382d838f75e910883",
+      "size_bytes": 8257,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 306,
+      "nfc": true,
+      "path": "aegis/core/readonly_rootfs.py",
+      "sha256": "16760deb0633da141df6f2c76c3b36f2a076d529331efbf99a23c3a2490e62a6",
+      "size_bytes": 11269,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 144,
+      "nfc": true,
+      "path": "aegis/core/red_team_framework.py",
+      "sha256": "708bb319df9019587774c9cd6f63b78ac68fb4bd00f088b33a4d4ce987162d8e",
+      "size_bytes": 5319,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 542,
+      "nfc": true,
+      "path": "aegis/core/rfc3161_timestamper.py",
+      "sha256": "bda514467993d44f134fa5d68a366e584f1f199f324e66bb84bb5eb3bee0db85",
+      "size_bytes": 19728,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 89,
+      "nfc": true,
+      "path": "aegis/core/root_ca_gateway.py",
+      "sha256": "1c11af834ed1e167cc6690768009ff33f513e4ae0c1e2ba6cf027d72b11f1a58",
+      "size_bytes": 3099,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 269,
+      "nfc": true,
+      "path": "aegis/core/rt_scheduler.py",
+      "sha256": "6e0abf0450fdfeb63eaed6b380a41b0e7efdd755b8dcd83193028fc955b9630a",
+      "size_bytes": 9827,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 324,
+      "nfc": true,
+      "path": "aegis/core/rust_integration.py",
+      "sha256": "d616d6250fb79f757e2e7506b86336d48d4e38d05ac03a821f3ddbfd1c455652",
+      "size_bytes": 11106,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 306,
+      "nfc": true,
+      "path": "aegis/core/safe_serialization.py",
+      "sha256": "b419284cdc1c62f17a00325d3a08d83ef9aff5f8ab25fa1809aa47512c920484",
+      "size_bytes": 10815,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 177,
+      "nfc": true,
+      "path": "aegis/core/sandbox.py",
+      "sha256": "4e08b6dac289746c769631be2cc0b5708d37e60dc12a74aec9d2154ea13dce36",
+      "size_bytes": 6115,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 247,
+      "nfc": true,
+      "path": "aegis/core/sandbox_l1.py",
+      "sha256": "e8a869b75c8500f1db9e26f0ae55aca3da469e196d8939b216a0e7efc7533dc7",
+      "size_bytes": 7889,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 205,
+      "nfc": true,
+      "path": "aegis/core/seccomp_guard.py",
+      "sha256": "da29813a38de586f259c260d2ca1c5841e75b312b9594c173577ed24e79b5061",
+      "size_bytes": 7371,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 120,
+      "nfc": true,
+      "path": "aegis/core/secrets.py",
+      "sha256": "c2082b5ab18b2188afac8f7afa2271ae7bda52708e4d9b60591af6415cce5b22",
+      "size_bytes": 4127,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 59,
+      "nfc": true,
+      "path": "aegis/core/secure_runtime.py",
+      "sha256": "d8c8151ca5d0b15c66bcb962b4f53af40637fd9607b9a07c45d0d949f6f36a15",
+      "size_bytes": 1943,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 113,
+      "nfc": true,
+      "path": "aegis/core/semantic_defense.py",
+      "sha256": "29ffedcd0eaf5c2cfa4f899a8c54337300fb8542a3db2d8c88a15696721d8f2b",
+      "size_bytes": 3789,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 418,
+      "nfc": true,
+      "path": "aegis/core/semantic_sim_clustering.py",
+      "sha256": "e055aca254afec64fc0254daf91fb2d2fc369f46312a4c53b503f49b49c6c813",
+      "size_bytes": 15260,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 162,
+      "nfc": true,
+      "path": "aegis/core/session_manager.py",
+      "sha256": "0faa42694d8259c831b94621cf3a944e2e2262422638fdf76b116758ad0ff7f7",
+      "size_bytes": 6516,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 355,
+      "nfc": true,
+      "path": "aegis/core/slo_alerting.py",
+      "sha256": "614c67fb68c0d888883350d9d764a58c796f1a6165ef8e25403d25d9cfe8db8d",
+      "size_bytes": 12061,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 210,
+      "nfc": true,
+      "path": "aegis/core/split_brain.py",
+      "sha256": "31a4c8d6559c91c93b0823f763fd02d60b9bb78cb56e46b1b7e567133186f9cc",
+      "size_bytes": 7940,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 123,
+      "nfc": true,
+      "path": "aegis/core/state_snapshotter.py",
+      "sha256": "cf024cd09db4c6559eab4cdddb400d389527792ce1ed7d382e8c9a7a8802d39e",
+      "size_bytes": 4882,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 552,
+      "nfc": true,
+      "path": "aegis/core/stix_taxii_ingestor.py",
+      "sha256": "d4175fb24c08ea383fb8ebf19c3167774da59fc42d7637ad4963b25a0d6b2c9e",
+      "size_bytes": 20064,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 224,
+      "nfc": true,
+      "path": "aegis/core/streaming_deidentifier.py",
+      "sha256": "028d77dc6ec65212cb2bd8819354b6905f1e169b85786501a3f86d5aef363d3c",
+      "size_bytes": 8390,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 71,
+      "nfc": true,
+      "path": "aegis/core/taint_analysis.py",
+      "sha256": "0fdc459cafd19f7c61f2e301d18f0a50a15d090b708d2a8234e9ed90cbeebc4b",
+      "size_bytes": 2461,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 107,
+      "nfc": true,
+      "path": "aegis/core/tee_manager.py",
+      "sha256": "bea7716c228be7695cb9ff30769e22ffa85e001a7db2eb1a3c9fdcc6c300fccb",
+      "size_bytes": 4035,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 171,
+      "nfc": true,
+      "path": "aegis/core/telemetry.py",
+      "sha256": "ea242644d6f10c280a599432b8b814dc8887e122dbcb16d61cf6aa2004fd0a04",
+      "size_bytes": 6830,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 668,
+      "nfc": true,
+      "path": "aegis/core/ti_sharing.py",
+      "sha256": "9b6c3b5a44ce7ce027a9c1278924173a722b7baee4534750d624664e5f5c8ee3",
+      "size_bytes": 20830,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 77,
+      "nfc": true,
+      "path": "aegis/core/timing_defense.py",
+      "sha256": "74de43cd43125f3316df1cf3461d4e64a95d2e9221643d85ad749a5cc965e8d3",
+      "size_bytes": 2717,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 342,
+      "nfc": true,
+      "path": "aegis/core/token_split_detector.py",
+      "sha256": "9198f4a4af7436abb1ddeddf4737df4c22b134bc1fc753e242e02fb62a9e75c9",
+      "size_bytes": 12272,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 148,
+      "nfc": true,
+      "path": "aegis/core/tpm.py",
+      "sha256": "83fbb49c340f27b442d0b3c39afeb0dc7c87bafa3f0d40f78f2890aa902e6e0e",
+      "size_bytes": 5949,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 149,
+      "nfc": true,
+      "path": "aegis/core/transparency_log.py",
+      "sha256": "ef1e9438ffc829c33d4ea8db0d48238076e3f5adc01c5cb90d50612862075308",
+      "size_bytes": 5376,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 94,
+      "nfc": true,
+      "path": "aegis/core/transport_hardener.py",
+      "sha256": "b8cf42fc327f25d0c24399facaa8ff79725ba8bc3606e6a992dd9c594ec81d07",
+      "size_bytes": 3288,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 147,
+      "nfc": true,
+      "path": "aegis/core/tsa_provider.py",
+      "sha256": "822f4131f36ccf6ec0228fcf9e9204cb497de1798eda95ce3a69515ca197c360",
+      "size_bytes": 4734,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 414,
+      "nfc": true,
+      "path": "aegis/core/waf_fuzzing.py",
+      "sha256": "04589779d735e5077d364e81336d0a72be8a0d6606a3cc3a68bd94e0c365c7f0",
+      "size_bytes": 14625,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 415,
+      "nfc": true,
+      "path": "aegis/core/waf_hot_reload.py",
+      "sha256": "2e80abd33ba16cb6e0e12ac6dac527d2926d9bc5fea0c9c8b71c68bb4a856774",
+      "size_bytes": 14580,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 218,
+      "nfc": true,
+      "path": "aegis/core/waf_session.py",
+      "sha256": "4bd57f5b8dde2ae80f18bd1e285a5c3e49b6bae86504ce1791814805a165e321",
+      "size_bytes": 7818,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 360,
+      "nfc": true,
+      "path": "aegis/core/wal_backup.py",
+      "sha256": "471dfca8e12cc7cddfbeb63f72050ecef9d01fa287a4c4b2e286a4c0a6f934a6",
+      "size_bytes": 13740,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 460,
+      "nfc": true,
+      "path": "aegis/core/witness_cosign.py",
+      "sha256": "07836873de8027bab524839c4b31634a91dcf08ff7de2ad4e5c806296cc99a96",
+      "size_bytes": 15702,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 633,
+      "nfc": true,
+      "path": "aegis/core/worm_ledger.py",
+      "sha256": "9b725651d347f92f84878ee19cc38c2126c87ee5cc04ff03c38398207fc4d740",
+      "size_bytes": 23418,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 73,
+      "nfc": true,
+      "path": "aegis/core/worm_storage.py",
+      "sha256": "ee3ca7c5440907211a159ea908aff582cd16ff2609006b1391db90660c94e596",
+      "size_bytes": 2225,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 318,
+      "nfc": true,
+      "path": "aegis/core/xdp_dynamic_segmentation.py",
+      "sha256": "2cd2b50a8a46964943f20bd497139cefccb9083a4a2a3e014e9cb4e88d48cfa8",
+      "size_bytes": 11585,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 598,
+      "nfc": true,
+      "path": "aegis/core/yara_engine.py",
+      "sha256": "51c0382530951c47c099a17bba3d9152dcd009b7c27ce70539dee6083397fd1f",
+      "size_bytes": 20011,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 265,
+      "nfc": true,
+      "path": "aegis/core/zk_proof.py",
+      "sha256": "2a89e633c3678f51b1934418bcddd180bea2d077b1fde7fbf15dda98cca0800c",
+      "size_bytes": 9961,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 120,
+      "nfc": true,
+      "path": "aegis/providers/__init__.py",
+      "sha256": "0645c289f437851d34657a9a8007427d1fae29b098c17e53c8f41fcf9238bc5f",
+      "size_bytes": 4314,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 532,
+      "nfc": true,
+      "path": "aegis/providers/anthropic_provider.py",
+      "sha256": "7602c73b01606fae1b3832b66c79f67ebf95dc4f232b6d30ef2a8ec993031e12",
+      "size_bytes": 20302,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 144,
+      "nfc": true,
+      "path": "aegis/providers/base.py",
+      "sha256": "d3852c6130f6fcd9224a73cf5e603e5381037b268c22d40745b21f5083f388d9",
+      "size_bytes": 5296,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 77,
+      "nfc": true,
+      "path": "aegis/providers/gemini_provider.py",
+      "sha256": "c624e75c5d0b94f6e3abac8de085cbded95e157e79021880b4809928f79efc6a",
+      "size_bytes": 2625,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 86,
+      "nfc": true,
+      "path": "aegis/providers/openai_provider.py",
+      "sha256": "1e2f2fac10a1959970f53300b90fe655ed180d902dbab594d4c5295a8e4f74c5",
+      "size_bytes": 2691,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 5,
+      "nfc": true,
+      "path": "aegis/proxy/__init__.py",
+      "sha256": "9389722cc5b6e64b6827791cd371f604b5688afd8ca5d6810f2794198395b459",
+      "size_bytes": 259,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 380,
+      "nfc": true,
+      "path": "aegis/proxy/analyzer.py",
+      "sha256": "0dcee1047538d69bd7f501e304acfe9eb946289a0d07c5298956bfb6b2d2f06a",
+      "size_bytes": 14578,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1773,
+      "nfc": true,
+      "path": "aegis/proxy/app.py",
+      "sha256": "6b27060a62e871da36dc255ebdb8e1ce9a6bc8274e99ddb37144dbb5692d01cf",
+      "size_bytes": 73664,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 58,
+      "nfc": true,
+      "path": "aegis/proxy/attestation_api.py",
+      "sha256": "de2e64abf666229ba322bdfc616f9acdf6455071e8e4ddba10c760c08fa58142",
+      "size_bytes": 2142,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 341,
+      "nfc": true,
+      "path": "aegis/proxy/audit_api.py",
+      "sha256": "c27056733894feb95738aee739a1316c4976d898c9f68b6686bc9b85b96a7202",
+      "size_bytes": 14140,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 112,
+      "nfc": true,
+      "path": "aegis/proxy/dependencies.py",
+      "sha256": "df36efa4b2d09af9152065dd01bd4beccce4f37a63143379212b13f07f556f28",
+      "size_bytes": 4676,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 125,
+      "nfc": true,
+      "path": "aegis/proxy/dmz_middleware.py",
+      "sha256": "61117ed2997dac9c5c0ed42ba798d9b4ada2a85e8a6cff49bfd108d422f411ec",
+      "size_bytes": 4197,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 199,
+      "nfc": true,
+      "path": "aegis/proxy/egress_guard.py",
+      "sha256": "a07031d58f5c2ce6fbc80104c5dc9d6b6d6a11edf8d29a6ae072efce2d683c62",
+      "size_bytes": 7568,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 498,
+      "nfc": true,
+      "path": "aegis/proxy/forwarder.py",
+      "sha256": "be18627be068abb83ddb9c3fd0197df4f6c1c0945fd6cc2d5cf2a5605f50fb52",
+      "size_bytes": 19890,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 136,
+      "nfc": true,
+      "path": "aegis/proxy/mtls.py",
+      "sha256": "3f80961587bebf8fb3cbfab2b7e91ce124b125ae3214a9d9bc359f3aa8206937",
+      "size_bytes": 5512,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 232,
+      "nfc": true,
+      "path": "aegis/proxy/schemas.py",
+      "sha256": "f9e658ad5c157a2d23d085ef07dd6efac80326a56c865d9a14fca04600519633",
+      "size_bytes": 6563,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 450,
+      "nfc": true,
+      "path": "aegis/proxy/streaming.py",
+      "sha256": "dfcf1bfc88643cd140056942ac75feea8c24b030bbd4303dbf42f25d553fdf7b",
+      "size_bytes": 17841,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 371,
+      "nfc": true,
+      "path": "aegis/proxy/waf.py",
+      "sha256": "9b94d227a79c9bb296d7d70df5134c26081bfb699f92a60c3c6123a31f032c17",
+      "size_bytes": 16413,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 28,
+      "nfc": true,
+      "path": "aegis_rust_v2/.cargo/audit.toml",
+      "sha256": "d58cef014dddd2d502bbeda320e9847d0fcfb60757dd78703d93c9fccd6e7832",
+      "size_bytes": 1433,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 14,
+      "nfc": true,
+      "path": "aegis_rust_v2/.cargo/config.toml",
+      "sha256": "5b1b4461353b7d05f6b9e9a9e4a931bf92afeab75ae0772ef30fcf1f8afa7c04",
+      "size_bytes": 581,
+      "text": true
+    },
+    {
+      "path": "aegis_rust_v2/Cargo.lock",
+      "sha256": "7125b1c230831318179f0c4a8693dbe7e811f27242cf7d3d1a6e2789f5af656d",
+      "size_bytes": 60576,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 115,
+      "nfc": true,
+      "path": "aegis_rust_v2/Cargo.toml",
+      "sha256": "1a8d9b397b431fbdc5ba44f7338221a0d56110395c7a544b24732880d73d53d3",
+      "size_bytes": 4211,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 21,
+      "nfc": true,
+      "path": "aegis_rust_v2/pyproject.toml",
+      "sha256": "d95bc1a1170e192fe382f3c6f601b5834ad46bfd24aeb9cb2ade32aa82c65749",
+      "size_bytes": 681,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 156,
+      "nfc": true,
+      "path": "aegis_rust_v2/src/audit.rs",
+      "sha256": "de57d23c99f36fc2b60749b516334740de14696c8fd742234a2367edc72784c2",
+      "size_bytes": 5209,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 261,
+      "nfc": true,
+      "path": "aegis_rust_v2/src/forwarder.rs",
+      "sha256": "b18dfd0a7b6a70b9a8a6bae37b3ba60e9953818f7c1d71e4e4709fe7dea0ff33",
+      "size_bytes": 9605,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 112,
+      "nfc": true,
+      "path": "aegis_rust_v2/src/hasher.rs",
+      "sha256": "3180ee15d1d40e35636751929e932bbdfcbdb924eeec930f7fe11cf3ed6bb9f2",
+      "size_bytes": 3532,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 76,
+      "nfc": true,
+      "path": "aegis_rust_v2/src/ledger.rs",
+      "sha256": "833615c8b69d185a9f87e5e3b4d5cdd828d849af7c66796e3a699bc2077cec8b",
+      "size_bytes": 2460,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 131,
+      "nfc": true,
+      "path": "aegis_rust_v2/src/lib.rs",
+      "sha256": "48801046edc1b8ada830c1a24627a31b2636e7e22f6412d284c48304094bdbb5",
+      "size_bytes": 5432,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 130,
+      "nfc": true,
+      "path": "aegis_rust_v2/src/mmr.rs",
+      "sha256": "8498c9f3b7225983ce200f8287027a5c5628f3eee552ac4cae94ef8897c6c811",
+      "size_bytes": 3525,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 125,
+      "nfc": true,
+      "path": "aegis_rust_v2/src/pqc.rs",
+      "sha256": "7c068a343ff5eca9d25811078d8ddfa39915125d9ef083ea6a0e739a1757132c",
+      "size_bytes": 4602,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 179,
+      "nfc": true,
+      "path": "aegis_rust_v2/src/rate_limit.rs",
+      "sha256": "fd0082c87a51e3b1df05f4f8a97de117ea8c1703bbb22afcc3da7bb660ec91f7",
+      "size_bytes": 6493,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 169,
+      "nfc": true,
+      "path": "aegis_rust_v2/src/session.rs",
+      "sha256": "77e6358501215027d1496f474610ec835d6cb85f3f7468d9cbf26ac6654300bb",
+      "size_bytes": 4870,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 259,
+      "nfc": true,
+      "path": "aegis_rust_v2/src/waf.rs",
+      "sha256": "763e1b821815b332cf6d9a1423ea4098a909274d721f7555b3997bd66a79b943",
+      "size_bytes": 8429,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 309,
+      "nfc": true,
+      "path": "aegis_rust_v2/src/wal.rs",
+      "sha256": "a0fb4637f0edbc8180f43272aa4f923e9de23325c5158191e5909e66b73d2efd",
+      "size_bytes": 10669,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 14,
+      "nfc": true,
+      "path": "aegis_server/__init__.py",
+      "sha256": "d9a06facc00d77a627cc7382e9fbf69acfbf8e6b6c3ea4cb2a04a83be9d03259",
+      "size_bytes": 589,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 21,
+      "nfc": true,
+      "path": "aegis_server/compliance/__init__.py",
+      "sha256": "5208dba58c6da538074463ff05465595364beaef207f26190bfd66318476016e",
+      "size_bytes": 745,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 528,
+      "nfc": true,
+      "path": "aegis_server/compliance/exporter.py",
+      "sha256": "7b58b801c851a2eede1b1587e3d5c3f84cc923895439214de0e855f828a2f300",
+      "size_bytes": 20024,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 317,
+      "nfc": true,
+      "path": "aegis_server/config.py",
+      "sha256": "2964947984c16e83ae0e9cd283150c678b4611d9ddb96f14c1457060a074c057",
+      "size_bytes": 12133,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 106,
+      "nfc": true,
+      "path": "aegis_server/crypto/__init__.py",
+      "sha256": "a1462da3c7841cec9914978fd1aa4d209f639d12ffda1ae5fbba7c77d289d31d",
+      "size_bytes": 3886,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 195,
+      "nfc": true,
+      "path": "aegis_server/crypto/base.py",
+      "sha256": "3b793fed8ee76c189d37078456beccbe83f335a7ca6e376ec3957947e08d65fa",
+      "size_bytes": 7029,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 242,
+      "nfc": true,
+      "path": "aegis_server/crypto/keyring.py",
+      "sha256": "4149707e84fb0f44131c3ef8244336e62ce677480ab9b2d76b1c7dffb308f784",
+      "size_bytes": 9666,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 355,
+      "nfc": true,
+      "path": "aegis_server/crypto/vault_signer.py",
+      "sha256": "9484a59ef72a9808482f9d9dab5ba846dedfd08a4ce227bc81f84b7a183bda07",
+      "size_bytes": 12770,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1029,
+      "nfc": true,
+      "path": "aegis_server/main.py",
+      "sha256": "c21ea26011b7be695b6df06968f3a489deba16240b2d579b5ecfddb80d5b3f29",
+      "size_bytes": 40850,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 99,
+      "nfc": true,
+      "path": "aegis_server/storage/__init__.py",
+      "sha256": "90ec7b83b4173181dca1415c2223ab4a2c1430618f8931e1284ff277bd36a323",
+      "size_bytes": 3313,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 313,
+      "nfc": true,
+      "path": "aegis_server/storage/base.py",
+      "sha256": "ce879cb799c9c1638ad95bf7725ea59052c8c52b3f6337c70c587ebf9de5e931",
+      "size_bytes": 11043,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 469,
+      "nfc": true,
+      "path": "aegis_server/storage/dynamodb_provider.py",
+      "sha256": "1273ddb5657901602d7db6bfe4830c7e42778de9eab523dbd11c595cc6649c04",
+      "size_bytes": 18386,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 426,
+      "nfc": true,
+      "path": "aegis_server/storage/postgres_provider.py",
+      "sha256": "0ccb13fc55829cb5277ad0e056a11546c41c3ea1549538c6a741558f050dee5d",
+      "size_bytes": 14369,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 460,
+      "nfc": true,
+      "path": "aegis_server/storage/sqlite_provider.py",
+      "sha256": "6c024613022aa0e409e8ec135b85f85615060874b80ca508177ffb335ae23b0c",
+      "size_bytes": 16403,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 3,
+      "nfc": true,
+      "path": "benchmarks/__init__.py",
+      "sha256": "fe5699aade045b5ffd5dec0c0071bc9f26aed67b45d9642e272af6a28d1c9117",
+      "size_bytes": 206,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 230,
+      "nfc": true,
+      "path": "benchmarks/bench_crypto_audit.py",
+      "sha256": "983c81a0e9b529d838bf09ec9b6f579b19ba2dfadf3ba639db55b6c98380cce7",
+      "size_bytes": 9060,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 409,
+      "nfc": true,
+      "path": "benchmarks/bench_forwarding.py",
+      "sha256": "d8523370cd268901d981774a7ad5aa2a6db9fb3d2f4cfa726b18f9c1cac70d02",
+      "size_bytes": 15434,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 183,
+      "nfc": true,
+      "path": "benchmarks/bench_http_load.py",
+      "sha256": "da5b8e6422de78dd93ef0371301f85541b67eb84aefa008c38cea883dc952488",
+      "size_bytes": 6032,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 210,
+      "nfc": true,
+      "path": "benchmarks/bench_mmr.py",
+      "sha256": "58f2af892812148e7b32212ee6ed59c467e7f9ca1a52fc6898e522086c7870bd",
+      "size_bytes": 7658,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 127,
+      "nfc": true,
+      "path": "benchmarks/bench_streaming_sse.py",
+      "sha256": "2ead651064e80a6c223fb6a9965aa9a0fc1f97575977b6e92d9e434ed056ad71",
+      "size_bytes": 4972,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 51,
+      "nfc": true,
+      "path": "config/presets/engineering.env",
+      "sha256": "0dcd0a6dec5f758bae7bbe3ecf8a0f1c56eb12a7ec531698795ddb20c686811b",
+      "size_bytes": 2532,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 69,
+      "nfc": true,
+      "path": "config/presets/fedramp.env",
+      "sha256": "712ef7553320997ee920d7d6e5808cfc0ba4f5d6520ce00b64c9afc41aee09a5",
+      "size_bytes": 3830,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 63,
+      "nfc": true,
+      "path": "config/presets/finreg.env",
+      "sha256": "47004a7676ad24cde5956e150e1675c3b8646a1e431c127b86ff3637f28ea8cf",
+      "size_bytes": 3725,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 66,
+      "nfc": true,
+      "path": "config/presets/healthcare.env",
+      "sha256": "4616ec1d65f45ffc2d5d542ffffe7dee44c97fc37607fc0e728cdcb65dd655cf",
+      "size_bytes": 3406,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 66,
+      "nfc": true,
+      "path": "config/presets/judicial.env",
+      "sha256": "e83104fb63d85f03bdbbebe02c71f3e060e657d1a47f033f6ea753158d7af21f",
+      "size_bytes": 3411,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 52,
+      "nfc": true,
+      "path": "config/presets/scientific.env",
+      "sha256": "c7d3431c2d60b0c1b9698ae43d0d38160df2bc99dbfa4707905e9f3a6dde10df",
+      "size_bytes": 2676,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 58,
+      "nfc": true,
+      "path": "config/presets/smb.env",
+      "sha256": "62aa5c0645a3a444f10f56ca7e529aec489e35d7ddf218f970be34316bdfec37",
+      "size_bytes": 2890,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "coverage.json",
+      "sha256": "95d5629e087cc47420839fd0d24502f406b34ef9b3c3189d6bca8e4300dd98d3",
+      "size_bytes": 861510,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 35,
+      "nfc": true,
+      "path": "dashboard/README.md",
+      "sha256": "ef5b37f05e57a6c4b03757d3dde3b0651c5fbffb8f8355c9b17b7f007c77436c",
+      "size_bytes": 2245,
+      "text": true
+    },
+    {
+      "path": "dashboard/next-env.d.ts",
+      "sha256": "1862ac4bbbc5192d4bf562161df66ea547ed3e67173100656ab606ae9797db2b",
+      "size_bytes": 288,
+      "text": false
+    },
+    {
+      "path": "dashboard/next.config.ts",
+      "sha256": "1c66534c6e27605f111c0d8e7ee15c195a693a70d0257fcd192e8324a18675a0",
+      "size_bytes": 1236,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 3604,
+      "nfc": true,
+      "path": "dashboard/package-lock.json",
+      "sha256": "7038e32f8bfc7f52657f3c44772ccb4e7b5d2ab725f3c8119b9096ad04e67985",
+      "size_bytes": 123268,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 37,
+      "nfc": true,
+      "path": "dashboard/package.json",
+      "sha256": "756cdbcd4e69f19ffc676b3f70285d2b801ca77b9ca1a81240f6c85d8e0cc32b",
+      "size_bytes": 965,
+      "text": true
+    },
+    {
+      "path": "dashboard/src/app/api/aegis/evidence/route.ts",
+      "sha256": "fd298df603b3274bf13924805c925a0005660789fea78f8b4ffeacc1db31ee0a",
+      "size_bytes": 999,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/app/api/aegis/metrics/route.ts",
+      "sha256": "4c273fb84f2d852318c927b6be3748e886182147c7128f100200ef346aa384af",
+      "size_bytes": 830,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/app/api/aegis/nodes/route.ts",
+      "sha256": "73d2315dfd4cf1b662afa1f3e185548c1c88aeff50024f3ae9af32ca3e67acb0",
+      "size_bytes": 2023,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/app/api/aegis/overview/route.ts",
+      "sha256": "5500a6708bb296f073fa45db00a4a39c93fa7d1c6f1657d74f750b4e6a842a5a",
+      "size_bytes": 1080,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/app/api/aegis/proof/route.ts",
+      "sha256": "fe3f798d44cacafa8a88564bd76eace70cd55c6f7314cfb8577b13275c7fe880",
+      "size_bytes": 1152,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/app/api/v1/forensics/export/route.ts",
+      "sha256": "30a15aa6f7f4626517017e56fe0f9da941b15ca5030d5b65fcb070b9a336a858",
+      "size_bytes": 1654,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/app/forensics/page.tsx",
+      "sha256": "e24607f38928c3d5f4b440df89e1d058a7ce624324d1cd42a06f6d8aa008a46b",
+      "size_bytes": 386,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/app/globals.css",
+      "sha256": "a850d723f5918e300de00b2213075c8f7ab1bed8d4cb208dbc9f32540168aafa",
+      "size_bytes": 4617,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/app/layout.tsx",
+      "sha256": "20547f0f2130f96f024ae5be99b2cc509986966fc0fe9dfd1e9d172b095077cb",
+      "size_bytes": 994,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/app/ledger/page.tsx",
+      "sha256": "a546fc413abc263daef92b9de10fc15a9e630f71fc548927e7e25d30d4976e90",
+      "size_bytes": 251,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/app/metrics/page.tsx",
+      "sha256": "da3c162abe8cc58fc708ed4536495f0315308a12dd2eb624bf719a796a0fbbc0",
+      "size_bytes": 275,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/app/mmr/page.tsx",
+      "sha256": "8b101ad4e870069ca749ca2064c237f12f7017d6b5178618df09c72d036b9dd4",
+      "size_bytes": 532,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/app/page.tsx",
+      "sha256": "c66b282aafee851eb6b7cb9b4e0985786647a02e700e5a47f70e5a397cc8513e",
+      "size_bytes": 319,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/components/ForensicExport.tsx",
+      "sha256": "b094ad283b6869332e56bf852686eaf4c3662f0d2c8b2941a417e6a87dd77a49",
+      "size_bytes": 5595,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/components/LedgerPanel.tsx",
+      "sha256": "63f3f824ca3aa512d2ed44b98cb7f66cd5988b87683844d57323c3c6a91965a3",
+      "size_bytes": 5339,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/components/LedgerTable.tsx",
+      "sha256": "2bd951b7a2af987af18a419efaa78e23e7ec77d63500b12af3e1609c57222cb1",
+      "size_bytes": 6442,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/components/MMRExplorer.tsx",
+      "sha256": "e210cd13a9ce110861c53f76b4fed9fa4ed7dca296010d40a745c9ef8cc70956",
+      "size_bytes": 8440,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/components/MetricsPanel.tsx",
+      "sha256": "7cc3c0060ee49e0e5579d403440f27644110b7e965bffbe5fef5be5cf2b2ef06",
+      "size_bytes": 7213,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/components/OverviewPanel.tsx",
+      "sha256": "27731995c32789016c4024e0cc0e0f811976998393946c16e1e63c792b57dbb6",
+      "size_bytes": 2808,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/lib/aegis-client.server.ts",
+      "sha256": "7a0b8b789bf30f1869985852b522d660aea6aae9e2dfa03b3921766bf275c0c4",
+      "size_bytes": 2202,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/lib/contracts.ts",
+      "sha256": "8c0df2a6ed88f6b5ab536e5ea0460629012cf82c0dcbe37c5c9e08a1bfce97be",
+      "size_bytes": 2455,
+      "text": false
+    },
+    {
+      "path": "dashboard/src/lib/prometheus.ts",
+      "sha256": "7de52bcdaca94ddaf1c960cb61a7be13011898cb09a301dcf51e399e7e9e0abb",
+      "size_bytes": 806,
+      "text": false
+    },
+    {
+      "path": "dashboard/tests/contracts.test.ts",
+      "sha256": "521e169ad0fa732fc4c61a8b4db54b58275b3be67bf05c85f2376eb505a75591",
+      "size_bytes": 876,
+      "text": false
+    },
+    {
+      "path": "dashboard/tests/no-fabrication.test.ts",
+      "sha256": "65a42943f31a0b28ed009173516be886e1f9842f12c258eb5dad5694f30cf75e",
+      "size_bytes": 736,
+      "text": false
+    },
+    {
+      "path": "dashboard/tests/setup.ts",
+      "sha256": "9b328c4843431fa76d8de00008fc159e95f99a840211085ff3b8f25e53d14409",
+      "size_bytes": 43,
+      "text": false
+    },
+    {
+      "path": "dashboard/tests/states.test.tsx",
+      "sha256": "7f3a38bb353862a3683727446128b9d2f809850a47e1b23be9ee15dc315079ed",
+      "size_bytes": 1379,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 45,
+      "nfc": true,
+      "path": "dashboard/tsconfig.json",
+      "sha256": "6e5375a777ca5b9ba3aa60a5f60e787d9b7c845787a80d473f9ec893165fe16f",
+      "size_bytes": 832,
+      "text": true
+    },
+    {
+      "path": "dashboard/vitest.config.ts",
+      "sha256": "5417e5cb1469876f03d86b04390007ec7220cebf4c96ec30ff480655827b2605",
+      "size_bytes": 267,
+      "text": false
+    },
+    {
+      "path": "deploy/apparmor/aegis.profile",
+      "sha256": "18a019e6c401e713271467aaa6533661bff717cc0dcde6fd87fb668bd5bc7f64",
+      "size_bytes": 494,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 98,
+      "nfc": true,
+      "path": "deploy/docker/Dockerfile",
+      "sha256": "e42ae714e47a13dfe2fb9ed6c968278f4bc65394d2d4f95570e129708b1e38e1",
+      "size_bytes": 3924,
+      "text": true
+    },
+    {
+      "path": "deploy/docker/Dockerfile.airgap",
+      "sha256": "a29487153fed0ace56cc1b81afcb506d1001c40455342b22b9b2be3c5ec11ad2",
+      "size_bytes": 5026,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 252,
+      "nfc": true,
+      "path": "deploy/docker/docker-compose.enterprise.yml",
+      "sha256": "0405e69825c7ac74e778fa7a8033e78bc985af3ce090d6cd5eb9a605dc2c7c5a",
+      "size_bytes": 10507,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 68,
+      "nfc": true,
+      "path": "deploy/docker/docker-compose.yml",
+      "sha256": "84a334e40bba6b27f848e1d9089b203a10e71d7b035201feb39866574a2f2019",
+      "size_bytes": 2153,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 18,
+      "nfc": true,
+      "path": "deploy/helm/Chart.yaml",
+      "sha256": "fe505a9976301a076779f4106aa24ff456b0272cc30d055a84eb5c418a24b7b2",
+      "size_bytes": 442,
+      "text": true
+    },
+    {
+      "path": "deploy/helm/templates/_helpers.tpl",
+      "sha256": "c928fe2d43795037d54ea329b5756e96b36f2e205665dcf2766114c3a12b1953",
+      "size_bytes": 1149,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 159,
+      "nfc": true,
+      "path": "deploy/helm/templates/deployment.yaml",
+      "sha256": "376dab4d160743b6eaaed8680b781f534d7672bcb1e8d7c07a51c564ddbc9d41",
+      "size_bytes": 6520,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 32,
+      "nfc": true,
+      "path": "deploy/helm/templates/hpa.yaml",
+      "sha256": "f1ac10068beb8de06e9d25bc8e4f5e93a75135ec05603904b743b81d028e35e2",
+      "size_bytes": 1021,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 13,
+      "nfc": true,
+      "path": "deploy/helm/templates/pdb.yaml",
+      "sha256": "42531d35ddac8df957566d6958f84facbb1d6fa786e5eac30823f11c57ef7699",
+      "size_bytes": 406,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 254,
+      "nfc": true,
+      "path": "deploy/helm/templates/prometheusrule.yaml",
+      "sha256": "bbed403809310a44eb809123b15ac8f1a22d789c429aaeae804c5966ecdb022f",
+      "size_bytes": 12243,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 17,
+      "nfc": true,
+      "path": "deploy/helm/templates/pvc.yaml",
+      "sha256": "cb46195b39de5a0a2e5ac4c19829b5392fe3b6b6257062e74c3398e7c0310ce5",
+      "size_bytes": 483,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 19,
+      "nfc": true,
+      "path": "deploy/helm/templates/service.yaml",
+      "sha256": "a733c94d18845f984a7d1c7e87264eb2bb4b405c94eabc34b978dd9261382155",
+      "size_bytes": 521,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 13,
+      "nfc": true,
+      "path": "deploy/helm/templates/serviceaccount.yaml",
+      "sha256": "8d1d85b5a204512889456d5b0535e9aeccaf5b7f8bea7b512538da1ee526c798",
+      "size_bytes": 428,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 178,
+      "nfc": true,
+      "path": "deploy/helm/values.yaml",
+      "sha256": "328a8477f0767acbc8ee38c8c4c795789dd4086f35887fa982f3770a61d5e7c3",
+      "size_bytes": 6577,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 94,
+      "nfc": true,
+      "path": "deploy/k8s/aegis-operator/crd.yaml",
+      "sha256": "8d43cbf10a52aa4ceea69fba64d6c5a1b11da8f986535443fa56ee81a82074ca",
+      "size_bytes": 3366,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 174,
+      "nfc": true,
+      "path": "deploy/k8s/aegis-operator/operator.py",
+      "sha256": "b8cb3852995145f79b0eb01202ea623878171b5cf5338ab78cc74ca5a1b8c8c7",
+      "size_bytes": 6936,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 47,
+      "nfc": true,
+      "path": "deploy/network-isolation.yaml",
+      "sha256": "8ce2bc10a0d38b1cfa7b9e9a4cc699d101863aa2b5a9ab9a5c9713cfc8d3a173",
+      "size_bytes": 1079,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 134,
+      "nfc": true,
+      "path": "deploy/seccomp/aegis.json",
+      "sha256": "64a849b5e0c7dc90f2cc63f1542e0faa7ec5ded3cdef2961b4ddcc2704962a8a",
+      "size_bytes": 2589,
+      "text": true
+    },
+    {
+      "path": "docs/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 116,
+      "nfc": true,
+      "path": "docs/BENCHMARKS.md",
+      "sha256": "f9d37d244e41ca69612dfe6bcc4f9b8f17655446f9d501d0cacb39da20f66904",
+      "size_bytes": 9328,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 74,
+      "nfc": true,
+      "path": "docs/BUYER_GUIDE_US.md",
+      "sha256": "6a94c82333cdb0efd40362c891e328d01b165c67c20ecb46aa92e88d558279de",
+      "size_bytes": 8455,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 80,
+      "nfc": true,
+      "path": "docs/CLAIMS_MATRIX.md",
+      "sha256": "9c890187a86fd8a54959548a58143e160c5458af812a6717ce23e3b7d78c510a",
+      "size_bytes": 14918,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 106,
+      "nfc": true,
+      "path": "docs/COMMERCIAL_STRATEGY_US.md",
+      "sha256": "d39ab6d0c4aa5f2ce911aa6af05e19b050472c50348297515037cd6ca65ddf90",
+      "size_bytes": 9926,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 181,
+      "nfc": true,
+      "path": "docs/DEVELOPER_QUICKSTART.md",
+      "sha256": "b28d224d32d83fa29d085008f094c6d4e4338cef8d03fd09595ff7313fa076fb",
+      "size_bytes": 9472,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 93,
+      "nfc": true,
+      "path": "docs/FAQ_PROCUREMENT.md",
+      "sha256": "ead0c86059623f3c67b9d2a2c42631aac7d75be199b9b995603d5adfb79fce68",
+      "size_bytes": 8280,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 80,
+      "nfc": true,
+      "path": "docs/FAQ_SECURITY.md",
+      "sha256": "657d3349a2e83a1894297aa36694105740adca87b12d9d0a9e1a6be4f7baddc5",
+      "size_bytes": 6940,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 98,
+      "nfc": true,
+      "path": "docs/FAQ_TECHNICAL.md",
+      "sha256": "fc89c96c30b34bec344562549d81bab547e5b86eb1866c4e387c58834b04931d",
+      "size_bytes": 8786,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 142,
+      "nfc": true,
+      "path": "docs/PLATFORM_OPERATOR_GUIDE.md",
+      "sha256": "0d307fb3158628745c637f63839226e1bae0ca791dce2a7df9dfb77eb76084dc",
+      "size_bytes": 11644,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 75,
+      "nfc": true,
+      "path": "docs/PRODUCT_BRIEF_US.md",
+      "sha256": "15e3499b7984ac05d80f858d632438d3f3c71da9165d2c1579d19f4facebbe2e",
+      "size_bytes": 7709,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 106,
+      "nfc": true,
+      "path": "docs/PROSPECTUS.md",
+      "sha256": "c51371e86c87cf7a5383c76ecf85a9f20f1da19dbb0dc1acf17d302ac66b1484",
+      "size_bytes": 10701,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 70,
+      "nfc": true,
+      "path": "docs/PROSPECTUS_ES.md",
+      "sha256": "82cdb5d0291ccc4fc6572a9027ca83c78cf210ac5632a4159d201bc5ec3f60f9",
+      "size_bytes": 7248,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 87,
+      "nfc": true,
+      "path": "docs/REPOSITORY_MAP.md",
+      "sha256": "b671dafa3e8bf32586e0a1a64045d12e72ed693d7fc5f0487736d8146291242c",
+      "size_bytes": 7401,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 136,
+      "nfc": true,
+      "path": "docs/ROADMAP.md",
+      "sha256": "99a6f59981f2f972ab735f4e81d198093a7ef4b3030077b3b0efbb422f51229c",
+      "size_bytes": 13579,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 61,
+      "nfc": true,
+      "path": "docs/RUST_BUILD.md",
+      "sha256": "a7d21a52328aaeac3692d7ea9e73dcccb4bce279af520398a8a8cbb745b68909",
+      "size_bytes": 2614,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 52,
+      "nfc": true,
+      "path": "docs/SECURITY_ASSURANCE_ROADMAP.md",
+      "sha256": "d03205a8f117bf8da6de23663c32d1d313496e6a0880cc9930be09df0842ab25",
+      "size_bytes": 5257,
+      "text": true
+    },
+    {
+      "path": "docs/Zero-Overhead Post-Quantum Auditing and Threat Mitigation for LLM Inference Pipelines.pdf",
+      "sha256": "1d6b6054ad6e4db9a4a891226e13c8338d89695a4682ba628a84bc54650db02c",
+      "size_bytes": 259382,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 72,
+      "nfc": true,
+      "path": "docs/api/MMR_PROOF_V1.md",
+      "sha256": "49975b687094af184947f5e16d925c2afbe332ebd2e95a9b7cada10894031d27",
+      "size_bytes": 5373,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 46,
+      "nfc": true,
+      "path": "docs/architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md",
+      "sha256": "152b9592173e1160c0e6ed99fa6766376086152d890fe2239650047f2498779c",
+      "size_bytes": 4217,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 140,
+      "nfc": true,
+      "path": "docs/architecture/ARCHITECTURE.md",
+      "sha256": "4b83e04a10bd9ed55c5136b3126d767a0e33d6ac1e054762d6b23407cefc3983",
+      "size_bytes": 10712,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 226,
+      "nfc": true,
+      "path": "docs/architecture/DEEP_DIVE.md",
+      "sha256": "cce0cc959e6d1fe088183b5d2cbc8be54d1848a8e895e936abffd1e2b36da1ee",
+      "size_bytes": 11262,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 50,
+      "nfc": true,
+      "path": "docs/architecture/README.md",
+      "sha256": "ca4b9b5d39beb67c8c185beb20270bd1d5f952c9a402fcf1fa0b2d283f20a1c6",
+      "size_bytes": 2995,
+      "text": true
+    },
+    {
+      "path": "docs/assets/art-audit-chain.png",
+      "sha256": "0a98916666718fa02e778a8642c99b114854d2e08f451dd000016b60e3079f4f",
+      "size_bytes": 1332234,
+      "text": false
+    },
+    {
+      "path": "docs/assets/art-divider.png",
+      "sha256": "4345419d61b69d3c21523f3a08cad85b4ef5b0aa8176b24826d3de090d3d2007",
+      "size_bytes": 957860,
+      "text": false
+    },
+    {
+      "path": "docs/assets/art-gateway.png",
+      "sha256": "2c938c3e802562ac28fda06008a2742a4abcdb66a3f69b9271ecde8d7d49571a",
+      "size_bytes": 1532696,
+      "text": false
+    },
+    {
+      "path": "docs/assets/art-hero.png",
+      "sha256": "c29f67619e8e40c6e52e9ae07af17276a11c778eb30e10a529b96badc623a369",
+      "size_bytes": 1379161,
+      "text": false
+    },
+    {
+      "path": "docs/assets/art-industries.png",
+      "sha256": "afedaba3cec75265a3477ced173c569e0776a4aeba93fb15d2ca47746315e25e",
+      "size_bytes": 1400566,
+      "text": false
+    },
+    {
+      "path": "docs/assets/art-pqc-seal.png",
+      "sha256": "f15ff2ba4a179313f63c0ee3afaf09c2f74e662244e4b3ddbbb8d894b83f90e7",
+      "size_bytes": 1703878,
+      "text": false
+    },
+    {
+      "path": "docs/assets/flow-dark.svg",
+      "sha256": "a349cafaa92a1bf1292d9c0b04aa4231db86474153fa13849366f2aaa4864d05",
+      "size_bytes": 6157,
+      "text": false
+    },
+    {
+      "path": "docs/assets/flow-light.svg",
+      "sha256": "0647788c6f25ffe29e0fd4c0fa0caff505c000372ea11edf303aa18aac423ea3",
+      "size_bytes": 6157,
+      "text": false
+    },
+    {
+      "path": "docs/assets/hero-dark.svg",
+      "sha256": "a71cb8b5402f6e5182679369f311a083eeeaea2dc6eb5c34771eedf88bc3a497",
+      "size_bytes": 5675,
+      "text": false
+    },
+    {
+      "path": "docs/assets/hero-light.svg",
+      "sha256": "685ebc5e079360f5fb028463b20483a604d3174edc0a162417e6a51ce3add256",
+      "size_bytes": 5675,
+      "text": false
+    },
+    {
+      "path": "docs/assets/trust-dark.svg",
+      "sha256": "0f7218ef00ee1485aeb5e6d1dda95e774b6197dc073d3cf280dd078d1140e952",
+      "size_bytes": 3597,
+      "text": false
+    },
+    {
+      "path": "docs/assets/trust-light.svg",
+      "sha256": "724ae0e2e071af4d0c0931609c29eb8bb42804bfb67d37362df5d1a23f0a8657",
+      "size_bytes": 3597,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 95,
+      "nfc": true,
+      "path": "docs/benchmarks/BENCHMARK_RESULTS.md",
+      "sha256": "fb05a443b8a27a5f5c0d27ae37a5b6fe514b5fcaa2ef8ebda8e35ad2a6969c65",
+      "size_bytes": 7902,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 88,
+      "nfc": true,
+      "path": "docs/benchmarks/README.md",
+      "sha256": "03823033ed8a694f771f8c5035ca07f342424f916b0a72e71412b88413287c0b",
+      "size_bytes": 6416,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 149,
+      "nfc": true,
+      "path": "docs/compliance/COMPLIANCE_MAPPING.md",
+      "sha256": "12f9f107375d8dca90f03b85e568c3f002fc89ee62756eb8406f01c7785e4e41",
+      "size_bytes": 16208,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 46,
+      "nfc": true,
+      "path": "docs/formal/FORMAL_VERIFICATION.md",
+      "sha256": "734fbff57ed78e03e53ed89063964bc1e2a93c8ca867a3a1ae33d947e370a74d",
+      "size_bytes": 6172,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 48,
+      "nfc": true,
+      "path": "docs/institutional/CLAIM_EVIDENCE_GRAPH.md",
+      "sha256": "511ca9ad692bf42abda16e471b82b9938c7c9d3b88d7136a997110b21d9e596e",
+      "size_bytes": 10475,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 382,
+      "nfc": true,
+      "path": "docs/institutional/DOC-01_ENTERPRISE_ARCHITECTURE.md",
+      "sha256": "ba561ddd17d1d777c0394ff28d47ed57206f1125cbe44a3359bee1ec03b6059a",
+      "size_bytes": 63961,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 264,
+      "nfc": true,
+      "path": "docs/institutional/DOC-02_CRYPTOGRAPHIC_FORENSIC_BLUEPRINT.md",
+      "sha256": "b58e1bb9b3445ce2a08e5727aac38cc09bbc0cfa7bed2700c0e19ff234643972",
+      "size_bytes": 43795,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 166,
+      "nfc": true,
+      "path": "docs/institutional/DOC-03_THREAT_MODEL.md",
+      "sha256": "7e16f9bf249639f3ed5ae71fca3470ba48e8dc9a4df6a6eb878cdaaefb68d319",
+      "size_bytes": 36568,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 382,
+      "nfc": true,
+      "path": "docs/institutional/DOC-04_OPERATIONS_PLAYBOOK.md",
+      "sha256": "43f34e6be04f402b6a986a7eb74d15653ce5a3bff47a3adb3220faa0f4ce8405",
+      "size_bytes": 49900,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 200,
+      "nfc": true,
+      "path": "docs/institutional/DOC-05_REGULATORY_DOSSIER.md",
+      "sha256": "5c1624c7bfc150d5ef9a80d834b29468d4e25b01479e66f0d63f9e83ec094cb2",
+      "size_bytes": 29002,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 326,
+      "nfc": true,
+      "path": "docs/institutional/DOC-06_COMMERCIAL_PROCUREMENT.md",
+      "sha256": "0c7e16e3c90ae43a6937d41d9cc3fd28134a360e5c08a0609ef6bfbcd3faaa62",
+      "size_bytes": 58123,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 115,
+      "nfc": true,
+      "path": "docs/institutional/DOCUMENT_CONTROL.md",
+      "sha256": "f8cfe86c68b49ab90c3cf2acabf1f87f0dbc87025a46335ddeca63ecfcbd4479",
+      "size_bytes": 8400,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 62,
+      "nfc": true,
+      "path": "docs/institutional/README.md",
+      "sha256": "d0d56674565ecb085532ccf4d0438414faa7c2bfa6bc3f71dec210ef109c340d",
+      "size_bytes": 5868,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 69,
+      "nfc": true,
+      "path": "docs/institutional/UNSUPPORTED_CLAIMS.md",
+      "sha256": "dfcdf9073e2e086845c4e9ad6f2d16676533c85c6084d002b3c5b2abf6af7030",
+      "size_bytes": 12642,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 73,
+      "nfc": true,
+      "path": "docs/operations/BACKPRESSURE_RUNBOOK.md",
+      "sha256": "df7e1935ddfa4d0eb6a54a12ebcf52e54fb9f3418dba490e1142e835cde801d1",
+      "size_bytes": 7425,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 73,
+      "nfc": true,
+      "path": "docs/operations/KEY_ROTATION_RUNBOOK.md",
+      "sha256": "42ac0c93edfc20a389d1c4c83a1f95391971e25fb09fe02643a52d170f94616f",
+      "size_bytes": 5420,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 136,
+      "nfc": true,
+      "path": "docs/operations/ROLLBACK_RUNBOOK.md",
+      "sha256": "abbc77d46004f6ac661846c12614ceab03efb24fc4410d94ee65732984dc4c20",
+      "size_bytes": 7307,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 92,
+      "nfc": true,
+      "path": "docs/performance/SCALING_GUIDE.md",
+      "sha256": "11836dcc9957254487e9ef5a0795f3a6d26cadad05d152128cd4c0a0db8b6c95",
+      "size_bytes": 7799,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 129,
+      "nfc": true,
+      "path": "docs/privacy/DATA_RETENTION.md",
+      "sha256": "add4fb3950a28e34a297022f8757e9f7b80d24df08e5232973595d9140c2e295",
+      "size_bytes": 11070,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 58,
+      "nfc": true,
+      "path": "docs/security/PQC_CONSTANT_TIME.md",
+      "sha256": "7bd8240ba31227ba5c1a55d6c615218cdca9844a0d55c33db149fa9604a4c58e",
+      "size_bytes": 4817,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 91,
+      "nfc": true,
+      "path": "docs/security/THREAT_MODEL.md",
+      "sha256": "936ffbe48a60ca83aaad5f1368edafe49af272c86fd8da335f6a3c23c2fcb14d",
+      "size_bytes": 8715,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 58,
+      "nfc": true,
+      "path": "docs/security/WAF_TESTING.md",
+      "sha256": "756f65753baefba2229c4e84f64d6a7f75efb840fdc7eb26c629a187315a305f",
+      "size_bytes": 4057,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 42,
+      "nfc": true,
+      "path": "docs/security/WAL_HARDENING_2026-08-20.md",
+      "sha256": "b222cb84304e304145e4daadfad6d3fe0c4481c76a91685eec1f7af163a8a7ef",
+      "size_bytes": 4556,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 16,
+      "nfc": true,
+      "path": "evidence/commercial_phase2_dashboard_qa.md",
+      "sha256": "1ea86c4a43be5474bb0c99eed98b3f74c8a38bd0f8969758eb289b761a65611e",
+      "size_bytes": 2297,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 115,
+      "nfc": true,
+      "path": "evidence/commercial_phase2_streaming_benchmark.json",
+      "sha256": "fc1316e17ada9afebe54b06e7ff5b86e8ec01e1dfd84711b4001aa9b4d3804b5",
+      "size_bytes": 3465,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 28,
+      "nfc": true,
+      "path": "evidence/documentation_audit_2026-08-20/CORPUS_AUDIT.md",
+      "sha256": "ca466502d8bdb935c0d8dae30e2e7d735ddaef2f623194e7a6885bca9bf11530",
+      "size_bytes": 1355,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 5455,
+      "nfc": true,
+      "path": "evidence/documentation_audit_2026-08-20/CORPUS_INVENTORY.json",
+      "sha256": "3f508b67a121ca9e327c5d2fbf7e89d03663f6207151cb6afaeefdee4089d49f",
+      "size_bytes": 157367,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 45,
+      "nfc": true,
+      "path": "evidence/execution_2026-08-20/backpressure_stall_report.json",
+      "sha256": "2c730f85f8595bb2fd4966bec1934d0bfeef999d20f8d23fc47b19f9328c303d",
+      "size_bytes": 1396,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 25,
+      "nfc": true,
+      "path": "evidence/execution_2026-08-20/key_rotation_report.json",
+      "sha256": "ce612fcda2f625acabf579da20d0f980a00a1c074e0af2f0669e99f0bdca39fe",
+      "size_bytes": 859,
+      "text": true
+    },
+    {
+      "path": "evidence/execution_2026-08-20/manifest.cbor",
+      "sha256": "246b53d172593a0321390c0cd1b9b21217f425582861901d390933d11a968e3f",
+      "size_bytes": 8763,
+      "text": false
+    },
+    {
+      "path": "evidence/execution_2026-08-20/manifest.cid",
+      "sha256": "2262bf00ee9e88671c5158f82a7f10fc2b331e36d2c9b4ec4d0b7209c66b188e",
+      "size_bytes": 60,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/execution_2026-08-20/manifest.json",
+      "sha256": "fc673ea8ab63a30f5892f157aa63a75ef3953de98b8e6a04a09804ee958395b7",
+      "size_bytes": 9543,
+      "text": true
+    },
+    {
+      "path": "evidence/execution_2026-08-20/manifest.sha256",
+      "sha256": "5f5a3236f63cfc3ab027269a355f737b260e1481829478face4f8f8e2189444d",
+      "size_bytes": 65,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 269,
+      "nfc": true,
+      "path": "evidence/execution_2026-08-20/waf_corpus_report.json",
+      "sha256": "35d1ec5c17741821bb0c3a54a419a00e06655c0474eb92af51e8713250d76f9f",
+      "size_bytes": 7458,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 42,
+      "nfc": true,
+      "path": "evidence/github_status_baseline_2026-08-20/SUMMARY.json",
+      "sha256": "d756adec6e9e129a92cc3acf379607313f8402d13374c6e0b0d4f43bd23cb014",
+      "size_bytes": 1200,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_baseline_2026-08-20/actions_permissions.json",
+      "sha256": "0bffee97e4ad52676c0127aacb5b4b304a2675f5c524de641acf1326e0b0e857",
+      "size_bytes": 69,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1205,
+      "nfc": true,
+      "path": "evidence/github_status_baseline_2026-08-20/actions_runs.json",
+      "sha256": "47335af673867d58c76aa00a7f1d7b6589f560bcd3ecba578070db433d5b91a2",
+      "size_bytes": 43903,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_baseline_2026-08-20/branch_protection.json",
+      "sha256": "738014a2fa96c05e3e5a36a3a193f8c7e0aef587a636b6c78ce56ce5579fab32",
+      "size_bytes": 1691,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_baseline_2026-08-20/code_scanning_alerts.json",
+      "sha256": "9c58cc55fe238b29bc2d14713ed76284bf16e4eeb1336f174ff82ce969c7fd16",
+      "size_bytes": 166,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_baseline_2026-08-20/code_scanning_alerts.stderr.txt",
+      "sha256": "67522825656fb8092ae4db6a436b2aad857054a3f7b587f46c1725d77df82871",
+      "size_bytes": 54,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_baseline_2026-08-20/dependabot_alerts.json",
+      "sha256": "db7eddf511b9436a0bc2fe86adb854a7bca91fd477b1e749cee016aeff5f4092",
+      "size_bytes": 160,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_baseline_2026-08-20/dependabot_alerts.stderr.txt",
+      "sha256": "67522825656fb8092ae4db6a436b2aad857054a3f7b587f46c1725d77df82871",
+      "size_bytes": 54,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_baseline_2026-08-20/repository.json",
+      "sha256": "c1ef9cc284c0979df0e09ff7e4d6f4903499955e29fa58dc760fe42ceb85a24d",
+      "size_bytes": 6862,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_baseline_2026-08-20/secret_scanning_alerts.json",
+      "sha256": "18b8565a477fb90fb580c392f232dfcc872bb6fbc1cafbf6b1ed71b34c315876",
+      "size_bytes": 170,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_baseline_2026-08-20/secret_scanning_alerts.stderr.txt",
+      "sha256": "67522825656fb8092ae4db6a436b2aad857054a3f7b587f46c1725d77df82871",
+      "size_bytes": 54,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_baseline_2026-08-20/security_advisories.json",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "size_bytes": 2,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_baseline_2026-08-20/workflows.json",
+      "sha256": "25d65cd05f863b1602d18a46d2aab28079b6af9f3ea16321f535235c65e9d5e9",
+      "size_bytes": 5138,
+      "text": true
+    },
+    {
+      "path": "evidence/github_status_post_pr95/SHA256SUMS",
+      "sha256": "4b0d4f2cf7e68ac6c695e325118b8f5f416248a8fafeb56e918fd95bc1e2cd38",
+      "size_bytes": 3312,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 91,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/SUMMARY.json",
+      "sha256": "0358a5867b404fc08303405ac23e27f5affca09690b3d1461784b12052735d1f",
+      "size_bytes": 2352,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/actions_permissions.json",
+      "sha256": "041385137ddacf963fa629f303ffc3c0c3f7526d353afa6226fb9533cb1e9012",
+      "size_bytes": 182,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 5,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/actions_permissions_before_hardening.json",
+      "sha256": "27a17e995f96d2bec00ff5df114b1b137188521d353d352a5021f9961f28e515",
+      "size_bytes": 83,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 6,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/actions_permissions_final.json",
+      "sha256": "18fe17ad18792f0d12f29f6410d07487848783f29c6d87c28c214441566c4381",
+      "size_bytes": 200,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1205,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/actions_runs.json",
+      "sha256": "5ab68651dfe74890f850bd7c5bca0c486522f5f81e5779a5bf092b2d11ac3aa6",
+      "size_bytes": 43531,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/branch_protection.json",
+      "sha256": "8aa04ce66dbf9a1c5b0629a833e30f9617e903b04a27f3b12dee21f3cb9689b7",
+      "size_bytes": 2239,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 78,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/branch_protection_before_hardening.json",
+      "sha256": "2a213cc29a48e911a1781f02a29111c18790167a677e8e4753735a8d1bca0c92",
+      "size_bytes": 2156,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 113,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/branch_protection_final.json",
+      "sha256": "2dc75e3e04770295684683f4f49c088fd9230adb5490dd5ae6acd71b28648815",
+      "size_bytes": 2991,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/code_scanning_alerts.json",
+      "sha256": "9c58cc55fe238b29bc2d14713ed76284bf16e4eeb1336f174ff82ce969c7fd16",
+      "size_bytes": 166,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/code_scanning_alerts.stderr.txt",
+      "sha256": "67522825656fb8092ae4db6a436b2aad857054a3f7b587f46c1725d77df82871",
+      "size_bytes": 54,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/dependabot_alerts.json",
+      "sha256": "db7eddf511b9436a0bc2fe86adb854a7bca91fd477b1e749cee016aeff5f4092",
+      "size_bytes": 160,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/dependabot_alerts.stderr.txt",
+      "sha256": "67522825656fb8092ae4db6a436b2aad857054a3f7b587f46c1725d77df82871",
+      "size_bytes": 54,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/repository.json",
+      "sha256": "e2e049055633094be32ead64d8056df7f3ce5d39c2ebe0b039c2344c13590870",
+      "size_bytes": 6861,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 21,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/repository_security_final.json",
+      "sha256": "6400f8335c6009971cf8671db2145de5bbdca6e27d6cfc0eafcf9a29b86230ab",
+      "size_bytes": 448,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 13,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/run_32448725428_final.json",
+      "sha256": "0c67820afa6394ee616a22957cfa9ebf923a3d780bda9516fe2a76f5ed06ac81",
+      "size_bytes": 390,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 59,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/run_32448725428_jobs_final.json",
+      "sha256": "919f73c3fda9f44e62e4879fd9dc25888ae5e7dcebd9c4dbc68d973e5fd3ef84",
+      "size_bytes": 2013,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 13,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/run_32448725435_final.json",
+      "sha256": "ca86b3c5067503183be4aae3579587598a62160a611c7e9f2b3c33d29c6c52f0",
+      "size_bytes": 393,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 32,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/run_32448725435_jobs_final.json",
+      "sha256": "ae18d84ec2e78bd0f122f1ee66236d4ccfd827bf4ae78c7b2de7bc703117a131",
+      "size_bytes": 1071,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 13,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/run_32448725497_final.json",
+      "sha256": "4164d8ba7b287c4a5607cdac9fe49901057d42d70d3a4f4648aee134980d4043",
+      "size_bytes": 384,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 131,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/run_32448725497_jobs_final.json",
+      "sha256": "fc75d0c47df940b38fb0510674487e8a035b30ab9a958cff1c4cfcf99b9587d2",
+      "size_bytes": 4686,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 12,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/sbom_artifact_hashes.json",
+      "sha256": "776431962802ca522a2487d8e4c6e51d414df78b4afef1ce2376be633be6e482",
+      "size_bytes": 427,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 60,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/sbom_attestation_verification_summary.json",
+      "sha256": "655471e490bc569cf09ef01f278cd9d4f01dc4d350ed8b406d1becec01059de7",
+      "size_bytes": 1671,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/secret_scanning_alerts.json",
+      "sha256": "18b8565a477fb90fb580c392f232dfcc872bb6fbc1cafbf6b1ed71b34c315876",
+      "size_bytes": 170,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/secret_scanning_alerts.stderr.txt",
+      "sha256": "67522825656fb8092ae4db6a436b2aad857054a3f7b587f46c1725d77df82871",
+      "size_bytes": 54,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/security_advisories.json",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "size_bytes": 2,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 26,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/security_endpoint_statuses.json",
+      "sha256": "1d27a4123004271573ea5027dcfcc7a623272392c7129977d42fa51a906b5457",
+      "size_bytes": 841,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 37,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/selected_actions_final.json",
+      "sha256": "1ae97337b743b336a70d1c2a7a19ccc78de1bf8096779b782af02bb38323e9ed",
+      "size_bytes": 1127,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 31,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/selected_actions_intermediate_25_patterns.json",
+      "sha256": "f77f5576db60dde499d1e4a7a974c5bd506e676ae502f71e54c5c946d5c92966",
+      "size_bytes": 948,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/github_status_post_pr95/workflows.json",
+      "sha256": "25d65cd05f863b1602d18a46d2aab28079b6af9f3ea16321f535235c65e9d5e9",
+      "size_bytes": 5138,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 28,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/DIAGNOSTIC_BASELINE.md",
+      "sha256": "91670425708f87ec2da6a9297a4fd03ae40e214bc95f1b6390f71d37ac9a5de9",
+      "size_bytes": 3255,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 130,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/FINAL_VERIFICATION_REPORT.md",
+      "sha256": "8c25a17a2d21641e222fe8656a22e3a9d3a5c6ca50c2e3d16253d845422ff706",
+      "size_bytes": 13092,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 17,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/GITHUB_PR95_DIAGNOSTIC.md",
+      "sha256": "f6bcd35eff46459007dc18b1462b8587b954f4db68115e44c95cc0e9acf1217d",
+      "size_bytes": 3284,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 36,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/IMPLEMENTATION_MANIFEST.md",
+      "sha256": "610915e9bf3a7de0eda17e26a777ab901e3a9fd44a4bcd0ccdca8c0b16e2c2b9",
+      "size_bytes": 4273,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 19,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/INJECTION_CONTAINMENT.md",
+      "sha256": "2d6198fceb2cd5fc934f91465ca8fe71c8cd7d057c248383a9f925923013b87e",
+      "size_bytes": 1878,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 43,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/SUPPLY_CHAIN_ASSESSMENT.md",
+      "sha256": "432b9cf810ef3d2eec4f93a5842bd323eea116eb7a12a42ae31bdfe38d766ecd",
+      "size_bytes": 4934,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/automated_security_fixes_after.json",
+      "sha256": "0ff62c42295fc2725047cf32340e12c912af1d99c7ea5ec8902519de6ae3a477",
+      "size_bytes": 31,
+      "text": true
+    },
+    {
+      "path": "evidence/remediation_2026-08-21/dependabot_labels_after.jsonl",
+      "sha256": "a5b61f84c17053dd3c15bbd12c6c26c457d46c7d63601aa1cf85d45698faa80c",
+      "size_bytes": 414,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/github-before/actions_permissions.json",
+      "sha256": "0bffee97e4ad52676c0127aacb5b4b304a2675f5c524de641acf1326e0b0e857",
+      "size_bytes": 69,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/github-before/automated_security_fixes.json",
+      "sha256": "8a0a15ba9d18fbed2294a579cbae9c005dd2fc71b83c56a28e7f55f984e8771f",
+      "size_bytes": 32,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/github-before/branch_protection.json",
+      "sha256": "738014a2fa96c05e3e5a36a3a193f8c7e0aef587a636b6c78ce56ce5579fab32",
+      "size_bytes": 1691,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/github-before/labels.json",
+      "sha256": "2f7a409de87e7129b099b03489d64e4ce43c75cb3dffe4fee55009749c6086a0",
+      "size_bytes": 4587,
+      "text": true
+    },
+    {
+      "path": "evidence/remediation_2026-08-21/native_wheel.sha256",
+      "sha256": "7e734f6c7ebee4e9f4477631c2152ad3c68771a6ed842ce98ab838e11817f298",
+      "size_bytes": 134,
+      "text": false
+    },
+    {
+      "path": "evidence/remediation_2026-08-21/remediation_manifest.cbor",
+      "sha256": "333ae218b9b9c18773380f4c5cdf772e79ca7437fede2e269cee509965abe71a",
+      "size_bytes": 2087,
+      "text": false
+    },
+    {
+      "path": "evidence/remediation_2026-08-21/remediation_manifest.cid",
+      "sha256": "596f5858f1a9d7bff7dd47220a9f4acae07f7d20c4190e7165be1bf4caf5081f",
+      "size_bytes": 60,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/remediation_manifest.json",
+      "sha256": "062c209e5acff852d3438e88fdef1ba374cf3d798ec5879cf60e49586e2ac784",
+      "size_bytes": 2321,
+      "text": true
+    },
+    {
+      "path": "evidence/remediation_2026-08-21/remediation_manifest.sha256",
+      "sha256": "98455e3458df7843e2c27147b11d11ca2428b64931e0515736a3a5ef5d0bf378",
+      "size_bytes": 65,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/repository_after_dependabot.json",
+      "sha256": "beef0e8a66cc89e05f04a0310edcc53d094b2431b650ccd06b91783a0728d01f",
+      "size_bytes": 6861,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "evidence/remediation_2026-08-21/repository_after_secret_scanning.json",
+      "sha256": "beef0e8a66cc89e05f04a0310edcc53d094b2431b650ccd06b91783a0728d01f",
+      "size_bytes": 6861,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 46,
+      "nfc": true,
+      "path": "examples/README.md",
+      "sha256": "3d7f5e65dc41d3b5b609c22899cc232dc3bfb37ba181301627663918512fc432",
+      "size_bytes": 2053,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 4,
+      "nfc": true,
+      "path": "examples/__init__.py",
+      "sha256": "444cb44bbd60ffa7e958adc3b8e055906897faa67ee2bd229a07bd7bcea39609",
+      "size_bytes": 267,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 421,
+      "nfc": true,
+      "path": "examples/demo.py",
+      "sha256": "06eda2ae11e04e14445c84d363a55a142853b831a72a2a0978f4d4ff82a3f1f3",
+      "size_bytes": 15894,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 108,
+      "nfc": true,
+      "path": "init-repo.sh",
+      "sha256": "a9ab33cda8626212d973ed621ac61023eb26a458c522c87d66dca8a295fa150a",
+      "size_bytes": 5028,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 3,
+      "nfc": true,
+      "path": "integrations/__init__.py",
+      "sha256": "fe5699aade045b5ffd5dec0c0071bc9f26aed67b45d9642e272af6a28d1c9117",
+      "size_bytes": 206,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 98,
+      "nfc": true,
+      "path": "integrations/huggingface_plugin.py",
+      "sha256": "4d263f77b12153677943b093da40aa4311fc4d17ef3e374f00ccd6f1c0a0fbc7",
+      "size_bytes": 3042,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 170,
+      "nfc": true,
+      "path": "integrations/vllm_plugin.py",
+      "sha256": "926892db6b9bbfd4344aa97a2840a4ca0b231efa686a8f2bcb505bf47c0c392a",
+      "size_bytes": 6194,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 13,
+      "nfc": true,
+      "path": "mypy-ci.ini",
+      "sha256": "af30fad549406d6866df056e0f7c825eda1404566ef4c673a50a1e928bde36c4",
+      "size_bytes": 304,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 216,
+      "nfc": true,
+      "path": "pyproject.toml",
+      "sha256": "1f2a7ae4d056cbf235b00b7f58946c9d002b49bf2cc2d1ebf0aa4b9fa61d59cf",
+      "size_bytes": 8824,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 5,
+      "nfc": true,
+      "path": "pytest-core.ini",
+      "sha256": "975a7fdb13be5eb2e919cf143bbb395c18f968f890ef33764544f84fe62079a0",
+      "size_bytes": 241,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 5,
+      "nfc": true,
+      "path": "pytest-proxy.ini",
+      "sha256": "29637ff3742a91894f376a75cdfff03900bb1b512eff3cb59cb8769b2ef2d0b1",
+      "size_bytes": 144,
+      "text": true
+    },
+    {
+      "path": "requirements.lock",
+      "sha256": "467d41d303715c9ec3b945a22904bbc982df3da7f7604495517fe5b28f885556",
+      "size_bytes": 86339,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 18,
+      "nfc": true,
+      "path": "requirements.txt",
+      "sha256": "a554443e7e1ccb2fe97d076f88162bed96521b28e7c854474d05ac320118b672",
+      "size_bytes": 461,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 199,
+      "nfc": true,
+      "path": "scripts/apply_license_headers.py",
+      "sha256": "1d462021ae9958943c1a662534a4e0f7446aece6929e50080e1c9e7ef2c8e7f9",
+      "size_bytes": 6610,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 249,
+      "nfc": true,
+      "path": "scripts/audit_documentation_corpus.py",
+      "sha256": "745953e0daae27dd7e67368c213998d2530c9fd95972f60719e27047e4e38140",
+      "size_bytes": 9399,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 22,
+      "nfc": true,
+      "path": "scripts/build_embedded.sh",
+      "sha256": "a8e92767c097894d6c9b2fd8b1619d668ad20ec6941b7cd4299beb745d01f5a1",
+      "size_bytes": 799,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 176,
+      "nfc": true,
+      "path": "scripts/build_execution_manifest.py",
+      "sha256": "9ca6c19f5273485c3107541040d7801285338766f5dc51d4aad10dc645651f08",
+      "size_bytes": 6496,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 189,
+      "nfc": true,
+      "path": "scripts/build_remediation_manifest.py",
+      "sha256": "da03f6aec997330bc626b1060b4c781fa291244e7eeb542da5347321aaaf4f77",
+      "size_bytes": 6664,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 26,
+      "nfc": true,
+      "path": "scripts/build_rust.sh",
+      "sha256": "7d1e24d5175ebc96b1056f0dfe5c89df063693fbaec18825e4235a3d91ebff1a",
+      "size_bytes": 1039,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 114,
+      "nfc": true,
+      "path": "scripts/collect_github_security_status.sh",
+      "sha256": "57e933d3ddafbc0fd2d7bf9e0d8f56071faf74b41962a5ab6fa5462e02d0ecf3",
+      "size_bytes": 4121,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 339,
+      "nfc": true,
+      "path": "scripts/generate_license_key.py",
+      "sha256": "4282f196bf12efbdd13b4905ab51a33c92fa998710dd50ab0ece56768e7c92f2",
+      "size_bytes": 12291,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 46,
+      "nfc": true,
+      "path": "scripts/generate_mmr_vectors.py",
+      "sha256": "fb1d85c5f0ad84b40cd59633bf675b747f35ed9cc9c278368f972b35e8b72c76",
+      "size_bytes": 1443,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 55,
+      "nfc": true,
+      "path": "scripts/generate_sbom.sh",
+      "sha256": "fb2370bdaf9d74d93cf0c637fd7de441d2e91bb1ba6e9277d2ad6e2b7a6a5719",
+      "size_bytes": 2181,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 220,
+      "nfc": true,
+      "path": "scripts/install_aegis.sh",
+      "sha256": "2022f1fb5adf8bf2ba013790719f6bcb178f831dede8f55a7cf1bd89f7e22047",
+      "size_bytes": 9981,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 500,
+      "nfc": true,
+      "path": "scripts/integration_test_mock.py",
+      "sha256": "d4c5a1336aab097119bdc059cd0e9d1ec0bcb5b7a5e2a66ec82ba551fddf4ded",
+      "size_bytes": 19176,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 37,
+      "nfc": true,
+      "path": "scripts/smoke_test.sh",
+      "sha256": "bc33afcac7373d0c611c66545fa95581737511edda4413f506f8e321ba839046",
+      "size_bytes": 1263,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 94,
+      "nfc": true,
+      "path": "scripts/vendor_wheels.sh",
+      "sha256": "65006cafaa599e73790b92e2f266d6f26c4a9fd3578a19e9063387d3b3ddc93a",
+      "size_bytes": 4250,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 56,
+      "nfc": true,
+      "path": "scripts/verify_formal_artifacts.sh",
+      "sha256": "0ab34004cb89a73f0abcec873ee34776885235f11a8315df8bc6a1076e8200b3",
+      "size_bytes": 1949,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 44,
+      "nfc": true,
+      "path": "scripts/verify_github_action_pins.py",
+      "sha256": "5faa89595711796801568997f4e0a0ece150d3c4ed8ebbba9fa6190c0e233aa2",
+      "size_bytes": 1549,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 25,
+      "nfc": true,
+      "path": "sdk/python/README.md",
+      "sha256": "78ed633b252faeb4996ff39e2a73735258f2523990bdbc840a4e22dd30fab0d1",
+      "size_bytes": 1957,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 64,
+      "nfc": true,
+      "path": "sdk/python/pyproject.toml",
+      "sha256": "4d158920fae44fd8b00d06f529f5bfe21fdaf157a4ed769550240d002b6fbdd4",
+      "size_bytes": 1802,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 21,
+      "nfc": true,
+      "path": "sdk/python/src/aegis_sdk/__init__.py",
+      "sha256": "2061b6d1d5fe195e6d6c7f32b2aee43cd22e64f693f1d5c97b37d2e5c69f9387",
+      "size_bytes": 571,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 56,
+      "nfc": true,
+      "path": "sdk/python/src/aegis_sdk/_config.py",
+      "sha256": "55bab43d5d1ff104697b814026c735af48777b02fedd10f919f7189f15e348d0",
+      "size_bytes": 2022,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 112,
+      "nfc": true,
+      "path": "sdk/python/src/aegis_sdk/anthropic.py",
+      "sha256": "2110db37311b820939cb5aaf715358b50474d510f811caa2f5f4b03f793bdb39",
+      "size_bytes": 4040,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 105,
+      "nfc": true,
+      "path": "sdk/python/src/aegis_sdk/openai.py",
+      "sha256": "f81fec7ef1ece28e75abfeeacbda140e922c745363846020191cdd24fe1baf10",
+      "size_bytes": 3653,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 213,
+      "nfc": true,
+      "path": "sdk/python/src/aegis_sdk/proof.py",
+      "sha256": "314f0488a7f722ff3d51157f1d36d7da02692592167cf73f482c3966171784c6",
+      "size_bytes": 7613,
+      "text": true
+    },
+    {
+      "path": "sdk/python/src/aegis_sdk/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 63,
+      "nfc": true,
+      "path": "sdk/python/tests/test_anthropic_client.py",
+      "sha256": "f7e5c69da4ee86bdb89f93ff1d9c6a14104a4ab11245caecc8b56796fc22cdaa",
+      "size_bytes": 2190,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 112,
+      "nfc": true,
+      "path": "sdk/python/tests/test_openai_client.py",
+      "sha256": "cd93db64d7ab5adccb5dc3e83bf31ca0974bbaf2afc6f08550f18ed28bc6283a",
+      "size_bytes": 4012,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 72,
+      "nfc": true,
+      "path": "sdk/python/tests/test_proof.py",
+      "sha256": "8a56952c12c3c4b852889ecb68929bfa3199f8164c1e031d8248497489b0538d",
+      "size_bytes": 2466,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1,
+      "nfc": true,
+      "path": "sdk/shared/mmr-inclusion-v1.json",
+      "sha256": "1a7438a2dfef765dd4e5ac60c99cdce3fc254b52e62a98b2c405fab9f115840e",
+      "size_bytes": 70180,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 38,
+      "nfc": true,
+      "path": "sdk/typescript/README.md",
+      "sha256": "6c5032a807d8b1b3e7249c1bfc82e5c65fd531e845a851f00574e4bf18e766b9",
+      "size_bytes": 2245,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1859,
+      "nfc": true,
+      "path": "sdk/typescript/package-lock.json",
+      "sha256": "05b7835433ea4bf5db8761110e6a2bfbae9984bfdd59f350cef9410d1afcc908",
+      "size_bytes": 59775,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 95,
+      "nfc": true,
+      "path": "sdk/typescript/package.json",
+      "sha256": "c1b19cb09af3f14fa4606adfff601e7db32de69e57f333a63980f1a4f75a9f60",
+      "size_bytes": 2207,
+      "text": true
+    },
+    {
+      "path": "sdk/typescript/src/anthropic.ts",
+      "sha256": "9605a0a67f0c5c2a5473421486dfb9da062d1389eb3a8488b2ef5522ac8b9929",
+      "size_bytes": 1877,
+      "text": false
+    },
+    {
+      "path": "sdk/typescript/src/errors.ts",
+      "sha256": "20690132bafd6dda00dcad83ebfbe18ca9b05b8a8dde369d866f2325ee9eb1ee",
+      "size_bytes": 200,
+      "text": false
+    },
+    {
+      "path": "sdk/typescript/src/gateway.ts",
+      "sha256": "a1d82d9c3e97988d8439d2613948088de54a58f84f0f0e7b6443abe6b9c11f65",
+      "size_bytes": 2683,
+      "text": false
+    },
+    {
+      "path": "sdk/typescript/src/index.ts",
+      "sha256": "4fa7bf4b8adecebc8f481c5068a1cd04f633ffd4b949c5da9f75a7cf0c2d07e8",
+      "size_bytes": 675,
+      "text": false
+    },
+    {
+      "path": "sdk/typescript/src/openai.ts",
+      "sha256": "b660b0c573b27787e2fbdc522a2ae458c5177ee4da25043677874fcd806850a6",
+      "size_bytes": 1836,
+      "text": false
+    },
+    {
+      "path": "sdk/typescript/src/proof.ts",
+      "sha256": "23d2f39912ec157fa54e9dc19ba03fd76076a3e4abac487ba624bc14d7f82765",
+      "size_bytes": 8222,
+      "text": false
+    },
+    {
+      "path": "sdk/typescript/src/providers.ts",
+      "sha256": "a267a8ec019b5f7bd42de426f7e9b5707ccce4fa5e61bfa301df6ef3d3855024",
+      "size_bytes": 1463,
+      "text": false
+    },
+    {
+      "path": "sdk/typescript/src/types.ts",
+      "sha256": "f6b89a432e162784409f5253f1e2fb0910820ce4e53021b1409293d32eb6018c",
+      "size_bytes": 760,
+      "text": false
+    },
+    {
+      "path": "sdk/typescript/src/verifier.ts",
+      "sha256": "f80c9fc4b85e1930704198baa9b5fd669d8df4cca41bbbeb2739bf5e7519b7fd",
+      "size_bytes": 2300,
+      "text": false
+    },
+    {
+      "path": "sdk/typescript/tests/dropin.test.ts",
+      "sha256": "4c351475e7c55bd30cf0de1d6d0aa951f4a2013658beb595d32998bb542903fd",
+      "size_bytes": 3486,
+      "text": false
+    },
+    {
+      "path": "sdk/typescript/tests/gateway.test.ts",
+      "sha256": "de5ac7a58280937f80ab6534c8f8e3b8e409217fc695ca6ef28a41218d9dce09",
+      "size_bytes": 1625,
+      "text": false
+    },
+    {
+      "path": "sdk/typescript/tests/proof.test.ts",
+      "sha256": "15c4fc3447a88bb8e0cdbab4821a78f34ac5b5c1f49feae84fcd4c02e50c719e",
+      "size_bytes": 2933,
+      "text": false
+    },
+    {
+      "path": "sdk/typescript/tests/providers.test.ts",
+      "sha256": "1c3ee0369901dad183d594e4e2a8ef0738c083d3b3af03660c3b243ddc0117e1",
+      "size_bytes": 1892,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 13,
+      "nfc": true,
+      "path": "sdk/typescript/tsconfig.build.json",
+      "sha256": "f07cc68fa47bb23065f2193e1a2b218b78e555d62c6623f1303f50882fdb983a",
+      "size_bytes": 253,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 21,
+      "nfc": true,
+      "path": "sdk/typescript/tsconfig.json",
+      "sha256": "f95979433d3687d2cbc9c2b9b01b6c7b93c4f1f3af2d9283e4e18f1ab3bd1e1b",
+      "size_bytes": 612,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 58,
+      "nfc": true,
+      "path": "specs/AegisVerification.lean",
+      "sha256": "8537ac624b4c8a635ae740262b5aa8d78fa343b6a1a0f4b1924e762bedd26a5f",
+      "size_bytes": 1933,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 9,
+      "nfc": true,
+      "path": "specs/aegis_invariants.cfg",
+      "sha256": "43d61e42805fed9862ab073920463e7f35e846fe903a93da7208fdc382cc0def",
+      "size_bytes": 144,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 48,
+      "nfc": true,
+      "path": "specs/aegis_invariants.smt2",
+      "sha256": "585147f3bda018a6cc3dab4b48c3304bc42b2a8c25a54cef164e4e0a2952432f",
+      "size_bytes": 1650,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 65,
+      "nfc": true,
+      "path": "specs/aegis_invariants.tla",
+      "sha256": "aadd5e2c542a748de8611b7433857282eaac8e91c978c224b4dea9bfec5bced8",
+      "size_bytes": 2057,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 10,
+      "nfc": true,
+      "path": "specs/aegis_ledger_immutability.cfg",
+      "sha256": "3a5b2d944e813cbf16f9885445ea20a5d853d691751684d3d913db12ec47017b",
+      "size_bytes": 163,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 47,
+      "nfc": true,
+      "path": "specs/aegis_ledger_immutability.tla",
+      "sha256": "cfa76b1beecb2b96d3a20d4d3d061582df0a222621fafc041d44584d9016dcb7",
+      "size_bytes": 1301,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 12,
+      "nfc": true,
+      "path": "specs/aegis_session_manager.cfg",
+      "sha256": "425cb429ba890dae41e6862606f1bc2c77e682dda8126a77d7fd92f66eb2a871",
+      "size_bytes": 211,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 79,
+      "nfc": true,
+      "path": "specs/aegis_session_manager.tla",
+      "sha256": "b4c8ab225ef988e707585d0a191c9d934ab8b95f2f7fb16df066fe7967b2cb9c",
+      "size_bytes": 2536,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 20,
+      "nfc": true,
+      "path": "specs/aegis_stream_buffer.smt2",
+      "sha256": "05d7e515f25ee49979660014ee844f2ce20864de89e208d3fc7062763de5e802",
+      "size_bytes": 905,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 77,
+      "nfc": true,
+      "path": "tests/conftest.py",
+      "sha256": "4860af40a62e349a67362bf4fcdeedcde5535237587d4da8d5c5286a8f40a0ea",
+      "size_bytes": 3396,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 29,
+      "nfc": true,
+      "path": "tests/data/waf_corpus_v1.json",
+      "sha256": "2ce66d805adf1e0bad7f8177bc16bcb6fc79396a181a2af00ff206d389a64c69",
+      "size_bytes": 3456,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 93,
+      "nfc": true,
+      "path": "tests/final_audit_suite.py",
+      "sha256": "b6da5ecc40b6b43b33127c6765646b474f28fb188a1ad10bd8e947f67694df98",
+      "size_bytes": 2732,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 395,
+      "nfc": true,
+      "path": "tests/test_abac.py",
+      "sha256": "d2b035339bdc7e033b9de4780c90b18661364bec4a63c3fe1bf1c35d2340e133",
+      "size_bytes": 15638,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 415,
+      "nfc": true,
+      "path": "tests/test_adversarial_suffix_detector.py",
+      "sha256": "49487849f527e33b30218e064b3a3eda4272fb3f5cf6a92db77b52f3e7929ae9",
+      "size_bytes": 16222,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 489,
+      "nfc": true,
+      "path": "tests/test_ae_keyword_detector.py",
+      "sha256": "e871c2e009fc22da66328e131c356f9a443ec37ce52141d27722c7e5fd2270c4",
+      "size_bytes": 18949,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 284,
+      "nfc": true,
+      "path": "tests/test_airgap_docker.py",
+      "sha256": "6ef4e19a95ca3a0c87eb270497e52e753ce98ea08f1a3aaa4dc4070261f76905",
+      "size_bytes": 12546,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 375,
+      "nfc": true,
+      "path": "tests/test_analyzer_deep.py",
+      "sha256": "4dba62f278d7c76e6aa7c5b7631b2bcbc7494a6e4f5f2773ee20e333bc242aa3",
+      "size_bytes": 13868,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 283,
+      "nfc": true,
+      "path": "tests/test_api_key_scopes.py",
+      "sha256": "63963275b750dd87a49e74a0eba5ee324ceba366f17392cc1126ccc705ae1b21",
+      "size_bytes": 12106,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 112,
+      "nfc": true,
+      "path": "tests/test_apikey_new.py",
+      "sha256": "82fd183a5bf7495983155d48c05910f6ac4454e3652b87b46ac9353f56ddba1a",
+      "size_bytes": 3932,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 409,
+      "nfc": true,
+      "path": "tests/test_app_coverage.py",
+      "sha256": "4b38bb715844628258d75cbfd36c7a0b351c4e27198dd70dcdff4f3b5f3b5e25",
+      "size_bytes": 14356,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1293,
+      "nfc": true,
+      "path": "tests/test_app_coverage_extended.py",
+      "sha256": "157be92487beaf83de2fa0f946115b0b213ced92716053a23f8291198ad2d978",
+      "size_bytes": 50645,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 330,
+      "nfc": true,
+      "path": "tests/test_app_unit.py",
+      "sha256": "a5db832e226ea8960ad1d67eec90a9ce83575907d79dac50e613390d8ea7b927",
+      "size_bytes": 10118,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 584,
+      "nfc": true,
+      "path": "tests/test_archival_bundle.py",
+      "sha256": "ca63a352d47bd1d7e7de2f9ab9cc9cc43928e6ffa5a8beb540fba0e775782918",
+      "size_bytes": 22268,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 129,
+      "nfc": true,
+      "path": "tests/test_artifact_signing.py",
+      "sha256": "1b8945585c3f33d6eba085f30d389cabacc0b6355a663afea84b28fac381af93",
+      "size_bytes": 5115,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 370,
+      "nfc": true,
+      "path": "tests/test_atlas_tactic_mapper.py",
+      "sha256": "05bcb214e2e74601d68c964de284b17126ac7a067e851abe268f6ab22e5b6dc2",
+      "size_bytes": 13642,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 132,
+      "nfc": true,
+      "path": "tests/test_attestation_capabilities.py",
+      "sha256": "46cc5b49a3a2694a1bacd4c7e7211d408fd5a743b825dcb423cf0dd420bb2a96",
+      "size_bytes": 5436,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 252,
+      "nfc": true,
+      "path": "tests/test_audit_api_new.py",
+      "sha256": "b4d7731f4442bf1fce4b13c77f83d4cf9760861a88a8fab2089a028fcbc53d30",
+      "size_bytes": 8370,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 285,
+      "nfc": true,
+      "path": "tests/test_audit_node_encryptor.py",
+      "sha256": "c9334aff8418191475c751590af4bf1d09c508f5b0b975e5a794315402c036a7",
+      "size_bytes": 11292,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 176,
+      "nfc": true,
+      "path": "tests/test_blockchain_anchor.py",
+      "sha256": "f30b8c25bb957bc5f59a719622a9cc6596648a1d3bb3cc6809a8073ed8a8f01e",
+      "size_bytes": 7187,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 213,
+      "nfc": true,
+      "path": "tests/test_boot_attestation.py",
+      "sha256": "0b5ea3e3206d5239d1194222a3539fe5286094dc5797805633271a0fe562b9b1",
+      "size_bytes": 8707,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 222,
+      "nfc": true,
+      "path": "tests/test_build_reproducibility.py",
+      "sha256": "5ca1a8626750c448337f142ed793f6b821d90251276d2b69744671bd21142969",
+      "size_bytes": 8557,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 352,
+      "nfc": true,
+      "path": "tests/test_cac_piv.py",
+      "sha256": "3a9170e7fb4a6641949637e1f0a0dd9cf2efb6961ca7c4f86d64cf55c5bf9143",
+      "size_bytes": 12083,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 360,
+      "nfc": true,
+      "path": "tests/test_cds_guard.py",
+      "sha256": "e15c8770bc0de9d60c493dcbdc3881f812a5c2dee39e4ca6bea4c82d4302313c",
+      "size_bytes": 13141,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 186,
+      "nfc": true,
+      "path": "tests/test_cfi_manager.py",
+      "sha256": "38fb91716c0e093b991bdca84b8e551558cb732be2f6e02e5a0b396a5bee06a5",
+      "size_bytes": 6445,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 674,
+      "nfc": true,
+      "path": "tests/test_cgroups_quota.py",
+      "sha256": "ccd6e50a2c95495cb104a10cf1fa9adfbd00579c7833052ee65484dcd26f7598",
+      "size_bytes": 28513,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 398,
+      "nfc": true,
+      "path": "tests/test_chaos.py",
+      "sha256": "8a0ebc298b1bfc28071ece375384fb88ca98d34ce4904746a34f918acc98f45d",
+      "size_bytes": 16279,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 354,
+      "nfc": true,
+      "path": "tests/test_circuit_breaker.py",
+      "sha256": "59f02832c1d140953efb78d572f3ba2d9dd9dd81f1d5618d7f023753c3a2345f",
+      "size_bytes": 12159,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 126,
+      "nfc": true,
+      "path": "tests/test_circuit_breaker_new.py",
+      "sha256": "30cb713b7ca193c8f2588f1373f79457fc8276e071f023f09a5afdd80a851e72",
+      "size_bytes": 4276,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 566,
+      "nfc": true,
+      "path": "tests/test_classified_marker_detector.py",
+      "sha256": "66ab9d79f4cb0ad582d272c453857c394efb51a0d4fdabcef3c1bb4648fc11c6",
+      "size_bytes": 22094,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 372,
+      "nfc": true,
+      "path": "tests/test_clinical_claim_detector.py",
+      "sha256": "3397b663dfeeeb314c28daf54b1f45295c3f701f6db3802225ff743042595464",
+      "size_bytes": 14969,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 329,
+      "nfc": true,
+      "path": "tests/test_clock_integrity.py",
+      "sha256": "780abe3f85c49777c51a43a663d73c4feaacfd36dffe20876795a2335cff7e9b",
+      "size_bytes": 13933,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 345,
+      "nfc": true,
+      "path": "tests/test_cnsa_negotiation.py",
+      "sha256": "b10fc9dd9d5e67df458b39f9aed0f00d054dc3188805700b10992bb4e5364e3b",
+      "size_bytes": 14188,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 185,
+      "nfc": true,
+      "path": "tests/test_codeql_config.py",
+      "sha256": "f63060432eab013f1dd29b8c125c84acd3715a50d55e073ddf5cf33073af0021",
+      "size_bytes": 6773,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 134,
+      "nfc": true,
+      "path": "tests/test_compliance_additional.py",
+      "sha256": "24bc6130dd702e481c1e849f3927d0e6b483bd2b0a6a312acea78a039a689044",
+      "size_bytes": 5081,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 285,
+      "nfc": true,
+      "path": "tests/test_compliance_exporter_new.py",
+      "sha256": "0d4d5f98d27b2a1936cf83aefa57aa01ba8427c07990fb5e2539a328494d5afa",
+      "size_bytes": 11073,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 269,
+      "nfc": true,
+      "path": "tests/test_conversation_graph.py",
+      "sha256": "b817be3bc6f0a8380bbb0a8bce35cae919290c57cef3045ff22e391cbde82570",
+      "size_bytes": 12268,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 515,
+      "nfc": true,
+      "path": "tests/test_core.py",
+      "sha256": "e188722b684cb0e8706254426e018fdbea6569860804e321fe9be4043255551e",
+      "size_bytes": 20987,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 77,
+      "nfc": true,
+      "path": "tests/test_core_init_new.py",
+      "sha256": "b7fff0eb16726159f3efb01c76e2499716e20eefc69b1f54b013224b8cba056a",
+      "size_bytes": 2743,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 315,
+      "nfc": true,
+      "path": "tests/test_coverage_final.py",
+      "sha256": "e77063f65b2f8803d5f880500943504a570d10b7d71dc51ef2b7df3d11826549",
+      "size_bytes": 10983,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 219,
+      "nfc": true,
+      "path": "tests/test_cpu_affinity.py",
+      "sha256": "07aa5797060856772c705cbc42cb61bd171e642068f8f46740723bdf5038a311",
+      "size_bytes": 8418,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 393,
+      "nfc": true,
+      "path": "tests/test_crdt_ordering.py",
+      "sha256": "d283422f86ea887d1afb6e84deb98ec806c5a3f87c9825a0ad1c389a549b9e5a",
+      "size_bytes": 12006,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 512,
+      "nfc": true,
+      "path": "tests/test_cross_session_correlator.py",
+      "sha256": "923a00a487fd17541312bebdccd1c3e958ad202efcf1bee5986815c445aebc3b",
+      "size_bytes": 21535,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 351,
+      "nfc": true,
+      "path": "tests/test_crypto_audit_branch.py",
+      "sha256": "2fce605abadb63fe9d29ffb9d8eda2726aee3c171162aaba728d783c1f2dcfe5",
+      "size_bytes": 13752,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 437,
+      "nfc": true,
+      "path": "tests/test_custody_transfer.py",
+      "sha256": "732d730e5fb095a81973cbf580927712137f520119de5ede668bade9dbbba6c2",
+      "size_bytes": 15870,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 427,
+      "nfc": true,
+      "path": "tests/test_decode_pipeline.py",
+      "sha256": "c0a067fc802d1c82977aeecfdcbba6745330bcf5a67114b58b55dcc65962a0df",
+      "size_bytes": 16556,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 182,
+      "nfc": true,
+      "path": "tests/test_dependencies_new.py",
+      "sha256": "1f66efcecd58fa306543222791c0802f455288172bbe32784718825793476cbc",
+      "size_bytes": 6707,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 299,
+      "nfc": true,
+      "path": "tests/test_dependency_audit.py",
+      "sha256": "ec3bb16e5dc872c0b6e9d804be5b8015d669905ab6c5ee684ac6ed44f6ba9afc",
+      "size_bytes": 11013,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 247,
+      "nfc": true,
+      "path": "tests/test_determinism.py",
+      "sha256": "597407c0e6ba89ac6da33c085dd19a65ab17f2eb5654f68b81bdc045c4360d08",
+      "size_bytes": 10730,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 343,
+      "nfc": true,
+      "path": "tests/test_dfir_export.py",
+      "sha256": "d28ab6fa2b8baa6819b3fe071206cf0061f71183dd38f9c257c4a91a65b48319",
+      "size_bytes": 11837,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 295,
+      "nfc": true,
+      "path": "tests/test_dmz_middleware.py",
+      "sha256": "f67d07ff046779e1363c161e9ce237ce6fa8451622c67f476c84db1bcaa8311d",
+      "size_bytes": 11094,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 379,
+      "nfc": true,
+      "path": "tests/test_dosage_hallucination.py",
+      "sha256": "75d682ff8a77e816310d2f03de359587fc2a825dd731d06c6d026bfab5af7ef2",
+      "size_bytes": 14923,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 198,
+      "nfc": true,
+      "path": "tests/test_dp_analytics.py",
+      "sha256": "8dab3509873d6b700a8adc9d6a0cf0350b26e5267777eeb2bfcfbc7888f1fc90",
+      "size_bytes": 8025,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 543,
+      "nfc": true,
+      "path": "tests/test_dynamodb_provider_new.py",
+      "sha256": "596117072d5d75fa43856efd4c9edc591fe568516e91c77c2b741c7f609e6d1a",
+      "size_bytes": 17975,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 249,
+      "nfc": true,
+      "path": "tests/test_egress_guard.py",
+      "sha256": "47554eda8d165d52aa20be5d79af1ffbf8cf7802a51ad8d2b2bc9f22293065e3",
+      "size_bytes": 10474,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 25,
+      "nfc": true,
+      "path": "tests/test_enterprise_auth.py",
+      "sha256": "2fbc7e3f4b4cd760fa00f24608f977a1f1593d7c8568702c3e527efdfe10dde2",
+      "size_bytes": 963,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 232,
+      "nfc": true,
+      "path": "tests/test_enterprise_config_new.py",
+      "sha256": "71cbeea58743897c14c216df4005854592812771c07d906a59de324a3eebc44c",
+      "size_bytes": 7031,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 121,
+      "nfc": true,
+      "path": "tests/test_enterprise_durable_evidence.py",
+      "sha256": "6340bab19f96b44d5f2a734f397cefd5dffc613bedeb17d8b1ba127a7111499a",
+      "size_bytes": 5009,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 421,
+      "nfc": true,
+      "path": "tests/test_export_audit_log.py",
+      "sha256": "ed2251589d930b5caa6ba406a6ac5c9ff3e35969d4fafb4d1a00980258b5fff5",
+      "size_bytes": 15031,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 139,
+      "nfc": true,
+      "path": "tests/test_forensic.py",
+      "sha256": "39d86617ca1e183aeb1615976e465c2977c40ae563cc13c0958bdb87ebcc860c",
+      "size_bytes": 4797,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 249,
+      "nfc": true,
+      "path": "tests/test_forensic_builders.py",
+      "sha256": "6d488a6ad0cdc5fc187476d27ef28305a90573182269fda0dd58b3e039ce4868",
+      "size_bytes": 7373,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 82,
+      "nfc": true,
+      "path": "tests/test_forensic_bundle.py",
+      "sha256": "8fb48678931222a14823e1753400072988b2ae674a6fc42235b9eb7dc012fb6d",
+      "size_bytes": 2931,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 455,
+      "nfc": true,
+      "path": "tests/test_forensic_pdf_report.py",
+      "sha256": "2c174f63093deaf2b351f9475384adc1573171f5386759f31dbbea59c4e642c6",
+      "size_bytes": 16782,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 146,
+      "nfc": true,
+      "path": "tests/test_forensic_sealing.py",
+      "sha256": "7f2267deff96a4917f884475e63b5dc0d3b8b05154e87b5177ac960d02d80288",
+      "size_bytes": 4856,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 301,
+      "nfc": true,
+      "path": "tests/test_forwarder_deep.py",
+      "sha256": "8c8ded57712454916aed87c4cfae0594582dbd3d3ec5e6a7cbebfe666df4b979",
+      "size_bytes": 10264,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 304,
+      "nfc": true,
+      "path": "tests/test_forwarder_extra.py",
+      "sha256": "35f177c9160cefd17852b0b01dda367bdecd4f2bb9eb4468f7d0d489fa98419c",
+      "size_bytes": 10350,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 519,
+      "nfc": true,
+      "path": "tests/test_forwarder_new.py",
+      "sha256": "c673d53e87a0faaae2778fb945e44a533730402a90003720abe2864df62cebdc",
+      "size_bytes": 16020,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 179,
+      "nfc": true,
+      "path": "tests/test_fuzzing_harness.py",
+      "sha256": "a67d79e069a2dc04175614e1021bc0b4b2ff04de36f9ea2ca96b84da18270561",
+      "size_bytes": 6527,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 490,
+      "nfc": true,
+      "path": "tests/test_gossip_wal_sync.py",
+      "sha256": "459210dd51890eed744f43bda0e7b805aff2a6de9fc8123364bc2fbc7f3e90b3",
+      "size_bytes": 18205,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 721,
+      "nfc": true,
+      "path": "tests/test_gxp_qualification.py",
+      "sha256": "7d2ff932f39062ce17c08974900e77a2921c3f8edaba954cb84d83230c7eaead",
+      "size_bytes": 25746,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 310,
+      "nfc": true,
+      "path": "tests/test_hardware_modules.py",
+      "sha256": "42a9eb9bc4cfc7436ba357b1aa344b416bafb19597999169081879da0c7fa379",
+      "size_bytes": 11553,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 437,
+      "nfc": true,
+      "path": "tests/test_hardware_token.py",
+      "sha256": "ceca6bf2c06fc3d1f500417eb9e7813eafc33eb61bd900d52f2c9476c6401d1d",
+      "size_bytes": 18591,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 44,
+      "nfc": true,
+      "path": "tests/test_health.py",
+      "sha256": "6704d9fd1470a4085755a7a4c08096e557b995f4387595776633ff4b7401404a",
+      "size_bytes": 1341,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 512,
+      "nfc": true,
+      "path": "tests/test_hl7_fhir_phi_detector.py",
+      "sha256": "aea5627609d9cfa305166301e7d1aa37cc4b9b8b6b2d113212b7c2cd547d38ad",
+      "size_bytes": 19798,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 323,
+      "nfc": true,
+      "path": "tests/test_homoglyph_normalizer.py",
+      "sha256": "6f17c84279c329d518a668e71665b1e2f12e359335b516dba7a392d268c015ca",
+      "size_bytes": 11292,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 524,
+      "nfc": true,
+      "path": "tests/test_hsm.py",
+      "sha256": "a2feddfba6c0420306829214cd9a86156f8dc776f6a57b83ce520fd6bd442c06",
+      "size_bytes": 20418,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 668,
+      "nfc": true,
+      "path": "tests/test_icd_snomed_detector.py",
+      "sha256": "cda16a7cefc987387f87a0935b1574aac05c5cf83991132b7c38eee0d1efb76b",
+      "size_bytes": 26314,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 71,
+      "nfc": true,
+      "path": "tests/test_identity_mtls.py",
+      "sha256": "7283ed000090dc48de38268d79115157215660ca8a84ea6b7f19962e44a12cb9",
+      "size_bytes": 2743,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 117,
+      "nfc": true,
+      "path": "tests/test_integration_proxy.py",
+      "sha256": "b434c366c293bc15dea707531eba9b38a2fb665f893a9cb5dbb1e1666039385c",
+      "size_bytes": 4013,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 443,
+      "nfc": true,
+      "path": "tests/test_intermittent_connectivity.py",
+      "sha256": "bd064a7f857404f03a370014858699f27cb610a65cb665faea05fe96d6bef169",
+      "size_bytes": 17628,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 481,
+      "nfc": true,
+      "path": "tests/test_ioc_correlator.py",
+      "sha256": "3a31f7bc39509b2b315ca59b56c71fc3ba657e02ea9e8289a487278760ffaa3c",
+      "size_bytes": 17791,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 263,
+      "nfc": true,
+      "path": "tests/test_iq_oq.py",
+      "sha256": "a8eb5368ab85692497aa94d488cccb73a6ae63027c8d6e9cf5b8cfa9d605a2a7",
+      "size_bytes": 8786,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 885,
+      "nfc": true,
+      "path": "tests/test_iso27037_evidence.py",
+      "sha256": "6d448b9fc055135c5c1f9a60cdbaa8a8d88c4db0224cfdc86e6df0190e182884",
+      "size_bytes": 33172,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 191,
+      "nfc": true,
+      "path": "tests/test_k8s_operator.py",
+      "sha256": "b0a4f0036e9f4983e7aa723513bf869dfb02ab3b8fb9bb32ac697cdc1d2e8827",
+      "size_bytes": 8887,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 162,
+      "nfc": true,
+      "path": "tests/test_keyring_rotation.py",
+      "sha256": "c614304cfad74c607ed833accdaedf706bc16b104cf0089a9ceebb683d8e72a8",
+      "size_bytes": 5182,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 417,
+      "nfc": true,
+      "path": "tests/test_ldap_auth.py",
+      "sha256": "7db2ab683fbb1cbea67f84cb362db47ccefa225ce8db1e9bf789310ccbd99987",
+      "size_bytes": 16250,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 147,
+      "nfc": true,
+      "path": "tests/test_leak_detector_new.py",
+      "sha256": "0193e9a000148b1f30e21d3b45ad1649f9e53b6d5798bdfce6dbb5ccacdf23a1",
+      "size_bytes": 5260,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 174,
+      "nfc": true,
+      "path": "tests/test_local_hmac_signer.py",
+      "sha256": "23fd994aafe14733964b4c4dec4016343b852486d2bc0130f5b7dd60f1db3f25",
+      "size_bytes": 5773,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 248,
+      "nfc": true,
+      "path": "tests/test_lsm_guard.py",
+      "sha256": "a26bd24cf3c4298537ac02eae8a6cb0e9abddebc2b7df635f12975028e491d59",
+      "size_bytes": 9865,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 213,
+      "nfc": true,
+      "path": "tests/test_lsm_guard_new.py",
+      "sha256": "dbed9451e8a2bc4860968d350fb83ef9ea00ddd68560377e211cba1bd2702e38",
+      "size_bytes": 7669,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 1071,
+      "nfc": true,
+      "path": "tests/test_main_new.py",
+      "sha256": "5009853d417597559d6a8aaaf356c801ea9041b2f6eaf64afff9f75e0bee139c",
+      "size_bytes": 39657,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 341,
+      "nfc": true,
+      "path": "tests/test_manyshot_detector.py",
+      "sha256": "c2614a6b922fef2a59945b40886e1d8fa18066bccd75e631466244cd280b0908",
+      "size_bytes": 13648,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 471,
+      "nfc": true,
+      "path": "tests/test_market_abuse_detector.py",
+      "sha256": "433c29af730158e97562648d00206a322d89bd74c684aabadf7c14aec359082b",
+      "size_bytes": 19908,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 65,
+      "nfc": true,
+      "path": "tests/test_market_hardening_gates.py",
+      "sha256": "6bc45aaf17e56a5b6619865060d27c0beef2809ab1bdd56949baeb3c9bbb32b0",
+      "size_bytes": 2171,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 155,
+      "nfc": true,
+      "path": "tests/test_memory_invariants.py",
+      "sha256": "981fcc1c61a1951c1ee3c340764bfdfaaa676dda3b940a2c2d011b871073d58b",
+      "size_bytes": 5956,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 331,
+      "nfc": true,
+      "path": "tests/test_mifid_record_keeper.py",
+      "sha256": "28286b128de094935a84e2801abbdb1385af75b367f1d8d87736d36b85fe3275",
+      "size_bytes": 11694,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 493,
+      "nfc": true,
+      "path": "tests/test_misc_gaps.py",
+      "sha256": "e476540998386e58b2ff7a78abee05fbe7b6938d26c0c5718ddaacd15c2ef05e",
+      "size_bytes": 16546,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 175,
+      "nfc": true,
+      "path": "tests/test_mlkem_session.py",
+      "sha256": "536fae7c9b55dff310133419fc67995cc5562fa0c75239a9870201e617001ac0",
+      "size_bytes": 6506,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 70,
+      "nfc": true,
+      "path": "tests/test_mmr.py",
+      "sha256": "5ea9e88d7174fa6549a12a716606360a76aff231dca0f5b245c50ead601e312e",
+      "size_bytes": 2224,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 280,
+      "nfc": true,
+      "path": "tests/test_mmr_branch.py",
+      "sha256": "9dc57bf08d6e961d8ddb9b912c467df0bf8d7a856895990b49b70e19bcaa6888",
+      "size_bytes": 11402,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 60,
+      "nfc": true,
+      "path": "tests/test_mmr_new.py",
+      "sha256": "154a32e3743b7fdcee81bcc12aad10028168a794da3a10d3522097e3c5337b96",
+      "size_bytes": 2168,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 64,
+      "nfc": true,
+      "path": "tests/test_mmr_parity.py",
+      "sha256": "493e8f33b43c8f6f5bebdb10b4b4196609df5562fe3328687da374baaeb07663",
+      "size_bytes": 2520,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 83,
+      "nfc": true,
+      "path": "tests/test_mmr_portable.py",
+      "sha256": "4d39699299eb7555dbc3091c735ffdb69c3d3f4486222361dc8f2df1ab2046a3",
+      "size_bytes": 3321,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 209,
+      "nfc": true,
+      "path": "tests/test_mmr_properties.py",
+      "sha256": "bc06ddc978525a8e3be23299b60570e8103f2f65dd4ffec1eb72ab6beb388c10",
+      "size_bytes": 7777,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 378,
+      "nfc": true,
+      "path": "tests/test_model_decision_explainer.py",
+      "sha256": "d4319c14ccd500947c54bcc1a7293ddb0f1498044b3e30e9a4411f0cd2601fbc",
+      "size_bytes": 12818,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 453,
+      "nfc": true,
+      "path": "tests/test_model_risk_governance.py",
+      "sha256": "c0b3275ba1748cc1bdbca5ade97105b252e3b6c7a6c170487a530bd450f13613",
+      "size_bytes": 18237,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 140,
+      "nfc": true,
+      "path": "tests/test_mte_guard.py",
+      "sha256": "b1149ecaf258b81a9bacb40cb77d3247d80195742ec8f01a34d17bd7b1e8aac3",
+      "size_bytes": 5056,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 81,
+      "nfc": true,
+      "path": "tests/test_no_simulation_markers.py",
+      "sha256": "fe48d91ccd80beade1dfb6615792d3c886ddde28dc8e1947f714b899aec5808c",
+      "size_bytes": 3229,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 320,
+      "nfc": true,
+      "path": "tests/test_observability.py",
+      "sha256": "b9b746d8f32f6b6a14c7ff13bd88dbb227ba5c9685b9ea59f7cd4922bf707884",
+      "size_bytes": 11043,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 190,
+      "nfc": true,
+      "path": "tests/test_observability_new.py",
+      "sha256": "9a581cc23dcc7dfa6db8c1fde645f8c82b9ea1e783cb40605413940556beec87",
+      "size_bytes": 6366,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 351,
+      "nfc": true,
+      "path": "tests/test_offline_license.py",
+      "sha256": "2d2c0117ad2aad25561e1327df730766af369a65403d1b58e9f2af00772db499",
+      "size_bytes": 14189,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 566,
+      "nfc": true,
+      "path": "tests/test_operator_seal.py",
+      "sha256": "3682af7af983fac5a6b4084dac1986ad86362fdae478b032990697f3062f3de3",
+      "size_bytes": 22522,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 369,
+      "nfc": true,
+      "path": "tests/test_ot_protocol_scanner.py",
+      "sha256": "8fd63220a3fddcf54e70dbdbd4eb378b2941c6225ffa4a578afd844a693f75e1",
+      "size_bytes": 15187,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 71,
+      "nfc": true,
+      "path": "tests/test_p0_release_gates.py",
+      "sha256": "ff66f992980521137e43f69c479e3dd9f54f26f2a46d1f1b6246bb4471bb9a80",
+      "size_bytes": 2571,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 195,
+      "nfc": true,
+      "path": "tests/test_part11_signatures.py",
+      "sha256": "157b60a77b58b7224194140c9e06103146c264f5309c5700eb72640892624eca",
+      "size_bytes": 7907,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 250,
+      "nfc": true,
+      "path": "tests/test_pci_detector.py",
+      "sha256": "a2ffe53d5ce4471c5904847ef8ed23e5d992c1e2f30ae6d6564ed4eb376996f9",
+      "size_bytes": 9284,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 64,
+      "nfc": true,
+      "path": "tests/test_persistence_verification.py",
+      "sha256": "9225a80a1396bc40b30cc031c18a0ff1d415e285ef832ed466ed1d8582e4784a",
+      "size_bytes": 2243,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 136,
+      "nfc": true,
+      "path": "tests/test_phi_audit_trail.py",
+      "sha256": "ee4126a967ed416a8b7d9ae57939c48271cc5645d5f74f976ded51474bda309b",
+      "size_bytes": 5268,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 330,
+      "nfc": true,
+      "path": "tests/test_phi_deidentifier.py",
+      "sha256": "3734c4f219d5991f61acc00612375ecf49d5facf9f6a591ff8e2dc41aacaab7c",
+      "size_bytes": 12667,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 176,
+      "nfc": true,
+      "path": "tests/test_phi_encryption.py",
+      "sha256": "6017da8b799048b991152e9531ac680d414ab74e30baa05e6cec992732d3331b",
+      "size_bytes": 7105,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 221,
+      "nfc": true,
+      "path": "tests/test_phi_scrub_audit.py",
+      "sha256": "260bbf9a4feabe771fff08ec89e13ea5a9499fc0fa9f4bda5f447ba10b1c95c5",
+      "size_bytes": 8381,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 351,
+      "nfc": true,
+      "path": "tests/test_pii_confidence.py",
+      "sha256": "a13b7f660c4fe142e1d175ffd7d8faf9c9f71f1c1d2393613f0b0bd10a34f2b7",
+      "size_bytes": 14250,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 299,
+      "nfc": true,
+      "path": "tests/test_pinned_ca_bundle.py",
+      "sha256": "1bec963e5830e0bb25f191675100ad706a8a2350ca0723ad6288a2fc002e7396",
+      "size_bytes": 11469,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 531,
+      "nfc": true,
+      "path": "tests/test_postgres_provider_new.py",
+      "sha256": "98debdb031f17ec04f271dab626cb7e81ba7375e8a7e37069cd9d2bc494b17ae",
+      "size_bytes": 16448,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 247,
+      "nfc": true,
+      "path": "tests/test_pqc_signer.py",
+      "sha256": "9a93e6c48efc22525b45a55214ccf3d15d8d83e3054a67e61fe14c6b2942af2c",
+      "size_bytes": 8957,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 158,
+      "nfc": true,
+      "path": "tests/test_pqc_tls.py",
+      "sha256": "8b4c5b636033f5737f41126013ff25c34ff7c0b056e40e6dd73f7e62a53a8823",
+      "size_bytes": 6631,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 275,
+      "nfc": true,
+      "path": "tests/test_process_hardening.py",
+      "sha256": "c21724263733b1d37a09eeb992f15ad5ec6178e6e2541998d9d19e3ebc361dd6",
+      "size_bytes": 11322,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 141,
+      "nfc": true,
+      "path": "tests/test_production_stresses.py",
+      "sha256": "711a92c7767e299a535c3de1a835916cb3284e197a40564589277c4aa19bd0de",
+      "size_bytes": 4855,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 58,
+      "nfc": true,
+      "path": "tests/test_property_based.py",
+      "sha256": "2a9ef89d70d06d65c30ac27a9e7b00b4d034b1e26ae3def5040a1ae730e980f9",
+      "size_bytes": 2091,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 764,
+      "nfc": true,
+      "path": "tests/test_provider_contracts.py",
+      "sha256": "60e8cbe53a0af6175c399d96f66a06d7e8293881a77109103abf87c469756647",
+      "size_bytes": 31275,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 564,
+      "nfc": true,
+      "path": "tests/test_providers.py",
+      "sha256": "fa924a874a4037d695e8f0547d48d65bfa35467ea4e9b511307d5ba06c58385c",
+      "size_bytes": 21212,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 372,
+      "nfc": true,
+      "path": "tests/test_proxy.py",
+      "sha256": "4dd56969f10776e1c3ab3fe548f616a229cb69f9e1ef84e794841a5b51bf0340",
+      "size_bytes": 15451,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 545,
+      "nfc": true,
+      "path": "tests/test_proxy_streaming.py",
+      "sha256": "7363bf63c36bc1c3cdb5cdb0ecfc89c61b41887215ce2655e5905fffa496b6e0",
+      "size_bytes": 18608,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 502,
+      "nfc": true,
+      "path": "tests/test_raft_consensus.py",
+      "sha256": "af03d7a030de08c1b9cf7067ea27a5ff440fd9049eb54cfc74c559866b3e9702",
+      "size_bytes": 16840,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 839,
+      "nfc": true,
+      "path": "tests/test_rag_injection_scanner.py",
+      "sha256": "a1d6e3b5a8786ab0fe68bf896bfa859c005853d414d4f084bd5f46f308c5fd28",
+      "size_bytes": 31715,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 208,
+      "nfc": true,
+      "path": "tests/test_ratelimiter_new.py",
+      "sha256": "52c738fa48d0473351be78f8d906c922c1edf4ba1840ba2ddf03c01f1b621100",
+      "size_bytes": 7942,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 383,
+      "nfc": true,
+      "path": "tests/test_rbac.py",
+      "sha256": "00132de410e1c2fd016b388a5f8bd1e92fcb2eb119b8896d33dd463d2e461592",
+      "size_bytes": 16029,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 400,
+      "nfc": true,
+      "path": "tests/test_readonly_rootfs.py",
+      "sha256": "52341b82a81e960fe700d2be6dc520965c5912edf779671c2ccfe74ae3f6259d",
+      "size_bytes": 17104,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 107,
+      "nfc": true,
+      "path": "tests/test_red_team.py",
+      "sha256": "0b09b26c647fdd6c32b1937fe3ea789776224336f130ee778b6643488fc2539f",
+      "size_bytes": 3921,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 179,
+      "nfc": true,
+      "path": "tests/test_red_team_framework.py",
+      "sha256": "5a52368923e6911e200658099d6a772b392381615dcf6480b45f616cb476da5c",
+      "size_bytes": 6614,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 273,
+      "nfc": true,
+      "path": "tests/test_reliability.py",
+      "sha256": "b9dabb1f9d52dd041b8a0c7d62abd1cb8b0727a1ae787770184ffe7e2e504954",
+      "size_bytes": 9306,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 528,
+      "nfc": true,
+      "path": "tests/test_rfc3161_timestamper.py",
+      "sha256": "a663e58c8352fc7954aa8f09d07f439ab49ad302d5589349bc9f348e27f9c28c",
+      "size_bytes": 19123,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 213,
+      "nfc": true,
+      "path": "tests/test_rt_scheduler.py",
+      "sha256": "340aeac5d4153faef2e3fe3fac5d471b3a96f2d39f68bc3872e84cfb562b16bf",
+      "size_bytes": 8064,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 98,
+      "nfc": true,
+      "path": "tests/test_rust_extension.py",
+      "sha256": "1efabc0a4dd73fc949e2cf0f28d6231e69039b187c8d07ee1c96e1a24ad6fc4c",
+      "size_bytes": 3644,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 145,
+      "nfc": true,
+      "path": "tests/test_rust_integration_new.py",
+      "sha256": "55c3163d8710a51d70dd78e42523369c76bf43754e7eef84e3bb6fc8f62bea13",
+      "size_bytes": 5044,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 53,
+      "nfc": true,
+      "path": "tests/test_safe_serialization.py",
+      "sha256": "32f72aec8660112455223e9c1917f258edb4683b68bca0b4046a6bd112e98acf",
+      "size_bytes": 1730,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 136,
+      "nfc": true,
+      "path": "tests/test_safe_serialization_new.py",
+      "sha256": "167f2a488f98991ecd14fafdf4edc2f6fab23873b70f9726be3ff6844a607463",
+      "size_bytes": 4238,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 171,
+      "nfc": true,
+      "path": "tests/test_sandbox.py",
+      "sha256": "9442a939bba6b0038b9bdf8e5aab37c05368a7a814ffd0bf505cdfb24046c4e6",
+      "size_bytes": 6118,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 234,
+      "nfc": true,
+      "path": "tests/test_sandbox_l1.py",
+      "sha256": "6cda89168e8a45990ab0cff8aa794542649f86d18f5ff3834d9e98b5cfb85504",
+      "size_bytes": 8626,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 748,
+      "nfc": true,
+      "path": "tests/test_scim.py",
+      "sha256": "db128e7c6734f538d5241faace39f2c7bb89a6f393db2297c312f7c8a9ee3665",
+      "size_bytes": 27668,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 259,
+      "nfc": true,
+      "path": "tests/test_seccomp_extended.py",
+      "sha256": "4385bc050d8549a4ea77491dc2c42f4a913c9822bfb4b5816b77b221db54b59c",
+      "size_bytes": 8319,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 185,
+      "nfc": true,
+      "path": "tests/test_seccomp_guard_new.py",
+      "sha256": "88aa3718ec220a2f9f6493e77c7c24123d02cd5027f672dd69f4a75f5a8795bc",
+      "size_bytes": 6754,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 39,
+      "nfc": true,
+      "path": "tests/test_seccomp_new.py",
+      "sha256": "06c6a2933455b6e641c9f292b369030dbb83c3e55be8920164a13c0dfda255e1",
+      "size_bytes": 1239,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 202,
+      "nfc": true,
+      "path": "tests/test_security_fixes.py",
+      "sha256": "41631aeb3dbffac8084533841afaa26db500931805559efd1b5a114f8cdf38ad",
+      "size_bytes": 7770,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 96,
+      "nfc": true,
+      "path": "tests/test_security_guards.py",
+      "sha256": "05492faaa1f479aa9ee308bf5a0e6ac4940cddcdb0f1dd61ce7a363a860fef16",
+      "size_bytes": 3208,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 326,
+      "nfc": true,
+      "path": "tests/test_semantic_sim_clustering.py",
+      "sha256": "2c507d1ed4d297f2b20d04378d153f9516a4ba959cba9e937b28d82262e70369",
+      "size_bytes": 13417,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 140,
+      "nfc": true,
+      "path": "tests/test_server_factory.py",
+      "sha256": "c564c25ba4e6702a8181c054a7f1cf280832db577ccad5e5b3689fe4ee791425",
+      "size_bytes": 4592,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 174,
+      "nfc": true,
+      "path": "tests/test_session_manager_new.py",
+      "sha256": "f85db1c893145d767cb235908330dc783049f056877d354777911d85ef1b0084",
+      "size_bytes": 6081,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 353,
+      "nfc": true,
+      "path": "tests/test_slo_alerting.py",
+      "sha256": "735cea6b878c31216ee4e2ecf29eee0566c3c552086cc6f082b30c896fedbb6e",
+      "size_bytes": 13380,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 255,
+      "nfc": true,
+      "path": "tests/test_split_brain.py",
+      "sha256": "c17a8687bb70c8bab2628bee08809a4fd3e012edc682e5ba98dfdb42c2af4660",
+      "size_bytes": 7940,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 213,
+      "nfc": true,
+      "path": "tests/test_sqlite_additional.py",
+      "sha256": "19abd259e2daefdc707fdefea530c663109f402e6acb04f40e53dfa894a817db",
+      "size_bytes": 7405,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 404,
+      "nfc": true,
+      "path": "tests/test_sqlite_provider_new.py",
+      "sha256": "44370f8d5cf47f2f0967b8d539c8190d10b64fa983c743061a1e963bfe03d349",
+      "size_bytes": 13282,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 112,
+      "nfc": true,
+      "path": "tests/test_state_snapshotter.py",
+      "sha256": "67307b2f2a4a355042c22302c1c99e75f953b6775591fbabf8fdfdec9c42dfbe",
+      "size_bytes": 3919,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 78,
+      "nfc": true,
+      "path": "tests/test_stealth_attack.py",
+      "sha256": "b6417598f5084d6d24418fc3ea92b05f7c15ce4886487bfd07b93e3a71fc821d",
+      "size_bytes": 3270,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 591,
+      "nfc": true,
+      "path": "tests/test_stix_taxii_ingestor.py",
+      "sha256": "716727732f781be387caa0ee07e772c22fe3644fbedeaa956578cc1aba32c5f0",
+      "size_bytes": 22366,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 117,
+      "nfc": true,
+      "path": "tests/test_storage_base_new.py",
+      "sha256": "2a9cc64b471e0d5c4de84f7215860eafaf4cd09eff320181dbd7b11721d797e1",
+      "size_bytes": 3870,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 128,
+      "nfc": true,
+      "path": "tests/test_telemetry_new.py",
+      "sha256": "e56bc2118aa110472b384ac56a7e974db3006623b8bccfbb9453edbae6417049",
+      "size_bytes": 4424,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 221,
+      "nfc": true,
+      "path": "tests/test_threat_lab.py",
+      "sha256": "af2b282d5f1cfce59e9777c10ffe77d66ddb9c59eb6f17af26d0b83c45c61888",
+      "size_bytes": 8580,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 467,
+      "nfc": true,
+      "path": "tests/test_ti_sharing.py",
+      "sha256": "d331a8762caa582a7c5aba07f5e796a84110945a7538da8fb3125ef958d4ecde",
+      "size_bytes": 16588,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 148,
+      "nfc": true,
+      "path": "tests/test_timing_defense_new.py",
+      "sha256": "5eb00e655a55c3f1e17bf1aa576b1bc87311d3c6b1a437c135bea1f47222581a",
+      "size_bytes": 5405,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 287,
+      "nfc": true,
+      "path": "tests/test_token_split_detector.py",
+      "sha256": "532b116ba407210dcf94c4f32187d92a5f6bc983b1657c5254aa0a1d0b88f5f2",
+      "size_bytes": 11393,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 177,
+      "nfc": true,
+      "path": "tests/test_tpm.py",
+      "sha256": "7c8ccd611a4fac4d26affb0ae80fd6d01e639c67e26a2b1083de7cbd95b715f6",
+      "size_bytes": 6383,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 177,
+      "nfc": true,
+      "path": "tests/test_transparency_log.py",
+      "sha256": "9ca108154180b4036a82c83261ae634e60643f387ff4d19e229e91336b8a4d74",
+      "size_bytes": 6455,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 193,
+      "nfc": true,
+      "path": "tests/test_tsa_provider.py",
+      "sha256": "00d9d7aedeb38520b5fd3fdfa8eaaeb4028a482f2910252fcc7ab666af347b20",
+      "size_bytes": 6706,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 333,
+      "nfc": true,
+      "path": "tests/test_vault_manager.py",
+      "sha256": "8ecde1d424c0676ec674878b95ef4ff4b340b4cb7c623a002060ada332c17998",
+      "size_bytes": 10890,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 490,
+      "nfc": true,
+      "path": "tests/test_vault_signer_new.py",
+      "sha256": "cdde1a26b0702f2f5ac8ceafa3822101ddc45aec8686d68893e795cc9719bb18",
+      "size_bytes": 15459,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 242,
+      "nfc": true,
+      "path": "tests/test_visualizer_app.py",
+      "sha256": "94a17149a0484bc507e622183c5d69965f31b73b2a9f40f694463c68176c3c09",
+      "size_bytes": 10246,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 260,
+      "nfc": true,
+      "path": "tests/test_waf_hardening.py",
+      "sha256": "7e289217d4f4c69ffb22d3e8b3008b79eeaaa222f3febc2fbdf6fe62a8737060",
+      "size_bytes": 8847,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 388,
+      "nfc": true,
+      "path": "tests/test_waf_hot_reload.py",
+      "sha256": "bef5ca2eb94680a4daa71a7fa47a28b4eed194a9ca7014b93e5fd1cac2bd9797",
+      "size_bytes": 14956,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 355,
+      "nfc": true,
+      "path": "tests/test_waf_hypothesis.py",
+      "sha256": "5ef9e7dcc53bd5312a2bc20dbe114e743909117c31571a11f533b688632f2221",
+      "size_bytes": 13715,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 268,
+      "nfc": true,
+      "path": "tests/test_waf_new.py",
+      "sha256": "89174ac9b7ef6c17336ad86037882f3bd8c71e15e37cad205aa106e5c1c064e4",
+      "size_bytes": 8877,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 240,
+      "nfc": true,
+      "path": "tests/test_waf_session.py",
+      "sha256": "5f38e50150fbeafcb7829c92547da267e6be6a9e70ef3a2e31619288f8a3da6f",
+      "size_bytes": 9679,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 227,
+      "nfc": true,
+      "path": "tests/test_wal_backup.py",
+      "sha256": "1df85944cece772e32844601cb9737b8ee45fa9023357f136e768a121996915b",
+      "size_bytes": 8811,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 138,
+      "nfc": true,
+      "path": "tests/test_wal_rotation.py",
+      "sha256": "428086ca7b5869e4541ace90aea54d7ec8b5e48b7e255d8432b303a42e6f8b44",
+      "size_bytes": 5629,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 438,
+      "nfc": true,
+      "path": "tests/test_witness_cosign.py",
+      "sha256": "cc4050823ed629995b44e42442a2dacc465837a5314fc3b5000f738e4055978e",
+      "size_bytes": 16554,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 775,
+      "nfc": true,
+      "path": "tests/test_worm_ledger.py",
+      "sha256": "be4791803c8861588490396b4eb1d1096b2cd2d4c5ca9acab3ed33b21f732e0c",
+      "size_bytes": 31135,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 212,
+      "nfc": true,
+      "path": "tests/test_xdp_dynamic_segmentation.py",
+      "sha256": "4da6ac68b592cd72a6d61f530d6fd4b40e8ed1777fba9209760f6c2c4512401d",
+      "size_bytes": 8450,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 747,
+      "nfc": true,
+      "path": "tests/test_yara_engine.py",
+      "sha256": "8d3dd9542b15c1c5477a05ace8f9da8975652200ebaab907c9be5cb70827b6fb",
+      "size_bytes": 25693,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 63,
+      "nfc": true,
+      "path": "tests/test_zero_day_defense.py",
+      "sha256": "e99e92cf4384ec7fa4cc8ac81c842126385127c48d52b3e2da7665ef552e92dd",
+      "size_bytes": 2673,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 402,
+      "nfc": true,
+      "path": "tests/test_zk_proof.py",
+      "sha256": "80bb407e628d917e3c9ff733faaf84bba6ea05a349e5f8be319c3c5c54794417",
+      "size_bytes": 12790,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 174,
+      "nfc": true,
+      "path": "tests/test_zz_dynamodb_additional.py",
+      "sha256": "bb84d07f1cbd7503eba57224e6686f282408679664463152083ea9085962799b",
+      "size_bytes": 5820,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 120,
+      "nfc": true,
+      "path": "tests/test_zz_server_factory_additional.py",
+      "sha256": "e30ae85e8035caab9351721a86782e48d154329bd5300082dbf1c113cd19124d",
+      "size_bytes": 4445,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 216,
+      "nfc": true,
+      "path": "tools/benchmarks/run_backpressure_stall.py",
+      "sha256": "5ac199137c5f88381ab51841efc271e941f877a51effa9e6758c4315e7b38574",
+      "size_bytes": 8196,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 188,
+      "nfc": true,
+      "path": "tools/benchmarks/run_key_rotation.py",
+      "sha256": "ee40747391b81497aa81b8b74d8ed70298781ddf520581e6413d641f7e8b8445",
+      "size_bytes": 7101,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 266,
+      "nfc": true,
+      "path": "tools/benchmarks/run_pqc_timing.py",
+      "sha256": "4338f9cdf517b7790cc4b48232a2b76e1145d88adb18033402552b7218c765ba",
+      "size_bytes": 10432,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 268,
+      "nfc": true,
+      "path": "tools/docs/verify_documentation.py",
+      "sha256": "46c7ba1595f9352502a545f6c2365df84e5da6ab1786942fe0e8ec81365b7311",
+      "size_bytes": 9222,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 442,
+      "nfc": true,
+      "path": "tools/forensic/diagnose_aegis.py",
+      "sha256": "2232a6c3b6e35e7c7ab38b74392782840e4b6ad594b5ea21fc6c65a98fbfc80d",
+      "size_bytes": 16218,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 133,
+      "nfc": true,
+      "path": "tools/forensic/forensic_checks.py",
+      "sha256": "a700481ecf8ab9010b8536bcba7641c21bd5c6760523005f37bc4987ac65a2b5",
+      "size_bytes": 4993,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 262,
+      "nfc": true,
+      "path": "tools/forensic/report.json",
+      "sha256": "1b3df68645d32839c433007c19cbbea5d300cf1cf0599eb19c5c42a15edfa93f",
+      "size_bytes": 8770,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 77,
+      "nfc": true,
+      "path": "tools/forensic/triage_unsafe.py",
+      "sha256": "5808beeba649675a56a0435caf4d950855b0bf3f214f54b7129284beae435d23",
+      "size_bytes": 2916,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 86,
+      "nfc": true,
+      "path": "tools/forensic/unsafe_remediation.md",
+      "sha256": "70d358658823166ccee579cde7d7180330f8c269914a03fc18b8aaf0bb15d1eb",
+      "size_bytes": 8174,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 4,
+      "nfc": true,
+      "path": "tools/qualification/__init__.py",
+      "sha256": "123c73470b529ecd722a990d14c6388fb624fac256640c3c5be0411aae5c07ad",
+      "size_bytes": 269,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 390,
+      "nfc": true,
+      "path": "tools/qualification/iq_checks.py",
+      "sha256": "6bf4ecf26de18ab16cbb0adb9996d28c359d2fb762124257575027ae1b966994",
+      "size_bytes": 15730,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 453,
+      "nfc": true,
+      "path": "tools/qualification/oq_checks.py",
+      "sha256": "67750a101866f252d1833cd72703ab8d8ea1f628f203e8963dcd292691d1bccb",
+      "size_bytes": 18561,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 161,
+      "nfc": true,
+      "path": "tools/security/run_waf_corpus.py",
+      "sha256": "23abf5a3bc847cfbe0671a86bc50c3cf1dfd6fa062ac51509aacf651ed7d431e",
+      "size_bytes": 6022,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 100,
+      "nfc": true,
+      "path": "tools/visualizer/README.md",
+      "sha256": "f53529416ad0e4053533b199835b05a66ffc8227f6c22eca4522b3722676b243",
+      "size_bytes": 5467,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 304,
+      "nfc": true,
+      "path": "tools/visualizer/app.py",
+      "sha256": "c7504743531ab44e1925a54ad45c42a0a056de9b9a5283ee7de12e28d1a8e225",
+      "size_bytes": 10885,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 448,
+      "nfc": true,
+      "path": "tools/visualizer/generate_samples.py",
+      "sha256": "3309d505d3b78cdea9116420fd6b2dc428f99b152c95d5e497750796a4d07c87",
+      "size_bytes": 17596,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 97,
+      "nfc": true,
+      "path": "tools/visualizer/generate_summary.py",
+      "sha256": "5b2a8dd8727f752709f62ba23645a4c7dcc7ca6ffcb553d55d3223ec30d71e78",
+      "size_bytes": 2872,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 2,
+      "nfc": true,
+      "path": "tools/visualizer/requirements.txt",
+      "sha256": "72b7dd981782e40c30a580b5bc5233a96ece788ba1e69d7686917830d40ee106",
+      "size_bytes": 26,
+      "text": true
+    },
+    {
+      "path": "tools/visualizer/static/index.html",
+      "sha256": "81fa0f23f349587c90bfb190f173e105382699749b70d7123f93d1ef0111420b",
+      "size_bytes": 135850,
+      "text": false
+    },
+    {
+      "lf_only": true,
+      "line_count": 21,
+      "nfc": true,
+      "path": "tools/visualizer/test_results.json",
+      "sha256": "8f2e5d38c51a94e4615790d22d9c1dd1cc98cf43466de24c6e137f0146e12223",
+      "size_bytes": 601,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 577,
+      "nfc": true,
+      "path": "tools/visualizer/threat_lab.py",
+      "sha256": "d8c3aca449138579215af62e5ede9ecdbd7776ce0475661d51ef53ae74ff7071",
+      "size_bytes": 20159,
+      "text": true
+    },
+    {
+      "lf_only": true,
+      "line_count": 12,
+      "nfc": true,
+      "path": "visualizer_runner.py",
+      "sha256": "e937ca3868e7a932cd1a675329e61dcbd1bd7f2136ecf203a154e36e436f4750",
+      "size_bytes": 398,
+      "text": true
+    },
+    {
+      "path": "visualizer_runner.spec",
+      "sha256": "efdcbc7cfdb83cdc199ca08b9e5e6da20ca9684bf91d7b7a0c34eb27dc91d291",
+      "size_bytes": 774,
+      "text": false
+    }
+  ],
+  "institutional_placeholders": [],
+  "non_nfc_files": [],
+  "repeated_headings": [
+    {
+      "heading": "fixed",
+      "locators": [
+        "CHANGELOG.md:290",
+        "CHANGELOG.md:367",
+        "CHANGELOG.md:400",
+        "CHANGELOG.md:410",
+        "CHANGELOG.md:419"
+      ]
+    },
+    {
+      "heading": "references",
+      "locators": [
+        "docs/COMMERCIAL_STRATEGY_US.md:101",
+        "docs/PROSPECTUS.md:97",
+        "docs/compliance/COMPLIANCE_MAPPING.md:137",
+        "docs/institutional/DOC-03_THREAT_MODEL.md:153",
+        "docs/institutional/DOC-05_REGULATORY_DOSSIER.md:189",
+        "docs/privacy/DATA_RETENTION.md:125",
+        "evidence/remediation_2026-08-21/FINAL_VERIFICATION_REPORT.md:122"
+      ]
+    },
+    {
+      "heading": "related documents",
+      "locators": [
+        "CHANGELOG.md:435",
+        "COMMERCIAL.md:61",
+        "CONTRIBUTING.md:230",
+        "DEPLOYMENT_GUIDE.md:161",
+        "README.md:321",
+        "SECURITY.md:93",
+        "docs/BENCHMARKS.md:108",
+        "docs/BUYER_GUIDE_US.md:66",
+        "docs/CLAIMS_MATRIX.md:73",
+        "docs/COMMERCIAL_STRATEGY_US.md:91",
+        "docs/DEVELOPER_QUICKSTART.md:166",
+        "docs/FAQ_PROCUREMENT.md:85",
+        "docs/FAQ_SECURITY.md:72",
+        "docs/FAQ_TECHNICAL.md:91",
+        "docs/PLATFORM_OPERATOR_GUIDE.md:134",
+        "docs/PRODUCT_BRIEF_US.md:68",
+        "docs/PROSPECTUS.md:86",
+        "docs/REPOSITORY_MAP.md:80",
+        "docs/ROADMAP.md:129",
+        "docs/SECURITY_ASSURANCE_ROADMAP.md:45",
+        "docs/api/MMR_PROOF_V1.md:67",
+        "docs/architecture/ARCHITECTURE.md:133",
+        "docs/architecture/README.md:43",
+        "docs/benchmarks/BENCHMARK_RESULTS.md:88",
+        "docs/benchmarks/README.md:80",
+        "docs/compliance/COMPLIANCE_MAPPING.md:129",
+        "docs/operations/BACKPRESSURE_RUNBOOK.md:67",
+        "docs/operations/KEY_ROTATION_RUNBOOK.md:67",
+        "docs/operations/ROLLBACK_RUNBOOK.md:129",
+        "docs/performance/SCALING_GUIDE.md:85",
+        "docs/privacy/DATA_RETENTION.md:117",
+        "docs/security/PQC_CONSTANT_TIME.md:53",
+        "docs/security/THREAT_MODEL.md:83",
+        "docs/security/WAF_TESTING.md:53"
+      ]
+    },
+    {
+      "heading": "verification",
+      "locators": [
+        ".github/PULL_REQUEST_TEMPLATE.md:21",
+        "CHANGELOG.md:113",
+        "CHANGELOG.md:142",
+        "dashboard/README.md:27",
+        "docs/architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md:44"
+      ]
+    }
+  ],
+  "schema": "aegis-documentation-corpus-audit-v1",
+  "source_commit": "45d95188d40792639fdd654369765a7233bef09a",
+  "source_worktree_dirty": true,
+  "tracked_patch_sha256": "c8c38408f20d2e8c3b0554eb2f58f3e7932adfbcc17318a050f501330b4a8c15",
+  "utf8_failures": []
+}

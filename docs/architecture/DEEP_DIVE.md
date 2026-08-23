@@ -145,17 +145,16 @@ Measured Rust vs Python throughput (leaf insertion):
 
 ---
 
-## 4. Asynchronous Persistence — Write-Ahead Log
+## 4. Persistence — Authoritative JSONL and Auxiliary RustWal
 
-Implemented in `aegis/core/crypto_audit.py` (persistence) with a Rust mmap WAL
-(`memmap2` + CRC32 framing) and a pure-Python JSONL fallback.
+Implemented in `aegis/core/crypto_audit.py` with JSONL as the replay authority. When the native extension is available, the proxy additionally opens `<wal_path>.stream.rwal` as an optional 256 MiB Rust mmap WAL (`memmap2` + CRC32 framing) and appends a copy only after the authoritative terminal stream node commits. The native segment is auxiliary, not a replacement or replay fallback. If its post-commit append fails, the process records `aegis_native_stream_wal_errors_total`, disables the segment and retains the JSONL result as authoritative rather than suppressing a terminal marker that the JSONL node already binds.
 
 ### 4.1 Durability properties
 
 - **File mode `0o600`** — owner read/write only; other users on the host cannot read
   audit payload digests or signatures.
 - **Append-only** — no delete/overwrite code path exists in node storage.
-- **CRC32 framing** (Rust) — each record is length-prefixed and CRC-framed; `read_all()`
+- **CRC32 framing** (auxiliary RustWal) — each copied terminal stream frame is length-prefixed and CRC-framed; `read_all()`
   stops at the first corrupt frame and reports `fault_state = "wal_corrupt"` (the
   in-memory chain stays intact).
 - **Atomic write-position rollback** — if an I/O error occurs after space reservation,
@@ -172,7 +171,7 @@ Implemented in `aegis/core/crypto_audit.py` (persistence) with a Rust mmap WAL
 
 ### 4.3 Crash recovery
 
-On startup `_load_from_wal()` replays every segment and re-links the hash chain within
+On startup `_load_from_wal()` replays the authoritative JSONL segments and re-links the hash chain within
 the implementation boundary. A process killed during non-streaming persistence does not
 produce a governed success from that path. During SSE, non-terminal events may already
 have reached the client, but the terminal marker is withheld if terminal summary commit
@@ -210,7 +209,7 @@ Every Rust tier has a functionally complete Python fallback; the extension is op
 | 3 | Rate limiter | lock-free CAS token bucket | `asyncio.Lock` + TTLCache |
 | 4 | Session store | sharded DashMap | `OrderedDict` + `RLock` |
 | 5 | Audit ring buffer | `crossbeam::ArrayQueue` | `asyncio.Queue` |
-| 6 | Write-ahead log | `memmap2` + CRC32 | `os.fsync()` JSONL |
+| 6 | Auxiliary stream WAL | `memmap2` + CRC32 copy | No auxiliary segment; authoritative `os.fsync()` JSONL is unchanged |
 | 7 | Cryptography | BLAKE3 SIMD + ML-DSA-65 | `hashlib` + HMAC-SHA256 |
 
 Only Tier 7 (MMR) has a committed benchmark today; Tiers 1–6 carry design-target
