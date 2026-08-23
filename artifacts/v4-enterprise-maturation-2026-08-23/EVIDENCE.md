@@ -5,6 +5,7 @@
 **Branch:** `manus/enterprise-maturation-v4-20260823`  
 **Base commit:** `7647fad798b3b79a98cc15323299f40d185b7b4c`  
 **Implementation commit:** `6b0e70b`  
+**CodeQL remediation commit:** `eea84d7a6bcd069f4105b3d0da519a9400ee850f`  
 **Published version retained:** `3.1.0`  
 **Candidate status:** `UNRELEASED`; external acceptance is incomplete.
 
@@ -18,7 +19,7 @@ The evidence below establishes only local source, test, build, and bounded-model
 
 | Gate | Result | Bounded observation |
 |---|---:|---|
-| Python 3.11 full suite | PASS | 5,540 passed, 37 skipped in 85.99 s |
+| Python 3.11 full suite | PASS | 5,540 passed, 37 skipped in 88.68 s after CodeQL remediation |
 | Python coverage | PASS | 89.64% statement coverage; configured floor 65% |
 | Python 3.11 concurrent ledger stress | PASS | 128 threads, 512 durable commits; 4-test module completed in 3.02 s |
 | Focused enterprise regressions | PASS | Auth, mTLS, OIDC, archive, timestamp, telemetry, SIEM, SDK callbacks, release contract |
@@ -56,7 +57,7 @@ An independent diff review identified two high-severity blockers and four medium
 
 | Artifact | SHA-256 |
 |---|---|
-| `coverage.xml` | `6541df7695db6dbee9d745f1223a95652bf5bee4e4d3320d26c1f31184422b10` |
+| `coverage.xml` | `5dcecf4e5f517b2001baf2bf5d9d6ad49f6a464938b312c98b52a50b65293e5d` |
 | `documentation-corpus/CORPUS_AUDIT.md` | `41f865f8dcc64146fdce4e190233a59872ba2c7e9c482ad3c448b89559a3caac` |
 | `documentation-corpus/CORPUS_INVENTORY.json` | `21b828bf90f61ebf7f0276f710325217de94b1beb6b57aadd9052af6364eeb4c` |
 | `waf-corpus.json` | `b033d5ff8c79e08c72ee10046f91ec81ac5eb28c75abeea8a2a11d48ce5dc5e6` |
