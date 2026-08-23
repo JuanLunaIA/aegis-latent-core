@@ -76,6 +76,9 @@ The strict lifecycle is:
 | Strong signing | Strict ledgers reject the ephemeral Ed25519 fallback. HMAC-SHA256, configured HSM, or configured native signer must be available according to policy. | Signer tests and strict startup gates. HMAC is symmetric and does not provide third-party non-repudiation. |
 | Key rotation | The enterprise signer supports an atomic, versioned HMAC keyring with one active key, historical verify keys, explicit expiry, and non-secret `key_id` metadata. | `aegis_server/crypto/keyring.py`, `tests/test_keyring_rotation.py`. Three-replica deployment evidence remains required for a production claim. |
 | Rate limiting | Redis-backed distributed limiting fails closed when the backend is unavailable; development in-memory limiting is not a production substitute. | Rate-limiter tests and deployment configuration. Redis/TLS/HA behavior is deployment-dependent. |
+| Enterprise identity and tenant binding | The unreleased candidate derives immutable principals from configured API-key mappings, strict OIDC claims, or explicitly pinned mTLS certificates. Tenant/session headers do not select the evidence tenant or quota key. | `aegis/auth/`, `aegis/proxy/dependencies.py`, and auth integration tests. IdP, TLS terminator, certificate lifecycle, and Redis acceptance remain deployment-dependent; current mTLS source is leaf-pin mode, not universal PKI validation. |
+| Finalized-segment archival | Rotated JSONL WAL segments receive versioned manifests and can be uploaded through the optional S3 Object Lock adapter with SHA-256, version, lock-mode, and retention verification. Optional RFC 3161 acceptance requires OpenSSL verification against an explicit CA file. | `aegis/storage/`, `aegis/anchoring/`, and focused tests. This is not a regulatory WORM, legal-admissibility, or external-time guarantee without target acceptance. |
+| Privacy-safe telemetry | Closed-schema security events omit prompt/response/token text, embeddings, raw tenant/session identifiers, signer names, and exception strings; an optional bounded SQLite spool exports to supported SIEM encodings. | `aegis/telemetry/` and privacy sentinel tests. Downstream delivery, retention, access control, and operational SLOs are external. |
 | Request bounds | Oversized bodies are rejected before normal application processing. | P0/P1 release tests. Limits must be sized for the deployed provider and streaming policy. |
 | WAF | NFKC normalization, zero-width stripping, critical pattern blocks, structural depth guard, and weighted local analysis run at the application boundary. | `tests/data/waf_corpus_v1.json` and `tools/security/run_waf_corpus.py`. Ingress HTTP/2 parsing is outside the application boundary. |
 | Egress | Canonical allowlists reject schemes, userinfo, malformed ports, unsupported forms, and non-approved endpoints. | `aegis/proxy/egress_guard.py` and tests. This does not replace firewall, namespace, NetworkPolicy, or cloud egress controls. |
@@ -104,6 +107,8 @@ For a minimal local gateway, use the repository’s example configuration and a 
 The current-main Python distribution in [`sdk/python`](sdk/python) is a drop-in integration that subclasses the official OpenAI and Anthropic clients. Existing request/response model types and sync/async resource APIs are preserved while Aegis tenant, session, and bearer-auth headers are injected at construction. The native Anthropic `/v1/messages` ingress requires `AEGIS_PROVIDER=anthropic`; it preserves the Anthropic Messages response shape instead of translating it to OpenAI objects.
 
 The edge-compatible current-main TypeScript package in [`sdk/typescript`](sdk/typescript) verifies `aegis-mmr-inclusion-v1` proofs with Web Crypto and supplies provider-native wrappers and constructor options rather than re-declaring provider payloads. The official OpenAI and Anthropic packages are peer dependencies, so their native resources, request parameters, response models, streaming iterators, retries and error types remain authoritative. Both SDKs consume the same frozen proof vectors under `sdk/shared/`.
+
+The unreleased Python SDK candidate also includes privacy-minimized LangChain and LlamaIndex callback adapters. Publication workflows are disabled unless external trusted-publisher, environment, signed-tag, and repository-variable prerequisites are configured. See [`docs/DEVELOPER_INTEGRATIONS_GUIDE.md`](docs/DEVELOPER_INTEGRATIONS_GUIDE.md).
 
 ```python
 from aegis_sdk.openai import OpenAI
@@ -312,7 +317,7 @@ The repository is licensed under the terms in [`LICENSE`](LICENSE) and [`COMMERC
 
 ## Current release
 
-The current published release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). Current main has subsequently advanced through PR #99 at commit `45d95188d40792639fdd654369765a7233bef09a`; the current-main capabilities identified above are not claims about the v3.1.0 tag. The ML-DSA `verify` timing claim remains blocked because the retained experiment returned `p=0.0`; a published release is not evidence that every deployment prerequisite or external assurance requirement has been satisfied.
+The current published release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). The baseline before this branch is post-PR #100 at commit `7647fad798b3b79a98cc15323299f40d185b7b4c`; the enterprise-maturation work described above is an **unreleased candidate** and is not attributed to the `v3.1.0` tag. No `v4.0.0` version, tag, registry publication, OCI release, WORM status, SLSA level, legal admissibility, or production-readiness claim is made. The ML-DSA `verify` timing claim remains blocked because the retained experiment returned `p=0.0`; a published release is not evidence that every deployment prerequisite or external assurance requirement has been satisfied.
 
 ## External reference boundaries
 
@@ -321,6 +326,7 @@ The documentation uses NIST AI RMF, NIST CSF, NIST FIPS 204, W3C WCAG 2.2, CISA 
 ## Related documents
 
 - [`docs/DEVELOPER_QUICKSTART.md`](docs/DEVELOPER_QUICKSTART.md)
+- [`docs/DEVELOPER_INTEGRATIONS_GUIDE.md`](docs/DEVELOPER_INTEGRATIONS_GUIDE.md)
 - [`docs/PLATFORM_OPERATOR_GUIDE.md`](docs/PLATFORM_OPERATOR_GUIDE.md)
 - [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)
 - [`docs/FAQ_TECHNICAL.md`](docs/FAQ_TECHNICAL.md)

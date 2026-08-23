@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
@@ -29,11 +31,23 @@ def test_strict_runtime_rejects_missing_production_controls(tmp_path: Path) -> N
 
 
 def test_strict_runtime_accepts_explicit_controls(tmp_path: Path) -> None:
+    key = "test-key"
+    digest = hashlib.sha256(key.encode()).hexdigest()
     cfg = AegisSettings(
         security_enforcement_mode="strict",
         rate_limit_backend="redis",
         signing_key="a" * 64,
-        api_keys="test-key",
+        api_keys=key,
+        auth_identity_hmac_key="i" * 32,
+        api_key_principals_json=json.dumps(
+            {
+                digest: {
+                    "subject": "p0-gate",
+                    "tenant_id": "tenant-p0",
+                    "roles": ["proxy_user"],
+                }
+            }
+        ),
         wal_path=tmp_path / "audit.wal",
     )
     cfg.validate_runtime_invariants()

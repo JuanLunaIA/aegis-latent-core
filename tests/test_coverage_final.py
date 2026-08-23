@@ -7,7 +7,9 @@ app-startup seccomp enforcement, and the forwarder's optional-Rust import."""
 from __future__ import annotations
 
 import builtins
+import hashlib
 import importlib
+import json
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -155,9 +157,21 @@ def test_compute_entropy_gpu_rejects_non_1d():
 
 
 def _seccomp_settings(tmp_path) -> AegisSettings:
+    key = "sk-key"
+    digest = hashlib.sha256(key.encode()).hexdigest()
     return AegisSettings(
         backend_api_key="sk-test",
-        api_keys="sk-key",
+        api_keys=key,
+        auth_identity_hmac_key="i" * 32,
+        api_key_principals_json=json.dumps(
+            {
+                digest: {
+                    "subject": "seccomp-gate",
+                    "tenant_id": "tenant-seccomp",
+                    "roles": ["proxy_user"],
+                }
+            }
+        ),
         security_enforcement_mode="strict",
         require_lsm=False,
         rate_limit_backend="redis",

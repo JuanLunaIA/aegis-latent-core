@@ -1,0 +1,109 @@
+name: Publish TypeScript SDK to npm
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-npm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  provenance:
+    name: Verify signed tag and protected-branch ancestry
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - name: Verify immutable release provenance
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          git fetch --no-tags origin main
+          test "$(git cat-file -t "refs/tags/${RELEASE_TAG}")" = tag
+          git verify-tag "${RELEASE_TAG}"
+          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+
+  build:
+    name: Build and verify TypeScript SDK
+    needs: provenance
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+      - name: Verify release tag matches TypeScript SDK version
+        working-directory: sdk/typescript
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=module <<'JS'
+          import {readFileSync} from "node:fs";
+          const {version} = JSON.parse(readFileSync("package.json", "utf8"));
+          if (process.env.RELEASE_TAG !== `v${version}`) {
+            throw new Error(`release tag ${process.env.RELEASE_TAG} does not match TypeScript SDK v${version}`);
+          }
+          JS
+      - name: Install locked dependencies
+        working-directory: sdk/typescript
+        run: npm ci --ignore-scripts
+      - name: Typecheck, test, and build TypeScript SDK
+        working-directory: sdk/typescript
+        run: npm run check
+      - name: Pack exact npm publication tarball
+        working-directory: sdk/typescript
+        run: |
+          npm pack --json > npm-pack.json
+          test "$(find . -maxdepth 1 -type f -name '*.tgz' | wc -l)" -eq 1
+      - name: Upload immutable TypeScript SDK tarball
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: typescript-sdk-package-${{ github.sha }}
+          path: sdk/typescript/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish verified TypeScript SDK artifact
+    needs: build
+    if: vars.AEGIS_TRUSTED_PUBLISHING_ENABLED == 'true'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@aegis-latent/sdk
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          registry-url: https://registry.npmjs.org
+      - name: Install hash-verified trusted-publishing-capable npm CLI
+        env:
+          NPM_CLI_SHA512: aac1241cfc3f41dc38780d64295c6c6b917a41e24288b33519a7b11adfc5a54a5f881c642d7557215b6c70e01e55655ed7ba666300fd0238bc75fb17478afaf3
+        run: |
+          curl --fail --silent --show-error --location \
+            --output /tmp/npm-11.5.2.tgz \
+            https://registry.npmjs.org/npm/-/npm-11.5.2.tgz
+          echo "${NPM_CLI_SHA512}  /tmp/npm-11.5.2.tgz" | sha512sum --check --strict
+          npm install --global --ignore-scripts /tmp/npm-11.5.2.tgz
+          test "$(npm --version)" = "11.5.2"
+      - name: Download exact TypeScript SDK artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: typescript-sdk-package-${{ github.sha }}
+          path: release-artifact
+      - name: Publish to npm with OIDC provenance
+        run: npm publish release-artifact/*.tgz --access public --provenance

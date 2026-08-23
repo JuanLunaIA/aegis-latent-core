@@ -104,6 +104,25 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 - [ ] Keep dependency and action exceptions bounded, owned, time-limited, and documented; no silent advisory ignore.
 - [ ] Complete an independent threat-model and code review before any certification, court-admissibility, or high-assurance procurement language.
 
+## Unreleased enterprise-maturation candidate (v4 target)
+
+- [x] Add immutable principal, OIDC, explicit mTLS leaf-pin, tenant confinement, scope enforcement, and dual request/token quota source modules with deterministic tests.
+- [x] Remove caller session/tenant values from primary-gateway quota identity and durable tenant selection.
+- [x] Add finalized WAL segment manifests, durable S3 archival journal/spool, Object Lock metadata verification, and optional RFC 3161 trust verification against an explicit CA file.
+- [x] Add closed-schema OTel/SIEM primitives, bounded SIEM spool controls, and privacy sentinel tests.
+- [x] Add LangChain/LlamaIndex SDK callback source adapters and isolated SDK publishing workflow candidates.
+- [d] Validate OIDC issuer/JWKS rotation and revocation behavior against the target IdP; source tests are not IdP acceptance.
+- [d] Validate the TLS terminator, forwarded-certificate header stripping, leaf-pin rotation, and target PKI/revocation policy. Current source must not be described as universal mTLS chain validation.
+- [d] Validate Redis atomic quota behavior, outage handling, latency, and key lifecycle on the target topology.
+- [d] Validate S3 versioning/Object Lock bucket creation, permissions, retention/legal-hold behavior, reconciliation, restore, cost, and deletion resistance. GCS and Azure adapters are not implemented.
+- [d] Validate the approved TSA, trust/revocation/policy configuration, renewal, offline verification, and evidence retention.
+- [d] Validate SIEM/OTel authentication, egress, downstream parsing, quotas, outage recovery, retention, and operational ownership.
+- [ ] Migrate or retire the alternate `aegis_server` HTTP surface so it cannot be mistaken for having the primary gateway's new tenant/RBAC contract.
+- [x] Add an isolated gateway/dashboard multi-architecture OCI build, SBOM, provenance, and keyless digest-signing workflow candidate.
+- [d] Validate OCI execution, package permissions, registry policy, signature/provenance verification, architecture smoke tests, and rollback on the target GHCR environment.
+- [ ] Configure protected immutable signed tags, GitHub environments, and exact PyPI/npm trusted-publisher bindings. Publication remains disabled unless `AEGIS_TRUSTED_PUBLISHING_ENABLED=true` is configured externally.
+- [ ] Complete full CI, security, formal, documentation, dependency, packaging, and target-environment acceptance gates plus mandatory domain approvals before any `v4.0.0` version bump, tag, release, or readiness claim.
+
 ## P2 performance and operations
 
 - [ ] Measure end-to-end proxy latency with a real or explicitly bounded upstream, including evidence durability, streaming, WAF, rate limiting, and provider failure paths.

@@ -139,6 +139,10 @@ jobs:
           mypy --config-file=mypy-ci.ini \
             aegis/config.py \
             aegis/auth/apikey.py \
+            aegis/auth/principal.py \
+            aegis/auth/oidc.py \
+            aegis/auth/mtls.py \
+            aegis/anchoring/rfc3161.py \
             aegis/core/mmr.py \
             aegis/core/crypto_audit.py \
             aegis/core/forensic.py \
@@ -155,7 +159,14 @@ jobs:
             aegis/proxy/schemas.py \
             aegis/proxy/forwarder.py \
             aegis/proxy/streaming.py \
-            aegis/proxy/audit_api.py
+            aegis/proxy/audit_api.py \
+            aegis/proxy/dependencies.py \
+            aegis/proxy/rate_limiter.py \
+            aegis/storage/s3_worm.py \
+            aegis/storage/segment_manifest.py \
+            aegis/telemetry/events.py \
+            aegis/telemetry/otel.py \
+            aegis/telemetry/siem.py
 
   # ── Public SDK contract gates ───────────────────────────────────────────────
   sdk-python:

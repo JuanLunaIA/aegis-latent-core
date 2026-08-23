@@ -4,8 +4,9 @@
 **Suite version:** 1.0
 **Repository:** `JuanLunaIA/aegis-latent-core`
 **Release baseline:** published `v3.1.0`
-**Current-main review baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
-**Status:** Review candidate pending GitHub CI and owner approval
+**Current-main review baseline:** post-PR #100, commit `7647fad798b3b79a98cc15323299f40d185b7b4c`
+**Current change set:** unreleased enterprise-maturation candidate; final commit not yet assigned
+**Status:** Technical review candidate pending full GitHub CI, external acceptance, claim review, and owner/domain approval
 
 ## 1. Authority and source hierarchy
 
@@ -32,6 +33,7 @@ A higher-ranked source can still require legal or specialist interpretation. Cod
 | Regulatory and legal labels | Unauthorized legal conclusion | Mapped as technical contributions with counsel/assessor gates. | DOC-05 and unsupported report block compliance/admissibility wording. |
 | Performance and commercial numbers | Measurement and promise inflation | Compared with retained artifacts and contracts; unsupported values downgraded. | Claims matrix contains only bounded measurements. |
 | Example secret-like values | Secret normalization risk | Not copied into canonical runbooks or production configuration. | Secret scans and repository diff review must remain clean. |
+| Pasted `v4.0.0`, WORM, SLSA, admissibility, enterprise, and production assertions | Release/compliance self-certification | Treated as desired outcomes, not established facts. Version bump, tag, publication, and external guarantees remain blocked. | Claims matrix and developer integration guide retain `UNRELEASED`, `CONFIGURATION-DEPENDENT`, and external-acceptance states. |
 
 **Falsification:** containment fails if pasted text changes governing policy, accesses a secret, authorizes an external action beyond the user's request, or enters the canonical suite as fact without evidence and status.
 

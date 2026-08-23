@@ -7,6 +7,8 @@ aegis.config — Centralized configuration via environment variables.
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
 
+import hashlib
+import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
@@ -141,6 +143,35 @@ class AegisSettings(BaseSettings):
             "If empty and auth is not disabled, a warning is emitted at startup."
         ),
     )
+    auth_mode: Literal["api_key", "oidc", "mtls", "api_key_mtls", "oidc_mtls"] = Field(
+        default="api_key",
+        description="Single configured authentication mode; composite modes require both factors.",
+    )
+    auth_identity_hmac_key: str = Field(
+        default="",
+        description="Secret used only to derive opaque stable credential identifiers.",
+    )
+    api_key_principals_json: str = Field(
+        default="",
+        description=(
+            "JSON object keyed by lowercase SHA-256 API-key digest. Each value contains "
+            "tenant_id, roles, and scopes. Strict mode requires an entry for every configured key."
+        ),
+    )
+    development_tenant_id: str = Field(default="development")
+    oidc_issuer: str = Field(default="")
+    oidc_audience: str = Field(default="")
+    oidc_jwks_url: str = Field(default="")
+    oidc_algorithms: str = Field(default="RS256")
+    oidc_tenant_claim: str = Field(default="tenant_id")
+    oidc_roles_claim: str = Field(default="roles")
+    oidc_leeway_seconds: int = Field(default=0, ge=0, le=300)
+    oidc_http_timeout_seconds: float = Field(default=5.0, ge=0.1, le=30.0)
+    mtls_trusted_proxy_cidrs: str = Field(default="")
+    mtls_allowed_sha256_fingerprints: str = Field(default="")
+    mtls_san_allowlist: str = Field(default="")
+    mtls_tenant_san_prefix: str = Field(default="tenant:")
+    mtls_default_roles: str = Field(default="proxy_user")
 
     # ── LDAP / Active Directory ───────────────────────────────────────────────
     ldap_url: str = Field(
@@ -289,6 +320,18 @@ class AegisSettings(BaseSettings):
             "audit chain is never truncated."
         ),
     )
+    s3_archive_enabled: bool = Field(default=False)
+    s3_archive_bucket: str = Field(default="")
+    s3_archive_prefix: str = Field(default="aegis/wal")
+    s3_archive_region: str = Field(default="")
+    s3_archive_retention_days: int = Field(default=365, ge=1, le=36_500)
+    s3_archive_lock_mode: Literal["GOVERNANCE", "COMPLIANCE"] = Field(default="COMPLIANCE")
+    s3_archive_spool_dir: Path = Field(default=Path("./aegis-archive-spool"))
+    s3_archive_journal_path: Path = Field(default=Path("./aegis-archive.sqlite3"))
+    s3_archive_max_spool_bytes: int = Field(default=1_073_741_824, ge=1)
+    tsa_url: str = Field(default="")
+    tsa_ca_file: Path | None = Field(default=None)
+    tsa_evidence_dir: Path = Field(default=Path("./aegis-rfc3161"))
 
     # ── Runtime enforcement and bounded resources ─────────────────────────
     security_enforcement_mode: Literal["strict", "development"] = Field(
@@ -453,6 +496,11 @@ class AegisSettings(BaseSettings):
         default="memory",
         description="Rate limiter backend: 'memory' (default, no Redis) or 'redis'.",
     )
+    rate_limit_token_capacity: int = Field(default=100_000, ge=1)
+    rate_limit_tokens_per_minute: int = Field(default=100_000, ge=1)
+    rate_limit_default_output_tokens: int = Field(default=4_096, ge=1)
+    rate_limit_max_output_tokens: int = Field(default=16_384, ge=1)
+    rate_limit_max_buckets: int = Field(default=10_000, ge=2, le=1_000_000)
     request_entropy_guard: bool = Field(
         default=False,
         description="Block requests failing Shannon-entropy heuristics (enable in hardened mode).",
@@ -650,6 +698,13 @@ class AegisSettings(BaseSettings):
         description="HTTP(S) URL to POST alert payloads to (Slack, Teams, custom SIEM).",
     )
     webhook_timeout_seconds: float = Field(default=5.0, ge=0.5, le=30.0)
+    siem_url: str = Field(default="")
+    siem_bearer_token: str = Field(default="")
+    siem_format: Literal["cef", "rfc5424", "splunk", "datadog"] = Field(default="cef")
+    siem_spool_path: Path = Field(default=Path("./aegis-siem.sqlite3"))
+    siem_spool_max_rows: int = Field(default=100_000, ge=1)
+    siem_spool_max_bytes: int = Field(default=268_435_456, ge=1)
+    siem_max_payload_bytes: int = Field(default=16_384, ge=256, le=1_048_576)
 
     @field_validator("provider")
     @classmethod
@@ -711,6 +766,36 @@ class AegisSettings(BaseSettings):
             )
         if self.max_stream_event_bytes > self.stream_queue_max_bytes:
             raise ValueError("max_stream_event_bytes must not exceed stream_queue_max_bytes")
+        if self.rate_limit_default_output_tokens > self.rate_limit_max_output_tokens:
+            raise ValueError(
+                "rate_limit_default_output_tokens must not exceed rate_limit_max_output_tokens"
+            )
+        if self.auth_mode in {"oidc", "oidc_mtls"}:
+            for name, value in (
+                ("oidc_issuer", self.oidc_issuer),
+                ("oidc_audience", self.oidc_audience),
+                ("oidc_jwks_url", self.oidc_jwks_url),
+            ):
+                if not value:
+                    raise ValueError(f"auth_mode={self.auth_mode!r} requires {name}")
+        if self.auth_mode in {"mtls", "api_key_mtls", "oidc_mtls"}:
+            if not self.get_mtls_fingerprints() or not self.get_mtls_san_allowlist():
+                raise ValueError("mTLS auth mode requires fingerprint and SAN allowlists")
+            direct_tls = self.mtls_required and self.ssl_ca_certs is not None
+            if not self.mtls_trusted_proxy_cidrs and not direct_tls:
+                raise ValueError(
+                    "mTLS auth mode requires verified direct TLS or trusted proxy CIDRs"
+                )
+        if self.s3_archive_enabled and not self.s3_archive_bucket:
+            raise ValueError("s3_archive_enabled=True requires s3_archive_bucket")
+        if self.s3_archive_enabled and self.max_wal_bytes == 0:
+            raise ValueError("s3 archival requires max_wal_bytes > 0 to finalize segments")
+        if self.tsa_url and self.tsa_ca_file is None:
+            raise ValueError("tsa_url requires tsa_ca_file for explicit trust-policy verification")
+        if self.siem_url:
+            parsed_siem = urlparse(self.siem_url)
+            if parsed_siem.scheme != "https" or not parsed_siem.hostname:
+                raise ValueError("siem_url must be an absolute HTTPS URL")
         return self
 
     def validate_runtime_invariants(self) -> None:
@@ -725,12 +810,25 @@ class AegisSettings(BaseSettings):
             raise ValueError("strict runtime requires require_durable_evidence=True")
         if self.rate_limit_backend != "redis":
             raise ValueError("strict runtime requires rate_limit_backend='redis'")
-        if not self.get_api_keys():
+        if self.auth_mode in {"api_key", "api_key_mtls"} and not self.get_api_keys():
             raise ValueError("strict runtime requires at least one AEGIS_API_KEYS value")
         if not self.signing_key and not self.pkcs11_library_path:
             raise ValueError("strict runtime requires signing_key or pkcs11_library_path")
         if self.mtls_required and not self.ssl_ca_certs:
             raise ValueError("mtls_required=True requires ssl_ca_certs")
+        if len(self.auth_identity_hmac_key.encode("utf-8")) < 32:
+            raise ValueError("strict runtime requires auth_identity_hmac_key of at least 32 bytes")
+        if self.auth_mode in {"api_key", "api_key_mtls"}:
+            configured = self.get_api_key_principals()
+            missing = sorted(
+                hashlib.sha256(key.encode("utf-8")).hexdigest()
+                for key in self.get_api_keys()
+                if hashlib.sha256(key.encode("utf-8")).hexdigest() not in configured
+            )
+            if missing:
+                raise ValueError(
+                    "strict API-key mode requires an explicit principal mapping per key"
+                )
 
     def get_api_keys(self) -> frozenset[str]:
         if not self.api_keys:
@@ -741,6 +839,52 @@ class AegisSettings(BaseSettings):
         if not self.audit_api_keys:
             return self.get_api_keys()
         return frozenset(k.strip() for k in self.audit_api_keys.split(",") if k.strip())
+
+    def get_api_key_principals(self) -> dict[str, dict[str, object]]:
+        if not self.api_key_principals_json:
+            return {}
+        try:
+            value = json.loads(self.api_key_principals_json)
+        except json.JSONDecodeError as exc:
+            raise ValueError("api_key_principals_json must be valid JSON") from exc
+        if not isinstance(value, dict):
+            raise ValueError("api_key_principals_json must be a JSON object")
+        result: dict[str, dict[str, object]] = {}
+        for digest, record in value.items():
+            if (
+                not isinstance(digest, str)
+                or len(digest) != 64
+                or any(character not in "0123456789abcdef" for character in digest)
+                or not isinstance(record, dict)
+            ):
+                raise ValueError(
+                    "API-key principal mappings require SHA-256 keys and object values"
+                )
+            result[digest] = dict(record)
+        return result
+
+    def get_oidc_algorithms(self) -> tuple[str, ...]:
+        values = tuple(value.strip() for value in self.oidc_algorithms.split(",") if value.strip())
+        if not values:
+            raise ValueError("oidc_algorithms must contain at least one algorithm")
+        return values
+
+    def get_mtls_fingerprints(self) -> frozenset[str]:
+        return frozenset(
+            value.strip()
+            for value in self.mtls_allowed_sha256_fingerprints.split(",")
+            if value.strip()
+        )
+
+    def get_mtls_san_allowlist(self) -> frozenset[str]:
+        return frozenset(
+            value.strip() for value in self.mtls_san_allowlist.split(",") if value.strip()
+        )
+
+    def get_mtls_proxy_cidrs(self) -> tuple[str, ...]:
+        return tuple(
+            value.strip() for value in self.mtls_trusted_proxy_cidrs.split(",") if value.strip()
+        )
 
     def get_cors_origins(self) -> list[str]:
         if not self.cors_origins:
