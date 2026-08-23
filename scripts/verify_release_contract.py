@@ -220,7 +220,11 @@ def _validate_npm_workflow(root: Path, diagnostics: list[Diagnostic]) -> None:
         and "release-artifact/*.tgz" in workflow,
         "npm.environment": re.search(r"(?m)^\s{4}environment:\s*$", workflow) is not None
         and "name: npm" in workflow,
-        "npm.oidc": "id-token: write" in workflow and "registry.npmjs.org" in workflow,
+        "npm.oidc": "id-token: write" in workflow
+        and any(
+            line.strip() == "registry-url: https://registry.npmjs.org"
+            for line in workflow.splitlines()
+        ),
         "npm.provenance": re.search(
             r"npm publish\s+release-artifact/\*\.tgz[^\n]*--provenance", workflow
         )

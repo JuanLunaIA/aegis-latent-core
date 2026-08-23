@@ -90,7 +90,7 @@ def _api_key_principal(request: Request, key: str) -> Principal:
             detail="Invalid API key",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    key_digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+    key_digest = settings.api_key_principal_digest(key)
     configured = settings.get_api_key_principals().get(key_digest)
     if configured is None:
         if settings.security_enforcement_mode == "strict":

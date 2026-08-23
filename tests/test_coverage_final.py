@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import builtins
 import hashlib
+import hmac
 import importlib
 import json
 import sys
@@ -158,11 +159,14 @@ def test_compute_entropy_gpu_rejects_non_1d():
 
 def _seccomp_settings(tmp_path) -> AegisSettings:
     key = "sk-key"
-    digest = hashlib.sha256(key.encode()).hexdigest()
+    identity_key = "i" * 32
+    digest = hmac.new(
+        identity_key.encode(), b"aegis-api-key-principal-v1\x00" + key.encode(), hashlib.sha256
+    ).hexdigest()
     return AegisSettings(
         backend_api_key="sk-test",
         api_keys=key,
-        auth_identity_hmac_key="i" * 32,
+        auth_identity_hmac_key=identity_key,
         api_key_principals_json=json.dumps(
             {
                 digest: {

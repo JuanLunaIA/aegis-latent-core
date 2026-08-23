@@ -8,6 +8,7 @@ aegis.config — Centralized configuration via environment variables.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 from functools import lru_cache
 from pathlib import Path
@@ -154,7 +155,8 @@ class AegisSettings(BaseSettings):
     api_key_principals_json: str = Field(
         default="",
         description=(
-            "JSON object keyed by lowercase SHA-256 API-key digest. Each value contains "
+            "JSON object keyed by lowercase HMAC-SHA256 API-key digest using "
+            "auth_identity_hmac_key. Each value contains "
             "tenant_id, roles, and scopes. Strict mode requires an entry for every configured key."
         ),
     )
@@ -821,9 +823,9 @@ class AegisSettings(BaseSettings):
         if self.auth_mode in {"api_key", "api_key_mtls"}:
             configured = self.get_api_key_principals()
             missing = sorted(
-                hashlib.sha256(key.encode("utf-8")).hexdigest()
+                self.api_key_principal_digest(key)
                 for key in self.get_api_keys()
-                if hashlib.sha256(key.encode("utf-8")).hexdigest() not in configured
+                if self.api_key_principal_digest(key) not in configured
             )
             if missing:
                 raise ValueError(
@@ -839,6 +841,15 @@ class AegisSettings(BaseSettings):
         if not self.audit_api_keys:
             return self.get_api_keys()
         return frozenset(k.strip() for k in self.audit_api_keys.split(",") if k.strip())
+
+    def api_key_principal_digest(self, key: str) -> str:
+        """Return the domain-separated keyed lookup digest for an API key."""
+
+        return hmac.new(
+            self.auth_identity_hmac_key.encode("utf-8"),
+            b"aegis-api-key-principal-v1\x00" + key.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
 
     def get_api_key_principals(self) -> dict[str, dict[str, object]]:
         if not self.api_key_principals_json:
@@ -858,7 +869,7 @@ class AegisSettings(BaseSettings):
                 or not isinstance(record, dict)
             ):
                 raise ValueError(
-                    "API-key principal mappings require SHA-256 keys and object values"
+                    "API-key principal mappings require HMAC-SHA256 keys and object values"
                 )
             result[digest] = dict(record)
         return result

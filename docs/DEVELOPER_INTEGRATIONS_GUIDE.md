@@ -9,7 +9,7 @@ Aegis binds every governed request to an immutable `Principal` containing a subj
 
 | Authentication mode | Required configuration | Trust boundary |
 |---|---|---|
-| `api_key` | API keys; in strict mode, `auth_identity_hmac_key` and a SHA-256-keyed `api_key_principals_json` mapping | Constant-time key match plus server-side tenant/scope mapping |
+| `api_key` | API keys; in strict mode, `auth_identity_hmac_key` and an HMAC-SHA256-keyed `api_key_principals_json` mapping | Constant-time key match plus server-side tenant/scope mapping |
 | `oidc` | HTTPS issuer, exact audience, pinned HTTPS JWKS URL, explicit algorithms, PyJWT extra | JWT signature and exact claims; deployment owns IdP, TLS, key rotation, and revocation policy |
 | `mtls` | Fingerprint and SAN allowlists; direct verified TLS state or allowlisted immediate proxy | Current source implements explicit leaf pinning, validity, SAN, and unique tenant binding; it is not a general PKI path/revocation engine |
 | `api_key_mtls` / `oidc_mtls` | Both corresponding configurations | Both factors must authenticate and bind the same tenant |

@@ -82,13 +82,15 @@ def test_provider_lifecycle_allowlist_and_no_exception_text() -> None:
     with pytest.raises(ValueError, match="allowlisted"):
         with provider.span(SpanName.GATEWAY_REQUEST, attributes={"prompt": SENTINEL}):
             pass
-    with pytest.raises(RuntimeError, match=SENTINEL):
-        with provider.span(
-            SpanName.GATEWAY_REQUEST,
-            attributes={"aegis.outcome": "failed", "aegis.item_count": 2},
-        ):
-            raise RuntimeError(SENTINEL)
-    provider.shutdown()
+    try:
+        with pytest.raises(RuntimeError, match=SENTINEL):
+            with provider.span(
+                SpanName.GATEWAY_REQUEST,
+                attributes={"aegis.outcome": "failed", "aegis.item_count": 2},
+            ):
+                raise RuntimeError(SENTINEL)
+    finally:
+        provider.shutdown()
     assert collector.closed
     assert collector.spans[0].status.value == "error"
     assert SENTINEL not in repr(collector.spans)
