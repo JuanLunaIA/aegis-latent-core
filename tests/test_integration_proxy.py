@@ -77,11 +77,14 @@ async def test_ledger_integration_via_proxy():
                 headers = {
                     "Authorization": "Bearer test-proxy-key",
                     "x-session-id": "integration-session",
+                    "x-aegis-tenant-id": "attacker-selected-tenant",
                 }
 
                 response = await client.post("/v1/chat/completions", json=payload, headers=headers)
 
                 assert response.status_code == 200
+                assert response.headers["x-ratelimit-limit-requests"] == "10"
+                assert int(response.headers["x-ratelimit-remaining-tokens"]) < 100_000
 
                 # Wait for the background audit task to complete
                 await asyncio.sleep(1)
@@ -91,6 +94,8 @@ async def test_ledger_integration_via_proxy():
 
                 new_ledger = CryptographicAuditLedger(persistence_path=wal_path)
                 assert len(new_ledger.chain) >= 1
+                assert new_ledger.chain[-1].tenant_id == "development"
+                assert new_ledger.chain[-1].tenant_id != "attacker-selected-tenant"
 
                 # 3. Verify Integrity
                 is_valid, error_idx = new_ledger.verify_integrity()

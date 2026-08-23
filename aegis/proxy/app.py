@@ -8,12 +8,14 @@ import base64
 import hashlib
 import json
 import logging
+import math
 import time
 import uuid
 from collections import OrderedDict
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from datetime import timedelta
 from secrets import randbelow
 from threading import Lock
 from typing import Annotated, Any
@@ -24,7 +26,15 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import aegis
+from aegis.anchoring.rfc3161 import (
+    HTTPXTimestampTransport,
+    OpenSSLRFC3161Verifier,
+    RFC3161AnchorClient,
+)
 from aegis.auth.apikey import AuditKeyAuth, ProxyKeyAuth
+from aegis.auth.mtls import MTLSVerificationConfig, MTLSVerifier
+from aegis.auth.oidc import HTTPXJWKSTransport, OIDCConfig, OIDCManager
+from aegis.auth.principal import Principal
 from aegis.config import AegisSettings, get_settings
 from aegis.core import observability
 from aegis.core.circuit_breaker import CircuitOpenError
@@ -33,19 +43,30 @@ from aegis.core.hsm import HSMSigningBackend
 from aegis.core.normalization import canonical_normalize
 from aegis.core.pci_detector import PCIScrubber
 from aegis.core.phi_deidentifier import PHIDeidentifier
-from aegis.core.ratelimiter import RateLimitBackendUnavailable, create_rate_limiter
+from aegis.core.ratelimiter import RateLimitBackendUnavailable as LegacyRateLimitBackendUnavailable
 from aegis.core.secrets import VaultManager
 from aegis.core.session_manager import SessionLifecycleManager
 from aegis.core.waf_session import WAFSessionTracker
 from aegis.proxy.analyzer import ResponseAnalyzer
 from aegis.proxy.attestation_api import build_attestation_router
 from aegis.proxy.audit_api import build_audit_router
-from aegis.proxy.dependencies import validate_proxy_auth
+from aegis.proxy.dependencies import validate_audit_auth, validate_proxy_auth
 from aegis.proxy.dmz_middleware import DMZSourceIPMiddleware
 from aegis.proxy.forwarder import LLMForwarder
+from aegis.proxy.rate_limiter import (
+    DualRateLimiter,
+    RateLimitBackendUnavailableError,
+    RateLimitDecision,
+    RedisRateLimitBackend,
+    TokenReservation,
+)
 from aegis.proxy.schemas import AlertOut
 from aegis.proxy.streaming import BoundedStreamProxy, StreamEvidenceSummary
 from aegis.proxy.waf import AegisWAF
+from aegis.storage.s3_worm import Boto3S3WormProvider, ObjectLockMode, S3WormArchiver
+from aegis.storage.segment_manifest import archive_finalized_segment
+from aegis.telemetry.events import EventKind, EventOutcome, SecurityEvent, Severity
+from aegis.telemetry.siem import HTTPSIEMSink, SIEMExporter, SIEMFormat
 
 logger = logging.getLogger(__name__)
 _ALERT_BUFFER_SIZE = 10_000
@@ -352,6 +373,12 @@ class _AppState:
     waf_session_tracker: WAFSessionTracker
     # Optional best-effort copy of terminal streaming frames. JSONL is authoritative.
     native_stream_wal: Any
+    oidc_manager: OIDCManager | None
+    enterprise_mtls_verifier: MTLSVerifier | None
+    siem_exporter: SIEMExporter | None
+    s3_archiver: S3WormArchiver | None
+    rfc3161_client: RFC3161AnchorClient | None
+    archive_task: asyncio.Task[None] | None
 
     def get_analyzer(self, session_id: str) -> ResponseAnalyzer:
         return self.analyzers.get(session_id)
@@ -692,7 +719,77 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 state.native_stream_wal = None
         return node
 
-    state.ratelimiter = create_rate_limiter(cfg)
+    rate_backend = (
+        RedisRateLimitBackend(cfg.redis_url) if cfg.rate_limit_backend == "redis" else None
+    )
+    state.ratelimiter = DualRateLimiter(
+        request_capacity=cfg.rate_limit_burst,
+        request_refill_per_second=cfg.rate_limit_requests_per_minute / 60.0,
+        token_capacity=cfg.rate_limit_token_capacity,
+        token_refill_per_second=cfg.rate_limit_tokens_per_minute / 60.0,
+        backend=rate_backend,
+        max_buckets=cfg.rate_limit_max_buckets,
+    )
+    state.oidc_manager = None
+    if cfg.auth_mode in {"oidc", "oidc_mtls"}:
+        state.oidc_manager = OIDCManager(
+            OIDCConfig(
+                issuer=cfg.oidc_issuer,
+                audience=cfg.oidc_audience,
+                algorithms=cfg.get_oidc_algorithms(),
+                tenant_claim=cfg.oidc_tenant_claim,
+                roles_claim=cfg.oidc_roles_claim,
+                leeway_seconds=cfg.oidc_leeway_seconds,
+            ),
+            HTTPXJWKSTransport(
+                cfg.oidc_jwks_url,
+                timeout=cfg.oidc_http_timeout_seconds,
+            ),
+        )
+    state.enterprise_mtls_verifier = None
+    if cfg.auth_mode in {"mtls", "api_key_mtls", "oidc_mtls"}:
+        state.enterprise_mtls_verifier = MTLSVerifier(
+            MTLSVerificationConfig(
+                trusted_proxy_cidrs=cfg.get_mtls_proxy_cidrs(),
+                allowed_sha256_fingerprints=cfg.get_mtls_fingerprints(),
+                san_allowlist=cfg.get_mtls_san_allowlist(),
+                tenant_san_prefix=cfg.mtls_tenant_san_prefix,
+            )
+        )
+    state.siem_exporter = None
+    if cfg.siem_url:
+        state.siem_exporter = SIEMExporter(
+            HTTPSIEMSink(
+                cfg.siem_url,
+                bearer_token=cfg.siem_bearer_token,
+                timeout=cfg.webhook_timeout_seconds,
+            ),
+            cfg.siem_spool_path,
+            output_format=SIEMFormat(cfg.siem_format),
+            max_spool_rows=cfg.siem_spool_max_rows,
+            max_spool_bytes=cfg.siem_spool_max_bytes,
+            max_payload_bytes=cfg.siem_max_payload_bytes,
+        )
+    state.s3_archiver = None
+    if cfg.s3_archive_enabled:
+        state.s3_archiver = S3WormArchiver(
+            Boto3S3WormProvider(region_name=cfg.s3_archive_region or None),
+            bucket=cfg.s3_archive_bucket,
+            journal_path=cfg.s3_archive_journal_path,
+            spool_dir=cfg.s3_archive_spool_dir,
+            retention=timedelta(days=cfg.s3_archive_retention_days),
+            object_lock_mode=ObjectLockMode(cfg.s3_archive_lock_mode),
+            max_spool_bytes=cfg.s3_archive_max_spool_bytes,
+        )
+    state.rfc3161_client = None
+    if cfg.tsa_url:
+        state.rfc3161_client = RFC3161AnchorClient(
+            url=cfg.tsa_url,
+            transport=HTTPXTimestampTransport(),
+            verifier=OpenSSLRFC3161Verifier(ca_file=cfg.tsa_ca_file),
+            evidence_dir=cfg.tsa_evidence_dir,
+        )
+    state.archive_task = None
 
     # FIX-APP-02: pre-initialise entropy guard singletons.
     # These objects are stateless across requests; constructing them once avoids
@@ -711,6 +808,26 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         state._entropy_analyzer = None
         state._entropy_segmenter = None
 
+    async def _archive_finalized_segments_worker() -> None:
+        assert state.s3_archiver is not None
+        while True:
+            for segment_path in state.ledger.archived_segments:
+                try:
+                    await archive_finalized_segment(
+                        segment_path,
+                        archiver=state.s3_archiver,
+                        prefix=cfg.s3_archive_prefix,
+                        receipt_dir=cfg.s3_archive_spool_dir / "anchor-receipts",
+                        anchor_client=state.rfc3161_client,
+                    )
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    logger.exception(
+                        "finalized WAL archival is degraded; local authoritative segment retained"
+                    )
+            await asyncio.sleep(5.0)
+
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         cfg.validate_runtime_invariants()
@@ -719,6 +836,14 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             format="%(asctime)s %(levelname)s %(name)s — %(message)s",
         )
         observability.setup_otel(service_name="aegis-proxy")
+        if state.siem_exporter is not None:
+            state.siem_exporter.start()
+        if state.s3_archiver is not None:
+            await state.s3_archiver.start()
+            state.archive_task = asyncio.create_task(
+                _archive_finalized_segments_worker(),
+                name="aegis-finalized-segment-archive",
+            )
 
         # NOTE: the seccomp filter is applied LAST in this startup sequence
         # (just before `yield`), NOT here.  The async Rust forwarder's Tokio
@@ -784,22 +909,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             for index in range(cfg.analysis_worker_count)
         ]
 
-        # I-05: wire mTLS identity validation when the operator enables it.
-        # Without this block state.mtls_auth stays None and the mTLS code path
-        # in dependencies.py is silently skipped, making mtls_required a no-op.
-        if cfg.mtls_required or cfg.ssl_ca_certs:
-            try:
-                from aegis.core.identity import SpiffeIdentityManager
-                from aegis.proxy.mtls import mTLSAuth
-
-                state.mtls_auth = mTLSAuth(SpiffeIdentityManager())
-                logger.info("mTLS authentication enabled (SPIFFE via SPIRE agent).")
-            except Exception as exc:
-                logger.warning("mTLS initialization failed: %s", exc)
-                if cfg.mtls_required:
-                    raise RuntimeError(
-                        "mtls_required=True but mTLS could not be initialized"
-                    ) from exc
+        # Legacy SPIFFE header authentication is intentionally not activated.
+        # Principal-first mTLS accepts direct TLS state or headers from an
+        # explicitly allowlisted immediate proxy only.
 
         # ── Seccomp lockdown (applied LAST, after all subsystems init) ──────
         # Warm the Rust async runtime so its worker pool exists before we forbid
@@ -830,6 +942,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         for worker in state.analysis_workers:
             worker.cancel()
+        if state.archive_task is not None:
+            state.archive_task.cancel()
+            await asyncio.gather(state.archive_task, return_exceptions=True)
         if state.analysis_workers:
             try:
                 async with asyncio.timeout(cfg.analysis_shutdown_timeout_seconds):
@@ -844,6 +959,13 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     pending_workers,
                 )
         await state.forwarder.stop()
+        if state.siem_exporter is not None:
+            try:
+                await asyncio.to_thread(state.siem_exporter.shutdown, 5.0, drain=False)
+            except TimeoutError:
+                logger.error("SIEM exporter did not stop before shutdown deadline")
+        if state.s3_archiver is not None:
+            await state.s3_archiver.close(drain=True)
         await state.ratelimiter.close()
         state.sessions.close()
         state.ledger.close()
@@ -885,6 +1007,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 "X-Aegis-Proof-Status",
                 "X-Aegis-Request-ID",
                 "X-Aegis-Session-ID",
+                "X-RateLimit-Limit-Requests",
+                "X-RateLimit-Remaining-Requests",
+                "X-RateLimit-Limit-Tokens",
+                "X-RateLimit-Remaining-Tokens",
+                "Retry-After",
             ],
         )
 
@@ -899,7 +1026,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             trust_proxy_headers=cfg.dmz_trust_proxy_headers,
         )
 
-    app.include_router(build_audit_router(state.ledger, state.audit_auth), prefix="/v1/audit")
+    app.include_router(build_audit_router(state.ledger, validate_audit_auth), prefix="/v1/audit")
     app.include_router(build_attestation_router(), prefix="/v1/attestation")
 
     if observability.prometheus_available():
@@ -952,7 +1079,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 },
                 phi_scrubbed=phi_scrubbed,
                 scrub_method=scrub_method,
-                signer_name=sid,
+                signer_name="",
                 signature_meaning="request-response-evidence",
             )
             commit_elapsed = time.perf_counter() - commit_start
@@ -987,6 +1114,94 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 'type="application/json"'
             ),
         }
+
+    def _requested_output_tokens(body: dict[str, Any]) -> int:
+        value = body.get("max_completion_tokens", body.get("max_tokens"))
+        if value is None:
+            return cfg.rate_limit_default_output_tokens
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise HTTPException(
+                status_code=422, detail="output token limit must be a positive integer"
+            )
+        if value > cfg.rate_limit_max_output_tokens:
+            raise HTTPException(
+                status_code=422,
+                detail="requested output token limit exceeds the configured maximum",
+            )
+        return value
+
+    def _rate_headers(decision: RateLimitDecision) -> dict[str, str]:
+        return {
+            "X-RateLimit-Limit-Requests": str(cfg.rate_limit_burst),
+            "X-RateLimit-Remaining-Requests": str(decision.request_remaining),
+            "X-RateLimit-Limit-Tokens": str(cfg.rate_limit_token_capacity),
+            "X-RateLimit-Remaining-Tokens": str(decision.token_remaining),
+        }
+
+    async def _reserve_budget(
+        principal: Principal,
+        body: dict[str, Any],
+    ) -> tuple[RateLimitDecision, TokenReservation]:
+        try:
+            decision = await state.ratelimiter.reserve(
+                principal.tenant_id,
+                principal.credential_id,
+                _requested_output_tokens(body),
+            )
+        except (RateLimitBackendUnavailableError, LegacyRateLimitBackendUnavailable) as exc:
+            observability.RATELIMIT_BACKEND_ERRORS.inc()
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Rate-limit backend unavailable; request rejected",
+            ) from exc
+        if not decision.allowed or decision.reservation is None:
+            observability.RATELIMIT_REJECTIONS.inc()
+            headers = _rate_headers(decision)
+            if math.isfinite(decision.retry_after):
+                headers["Retry-After"] = str(max(1, math.ceil(decision.retry_after)))
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Request or generated-token quota exceeded",
+                headers=headers,
+            )
+        return decision, decision.reservation
+
+    async def _settle_budget(
+        reservation: TokenReservation,
+        response_json: object,
+        *,
+        provider: str,
+    ) -> RateLimitDecision | None:
+        if not isinstance(response_json, dict):
+            return await reservation.finalize(reservation.reserved)
+        usage = response_json.get("usage")
+        if not isinstance(usage, dict):
+            return await reservation.finalize(reservation.reserved)
+        field = "output_tokens" if provider == "anthropic" else "completion_tokens"
+        actual = usage.get(field)
+        if isinstance(actual, bool) or not isinstance(actual, int) or actual < 0:
+            return await reservation.finalize(reservation.reserved)
+        return await reservation.finalize(actual)
+
+    def _emit_security_event(
+        request_id: str,
+        *,
+        outcome: EventOutcome,
+        duration_seconds: float,
+        item_count: int = 1,
+    ) -> None:
+        exporter = state.siem_exporter
+        if exporter is None:
+            return
+        event = SecurityEvent(
+            kind=EventKind.REQUEST_COMPLETED,
+            outcome=outcome,
+            correlation_id=request_id,
+            severity=Severity.INFO if outcome is EventOutcome.SUCCEEDED else Severity.WARNING,
+            item_count=item_count,
+            duration_ms=max(0.0, duration_seconds * 1000.0),
+        )
+        _spawn_background(asyncio.to_thread(exporter.submit, event))
 
     async def _durable_error_response(
         *,
@@ -1139,7 +1354,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     @app.post("/v1/chat/completions")
     async def chat_completions(
         request: Request,
-        _key: Annotated[str, Depends(validate_proxy_auth)],
+        principal: Annotated[Principal, Depends(validate_proxy_auth)],
     ):
         request_start = time.perf_counter()
         raw_body = await request.body()
@@ -1179,7 +1394,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             or body.get("user")
             or str(uuid.uuid4())
         )
-        tenant_id = request.headers.get("x-aegis-tenant-id") or session_id
+        tenant_id = principal.tenant_id
         request_id = str(uuid.uuid4())
 
         # Multi-turn behavioral WAF check (Domain 5.1): accumulate per-session WAF
@@ -1198,22 +1413,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 detail=f"Behavioral WAF: {session_waf.reason}",
             )
 
-        try:
-            allowed_by_rate = await state.ratelimiter.check_limit(session_id)
-        except RateLimitBackendUnavailable as exc:
-            observability.RATELIMIT_BACKEND_ERRORS.inc()
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Rate-limit backend unavailable; request rejected",
-            ) from exc
-        if not allowed_by_rate:
-            observability.RATELIMIT_REJECTIONS.inc()
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Rate limit exceeded for this session",
-            )
+        rate_decision, reservation = await _reserve_budget(principal, body)
 
         if not hasattr(state, "forwarder") or state.forwarder is None:
+            await reservation.refund(0)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Proxy not ready: forwarder has not been initialized. "
@@ -1259,7 +1462,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                             if summary.redaction_hits
                             else _scrub_method
                         ),
-                        signer_name=session_id,
+                        signer_name=principal.subject,
                         signature_meaning="stream-terminal-evidence",
                     )
                     observability.STREAM_DURATION.labels(
@@ -1273,6 +1476,16 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     observability.AUDIT_COMMIT_DURATION.observe(time.perf_counter() - commit_start)
                     observability.AUDIT_CHAIN_NODES.set(len(state.ledger.chain))
                     observability.AUDIT_COMMIT_LAG.observe(time.perf_counter() - request_start)
+                    await reservation.finalize(reservation.reserved)
+                    _emit_security_event(
+                        request_id,
+                        outcome=(
+                            EventOutcome.SUCCEEDED
+                            if summary.terminal_outcome == "complete"
+                            else EventOutcome.FAILED
+                        ),
+                        duration_seconds=summary.elapsed_seconds,
+                    )
                 except Exception:
                     observability.AUDIT_COMMIT_ERRORS.inc()
                     raise
@@ -1298,6 +1511,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     "X-Aegis-Evidence-Status": "pending-terminal",
                     "X-Aegis-Analysis-Status": "not-sampled",
                     "X-Aegis-Proof-Status": "pending-terminal",
+                    **_rate_headers(rate_decision),
                     "Link": (
                         f"</v1/audit/proofs/{request_id}>; "
                         'rel="aegis-inclusion-proof"; type="application/json"'
@@ -1313,6 +1527,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 upstream = await state.forwarder.forward_json("/v1/chat/completions", body)
         except CircuitOpenError:
             observability.FORWARD_ERRORS.labels(stage="circuit_open").inc()
+            await reservation.refund(0)
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
@@ -1325,6 +1540,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         except Exception:
             observability.FORWARD_ERRORS.labels(stage="network").inc()
             logger.exception("upstream forwarding failed")
+            await reservation.refund(0)
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
@@ -1342,6 +1558,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 endpoint="chat_completions",
                 status_class=f"{upstream.status_code // 100}xx",
             ).inc()
+            await reservation.refund(0)
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
@@ -1353,6 +1570,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
 
         resp_json = upstream.json()
+        settled = await _settle_budget(reservation, resp_json, provider="openai")
+        response_rate_decision = settled or rate_decision
         # PHI de-identification on the hot response path: scrub before returning to client.
         resp_json = _apply_phi_scrub_response(resp_json, state)
         # PCI-DSS cardholder-data scrubbing on the hot response path.
@@ -1406,6 +1625,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             }
         )
         resp.headers.update(_proof_headers(evidence_node))
+        resp.headers.update(_rate_headers(response_rate_decision))
+        _emit_security_event(
+            request_id,
+            outcome=EventOutcome.SUCCEEDED,
+            duration_seconds=time.perf_counter() - request_start,
+        )
         if trace_id:
             resp.headers["X-Trace-ID"] = trace_id
         return resp
@@ -1413,7 +1638,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     @app.post("/v1/messages")
     async def anthropic_messages(
         request: Request,
-        _key: Annotated[str, Depends(validate_proxy_auth)],
+        principal: Annotated[Principal, Depends(validate_proxy_auth)],
     ) -> Response:
         request_start = time.perf_counter()
         raw_body = await request.body()
@@ -1444,21 +1669,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             or request.headers.get("x-session-id")
             or str(uuid.uuid4())
         )
-        tenant_id = request.headers.get("x-aegis-tenant-id") or session_id
+        tenant_id = principal.tenant_id
         request_id = str(uuid.uuid4())
-        try:
-            allowed_by_rate = await state.ratelimiter.check_limit(session_id)
-        except RateLimitBackendUnavailable as exc:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Rate-limit backend unavailable; request rejected",
-            ) from exc
-        if not allowed_by_rate:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Rate limit exceeded for this session",
-            )
+        rate_decision, reservation = await _reserve_budget(principal, body)
         if state.forwarder.provider.name != "anthropic":
+            await reservation.refund(0)
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
@@ -1498,7 +1713,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     endpoint="anthropic.messages",
                     phi_scrubbed=request_scrubbed or bool(summary.redaction_hits),
                     scrub_method=scrub_method,
-                    signer_name=session_id,
+                    signer_name=principal.subject,
                     signature_meaning="stream-terminal-evidence",
                 )
                 observability.STREAM_DURATION.labels(
@@ -1509,6 +1724,16 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     observability.STREAM_REDACTIONS.labels(provider="anthropic", entity=entity).inc(
                         count
                     )
+                await reservation.finalize(reservation.reserved)
+                _emit_security_event(
+                    request_id,
+                    outcome=(
+                        EventOutcome.SUCCEEDED
+                        if summary.terminal_outcome == "complete"
+                        else EventOutcome.FAILED
+                    ),
+                    duration_seconds=summary.elapsed_seconds,
+                )
 
             bounded = BoundedStreamProxy(
                 upstream_stream,
@@ -1535,6 +1760,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     "X-Aegis-Session-ID": session_id,
                     "X-Aegis-Evidence-Status": "pending-terminal",
                     "X-Aegis-Proof-Status": "pending-terminal",
+                    **_rate_headers(rate_decision),
                     "Link": (
                         f"</v1/audit/proofs/{request_id}>; "
                         'rel="aegis-inclusion-proof"; type="application/json"'
@@ -1545,6 +1771,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         try:
             upstream = await state.forwarder.forward_native_anthropic(body)
         except CircuitOpenError:
+            await reservation.refund(0)
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
@@ -1558,6 +1785,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
         except Exception:
             logger.exception("native Anthropic forwarding failed")
+            await reservation.refund(0)
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
@@ -1570,6 +1798,21 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 tenant_id=tenant_id,
             )
         response_json = upstream.json()
+        if upstream.status_code < 200 or upstream.status_code >= 300:
+            await reservation.refund(0)
+            return await _durable_error_response(
+                request_id=request_id,
+                session_id=session_id,
+                raw_body=raw_body,
+                model=body["model"],
+                request_start=request_start,
+                status_code=upstream.status_code,
+                content=upstream.content,
+                endpoint="anthropic.messages",
+                tenant_id=tenant_id,
+            )
+        settled = await _settle_budget(reservation, response_json, provider="anthropic")
+        response_rate_decision = settled or rate_decision
         response_json, response_scrubbed, response_scrub_method = _scrub_anthropic_payload(
             response_json, state
         )
@@ -1601,12 +1844,18 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             },
         )
         response.headers.update(_proof_headers(evidence_node))
+        response.headers.update(_rate_headers(response_rate_decision))
+        _emit_security_event(
+            request_id,
+            outcome=EventOutcome.SUCCEEDED,
+            duration_seconds=time.perf_counter() - request_start,
+        )
         return response
 
     @app.post("/v1/completions")
     async def completions(
         request: Request,
-        _key: Annotated[str, Depends(validate_proxy_auth)],
+        principal: Annotated[Principal, Depends(validate_proxy_auth)],
     ):
         raw_body = await request.body()
         try:
@@ -1633,7 +1882,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             or request.headers.get("x-session-id")
             or str(uuid.uuid4())
         )
-        tenant_id = request.headers.get("x-aegis-tenant-id") or session_id
+        tenant_id = principal.tenant_id
         request_id = str(uuid.uuid4())
 
         session_waf = state.waf_session_tracker.record_and_check(
@@ -1649,25 +1898,14 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 detail=f"Behavioral WAF: {session_waf.reason}",
             )
 
-        try:
-            allowed_by_rate = await state.ratelimiter.check_limit(session_id)
-        except RateLimitBackendUnavailable as exc:
-            observability.RATELIMIT_BACKEND_ERRORS.inc()
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Rate-limit backend unavailable; request rejected",
-            ) from exc
-        if not allowed_by_rate:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Rate limit exceeded for this session",
-            )
+        rate_decision, reservation = await _reserve_budget(principal, body)
 
         completions_start = time.perf_counter()
         try:
             upstream = await state.forwarder.forward_json("/v1/completions", body)
         except CircuitOpenError:
             observability.FORWARD_ERRORS.labels(stage="circuit_open").inc()
+            await reservation.refund(0)
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
@@ -1681,6 +1919,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         except Exception:
             observability.FORWARD_ERRORS.labels(stage="network").inc()
             logger.exception("upstream completions forwarding failed")
+            await reservation.refund(0)
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
@@ -1692,6 +1931,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 endpoint="completions",
             )
         if upstream.status_code != 200:
+            await reservation.refund(0)
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
@@ -1703,6 +1943,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 endpoint="completions",
             )
 
+        try:
+            response_json = upstream.json()
+        except Exception:
+            response_json = None
+        settled = await _settle_budget(reservation, response_json, provider="openai")
+        response_rate_decision = settled or rate_decision
         evidence_node = await _commit_evidence(
             request_id,
             session_id,
@@ -1732,6 +1978,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         resp.headers["X-Aegis-Evidence-Status"] = "durable"
         resp.headers["X-Aegis-Analysis-Status"] = "queued" if queued else "not-sampled"
         resp.headers.update(_proof_headers(evidence_node))
+        resp.headers.update(_rate_headers(response_rate_decision))
+        _emit_security_event(
+            request_id,
+            outcome=EventOutcome.SUCCEEDED,
+            duration_seconds=time.perf_counter() - completions_start,
+        )
         return resp
 
     return app

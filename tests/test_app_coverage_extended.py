@@ -459,7 +459,7 @@ def test_native_anthropic_ingress_preserves_shape_tenant_and_proof(tmp_path):
     assert response.json() == native_response
     assert response.headers["X-Aegis-Session-ID"] == "session-native"
     assert response.headers["X-Aegis-MMR-Format"] == "aegis-mmr-inclusion-v1"
-    assert app.state.aegis.ledger.chain[-1].tenant_id == "tenant-native"
+    assert app.state.aegis.ledger.chain[-1].tenant_id == "development"
     assert app.state.aegis.ledger.chain[-1].endpoint == "anthropic.messages"
 
 
@@ -994,14 +994,21 @@ def test_completions_forwarder_none_returns_503(tmp_path):
 
 
 def test_completions_rate_limit_exceeded(tmp_path):
-    """When ratelimiter returns False for completions, 429 is returned (line 793)."""
+    """When the dual limiter rejects completions, 429 is returned."""
     fwd_inst = _mock_forwarder()
 
     with patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst):
         cfg = _make_settings(tmp_path)
         app = create_app(cfg)
-        # Patch the rate limiter to always reject
-        app.state.aegis.ratelimiter.check_limit = AsyncMock(return_value=False)
+        app.state.aegis.ratelimiter.reserve = AsyncMock(
+            return_value=SimpleNamespace(
+                allowed=False,
+                retry_after=1.0,
+                request_remaining=0,
+                token_remaining=0,
+                reservation=None,
+            )
+        )
         with TestClient(app) as client:
             resp = client.post(
                 "/v1/completions",
@@ -1154,25 +1161,25 @@ def test_mtls_initialized_successfully(tmp_path):
 
 
 def test_mtls_required_but_init_fails_raises(tmp_path):
-    """When mtls_required=True and mTLS init fails, RuntimeError is raised (line 432)."""
+    """When v4 mTLS verifier construction fails, app creation fails closed."""
     fwd_inst = _mock_forwarder()
     ca_file = tmp_path / "ca.pem"
     ca_file.write_text("fake ca cert")
 
-    with patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst):
-        cfg = _make_settings(tmp_path, ssl_ca_certs=str(ca_file), mtls_required=True)
-        app = create_app(cfg)
-        with patch(
-            "aegis.core.identity.SpiffeIdentityManager",
-            side_effect=RuntimeError("SPIRE unavailable"),
-        ):
-            with pytest.raises(Exception):
-                with TestClient(app) as client:
-                    client.get("/health")
-    try:
-        app.state.aegis.ledger.close()
-    except Exception:
-        pass
+    cfg = _make_settings(
+        tmp_path,
+        auth_mode="mtls",
+        ssl_ca_certs=str(ca_file),
+        mtls_required=True,
+        mtls_allowed_sha256_fingerprints="a" * 64,
+        mtls_san_allowlist="spiffe://example/service",
+    )
+    with (
+        patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst),
+        patch("aegis.proxy.app.MTLSVerifier", side_effect=RuntimeError("verifier unavailable")),
+        pytest.raises(RuntimeError, match="verifier unavailable"),
+    ):
+        create_app(cfg)
 
 
 # ── OTel trace_id header (line 761) ──────────────────────────────────────────

@@ -16,9 +16,10 @@ import logging
 from datetime import UTC
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
-from aegis.auth.scopes import ALL_SCOPES, SCOPE_AUDIT_EXPORT, parse_scope_config
+from aegis.auth.principal import Principal, Role
+from aegis.auth.scopes import SCOPE_AUDIT_ANALYTICS, SCOPE_AUDIT_EXPORT, SCOPE_AUDIT_READ
 from aegis.core.dp_analytics import DPAggregator
 from aegis.core.forensic_bundle import (
     ForensicBundleError,
@@ -27,7 +28,7 @@ from aegis.core.forensic_bundle import (
     canonical_jcs_bytes,
     dag_cbor_cid,
 )
-from aegis.proxy.dependencies import validate_audit_auth
+from aegis.proxy.dependencies import principal_tenant
 from aegis.proxy.schemas import (
     AuditNodeOut,
     ForensicExportRequest,
@@ -44,6 +45,30 @@ def build_audit_router(
     auth_dependency: Any,
 ) -> APIRouter:
     router = APIRouter(tags=["audit"])
+    read_dependency = auth_dependency
+
+    def _as_principal(value: object) -> Principal:
+        if isinstance(value, Principal):
+            return value
+        # Test-only compatibility for directly constructed routers. Production
+        # passes the principal-first dependency from app.py.
+        return Principal(
+            subject="router-test",
+            tenant_id="development",
+            roles=frozenset({Role.ADMIN}),
+            scopes=frozenset({SCOPE_AUDIT_READ, SCOPE_AUDIT_EXPORT, SCOPE_AUDIT_ANALYTICS}),
+            auth_method="development",
+            credential_id="router-test",
+        )
+
+    def _require(principal_value: object, scope: str) -> Principal:
+        principal = _as_principal(principal_value)
+        if scope not in principal.scopes:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient scope")
+        return principal
+
+    def _visible(node: Any, principal: Principal) -> bool:
+        return Role.ADMIN in principal.roles or node.tenant_id == principal.tenant_id
 
     def _string_attr(node: Any, name: str, default: str) -> str:
         value = getattr(node, name, default)
@@ -98,15 +123,15 @@ def build_audit_router(
 
     @router.get("/health", include_in_schema=True)
     async def audit_health(
-        _key: Annotated[str, Depends(validate_audit_auth)],
-        request: Request,
+        auth: object = Depends(read_dependency),
     ) -> dict:
         """Returns audit subsystem health and node count."""
+        principal = _require(auth, SCOPE_AUDIT_READ)
         fault_state = _string_attr(ledger, "_fault_state", "healthy")
         window_anchor = _string_attr(ledger, "window_anchor_hash", "0" * 64)
         return {
             "status": "ok" if fault_state == "healthy" else "degraded",
-            "node_count": len(ledger.chain),
+            "node_count": sum(_visible(node, principal) for node in ledger.chain),
             "legal_admissibility": ledger.legal_admissibility,
             "fault_state": fault_state,
             "scope": "retained-memory-window",
@@ -116,9 +141,10 @@ def build_audit_router(
 
     @router.get("/integrity", response_model=IntegrityReport)
     async def check_integrity(
-        _key: Annotated[str, Depends(validate_audit_auth)],
+        auth: object = Depends(read_dependency),
     ) -> IntegrityReport:
         """Verify the retained Merkle-chain window. O(N); use sparingly."""
+        _require(auth, SCOPE_AUDIT_READ)
         is_valid, err_idx = ledger.verify_integrity()
         tail = ledger.chain[-1].node_hash if ledger.chain else ""
         window_anchor = _string_attr(ledger, "window_anchor_hash", "0" * 64)
@@ -135,7 +161,7 @@ def build_audit_router(
 
     @router.get("/nodes", response_model=list[AuditNodeOut])
     async def list_nodes(
-        _key: Annotated[str, Depends(validate_audit_auth)],
+        auth: object = Depends(read_dependency),
         offset: Annotated[int, Query(ge=0)] = 0,
         limit: Annotated[int, Query(ge=1, le=1000)] = 100,
         tenant_id: Annotated[str | None, Query()] = None,
@@ -147,9 +173,11 @@ def build_audit_router(
         failures_only: Annotated[bool, Query()] = False,
     ) -> list[AuditNodeOut]:
         """Paginated and filtered listing of retained audit nodes."""
-        chain_list = list(ledger.chain)
-        if tenant_id:
-            chain_list = [node for node in chain_list if node.tenant_id == tenant_id]
+        principal = _require(auth, SCOPE_AUDIT_READ)
+        effective_tenant = principal_tenant(principal, tenant_id)
+        chain_list = [node for node in ledger.chain if _visible(node, principal)]
+        if effective_tenant:
+            chain_list = [node for node in chain_list if node.tenant_id == effective_tenant]
         if model:
             chain_list = [node for node in chain_list if node.model == model]
         if endpoint:
@@ -181,11 +209,12 @@ def build_audit_router(
     @router.get("/nodes/{node_hash}", response_model=AuditNodeOut)
     async def get_node(
         node_hash: str,
-        _key: Annotated[str, Depends(validate_audit_auth)],
+        auth: object = Depends(read_dependency),
     ) -> AuditNodeOut:
         """Retrieve a single audit node by its hash."""
+        principal = _require(auth, SCOPE_AUDIT_READ)
         for index, node in enumerate(ledger.chain):
-            if node.node_hash == node_hash:
+            if node.node_hash == node_hash and _visible(node, principal):
                 return _node_out(index, node, verify_signature=True)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -195,11 +224,12 @@ def build_audit_router(
     @router.get("/nodes/{node_hash}/evidence", response_model=RawEvidenceOut)
     async def get_node_evidence(
         node_hash: str,
-        _key: Annotated[str, Depends(validate_audit_auth)],
+        auth: object = Depends(read_dependency),
     ) -> RawEvidenceOut:
         """Return byte-exact JCS and deterministic DAG-CBOR projections."""
+        principal = _require(auth, SCOPE_AUDIT_READ)
         for node in ledger.chain:
-            if node.node_hash != node_hash:
+            if node.node_hash != node_hash or not _visible(node, principal):
                 continue
             record, dag_cbor = _canonical_node(node)
             jcs = canonical_jcs_bytes(record)
@@ -218,11 +248,12 @@ def build_audit_router(
     @router.get("/proofs/{state_id}", response_model=MMRProofOut)
     async def get_proof(
         state_id: str,
-        _key: Annotated[str, Depends(validate_audit_auth)],
+        auth: object = Depends(read_dependency),
     ) -> MMRProofOut:
         """Retrieve a portable inclusion proof by request/state identifier."""
+        principal = _require(auth, SCOPE_AUDIT_READ)
         for node in reversed(ledger.chain):
-            if node.state_id != state_id:
+            if node.state_id != state_id or not _visible(node, principal):
                 continue
             if node.mmr_proof is None or not node.mmr_leaf_hash:
                 raise HTTPException(
@@ -247,33 +278,34 @@ def build_audit_router(
 
     @router.get("/tenants", response_model=list[str])
     async def list_tenants(
-        _key: Annotated[str, Depends(validate_audit_auth)],
+        auth: object = Depends(read_dependency),
     ) -> list[str]:
         """Return distinct tenant IDs present in the current memory window."""
+        principal = _require(auth, SCOPE_AUDIT_READ)
+        if Role.ADMIN not in principal.roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Administrator required"
+            )
         return sorted({node.tenant_id for node in ledger.chain})
 
     @router.get("/export/part11", response_model=list[dict])
     async def export_part11(
-        _key: Annotated[str, Depends(validate_audit_auth)],
+        auth: object = Depends(read_dependency),
     ) -> list[dict]:
         """Export 21 CFR Part 11 annotation fields plus cryptographic bindings."""
-        return ledger.export_part11_signatures()
+        principal = _require(auth, SCOPE_AUDIT_EXPORT)
+        records = ledger.export_part11_signatures()
+        visible_ids = {node.state_id for node in ledger.chain if _visible(node, principal)}
+        return [record for record in records if record.get("state_id") in visible_ids]
 
     @router.post("/forensics/export")
     async def export_forensic_bundle(
         payload: ForensicExportRequest,
-        key: Annotated[str, Depends(validate_audit_auth)],
-        request: Request,
+        auth: object = Depends(read_dependency),
     ) -> Response:
         """Export a bounded ISO/IEC 27037-oriented technical evidence bundle."""
-        if key != "auth-disabled":
-            scope_map = parse_scope_config(request.app.state.aegis.settings.api_key_scopes)
-            scopes = scope_map.get(key, ALL_SCOPES)
-            if SCOPE_AUDIT_EXPORT not in scopes:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="API key lacks the audit:export scope.",
-                )
+        principal = _require(auth, SCOPE_AUDIT_EXPORT)
+        effective_tenant = principal_tenant(principal, payload.tenant_id)
         start = payload.start_time
         end = payload.end_time
         if start.tzinfo is None or end.tzinfo is None:
@@ -292,7 +324,8 @@ def build_audit_router(
             node
             for node in ledger.chain
             if start_utc.timestamp() <= node.timestamp <= end_utc.timestamp()
-            and (payload.tenant_id is None or node.tenant_id == payload.tenant_id)
+            and _visible(node, principal)
+            and (effective_tenant is None or node.tenant_id == effective_tenant)
         ]
         try:
             archive = await asyncio.to_thread(
@@ -321,12 +354,13 @@ def build_audit_router(
 
     @router.get("/analytics/dp", response_model=dict)
     async def dp_analytics(
-        _key: Annotated[str, Depends(validate_audit_auth)],
+        auth: object = Depends(read_dependency),
         epsilon: Annotated[float, Query(gt=0.0, le=100.0)] = 1.0,
     ) -> dict:
         """Return differentially-private aggregate statistics over the audit chain."""
+        principal = _require(auth, SCOPE_AUDIT_ANALYTICS)
         agg = DPAggregator(epsilon=epsilon, delta=0.0)
-        report = agg.compute(list(ledger.chain))
+        report = agg.compute([node for node in ledger.chain if _visible(node, principal)])
         return {
             "epsilon": report.epsilon,
             "delta": report.delta,

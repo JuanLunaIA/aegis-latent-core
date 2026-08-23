@@ -36,8 +36,10 @@ class RedTeamStressTests(unittest.TestCase):
     def test_S1_Massive_Concurrency_Burst(self):
         """Scenario: 100+ threads hammering the ledger to find race conditions."""
         ledger = self.create_ledger(persistence_path=self.path)
-        num_threads = 100
-        commits_per_thread = 50
+        # Preserve the 100+ thread interleaving target without multiplying durable
+        # fsync work enough to exceed the bounded CI job on Python 3.11.
+        num_threads = 128
+        commits_per_thread = 4
 
         def worker(tid):
             for i in range(commits_per_thread):

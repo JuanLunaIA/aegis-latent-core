@@ -16,6 +16,8 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
+from aegis.auth.principal import Principal, Role
+from aegis.auth.scopes import SCOPE_AUDIT_READ
 from aegis.core.crypto_audit import CryptographicAuditLedger
 from aegis.proxy.audit_api import build_audit_router
 
@@ -54,7 +56,7 @@ def _make_app(ledger) -> FastAPI:
 
     # Bypass auth: override validate_audit_auth to always return "test"
 
-    async def _noop_auth(request):
+    async def _noop_auth():
         return "test"
 
     router = build_audit_router(ledger, auth_dependency=_noop_auth)
@@ -67,6 +69,23 @@ def _make_app(ledger) -> FastAPI:
 
     app.dependency_overrides[validate_audit_auth] = lambda: "test"
 
+    return app
+
+
+def _make_tenant_app(ledger, tenant_id: str) -> FastAPI:
+    app = FastAPI()
+
+    async def _tenant_auth() -> Principal:
+        return Principal(
+            subject="auditor",
+            tenant_id=tenant_id,
+            roles=frozenset({Role.AUDIT_READER}),
+            scopes=frozenset({SCOPE_AUDIT_READ}),
+            auth_method="test",
+            credential_id="test-credential",
+        )
+
+    app.include_router(build_audit_router(ledger, auth_dependency=_tenant_auth), prefix="/v1/audit")
     return app
 
 
@@ -250,3 +269,25 @@ async def test_audit_list_tenants():
     assert resp.status_code == 200
     tenants = resp.json()
     assert tenants == sorted({"t1", "t2"})
+
+
+@pytest.mark.asyncio
+async def test_non_admin_cannot_cross_tenant_or_list_tenants() -> None:
+    nodes = [
+        _make_node(node_hash="a" * 64, tenant_id="tenant-a", state_id="a"),
+        _make_node(node_hash="b" * 64, tenant_id="tenant-b", state_id="b"),
+    ]
+    app = _make_tenant_app(_make_ledger(nodes=nodes), "tenant-a")
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        listing = await client.get("/v1/audit/nodes")
+        crossing = await client.get("/v1/audit/nodes", params={"tenant_id": "tenant-b"})
+        direct = await client.get(f"/v1/audit/nodes/{'b' * 64}")
+        tenants = await client.get("/v1/audit/tenants")
+
+    assert listing.status_code == 200
+    assert [node["tenant_id"] for node in listing.json()] == ["tenant-a"]
+    assert crossing.status_code == 403
+    assert direct.status_code == 404
+    assert tenants.status_code == 403
