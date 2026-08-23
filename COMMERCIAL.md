@@ -1,9 +1,10 @@
-# Aegis Latent Core — Commercial Use and Licensing v3.1.0
+# Aegis Latent Core — Commercial Use and Licensing
 
 This document summarizes the open-source and commercial licensing boundary and the current packaging hypothesis for Aegis Latent Core. It is for procurement, legal, commercial and technical buyers. It is not legal advice, a binding offer, a warranty, a support SLA or a regulatory representation.
 
-**Last verified:** 2026-08-18 UTC
-**Release baseline:** `v3.1.0`
+**Last verified:** 2026-08-22 UTC
+**Release baseline:** published `v3.1.0`
+**Current-main baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
 **License source:** [`LICENSE`](LICENSE)
 **Commercial strategy:** [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md)
 
@@ -12,6 +13,12 @@ This document summarizes the open-source and commercial licensing boundary and t
 Aegis Latent Core is available under the GNU Affero General Public License v3 as described in [`LICENSE`](LICENSE). A separate commercial agreement may be available for organizations that need terms different from the open-source license, subject to an executed agreement and applicable legal review.
 
 This file does not determine whether a specific use triggers AGPL obligations, whether an exemption applies, whether future versions are included, or whether a customer has a regulatory duty. Customer counsel must review the actual deployment, modifications, distribution model and executed contract.
+
+## Product baseline for commercial review
+
+The published release remains **v3.1.0**. Current main after PR #99 adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP exports, and an auxiliary `RustWal` streaming segment. These capabilities must not be represented as part of the v3.1.0 tag; a commercial scope must name the exact commit or future release it covers.
+
+For non-streaming calls, durable evidence and MMR proof headers are available after commit. For streams, initial headers remain `pending-terminal`; the terminal record is committed before the protocol terminal marker and proof retrieval occurs after termination.
 
 ## Commercial packaging hypothesis
 
@@ -23,7 +30,7 @@ This file does not determine whether a specific use triggers AGPL obligations, w
 | Enterprise | Multiple environments or procurement-heavy deployment | Negotiated support, security-review assistance, architecture guidance, procurement artifacts and response targets | Custom annual agreement subject to staffing and legal review |
 | Sovereign / OEM | Air-gapped, embedded, redistribution, escrow or dedicated assurance | Separate redistribution, support, assurance and custody terms | Future/custom only; not a default promise |
 
-The project does not publish a permanent one-time price, lifetime update promise, automatic AGPL exemption, unlimited feature entitlement, 24/7 support commitment or sovereign assurance claim. Those commitments require an executed agreement, an accountable support organization and legal review.
+The project does not publish a permanent one-time price, lifetime update promise, automatic AGPL exemption, unlimited feature entitlement, 24/7 support commitment or sovereign assurance claim. Internal planning retains Team/Pilot USD 10,000–30,000, Production USD 40,000–100,000, and Enterprise USD 100,000–250,000+ solely as hypotheses. They are **not list prices, observed ACV, or a valuation**, and this repository contains no evidence-backed vertical ACV or startup/IP valuation. Those commitments require an executed agreement, an accountable support organization and legal review.
 
 ## What a commercial engagement can provide
 

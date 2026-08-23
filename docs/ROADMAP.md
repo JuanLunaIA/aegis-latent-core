@@ -6,9 +6,9 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 # Aegis Latent Core — Engineering and Market Roadmap
 
-**Status:** Published v3.1.0 release line with open deployment and assurance work
-**Last verified:** 2026-08-18 UTC
-**Release baseline:** `v3.1.0`
+**Status:** Current `main` after PR #99, with `v3.1.0` retained as the immutable release baseline and open deployment/assurance work
+**Last verified:** 2026-08-22 UTC
+**Release baseline:** `v3.1.0` (Phase 2/3 modules below are post-release `main`, not v3.1.0 capabilities)
 **Purpose:** Single source of truth for work that is implemented, measured, deployment-dependent, or still open.
 
 ## Status rules
@@ -25,7 +25,7 @@ A checkbox may not be changed to `[x]` because a stub, dashboard sample, docstri
 
 ## Current public baseline
 
-The current immutable public release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). Its release pipeline completed with source, wheels, provenance, hashes and GitHub checks. The historical `v3.0.1` release remains available for provenance; it is not the current capability baseline. The open items below are deployment, assurance, independent-review or future-product work and must not be represented as shipped capabilities.
+The current immutable public release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). Its release pipeline completed with source, wheels, provenance, hashes and GitHub checks. The current `main` tree additionally contains the Phase 2/3 modules merged by PR #99. Those modules are implemented in source and CI under the limits below, but are **not** part of the `v3.1.0` tag or its release assets. Open deployment, assurance, independent-review and future-product work must not be represented as shipped or externally assured capabilities.
 
 ## Completed core controls
 
@@ -40,6 +40,17 @@ The current immutable public release is [`v3.1.0`](https://github.com/JuanLunaIA
 - [x] Dependency, SBOM, release provenance, and security disclosure surfaces exist and are tied to release artifacts.
 
 Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), git history, module docs, and release assets. This file tracks current decision status rather than repeating every historical patch.
+
+## Current `main` — Phase 2/3 modules A–D (post-v3.1.0)
+
+- [x] **Module A — bounded SSE:** incremental event transformation uses byte/event queue limits, event/output/window/preview/duration bounds, online hashing, and terminal evidence ordering. Locators: `aegis/proxy/streaming.py`, `tests/test_proxy_streaming.py`, and `specs/aegis_stream_buffer.smt2`. Limits are per admitted stream; aggregate memory and throughput remain concurrency- and deployment-dependent.
+- [x] **Module B — portable MMR proof and SDKs:** the core emits the versioned inclusion-proof contract, shared vectors verify in Python and TypeScript, and tested OpenAI/Anthropic integration surfaces exist. Locators: `aegis/core/mmr.py`, `tests/test_mmr_portable.py`, `sdk/shared/mmr-inclusion-v1.json`, `sdk/python/tests/`, and `sdk/typescript/tests/`. A verifier still needs an independently trusted root; provider compatibility is bounded to tested surfaces and dependency ranges.
+- [x] **Module C — bounded forensic export:** retained-window export produces the contract-tested ZIP and rejects empty or unbounded acquisition requests. Locators: `aegis/core/forensic_bundle.py`, `tests/test_forensic_bundle.py`, and `tests/test_audit_api_new.py::test_forensic_export_returns_verifiable_zip`. It does not establish authorship, complete custody, certification, legal admissibility, or external immutability.
+- [x] **Module D — forensic dashboard:** the read-only dashboard uses real gateway responses, server-side credential handling, explicit empty/unavailable/error states, and tested proof/contract parsing. Locators: `dashboard/src/`, `dashboard/tests/`, `.github/workflows/ci.yml` job `dashboard`, and `evidence/commercial_phase2_dashboard_qa.md`. A local visual-QA artifact is not customer telemetry, production availability, capacity, or independent assurance.
+- [m] The seven-round, 1,000-event local SSE artifact is retained at `evidence/commercial_phase2_streaming_benchmark.json`; it excludes network and durable-WAL latency and is not an end-to-end capacity result.
+- [ ] Package and publish a future release before describing Modules A–D as release-tagged capabilities.
+- [ ] Provide cross-replica global ordering and multi-region failover/recovery evidence; current implementation does not establish multi-region HA.
+- [ ] Complete independent security, cryptographic, deployment, accessibility, and forensic-process assurance appropriate to the claimed scope. Repository tests and local QA are not external assurance.
 
 ## v3.1.0 market-hardening release
 
@@ -97,7 +108,7 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 
 - [ ] Measure end-to-end proxy latency with a real or explicitly bounded upstream, including evidence durability, streaming, WAF, rate limiting, and provider failure paths.
 - [ ] Measure multi-worker or multi-process topology with the actual container/seccomp policy; document worker count, GIL/event-loop boundary, storage, and rejected traffic.
-- [ ] Bound and instrument every cache and queue with explicit eviction, age, saturation, and memory-pressure tests.
+- [d] The Phase 2 SSE queue is explicitly byte/event bounded and instrumented; continue bounding and testing every other cache and queue, including aggregate concurrency, eviction, age, saturation, and memory pressure.
 - [ ] Add memory-pressure, disk-exhaustion, WAL rotation, and recovery tests that preserve evidence correlation.
 - [ ] Publish an SLO only after an owner, target, error budget, telemetry, and rollback path exist.
 
@@ -113,7 +124,7 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 
 ## Release gate
 
-The v3.1.0 release passed its declared publication gate. Future market-facing releases remain blocked until the affected source and tests pass, version anchors are coherent, the claim matrix is updated, documentation has no stronger language than the artifacts, the SBOM and dependency gates are clean or explicitly excepted, release provenance is regenerated, rollback and kill criteria are documented, and a qualified reviewer accepts the residual risk.
+The v3.1.0 release passed its declared publication gate, but it does not contain the post-release Phase 2/3 modules on current `main`. A future market-facing release containing those modules remains blocked until the affected source and tests pass, version anchors are coherent, the claim matrix is updated, documentation has no stronger language than the artifacts, the SBOM and dependency gates are clean or explicitly excepted, release provenance is regenerated, rollback and kill criteria are documented, and a qualified reviewer accepts the residual risk.
 
 ## Related documents
 

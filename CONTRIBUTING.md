@@ -8,7 +8,7 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 This document defines the contribution workflow, DCO sign-off, forward-looking CLA language, test expectations and public-claim review for Aegis. It is for prospective contributors, maintainers and organizations evaluating contribution rights. It is not legal advice.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
 
 Thank you for your interest in contributing. This project is maintained by its
@@ -191,7 +191,20 @@ copy of the CLA by email before merging.
    ruff check aegis/
    # Rust changes:
    cargo test --manifest-path aegis_rust_v2/Cargo.toml --all-features
+
+   # Changes under sdk/python/ (the CI `sdk-python` job also runs these):
+   (cd sdk/python && ruff check src tests && mypy --config-file pyproject.toml && pytest -q)
+   python -m build sdk/python
+
+   # Changes under sdk/typescript/ (the CI `sdk-typescript` job also runs these):
+   (cd sdk/typescript && npm ci --ignore-scripts && npm run check && npm audit --audit-level=high && npm pack --dry-run)
+
+   # Changes under dashboard/ (the CI `dashboard` job also builds the local TS SDK first):
+   (cd sdk/typescript && npm ci --ignore-scripts && npm run build)
+   (cd dashboard && npm ci --ignore-scripts && npm run typecheck && npm test && npm run build && npm audit --audit-level=high)
    ```
+
+   Run only the language/component blocks affected by the change locally; CI executes all three jobs independently. Commit the relevant lockfile changes when dependencies change, and do not bypass tests, type checks, production builds, package dry-runs, or high-severity audits.
 5. **Document new claims.** Any new performance claim must ship with a benchmark
    in `benchmarks/` and a results entry in `docs/BENCHMARKS.md`. Any change to the
    audit chain or WAL must pass `tests/test_security_fixes.py`.

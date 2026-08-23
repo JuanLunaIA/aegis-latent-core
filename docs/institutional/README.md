@@ -1,14 +1,15 @@
 # Aegis Institutional Documentation Suite
 
 **Suite version:** 1.0
-**Evidence cutoff:** 2026-08-20 UTC
-**Repository baseline:** `manus/formal-wal-hardening-20260820`
+**Evidence cutoff:** 2026-08-22 UTC
+**Release baseline:** published `v3.1.0`
+**Current-main review baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
 **Language:** US English
 **Status:** Review candidate; publication is controlled by `docs/CLAIMS_MATRIX.md`
 
 ## Purpose
 
-This directory is the canonical institutional review suite for Aegis Latent Core v3.1.0. It reconciles architecture, cryptography, security, operations, regulatory, and commercial claims against production code, tests, retained evidence, and authoritative external sources. It does not convert a technical feature into a certification, legal opinion, contractual commitment, production authorization, or independent assurance report.
+This directory is the canonical institutional review suite for the published Aegis Latent Core v3.1.0 baseline and the explicitly identified current-main changes after PR #99. It reconciles architecture, cryptography, security, operations, regulatory, and commercial claims against production code, tests, retained evidence, and authoritative external sources. Current-main capabilities are not retroactively attributed to the v3.1.0 tag. The suite does not convert a technical feature into a certification, legal opinion, contractual commitment, production authorization, or independent assurance report.
 
 ## Volumes
 
@@ -46,7 +47,8 @@ Every material claim uses one status: `IMPLEMENTED`, `MEASURED`, `CONFIGURATION-
 ## Reproduction and validation
 
 ```bash
-python scripts/audit_documentation_corpus.py
+python scripts/audit_documentation_corpus.py \
+  --output-dir "evidence/documentation_audit_$(date -u +%F)"
 python tools/docs/verify_documentation.py
 python -m ruff check aegis aegis_server tests scripts/audit_documentation_corpus.py
 python -m pytest -q --tb=short

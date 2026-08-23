@@ -2,14 +2,15 @@
 
 This guide is for SRE, platform, infrastructure, and security operations teams deploying Aegis in a controlled environment. It defines the deployment dependencies, topology choices, telemetry, failure handling, backup expectations, and rollback boundaries. It does not establish an availability SLO, compliance status, or authorization.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
+**Current main verified:** `45d95188d40792639fdd654369765a7233bef09a` (post-release; not the `v3.1.0` tag)
 **Audience:** Platform engineering, SRE, security operations
 **Primary deployment contract:** [`DEPLOYMENT_GUIDE.md`](../DEPLOYMENT_GUIDE.md)
 
 ## Operating model
 
-Aegis commits authoritative evidence before returning a governed successful response. The evidence path depends on the filesystem, signer, process, kernel, network, Redis and configuration. Optional enrichment runs after the authoritative record and can be rejected under queue pressure.
+Aegis commits authoritative evidence before returning a non-streaming governed response or the success terminal marker of an SSE response. Sanitized non-terminal SSE events may be emitted while evidence is `pending-terminal`. The evidence path depends on the filesystem, signer, process, kernel, network, Redis and configuration. Optional enrichment runs after the authoritative record and can be rejected under queue pressure.
 
 A production operator must distinguish three states:
 
@@ -31,6 +32,10 @@ AEGIS_RATE_LIMIT_BACKEND=redis
 AEGIS_REQUIRE_LSM=true
 AEGIS_REQUIRE_SECCOMP=true
 AEGIS_MAX_REQUEST_BODY_BYTES=1048576
+AEGIS_STREAM_QUEUE_MAX_ITEMS=64
+AEGIS_STREAM_QUEUE_MAX_BYTES=1048576
+AEGIS_MAX_STREAM_EVENT_BYTES=65536
+AEGIS_STREAM_DEIDENTIFIER_WINDOW_CHARS=128
 ```
 
 Use an external secret manager or protected signer service for `AEGIS_SIGNING_KEY`, upstream credentials, Redis credentials, and keyring material. Mount only the evidence directory as writable when the container posture permits it. Run as a non-root identity, drop unnecessary Linux capabilities, use a read-only root filesystem, and apply the target Seccomp and AppArmor/SELinux profiles.
@@ -51,6 +56,12 @@ Do not infer global ordering, multi-region high availability, or a production SL
 The WAL must reside on storage whose failure and flush semantics are accepted for the deployment. `fsync` completion is an application-visible boundary, not a universal guarantee about hardware power-loss behavior, cloud volume replication, filesystem journaling, or backup durability.
 
 Monitor free space, write latency, synchronization errors, inode exhaustion, WAL rotation, backup freshness, restore-test status, filesystem permissions and ownership. Preserve original WAL bytes and metadata during incident handling. Do not compact, rewrite or delete evidence in place without an approved process and qualified review.
+
+The JSONL file at `AEGIS_WAL_PATH` is the replay authority. If the native extension loads, Aegis also opens `<wal_path>.stream.rwal` as an optional 256 MiB `RustWal` segment and appends one CRC-framed copy after each committed terminal stream node. Treat that segment as auxiliary: never replace JSONL replay or recovery with it. An append failure increments `aegis_native_stream_wal_errors_total`, disables the auxiliary segment for that process and leaves the authoritative JSONL commit and client terminal marker intact; alert on any non-zero increase and rotate or repair the native segment before restarting it.
+
+## Streaming controls
+
+`BoundedStreamProxy` uses `AEGIS_STREAM_QUEUE_MAX_ITEMS` and `AEGIS_STREAM_QUEUE_MAX_BYTES` together; the latter is retained canonical SSE bytes per active queue, not a total-response limit. `AEGIS_MAX_STREAM_EVENT_BYTES` bounds both upstream and canonical events and must not exceed the queue byte budget. `AEGIS_STREAM_DEIDENTIFIER_WINDOW_CHARS` is finite logical-text holdback for cross-event PHI/PCI interception. Exceeding a byte, event or duration limit closes upstream immediately, commits exactly one terminal failure outcome and omits the success terminal marker.
 
 ## Redis and upstream controls
 
@@ -76,7 +87,7 @@ The deployment review should record:
 
 ## Telemetry and alerts
 
-Emit structured metrics and logs for request ID, evidence status, commit latency, WAL synchronization, signer availability, keyring reload, Redis failure, queue depth, queue rejection, upstream status, circuit state, body-limit rejection, WAF decision, integrity verification and startup rejection. Do not log raw prompt content, response content, signing material or provider credentials.
+Emit structured metrics and logs for request ID, evidence status, commit latency, WAL synchronization, signer availability, keyring reload, Redis failure, queue depth, queue rejection, upstream status, circuit state, body-limit rejection, WAF decision, integrity verification and startup rejection. The implemented stream metrics are `aegis_stream_duration_seconds{provider,outcome}`, `aegis_stream_tokens_total{provider}`, and `aegis_stream_redactions_total{provider,entity}`. Do not invent queue gauges that the process does not expose, and do not log raw prompt content, response content, signing material or provider credentials.
 
 Recommended alert conditions are below. Thresholds are deployment-specific and must be validated against a measured baseline.
 
@@ -90,6 +101,12 @@ Recommended alert conditions are below. Thresholds are deployment-specific and m
 | Integrity failure | Evidence chain may be altered or truncated | Isolate the segment, preserve bytes and begin incident procedure |
 | Upstream error spike | Provider path is degraded | Inspect circuit state and provider contract |
 | Kernel startup rejection | Declared posture is not met | Do not bypass strict mode; fix host/runtime configuration |
+
+## Forensic dashboard and export
+
+The Next.js forensic dashboard reaches Aegis only from server route handlers. Configure `AEGIS_PRIMARY_BASE_URL` and `AEGIS_DASHBOARD_API_KEY` in the dashboard server environment; `aegis-client.server.ts` imports `server-only`, adds the bearer key on the server, disables caching and bounds backend responses. Never expose the audit key through `NEXT_PUBLIC_*` or browser code.
+
+The dashboard export flow posts to its same-origin `/api/v1/forensics/export` route, which proxies `POST /v1/audit/forensics/export` and returns `application/zip`. The bounded ZIP contains a manifest and executable `VERIFY.sh`; preserve the archive bytes, run verification after extraction, and treat the package as technical integrity evidence rather than a legal-admissibility determination.
 
 ## Operational acceptance scenarios
 

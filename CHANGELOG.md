@@ -2,14 +2,16 @@
 
 All notable changes to **Aegis Latent Core** are documented in this file.
 
-**Last verified:** 2026-08-21 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
 **Documentation verification baseline:** `v3.1.0`. Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] — current `main` after `v3.1.0`
+
+Everything in this section post-dates the immutable `v3.1.0` tag. These entries describe the current `main` tree and must not be represented as capabilities, packages, evidence, or assurance shipped in the `v3.1.0` release.
 
 ### Commercial expansion Phase 2/3
 
@@ -19,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a read-only Next.js 16 and React 19 forensic dashboard with server-side credential isolation, explicit unavailable/error/empty states, real gateway data only, accessible ledger views, browser-side proof verification, and Prometheus-backed metrics visualization.
 - Added a scoped forensic export workflow producing bounded ZIP bundles with RFC 8785 JCS manifests, deterministic RFC 8949 DAG-CBOR ledger slices, CIDv1 identifiers, portable MMR proofs, a technical PDF certificate, and an offline `VERIFY.sh`; the output explicitly does not claim certification or legal admissibility.
 - Added provider-native RustWal terminal frames, streaming duration/token/redaction telemetry, a local MMR verification sandbox, raw canonical evidence inspection, and server-side ledger filters for tenant, model, endpoint, policy events, failures, and latency.
+- Made post-commit failures in the auxiliary `RustWal` non-authoritative: Aegis now records `aegis_native_stream_wal_errors_total`, disables the failed auxiliary segment, and preserves the JSONL-bound terminal marker instead of creating contradictory terminal evidence.
 - Added the bounded-stream Z3 model, streaming and portable-proof regression suites, SDK and dashboard CI jobs, production builds, accessibility checks, and real-backend visual QA evidence.
 - Added and executed a seven-round, 1,000-event in-process SSE benchmark with retained JSON evidence and explicit exclusion of network and durable-WAL latency.
 
@@ -112,7 +115,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Final checkout gate: `5374 passed, 80 skipped, 47 warnings`; Ruff lint/format, Bandit, pip-audit, and Helm lint exited with status 0.
 - Coverage gate: `93%` line coverage measured by `pytest-cov`; residual warnings remain documented telemetry.
 
-## [3.0.0] — 2026-08-14
+## 3.0.0 — 2026-08-14
+
+This is a historical changelog entry; no corresponding public GitHub Release or tag is currently available.
 
 ### Security and evidence
 
@@ -398,7 +403,9 @@ Industrial, Enterprise HA, Forensics), advancing the roadmap scorecard to
   HMAC-only compliance export path on installs without the optional `vault`
   extra; `VaultSigner` is now lazy-imported. *(Severity: Low)*
 
-## [2.3.0] - 2026-06
+## 2.3.0 - 2026-06
+
+This is a historical changelog entry; no corresponding public GitHub Release or tag is currently available.
 
 ### Fixed
 
@@ -421,10 +428,8 @@ Industrial, Enterprise HA, Forensics), advancing the roadmap scorecard to
   *(Severity: Critical)*
 
 [3.0.1]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.0.1
-[3.0.0]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.0.0
 [2.4.1]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v2.4.1
 [2.4.0]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v2.4.0
-[2.3.0]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v2.3.0
 [2.2.0]: https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v2.2.0
 
 ## Related documents

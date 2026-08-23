@@ -1,8 +1,10 @@
 # Institutional Documentation Control Record
 
-**Control record:** `AEGIS-DOC-CONTROL-2026-08-20`
+**Control record:** `AEGIS-DOC-CONTROL-2026-08-22`
 **Suite version:** 1.0
 **Repository:** `JuanLunaIA/aegis-latent-core`
+**Release baseline:** published `v3.1.0`
+**Current-main review baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
 **Status:** Review candidate pending GitHub CI and owner approval
 
 ## 1. Authority and source hierarchy
@@ -82,7 +84,8 @@ DRAFT -> TECHNICAL REVIEW -> CLAIM REVIEW -> DOMAIN APPROVAL -> RELEASED
 ## 6. Deterministic release gates
 
 ```bash
-python scripts/audit_documentation_corpus.py
+python scripts/audit_documentation_corpus.py \
+  --output-dir "evidence/documentation_audit_$(date -u +%F)"
 python tools/docs/verify_documentation.py
 python -m ruff check aegis aegis_server tests scripts/audit_documentation_corpus.py
 python -m pytest -q --tb=short

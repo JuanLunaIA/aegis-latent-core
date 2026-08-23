@@ -2,7 +2,7 @@
 
 This document defines the application-layer WAF corpus, metrics, reproduction method and ingress boundary for security reviewers. It does not provide universal prompt-injection detection, HTTP/2 parser coverage, or a production WAF certification.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
 **Scope:** Aegis application-layer payload inspection
 **Current artifact:** `evidence/market_hardening_v3_1/waf_corpus_report_v1_candidate.json` outside the source tree

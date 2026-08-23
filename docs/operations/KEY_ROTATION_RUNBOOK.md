@@ -2,7 +2,7 @@
 
 This runbook is for security operators and platform engineers rotating HMAC keys without a process restart. It defines the versioned keyring contract, overlap window, rollback and acceptance boundary. The local result does not prove a real secret-manager or orchestrator deployment.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
 **Scope:** Versioned HMAC keyring for enterprise self-hosted deployments
 **Implementation:** `aegis_server.crypto.keyring.RotatingHMACSigner`

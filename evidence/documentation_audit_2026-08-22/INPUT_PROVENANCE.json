@@ -1,0 +1,11 @@
+{
+  "schema": "aegis-documentation-review-input-v1",
+  "classification": "UNTRUSTED_INPUT",
+  "logical_name": "pasted_content.txt",
+  "received_via": "task attachment",
+  "reviewed_at_utc": "2026-08-22",
+  "sha256": "9c705ac5183239d1977d8ae332bf737f05799311c7c5500e50d01c4f390e64e6",
+  "size_bytes": 9927,
+  "retention": "content not copied into repository; hash and metadata retained",
+  "authority": "proposal only; not a factual or legal evidence source"
+}

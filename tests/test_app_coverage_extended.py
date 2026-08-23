@@ -837,6 +837,42 @@ def test_chat_streaming_allows_response_within_byte_limit(tmp_path):
     assert app.state.aegis.ledger.chain[-1].sampling_params["terminal_outcome"] == "complete"
 
 
+def test_chat_streaming_auxiliary_rust_wal_failure_preserves_terminal_marker(tmp_path, caplog):
+    """An auxiliary RustWal failure cannot invalidate an authoritative JSONL commit."""
+    fwd_inst = _mock_forwarder()
+
+    async def _sse_gen():
+        yield (
+            b'data: {"choices":[{"delta":{"content":"hello"}}]}\n\n',
+            {"choices": [{"delta": {"content": "hello"}}]},
+        )
+        yield b"data: [DONE]\n\n", None
+
+    class _FailingRustWal:
+        def append(self, _frame: str) -> None:
+            raise OSError("auxiliary segment full")
+
+    fwd_inst.stream_sse = MagicMock(return_value=_sse_gen())
+    with patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst):
+        cfg = _make_settings(tmp_path)
+        app = create_app(cfg)
+        with TestClient(app) as client:
+            app.state.aegis.native_stream_wal = _FailingRustWal()
+            with caplog.at_level("ERROR", logger="aegis.proxy.app"):
+                resp = client.post(
+                    "/v1/chat/completions",
+                    headers={"Authorization": "Bearer sk-valid"},
+                    json={"model": "gpt-4", "messages": [], "stream": True},
+                )
+
+    assert resp.status_code == 200
+    assert resp.content.endswith(b"data: [DONE]\n\n")
+    assert app.state.aegis.ledger.chain[-1].sampling_params["terminal_outcome"] == "complete"
+    assert app.state.aegis.ledger.chain[-1].sampling_params["final_marker_included"] is True
+    assert app.state.aegis.native_stream_wal is None
+    assert "Auxiliary Rust streaming WAL append failed" in caplog.text
+
+
 def test_chat_streaming_rejects_response_over_byte_limit_and_closes_upstream(tmp_path):
     """A chunk crossing the cap fails closed without consuming further upstream data."""
     fwd_inst = _mock_forwarder()

@@ -2,14 +2,15 @@
 
 This guide is for developers who need to clone Aegis, run the local evaluation path, inspect the evidence lifecycle, and extend the repository without weakening the durable evidence contract. It describes local development, not a production deployment or a regulatory result.
 
-**Last verified:** 2026-08-18 UTC
+**Last verified:** 2026-08-22 UTC
 **Release baseline:** `v3.1.0`
+**Current main verified:** `45d95188d40792639fdd654369765a7233bef09a` (post-release; not the `v3.1.0` tag)
 **Audience:** Application, platform, and security engineers
 **Root entry point:** [`README.md`](../README.md)
 
 ## Evaluation target
 
-Aegis is an OpenAI-compatible AI Governance and Evidence Gateway. The local path lets a developer inspect policy, WAF, egress, signing, WAL persistence, integrity verification, and failure-path behavior. The local path does not prove target filesystem semantics, secret-manager behavior, upstream availability, kernel enforcement, HTTP/2 ingress behavior, or production capacity.
+Aegis exposes OpenAI-compatible `/v1/chat/completions` and, when `AEGIS_PROVIDER=anthropic`, native Anthropic `/v1/messages`. The local path lets a developer inspect policy, WAF, egress, signing, WAL persistence, portable MMR proofs, integrity verification, and failure-path behavior. The local path does not prove target filesystem semantics, secret-manager behavior, upstream availability, kernel enforcement, HTTP/2 ingress behavior, or production capacity.
 
 ## Clone and install
 
@@ -69,12 +70,61 @@ The relevant implementation path is distributed across `aegis/proxy/`, `aegis/co
 2. Read the bounded request body and canonicalize the representation.
 3. Apply WAF, session, egress and rate-limit controls.
 4. Call the configured upstream only after admission.
-5. Capture the terminal response under the configured streaming bound.
-6. Hash, sign, append, flush and `fsync` the evidence record.
-7. Return a governed response only after the durable evidence path succeeds.
-8. Enqueue optional response enrichment after the authoritative record exists.
+5. For non-streaming traffic, capture the response, then hash, sign, append, flush and `fsync` the evidence before emission.
+6. For SSE, pass canonical events through `BoundedStreamProxy`: a queue bounded by items and bytes, incremental SHA-256 over emitted bytes, and finite de-identification holdback. The implementation does not retain the complete response.
+7. Start SSE with `X-Aegis-Evidence-Status: pending-terminal` and `X-Aegis-Proof-Status: pending-terminal`; commit exactly one terminal summary before emitting `[DONE]` or Anthropic `message_stop`.
+8. On a byte, event-size or duration limit, close upstream immediately, commit the failure outcome once, and omit the success terminal marker.
+9. Enqueue optional response enrichment after the authoritative record exists.
 
 The P0 failure-path tests are the executable contract for this sequence. A background analyzer is not the authoritative evidence commit.
+
+## Use the provider-native SDKs
+
+The Python wrappers subclass the official provider clients, and the TypeScript wrappers subclass their installed peer dependencies. They preserve native resources, overloads, stream iterators, errors and response types while changing gateway routing and Aegis headers.
+
+```python
+from aegis_sdk.openai import OpenAI
+from aegis_sdk.anthropic import Anthropic
+
+openai_client = OpenAI(
+    aegis_api_key="dev-key",
+    gateway_url="http://127.0.0.1:8000",
+    tenant_id="dev-tenant",
+)
+openai_response = openai_client.chat.completions.create(
+    model="gpt-4o-mini", messages=[{"role": "user", "content": "hello"}]
+)
+
+# Requires the gateway itself to use AEGIS_PROVIDER=anthropic.
+anthropic_client = Anthropic(
+    aegis_api_key="dev-key",
+    gateway_url="http://127.0.0.1:8000",
+    tenant_id="dev-tenant",
+)
+anthropic_response = anthropic_client.messages.create(
+    model="claude-3-5-sonnet-latest",
+    max_tokens=64,
+    messages=[{"role": "user", "content": "hello"}],
+)
+```
+
+```typescript
+import OpenAI from "@aegis-latent/sdk/openai";
+import Anthropic from "@aegis-latent/sdk/anthropic";
+
+const openai = new OpenAI({
+  aegisApiKey: "dev-key",
+  gatewayUrl: "http://127.0.0.1:8000",
+  tenantId: "dev-tenant",
+});
+const anthropic = new Anthropic({
+  aegisApiKey: "dev-key",
+  gatewayUrl: "http://127.0.0.1:8000",
+  tenantId: "dev-tenant",
+});
+```
+
+Durable non-streaming replies expose portable `aegis-mmr-inclusion-v1` headers. SSE starts with pending-terminal headers and a `Link` to `GET /v1/audit/proofs/{request_id}`; perform that authenticated lookup after termination rather than treating initial headers as a durable proof.
 
 ## Exercise key rotation locally
 

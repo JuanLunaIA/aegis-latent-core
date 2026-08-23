@@ -165,6 +165,10 @@ if _PROM:
         "Incremental streaming redactions by bounded entity category and provider.",
         ["provider", "entity"],
     )
+    NATIVE_STREAM_WAL_ERRORS: Any = Counter(
+        "aegis_native_stream_wal_errors_total",
+        "Auxiliary native streaming WAL append failures; JSONL remains authoritative.",
+    )
 else:
     # No-op stubs — identical API surface so callers never branch on _PROM.
     # All methods are silent no-ops; the proxy runs identically when
@@ -197,6 +201,7 @@ else:
     STREAM_DURATION = _NoopMetric()
     STREAM_TOKENS = _NoopMetric()
     STREAM_REDACTIONS = _NoopMetric()
+    NATIVE_STREAM_WAL_ERRORS = _NoopMetric()
     WAL_REPLICATION_LAG = _NoopMetric()
     SCHEDULING_JITTER = _NoopMetric()
 

@@ -1,15 +1,15 @@
-# Security Assurance Roadmap — Aegis Latent Core v3.1.0
+# Security Assurance Roadmap — Aegis Latent Core
 
 This roadmap distinguishes **repository evidence** from **deployment acceptance** and **independent assurance**. Passing repository tests does not create a certification, attestation or customer-specific production SLO.
 
-**Last verified:** 2026-08-18 UTC
-**Release baseline:** `v3.1.0`
+**Last verified:** 2026-08-22 UTC
+**Release baseline:** `v3.1.0`; bounded SSE, portable MMR proofs, SDKs, forensic export, and dashboard are current-`main` post-release scope
 
 ## Assurance layers
 
 | Layer | Current status | Required artifact | Owner |
 |---|---|---|---|
-| Source and regression | Implemented and published for v3.1.0; post-release documentation hardening is tracked on `main` | Test output, lint, dependency scan, SBOM, source/tree hash | Release owner |
+| Source and regression | v3.1.0 release evidence remains published; PR #99 modules are implemented and CI-gated on current `main` but not published in that tag | Test output, lint, dependency scan, SDK/dashboard builds, SBOM, source/tree identity, and future release assets | Release owner |
 | Deployment controls | Configuration-dependent | Target kernel/LSM/Seccomp, ingress, storage, Redis, signer, TLS, backup, and recovery evidence | Customer platform/SRE |
 | Adversarial application testing | Local WAF corpus passed; HTTP/2 ingress corpus not executed | Pinned corpus, minimized regressions, ingress boundary, raw results | Security reviewer |
 | Key custody and rotation | File-backed keyring contract implemented; three-replica production run unverified | Secret-manager propagation, overlap, rollback, expiry, replica evidence | Security/platform owner |
@@ -17,6 +17,10 @@ This roadmap distinguishes **repository evidence** from **deployment acceptance*
 | Independent security review | Not completed by this repository | Scope, methodology, findings, retest, residual risk | Independent assessor |
 | Production pilot | Not established in public evidence | Customer-owned workload, consented metrics, rollback, incident evidence | Customer + release owner |
 | Certification / attestation | Not claimed | Applicable external assessment and formal report | Qualified external authority |
+
+## Current-main assurance boundary
+
+The bounded SSE, portable MMR proof, Python/TypeScript SDK, forensic export, and dashboard regressions provide repository-level evidence only. Per-stream bounds do not prove aggregate deployment capacity; proof validity depends on a trusted root; export integrity does not prove custody or admissibility; and dashboard QA does not prove availability or accessibility in every target. Cross-replica global ordering, multi-region failover/recovery, and independent external assurance remain open.
 
 ## Prioritized sequence
 

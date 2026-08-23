@@ -350,6 +350,8 @@ class _AppState:
     _pci_scrubber: PCIScrubber | None
     # Multi-turn behavioral WAF session tracker (Domain 5.1).
     waf_session_tracker: WAFSessionTracker
+    # Optional best-effort copy of terminal streaming frames. JSONL is authoritative.
+    native_stream_wal: Any
 
     def get_analyzer(self, session_id: str) -> ResponseAnalyzer:
         return self.analyzers.get(session_id)
@@ -670,15 +672,24 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     def _commit_stream_evidence(**kwargs: Any) -> Any:
         """Commit once to the ledger and append one CRC-framed native WAL record."""
         node = state.ledger.commit_forensic_summary(**kwargs)
-        if state.native_stream_wal is not None:
+        native_stream_wal = state.native_stream_wal
+        if native_stream_wal is not None:
             frame = {
                 "frame_type": "aegis-stream-terminal-v1",
                 "node": node.to_dict(),
                 "node_hash": node.node_hash,
             }
-            state.native_stream_wal.append(
-                json.dumps(frame, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-            )
+            try:
+                native_stream_wal.append(
+                    json.dumps(frame, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+                )
+            except Exception:
+                observability.NATIVE_STREAM_WAL_ERRORS.inc()
+                logger.exception(
+                    "Auxiliary Rust streaming WAL append failed; disabling the auxiliary "
+                    "segment while preserving the authoritative JSONL terminal commit"
+                )
+                state.native_stream_wal = None
         return node
 
     state.ratelimiter = create_rate_limiter(cfg)

@@ -2,7 +2,8 @@
 
 **Format identifier:** `aegis-mmr-inclusion-v1`  
 **Status:** implemented and covered by cross-language golden vectors  
-**Last reviewed:** 2026-08-21 UTC
+**Last reviewed:** 2026-08-22 UTC
+**Release package:** not yet released; **current main verified:** `45d95188d40792639fdd654369765a7233bef09a`
 
 ## Purpose and claim boundary
 
