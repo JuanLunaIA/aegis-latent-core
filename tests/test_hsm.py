@@ -58,12 +58,25 @@ def _make_pkcs11_module() -> MagicMock:
 
 def _make_rsa_key(label: str, signature: bytes = b"rsa-sig") -> MagicMock:
     """Mock RSA private/public key pair."""
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    public_numbers = (
+        rsa.generate_private_key(public_exponent=65537, key_size=2048).public_key().public_numbers()
+    )
+    modulus = public_numbers.n.to_bytes((public_numbers.n.bit_length() + 7) // 8, "big")
+    exponent = public_numbers.e.to_bytes((public_numbers.e.bit_length() + 7) // 8, "big")
     priv = MagicMock()
     priv.__getitem__ = MagicMock(side_effect=lambda attr: "RSA" if attr == "KEY_TYPE" else label)
     priv.sign = MagicMock(return_value=signature)
 
     pub = MagicMock()
-    pub.__getitem__ = MagicMock(side_effect=lambda attr: "RSA" if attr == "KEY_TYPE" else label)
+    pub.__getitem__ = MagicMock(
+        side_effect=lambda attr: {
+            "KEY_TYPE": "RSA",
+            "MODULUS": modulus,
+            "PUBLIC_EXPONENT": exponent,
+        }.get(attr, label)
+    )
     return priv, pub
 
 
@@ -302,6 +315,24 @@ class TestHSMSigningBackendRSA:
                 with pytest.raises(HSMUnavailableError):
                     backend.sign(b"data")
 
+    def test_duplicate_private_key_labels_are_rejected(self, pkcs11_rsa_env):
+        from aegis.core.hsm import HSMUnavailableError
+
+        pkcs11_mod, priv, pub, session = pkcs11_rsa_env
+
+        def duplicate_private(attrs: dict) -> list:
+            if attrs.get("CLASS") == "PRIVATE_KEY":
+                return [priv, priv]
+            return [pub]
+
+        session.get_objects = MagicMock(side_effect=duplicate_private)
+        import aegis.core.hsm as hsm_mod
+
+        with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
+            backend = hsm_mod.HSMSigningBackend(library_path="/fake/libsofthsm2.so")
+            with pytest.raises(HSMUnavailableError, match="exactly one private key"):
+                backend.sign(b"data")
+
 
 class TestHSMSigningBackendEC:
     def test_ec_sign_returns_correct_scheme(self, pkcs11_ec_env):
@@ -492,21 +523,20 @@ class TestLedgerHSMIntegration:
 
 
 class TestHSMManagerShim:
-    def test_open_session_returns_true(self):
+    def test_open_session_fails_closed_when_backend_unavailable(self):
         from aegis.core.hsm import HSMManager
 
         mgr = HSMManager(library_path="/nonexistent.so")
         result = mgr.open_session(slot_id=0, pin="pin")
-        assert result is True  # always True (graceful)
+        assert result is False
 
-    def test_sign_data_returns_bytes_software_fallback(self):
-        from aegis.core.hsm import HSMManager
+    def test_no_software_fallback_signature_is_emitted(self):
+        from aegis.core.hsm import HSMManager, HSMUnavailableError
 
         mgr = HSMManager(library_path="/nonexistent.so")
-        mgr.open_session(slot_id=0, pin="pin")
-        sig = mgr.sign_data(key_handle=1, data=b"hello")
-        assert isinstance(sig, bytes)
-        assert len(sig) > 0
+        assert mgr.open_session(slot_id=0, pin="pin") is False
+        with pytest.raises((ConnectionError, HSMUnavailableError)):
+            mgr.sign_data(key_handle=1, data=b"hello")
 
     def test_close_session_idempotent(self):
         from aegis.core.hsm import HSMManager

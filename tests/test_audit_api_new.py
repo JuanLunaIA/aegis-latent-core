@@ -142,6 +142,17 @@ async def test_audit_health_returns_status():
     assert data["node_count"] == 1
 
 
+@pytest.mark.asyncio
+async def test_unaccounted_dp_analytics_route_is_not_published() -> None:
+    app = _make_app(_make_ledger(nodes=[_make_node()]))
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.get("/v1/audit/analytics/dp", params={"epsilon": 100})
+
+    assert response.status_code == 404
+
+
 # ── /integrity ────────────────────────────────────────────────────────────────
 
 

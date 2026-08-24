@@ -2,7 +2,7 @@
 
 All notable changes to **Aegis Latent Core** are documented in this file.
 
-**Last verified:** 2026-08-22 UTC
+**Last verified:** 2026-08-24 UTC
 **Release baseline:** `v3.1.0`
 **Documentation verification baseline:** `v3.1.0`. Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
@@ -23,6 +23,10 @@ Everything in this section post-dates the immutable `v3.1.0` tag. These entries 
 - Added hardened Helm defaults and a restricted source template for installing the operator controller with namespaced RBAC. Operator-generated Aegis workloads still require persistent-storage and target-cluster acceptance; the controller deployment intentionally references an invalid placeholder image until a reviewed immutable image is supplied.
 - Added an advisory `.aegis_ai_context` pack, `llms.txt`, and `.cursorrules` with offline structural tests and explicit release, proof, compliance, and external-acceptance boundaries.
 - Added strict documentation claim validation for configured high-risk assurance, performance, readiness, and publication language, including affirmative claims embedded in tables.
+- Corrected TEE capability reporting so device-node visibility remains discovery-only; legacy caller-authored attestation reports are rejected, while an injected verifier may supply authenticated normalized claims for exact policy evaluation. No enclave loader or vendor quote verifier is implemented.
+- Removed the unaccounted differential-privacy HTTP analytics route and reduced the module to an internal CSPRNG-backed Laplace count primitive with a one-release, add/remove adjacency boundary. No privacy accountant, repeated-release protection, or universal anonymization claim is provided.
+- Made the legacy HSM manager fail closed when PKCS#11 is unavailable, removed its predictable software-HMAC fallback, rejected duplicate key labels, and required a unique exportable public key for asymmetric evidence metadata. Unit mocks are not hardware or FIPS validation.
+- Replaced Cargo-only fuzzing capability detection and constant coverage/bug figures with exact executable, private-workspace, bounded-manifest, and confined target-file readiness checks, bounded execution states, explicit timeouts, and unavailable measured coverage. No cargo-fuzz target or Kani proof is claimed until source and tool evidence exist.
 
 ### Commercial expansion Phase 2/3
 
