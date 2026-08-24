@@ -77,7 +77,7 @@ jobs:
 
       - name: Upload SARIF to GitHub Security
         if: always()
-        uses: github/codeql-action/upload-sarif@f3712979fa5f215279b101dd0a2e3bdfb4353324 # v3
+        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v3
         with:
           sarif_file: bandit.sarif
           category: bandit
@@ -138,7 +138,7 @@ jobs:
 
       - name: Upload Trivy SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@f3712979fa5f215279b101dd0a2e3bdfb4353324 # v3
+        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v3
         with:
           sarif_file: trivy-fs.sarif
           category: trivy-fs
@@ -165,7 +165,7 @@ jobs:
       - name: Upload OSV SARIF
         # Only upload when the scanner actually produced a report.
         if: ${{ always() && hashFiles('osv-results.sarif') != '' }}
-        uses: github/codeql-action/upload-sarif@f3712979fa5f215279b101dd0a2e3bdfb4353324 # v3
+        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v3
         with:
           sarif_file: osv-results.sarif
           category: osv-scanner
