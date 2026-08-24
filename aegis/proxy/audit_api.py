@@ -19,8 +19,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from aegis.auth.principal import Principal, Role
-from aegis.auth.scopes import SCOPE_AUDIT_ANALYTICS, SCOPE_AUDIT_EXPORT, SCOPE_AUDIT_READ
-from aegis.core.dp_analytics import DPAggregator
+from aegis.auth.scopes import SCOPE_AUDIT_EXPORT, SCOPE_AUDIT_READ
 from aegis.core.forensic_bundle import (
     ForensicBundleError,
     build_forensic_bundle,
@@ -56,7 +55,7 @@ def build_audit_router(
             subject="router-test",
             tenant_id="development",
             roles=frozenset({Role.ADMIN}),
-            scopes=frozenset({SCOPE_AUDIT_READ, SCOPE_AUDIT_EXPORT, SCOPE_AUDIT_ANALYTICS}),
+            scopes=frozenset({SCOPE_AUDIT_READ, SCOPE_AUDIT_EXPORT}),
             auth_method="development",
             credential_id="router-test",
         )
@@ -351,25 +350,5 @@ def build_audit_router(
                 "X-Content-Type-Options": "nosniff",
             },
         )
-
-    @router.get("/analytics/dp", response_model=dict)
-    async def dp_analytics(
-        auth: object = Depends(read_dependency),
-        epsilon: Annotated[float, Query(gt=0.0, le=100.0)] = 1.0,
-    ) -> dict:
-        """Return differentially-private aggregate statistics over the audit chain."""
-        principal = _require(auth, SCOPE_AUDIT_ANALYTICS)
-        agg = DPAggregator(epsilon=epsilon, delta=0.0)
-        report = agg.compute([node for node in ledger.chain if _visible(node, principal)])
-        return {
-            "epsilon": report.epsilon,
-            "delta": report.delta,
-            "mechanism": report.mechanism,
-            "node_count": report.node_count,
-            "mean_entropy": report.mean_entropy,
-            "entropy_variance": report.entropy_variance,
-            "phi_scrubbed_count": report.phi_scrubbed_count,
-            "tenant_counts": report.tenant_counts,
-        }
 
     return router

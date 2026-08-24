@@ -1,6 +1,4 @@
-"""
-aegis.core.secure_runtime — Integrates TEE and TPM for a fully shielded execution environment.
-"""
+"""Fail-closed coordinator for optional TPM and TEE evidence backends."""
 
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
@@ -17,11 +15,9 @@ logger = logging.getLogger(__name__)
 
 class SecureRuntime:
     """
-    The SecureRuntime is the ultimate orchestration layer for hardware-backed security.
-    It ensures the system is:
-    1. Measured (TPM)
-    2. Isolated (TEE)
-    3. Attested (Remote Quote)
+    Coordinate measurement, enclave loading, and attestation when real provider
+    backends exist. The current source has no enclave loader or quote verifier,
+    so activation fails closed.
     """
 
     def __init__(self):
@@ -30,10 +26,12 @@ class SecureRuntime:
         self._is_shielded = False
 
     def activate_shield(self, binary_path: str, golden_hash: str) -> bool:
+        """Attempt the configured measurement and TEE evidence chain.
+
+        The current source fails closed because no enclave loader or vendor quote
+        verifier is integrated.
         """
-        Activates the full hardware shield.
-        """
-        logger.info("Activating Hardware Shield...")
+        logger.info("Attempting configured hardware evidence chain")
 
         # Step 1: TPM Measurement
         if not self.tpm.verify_golden_hash(self.tpm.measure_binary(binary_path)):
@@ -51,7 +49,7 @@ class SecureRuntime:
             logger.critical("Shield Activation Failed: Remote attestation failed.")
             return False
 
-        logger.info("HARDWARE SHIELD ACTIVE. Aegis Core is now running in an Inexpugnable state.")
+        logger.info("Hardware evidence policy accepted for the configured backends")
         self._is_shielded = True
         return True
 

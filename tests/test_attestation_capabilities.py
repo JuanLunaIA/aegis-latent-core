@@ -77,11 +77,35 @@ class TestProbeEnvironmentSensitivity:
         result = cap._tee_enclave()
         assert result.status == "UNAVAILABLE"
 
-    def test_tee_real_with_device(self, monkeypatch):
+    def test_tee_remains_unavailable_with_device_only(self, monkeypatch):
         monkeypatch.setattr(cap.os.path, "exists", lambda p: p == "/dev/sgx_enclave")
         result = cap._tee_enclave()
-        assert result.status == "REAL"
+        assert result.status == "UNAVAILABLE"
         assert "/dev/sgx_enclave" in result.detail
+        assert "no enclave loader" in result.detail
+
+    def test_fuzzing_requires_complete_toolchain_and_targets(self, monkeypatch):
+        from aegis.core import fuzzing_harness
+
+        monkeypatch.setattr(
+            fuzzing_harness,
+            "fuzzing_toolchain_status",
+            lambda: (False, "fuzz manifest is missing declared targets"),
+        )
+        result = cap._fuzzing_harness()
+        assert result.status == "UNAVAILABLE"
+        assert "missing declared targets" in result.detail
+
+    def test_fuzzing_real_only_after_readiness_probe(self, monkeypatch):
+        from aegis.core import fuzzing_harness
+
+        monkeypatch.setattr(
+            fuzzing_harness,
+            "fuzzing_toolchain_status",
+            lambda: (True, "cargo-fuzz workspace declares 3 required targets"),
+        )
+        result = cap._fuzzing_harness()
+        assert result.status == "REAL"
 
     def test_ebpf_real_when_bpftool_present(self, monkeypatch):
         monkeypatch.setattr(cap.shutil, "which", lambda n: "/usr/sbin/bpftool")

@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -22,6 +23,18 @@ from typing import Any
 from aegis.anchoring.rfc3161 import RFC3161AnchorClient, TimestampAnchor
 from aegis.core.crypto_audit import AuditNode
 from aegis.storage.s3_worm import ArchiveState, S3WormArchiver
+
+_ANCHOR_RECEIPT_FIELDS = frozenset(
+    {
+        "anchor_id",
+        "cms_trusted",
+        "manifest_sha256",
+        "message_imprint",
+        "nonce",
+        "request_path",
+        "response_path",
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,6 +126,78 @@ def _atomic_write(path: Path, data: bytes) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def _validate_existing_anchor_receipt(
+    receipt_path: Path,
+    manifest_bytes: bytes,
+    anchor_client: RFC3161AnchorClient | None,
+) -> None:
+    """Fail closed unless a receipt exactly binds this manifest and its evidence exists."""
+    try:
+        receipt: Any = json.loads(receipt_path.read_bytes())
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("existing anchor receipt is unreadable or invalid") from exc
+    if not isinstance(receipt, dict) or set(receipt) != _ANCHOR_RECEIPT_FIELDS:
+        raise RuntimeError("existing anchor receipt does not match the expected schema")
+    if (
+        not isinstance(receipt["anchor_id"], str)
+        or not receipt["anchor_id"]
+        or receipt["cms_trusted"] is not True
+        or not isinstance(receipt["manifest_sha256"], str)
+        or not isinstance(receipt["message_imprint"], str)
+        or not isinstance(receipt["nonce"], str)
+        or not receipt["nonce"].isdigit()
+        or not isinstance(receipt["request_path"], str)
+        or not receipt["request_path"]
+        or not isinstance(receipt["response_path"], str)
+        or not receipt["response_path"]
+    ):
+        raise RuntimeError("existing anchor receipt does not match the expected schema")
+
+    expected_digest = hashlib.sha256(manifest_bytes).hexdigest()
+    if not secrets.compare_digest(receipt["manifest_sha256"], expected_digest):
+        raise RuntimeError("existing anchor receipt manifest hash mismatch")
+    if not secrets.compare_digest(receipt["message_imprint"], expected_digest):
+        raise RuntimeError("existing anchor receipt message imprint mismatch")
+    request_path = Path(receipt["request_path"])
+    response_path = Path(receipt["response_path"])
+    anchor_id = receipt["anchor_id"]
+    if (
+        request_path.suffix != ".tsq"
+        or request_path.name != f"{anchor_id}.tsq"
+        or not request_path.is_file()
+        or request_path.stat().st_size == 0
+    ):
+        raise RuntimeError("existing anchor receipt references a missing timestamp request")
+    if (
+        response_path.suffix != ".tsr"
+        or response_path.name != f"{anchor_id}.tsr"
+        or not response_path.is_file()
+        or response_path.stat().st_size == 0
+    ):
+        raise RuntimeError("existing anchor receipt references a missing timestamp response")
+    if request_path.parent.resolve() != response_path.parent.resolve():
+        raise RuntimeError("existing anchor receipt evidence paths do not share a directory")
+    if anchor_client is None:
+        raise RuntimeError("existing anchor receipt requires a configured RFC 3161 verifier")
+    try:
+        verification = anchor_client.verify_existing(
+            request_der=request_path.read_bytes(),
+            response_der=response_path.read_bytes(),
+            expected_data=manifest_bytes,
+            expected_nonce=int(receipt["nonce"]),
+        )
+    except (OSError, ValueError, TypeError, RuntimeError) as exc:
+        raise RuntimeError("existing anchor receipt cryptographic verification failed") from exc
+    if verification.cms_trusted is not True:
+        raise RuntimeError("existing anchor receipt CMS trust verification failed")
+    if verification.message_imprint is None or not secrets.compare_digest(
+        verification.message_imprint.hex(), expected_digest
+    ):
+        raise RuntimeError("existing anchor receipt verified imprint mismatch")
+    if verification.nonce != int(receipt["nonce"]):
+        raise RuntimeError("existing anchor receipt verified nonce mismatch")
+
+
 async def archive_finalized_segment(
     path: str | Path,
     *,
@@ -140,7 +225,10 @@ async def archive_finalized_segment(
         raise RuntimeError("segment manifest archive is not remotely verified")
 
     receipt_path = receipt_dir / f"{manifest.segment_name}.anchor.json"
-    if receipt_path.exists() or anchor_client is None:
+    if receipt_path.exists():
+        _validate_existing_anchor_receipt(receipt_path, manifest_bytes, anchor_client)
+        return manifest, None
+    if anchor_client is None:
         return manifest, None
     anchor = await anchor_client.anchor(manifest_bytes)
     receipt = {

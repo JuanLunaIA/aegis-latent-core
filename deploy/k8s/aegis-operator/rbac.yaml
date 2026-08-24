@@ -1,0 +1,35 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aegis-operator
+  namespace: aegis-system
+rules:
+  - apiGroups: ["aegis.io"]
+    resources: ["aegisproxies"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: ["aegis.io"]
+    resources: ["aegisproxies/status"]
+    verbs: ["get", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["create", "patch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aegis-operator
+  namespace: aegis-system
+subjects:
+  - kind: ServiceAccount
+    name: aegis-operator
+    namespace: aegis-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: aegis-operator

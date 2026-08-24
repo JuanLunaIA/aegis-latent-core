@@ -130,6 +130,64 @@ class TestBuildDeployment:
         )
         assert env_map["AEGIS_API_KEYS"]["valueFrom"]["secretKeyRef"]["name"] == "myproxy-api-keys"
 
+    def test_default_image_is_version_pinned(self, operator, basic_spec: dict) -> None:
+        result = operator._build_deployment("proxy-1", "aegis-system", basic_spec)
+        image = result["spec"]["template"]["spec"]["containers"][0]["image"]
+        assert image == "ghcr.io/juanlunaia/aegis-latent-core:3.1.0"
+
+    def test_configurable_image(self, operator, basic_spec: dict) -> None:
+        basic_spec["image"] = "registry.example/aegis@sha256:" + "a" * 64
+        result = operator._build_deployment("proxy-1", "aegis-system", basic_spec)
+        assert result["spec"]["template"]["spec"]["containers"][0]["image"] == basic_spec["image"]
+
+    @pytest.mark.parametrize("image", ["registry.example/aegis:latest", "registry.example/aegis"])
+    def test_latest_or_implicit_latest_rejected(
+        self, operator, basic_spec: dict, image: str
+    ) -> None:
+        basic_spec["image"] = image
+        with pytest.raises(ValueError, match="latest|explicit valid tag"):
+            operator._build_deployment("proxy-1", "aegis-system", basic_spec)
+
+    def test_latest_requires_explicit_override(self, operator, basic_spec: dict) -> None:
+        basic_spec.update(image="registry.example/aegis:latest", allowLatestImage=True)
+        result = operator._build_deployment("proxy-1", "aegis-system", basic_spec)
+        assert result["spec"]["template"]["spec"]["containers"][0]["image"].endswith(":latest")
+
+    @pytest.mark.parametrize(
+        "image",
+        [
+            "registry.example/aegis@",
+            "registry.example/aegis@garbage",
+            "registry.example/aegis@sha256:abc",
+            "registry.example/aegis:latest@garbage",
+        ],
+    )
+    def test_malformed_digest_references_are_rejected(
+        self, operator, basic_spec: dict, image: str
+    ) -> None:
+        basic_spec["image"] = image
+        with pytest.raises(ValueError, match="digest"):
+            operator._build_deployment("proxy-1", "aegis-system", basic_spec)
+
+    def test_generated_pod_uses_restricted_security_context(
+        self, operator, basic_spec: dict
+    ) -> None:
+        result = operator._build_deployment("proxy-1", "aegis-system", basic_spec)
+        pod = result["spec"]["template"]["spec"]
+        container = pod["containers"][0]
+        assert pod["automountServiceAccountToken"] is False
+        assert pod["securityContext"]["runAsNonRoot"] is True
+        assert pod["securityContext"]["seccompProfile"] == {"type": "RuntimeDefault"}
+        assert container["securityContext"] == {
+            "allowPrivilegeEscalation": False,
+            "readOnlyRootFilesystem": True,
+            "capabilities": {"drop": ["ALL"]},
+        }
+        assert container["ports"] == [{"containerPort": 8080}]
+        assert container["readinessProbe"]["httpGet"]["port"] == 8080
+        assert container["livenessProbe"]["httpGet"]["port"] == 8080
+        assert {mount["mountPath"] for mount in container["volumeMounts"]} == {"/data", "/tmp"}
+
     def test_has_readiness_probe(self, operator, basic_spec: dict) -> None:
         result = operator._build_deployment("proxy-1", "aegis-system", basic_spec)
         container = result["spec"]["template"]["spec"]["containers"][0]

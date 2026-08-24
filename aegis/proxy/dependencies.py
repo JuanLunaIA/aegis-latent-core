@@ -98,8 +98,12 @@ def _api_key_principal(request: Request, key: str) -> Principal:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="API-key principal mapping is incomplete",
             )
-        scopes = parse_scope_config(settings.api_key_scopes).get(key, ALL_SCOPES)
-        roles = frozenset({Role.ADMIN}) if scopes == ALL_SCOPES else frozenset()
+        if settings.allow_legacy_unmapped_api_key_principals:
+            scopes = parse_scope_config(settings.api_key_scopes).get(key, ALL_SCOPES)
+            roles = frozenset({Role.ADMIN}) if scopes == ALL_SCOPES else frozenset()
+        else:
+            roles = frozenset()
+            scopes = frozenset()
         tenant_id = settings.development_tenant_id
     else:
         try:

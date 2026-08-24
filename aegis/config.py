@@ -130,7 +130,8 @@ class AegisSettings(BaseSettings):
             "Semicolon-separated HIPAA minimum-necessary scope restrictions per API key. "
             "Format: 'key1:scope1,scope2;key2:scope3'. "
             "Valid scopes: proxy:completions, audit:read, audit:export, audit:analytics. "
-            "Keys not listed here receive all scopes (backward-compatible default). "
+            "With legacy unmapped-principal compatibility enabled, keys not listed here receive "
+            "all scopes; otherwise unmapped keys receive no scopes. "
             "Example: 'read-only-key:audit:read;export-key:audit:read,audit:export'. "
             "Set via AEGIS_API_KEY_SCOPES environment variable."
         ),
@@ -158,6 +159,14 @@ class AegisSettings(BaseSettings):
             "JSON object keyed by lowercase HMAC-SHA256 API-key digest using "
             "auth_identity_hmac_key. Each value contains "
             "tenant_id, roles, and scopes. Strict mode requires an entry for every configured key."
+        ),
+    )
+    allow_legacy_unmapped_api_key_principals: bool = Field(
+        default=False,
+        description=(
+            "Compatibility-only opt-in that grants legacy API_KEY_SCOPES permissions to valid "
+            "API keys without an explicit principal mapping in development mode. Unmapped keys "
+            "otherwise authenticate with no roles or scopes, and strict mode always rejects them."
         ),
     )
     development_tenant_id: str = Field(default="development")

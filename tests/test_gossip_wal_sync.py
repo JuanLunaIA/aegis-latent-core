@@ -169,8 +169,25 @@ def test_process_message_peer_stale(syncer):
 def test_process_message_no_sync_needed(syncer):
     syncer.add_peer("node-B", "10.0.0.2:7946")
     msg = GossipMessage("node-B", "hash", 0, 42, time.time())
-    result = syncer.process_message(msg, our_node_count=42)
+    result = syncer.process_message(msg, our_node_count=42, our_wal_head_hash="hash")
     assert result.decision is SyncDecision.NO_SYNC_NEEDED
+
+
+def test_process_message_detects_equal_length_head_divergence(syncer):
+    syncer.add_peer("node-B", "10.0.0.2:7946")
+    msg = GossipMessage("node-B", "peer-head", 0, 42, time.time())
+
+    result = syncer.process_message(msg, our_node_count=42, our_wal_head_hash="local-head")
+
+    assert result.decision is SyncDecision.DIVERGED
+    assert result.to_dict()["decision"] == "diverged"
+
+
+@pytest.mark.parametrize(("local_head", "peer_head"), [("", "peer"), ("local", "")])
+def test_process_message_reports_unknown_without_both_heads(syncer, local_head, peer_head):
+    msg = GossipMessage("node-B", peer_head, 0, 42, time.time())
+    result = syncer.process_message(msg, our_node_count=42, our_wal_head_hash=local_head)
+    assert result.decision is SyncDecision.UNKNOWN
 
 
 def test_process_message_updates_peer_node_count(syncer):
@@ -475,6 +492,25 @@ class TestReceiveOne:
         assert result is not None
         assert result.decision == SyncDecision.SYNC_NEEDED
         assert result.peer_node_count == 20
+
+    def test_receive_one_reports_divergence_without_wal_transfer(self, syncer, tmp_path):
+        wal = tmp_path / "local.wal"
+        wal.write_bytes(b"immutable local bytes")
+        syncer.local_wal_path = str(wal)
+        msg = GossipMessage("node-B", "peer-head", 100, 20, time.time())
+        transport = MagicMock(spec=GossipUDPTransport)
+        transport.receive.return_value = msg
+
+        result = syncer.receive_one(
+            transport,
+            our_node_count=20,
+            our_wal_head_hash="local-head",
+        )
+
+        assert result is not None
+        assert result.decision is SyncDecision.DIVERGED
+        assert wal.read_bytes() == b"immutable local bytes"
+        transport.send.assert_not_called()
 
     def test_receive_one_returns_none_on_timeout(self, syncer):
         transport = MagicMock(spec=GossipUDPTransport)

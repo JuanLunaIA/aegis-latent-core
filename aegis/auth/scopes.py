@@ -21,7 +21,8 @@ Scope definitions
     Should be restricted to compliance officers and auditors.
 
 ``audit:analytics``
-    Access to ``/v1/audit/analytics/dp`` (differentially-private aggregates).
+    Reserved for a future reviewed analytics surface. No analytics endpoint is
+    currently published because the repository has no durable privacy accountant.
 
 Configuration
 -------------

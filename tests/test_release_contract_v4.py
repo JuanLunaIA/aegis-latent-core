@@ -14,6 +14,16 @@ from scripts.verify_release_contract import assess_repository
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _git(*arguments: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(  # noqa: S603 - fixed git executable and controlled arguments
+        ["git", *arguments],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
 def test_release_source_contract_is_complete_without_claiming_external_readiness() -> None:
     assessment = assess_repository(ROOT)
 
@@ -21,6 +31,12 @@ def test_release_source_contract_is_complete_without_claiming_external_readiness
     assert len(set(assessment.versions.values())) == 1
     assert assessment.ready
     assert assessment.diagnostics == ()
+
+    # Source-contract readiness is not evidence that a v4 tag or release exists.
+    assert all(not version.startswith("4.") for version in assessment.versions.values())
+    assert _git("tag", "--list", "v4*").stdout.strip() == ""
+    assert "published" not in assessment.to_dict()
+    assert "released" not in assessment.to_dict()
 
 
 def test_release_contract_cli_reports_source_contract_as_json() -> None:

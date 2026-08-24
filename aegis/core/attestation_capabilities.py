@@ -17,9 +17,9 @@ it is:
   report this**; the value exists only so an auditor can detect a regression.
 
 The probes here are deliberately cheap and side-effect-free (``shutil.which``,
-``os.path.exists``, ``ctypes.util.find_library``, import checks). They never run
-the underlying tools, so calling this endpoint cannot extend a PCR, load a BPF
-program, or shell out to a fuzzer.
+``os.path.exists``, ``ctypes.util.find_library``, bounded local manifest reads,
+and import checks). They never run the underlying tools, so calling this endpoint
+cannot extend a PCR, load a BPF program, or shell out to a fuzzer.
 """
 
 from __future__ import annotations
@@ -136,12 +136,12 @@ def _tee_enclave() -> ControlCapability:
     return ControlCapability(
         name="tee_enclave_attestation",
         category="hardware-root-of-trust",
-        status="REAL" if device else "UNAVAILABLE",
+        status="UNAVAILABLE",
         module="aegis.core.tee_manager",
         detail=(
-            f"TEE device present ({device})"
+            f"TEE device node present ({device}), but no enclave loader or vendor quote verifier is integrated"
             if device
-            else "no SGX/SEV/TDX device; enclave operations raise instead of faking attestation"
+            else "no SGX/SEV/TDX device and no vendor quote verifier; attestation remains unavailable"
         ),
     )
 
@@ -211,17 +211,19 @@ def _cfi_inspection() -> ControlCapability:
 
 
 def _fuzzing_harness() -> ControlCapability:
-    tool = _which_any("cargo")
+    try:
+        from aegis.core.fuzzing_harness import fuzzing_toolchain_status
+
+        ready, detail = fuzzing_toolchain_status()
+    except Exception:  # pragma: no cover - import/probe failure path
+        ready = False
+        detail = "fuzzing readiness probe failed"
     return ControlCapability(
         name="fuzzing_harness",
         category="assurance-pipeline",
-        status="REAL" if tool else "UNAVAILABLE",
+        status="REAL" if ready else "UNAVAILABLE",
         module="aegis.core.fuzzing_harness",
-        detail=(
-            f"cargo present ({tool}); cargo-fuzz can run targets"
-            if tool
-            else "cargo not found; fuzz targets report UNAVAILABLE rather than a fake clean run"
-        ),
+        detail=detail,
     )
 
 

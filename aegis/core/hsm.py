@@ -6,18 +6,13 @@
 Provides ``HSMSigningBackend``: a thread-safe, session-persistent PKCS#11
 signing interface whose signing key NEVER leaves the HSM token boundary.
 
-When ``python-pkcs11`` is not installed, when the configured library path does
-not exist, or when no token is present in the target slot, ``available`` is
-``False`` and the caller should fall back to software signing (HMAC-SHA256 or
-ML-DSA).  This makes the HSM integration fully optional and backward-compatible.
+When ``python-pkcs11`` is not installed, the configured library is unusable, or
+no token is present, ``available`` is ``False``. Callers that require hardware
+signing must fail closed; any software-signing policy is a separate explicit mode.
 
-Supported HSMs (tested with SoftHSM2 in CI; interoperable with any PKCS#11
-v2.20+ implementation):
-  - Thales Luna Network HSM
-  - AWS CloudHSM (PKCS#11 client)
-  - SoftHSM2 (software token; FIPS-validated mode available)
-  - nCipher nShield
-  - YubiHSM2
+The adapter is unit-tested with injected PKCS#11 objects. That does not establish
+vendor-token interoperability, key non-exportability, certification, or target
+deployment acceptance.
 
 Signing mechanisms (auto-detected from key type):
   - RSA: CKM_SHA256_RSA_PKCS_PSS (RSA-PSS, SHA-256, MGF1-SHA-256, salt=32)
@@ -87,7 +82,7 @@ class HSMSigningBackend:
         self,
         library_path: str,
         slot_id: int = 0,
-        pin: str = "",
+        pin: str | None = None,
         key_label: str = "aegis-signing-key",
         token_label: str = "",
     ) -> None:
@@ -110,6 +105,14 @@ class HSMSigningBackend:
         Imports pkcs11 locally so that test code can inject a mock via
         sys.modules without being blocked by the module-level ImportError guard.
         """
+        if self._session is not None:
+            try:
+                self._session.close()
+            except Exception:
+                logger.warning("HSM session close failed before refresh")
+            self._session = None
+            self._available = False
+
         try:
             import pkcs11 as _pkcs11  # noqa: PLC0415
             import pkcs11.util.rsa as _pkcs11_rsa  # noqa: PLC0415,F401
@@ -151,7 +154,7 @@ class HSMSigningBackend:
                 getattr(token, "label", "?"),
             )
         except Exception as exc:
-            logger.warning("HSM signing backend not available: %s", exc)
+            logger.warning("HSM signing backend not available: %s", type(exc).__name__)
             self._available = False
 
     @property
@@ -180,11 +183,13 @@ class HSMSigningBackend:
             try:
                 return self._sign_internal(data)
             except Exception as exc:
-                logger.warning("HSM sign failed (%s); attempting session refresh", exc)
+                logger.warning(
+                    "HSM sign failed (%s); attempting session refresh", type(exc).__name__
+                )
                 self._try_initialize()
                 if not self._available:
                     raise HSMUnavailableError(
-                        f"HSM session lost and could not be re-established: {exc}"
+                        f"HSM session lost and could not be re-established ({type(exc).__name__})"
                     ) from exc
                 return self._sign_internal(data)
 
@@ -205,11 +210,12 @@ class HSMSigningBackend:
                 )
             )
         except Exception as exc:
-            raise HSMUnavailableError(f"HSM key search failed: {exc}") from exc
+            raise HSMUnavailableError(f"HSM key search failed ({type(exc).__name__})") from exc
 
-        if not priv_keys:
+        if len(priv_keys) != 1:
             raise HSMUnavailableError(
-                f"No private key with label {self._key_label!r} found in HSM token"
+                f"Expected exactly one private key with label {self._key_label!r}; "
+                f"found {len(priv_keys)}"
             )
 
         priv_key = priv_keys[0]
@@ -234,18 +240,20 @@ class HSMSigningBackend:
             mgf=_pkcs11.MGF.SHA256,
             sLen=32,
         )
-        sig_bytes: bytes = priv_key.sign(data, mechanism=mechanism, mechanism_param=params)
-
         pub_hex = self._export_rsa_public_key(session, _pkcs11)
+        if not pub_hex:
+            raise HSMUnavailableError("RSA public key is missing or ambiguous")
+        sig_bytes: bytes = priv_key.sign(data, mechanism=mechanism, mechanism_param=params)
         return sig_bytes, pub_hex, "pkcs11-rsa-pss-sha256"
 
     def _sign_ec(
         self, session: Any, priv_key: Any, data: bytes, _pkcs11: Any
     ) -> tuple[bytes, str, str]:
         """ECDSA with SHA-256 (CKM_ECDSA_SHA256)."""
-        sig_bytes: bytes = priv_key.sign(data, mechanism=_pkcs11.Mechanism.ECDSA_SHA256)
-
         pub_hex = self._export_ec_public_key(session, _pkcs11)
+        if not pub_hex:
+            raise HSMUnavailableError("EC public key is missing or ambiguous")
+        sig_bytes: bytes = priv_key.sign(data, mechanism=_pkcs11.Mechanism.ECDSA_SHA256)
         return sig_bytes, pub_hex, "pkcs11-ecdsa-sha256"
 
     def _export_rsa_public_key(self, session: Any, _pkcs11: Any) -> str:
@@ -268,7 +276,7 @@ class HSMSigningBackend:
                     }
                 )
             )
-            if not pub_keys:
+            if len(pub_keys) != 1:
                 return ""
             pub = pub_keys[0]
             n = int.from_bytes(bytes(pub[_pkcs11.Attribute.MODULUS]), "big")
@@ -295,7 +303,7 @@ class HSMSigningBackend:
                     }
                 )
             )
-            if not pub_keys:
+            if len(pub_keys) != 1:
                 return ""
             der = _ec_util.encode_ec_public_key(pub_keys[0])
             return str(der.hex())
@@ -309,33 +317,31 @@ class HSMSigningBackend:
                 if self._session is not None:
                     self._session.close()
             except Exception:
-                pass
+                logger.warning("HSM session close failed")
             self._session = None
             self._available = False
             logger.debug("HSM session closed")
 
 
 # ── Backward-compat shim ──────────────────────────────────────────────────────
-# The old stub HSMManager / HSMSession are preserved for artifact_signing.py.
-# New code should use HSMSigningBackend directly.
+# The legacy shape remains importable, but no longer fabricates an HSM session or
+# derives a predictable software key when PKCS#11 is unavailable.
 
 
 class _HSMSession:
     """Internal session state (legacy shim)."""
 
-    def __init__(self, slot_id: int, session_handle: int, user_pin: str) -> None:
+    def __init__(self, slot_id: int, session_handle: int) -> None:
         self.slot_id = slot_id
         self.session_handle = session_handle
-        self.user_pin = user_pin
 
 
 class HSMManager:
     """Legacy HSM interface used by artifact_signing.py.
 
     In new code prefer ``HSMSigningBackend`` which uses real PKCS#11.
-    This shim delegates to ``HSMSigningBackend`` when the library is
-    available, and falls back to a deterministic HMAC of a slot-derived key
-    (identical to the previous stub behaviour) when it is not.
+    This shim delegates to ``HSMSigningBackend`` only. It fails closed when the
+    PKCS#11 backend is unavailable and never performs software signing.
     """
 
     def __init__(self, library_path: str = "/usr/lib/softhsm/libsofthsm2.so") -> None:
@@ -347,26 +353,25 @@ class HSMManager:
     def open_session(self, slot_id: int, pin: str) -> bool:
         """Open a session and authenticate. Returns True on success."""
         try:
-            self._session = _HSMSession(
-                slot_id=slot_id,
-                session_handle=0,
-                user_pin=pin,
-            )
             self._backend = HSMSigningBackend(
                 library_path=self.library_path,
                 slot_id=slot_id,
                 pin=pin,
             )
             if self._backend.available:
-                logger.info("HSM Session opened via PKCS#11 on slot %d", slot_id)
-            else:
-                logger.info(
-                    "HSM PKCS#11 unavailable; session opened in software-fallback mode (slot %d)",
-                    slot_id,
+                self._session = _HSMSession(
+                    slot_id=slot_id,
+                    session_handle=0,
                 )
-            return True
+                logger.info("HSM Session opened via PKCS#11 on slot %d", slot_id)
+                return True
+            self._backend.close()
+            self._backend = None
+            self._session = None
+            logger.error("HSM PKCS#11 unavailable for slot %d", slot_id)
+            return False
         except Exception as exc:
-            logger.error("HSM Session failed: %s", exc)
+            logger.error("HSM Session failed: %s", type(exc).__name__)
             return False
 
     def sign_data(self, key_handle: int, data: bytes) -> bytes:
@@ -374,25 +379,16 @@ class HSMManager:
         if not self._session:
             raise ConnectionError("No active HSM session. Call open_session first.")
 
-        # Delegate to real PKCS#11 backend when available.
+        del key_handle  # retained only for source compatibility with the legacy API
         if self._backend and self._backend.available:
-            try:
-                sig_bytes, _pub, _scheme = self._backend.sign(data)
-                return sig_bytes
-            except HSMUnavailableError:
-                pass
-
-        # Software fallback: deterministic HMAC keyed by slot-derived handle.
-        import hashlib
-        import hmac as _hmac
-
-        slot_key = f"HSM_KEY_{key_handle}".encode()
-        return _hmac.new(slot_key, data, hashlib.sha512).digest()
+            sig_bytes, _pub, _scheme = self._backend.sign(data)
+            return sig_bytes
+        raise HSMUnavailableError("active PKCS#11 session is unavailable")
 
     def close_session(self) -> None:
-        """Close session and zeroize handles."""
+        """Close the backend session and release local handle references."""
         if self._backend:
             self._backend.close()
             self._backend = None
         self._session = None
-        logger.info("HSM Session closed and handles zeroized.")
+        logger.info("HSM session closed and local handle references released")
