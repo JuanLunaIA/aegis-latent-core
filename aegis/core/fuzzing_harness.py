@@ -196,7 +196,7 @@ class AegisFuzzingEngine:
     @staticmethod
     def _prepare_artifact_dir(
         workspace: Path, target: FuzzTarget
-    ) -> tuple[Path, tuple[int, int, int], Path, bytes] | None:
+    ) -> tuple[Path, tuple[int, int], Path, bytes] | None:
         """Create a confined artifact directory with a per-run identity sentinel."""
         artifact_root = workspace / "artifacts"
         if artifact_root.is_symlink():
@@ -231,7 +231,7 @@ class AegisFuzzingEngine:
             return None
         return (
             resolved,
-            (info.st_dev, info.st_ino, info.st_ctime_ns),
+            (info.st_dev, info.st_ino),
             sentinel,
             sentinel_token,
         )
@@ -244,11 +244,11 @@ class AegisFuzzingEngine:
             logger.error("Fuzz target %s is not declared", target_name)
             return False
 
-        ready, detail = fuzzing_toolchain_status(self.fuzz_dir)
+        ready, _detail = fuzzing_toolchain_status(self.fuzz_dir)
         workspace, _error = _trusted_workspace(self.fuzz_dir)
         if not ready or workspace is None:
             target.last_run_status = FuzzRunStatus.UNAVAILABLE
-            logger.warning("Fuzzing unavailable for %s: %s", target.name, detail)
+            logger.warning("Fuzzing unavailable after readiness checks")
             return False
 
         prepared = self._prepare_artifact_dir(workspace, target)
@@ -286,7 +286,7 @@ class AegisFuzzingEngine:
                 return False
 
             current = artifact_dir.stat()
-            if (current.st_dev, current.st_ino, current.st_ctime_ns) != artifact_identity:
+            if (current.st_dev, current.st_ino) != artifact_identity:
                 raise RuntimeError("fuzz artifact directory identity changed")
             if sentinel.read_bytes() != sentinel_token:
                 raise RuntimeError("fuzz artifact directory sentinel changed")
