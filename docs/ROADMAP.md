@@ -7,7 +7,7 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 # Aegis Latent Core — Engineering and Market Roadmap
 
 **Status:** Current `main` after PR #99, with `v3.1.0` retained as the immutable release baseline and open deployment/assurance work
-**Last verified:** 2026-08-22 UTC
+**Last verified:** 2026-08-23 UTC
 **Release baseline:** `v3.1.0` (Phase 2/3 modules below are post-release `main`, not v3.1.0 capabilities)
 **Purpose:** Single source of truth for work that is implemented, measured, deployment-dependent, or still open.
 
@@ -119,6 +119,11 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 - [d] Validate SIEM/OTel authentication, egress, downstream parsing, quotas, outage recovery, retention, and operational ownership.
 - [ ] Migrate or retire the alternate `aegis_server` HTTP surface so it cannot be mistaken for having the primary gateway's new tenant/RBAC contract.
 - [x] Add an isolated gateway/dashboard multi-architecture OCI build, SBOM, provenance, and keyless digest-signing workflow candidate.
+- [x] Add a truthful crypto capability facade that reports optional runtime availability, the non-real ZK stub, O(log n) portable-MMR proof growth, and absent external validation without changing the underlying primitives.
+- [x] Add an exact metadata-only query helper over fixed tuples of retained-node references. It neither copies nor makes referenced nodes immutable, remains unwired to the audit HTTP API, and is not a durable, archived-WAL, full-text, or scale-qualified search engine.
+- [x] Fail closed on stale/malformed timestamp-receipt reuse and expose same-length WAL-head divergence in the metadata-only gossip detector.
+- [x] Add a deterministic advisory AI context pack with offline schema/link/claim-boundary checks; context files remain non-authoritative.
+- [d] Add hardened Helm defaults and a restricted source template for installing the AegisProxy operator controller with namespaced RBAC. A reviewed immutable controller image, persistent storage for generated Aegis workloads, cluster reconciliation tests, readiness/status observation, and target acceptance remain open.
 - [d] Validate OCI execution, package permissions, registry policy, signature/provenance verification, architecture smoke tests, and rollback on the target GHCR environment.
 - [ ] Configure protected immutable signed tags, GitHub environments, and exact PyPI/npm trusted-publisher bindings. Publication remains disabled unless `AEGIS_TRUSTED_PUBLISHING_ENABLED=true` is configured externally.
 - [ ] Complete full CI, security, formal, documentation, dependency, packaging, and target-environment acceptance gates plus mandatory domain approvals before any `v4.0.0` version bump, tag, release, or readiness claim.

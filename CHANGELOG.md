@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Everything in this section post-dates the immutable `v3.1.0` tag. These entries describe the current `main` tree and must not be represented as capabilities, packages, evidence, or assurance shipped in the `v3.1.0` release.
 
+### Bounded enterprise-maturation follow-up
+
+- Added a truthful `aegis.crypto` capability facade that reports optional PQC runtime availability, the explicit ZK stub state, logarithmic portable-MMR proof growth, and the absence of FIPS validation without changing cryptographic behavior.
+- Added a dependency-free, metadata-only forensic query helper over fixed tuples of retained-node references. It neither copies nor makes referenced nodes immutable, uses bounded exact predicates and pagination, is not wired as a global/WAL search service, and carries no scale claim.
+- Hardened finalized-segment timestamp receipt reuse, requiring exact schema and current-manifest bindings, trusted-CMS status, and non-empty timestamp evidence files; metadata gossip now surfaces equal-length divergent WAL heads without transferring WAL bytes.
+- Made unmapped legacy API-key authority an explicit development-only compatibility opt-in while preserving strict-mode principal mapping requirements.
+- Added content-free SIEM exporter counters for acceptance, rejection, acknowledgement, retry, and pending spool rows.
+- Added hardened Helm defaults and a restricted source template for installing the operator controller with namespaced RBAC. Operator-generated Aegis workloads still require persistent-storage and target-cluster acceptance; the controller deployment intentionally references an invalid placeholder image until a reviewed immutable image is supplied.
+- Added an advisory `.aegis_ai_context` pack, `llms.txt`, and `.cursorrules` with offline structural tests and explicit release, proof, compliance, and external-acceptance boundaries.
+- Added strict documentation claim validation for configured high-risk assurance, performance, readiness, and publication language, including affirmative claims embedded in tables.
+
 ### Commercial expansion Phase 2/3
 
 - Replaced whole-response SSE buffering with an incremental, byte-bounded streaming proxy that applies bounded-window PHI/PCI redaction, hashes forwarded bytes online, propagates backpressure, commits terminal evidence exactly once, and supports native Anthropic `/v1/messages` ingress.

@@ -27,6 +27,9 @@ from unittest.mock import MagicMock
 
 # Tests are isolated development-mode consumers; production defaults remain strict.
 os.environ.setdefault("AEGIS_SECURITY_ENFORCEMENT_MODE", "development")
+# Historical endpoint tests use valid API keys without enterprise principal maps.
+# Production remains deny-by-default; focused auth tests remove or override this.
+os.environ.setdefault("AEGIS_ALLOW_LEGACY_UNMAPPED_API_KEY_PRINCIPALS", "true")
 
 
 class _StubClientError(Exception):

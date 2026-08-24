@@ -221,6 +221,46 @@ class RFC3161AnchorClient:
             verification=verification,
         )
 
+    def verify_existing(
+        self,
+        *,
+        request_der: bytes,
+        response_der: bytes,
+        expected_data: bytes,
+        expected_nonce: int,
+    ) -> VerificationResult:
+        """Revalidate persisted evidence with the configured trust verifier.
+
+        Receipt metadata is not trusted as a substitute for parsing the request,
+        validating the response binding, and applying the configured CMS trust policy.
+        """
+        if not isinstance(request_der, bytes) or not request_der:
+            raise TimestampVerificationError("timestamp request evidence is empty")
+        if len(request_der) > 4_096:
+            raise TimestampVerificationError("timestamp request evidence exceeds size bound")
+        if not isinstance(response_der, bytes) or not response_der:
+            raise TimestampVerificationError("timestamp response evidence is empty")
+        if len(response_der) > self._max_response_bytes:
+            raise TimestampVerificationError("timestamp response evidence exceeds size bound")
+        if not isinstance(expected_data, bytes):
+            raise TypeError("expected_data must be bytes")
+        if expected_nonce <= 0:
+            raise TimestampVerificationError("timestamp nonce must be positive")
+        imprint = hashlib.sha256(expected_data).digest()
+        try:
+            result = self._verifier.verify(
+                request_der=request_der,
+                response_der=response_der,
+                expected_imprint=imprint,
+                expected_nonce=expected_nonce,
+            )
+        except Exception as exc:
+            raise TimestampVerificationError(f"timestamp verifier failed: {exc}") from exc
+        self._validate_verification(result, imprint, expected_nonce)
+        if self._require_trusted_cms and not result.cms_trusted:
+            raise TimestampVerificationError("timestamp CMS trust-policy verification failed")
+        return result
+
     def _validate_response(self, response: object) -> bytes:
         if not isinstance(response, HTTPResponse):
             raise TimestampTransportError("transport returned an incompatible response")

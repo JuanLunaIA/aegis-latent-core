@@ -67,6 +67,17 @@ class SIEMMessage:
     content_type: str
 
 
+@dataclass(frozen=True, slots=True)
+class SIEMMetricsSnapshot:
+    """Content-free aggregates plus an independently sampled spool gauge."""
+
+    accepted: int
+    rejected: int
+    delivered: int
+    retried: int
+    pending: int
+
+
 def serialize_event(event: SecurityEvent, output_format: SIEMFormat) -> SIEMMessage:
     if not isinstance(event, SecurityEvent):
         raise TypeError("event must be a SecurityEvent; arbitrary mappings are not accepted")
@@ -115,7 +126,13 @@ class SIEMExporter:
         self._stop = threading.Event()
         self._wake = threading.Event()
         self._thread: threading.Thread | None = None
+        self._lifecycle_lock = threading.Lock()
         self._db_lock = threading.Lock()
+        self._metrics_lock = threading.Lock()
+        self._accepted = 0
+        self._rejected = 0
+        self._delivered = 0
+        self._retried = 0
         self._initialize_spool()
 
     @property
@@ -127,20 +144,24 @@ class SIEMExporter:
         return self._queue.maxsize
 
     def start(self) -> None:
-        if self._thread is not None and self._thread.is_alive():
-            raise RuntimeError("SIEM exporter is already started")
-        self._stop.clear()
-        self._thread = threading.Thread(target=self._run, name="aegis-siem", daemon=True)
-        self._thread.start()
-        self._wake.set()
+        with self._lifecycle_lock:
+            if self._thread is not None and self._thread.is_alive():
+                raise RuntimeError("SIEM exporter is already started")
+            self._stop.clear()
+            self._thread = threading.Thread(target=self._run, name="aegis-siem", daemon=True)
+            self._thread.start()
+            self._wake.set()
 
     def submit(self, event: SecurityEvent) -> bool:
         message = serialize_event(event, self._format)
         if len(message.payload) > self._max_payload_bytes:
+            self._increment_metrics(rejected=1)
             return False
         row_id = self._spool(message)
         if row_id is None:
+            self._increment_metrics(rejected=1)
             return False
+        self._increment_metrics(accepted=1)
         try:
             self._queue.put_nowait(row_id)
         except queue.Full:
@@ -153,6 +174,18 @@ class SIEMExporter:
         with self._connect() as connection:
             row = connection.execute("SELECT COUNT(*) FROM siem_spool").fetchone()
         return int(row[0]) if row is not None else 0
+
+    def metrics_snapshot(self) -> SIEMMetricsSnapshot:
+        """Return process counters and the current durable-spool pending gauge."""
+        pending = self.pending_count()
+        with self._metrics_lock:
+            return SIEMMetricsSnapshot(
+                accepted=self._accepted,
+                rejected=self._rejected,
+                delivered=self._delivered,
+                retried=self._retried,
+                pending=pending,
+            )
 
     def flush(self, timeout: float = 5.0) -> bool:
         deadline = time.monotonic() + max(0.0, timeout)
@@ -168,12 +201,15 @@ class SIEMExporter:
             raise TimeoutError("SIEM exporter did not drain before shutdown deadline")
         self._stop.set()
         self._wake.set()
-        thread = self._thread
+        with self._lifecycle_lock:
+            thread = self._thread
         if thread is not None:
             thread.join(max(0.0, timeout))
             if thread.is_alive():
                 raise TimeoutError("SIEM exporter worker did not stop before deadline")
-        self._thread = None
+        with self._lifecycle_lock:
+            if self._thread is thread:
+                self._thread = None
 
     def _initialize_spool(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
@@ -225,9 +261,25 @@ class SIEMExporter:
                 acknowledged = False
             if acknowledged:
                 self._delete(identifier)
+                self._increment_metrics(delivered=1)
             else:
                 delay = min(self._retry_max, self._retry_base * (2 ** min(attempts, 16)))
                 self._defer(identifier, attempts + 1, time.time() + delay)
+                self._increment_metrics(retried=1)
+
+    def _increment_metrics(
+        self,
+        *,
+        accepted: int = 0,
+        rejected: int = 0,
+        delivered: int = 0,
+        retried: int = 0,
+    ) -> None:
+        with self._metrics_lock:
+            self._accepted += accepted
+            self._rejected += rejected
+            self._delivered += delivered
+            self._retried += retried
 
     def _next_queued(self) -> int | None:
         try:
@@ -344,6 +396,7 @@ __all__ = [
     "SIEMExporter",
     "SIEMFormat",
     "SIEMMessage",
+    "SIEMMetricsSnapshot",
     "SIEMSink",
     "serialize_event",
 ]

@@ -11,7 +11,7 @@ serviceAccount:
   automountServiceAccountToken: false
 
 image:
-  repository: ghcr.io/juanlunia/aegis-latent-core
+  repository: ghcr.io/juanlunaia/aegis-latent-core
   pullPolicy: IfNotPresent
   tag: "3.1.0"
 
@@ -33,9 +33,11 @@ aegis:
   analysisWorkerCount: "2"
   analysisSampleRate: "1.0"
   analysisTimeoutSeconds: "5.0"
+  # External Redis is not installed by this chart. The named endpoint must be
+  # supplied and accepted by the target deployment before governed traffic.
   rateLimitBackend: "redis"
   redisUrl: "redis://redis:6379"
-  # Reference to a Secret containing AEGIS_BACKEND_API_KEY and AEGIS_API_KEYS
+  # Caller-supplied Secret containing AEGIS_BACKEND_API_KEY and AEGIS_API_KEYS.
   # Create with: kubectl create secret generic aegis-keys \
   #   --from-literal=AEGIS_BACKEND_API_KEY=sk-... \
   #   --from-literal=AEGIS_API_KEYS=sk-aegis-1,sk-aegis-2 \
@@ -108,9 +110,11 @@ autoscaling:
 # ── Security context ──────────────────────────────────────────────────────────
 podSecurityContext:
   runAsNonRoot: true
-  runAsUser: 1000
-  runAsGroup: 1000
-  fsGroup: 1000
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
 
 containerSecurityContext:
   allowPrivilegeEscalation: false
@@ -142,9 +146,8 @@ podDisruptionBudget:
   enabled: true
   minAvailable: 1
 
-# ── Topology spread (multi-AZ HA) ─────────────────────────────────────────────
-# Spread pods across availability zones and nodes so a single-zone or single-node
-# failure cannot take the service offline.  Set to [] to disable.
+# ── Topology spread scheduling ────────────────────────────────────────────────
+# Request distribution across availability zones and nodes. Set to [] to disable.
 topologySpreadConstraints:
   - maxSkew: 1
     topologyKey: topology.kubernetes.io/zone

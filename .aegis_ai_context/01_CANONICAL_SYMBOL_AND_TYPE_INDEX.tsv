@@ -1,0 +1,24 @@
+symbol	kind	authoritative_path	role	status_or_boundary
+AegisSettings	class	aegis/config.py	Runtime configuration schema	Inspect validators and deployment-specific values; configuration is not acceptance.
+AuditNode	dataclass	aegis/core/crypto_audit.py	Canonical ledger record and hashes	Serialization/signature meaning is defined by implementation, not this index.
+CryptographicAuditLedger	class	aegis/core/crypto_audit.py	Commit, WAL persistence, integrity verification, and export	Durability depends on configured storage and target filesystem acceptance.
+CryptographicAuditLedger.commit_forensic	method	aegis/core/crypto_audit.py	Commit request/response forensic evidence	Callers must honor commit-before-success behavior and error handling.
+CryptographicAuditLedger.verify_integrity	method	aegis/core/crypto_audit.py	Verify in-process ledger chain	Does not independently validate host, keys, timestamps, or external archives.
+MMRProofStep	dataclass	aegis/core/mmr.py	Portable proof sibling hash and direction	Discloses proof structure; non-ZK.
+MMRPeak	dataclass	aegis/core/mmr.py	Portable proof peak metadata	Peak count is bounded by the set bits in leaf_count.
+MMRInclusionProofV1	dataclass	aegis/core/mmr.py	Strict portable inclusion-proof schema	Unknown fields and malformed values are rejected.
+MerkleMountainRange	class	aegis/core/mmr.py	Pure-Python append accumulator and proofs	Portable non-ZK MMR; inclusion proof/path growth is O(log n).
+MerkleMountainRange.get_portable_inclusion_proof	method	aegis/core/mmr.py	Create self-describing inclusion proof	Leaf index is zero-based; trusted root remains an external input.
+MerkleMountainRange.verify_portable_inclusion	staticmethod	aegis/core/mmr.py	Verify bytes against proof and trusted root	Membership only; no confidentiality, identity, time, or external anchor claim.
+RustBackedMMR	class	aegis/core/mmr.py	Rust root with Python proof replica	Require parity evidence; see tests/test_mmr_parity.py.
+StreamEvidenceSummary	dataclass	aegis/proxy/streaming.py	Terminal bounded-stream evidence summary	Streaming starts before terminal evidence exists; retrieve final proof after termination.
+BoundedStreamProxy	class	aegis/proxy/streaming.py	Bounded SSE transform, queue, closure, and finalization	Limits are configured; upstream and target load require acceptance.
+create_proxy_app	function	aegis/proxy/app.py	Build provider-facing FastAPI gateway	Lifecycle behavior is configuration-dependent.
+build_forensic_bundle	function	aegis/core/forensic_bundle.py	Build bounded deterministic evidence ZIP	Bundle verifies internal digests; it does not confer admissibility.
+canonical_jcs_bytes	function	aegis/core/forensic_bundle.py	Canonical JSON bytes for evidence artifacts	Canonicalization scope is implementation-defined.
+canonical_dag_cbor_bytes	function	aegis/core/forensic_bundle.py	Canonical DAG-CBOR encoding	Review accepted value types in source.
+RotatingHMACSigner	class	aegis_server/crypto/keyring.py	Versioned keyring reload, signing, and overlap verification	Real secret-manager/orchestrator propagation requires external acceptance.
+verify_release_contract	command	scripts/verify_release_contract.py	Static release-publication contract checks	Passing source checks does not prove registry publication or trusted-publisher binding.
+verify_formal_artifacts	command	scripts/verify_formal_artifacts.sh	Run available Z3, Lean, and TLC checks	Tool absence and bounded-model assumptions are reported by the script.
+claims_matrix	document	docs/CLAIMS_MATRIX.md	Authoritative claim status/evidence/falsifier map	Consult before changing public or operational claims.
+security_policy	document	SECURITY.md	Security boundary and reporting policy	Does not itself certify a deployment.

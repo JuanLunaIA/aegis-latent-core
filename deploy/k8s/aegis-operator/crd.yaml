@@ -29,6 +29,16 @@ spec:
                   enum: ["openai", "anthropic", "gemini", "openrouter", "custom"]
                 upstreamUrl:
                   type: string
+                image:
+                  type: string
+                  minLength: 1
+                  pattern: '^(?:[^@]+@sha256:[0-9a-fA-F]{64}|[^@]+:[A-Za-z0-9_][A-Za-z0-9._-]{0,127})$'
+                  default: "ghcr.io/juanlunaia/aegis-latent-core:3.1.0"
+                  description: "Aegis workload image; pin a non-latest tag or digest"
+                allowLatestImage:
+                  type: boolean
+                  default: false
+                  description: "Explicitly permit a mutable latest or untagged image"
                 signingKeySecret:
                   type: string
                   description: "Name of Secret containing AEGIS_SIGNING_KEY"

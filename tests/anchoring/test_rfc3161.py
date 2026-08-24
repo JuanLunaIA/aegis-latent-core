@@ -193,6 +193,44 @@ def test_der_request_contains_sha256_algorithm_and_imprint() -> None:
     assert imprint in request
 
 
+def test_verify_existing_reapplies_binding_and_trust_policy(tmp_path: Path) -> None:
+    instance = client(tmp_path, Verifier(trusted=True))
+    data = b"persisted manifest"
+    nonce = 123456
+    request = RFC3161AnchorClient.build_request(hashlib.sha256(data).digest(), nonce)
+
+    result = instance.verify_existing(
+        request_der=request,
+        response_der=b"timestamp-response",
+        expected_data=data,
+        expected_nonce=nonce,
+    )
+
+    assert result.cms_trusted is True
+    assert result.message_imprint == hashlib.sha256(data).digest()
+    assert result.nonce == nonce
+
+
+def test_verify_existing_rejects_untrusted_or_oversized_evidence(tmp_path: Path) -> None:
+    data = b"persisted manifest"
+    nonce = 123456
+    request = RFC3161AnchorClient.build_request(hashlib.sha256(data).digest(), nonce)
+    with pytest.raises(TimestampVerificationError, match="trust-policy"):
+        client(tmp_path, Verifier(trusted=False)).verify_existing(
+            request_der=request,
+            response_der=b"timestamp-response",
+            expected_data=data,
+            expected_nonce=nonce,
+        )
+    with pytest.raises(TimestampVerificationError, match="size bound"):
+        client(tmp_path, Verifier(trusted=True)).verify_existing(
+            request_der=request,
+            response_der=b"x" * 1_048_577,
+            expected_data=data,
+            expected_nonce=nonce,
+        )
+
+
 def test_atomic_persistence_does_not_publish_partial_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

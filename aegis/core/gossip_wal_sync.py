@@ -79,7 +79,7 @@ class GossipMessage:
     node_count: int
     timestamp: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         """Return a JSON-serializable dict representation."""
         return asdict(self)
 
@@ -109,6 +109,7 @@ class SyncDecision(str, Enum):  # noqa: UP042 — roadmap API requires str+Enum 
     NO_SYNC_NEEDED = "no_sync_needed"  # Peer is not ahead
     SYNC_NEEDED = "sync_needed"  # Peer has more nodes than us
     PEER_STALE = "peer_stale"  # Peer has fewer nodes (we are ahead)
+    DIVERGED = "diverged"  # Equal-length chains have different known heads
     UNKNOWN = "unknown"  # Can't compare (different chains)
 
 
@@ -197,7 +198,7 @@ class GossipSyncResult:
     our_node_count: int
     peer_node_count: int
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         """Return a JSON-serializable dict representation."""
         return {
             "decision": self.decision.value,
@@ -319,12 +320,16 @@ class GossipWALSyncer:
         self,
         msg: GossipMessage,
         our_node_count: int,
+        our_wal_head_hash: str = "",
     ) -> GossipSyncResult:
         """
         Process an incoming gossip message from a peer.
 
         Updates the peer's state record and returns a :class:`GossipSyncResult`
-        indicating whether we need to sync, are ahead, or are equal.
+        indicating whether we need to sync, are ahead, equal, or have diverged.
+
+        This is a metadata-only comparison. It never reads, writes, or transfers WAL bytes.
+        A divergence is knowable only when equal node counts have two non-empty head hashes.
         """
         now = time.time()
         peer = self._peers.get(msg.sender_id)
@@ -355,8 +360,14 @@ class GossipWALSyncer:
             decision = SyncDecision.SYNC_NEEDED
         elif peer_count < our_node_count:
             decision = SyncDecision.PEER_STALE
+        elif our_wal_head_hash and msg.wal_head_hash:
+            decision = (
+                SyncDecision.NO_SYNC_NEEDED
+                if msg.wal_head_hash == our_wal_head_hash
+                else SyncDecision.DIVERGED
+            )
         else:
-            decision = SyncDecision.NO_SYNC_NEEDED
+            decision = SyncDecision.UNKNOWN
 
         return GossipSyncResult(
             decision=decision,
@@ -423,6 +434,7 @@ class GossipWALSyncer:
         transport: GossipUDPTransport,
         our_node_count: int,
         timeout_s: float = 1.0,
+        our_wal_head_hash: str = "",
     ) -> GossipSyncResult | None:
         """Receive one inbound gossip message from ``transport`` and process it.
 
@@ -434,7 +446,11 @@ class GossipWALSyncer:
             return None
         if msg.sender_id == self.node_id:
             return None  # ignore our own reflected broadcasts
-        return self.process_message(msg, our_node_count=our_node_count)
+        return self.process_message(
+            msg,
+            our_node_count=our_node_count,
+            our_wal_head_hash=our_wal_head_hash,
+        )
 
     # ── Health tracking ───────────────────────────────────────────────────────
 

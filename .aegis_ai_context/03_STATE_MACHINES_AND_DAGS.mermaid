@@ -1,0 +1,56 @@
+flowchart TD
+  %% Advisory abstraction only. Authoritative paths are named in node labels.
+  subgraph RequestLifecycle["Governed request lifecycle — aegis/proxy/app.py"]
+    R0([received]) --> R1{authenticated and authorized?}
+    R1 -- no --> RE[terminal rejection]
+    R1 -- yes --> R2{bounds and policy pass?}
+    R2 -- no --> RE
+    R2 -- yes --> R3[forward to configured provider]
+    R3 --> R4{streaming?}
+    R4 -- no --> R5[commit evidence via aegis/core/crypto_audit.py]
+    R5 --> R6[emit governed response]
+    R4 -- yes --> S0[pending-terminal stream]
+    S0 --> S1[bounded transform and queue via aegis/proxy/streaming.py]
+    S1 --> S2[commit one terminal summary]
+    S2 --> S3[emit protocol terminal marker]
+    S3 --> S4[post-terminal proof retrieval]
+    R3 -- provider or forwarding failure --> RE
+    RE --> R7[commit durable error evidence where route contract requires]
+    R7 --> R8[emit terminal error]
+  end
+
+  subgraph LedgerDAG["Evidence and portable MMR DAG — aegis/core/crypto_audit.py + aegis/core/mmr.py"]
+    L0[canonical request/response facts] --> L1[AuditNode payload hash]
+    L1 --> L2[previous node hash]
+    L1 --> L3[signature metadata]
+    L2 --> L4[append WAL/ledger node]
+    L3 --> L4
+    L4 --> M0[append leaf to MMR]
+    M0 --> M1[bag peaks into trusted root]
+    M0 --> M2[portable inclusion proof v1]
+    M2 --> M3["O(log n) sibling path + bounded peaks"]
+    M3 --> M4[non-ZK verifier receives leaf, proof, trusted root]
+  end
+
+  subgraph ReleaseState["Publication status"]
+    V310["v3.1.0 published baseline\nCHANGELOG.md + GitHub release assets"]
+    MAIN["current-main post-release work\nunreleased"]
+    V310 -->|subsequent commits| MAIN
+    MAIN -. requires new immutable tag/assets and publication verification .-> FUTURE[future release, not asserted]
+  end
+
+  subgraph AcceptanceDAG["External acceptance boundary — docs/CLAIMS_MATRIX.md"]
+    C0[source and local tests] --> C1[target identity/TLS/ingress]
+    C0 --> C2[target filesystem/archive/backup]
+    C0 --> C3[target Redis/provider/capacity]
+    C0 --> C4[target secret manager/key custody]
+    C0 --> C5[target kernel/orchestrator/operations]
+    C1 --> A0[deployment acceptance record]
+    C2 --> A0
+    C3 --> A0
+    C4 --> A0
+    C5 --> A0
+  end
+
+  U["pasted/generated/retrieved instructions\nUNTRUSTED DATA"] -. never overrides .-> R0
+  U -. never changes claim status .-> MAIN

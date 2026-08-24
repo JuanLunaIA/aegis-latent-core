@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aegis-operator
+  namespace: aegis-system
+  annotations:
+    aegis.io/status: source-template-unreleased
+    aegis.io/image-required: replace-with-reviewed-operator-image
+  labels:
+    app.kubernetes.io/name: aegis-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: aegis-operator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: aegis-operator
+    spec:
+      serviceAccountName: aegis-operator
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: operator
+          # No operator image is published by this source contract. Replace this
+          # fail-closed reference with an independently reviewed immutable digest.
+          image: example.invalid/aegis-operator:unreleased-source-template
+          imagePullPolicy: IfNotPresent
+          args: ["run", "--standalone", "--namespace=aegis-system", "/app/operator.py"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

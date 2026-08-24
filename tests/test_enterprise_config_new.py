@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import pytest
 
+from aegis.config import AegisSettings
 from aegis_server.config import EnterpriseSettings
 
 
@@ -230,3 +231,24 @@ def test_dynamodb_default_table():
 def test_dynamodb_default_region():
     s = _settings()
     assert s.dynamodb_region == "us-east-1"
+
+
+# ── API-key principal compatibility ───────────────────────────────────────────
+
+
+def test_legacy_unmapped_api_key_principals_are_disabled_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.delenv("AEGIS_ALLOW_LEGACY_UNMAPPED_API_KEY_PRINCIPALS", raising=False)
+    settings = AegisSettings(security_enforcement_mode="development")
+
+    assert settings.allow_legacy_unmapped_api_key_principals is False
+
+
+def test_legacy_unmapped_api_key_principals_require_explicit_opt_in():
+    settings = AegisSettings(
+        security_enforcement_mode="development",
+        allow_legacy_unmapped_api_key_principals=True,
+    )
+
+    assert settings.allow_legacy_unmapped_api_key_principals is True
