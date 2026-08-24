@@ -38,6 +38,7 @@ The HSM compatibility path follows `PKCS#11 library → token session → exactl
 | Mypy delta | **PASS — 7 source files** | Strict CI configuration over the changed runtime modules. |
 | Strict documentation verifier | **PASS — 0 findings, 0 warnings; 27 required files** | High-risk claim classes checked against current repository documentation. |
 | Action pinning and actionlint | **PASS** | 101 remote Action references pinned; workflow syntax passed. |
+| Helm lint | **PASS — Helm v3.14.4** | CI version reproduced locally after replacing an unsupported regex lookahead with Draft-07 `not` plus a valid pattern. |
 | Dependency audit | **PASS — no known vulnerabilities** | `requirements.lock` through the installed `pip-audit` database at execution time. |
 | Bandit semantic delta | **PASS — 0 new findings** | Compared with base commit; removed B311 from the former PRNG and B110 from HSM close handling. Historical findings remain outside this delta decision. |
 | Formal artifact script | **PASS** | Repository-defined Lean, Z3, and bounded TLC checks passed. These are not refinement proofs of the Python/Rust implementation. |

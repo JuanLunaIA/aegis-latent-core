@@ -40,10 +40,12 @@ def test_helm_values_are_hardened_and_external_dependencies_are_caller_supplied(
 
 def test_helm_values_schema_is_valid_json_and_rejects_latest() -> None:
     schema = json.loads((HELM / "values.schema.json").read_text())
-    pattern = schema["properties"]["image"]["properties"]["tag"]["pattern"]
-    assert re.fullmatch(pattern, "3.1.0")
+    tag_schema = schema["properties"]["image"]["properties"]["tag"]
+    assert tag_schema["minLength"] == 1
+    forbidden_pattern = tag_schema["not"]["pattern"]
+    assert re.fullmatch(forbidden_pattern, "3.1.0") is None
     for mutable_tag in ("latest", "Latest", "LATEST", "lAtEsT"):
-        assert re.fullmatch(pattern, mutable_tag) is None
+        assert re.fullmatch(forbidden_pattern, mutable_tag)
 
 
 def test_operator_crd_requires_explicit_tag_or_sha256_digest_shape() -> None:

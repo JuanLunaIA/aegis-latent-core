@@ -27,7 +27,9 @@
         "tag": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^(?![lL][aA][tT][eE][sS][tT]$).+$"
+          "not": {
+            "pattern": "^[lL][aA][tT][eE][sS][tT]$"
+          }
         }
       }
     },
