@@ -16,6 +16,7 @@ This index distinguishes historical observations from current source-state evide
 | 2026-08-24 | [`pasted_content_5_execution_no_go_2026-08-24.md`](pasted_content_5_execution_no_go_2026-08-24.md) | Historical governance execution record and no-go. | Complementary governance record; superseded by later records only for current source/repository state. | [`pasted_content_5_execution_no_go_2026-08-24.sha256`](pasted_content_5_execution_no_go_2026-08-24.sha256); [`verify_pasted_content_5_evidence.sh`](verify_pasted_content_5_evidence.sh) |
 | 2026-08-24 | [`v4_0_0_release_candidate_gate_2026-08-24.md`](v4_0_0_release_candidate_gate_2026-08-24.md) | Historical source-candidate go with tag and multi-registry publication blocked. | Supersedes the pre-candidate record for candidate source state; superseded by the post-merge audit for merged source state. | [`v4_0_0_release_candidate_gate_2026-08-24.sha256`](v4_0_0_release_candidate_gate_2026-08-24.sha256); [`verify_v4_0_0_release_candidate_gate.sh`](verify_v4_0_0_release_candidate_gate.sh) |
 | 2026-08-25 | [`v4_0_0_post_merge_release_readiness_2026-08-25.md`](v4_0_0_post_merge_release_readiness_2026-08-25.md) | **Current source-state record:** source merge verified; production release no-go. | Supersedes earlier v4 readiness records only for merged-tree identification and repository observations as of its audit. | [`v4_0_0_post_merge_release_readiness_2026-08-25.sha256`](v4_0_0_post_merge_release_readiness_2026-08-25.sha256); [`verify_v4_0_0_post_merge_release_readiness.sh`](verify_v4_0_0_post_merge_release_readiness.sh) |
+| 2026-08-25 | [`pasted_content_6_execution_no_go_2026-08-25.md`](pasted_content_6_execution_no_go_2026-08-25.md) | **Current publication-gate execution:** source preflight and local builds pass; signed tag and production publication no-go. | Complements the post-merge source record with fresh local artifact hashes, external gate readbacks, and workflow mismatch analysis; it does not change the source baseline. | [`pasted_content_6_execution_no_go_2026-08-25.sha256`](pasted_content_6_execution_no_go_2026-08-25.sha256); [`verify_pasted_content_6_evidence.sh`](verify_pasted_content_6_evidence.sh) |
 
 The post-merge record is the current locator for the v4 **source baseline**. Its `4.0.0` anchors are source metadata, not proof of a signed tag, GitHub Release, PyPI/npm/OCI artifact, deployed service, or target acceptance.
 
@@ -42,7 +43,7 @@ The post-merge record is the current locator for the v4 **source baseline**. Its
 
 | Path | Protects or identifies | Verification boundary |
 |---|---|---|
-| `evidence/*.sha256` beside the four v4/governance Markdown records | Exact bytes of the adjacent named Markdown file | Run the adjacent `verify_*.sh` or `sha256sum -c` from `evidence/`. A digest proves byte identity only, not truth or approval. |
+| `evidence/*.sha256` beside the five v4/governance Markdown records | Exact bytes of the adjacent named Markdown file | Run the adjacent `verify_*.sh` or `sha256sum -c` from `evidence/`. A digest proves byte identity only, not truth or approval. |
 | [`execution_2026-08-20/manifest.sha256`](execution_2026-08-20/manifest.sha256), [`manifest.cbor`](execution_2026-08-20/manifest.cbor), [`manifest.cid`](execution_2026-08-20/manifest.cid) | Historical execution manifest representations | Preserve together with the referenced files and original canonicalization rules. |
 | [`remediation_2026-08-21/remediation_manifest.sha256`](remediation_2026-08-21/remediation_manifest.sha256), [`remediation_manifest.cbor`](remediation_2026-08-21/remediation_manifest.cbor), [`remediation_manifest.cid`](remediation_2026-08-21/remediation_manifest.cid) | Historical remediation manifest representations | Byte/provenance identifiers within the original record's scope; not current-state certification. |
 | [`remediation_2026-08-21/native_wheel.sha256`](remediation_2026-08-21/native_wheel.sha256) | Historical locally built v3.1.0 native wheel named in that sidecar | Does not prove the wheel is currently available from a registry or accepted on another platform. |
@@ -55,6 +56,7 @@ cd evidence
 ./verify_pasted_content_5_evidence.sh
 ./verify_v4_0_0_release_candidate_gate.sh
 ./verify_v4_0_0_post_merge_release_readiness.sh
+./verify_pasted_content_6_evidence.sh
 ```
 
 ## Publication and acceptance boundary
