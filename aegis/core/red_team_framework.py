@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import random
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -23,8 +24,8 @@ class AttackScenario:
     id: str
     name: str
     category: str  # 'STRESS' | 'INJECTION' | 'CORRUPTION' | 'SPOOFING'
-    payload_generator: callable
-    success_criteria: callable
+    payload_generator: Callable[[], dict[str, Any]]
+    success_criteria: Callable[[dict[str, Any]], bool]
 
 
 class RedTeamFramework:
@@ -33,11 +34,11 @@ class RedTeamFramework:
     the proxy and monitors the response of the security layers.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.scenarios: list[AttackScenario] = []
         self._setup_default_scenarios()
 
-    def _setup_default_scenarios(self):
+    def _setup_default_scenarios(self) -> None:
         # 1. Prompt Injection Attack
         self.scenarios.append(
             AttackScenario(
@@ -86,7 +87,9 @@ class RedTeamFramework:
             )
         )
 
-    async def execute_campaign(self, target_url: str, iterations: int = 100):
+    async def execute_campaign(
+        self, target_url: str, iterations: int = 100
+    ) -> list[dict[str, Any]]:
         """
         Runs a full red teaming campaign against the specified target.
 
@@ -96,7 +99,7 @@ class RedTeamFramework:
         are recorded as status_code=0 rather than silently discarded.
         """
         logger.info("Starting Red Team Campaign against %s...", target_url)
-        results = []
+        results: list[dict[str, Any]] = []
 
         async with httpx.AsyncClient(timeout=10.0) as client:
             for _ in range(iterations):
@@ -133,7 +136,7 @@ class RedTeamFramework:
     def generate_report(self, results: list[dict[str, Any]]) -> str:
         """Generates a dense technical report of the red teaming results."""
         report = ["=== AEGIS RED TEAMING ADVERSARIAL REPORT ==="]
-        summary = {}
+        summary: dict[str, int] = {}
         for r in results:
             name = r["scenario"]
             summary[name] = summary.get(name, 0) + (1 if r["success"] else 0)

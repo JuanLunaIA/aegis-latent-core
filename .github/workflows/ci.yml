@@ -180,7 +180,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install SDK and test toolchain
-        run: pip install -e "./sdk/python[dev]" build
+        run: pip install -e "./sdk/python[dev]" build==1.3.0
       - name: Lint, typecheck, and test official-client compatibility
         working-directory: sdk/python
         run: |
@@ -412,7 +412,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install pip-tools
-        run: pip install pip-tools
+        run: pip install pip-tools==7.5.2
       - name: Regenerate lock file
         run: pip-compile --generate-hashes --output-file=requirements.lock.new requirements.txt
       - name: Check for drift

@@ -151,14 +151,19 @@ Implemented in `aegis/core/crypto_audit.py` with JSONL as the replay authority. 
 
 ### 4.1 Durability properties
 
-- **File mode `0o600`** — owner read/write only; other users on the host cannot read
-  audit payload digests or signatures.
-- **Append-only** — no delete/overwrite code path exists in node storage.
-- **CRC32 framing** (auxiliary RustWal) — each copied terminal stream frame is length-prefixed and CRC-framed; `read_all()`
-  stops at the first corrupt frame and reports `fault_state = "wal_corrupt"` (the
-  in-memory chain stays intact).
-- **Atomic write-position rollback** — if an I/O error occurs after space reservation,
-  `write_pos` rolls back so no partial node is ever observable.
+- **File mode `0o600`** — owner read/write only. This does not protect against the
+  file owner, host root, a compromised process, or offline device access.
+- **Authoritative append path** — the Python JSONL ledger is the replay authority.
+  The auxiliary RustWal may overwrite bytes beginning at the first invalid frame
+  during bounded recovery; it is not an immutable archive.
+- **CRC32 framing** (auxiliary RustWal) — each copied terminal stream frame is
+  length-prefixed and CRC-framed. `read_all()` returns the valid prefix and stops
+  at the first zero-length, out-of-range, CRC-invalid, or non-UTF-8 frame. CRC32
+  detects accidental corruption under this parser; it is not authentication.
+- **Post-flush write-position publication** — one in-process mutex serializes frame
+  placement, synchronous flush requests, and publication. `write_pos` advances only
+  after the flush succeeds, so readers of that instance do not cross a failed frame.
+  This is not a multi-process coordination protocol.
 
 ### 4.2 Segment rotation & backpressure
 
@@ -176,7 +181,12 @@ the implementation boundary. A process killed during non-streaming persistence d
 produce a governed success from that path. During SSE, non-terminal events may already
 have reached the client, but the terminal marker is withheld if terminal summary commit
 does not complete. `fsync` completion is a process-observed storage acknowledgement, not
-a guarantee of power-loss survival on every target filesystem or device.
+a guarantee of power-loss survival on every target filesystem or device. On opening an
+auxiliary RustWal, scanning stops at the first invalid frame and writes a flushed zero-frame
+terminator at that offset. Each subsequent append also writes a terminator after the new
+valid prefix, preventing a same-size replacement from making a stale valid suffix reachable
+on the next open. This recovery behavior is tested in one process and inherits mmap,
+filesystem, kernel, controller, and device semantics.
 
 ---
 

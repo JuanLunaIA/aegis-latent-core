@@ -2,7 +2,7 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 [build-system]
-requires = ["hatchling>=1.24"]
+requires = ["hatchling==1.28.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -37,7 +37,7 @@ dependencies = [
     "httpx>=0.27.0",
     "pydantic>=2.7.0",
     "pydantic-settings>=2.3.0",
-    "numpy>=1.26.0",
+    "numpy>=1.26.0,<2.5",
     "python-dotenv>=1.0.0",
     "structlog>=24.1.0",
     "protobuf>=5.0.0",

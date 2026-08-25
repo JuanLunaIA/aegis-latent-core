@@ -208,7 +208,7 @@ def _verify_asymmetric(public_key_der: bytes, scheme: str, data: bytes, signatur
     """
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives.asymmetric import ec, padding
+    from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
     from cryptography.hazmat.primitives.asymmetric import utils as asym_utils
     from cryptography.hazmat.primitives.serialization import load_der_public_key
 
@@ -220,7 +220,10 @@ def _verify_asymmetric(public_key_der: bytes, scheme: str, data: bytes, signatur
 
     try:
         if scheme == _PKCS11_RSA_SCHEME:
-            public_key.verify(  # type: ignore[union-attr]
+            if not isinstance(public_key, rsa.RSAPublicKey):
+                logger.warning("operator_seal: RSA scheme requires an RSA public key")
+                return False
+            public_key.verify(
                 signature,
                 data,
                 padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=32),
@@ -237,7 +240,10 @@ def _verify_asymmetric(public_key_der: bytes, scheme: str, data: bytes, signatur
             r = int.from_bytes(signature[:half], "big")
             s = int.from_bytes(signature[half:], "big")
             der_sig = asym_utils.encode_dss_signature(r, s)
-            public_key.verify(der_sig, data, ec.ECDSA(hashes.SHA256()))  # type: ignore[union-attr]
+            if not isinstance(public_key, ec.EllipticCurvePublicKey):
+                logger.warning("operator_seal: EC scheme requires an EC public key")
+                return False
+            public_key.verify(der_sig, data, ec.ECDSA(hashes.SHA256()))
             return True
     except InvalidSignature:
         return False

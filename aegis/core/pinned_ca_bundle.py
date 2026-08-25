@@ -41,19 +41,24 @@ import logging
 import os
 import time
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # ── Optional cryptography import ──────────────────────────────────────────────
 
+_x509: Any
+_Encoding: Any
 try:
-    from cryptography import x509
-    from cryptography.hazmat.primitives.serialization import Encoding
+    from cryptography import x509 as imported_x509
+    from cryptography.hazmat.primitives.serialization import Encoding as ImportedEncoding
 
+    _x509 = imported_x509
+    _Encoding = ImportedEncoding
     HAS_CRYPTOGRAPHY: bool = True
 except ModuleNotFoundError:
-    x509 = None  # type: ignore[assignment]
-    Encoding = None  # type: ignore[assignment]
+    _x509 = None
+    _Encoding = None
     HAS_CRYPTOGRAPHY = False
     logger.warning(
         "cryptography package not installed — PinnedCABundle unavailable. "
@@ -231,7 +236,7 @@ class PinnedCABundle:
             Trusted when the certificate's SHA-256 DER fingerprint is pinned.
         """
         _require_cryptography()
-        cert = x509.load_pem_x509_certificate(cert_pem)
+        cert = _x509.load_pem_x509_certificate(cert_pem)
         subject = cert.subject.rfc4514_string()
         issuer = cert.issuer.rfc4514_string()
         fingerprint = self.compute_fingerprint(cert_pem)
@@ -279,7 +284,7 @@ class PinnedCABundle:
                 reason="empty certificate chain",
             )
 
-        leaf_cert = x509.load_pem_x509_certificate(cert_pem_list[0])
+        leaf_cert = _x509.load_pem_x509_certificate(cert_pem_list[0])
         leaf_subject = leaf_cert.subject.rfc4514_string()
         leaf_issuer = leaf_cert.issuer.rfc4514_string()
 
@@ -334,8 +339,8 @@ class PinnedCABundle:
             Lowercase hex SHA-256 of the DER-encoded certificate (no colons).
         """
         _require_cryptography()
-        cert = x509.load_pem_x509_certificate(cert_pem)
-        der = cert.public_bytes(Encoding.DER)
+        cert = _x509.load_pem_x509_certificate(cert_pem)
+        der = cert.public_bytes(_Encoding.DER)
         return hashlib.sha256(der).hexdigest()
 
 

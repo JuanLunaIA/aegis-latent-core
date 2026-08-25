@@ -212,7 +212,7 @@ def _ewf_file_header(segment_number: int = 1) -> bytes:
     )
 
 
-def _ewf_header_section(case_number: str, examiner: str, timestamp: str) -> bytes:
+def _ewf_header_section(case_number: str, examiner: str, timestamp: str) -> tuple[bytes, int]:
     """Build the "header" section (zlib-compressed case metadata)."""
     # EWF header v1 format: tab-separated key=value pairs, zlib-compressed
     header_text = (

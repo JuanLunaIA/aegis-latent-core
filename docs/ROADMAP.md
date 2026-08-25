@@ -6,7 +6,7 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 # Aegis Latent Core — Engineering and Market Roadmap
 
-**Status:** Current `main` after PR #99, with `v3.1.0` retained as the immutable release baseline and open deployment/assurance work
+**Status:** Current `main` after PR #102, with `v3.1.0` retained as the immutable release baseline and open deployment/assurance work
 **Last verified:** 2026-08-24 UTC
 **Release baseline:** `v3.1.0` (Phase 2/3 modules below are post-release `main`, not v3.1.0 capabilities)
 **Purpose:** Single source of truth for work that is implemented, measured, deployment-dependent, or still open.
@@ -25,7 +25,7 @@ A checkbox may not be changed to `[x]` because a stub, dashboard sample, docstri
 
 ## Current public baseline
 
-The current immutable public release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). Its release pipeline completed with source, wheels, provenance, hashes and GitHub checks. The current `main` tree additionally contains the Phase 2/3 modules merged by PR #99. Those modules are implemented in source and CI under the limits below, but are **not** part of the `v3.1.0` tag or its release assets. Open deployment, assurance, independent-review and future-product work must not be represented as shipped or externally assured capabilities.
+The current immutable public release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). Its release pipeline completed with source, wheels, provenance, hashes and GitHub checks. The current `main` tree additionally contains the bounded post-release modules merged through PR #102. Those modules are implemented in source and CI under the limits below, but are **not** part of the `v3.1.0` tag or its release assets. Open deployment, assurance, independent-review and future-product work must not be represented as shipped or externally assured capabilities.
 
 ## Completed core controls
 
@@ -48,6 +48,8 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 - [x] **Module C — bounded forensic export:** retained-window export produces the contract-tested ZIP and rejects empty or unbounded acquisition requests. Locators: `aegis/core/forensic_bundle.py`, `tests/test_forensic_bundle.py`, and `tests/test_audit_api_new.py::test_forensic_export_returns_verifiable_zip`. It does not establish authorship, complete custody, certification, legal admissibility, or external immutability.
 - [x] **Module D — forensic dashboard:** the read-only dashboard uses real gateway responses, server-side credential handling, explicit empty/unavailable/error states, and tested proof/contract parsing. Locators: `dashboard/src/`, `dashboard/tests/`, `.github/workflows/ci.yml` job `dashboard`, and `evidence/commercial_phase2_dashboard_qa.md`. A local visual-QA artifact is not customer telemetry, production availability, capacity, or independent assurance.
 - [m] The seven-round, 1,000-event local SSE artifact is retained at `evidence/commercial_phase2_streaming_benchmark.json`; it excludes network and durable-WAL latency and is not an end-to-end capacity result.
+- [x] Source-only release contracts now require 14 synchronized version anchors, exact candidate-tag binding, pinned Python build backends, signed annotated-tag/main ancestry commands, exact release-note extraction, deterministic asset preparation, and a create-only GitHub Release command. The OCI workflow builds both declared architectures without publication primitives.
+- [ ] Establish and independently verify release-environment reviewers, trusted signer roots, immutable release settings, registry privileges/immutability, OIDC/Sigstore verification, SBOM attachment policy, architecture runtime smoke tests, and trusted-root distribution before any future publication claim.
 - [ ] Package and publish a future release before describing Modules A–D as release-tagged capabilities.
 - [ ] Provide cross-replica global ordering and multi-region failover/recovery evidence; current implementation does not establish multi-region HA.
 - [ ] Complete independent security, cryptographic, deployment, accessibility, and forensic-process assurance appropriate to the claimed scope. Repository tests and local QA are not external assurance.

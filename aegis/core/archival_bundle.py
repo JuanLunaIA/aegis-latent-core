@@ -49,8 +49,10 @@ import json
 import logging
 import os
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +60,12 @@ _FORMAT_VERSION = "1.0"
 _DEFAULT_HASH_ALGOS = ["sha2-256", "sha3-256"]
 _DEFAULT_SIG_ALGO = "hmac-sha2-256"
 
-_HASH_REGISTRY: dict[str, object] = {
+
+class _HexDigest(Protocol):
+    def hexdigest(self) -> str: ...
+
+
+_HASH_REGISTRY: dict[str, Callable[[bytes], _HexDigest]] = {
     "sha2-256": hashlib.sha256,
     "sha2-384": hashlib.sha384,
     "sha2-512": hashlib.sha512,
@@ -198,7 +205,7 @@ def _compute_hash(algo: str, data: bytes) -> str:
     factory = _HASH_REGISTRY.get(algo)
     if factory is None:
         raise ArchivalBundleError(f"Unsupported hash algorithm: {algo!r}")
-    return factory(data).hexdigest()  # type: ignore[call-arg]
+    return factory(data).hexdigest()
 
 
 def _compute_sig(algo: str, signing_key: str, data: bytes) -> str:
