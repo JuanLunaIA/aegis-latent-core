@@ -54,7 +54,7 @@ Durable non-streaming responses expose the `aegis-mmr-inclusion-v1` format, leaf
 
 ## Are the SDKs provider-native?
 
-Yes. The Python `aegis_sdk.openai.OpenAI`/`AsyncOpenAI` and `aegis_sdk.anthropic.Anthropic`/`AsyncAnthropic` classes subclass the official clients. TypeScript exposes equivalent wrappers at `@aegis-latent/sdk/openai` and `@aegis-latent/sdk/anthropic`. OpenAI traffic uses `/v1/chat/completions`; native Anthropic messages use `/v1/messages` and require `AEGIS_PROVIDER=anthropic`.
+Yes. The Python `aegis_sdk.openai.OpenAI`/`AsyncOpenAI` and `aegis_sdk.anthropic.Anthropic`/`AsyncAnthropic` classes subclass the official clients. TypeScript exposes equivalent wrappers at `aegis-latent-sdk/openai` and `aegis-latent-sdk/anthropic`. OpenAI traffic uses `/v1/chat/completions`; native Anthropic messages use `/v1/messages` and require `AEGIS_PROVIDER=anthropic`.
 
 ## Is the native Rust WAL the replay authority?
 

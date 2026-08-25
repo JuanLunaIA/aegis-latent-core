@@ -84,7 +84,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: npm
-      url: https://www.npmjs.com/package/@aegis-latent/sdk
+      url: https://www.npmjs.com/package/aegis-latent-sdk
     permissions:
       contents: read
       id-token: write

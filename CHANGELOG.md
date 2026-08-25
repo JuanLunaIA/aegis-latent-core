@@ -9,9 +9,13 @@ All notable changes to **Aegis Latent Core** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — current `main` after `v3.1.0`
+## [Unreleased]
 
-Everything in this section post-dates the immutable `v3.1.0` tag. These entries describe the current `main` tree and must not be represented as capabilities, packages, evidence, or assurance shipped in the `v3.1.0` release.
+No changes recorded after the v4.0.0 release candidate.
+
+## [4.0.0] — 2026-08-24
+
+This candidate section describes the reviewed source tree proposed for `v4.0.0`. It does not claim that registry packages, OCI images, attestations, or the GitHub Release have been published.
 
 ### Bounded enterprise-maturation follow-up
 

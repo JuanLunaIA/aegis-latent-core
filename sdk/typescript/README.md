@@ -7,7 +7,7 @@ Use the structural constructor options with the official provider packages; Aegi
 ```ts
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import { anthropicGatewayOptions, openAIGatewayOptions } from "@aegis-latent/sdk";
+import { anthropicGatewayOptions, openAIGatewayOptions } from "aegis-latent-sdk";
 
 const openai = new OpenAI(openAIGatewayOptions({
   aegisApiKey: process.env.AEGIS_API_KEY!,
@@ -25,7 +25,7 @@ const anthropic = new Anthropic(anthropicGatewayOptions({
 The Anthropic native route is available only when the gateway itself is configured with `AEGIS_PROVIDER=anthropic`. Keep provider tokens in a server or approved secret boundary; do not embed them in a browser bundle.
 
 ```ts
-import { parseInclusionProof, verifyInclusionHash } from "@aegis-latent/sdk/proof";
+import { parseInclusionProof, verifyInclusionHash } from "aegis-latent-sdk/proof";
 
 const proof = parseInclusionProof(untrustedJson);
 const valid = await verifyInclusionHash(leafHashHeader, proof, pinnedRoot);

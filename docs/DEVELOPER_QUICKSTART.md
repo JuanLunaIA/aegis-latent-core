@@ -109,8 +109,8 @@ anthropic_response = anthropic_client.messages.create(
 ```
 
 ```typescript
-import OpenAI from "@aegis-latent/sdk/openai";
-import Anthropic from "@aegis-latent/sdk/anthropic";
+import OpenAI from "aegis-latent-sdk/openai";
+import Anthropic from "aegis-latent-sdk/anthropic";
 
 const openai = new OpenAI({
   aegisApiKey: "dev-key",
