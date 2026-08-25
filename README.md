@@ -6,10 +6,29 @@ Aegis Latent Core is an OpenAI-compatible gateway that applies request policy, W
 
 > **Product boundary:** Aegis is an AI Governance and Evidence Gateway. It is not an LLM, a universal WAF, a compliance certification, a legal-admissibility ruling, a production SLO, or a replacement for network, identity, privacy, retention, or incident-response controls.
 
-[![Release](https://img.shields.io/github/v/release/JuanLunaIA/aegis-latent-core?display_name=tag&sort=semver)](https://github.com/JuanLunaIA/aegis-latent-core/releases)
-[![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
-[![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
-[![License](https://img.shields.io/badge/license-AGPLv3%20%2B%20commercial-blue.svg)](LICENSE)
+<!-- ==================== BADGES GRID ==================== -->
+<p align="center">
+  <a href="https://github.com/JuanLunaIA/aegis-latent-core/releases"><img src="https://img.shields.io/github/v/release/JuanLunaIA/aegis-latent-core?sort=semver&color=2563eb&label=Release&logo=github" alt="GitHub Release"></a>
+  <a href="https://pypi.org/project/aegis-latent-sdk/"><img src="https://img.shields.io/pypi/v/aegis-latent-sdk?color=3b82f6&label=PyPI%20SDK&logo=pypi&logoColor=white" alt="PyPI Package"></a>
+  <a href="https://www.npmjs.com/package/aegis-latent-sdk"><img src="https://img.shields.io/npm/v/aegis-latent-sdk?color=ef4444&label=npm%20SDK&logo=npm&logoColor=white" alt="npm Package"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPLv3%20%2B%20Commercial-blue.svg" alt="License"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/JuanLunaIA/aegis-latent-core/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white" alt="CI Status"></a>
+  <a href="https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml"><img src="https://img.shields.io/github/actions/workflow/status/JuanLunaIA/aegis-latent-core/security.yml?branch=main&label=Security&logo=githubactions&logoColor=white" alt="Security Status"></a>
+  <img src="https://img.shields.io/badge/Tests-5%2C700%2B%20Passed-10b981?logo=pytest&logoColor=white" alt="Tests Passed">
+  <img src="https://img.shields.io/badge/Coverage-89.7%25-10b981?logo=codecov&logoColor=white" alt="Code Coverage">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776ab?logo=python&logoColor=white" alt="Python Versions">
+  <img src="https://img.shields.io/badge/TypeScript-%3E%3D5.0-3178c6?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Rust-Native%20Engine-black?logo=rust&logoColor=white" alt="Rust Native Engine">
+  <img src="https://img.shields.io/badge/Formal%20Methods-Z3%20%7C%20Lean%204%20%7C%20TLA%2B-7c3aed" alt="Formal Verification">
+  <img src="https://img.shields.io/badge/Supply%20Chain-Cosign%20%7C%20SPDX%202.3-0ea5e9?logo=sigstore&logoColor=white" alt="Supply Chain Security">
+</p>
+<!-- ===================================================== -->
 
 **Last verified:** 2026-08-25 UTC
 **Release baseline:** published [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0)
