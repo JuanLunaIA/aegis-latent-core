@@ -1,0 +1,25 @@
+# Command and CI Matrix
+
+Run commands from the repository root in a reviewed checkout. Record the immutable comparison anchor `2050a310ec295afc61d033ff842c9a535a4f3105`, current `HEAD`, branch, `git status --short`, tool versions, complete output, and exit status. A local pass describes only that checkout and environment. It does not publish v4 or replace external acceptance.
+
+| Purpose | Reproducible local command | CI/source correspondence | Stop condition and boundary |
+|---|---|---|---|
+| Verify context integrity | `python scripts/verify_ai_context_manifest.py` | Governed by this pack and `tests/test_ai_context.py` | Stop on missing, extra, or hash-drifted governed bytes. The manifest excludes itself and is not a Git commit identity. |
+| Regenerate context manifest | `python scripts/generate_ai_context_manifest.py` | Maintainer procedure; follow with verifier and focused pytest | Stop unless all changed governed inputs and context files are authorized and reviewed. |
+| Focused context semantics | `pytest -q tests/test_ai_context.py` | Python `test` job includes repository tests | Stop on package/anchor/workflow/adapter/release-language drift or manifest failure. |
+| Source release contract | `python scripts/verify_release_contract.py --root .` | Called by release and publication provenance gates | `READY` means source controls pass; it does not prove tag, GitHub Release, trusted-publisher binding, registry package, or OCI image existence. |
+| Action pinning | `python scripts/verify_github_action_pins.py` | `ci.yml` license-check | Stop on any mutable remote action reference. Runner/publisher trust remains external. |
+| Formal abstractions | `scripts/verify_formal_artifacts.sh` | `ci.yml` formal-verification | Stop on missing required tools, non-`unsat` Z3 result, Lean failure, TLC counterexample, or changed bounds. No implementation refinement claim. |
+| Python runtime tests | `python -X faulthandler -m pytest tests/ -v -o faulthandler_timeout=60` | `ci.yml` test matrix on Python 3.11/3.12/3.13 | Stop on failure, hang, or required skip. This is not target deployment acceptance. |
+| Python lint/format | `ruff check aegis aegis_server integrations tests tools/visualizer tools/forensic tools/benchmarks tools/security benchmarks` then the equivalent `ruff format --check` paths | `ci.yml` lint | Stop on any diagnostic; configured scope is not whole-repository universal correctness. |
+| Python CI typing surface | `mypy --config-file=mypy-ci.ini` with the exact paths in `ci.yml` | `ci.yml` typecheck | Stop on failure; this bounded profile is not an all-files strict typing claim. |
+| Python SDK | Install `./sdk/python[dev]`; in `sdk/python`, run `ruff check src tests`, `mypy --config-file pyproject.toml`, `pytest -q`; then `python -m build sdk/python` | `ci.yml` sdk-python; artifact build in `publish_pypi.yml` | Stop on any failure. Build success is not PyPI publication. |
+| TypeScript SDK | In `sdk/typescript`, run `npm ci --ignore-scripts`, `npm run check`, `npm audit --audit-level=high`, `npm pack --dry-run` | `ci.yml` sdk-typescript; exact package build in `publish_npm.yml` | Stop on lock drift, test/type/build/audit failure. Pack success is not npm publication. |
+| Dashboard | Build local TypeScript SDK; in `dashboard`, run `npm ci --ignore-scripts`, `npm run typecheck`, `npm test`, `npm run build`, `npm audit --audit-level=high` | `ci.yml` dashboard | Stop on local SDK, accessibility/state, build, or audit failure. Build success is not availability/capacity evidence. |
+| Rust extension | In `aegis_rust_v2`, run `cargo test --release` and `maturin build --release --features extension-module` | `ci.yml` rust; wheel assets in `release.yml` | Stop on test/build failure or skipped required parity. Wheel construction is not registry publication. |
+| Helm source | `helm lint deploy/helm` | `ci.yml` helm-lint | Stop on lint failure; static templates do not prove cluster enforcement. |
+| OCI build validation | Inspect/run the matrix defined in `.github/workflows/publish_oci.yml` | `publish_oci.yml` with `push: false` | Stop if registry login, push, signing, secrets, or publication is introduced without a separately reviewed publication design. |
+| Security workflows | Use the exact Bandit, pip-audit, CodeQL, Trivy, OSV, and Cargo Audit commands/configuration in `security.yml` and `ci.yml` | `security.yml`; `ci.yml` security | Stop on findings or operational failure. A pass is not proof of vulnerability absence. |
+| Full release attempt | Do not emulate from this context pack; follow reviewed tag-only workflows and repository policy | `release.yml`, `publish_pypi.yml`, `publish_npm.yml` | Stop without authorization, a matching signed annotated tag, main ancestry, environments, explicit enablement, immutable artifacts, and external registry/release verification. |
+
+The published baseline is **v3.1.0**. The synchronized `4.0.0` source metadata and merged v4 source anchor are **unpublished** until independent evidence establishes a tag, GitHub Release, and each intended registry publication.

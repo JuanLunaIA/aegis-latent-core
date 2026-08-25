@@ -2,14 +2,15 @@
 
 **Suite version:** 1.0
 **Evidence cutoff:** 2026-08-22 UTC
-**Release baseline:** published `v3.1.0`
-**Current-main review baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
+**Release baseline:** two-baseline model
+**Source baseline:** merged v4 source state documented by the 2026-08-25 post-merge audit
+**Distribution baseline:** published `v3.1.0` artifacts; post-v3.1.0 capabilities are not attributed to that distribution
 **Language:** US English
 **Status:** Review candidate; publication is controlled by `docs/CLAIMS_MATRIX.md`
 
 ## Purpose
 
-This directory is the canonical institutional review suite for the published Aegis Latent Core v3.1.0 baseline and the explicitly identified current-main changes after PR #99. It reconciles architecture, cryptography, security, operations, regulatory, and commercial claims against production code, tests, retained evidence, and authoritative external sources. Current-main capabilities are not retroactively attributed to the v3.1.0 tag. The suite does not convert a technical feature into a certification, legal opinion, contractual commitment, production authorization, or independent assurance report.
+This directory is the canonical institutional review suite for two distinct baselines: the merged v4 source state documented by the 2026-08-25 post-merge audit and the published Aegis Latent Core `v3.1.0` distribution artifacts. It reconciles architecture, cryptography, security, operations, regulatory, and commercial claims against production code, tests, retained evidence, and authoritative external sources. Post-v3.1.0 source capabilities are not retroactively attributed to the `v3.1.0` distribution, and source review does not establish v4 publication or target-environment acceptance. The suite does not convert a technical feature into a certification, legal opinion, contractual commitment, production authorization, or independent assurance report.
 
 ## Volumes
 

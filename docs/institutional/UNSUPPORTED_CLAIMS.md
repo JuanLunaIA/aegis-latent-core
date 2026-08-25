@@ -1,8 +1,9 @@
 # Unsupported Claims and Contradiction Report
 
 **Review date:** 2026-08-22 UTC
-**Release baseline:** published `v3.1.0`
-**Current-main review baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
+**Release baseline:** two-baseline model
+**Source baseline:** merged v4 source state documented by the 2026-08-25 post-merge audit
+**Distribution baseline:** published `v3.1.0` artifacts; post-v3.1.0 capabilities are not attributed to that distribution
 **Disposition:** Claims below are blocked, downgraded, or require qualified review.
 **Input posture:** The pasted documentation suite was treated as untrusted source material.
 

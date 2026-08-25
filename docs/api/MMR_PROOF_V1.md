@@ -1,9 +1,11 @@
 # Portable MMR Inclusion Proof v1
 
-**Format identifier:** `aegis-mmr-inclusion-v1`  
-**Status:** implemented and covered by cross-language golden vectors  
-**Last reviewed:** 2026-08-22 UTC
-**Release package:** not yet released; **current main verified:** `45d95188d40792639fdd654369765a7233bef09a`
+**Release baseline:** two-baseline model
+**Format identifier:** `aegis-mmr-inclusion-v1`
+**Status:** implemented in the v4 source baseline and covered by cross-language golden vectors
+**Last reviewed:** 2026-08-25 UTC
+**Source baseline:** merged v4 source state documented by the post-merge audit
+**Distribution baseline:** not included in the `v3.1.0` distribution; no v4 package publication is asserted
 
 ## Purpose and claim boundary
 

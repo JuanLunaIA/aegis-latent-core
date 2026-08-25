@@ -3,14 +3,14 @@
 This FAQ is for procurement officers, economic buyers, legal teams, CISOs and evaluation committees. It explains what the repository can support, what requires a commercial agreement or customer assessment, and which questions must be answered before a quote. It is not a binding offer or legal advice.
 
 **Last verified:** 2026-08-22 UTC
-**Release baseline:** published `v3.1.0`
-**Current-main baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
+**Release baseline:** published `v3.1.0` (latest published)
+**Merged v4 source baseline:** commit `2050a310ec295afc61d033ff842c9a535a4f3105` with 14 synchronized `4.0.0` anchors; no v4 tag, GitHub Release, PyPI/npm/OCI publication, or production-release acceptance
 **Audience:** Procurement, legal, security and executive sponsors
 **Commercial documents:** [`COMMERCIAL.md`](../COMMERCIAL.md), [`docs/COMMERCIAL_STRATEGY_US.md`](COMMERCIAL_STRATEGY_US.md)
 
 ## Which product baseline is being evaluated?
 
-The published release is **v3.1.0**. Current main after PR #99 is commit `45d95188d40792639fdd654369765a7233bef09a`. Its bounded SSE `pending-terminal` flow, native Anthropic `POST /v1/messages`, Python and TypeScript SDKs, portable MMR proofs, forensic dashboard and bounded ZIP export are not features of the v3.1.0 tag. Procurement documents, security evidence and acceptance tests must name one baseline rather than combining them.
+The latest published release remains **v3.1.0**. Commit `2050a310ec295afc61d033ff842c9a535a4f3105` is the merged v4 source baseline and contains 14 synchronized `4.0.0` anchors. Its bounded SSE `pending-terminal` flow, native Anthropic `POST /v1/messages`, Python and TypeScript SDKs, portable MMR proofs, forensic dashboard and bounded ZIP export are not features of the v3.1.0 tag. The synchronized anchors do not constitute a v4 tag, GitHub Release, PyPI/npm/OCI publication, or production-release acceptance. Procurement documents, security evidence and acceptance tests must name one baseline rather than combining them.
 
 ## What category is this product?
 
@@ -64,9 +64,9 @@ The release includes source, tests, claims matrix, dependency and supply-chain a
 
 Procurement can use them as evaluation inputs, not universal promises. The backpressure artifact preserved 10,000 durable records under an injected seam but recorded p99 commit latency of 1,189.89 ms. The WAF corpus is small. The key-rotation run is local. The timing experiment is not a proof of constant-time behavior.
 
-## What current-main integration and evidence artifacts are available?
+## What merged v4 source integration and evidence artifacts are available?
 
-Current main supports native Anthropic `POST /v1/messages` in addition to the OpenAI-compatible ingress. The Python SDK is drop-in through official-client subclasses. TypeScript uses provider-native wrappers and options, with the official provider packages as peer dependencies; it does not replace their models or normalize their payloads. Non-streaming responses can return durable status and `X-Aegis-MMR-*` proof headers. Streaming responses begin `pending-terminal`, commit one terminal summary before the protocol terminal marker, and expose post-terminal proof retrieval.
+The merged v4 source supports native Anthropic `POST /v1/messages` in addition to the OpenAI-compatible ingress. The Python SDK is drop-in through official-client subclasses. TypeScript uses provider-native wrappers and options, with the official provider packages as peer dependencies; it does not replace their models or normalize their payloads. Non-streaming responses can return durable status and `X-Aegis-MMR-*` proof headers. Streaming responses begin `pending-terminal`, commit one terminal summary before the protocol terminal marker, and expose post-terminal proof retrieval.
 
 The read-only forensic dashboard can request a bounded ZIP containing a JCS manifest, canonical DAG-CBOR ledger slice with CIDv1, MMR proof JSON, a technical PDF certificate and `VERIFY.sh`.
 

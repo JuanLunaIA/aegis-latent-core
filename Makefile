@@ -59,7 +59,7 @@ docker-airgap: vendor-wheels
 	docker build --network=none \
 	    --build-arg PYTHON_BASE_DIGEST=$$DIGEST \
 	    -f deploy/docker/Dockerfile.airgap \
-	    -t aegis-latent-core:3.0.1-airgap .
+	    -t aegis-latent-core:4.0.0-source-airgap .
 
 build-rust:
 	@command -v maturin >/dev/null 2>&1 || { echo "maturin not found: pip install maturin"; exit 1; }

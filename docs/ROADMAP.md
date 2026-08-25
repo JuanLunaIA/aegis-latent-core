@@ -6,9 +6,11 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 # Aegis Latent Core — Engineering and Market Roadmap
 
-**Status:** Current `main` after PR #102, with `v3.1.0` retained as the immutable release baseline and open deployment/assurance work
-**Last verified:** 2026-08-24 UTC
-**Release baseline:** `v3.1.0` (Phase 2/3 modules below are post-release `main`, not v3.1.0 capabilities)
+**Status:** v4 source baseline verified; publication, external assurance, and target acceptance remain open
+**Last verified:** 2026-08-25 UTC
+**Release baseline:** two-baseline model
+**Source baseline:** merged v4 source state documented by the post-merge audit
+**Distribution baseline:** previously published `v3.1.0` artifacts; historical v3.1.0 results below remain scoped to that baseline
 **Purpose:** Single source of truth for work that is implemented, measured, deployment-dependent, or still open.
 
 ## Status rules
@@ -23,9 +25,11 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 A checkbox may not be changed to `[x]` because a stub, dashboard sample, docstring, vendor statement, or favorable benchmark exists. Every change requires a locator, test or artifact, boundary, and falsification condition in [`CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md).
 
-## Current public baseline
+## Two-baseline current state
 
-The current immutable public release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). Its release pipeline completed with source, wheels, provenance, hashes and GitHub checks. The current `main` tree additionally contains the bounded post-release modules merged through PR #102. Those modules are implemented in source and CI under the limits below, but are **not** part of the `v3.1.0` tag or its release assets. Open deployment, assurance, independent-review and future-product work must not be represented as shipped or externally assured capabilities.
+The **v4 source baseline** is the merged tree checked by the 2026-08-25 post-merge audit: source anchors report `4.0.0`, required repository contexts reached terminal success on the candidate tree, and the audit decision is source-merge verified with publication no-go. The **distribution baseline** remains the previously published `v3.1.0` artifact set. Source version metadata does not establish a v4 tag, release, registry artifact, deployed service, SLO, compliance result, or external acceptance.
+
+Historical v3.1.0 benchmark, security, remediation, and release records retain their original values and scope. They are not superseded as historical observations, but they must not be presented as measurements of the v4 source baseline without rerunning the named workload. See [`evidence/INDEX.md`](../evidence/INDEX.md).
 
 ## Completed core controls
 
@@ -41,7 +45,7 @@ The current immutable public release is [`v3.1.0`](https://github.com/JuanLunaIA
 
 Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), git history, module docs, and release assets. This file tracks current decision status rather than repeating every historical patch.
 
-## Current `main` — Phase 2/3 modules A–D (post-v3.1.0)
+## v4 source baseline — Phase 2/3 modules A–D (not in the v3.1.0 distribution)
 
 - [x] **Module A — bounded SSE:** incremental event transformation uses byte/event queue limits, event/output/window/preview/duration bounds, online hashing, and terminal evidence ordering. Locators: `aegis/proxy/streaming.py`, `tests/test_proxy_streaming.py`, and `specs/aegis_stream_buffer.smt2`. Limits are per admitted stream; aggregate memory and throughput remain concurrency- and deployment-dependent.
 - [x] **Module B — portable MMR proof and SDKs:** the core emits the versioned inclusion-proof contract, shared vectors verify in Python and TypeScript, and tested OpenAI/Anthropic integration surfaces exist. Locators: `aegis/core/mmr.py`, `tests/test_mmr_portable.py`, `sdk/shared/mmr-inclusion-v1.json`, `sdk/python/tests/`, and `sdk/typescript/tests/`. A verifier still needs an independently trusted root; provider compatibility is bounded to tested surfaces and dependency ranges.
@@ -106,7 +110,7 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 - [ ] Keep dependency and action exceptions bounded, owned, time-limited, and documented; no silent advisory ignore.
 - [ ] Complete an independent threat-model and code review before any certification, court-admissibility, or high-assurance procurement language.
 
-## Unreleased enterprise-maturation candidate (v4 target)
+## Additional v4 source capabilities and open acceptance work
 
 - [x] Add immutable principal, OIDC, explicit mTLS leaf-pin, tenant confinement, scope enforcement, and dual request/token quota source modules with deterministic tests.
 - [x] Remove caller session/tenant values from primary-gateway quota identity and durable tenant selection.
@@ -132,7 +136,7 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 - [x] Require exact cargo-fuzz executables, a private workspace, bounded parseable manifest, and confined regular target files; distinguish clean/crash/tool-error/timeout states; and remove synthetic coverage/bug metrics. Git provenance, retained campaign artifacts, measured coverage, and bounded Kani harnesses remain open.
 - [d] Validate OCI execution, package permissions, registry policy, signature/provenance verification, architecture smoke tests, and rollback on the target GHCR environment.
 - [ ] Configure protected immutable signed tags, GitHub environments, and exact PyPI/npm trusted-publisher bindings. Publication remains disabled unless `AEGIS_TRUSTED_PUBLISHING_ENABLED=true` is configured externally.
-- [ ] Complete full CI, security, formal, documentation, dependency, packaging, and target-environment acceptance gates plus mandatory domain approvals before any `v4.0.0` version bump, tag, release, or readiness claim.
+- [ ] Complete full CI, security, formal, documentation, dependency, packaging, and target-environment acceptance gates plus mandatory domain approvals before any future tag, release, registry publication, or deployment-readiness claim.
 
 ## P2 performance and operations
 
@@ -154,7 +158,7 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 
 ## Release gate
 
-The v3.1.0 release passed its declared publication gate, but it does not contain the post-release Phase 2/3 modules on current `main`. A future market-facing release containing those modules remains blocked until the affected source and tests pass, version anchors are coherent, the claim matrix is updated, documentation has no stronger language than the artifacts, the SBOM and dependency gates are clean or explicitly excepted, release provenance is regenerated, rollback and kill criteria are documented, and a qualified reviewer accepts the residual risk.
+The historical v3.1.0 distribution passed its declared publication gate, but it does not contain the later Phase 2/3 modules in the v4 source baseline. A future market-facing release containing those modules remains blocked until the affected source and tests pass, version anchors are coherent, the claim matrix is updated, documentation has no stronger language than the artifacts, the SBOM and dependency gates are clean or explicitly excepted, release provenance is regenerated, rollback and kill criteria are documented, and a qualified reviewer accepts the residual risk.
 
 ## Related documents
 

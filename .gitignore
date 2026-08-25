@@ -49,7 +49,8 @@ aegis_rust_v2/target/
 *.rwal
 /tmp/
 
-# IDE and OS files
+# IDE and agent-local files
+CLAUDE.local.md
 .vscode/
 .idea/
 *.swp

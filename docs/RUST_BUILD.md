@@ -1,61 +1,75 @@
-Rust extension build notes (aegis_rust_v2)
-=========================================
+# Rust Extension Build Guide
 
-This document explains common issues encountered when building the PyO3 Rust
-extension (`aegis_rust_v2`) and practical steps to build it in developer
-and CI environments.
+**Last verified:** 2026-08-25 UTC
+**Release baseline:** two-baseline model
+**Source baseline:** merged v4 source state verified by [`evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md`](../evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md)
+**Distribution baseline:** previously published `v3.1.0` artifacts; no distribution is asserted for the source baseline
 
-Common failure: undefined references to Python C API symbols (PyObject_Str, _Py_IncRef, PyErr_Print, etc.)
------------------------------------------------------------------------------------------------------
+The Rust component has four different names. Keeping them distinct prevents broken imports and incorrect distribution claims.
 
-Symptoms:
-- Linker errors from `cc` when running `cargo test` or `maturin develop`.
-- The cargo build output shows undefined reference to PyObject_* functions.
+| Concept | Name | Source of truth |
+|---|---|---|
+| Source directory | `aegis_rust_v2/` | Repository layout; the suffix is historical and is not an import name. |
+| Cargo package and library | `aegis_rust` | `aegis_rust_v2/Cargo.toml` `[package]` and `[lib]` |
+| Python wheel distribution metadata | `aegis-rust` | `aegis_rust_v2/pyproject.toml` `[project].name` |
+| Python import module | `aegis_rust` | maturin `module-name` and PyO3 module declaration |
 
-Likely causes and fixes:
+No crates.io, PyPI, or other registry availability is asserted for this v4 source baseline. Build from the checked-out source.
 
-1) Missing Python development headers / shared library
-   - Install the Python dev package for your target interpreter, e.g. on Debian/Ubuntu:
-     sudo apt-get install python3.11-dev
-   - Ensure the python executable and headers match (python3.11 vs python3.14).
+## Prerequisites
 
-2) PyO3 / Python version mismatch
-   - PyO3 has a maximum supported Python version for the built release. If
-     building with newer Python (e.g., 3.14) and pyo3 version doesn't support
-     it, either set `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1` or upgrade PyO3.
-   - Example (temporary):
-     export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
-     maturin develop --release
+Use Python 3.11 or newer, a Rust toolchain with Cargo, a C compiler/linker, and maturin 1.x. On Debian or Ubuntu, a matching Python development package may be needed when the interpreter does not provide usable headers and link metadata.
 
-3) Prefer maturin over raw cargo for extension builds
-   - `maturin develop` handles Python interpreter discovery and linking more
-     robustly and is the recommended method to build and install the extension.
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install 'maturin>=1.5,<2'
+rustc --version
+cargo --version
+maturin --version
+```
 
-4) Use a matching virtualenv for the target Python
-   - Create a virtualenv with the Python version you intend to support and
-     activate it before running maturin. This ensures headers and the
-     interpreter match during the build.
+The maturin install above downloads a build tool; record the resolved version for reproducibility. It is not an installation of an Aegis registry package.
 
-Example developer steps (recommended):
+## Run Rust tests
 
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -U pip maturin
-export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1  # optional workaround
-cd aegis_rust_v2
-maturin develop --release
+Run Cargo from the repository root so the source-directory name is explicit:
 
-CI recommendations
-------------------
-- Use GitHub Actions with a matrix for Python 3.11–3.13 and a single, stable
-  Rust toolchain (e.g. stable). Prefer to run maturin in each job.
-- Set environment variable PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 only if you
-  intentionally target ABI3 forward compatibility. Otherwise pin PyO3 to a
-  version that supports the chosen Python versions.
+```bash
+cargo fmt --manifest-path aegis_rust_v2/Cargo.toml -- --check
+cargo clippy --manifest-path aegis_rust_v2/Cargo.toml --all-targets -- -D warnings
+cargo test --manifest-path aegis_rust_v2/Cargo.toml --release --locked
+```
 
-Advanced: upgrading PyO3
-------------------------
-- Upgrading pyo3 in Cargo.toml may be required to support newer Python
-  interpreter versions. This change can have implications: test the compiled
-  extension thoroughly and run Rust unit tests.
+`cargo test` uses the library configuration without making PyO3's `extension-module` feature the default, allowing the test binary to link correctly.
 
+## Build and install the Python extension locally
+
+```bash
+maturin develop --manifest-path aegis_rust_v2/Cargo.toml --release --features extension-module
+python -c 'import aegis_rust; print(aegis_rust.__version__)'
+```
+
+The import is `aegis_rust`, never `aegis_rust_v2` and never `aegis-rust`. The hyphenated spelling is only the Python distribution metadata name.
+
+To produce a local wheel without publishing it:
+
+```bash
+maturin build --manifest-path aegis_rust_v2/Cargo.toml --release --features extension-module
+```
+
+The wheel is written under `aegis_rust_v2/target/wheels/`. A successful local build is not registry publication, platform-wide compatibility, constant-time evidence, FIPS validation, or target-runtime acceptance.
+
+## Python and PyO3 compatibility failures
+
+Undefined references to Python C API symbols usually mean the interpreter, headers, and link metadata do not match, or that `extension-module` was applied to a Cargo test binary. Prefer `maturin develop` for the extension and plain `cargo test --release --locked` for Rust tests. Activate the intended virtual environment before building.
+
+`PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1` is an explicit compatibility override, not a default recommendation. Use it only when intentionally testing a newer interpreter against the configured `abi3-py311` boundary, then run the Rust and Python integration tests and record that environment.
+
+## Related documents
+
+- [`docs/DEVELOPER_QUICKSTART.md`](DEVELOPER_QUICKSTART.md)
+- [`docs/REPOSITORY_MAP.md`](REPOSITORY_MAP.md)
+- [`evidence/INDEX.md`](../evidence/INDEX.md)
+- [`aegis_rust_v2/Cargo.toml`](../aegis_rust_v2/Cargo.toml)
+- [`aegis_rust_v2/pyproject.toml`](../aegis_rust_v2/pyproject.toml)

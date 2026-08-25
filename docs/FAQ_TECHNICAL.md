@@ -1,12 +1,15 @@
-# Technical FAQ — Aegis Latent Core v3.1.0
+# Technical FAQ — Aegis Latent Core
 
 This FAQ answers implementation and operating questions for developers and platform engineers. Each answer states the current boundary and links to the implementation or verification path. It is not a substitute for the architecture or deployment guides.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
-**Current main verified:** `45d95188d40792639fdd654369765a7233bef09a` (post-release; not the `v3.1.0` tag)
+**Last verified:** 2026-08-25 UTC
+**Release baseline:** two-baseline model
+**Published evidence baseline:** `v3.1.0`; retained measurements are historical evidence for that release only
+**Merged-source anchor:** `2050a310ec295afc61d033ff842c9a535a4f3105` (unpublished v4 source; no v4 publication or deployment acceptance is asserted)
 **Audience:** Developers, platform engineers and technical evaluators
 **Root document:** [`README.md`](../README.md)
+
+Answers about implementation behavior refer to the merged v4 source anchor unless they identify retained evidence. All retained numeric measurements in this FAQ belong to the published `v3.1.0` historical evidence baseline; they must not be promoted to v4 capacity, latency, availability, detection, security, or SLO claims without a v4 rerun and applicable target-environment acceptance evidence.
 
 ## What does Aegis do?
 
@@ -26,7 +29,7 @@ The documented WAL model stores hashes and evidence metadata rather than plainte
 
 ## What happens when `fsync` stalls?
 
-The authoritative path can block or reject according to configured bounds. It must not silently return a governed accepted response without its evidence record. The retained 10k offered-load run preserved all 10,000 records under 2 ms injected delay but recorded p99 commit latency of 1,189.89 ms. See [`docs/operations/BACKPRESSURE_RUNBOOK.md`](operations/BACKPRESSURE_RUNBOOK.md).
+The authoritative path can block or reject according to configured bounds. It must not silently return a governed accepted response without its evidence record. The retained `v3.1.0` 10k offered-load run preserved all 10,000 records under 2 ms injected delay but recorded p99 commit latency of 1,189.89 ms. That historical result is not v4 capacity or SLO evidence. See [`docs/operations/BACKPRESSURE_RUNBOOK.md`](operations/BACKPRESSURE_RUNBOOK.md).
 
 ## What happens when Redis fails?
 

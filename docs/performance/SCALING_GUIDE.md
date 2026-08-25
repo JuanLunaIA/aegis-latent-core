@@ -1,12 +1,15 @@
-# Scaling Guide — Aegis Latent Core v3.1.0
+# Scaling Guide — Aegis Latent Core
 
 This guide explains how to scale Aegis without confusing horizontal fan-out, storage capacity, queueing and provider behavior. It is for platform engineers and SREs. The guide provides sizing hypotheses and telemetry requirements; it does not publish a production capacity number or SLO.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
-**Current main verified:** `45d95188d40792639fdd654369765a7233bef09a` (post-release; not the `v3.1.0` tag)
+**Last verified:** 2026-08-25 UTC
+**Release baseline:** two-baseline model
+**Published evidence baseline:** `v3.1.0`; retained measurements are historical evidence for that release only
+**Merged-source anchor:** `2050a310ec295afc61d033ff842c9a535a4f3105` (unpublished v4 source; no v4 publication or deployment acceptance is asserted)
 **Audience:** Platform engineering and SRE
 **Primary runtime contract:** [`DEPLOYMENT_GUIDE.md`](../../DEPLOYMENT_GUIDE.md)
+
+The merged-source anchor identifies the v4 implementation under documentation review; it does not reclassify or reproduce the published `v3.1.0` evidence. Historical v3.1.0 measurements must not be used as v4 capacity, latency, availability, or SLO claims. A v4 claim requires a v4 rerun plus acceptance evidence from the actual target environment.
 
 ## Scaling invariant
 
@@ -29,7 +32,7 @@ The current repository does not implement cross-replica global ordering or multi
 
 The WAL is the durability backbone. Monitor active bytes, rotated segments, write latency, `fsync` latency, free space, inode use, synchronization failures and restore-test status. Network filesystems and cloud volumes require an environment-specific acceptance test because their flush and replication semantics vary.
 
-The retained backpressure run offered 10,000 requests at 10,000 RPS with a 2 ms injected `fsync` delay. It preserved 10,000 durable records with zero failures, missing IDs or duplicates, but observed p99 commit latency of 1,189.89 ms. The mechanism preserved evidence while queueing increased tail latency. This is not a capacity claim.
+The retained `v3.1.0` backpressure run offered 10,000 requests at 10,000 RPS with a 2 ms injected `fsync` delay. It preserved 10,000 durable records with zero failures, missing IDs or duplicates, but observed p99 commit latency of 1,189.89 ms. The mechanism preserved evidence while queueing increased tail latency in that historical harness. This is not a capacity or SLO claim for v3.1.0 or v4.
 
 For SSE, memory is not proportional to retaining the complete response. Each `BoundedStreamProxy` has an item-and-byte-bounded queue, finite de-identification holdback and bounded preview while SHA-256 is updated incrementally over emitted bytes. Size aggregate stream memory from concurrent streams and `stream_queue_max_bytes`, `stream_queue_max_items`, `max_stream_event_bytes` and `stream_deidentifier_window_chars`; also include Python object overhead and downstream socket buffering. A limit breach closes upstream and produces a terminal failure outcome rather than growing without bound.
 

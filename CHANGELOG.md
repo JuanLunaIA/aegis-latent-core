@@ -2,20 +2,24 @@
 
 All notable changes to **Aegis Latent Core** are documented in this file.
 
-**Last verified:** 2026-08-24 UTC
-**Release baseline:** `v3.1.0`
-**Documentation verification baseline:** `v3.1.0`. Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
+**Last verified:** 2026-08-25 UTC
+**Release baseline:** published `v3.1.0`
+**Merged-source baseline:** `2050a310ec295afc61d033ff842c9a535a4f3105` (fourteen `4.0.0` anchors; unpublished)
+**Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-No changes recorded after the v4.0.0 release candidate.
+- Clarified the audited two-baseline model after the v4 source merge and migrated shared coding-agent guidance from legacy `.cursorrules` to `AGENTS.md` with thin tool adapters.
+- Added a deterministic, source-derived `.aegis_ai_context` manifest, progressive context router, component/workflow matrix, command/CI matrix, evidence index, and freshness tests. These are advisory repository aids, not hidden model instructions or release evidence.
+- Recorded the current `main` policy of eight exact required GitHub Actions contexts, strict freshness, required signatures, linear history, disabled force pushes/deletions, and administrator enforcement disabled. The candidate head later reached success for all eight contexts; this does not retroactively prove that they all completed before the administrator-bypass merge.
+- Registered the exact pending PyPI trusted-publisher coordinates for `aegis-latent-sdk` without publishing a package. npm ownership/bootstrap, a verifiable signed tag, broad strict-mypy debt, release-environment approval, and complete security-alert inventory remain unresolved release boundaries.
 
-## [4.0.0] — 2026-08-24
+## [4.0.0 source candidate] — merged 2026-08-24
 
-This candidate section describes the reviewed source tree proposed for `v4.0.0`. It does not claim that registry packages, OCI images, attestations, or the GitHub Release have been published.
+This historical candidate section describes the reviewed source tree merged as `2050a310ec295afc61d033ff842c9a535a4f3105`. Its fourteen version anchors are synchronized at `4.0.0`; that synchronization is source metadata, not publication evidence. No `v4.0.0` tag, GitHub Release, PyPI package, npm package, or OCI image publication is claimed.
 
 ### Bounded enterprise-maturation follow-up
 
@@ -29,7 +33,7 @@ This candidate section describes the reviewed source tree proposed for `v4.0.0`.
 - Made unmapped legacy API-key authority an explicit development-only compatibility opt-in while preserving strict-mode principal mapping requirements.
 - Added content-free SIEM exporter counters for acceptance, rejection, acknowledgement, retry, and pending spool rows.
 - Added hardened Helm defaults and a restricted source template for installing the operator controller with namespaced RBAC. Operator-generated Aegis workloads still require persistent-storage and target-cluster acceptance; the controller deployment intentionally references an invalid placeholder image until a reviewed immutable image is supplied.
-- Added an advisory `.aegis_ai_context` pack, `llms.txt`, and `.cursorrules` with offline structural tests and explicit release, proof, compliance, and external-acceptance boundaries.
+- Added an advisory `.aegis_ai_context` pack, `llms.txt`, and legacy `.cursorrules` with offline structural tests and explicit release, proof, compliance, and external-acceptance boundaries. The rules were later migrated to canonical `AGENTS.md`; this bullet preserves the candidate history.
 - Added strict documentation claim validation for configured high-risk assurance, performance, readiness, and publication language, including affirmative claims embedded in tables.
 - Corrected TEE capability reporting so device-node visibility remains discovery-only; legacy caller-authored attestation reports are rejected, while an injected verifier may supply authenticated normalized claims for exact policy evaluation. No enclave loader or vendor quote verifier is implemented.
 - Removed the unaccounted differential-privacy HTTP analytics route and reduced the module to an internal CSPRNG-backed Laplace count primitive with a one-release, add/remove adjacency boundary. No privacy accountant, repeated-release protection, or universal anonymization claim is provided.

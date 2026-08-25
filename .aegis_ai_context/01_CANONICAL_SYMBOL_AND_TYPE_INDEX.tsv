@@ -1,4 +1,16 @@
 symbol	kind	authoritative_path	role	status_or_boundary
+PublishedReleaseBaseline	release	CHANGELOG.md	Published v3.1.0 baseline	Immutable published release; distinct from merged v4 source.
+MergedV4SourceAnchor	commit	CHANGELOG.md	Source anchor 2050a310ec295afc61d033ff842c9a535a4f3105	Merged and immutable but unpublished; 14 version anchors read 4.0.0; no v4 tag, release, or registry publication is asserted.
+SynchronizedVersionAnchors	contract	scripts/verify_release_contract.py	Load and compare all 14 source version anchors	Source readiness only; a passing contract is not publication evidence.
+CorePythonDistribution	package	pyproject.toml	Python distribution identity and core anchor	Identity and 4.0.0 metadata are source facts, not v4 PyPI publication.
+PythonSDKDistribution	package	sdk/python/pyproject.toml	Python SDK distribution identity and anchor	Linked to OpenAI/Anthropic client adapters; unpublished v4 source.
+TypeScriptSDKPackage	package	sdk/typescript/package.json	TypeScript SDK package identity and anchor	Linked to OpenAI/Anthropic wrappers and proof verifier; unpublished v4 source.
+AuditDashboardPackage	package	dashboard/package.json	Private dashboard package and anchor	Local TypeScript SDK dependency; private application package.
+RustCoreCrate	package	aegis_rust_v2/Cargo.toml	Rust crate/module identity and anchor	No v4 crates.io publication asserted.
+RustPythonDistribution	package	aegis_rust_v2/pyproject.toml	Rust Python-extension distribution and anchor	Wheel build metadata is not registry publication.
+HelmChartPackage	package	deploy/helm/Chart.yaml	Helm chart identity, chart anchor, and app anchor	Configured version/image tag does not prove chart or OCI publication.
+ProviderAdapterRegistry	registry	aegis/providers/__init__.py	Maps OpenAI, Anthropic, Gemini, and OpenRouter to adapter classes	Compatibility is bounded by implementation and tests.
+ReleaseWorkflowContract	workflow	scripts/verify_release_contract.py	Validates package identity, 14 anchors, and workflow gates	Does not query or prove tags, releases, registries, environments, or trusted publishers.
 AegisSettings	class	aegis/config.py	Runtime configuration schema	Inspect validators and deployment-specific values; configuration is not acceptance.
 AuditNode	dataclass	aegis/core/crypto_audit.py	Canonical ledger record and hashes	Serialization/signature meaning is defined by implementation, not this index.
 CryptographicAuditLedger	class	aegis/core/crypto_audit.py	Commit, WAL persistence, integrity verification, and export	Durability depends on configured storage and target filesystem acceptance.

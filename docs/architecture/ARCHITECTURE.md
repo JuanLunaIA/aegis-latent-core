@@ -1,10 +1,11 @@
-# Architecture — Aegis Latent Core v3.1.0
+# Architecture — Aegis Latent Core
 
-This document explains the Aegis request lifecycle, evidence boundary, state machine, trust boundaries, topology choices, and failure semantics. It is for platform engineers, security reviewers, developers, and buyer technical evaluators. It describes the current repository boundary and does not claim global ordering, multi-region availability, or regulatory certification.
+This document explains the Aegis request lifecycle, evidence boundary, state machine, trust boundaries, topology choices, and failure semantics in the v4 source baseline. It is for platform engineers, security reviewers, developers, and buyer technical evaluators. It does not establish package publication, deployment acceptance, global ordering, multi-region availability, a production SLO, or regulatory certification.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
-**Current main verified:** `45d95188d40792639fdd654369765a7233bef09a` (post-release; not the `v3.1.0` tag)
+**Last verified:** 2026-08-25 UTC
+**Release baseline:** two-baseline model
+**Source baseline:** merged v4 source state documented by the post-merge audit
+**Distribution baseline:** `v3.1.0` artifact set; source-baseline behavior is not attributed to that distribution
 **Audience:** Engineering, security and architecture review
 **Decision record:** [`ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md`](ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md)
 

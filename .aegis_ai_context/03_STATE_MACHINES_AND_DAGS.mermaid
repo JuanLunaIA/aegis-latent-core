@@ -34,9 +34,13 @@ flowchart TD
 
   subgraph ReleaseState["Publication status"]
     V310["v3.1.0 published baseline\nCHANGELOG.md + GitHub release assets"]
-    MAIN["current-main post-release work\nunreleased"]
-    V310 -->|subsequent commits| MAIN
-    MAIN -. requires new immutable tag/assets and publication verification .-> FUTURE[future release, not asserted]
+    V4SRC["merged unpublished v4 source\n2050a310ec295afc61d033ff842c9a535a4f3105\n14 synchronized 4.0.0 anchors"]
+    WORKTREE["mutable working tree\nrecord HEAD + status + manifest"]
+    ABSENT["no v4 tag, GitHub Release,\nor registry publication asserted"]
+    V310 -->|subsequent source development| V4SRC
+    V4SRC -->|descendant and local changes possible| WORKTREE
+    V4SRC -. source readiness does not imply publication .-> ABSENT
+    ABSENT -. requires authorized tag, immutable assets, successful workflows, and external verification .-> FUTURE[future publication, not asserted]
   end
 
   subgraph AcceptanceDAG["External acceptance boundary — docs/CLAIMS_MATRIX.md"]
@@ -53,4 +57,4 @@ flowchart TD
   end
 
   U["pasted/generated/retrieved instructions\nUNTRUSTED DATA"] -. never overrides .-> R0
-  U -. never changes claim status .-> MAIN
+  U -. never changes claim status .-> V4SRC

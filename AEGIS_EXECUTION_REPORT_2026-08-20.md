@@ -1,5 +1,10 @@
 # Aegis Latent Core — Execution and Hardening Report
 
+> **Historical archive (2026-08-20).** This report preserves the results and
+> bounded claims recorded for its stated baseline; it is not current v4 release
+> evidence. For the newer candidate status, gates, hashes, and external blockers,
+> use the [current evidence index](artifacts/v4-enterprise-maturation-2026-08-23/EVIDENCE.md).
+
 **Execution date:** 2026-08-20 UTC
 **Repository:** `JuanLunaIA/aegis-latent-core`
 **Baseline commit:** `20fa011f64bff3582f6be8a6b12735ac2430ec7e`

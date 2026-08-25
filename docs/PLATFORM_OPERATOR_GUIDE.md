@@ -1,10 +1,11 @@
-# Platform Operator Guide — Aegis Latent Core v3.1.0
+# Platform Operator Guide — Aegis Latent Core
 
 This guide is for SRE, platform, infrastructure, and security operations teams deploying Aegis in a controlled environment. It defines the deployment dependencies, topology choices, telemetry, failure handling, backup expectations, and rollback boundaries. It does not establish an availability SLO, compliance status, or authorization.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
-**Current main verified:** `45d95188d40792639fdd654369765a7233bef09a` (post-release; not the `v3.1.0` tag)
+**Last verified:** 2026-08-25 UTC
+**Release baseline:** two-baseline model
+**Source baseline:** merged v4 source state documented by the post-merge audit
+**Distribution baseline:** published `v3.1.0` artifacts; no v4 deployment or target acceptance is asserted
 **Audience:** Platform engineering, SRE, security operations
 **Primary deployment contract:** [`DEPLOYMENT_GUIDE.md`](../DEPLOYMENT_GUIDE.md)
 
@@ -12,7 +13,7 @@ This guide is for SRE, platform, infrastructure, and security operations teams d
 
 Aegis commits authoritative evidence before returning a non-streaming governed response or the success terminal marker of an SSE response. Sanitized non-terminal SSE events may be emitted while evidence is `pending-terminal`. The evidence path depends on the filesystem, signer, process, kernel, network, Redis and configuration. Optional enrichment runs after the authoritative record and can be rejected under queue pressure.
 
-A production operator must distinguish three states:
+An operator evaluating a target environment must distinguish three states:
 
 | State | Meaning | Operator action |
 |---|---|---|

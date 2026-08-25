@@ -19,7 +19,7 @@ keywords = [
     "openai", "anthropic", "gemini", "openrouter", "proxy", "entropy", "merkle", "chain-of-custody",
 ]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
     "Intended Audience :: Science/Research",

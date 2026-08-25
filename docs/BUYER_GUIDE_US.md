@@ -3,14 +3,14 @@
 This guide is for CISO and AppSec reviewers, platform leaders, AI/ML engineering, privacy/compliance, procurement and executive sponsors evaluating Aegis. It describes the product boundary, verification questions, pilot acceptance criteria and procurement blockers. It is not a certification, legal opinion, production SLO, or binding offer.
 
 **Last verified:** 2026-08-22 UTC
-**Release baseline:** published `v3.1.0`
-**Current-main baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
+**Release baseline:** published `v3.1.0` (latest published)
+**Merged v4 source baseline:** commit `2050a310ec295afc61d033ff842c9a535a4f3105` with 14 synchronized `4.0.0` anchors; no v4 tag, GitHub Release, PyPI/npm/OCI publication, or production-release acceptance
 **Audience:** US enterprise buyer committee
 **Commercial context:** [`docs/COMMERCIAL_STRATEGY_US.md`](COMMERCIAL_STRATEGY_US.md)
 
 ## Baseline to request
 
-The published release is **v3.1.0**. Current main after PR #99 is commit `45d95188d40792639fdd654369765a7233bef09a`. Bounded SSE `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python and TypeScript SDKs, MMR proofs, the forensic dashboard and bounded forensic ZIP export are current-main capabilities, not v3.1.0 tag claims. A buyer should require the quote, SBOM, test evidence and acceptance plan to identify the same baseline.
+The latest published release remains **v3.1.0**. Commit `2050a310ec295afc61d033ff842c9a535a4f3105` is the merged v4 source baseline and contains 14 synchronized `4.0.0` anchors. Its bounded SSE `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python and TypeScript SDKs, MMR proofs, forensic dashboard and bounded forensic ZIP export are merged-source capabilities, not v3.1.0 tag claims. The synchronized anchors do not constitute a v4 tag, GitHub Release, PyPI/npm/OCI publication, or production-release acceptance. A buyer should require the quote, SBOM, test evidence and acceptance plan to identify the same baseline.
 
 ## Executive answer
 
@@ -22,16 +22,16 @@ Aegis is most relevant when an organization wants a provider-independent gateway
 |---|---|---|
 | CISO / AppSec | What attack surface does Aegis cover? | The gateway covers authenticated request admission, request-size bounds, application-layer WAF/session policy, egress endpoint validation, distributed rate-limit failure handling and evidence integrity. It does not cover every model, identity, network, endpoint or semantic attack. |
 | Platform engineering | Where does it run? | Self-hosted Python/FastAPI with optional Rust acceleration and optional enterprise storage/signer integrations. The customer owns the runtime, network, secrets, storage and operating objectives. |
-| AI/ML engineering | Does it replace provider SDKs? | No. Current main exposes an OpenAI-compatible surface and native Anthropic `POST /v1/messages`. Python is drop-in through official-client subclasses. TypeScript wrappers remain provider-native and use the official provider packages as peer dependencies; provider models and behavior remain authoritative. |
+| AI/ML engineering | Does it replace provider SDKs? | No. The merged v4 source exposes an OpenAI-compatible surface and native Anthropic `POST /v1/messages`. Python is drop-in through official-client subclasses. TypeScript wrappers remain provider-native and use the official provider packages as peer dependencies; provider models and behavior remain authoritative. |
 | Compliance / legal | Does it make us compliant? | No. It can provide control and evidence paths that may support an organization's review. Certification, conformity, legal privilege, admissibility and regulatory conclusions belong to the customer and qualified external reviewers. |
 | Procurement | What is included? | Packaging is staged: AGPL community use, a bounded pilot, commercial self-hosted production terms and an enterprise tier only when support, response targets, legal terms and assurance capacity are explicitly available. |
 | Privacy | Does Aegis retain prompts? | The deployment controls retention and evidence content. Request/response hashes and metadata may be retained even when raw bodies are not. The customer must define lawful basis, minimization, retention, deletion, residency and access controls. |
 | SRE | What happens when storage stalls? | Non-streaming calls return durable headers only after commit. Streams begin `pending-terminal`; their byte/item-bounded relay commits one terminal summary before the protocol terminal marker. The optional native `RustWal` stream segment is auxiliary, while JSONL remains the replay authority. |
 | Security architecture | What happens when a key rotates? | The versioned keyring supports one active key, historical verification keys with expiry, atomic reload and non-secret key IDs. A production three-replica claim still requires a real deployment run. |
 
-## Current-main forensic verification
+## Merged v4 source forensic verification
 
-Current main stores portable `aegis-mmr-inclusion-v1` proofs. Non-streaming responses can carry `X-Aegis-MMR-*` headers; streams provide post-terminal proof retrieval because no completed proof exists in their initial headers. The read-only dashboard exposes retained evidence without fallback sample data and can request a bounded ZIP containing a JCS manifest, canonical DAG-CBOR ledger slice with CIDv1, proof JSON, technical PDF and `VERIFY.sh`. The buyer must pin the trusted MMR root independently, and the export does not determine legal admissibility.
+The merged v4 source stores portable `aegis-mmr-inclusion-v1` proofs. Non-streaming responses can carry `X-Aegis-MMR-*` headers; streams provide post-terminal proof retrieval because no completed proof exists in their initial headers. The read-only dashboard exposes retained evidence without fallback sample data and can request a bounded ZIP containing a JCS manifest, canonical DAG-CBOR ledger slice with CIDv1, proof JSON, technical PDF and `VERIFY.sh`. The buyer must pin the trusted MMR root independently, and the export does not determine legal admissibility.
 
 ## What the buyer can verify
 

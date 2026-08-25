@@ -1,87 +1,63 @@
-# Repository Map — Aegis Latent Core v3.1.0
+# Repository Map — Aegis Latent Core
 
-This map is the shortest route through the Aegis Latent Core repository. Read the root README first, then select the path that matches the review. Paths in this map describe the current source tree; release evidence artifacts may be retained outside the source tree and attached to the GitHub release.
+**Last verified:** 2026-08-25 UTC
+**Release baseline:** two-baseline model
+**Source baseline:** merged v4 source state verified by [`evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md`](../evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md)
+**Distribution baseline:** previously published `v3.1.0` artifacts; no distribution is asserted for the source baseline
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
-**Root entry point:** [`README.md`](../README.md)
+Read the root [`README.md`](../README.md) first. Paths below describe the v4 source baseline unless a row is explicitly historical. Source paths and version metadata do not imply that corresponding packages or images are available from a public registry.
 
-## Runtime surfaces
+## Runtime and product surfaces
 
 | Path | Role | Review focus |
 |---|---|---|
-| `aegis/proxy/app.py` | Core FastAPI gateway and request lifecycle | Authentication, evidence gate, streaming, error paths, headers and bounded enrichment |
-| `aegis/proxy/waf.py` | Application-layer WAF | Normalization, critical patterns, structure guard and shadow mode |
-| `aegis/proxy/egress_guard.py` | Endpoint and air-gap guard | URL canonicalization, scheme restrictions, allowlists and SSRF boundary |
-| `aegis/core/crypto_audit.py` | Hash chain and WAL | Canonical record, signature, `fsync`, rotation, replay and integrity |
-| `aegis/proxy/streaming.py` | Incremental SSE transformation and terminal evidence ordering | Per-stream queue/event/byte/window/output/duration limits and backpressure; aggregate concurrency remains deployment-dependent |
-| `aegis/core/mmr.py` | MMR state and portable inclusion-proof generation | Versioned proof contract, retained-state availability, and trusted-root boundary |
-| `aegis/core/forensic_bundle.py` | Bounded retained-window forensic ZIP export | Contract contents, digest verification, acquisition bounds, and no legal/custody conclusion |
-| `sdk/python/` and `sdk/typescript/` | Tested gateway clients and stateless proof verifiers | Provider/version test scope, shared vectors, package builds, and current-main post-v3.1.0 status |
-| `dashboard/` | Read-only audit, proof, metrics, and export UI | Server-side credential boundary, real-data-only states, accessibility regressions, and no availability/capacity claim |
-| `aegis/core/ratelimiter.py` | Rate-limit providers | Redis failure semantics and development-only fallback |
-| `aegis/core/seccomp_guard.py` | Seccomp capability/enforcement | Startup requirements and sandbox boundary |
-| `aegis/core/lsm_guard.py` | AppArmor/SELinux checks | Runtime enforcement and deployment prerequisites |
-| `aegis_server/` | Enterprise storage, analytics and compliance API | Provider contracts, authentication, export evidence and signer integration |
-| `aegis_server/crypto/keyring.py` | Versioned HMAC keyring | Atomic reload, overlap verification, expiry, key IDs and fail-closed startup |
+| `aegis/proxy/app.py` | Primary FastAPI gateway, `create_app()`, module-level `app`, and installed `aegis`/`aegis-server` CLI target | Authentication, request bounds, provider forwarding, durable evidence, streaming, and failure paths |
+| `aegis/config.py` | `AegisSettings` environment contract | Strict versus development mode, secrets, storage, Redis, kernel controls, and bounds |
+| `aegis/core/crypto_audit.py` | Authoritative JSONL hash chain and WAL | Canonical records, signature metadata, flush/`fsync`, replay, rotation, and integrity |
+| `aegis/proxy/streaming.py` | Bounded SSE transformation | Per-stream queue/event/byte/window/output/duration limits and terminal evidence ordering |
+| `aegis/core/mmr.py` | MMR state and portable proof generation | Retained-state availability, shared schema, and trusted-root boundary |
+| `aegis/core/forensic_bundle.py` | Bounded retained-window ZIP export | Contract contents, digest checks, acquisition limits, and custody/authenticity limits |
+| `aegis/auth/`, `aegis/storage/`, `aegis/telemetry/` | v4 source authentication, archival, and telemetry modules | Deployment dependencies and explicit acceptance gaps |
+| `aegis_server/` | Separate legacy/enterprise server surface | Do not assume parity with the primary gateway's current auth or tenant contract |
+| `dashboard/` | Private Next.js audit UI source | Server-only credential handling, real-data states, build/test boundaries; no deployment claim |
 
-## Tests and harnesses
+## Package and import names
+
+| Source path | Build/distribution name | Import or package name | Availability boundary |
+|---|---|---|---|
+| repository root | Python distribution metadata `aegis-latent-core` | Python package `aegis`; CLIs `aegis`, `aegis-server` | Install from the clone for this baseline; no current registry availability is asserted. |
+| `sdk/python/` | Python distribution metadata `aegis-latent-sdk` | Python package `aegis_sdk` | Install with `python -m pip install -e './sdk/python[dev]'`; no PyPI publication is asserted. |
+| `sdk/typescript/` | npm package metadata `aegis-latent-sdk` | Exports declared by that local package | Use `npm ci` in the source directory; no npm publication is asserted. |
+| `aegis_rust_v2/` | Cargo crate/library `aegis_rust`; Python wheel distribution `aegis-rust` | Python import module `aegis_rust` | `aegis_rust_v2` is only the legacy source-directory name; build locally with Cargo/maturin. |
+| `dashboard/` | private package `aegis-audit-dashboard` | not a reusable public import | Private source application; no registry or deployment claim. |
+
+## Tests and verification
 
 | Path | Role |
 |---|---|
-| `tests/test_p0_release_gates.py` | Blocking P0/P1 regression gates |
-| `tests/test_enterprise_durable_evidence.py` | Governed success and durable failure-path tests |
-| `tests/test_market_hardening_gates.py` | WAF corpus and `fsync`-injection regressions |
-| `tests/test_proxy_streaming.py` | Bounded SSE transformation, backpressure, failure, closure, and terminal-evidence regressions |
-| `tests/test_mmr_portable.py` | Portable MMR proof generation, all leaf ordinals, tampering, and schema rejection |
-| `tests/test_forensic_bundle.py` | Bounded bundle contract, digests, and rejection of empty/unbounded requests |
-| `sdk/python/tests/`, `sdk/typescript/tests/`, `dashboard/tests/` | SDK provider/proof contracts and dashboard no-fabrication/state regressions |
-| `tests/test_keyring_rotation.py` | Keyring schema, reload, overlap, expiry and invalid-snapshot behavior |
-| `tests/data/waf_corpus_v1.json` | Pinned local WAF cases; not a universal threat corpus |
-| `tools/security/run_waf_corpus.py` | WAF metrics and Wilson interval report generator |
-| `tools/benchmarks/run_backpressure_stall.py` | `fsync`-stall workload and evidence-correlation report generator |
-| `tools/benchmarks/run_key_rotation.py` | Local multi-instance key-rotation exercise |
-| `tools/benchmarks/run_pqc_timing.py` | Native ML-DSA timing experiment with raw-sample retention |
+| `tests/test_health.py` | Offline application-factory health test |
+| `tests/test_p0_release_gates.py` | Strict-runtime and blocking durable-evidence regressions |
+| `tests/test_enterprise_durable_evidence.py` | Governed success and failure-path evidence tests |
+| `tests/test_proxy_streaming.py` | Bounded SSE and terminal-ordering tests |
+| `tests/test_mmr_portable.py` | Portable proof generation, tamper rejection, and schema tests |
+| `sdk/python/tests/`, `sdk/typescript/tests/` | SDK provider and proof contracts |
+| `dashboard/tests/` | UI contract, state, and no-fabrication tests |
+| `tools/docs/verify_documentation.py` | Required-document, relative-link, table, metadata, and claim-boundary verifier |
+| `scripts/verify_release_contract.py` | Source/version contract; passing it is not publication evidence |
 
-## Documentation by audience
+## Evidence and historical results
 
-| Audience | Entry point |
-|---|---|
-| Developer | [`docs/DEVELOPER_QUICKSTART.md`](DEVELOPER_QUICKSTART.md), [`CONTRIBUTING.md`](../CONTRIBUTING.md) |
-| Platform/SRE | [`docs/PLATFORM_OPERATOR_GUIDE.md`](PLATFORM_OPERATOR_GUIDE.md), [`DEPLOYMENT_GUIDE.md`](../DEPLOYMENT_GUIDE.md), `docs/operations/` |
-| AppSec | [`SECURITY.md`](../SECURITY.md), [`docs/security/THREAT_MODEL.md`](security/THREAT_MODEL.md), [`docs/security/WAF_TESTING.md`](security/WAF_TESTING.md) |
-| Cryptography reviewer | `aegis_server/crypto/`, [`docs/security/PQC_CONSTANT_TIME.md`](security/PQC_CONSTANT_TIME.md), [`docs/CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md) |
-| Compliance/privacy | [`docs/compliance/COMPLIANCE_MAPPING.md`](compliance/COMPLIANCE_MAPPING.md), [`docs/privacy/DATA_RETENTION.md`](privacy/DATA_RETENTION.md) |
-| Buyer/procurement | [`docs/PRODUCT_BRIEF_US.md`](PRODUCT_BRIEF_US.md), [`docs/BUYER_GUIDE_US.md`](BUYER_GUIDE_US.md), [`docs/FAQ_PROCUREMENT.md`](FAQ_PROCUREMENT.md), [`docs/COMMERCIAL_STRATEGY_US.md`](COMMERCIAL_STRATEGY_US.md) |
-| Release owner | [`CHANGELOG.md`](../CHANGELOG.md), release workflows, SBOM/provenance assets, benchmark artifacts and gate records |
-
-## Architecture and claims
-
-| Question | Document |
-|---|---|
-| How does the request and evidence lifecycle work? | [`docs/architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) |
-| Why this product category? | [`docs/architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md`](architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md) |
-| Which public claims are permitted? | [`docs/CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md) |
-| What was measured? | [`docs/benchmarks/BENCHMARK_RESULTS.md`](benchmarks/BENCHMARK_RESULTS.md) |
-| What is the scaling boundary? | [`docs/performance/SCALING_GUIDE.md`](performance/SCALING_GUIDE.md) |
-
-## Configuration and deployment
-
-Runtime configuration is defined in the settings modules and deployment manifests. Read the environment-variable descriptions next to the code, then validate the actual container, kernel, storage, TLS, Redis, signer and ingress environment. Static manifests do not prove that the target cluster enforces the declared profile.
-
-## Evidence path
-
-A reproducible evidence chain should retain the source commit, command, environment, raw output, canonical JSON, artifact hashes, release tag and reviewer decision. The current public release stores SBOM, provenance, release gate, repository manifest, asset hashes and publication records as release assets. New benchmark outputs must state their boundary and must not overwrite immutable evidence.
+[`evidence/INDEX.md`](../evidence/INDEX.md) is the evidence entry point. The 2026-08-20 through 2026-08-22 benchmark, security, GitHub-status, remediation, and documentation-audit collections are preserved as historical v3.1.0-era observations. The 2026-08-24 candidate/no-go records are superseded for current source-state identification by the 2026-08-25 post-merge audit, while retaining their historical results and decision context.
 
 ## Change-impact checklist
 
-A change touching `aegis/proxy/app.py`, `aegis/core/crypto_audit.py`, signer code, WAF code, configuration, deployment manifests or public claims requires a regression review. Update tests and the claim matrix, rerun affected harnesses, regenerate SBOM/provenance when the release changes, inspect the diff for secrets and stale versions, and update rollback notes before publishing.
+A change touching gateway admission, evidence commit, signer code, WAL persistence, SDK proof verification, Rust bindings, deployment manifests, or public claims requires a scoped regression test and claim review. Record the exact source revision and environment for new evidence; never overwrite historical artifacts or silently apply their results to a newer baseline.
 
 ## Related documents
 
-- [`README.md`](../README.md)
+- [`docs/README.md`](README.md)
+- [`docs/DEVELOPER_QUICKSTART.md`](DEVELOPER_QUICKSTART.md)
 - [`docs/architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md)
 - [`docs/CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md)
-- [`docs/DEVELOPER_QUICKSTART.md`](DEVELOPER_QUICKSTART.md)
-- [`docs/PLATFORM_OPERATOR_GUIDE.md`](PLATFORM_OPERATOR_GUIDE.md)
-- [`docs/FAQ_TECHNICAL.md`](FAQ_TECHNICAL.md)
+- [`docs/RUST_BUILD.md`](RUST_BUILD.md)
+- [`evidence/INDEX.md`](../evidence/INDEX.md)

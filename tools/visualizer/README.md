@@ -64,12 +64,26 @@ transparent client-side simulator; the live dashboard scans through the real eng
 
 ## Run (dev)
 
+From a clean checkout, run from the **repository root**. The editable root
+install supplies the local Aegis detection engines; the visualizer requirements
+add its FastAPI server. No published v4 package is required.
+
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r tools/visualizer/requirements.txt
-uvicorn tools.visualizer.app:app --reload --port 8081
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
+python -m pip install -r tools/visualizer/requirements.txt
+python -m pytest tests/test_threat_lab.py
+python -m uvicorn tools.visualizer.app:app --reload --port 8081
 # open http://localhost:8081/
 ```
+
+The root working directory is required for repository-derived metrics, forensic
+artifacts, module imports, and sample generation to resolve the intended paths.
+The separately distributed Python and TypeScript SDKs are both named
+`aegis-latent-sdk`; v4 is not published to PyPI or npm. See the
+[repository overview](../../README.md), [developer quickstart](../../docs/DEVELOPER_QUICKSTART.md),
+and [sample gallery](../../Samples/README.md).
 
 ### API
 
@@ -93,7 +107,7 @@ realistic production-scale mock data. They are the *exact same UI* (they boot fr
 an embedded dataset instead of the API), so they faithfully represent the program.
 
 ```bash
-python tools/visualizer/generate_samples.py   # regenerate Samples/
+python tools/visualizer/generate_samples.py   # from repository root; regenerates Samples/
 ```
 
 Open any `Samples/*.html` directly in a browser (no server needed; the Chart.js /

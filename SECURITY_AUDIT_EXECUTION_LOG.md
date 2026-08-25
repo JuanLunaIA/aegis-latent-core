@@ -1,5 +1,10 @@
 # Security Audit Execution Log
 
+> **Historical archive (2026-06-13).** This execution log is retained unchanged
+> as evidence for its stated version and scope; it does not describe current v4
+> status. Use the [current evidence index](artifacts/v4-enterprise-maturation-2026-08-23/EVIDENCE.md)
+> for newer gates, bounded observations, and outstanding external blockers.
+
 **Project:** Aegis Latent Core v2.3.0  
 **Audit date:** 2026-06-13  
 **Scope:** Full workspace — `aegis/`, `aegis_server/`, `aegis_rust_v2/`, `tests/`, `tools/visualizer/`  
