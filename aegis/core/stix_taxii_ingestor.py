@@ -236,18 +236,19 @@ def parse_stix_bundle(bundle: dict[str, object]) -> list[dict[str, object]]:
     Accepts both a bundle envelope (``type: "bundle"``) and a bare object
     list (TAXII sometimes returns the envelope, sometimes just ``objects``).
     """
-    if bundle.get("type") == "bundle":
-        return list(bundle.get("objects", []))
-    if isinstance(bundle.get("objects"), list):
-        return list(bundle["objects"])
-    return []
+    objects = bundle.get("objects")
+    if not isinstance(objects, list):
+        return []
+    return [item for item in objects if isinstance(item, dict)]
 
 
 def is_prompt_indicator(obj: dict[str, object]) -> bool:
     """Return True if *obj* is a STIX Indicator for an adversarial prompt."""
     if obj.get("type") != "indicator":
         return False
-    labels = obj.get("labels", [])
+    labels = obj.get("labels")
+    if not isinstance(labels, list) or not all(isinstance(label, str) for label in labels):
+        return False
     return bool(_PROMPT_LABELS & set(labels))
 
 
@@ -264,12 +265,16 @@ def extract_waf_pattern(stix_pattern: str) -> str:
 def parse_indicator(obj: dict[str, object]) -> PromptIndicator:
     """Parse a STIX Indicator dict into a :class:`PromptIndicator`."""
     pattern = str(obj.get("pattern", ""))
+    labels = obj.get("labels")
+    safe_labels = (
+        [label for label in labels if isinstance(label, str)] if isinstance(labels, list) else []
+    )
     return PromptIndicator(
         stix_id=str(obj.get("id", "")),
         name=str(obj.get("name", "")),
         description=str(obj.get("description", "")),
         pattern=pattern,
-        labels=list(obj.get("labels", [])),
+        labels=safe_labels,
         waf_pattern=extract_waf_pattern(pattern),
         created=str(obj.get("created", "")),
         modified=str(obj.get("modified", "")),

@@ -11,6 +11,7 @@ import hashlib
 import io
 import json
 import math
+import struct
 import textwrap
 import zipfile
 from collections.abc import Mapping, Sequence
@@ -21,6 +22,9 @@ import cbor2
 
 _MAX_BUNDLE_BYTES = 64 * 1024 * 1024
 _MAX_NODES = 1_000
+_JCS_MAX_SAFE_INTEGER = (1 << 53) - 1
+_CBOR_MAX_UINT = (1 << 64) - 1
+_CBOR_MIN_INT = -(1 << 64)
 
 
 class ForensicBundleError(ValueError):
@@ -37,13 +41,25 @@ def _jcs_bytes(value: Mapping[str, Any]) -> bytes:
     """
 
     def normalize(item: Any) -> Any:
-        if item is None or isinstance(item, (str, bool, int)):
+        if item is None or isinstance(item, bool):
+            return item
+        if isinstance(item, str):
+            try:
+                item.encode("utf-8")
+            except UnicodeEncodeError as exc:
+                raise ForensicBundleError("JCS strings must contain Unicode scalar values") from exc
+            return item
+        if isinstance(item, int):
+            if not -_JCS_MAX_SAFE_INTEGER <= item <= _JCS_MAX_SAFE_INTEGER:
+                raise ForensicBundleError("JCS integers must remain in the I-JSON safe range")
             return item
         if isinstance(item, Sequence) and not isinstance(item, (str, bytes, bytearray)):
             return [normalize(child) for child in item]
         if isinstance(item, Mapping):
             if not all(isinstance(key, str) for key in item):
                 raise ForensicBundleError("JCS manifest keys must be strings")
+            if not all(key.isascii() for key in item):
+                raise ForensicBundleError("JCS manifest keys must be ASCII")
             return {key: normalize(child) for key, child in item.items()}
         raise ForensicBundleError(f"unsupported JCS manifest type: {type(item).__name__}")
 
@@ -58,15 +74,36 @@ def _jcs_bytes(value: Mapping[str, Any]) -> bytes:
 
 
 def _dag_cbor_value(value: Any) -> Any:
-    if value is None or isinstance(value, (str, bytes, bool, int)):
+    if value is None or isinstance(value, (bytes, bool)):
+        return value
+    if isinstance(value, str):
+        try:
+            value.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            raise ForensicBundleError(
+                "DAG-CBOR strings must contain Unicode scalar values"
+            ) from exc
+        return value
+    if isinstance(value, int):
+        if not _CBOR_MIN_INT <= value <= _CBOR_MAX_UINT:
+            raise ForensicBundleError("DAG-CBOR integer is outside native CBOR bounds")
         return value
     if isinstance(value, float):
         if not math.isfinite(value):
             raise ForensicBundleError("DAG-CBOR does not accept non-finite floats")
+        if value == 0.0 and math.copysign(1.0, value) < 0:
+            raise ForensicBundleError("DAG-CBOR does not accept negative zero")
         return value
     if isinstance(value, Mapping):
         if not all(isinstance(key, str) for key in value):
             raise ForensicBundleError("DAG-CBOR map keys must be strings")
+        for key in value:
+            try:
+                key.encode("utf-8")
+            except UnicodeEncodeError as exc:
+                raise ForensicBundleError(
+                    "DAG-CBOR map keys must contain Unicode scalar values"
+                ) from exc
         return {key: _dag_cbor_value(child) for key, child in value.items()}
     if isinstance(value, Sequence):
         return [_dag_cbor_value(child) for child in value]
@@ -98,7 +135,15 @@ def canonical_jcs_bytes(value: Mapping[str, Any]) -> bytes:
 
 def canonical_dag_cbor_bytes(value: Any) -> bytes:
     """Return deterministic DAG-CBOR bytes for the supported evidence domain."""
-    return cbor2.dumps(_dag_cbor_value(value), canonical=True)
+
+    def encode_float64(encoder: Any, item: float) -> None:
+        encoder.write(b"\xfb" + struct.pack(">d", item))
+
+    return cbor2.dumps(
+        _dag_cbor_value(value),
+        canonical=True,
+        encoders={float: encode_float64},
+    )
 
 
 def dag_cbor_cid(payload: bytes) -> str:
@@ -178,7 +223,8 @@ check() {{
   echo "OK   $file $actual"
 }}
 {checks}
-echo "Bundle byte integrity verified. Validate MMR proofs against an independently trusted root."
+echo "Embedded file-byte SHA-256 values match this unauthenticated script."
+echo "This does not authenticate the script or archive and does not verify canonical encodings, signatures, MMR proofs, or a trusted root."
 """
     return script.encode("utf-8")
 
@@ -236,7 +282,7 @@ def build_forensic_bundle(
             }
         )
 
-    ledger_cbor = cbor2.dumps(_dag_cbor_value(records), canonical=True)
+    ledger_cbor = canonical_dag_cbor_bytes(records)
     proof_json = _jcs_bytes({"proofs": proofs, "version": "aegis-mmr-proof-set-v1"})
     root = records[-1].get("merkle_root", "")
     integrity_lines = [

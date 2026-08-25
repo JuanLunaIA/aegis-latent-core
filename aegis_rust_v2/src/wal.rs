@@ -11,7 +11,8 @@
 //!   [crc32: 4 B][payload_len: 4 B][payload: payload_len B]
 //!
 //! Guarantees:
-//!   - `flush_range` (msync MS_SYNC) after each frame → crash-consistent.
+//!   - `flush_range` requests synchronous persistence after each frame; actual
+//!     crash/power-loss durability still depends on the OS, filesystem, and device.
 //!   - CRC32 on read → torn-write detection.
 //!   - The mmap mutex serialises reservation, copy, flush, and publication, so
 //!     concurrent appends cannot expose a later frame before an earlier frame.
@@ -91,11 +92,19 @@ impl RustWal {
         })?;
 
         // SAFETY: we own the file and no other process writes to the region.
-        let mmap = unsafe { MmapMut::map_mut(&file) }.map_err(|e| {
+        let mut mmap = unsafe { MmapMut::map_mut(&file) }.map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("RustWal mmap: {e}"))
         })?;
 
         let write_pos = scan_write_pos(&mmap, capacity);
+        if write_pos + FRAME_HEADER <= capacity {
+            mmap[write_pos..write_pos + FRAME_HEADER].fill(0);
+            mmap.flush_range(write_pos, FRAME_HEADER).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyIOError, _>(format!(
+                    "RustWal recovery terminator flush: {e}"
+                ))
+            })?;
+        }
 
         Ok(RustWal {
             inner: Arc::new(WalInner {
@@ -143,9 +152,19 @@ impl RustWal {
         buf[4..8].copy_from_slice(&payload_len.to_le_bytes());
         buf[8..].copy_from_slice(data);
 
+        // Persist a zero-length sentinel after the new valid prefix. This
+        // prevents a same-size replacement of a recovered corrupt frame from
+        // making an older, otherwise valid suffix reachable on the next open.
+        let flush_end = if end + FRAME_HEADER <= self.inner.capacity {
+            mmap[end..end + FRAME_HEADER].fill(0);
+            end + FRAME_HEADER
+        } else {
+            end
+        };
+
         // Persist to storage — blocks until OS confirms durability. write_pos
         // remains unchanged on failure, so readers never cross this frame.
-        if let Err(e) = mmap.flush_range(offset, frame) {
+        if let Err(e) = mmap.flush_range(offset, flush_end - offset) {
             return Err(PyErr::new::<pyo3::exceptions::PyIOError, _>(format!(
                 "RustWal flush: {e}"
             )));
@@ -275,23 +294,32 @@ mod tests {
         for worker in 0..8 {
             let shared = Arc::clone(&wal);
             workers.push(std::thread::spawn(move || {
+                let mut writes = Vec::new();
                 for record in 0..100 {
-                    shared
-                        .append(&format!(r#"{{"worker":{worker},"record":{record}}}"#))
-                        .unwrap();
+                    let payload = format!(r#"{{"worker":{worker},"record":{record}}}"#);
+                    let offset = shared.append(&payload).unwrap();
+                    writes.push((offset, FRAME_HEADER + payload.len(), payload));
                 }
+                writes
             }));
         }
 
+        let mut writes = Vec::new();
         for worker in workers {
-            worker.join().unwrap();
+            writes.extend(worker.join().unwrap());
         }
 
+        writes.sort_by_key(|(offset, _, _)| *offset);
+        let mut expected_offset = 0u64;
+        for (offset, frame_len, _) in &writes {
+            assert_eq!(*offset, expected_offset);
+            expected_offset += *frame_len as u64;
+        }
+        assert_eq!(wal.write_pos(), expected_offset);
         let records = wal.read_all().unwrap();
         assert_eq!(records.len(), 800);
-        assert!(records
-            .iter()
-            .all(|record| record.starts_with('{') && record.ends_with('}')));
+        let expected: Vec<String> = writes.into_iter().map(|(_, _, payload)| payload).collect();
+        assert_eq!(records, expected);
     }
 
     #[test]
@@ -305,5 +333,43 @@ mod tests {
         assert!(wal.append("5").is_err());
         assert_eq!(wal.write_pos(), committed);
         assert_eq!(wal.read_all().unwrap(), vec!["1234".to_string()]);
+    }
+
+    #[test]
+    fn recovery_terminator_prevents_corrupt_suffix_resurrection() {
+        use std::io::{Seek, SeekFrom, Write};
+
+        let file = NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap().to_string();
+        let frame_len = FRAME_HEADER + 4;
+        {
+            let wal = RustWal::open(&path, Some(4096)).unwrap();
+            wal.append("AAAA").unwrap();
+            wal.append("BBBB").unwrap();
+            wal.append("CCCC").unwrap();
+        }
+
+        let mut raw = OpenOptions::new().write(true).open(&path).unwrap();
+        raw.seek(SeekFrom::Start((frame_len + FRAME_HEADER) as u64))
+            .unwrap();
+        raw.write_all(b"X").unwrap();
+        raw.sync_all().unwrap();
+
+        {
+            let recovered = RustWal::open(&path, Some(4096)).unwrap();
+            assert_eq!(recovered.read_all().unwrap(), vec!["AAAA".to_string()]);
+            let replacement_offset = recovered.append("DDDD").unwrap();
+            assert_eq!(replacement_offset, frame_len as u64);
+            assert_eq!(
+                recovered.read_all().unwrap(),
+                vec!["AAAA".to_string(), "DDDD".to_string()]
+            );
+        }
+
+        let reopened = RustWal::open(&path, Some(4096)).unwrap();
+        assert_eq!(
+            reopened.read_all().unwrap(),
+            vec!["AAAA".to_string(), "DDDD".to_string()]
+        );
     }
 }

@@ -16,11 +16,9 @@ on:
   push:
     tags:
       - "v[0-9]*"
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag to release (e.g. v2.4.0)"
-        required: true
+
+permissions:
+  contents: read
 
 env:
   PYTHON_BUILD_VERSION: "3.12"
@@ -35,6 +33,23 @@ jobs:
       version: ${{ steps.ver.outputs.version }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - name: Verify annotated signed tag and protected-branch ancestry
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          git fetch --no-tags origin main
+          test "$(git cat-file -t "refs/tags/${RELEASE_TAG}")" = tag
+          git verify-tag "${RELEASE_TAG}"
+          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+
+      - name: Verify full release contract
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python scripts/verify_release_contract.py --root . --tag "${RELEASE_TAG}"
 
       - name: Extract version from pyproject.toml
         id: ver
@@ -76,7 +91,7 @@ jobs:
           cache: pip
 
       - name: Install build tools
-        run: pip install build twine
+        run: pip install build==1.3.0 twine==6.2.0
 
       - name: Build sdist and wheel
         run: python -m build
@@ -175,6 +190,8 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-22.04
     needs: [validate, build-python, build-rust]
+    environment:
+      name: release
     permissions:
       contents: write
       id-token: write   # for artifact attestation
@@ -191,16 +208,7 @@ jobs:
 
       - name: Flatten artifact directories
         run: |
-          mkdir -p release/
-          find release-assets/ -type f -not -name "*.sha256" \
-            \( -name "*.whl" -o -name "*.tar.gz" \) \
-            -exec cp {} release/ \;
-          # Rehash everything in one place
-          cd release/
-          for f in *.whl *.tar.gz; do
-            sha256sum "$f" > "$f.sha256"
-          done
-          ls -lh
+          python scripts/prepare_release_assets.py --input release-assets --output release
 
       - name: Attest build artifacts (SLSA Level 2)
         uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1
@@ -209,36 +217,15 @@ jobs:
 
       - name: Extract CHANGELOG excerpt for this release
         id: changelog
-        run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          # Extract the section for this version from CHANGELOG.md
-          python - <<'EOF'
-          import re, os, sys
-          version = os.environ["VERSION"]
-          text = open("CHANGELOG.md").read()
-          # Match "## [2.4.0]" or "## 2.4.0" sections
-          pattern = rf"(?m)^##\s+[\[v]?{re.escape(version)}[^\n]*\n(.*?)(?=\n##\s|\Z)"
-          m = re.search(pattern, text, re.DOTALL)
-          body = m.group(1).strip() if m else f"Release v{version}"
-          # Write to file so the shell step can use it
-          with open("release_body.md", "w") as f:
-              f.write(body)
-          print(f"Extracted {len(body)} chars for v{version}")
-          EOF
         env:
           VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          python scripts/extract_release_notes.py --changelog CHANGELOG.md --version "${VERSION}" --output release_body.md
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-        with:
-          tag_name: v${{ needs.validate.outputs.version }}
-          name: "Aegis Latent Core v${{ needs.validate.outputs.version }}"
-          body_path: release_body.md
-          draft: false
-          prerelease: ${{ contains(needs.validate.outputs.version, 'rc') || contains(needs.validate.outputs.version, 'b') || contains(needs.validate.outputs.version, 'a') }}
-          files: |
-            release/*.whl
-            release/*.tar.gz
-            release/*.sha256
+      - name: Create a new GitHub Release without an update path
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          python scripts/create_github_release.py --tag "${RELEASE_TAG}" --version "${VERSION}" --notes-file release_body.md --asset-directory release

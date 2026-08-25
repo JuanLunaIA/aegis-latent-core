@@ -13,11 +13,11 @@ Aegis Latent Core is an OpenAI-compatible gateway that applies request policy, W
 
 **Last verified:** 2026-08-24 UTC
 **Release baseline:** published [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0)
-**Current-main baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
+**Current-main baseline:** post-PR #102, commit `5ebc761b55bec8db60df2edbdaf98e11d559bba6`
 
 ## Baselines and claim scope
 
-The published release baseline is **v3.1.0**. The repository state described as **current main** is commit `45d95188d40792639fdd654369765a7233bef09a` after PR #99. Streaming SSE with bounded `pending-terminal` evidence, native Anthropic `POST /v1/messages`, the Python and TypeScript SDKs, portable MMR proofs, the forensic dashboard and ZIP export, the auxiliary `RustWal` stream segment, and the SSE benchmark are current-main capabilities; they are **not attributed to the v3.1.0 tag**. Release evidence and current-main implementation evidence must be evaluated separately.
+The published release baseline is **v3.1.0**. The repository state described as **current main** is commit `5ebc761b55bec8db60df2edbdaf98e11d559bba6` after PR #102. Streaming SSE with bounded `pending-terminal` evidence, native Anthropic `POST /v1/messages`, the Python and TypeScript SDKs, portable MMR proofs, the forensic dashboard and ZIP export, the auxiliary `RustWal` stream segment, and the SSE benchmark are current-main capabilities; they are **not attributed to the v3.1.0 tag**. Release evidence and current-main implementation evidence must be evaluated separately. The release-readiness checker evaluates source contracts only: it does not prove a tag, GitHub environment, signer trust path, registry policy, artifact attestation, multi-architecture runtime, or external acceptance.
 
 ## Who should evaluate Aegis
 
