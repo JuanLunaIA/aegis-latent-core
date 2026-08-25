@@ -18,4 +18,4 @@ __all__ = [
     "verify_inclusion_hash",
     "verify_proof_headers",
 ]
-__version__ = "3.1.0"
+__version__ = "4.0.0"

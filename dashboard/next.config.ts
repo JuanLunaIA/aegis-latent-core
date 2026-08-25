@@ -21,7 +21,7 @@ const config: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   reactStrictMode: true,
-  transpilePackages: ["@aegis-latent/sdk"],
+  transpilePackages: ["aegis-latent-sdk"],
   turbopack: {root: repositoryRoot},
   async headers() {
     return [{

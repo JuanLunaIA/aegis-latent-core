@@ -621,11 +621,52 @@ def _validate_legacy_build_workflow(root: Path, diagnostics: list[Diagnostic]) -
     )
 
 
+def _validate_package_identity(root: Path, diagnostics: list[Diagnostic]) -> None:
+    """Bind public distribution names and the Rust runtime version export."""
+    try:
+        python_name = _nested_string(
+            _read_toml(root / "sdk/python/pyproject.toml"), "project", "name"
+        )
+        typescript_name = _nested_string(_read_json(root / "sdk/typescript/package.json"), "name")
+        rust_source = (root / "aegis_rust_v2/src/lib.rs").read_text(encoding="utf-8")
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        diagnostics.append(
+            Diagnostic(
+                "metadata.identity-unreadable",
+                f"cannot read release package identity: {exc}",
+                "package metadata",
+            )
+        )
+        return
+    _add_if_false(
+        diagnostics,
+        python_name == "aegis-latent-sdk",
+        "metadata.python-package-name",
+        "Python SDK distribution name must be aegis-latent-sdk",
+        "sdk/python/pyproject.toml",
+    )
+    _add_if_false(
+        diagnostics,
+        typescript_name == "aegis-latent-sdk",
+        "metadata.typescript-package-name",
+        "TypeScript SDK package name must be aegis-latent-sdk",
+        "sdk/typescript/package.json",
+    )
+    _add_if_false(
+        diagnostics,
+        'm.add("__version__", env!("CARGO_PKG_VERSION"))?;' in rust_source,
+        "metadata.rust-runtime-version-unbound",
+        "Rust Python runtime version must derive from CARGO_PKG_VERSION",
+        "aegis_rust_v2/src/lib.rs",
+    )
+
+
 def assess_repository(root: Path, *, release_tag: str | None = None) -> Assessment:
     root = root.resolve()
     diagnostics: list[Diagnostic] = []
     versions = _load_versions(root, diagnostics)
     _validate_build_backends(root, diagnostics)
+    _validate_package_identity(root, diagnostics)
     if release_tag is not None:
         expected = versions.get("core")
         tag_version = release_tag.removeprefix("v")

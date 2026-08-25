@@ -92,7 +92,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: pypi
-      url: https://pypi.org/project/aegis-sdk/
+      url: https://pypi.org/project/aegis-latent-sdk/
     permissions:
       contents: read
       id-token: write

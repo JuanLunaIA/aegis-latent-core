@@ -1,6 +1,6 @@
 # Aegis Python SDK
 
-`aegis-sdk` supplies typed subclasses of the official OpenAI and Anthropic clients plus a stateless verifier for `aegis-mmr-inclusion-v1` proofs.
+`aegis-latent-sdk` supplies typed subclasses of the official OpenAI and Anthropic clients plus a stateless verifier for `aegis-mmr-inclusion-v1` proofs.
 
 ```python
 from aegis_sdk.openai import OpenAI

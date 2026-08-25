@@ -49,6 +49,7 @@ def _copy_contract_repository(destination: Path) -> Path:
         "aegis_rust_v2/Cargo.lock",
         "aegis_rust_v2/Cargo.toml",
         "aegis_rust_v2/pyproject.toml",
+        "aegis_rust_v2/src/lib.rs",
         "dashboard/Dockerfile",
         "dashboard/package-lock.json",
         "dashboard/package.json",
@@ -80,8 +81,8 @@ def test_release_source_contract_is_complete_without_external_claims() -> None:
     assert len(set(assessment.versions.values())) == 1
     assert assessment.ready
     assert assessment.diagnostics == ()
-    assert all(not version.startswith("4.") for version in assessment.versions.values())
-    assert _git("tag", "--list", "v4*").stdout.strip() == ""
+    assert set(assessment.versions.values()) == {"4.0.0"}
+    assert _git("tag", "--list", "v4.0.0").stdout.strip() == ""
     assert "published" not in assessment.to_dict()
     assert "released" not in assessment.to_dict()
 
@@ -94,7 +95,7 @@ def test_release_contract_cli_reports_source_contract_as_json() -> None:
             "--root",
             str(ROOT),
             "--tag",
-            "v3.1.0",
+            "v4.0.0",
             "--json",
         ],
         cwd=ROOT,
@@ -108,7 +109,7 @@ def test_release_contract_cli_reports_source_contract_as_json() -> None:
     assert report["diagnostics"] == []
 
 
-@pytest.mark.parametrize("tag", ["v4.0.0", "3.1.0", "v03.1.0", "v3.1.0-rc1"])
+@pytest.mark.parametrize("tag", ["v3.1.0", "4.0.0", "v04.0.0", "v4.0.0-rc1"])
 def test_release_contract_rejects_mismatched_or_noncanonical_tag(tag: str) -> None:
     assessment = assess_repository(ROOT, release_tag=tag)
     assert "metadata.tag-version-mismatch" in {item.code for item in assessment.diagnostics}
@@ -129,22 +130,22 @@ def test_release_notes_require_one_exact_nonempty_stable_section() -> None:
 def test_release_creator_builds_only_create_command_with_hashed_assets(tmp_path: Path) -> None:
     assets = tmp_path / "assets"
     assets.mkdir()
-    wheel = assets / "aegis-3.1.0-py3-none-any.whl"
+    wheel = assets / "aegis-4.0.0-py3-none-any.whl"
     wheel.write_bytes(b"wheel")
     (assets / f"{wheel.name}.sha256").write_text("0" * 64 + f"  {wheel.name}\n", encoding="ascii")
     notes = tmp_path / "notes.md"
     notes.write_text("Release notes\n", encoding="utf-8")
     command = build_create_command(
-        tag="v3.1.0", version="3.1.0", notes_file=notes, asset_directory=assets
+        tag="v4.0.0", version="4.0.0", notes_file=notes, asset_directory=assets
     )
-    assert command[:4] == ("gh", "release", "create", "v3.1.0")
+    assert command[:4] == ("gh", "release", "create", "v4.0.0")
     assert "--verify-tag" in command
     assert "upload" not in command
     assert "edit" not in command
     assert "--clobber" not in command
     with pytest.raises(ValueError, match="exactly equal"):
         build_create_command(
-            tag="v4.0.0", version="3.1.0", notes_file=notes, asset_directory=assets
+            tag="v3.1.0", version="4.0.0", notes_file=notes, asset_directory=assets
         )
 
 
@@ -231,7 +232,7 @@ def test_release_contract_detects_version_drift_missing_dockerfile_and_backend(
     tmp_path: Path,
 ) -> None:
     cases = [
-        ("aegis/__init__.py", '"3.1.0"', '"3.1.1"', "metadata.version-drift"),
+        ("aegis/__init__.py", '"4.0.0"', '"4.0.1"', "metadata.version-drift"),
         ("pyproject.toml", "hatchling==1.28.0", "hatchling>=1.24", "build.backend-unpinned"),
     ]
     for index, (relative, old, new, code) in enumerate(cases):
@@ -245,6 +246,42 @@ def test_release_contract_detects_version_drift_missing_dockerfile_and_backend(
     (repository / "deploy/docker/Dockerfile").unlink()
     assessment = assess_repository(repository)
     assert "oci.dockerfile-missing" in {item.code for item in assessment.diagnostics}
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "old", "new", "diagnostic_code"),
+    [
+        (
+            "sdk/python/pyproject.toml",
+            'name = "aegis-latent-sdk"',
+            'name = "aegis-sdk"',
+            "metadata.python-package-name",
+        ),
+        (
+            "sdk/typescript/package.json",
+            '"name": "aegis-latent-sdk"',
+            '"name": "@aegis-latent/sdk"',
+            "metadata.typescript-package-name",
+        ),
+        (
+            "aegis_rust_v2/src/lib.rs",
+            'm.add("__version__", env!("CARGO_PKG_VERSION"))?;',
+            'm.add("__version__", "4.0.0")?;',
+            "metadata.rust-runtime-version-unbound",
+        ),
+    ],
+)
+def test_release_contract_binds_package_identity_and_rust_runtime_version(
+    tmp_path: Path, relative_path: str, old: str, new: str, diagnostic_code: str
+) -> None:
+    repository = _copy_contract_repository(tmp_path / "repository")
+    path = repository / relative_path
+    contents = path.read_text(encoding="utf-8")
+    assert contents.count(old) == 1
+    path.write_text(contents.replace(old, new), encoding="utf-8")
+    assessment = assess_repository(repository)
+    assert diagnostic_code in {item.code for item in assessment.diagnostics}
+    assert not assessment.ready
 
 
 @pytest.mark.parametrize(

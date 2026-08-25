@@ -1,6 +1,6 @@
 {
   "name": "aegis-audit-dashboard",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,7 @@
     "check": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
-    "@aegis-latent/sdk": "file:../sdk/typescript",
+    "aegis-latent-sdk": "file:../sdk/typescript",
     "@tanstack/react-virtual": "3.14.10",
     "next": "16.3.2",
     "react": "19.2.8",

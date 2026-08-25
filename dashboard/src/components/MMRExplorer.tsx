@@ -1,6 +1,6 @@
 "use client";
 
-import { parseInclusionProof, verifyInclusionHash, type InclusionProofV1 } from "@aegis-latent/sdk/proof";
+import { parseInclusionProof, verifyInclusionHash, type InclusionProofV1 } from "aegis-latent-sdk/proof";
 import { useState } from "react";
 
 import type { ProofResponse } from "@/lib/contracts";
