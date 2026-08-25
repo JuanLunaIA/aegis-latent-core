@@ -411,8 +411,9 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - name: Install pip-tools
-        run: pip install pip-tools==7.5.2
+      - name: Install compatible lock tooling
+        # pip-tools 7.5.2 imports an internal API removed by pip 25.3.
+        run: python -m pip install pip==25.2 pip-tools==7.5.2
       - name: Regenerate lock file
         run: pip-compile --generate-hashes --output-file=requirements.lock.new requirements.txt
       - name: Check for drift
