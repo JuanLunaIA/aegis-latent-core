@@ -1,10 +1,10 @@
-# Aegis Latent Core 3.1.0 — Deployment Guide
+# Aegis Latent Core — Deployment Guide
 
-This guide describes the implemented and configuration-dependent deployment contract for the published v3.1.0 release. It is for platform, SRE, security and procurement reviewers. It does not grant regulatory certification, create a production SLO or replace an environment-specific review of kernel, storage, network, identity, secrets, backup and incident-response controls.
+This guide distinguishes the published v3.1.0 release from the merged v4.0.0 source baseline. It is for platform, SRE, security and procurement reviewers. It does not claim a v4 publication, grant regulatory certification, create a production SLO or replace an environment-specific review of kernel, storage, network, identity, secrets, backup and incident-response controls.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
-**Current main verified:** `45d95188d40792639fdd654369765a7233bef09a` (post-release; not the `v3.1.0` tag)
+**Last verified:** 2026-08-25 UTC
+**Release baseline:** published `v3.1.0`
+**Merged-source baseline:** `2050a310ec295afc61d033ff842c9a535a4f3105` (fourteen `4.0.0` anchors; no v4 tag, GitHub Release, PyPI publication, or npm publication)
 **Audience:** Platform operators, SRE, security and procurement reviewers
 
 ## 1. Strict runtime contract
@@ -45,11 +45,25 @@ The Python fallback is a reference implementation, not a permission to omit prod
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --require-hashes -r requirements.lock
+python -m pip install --no-deps -e .
 python -m compileall -q aegis aegis_server
 pytest -q
 ```
 
-`requirements.txt` sets security floors and `requirements.lock` pins versions and hashes. `cryptography` is pinned at `50.0.0`, outside the audited affected range for `CVE-2026-69247` / `PYSEC-2026-3552`. Run the dependency scanner and generate the SBOM before creating an image.
+`requirements.txt` sets security floors and `requirements.lock` pins runtime versions and hashes. The editable `--no-deps` step installs the current source and its declared `aegis`/`aegis-server` console entry points without re-resolving that runtime set. `cryptography` is pinned at `50.0.0`, outside the audited affected range for `CVE-2026-69247` / `PYSEC-2026-3552`. Run the dependency scanner and generate the SBOM before creating an image.
+
+For an isolated local evaluation with a mock upstream, start the source entry point as follows:
+
+```bash
+export AEGIS_SECURITY_ENFORCEMENT_MODE=development
+export AEGIS_DEBUG_MODE=true
+export AEGIS_AUTH_DISABLED=true
+export AEGIS_BACKEND_URL='http://127.0.0.1:9001/v1'
+export AEGIS_WAL_PATH='/tmp/aegis-evaluation.wal.jsonl'
+aegis
+```
+
+Do not use this development profile for deployment evidence. For strict operation, configure every prerequisite below and use the same `aegis` entry point. The current source rejects the stale `permissive` mode value, and there is no `aegis.main` module.
 
 ## 4. Required configuration
 

@@ -1,6 +1,6 @@
 # Formal Specifications Mapping
 
-The files under [`specs/`](../specs/) describe **selected abstractions**. The executable entry point is [`scripts/verify_formal_artifacts.sh`](../scripts/verify_formal_artifacts.sh), also referenced by [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). A green result is not a refinement proof of Python/Rust code or a target platform.
+The files under [`specs/`](../specs/) describe **selected abstractions**. The executable entry point is [`scripts/verify_formal_artifacts.sh`](../scripts/verify_formal_artifacts.sh), also referenced by [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). A green result is not a refinement proof of Python/Rust code or a target platform. Release scope is separate: **v3.1.0** is published, while merged unpublished v4 source anchor **`2050a310ec295afc61d033ff842c9a535a4f3105`** has **14 synchronized `4.0.0` anchors** but no asserted v4 tag, GitHub Release, or registry publication.
 
 | Artifact | Property represented | Checker / expected result | Related runtime path | Explicit limit |
 |---|---|---|---|---|
@@ -18,5 +18,6 @@ The files under [`specs/`](../specs/) describe **selected abstractions**. The ex
 3. Treat missing tools, skipped checks, widened bounds, or changed assumptions as review findings—not implicit passes.
 4. Compare modeled transitions with authoritative implementation diffs and executable tests.
 5. Record external acceptance separately for storage, clocks, identity, network, providers, secrets, orchestration, and recovery.
+6. Stop if the checkout differs from the recorded mutable working-tree state, the context manifest is stale, or formal results are being used to infer release publication.
 
-The authoritative claim boundary is the formal-method row in [`docs/CLAIMS_MATRIX.md`](../docs/CLAIMS_MATRIX.md): bounded checks can falsify the declared models, but cannot establish production fitness, universal correctness, certification, or release publication.
+The authoritative claim boundary is the formal-method row in [`docs/CLAIMS_MATRIX.md`](../docs/CLAIMS_MATRIX.md): bounded checks can falsify the declared models, but cannot establish production fitness, universal correctness, certification, or release publication. The source anchor is immutable; a descendant or dirty working tree is mutable and must be reported separately.

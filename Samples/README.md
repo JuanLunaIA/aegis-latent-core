@@ -29,7 +29,17 @@ internet connection is used only to load the Chart.js / Mermaid CDNs).
 
 Regenerate with:
 
-    python tools/visualizer/generate_samples.py
+```bash
+# Run from the repository root, not from Samples/.
+python tools/visualizer/generate_samples.py
+```
+
+The root working directory ensures the generator writes to the tracked
+`Samples/` directory and resolves visualizer assets correctly. For the live
+local tool and its clean-checkout environment, see the
+[visualizer README](../tools/visualizer/README.md). Canonical project navigation
+is in the [repository overview](../README.md) and
+[developer quickstart](../docs/DEVELOPER_QUICKSTART.md).
 
 > The numbers here are illustrative mock data for presentation only. The live
 > dashboard reports real code/forensic metrics and renders honest "connect

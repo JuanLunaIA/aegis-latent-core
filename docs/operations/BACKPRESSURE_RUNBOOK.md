@@ -1,12 +1,15 @@
-# Backpressure and I/O Stall Runbook — Aegis Latent Core v3.1.0
+# Backpressure and I/O Stall Runbook — Aegis Latent Core
 
 This runbook is for platform engineering, SRE, security operations and release reviewers who must diagnose storage or `fsync` stall without losing authoritative evidence. It describes the local injected seam, operator actions, recovery and residual risk. A `dm-delay` test remains a separate privileged lab operation.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
-**Current main verified:** `45d95188d40792639fdd654369765a7233bef09a` (post-release; not the `v3.1.0` tag)
+**Last verified:** 2026-08-25 UTC
+**Release baseline:** two-baseline model
+**Published evidence baseline:** `v3.1.0`; retained measurements are historical evidence for that release only
+**Merged-source anchor:** `2050a310ec295afc61d033ff842c9a535a4f3105` (unpublished v4 source; no v4 publication or deployment acceptance is asserted)
 **Scope:** Aegis local WAL and governed-request evidence path
 **Audience:** Platform engineering, SRE, security operations and release reviewers
+
+The retained numeric results below belong to the published `v3.1.0` evidence baseline. The merged v4 source anchor identifies the implementation under documentation review, not a rerun of those measurements. Do not promote the v3.1.0 results to v4 capacity, latency, availability, or SLO claims without a v4 rerun and target-environment acceptance evidence.
 
 ## Runtime contract
 
@@ -44,7 +47,7 @@ PYTHONPATH=. .venv/bin/python tools/benchmarks/run_backpressure_stall.py \
 
 The artifact must record offered load, delay, worker count, accepted-and-durable count, failure count, missing IDs, duplicate IDs, chain integrity, commit latency percentiles, WAL hash, and the explicit statement that offered load is not accepted capacity.
 
-The retained candidate run offered 10,000 requests at 10,000 RPS with a 2 ms injected `fsync` delay and 64 workers. It recorded 10,000 durable commits, zero failures, zero missing IDs, zero duplicate IDs, and valid chain integrity. Observed total runtime was 32.36878035601694 s, with commit latency p50 `202.13615702232346 ms`, p95 `614.082946034614 ms`, p99 `1189.8909930023365 ms`, and max `3208.868669986259 ms`. This proves the no-silent-drop behavior within the local harness boundary; it also demonstrates that the offered load caused severe queueing and does not establish accepted capacity or a production SLO.
+The retained `v3.1.0` candidate run offered 10,000 requests at 10,000 RPS with a 2 ms injected `fsync` delay and 64 workers. It recorded 10,000 durable commits, zero failures, zero missing IDs, zero duplicate IDs, and valid chain integrity. Observed total runtime was 32.36878035601694 s, with commit latency p50 `202.13615702232346 ms`, p95 `614.082946034614 ms`, p99 `1189.8909930023365 ms`, and max `3208.868669986259 ms`. This proves the no-silent-drop behavior within that historical local harness boundary; it also demonstrates that the offered load caused severe queueing and does not establish accepted capacity or a production SLO for v3.1.0 or v4.
 
 A privileged storage test using `dm-delay` is a separate lab operation. It MUST run only on a disposable loop-backed block device or disposable namespace with explicit root/capability checks. It MUST NOT attach to host, production, or user data volumes. When the environment cannot prove that boundary, the result is `NOT_EXECUTED`, not pass.
 

@@ -11,13 +11,15 @@ Aegis Latent Core is an OpenAI-compatible gateway that applies request policy, W
 [![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
 [![License](https://img.shields.io/badge/license-AGPLv3%20%2B%20commercial-blue.svg)](LICENSE)
 
-**Last verified:** 2026-08-24 UTC
+**Last verified:** 2026-08-25 UTC
 **Release baseline:** published [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0)
-**Current-main baseline:** post-PR #102, commit `5ebc761b55bec8db60df2edbdaf98e11d559bba6`
+**Merged-source baseline:** `2050a310ec295afc61d033ff842c9a535a4f3105` (PR #112; fourteen version anchors synchronized at `4.0.0`)
 
 ## Baselines and claim scope
 
-The published release baseline is **v3.1.0**. The repository state described as **current main** is commit `5ebc761b55bec8db60df2edbdaf98e11d559bba6` after PR #102. Streaming SSE with bounded `pending-terminal` evidence, native Anthropic `POST /v1/messages`, the Python and TypeScript SDKs, portable MMR proofs, the forensic dashboard and ZIP export, the auxiliary `RustWal` stream segment, and the SSE benchmark are current-main capabilities; they are **not attributed to the v3.1.0 tag**. Release evidence and current-main implementation evidence must be evaluated separately. The release-readiness checker evaluates source contracts only: it does not prove a tag, GitHub environment, signer trust path, registry policy, artifact attestation, multi-architecture runtime, or external acceptance.
+The immutable public release baseline is **v3.1.0**. Commit `2050a310ec295afc61d033ff842c9a535a4f3105` is the merged v4 source baseline; its source release contract reports all fourteen version anchors synchronized at `4.0.0`. Streaming SSE with bounded `pending-terminal` evidence, native Anthropic `POST /v1/messages`, the Python and TypeScript SDKs, portable MMR proofs, the forensic dashboard and ZIP export, the auxiliary `RustWal` stream segment, and the SSE benchmark are merged-source capabilities; they are **not attributed to the v3.1.0 tag**.
+
+The merged source remains unreleased and unpublished. At the 2026-08-25 audit there was no `v4.0.0` tag, GitHub Release, PyPI publication, or npm publication. Release evidence and source implementation evidence must be evaluated separately. The release-readiness checker evaluates source contracts only: it does not prove a tag, GitHub environment approval, signer trust path, registry policy, artifact attestation, multi-architecture runtime, or external acceptance.
 
 ## Who should evaluate Aegis
 
@@ -83,7 +85,7 @@ The strict lifecycle is:
 | TEE attestation boundary | TEE device nodes are reported as discovery only. Caller-authored legacy reports are rejected; an injected verifier can provide authenticated normalized claims for exact measurement, signer, nonce, freshness, debug, TCB, and report-data policy evaluation. | `aegis/core/tee_manager.py` and hardware-module tests. The repository does not implement an enclave loader, vendor quote parsing, certificate/collateral validation, host-root confidentiality, or target attestation acceptance. |
 | Differential-privacy boundary | An internal Laplace count primitive uses sensitivity one and a system CSPRNG for one release under add/remove-one-record adjacency. | `aegis/core/dp_analytics.py` and deterministic tests. No DP HTTP endpoint is published; repeated releases require a durable accountant, stable dataset/query identity, memoization, and reviewed contribution bounds that are not implemented here. |
 | Fuzzing capability boundary | Fuzzing is available only when `cargo`, `cargo-fuzz`, a private workspace, a bounded parseable manifest, and all exact confined regular target files exist; run state distinguishes clean, crash artifact, tool error, timeout, and unavailable. | `aegis/core/fuzzing_harness.py` and focused tests. The current tree has no cargo-fuzz workspace or Kani harness, measured coverage remains unavailable, and bounded tests are not exhaustive proof. |
-| Advisory AI context | `.aegis_ai_context/`, `llms.txt`, and `.cursorrules` provide repository navigation and claim boundaries for coding assistants. | Offline context tests validate structure and links. These files are advisory data: they cannot override authorization, establish runtime behavior, or turn current-main source into a release. |
+| Advisory AI context | `AGENTS.md`, `llms.txt`, and `.aegis_ai_context/` provide repository navigation and claim boundaries for coding assistants. | These files are advisory data: they cannot override authorization, establish runtime behavior, or turn merged source into a release. |
 | Request bounds | Oversized bodies are rejected before normal application processing. | P0/P1 release tests. Limits must be sized for the deployed provider and streaming policy. |
 | WAF | NFKC normalization, zero-width stripping, critical pattern blocks, structural depth guard, and weighted local analysis run at the application boundary. | `tests/data/waf_corpus_v1.json` and `tools/security/run_waf_corpus.py`. Ingress HTTP/2 parsing is outside the application boundary. |
 | Egress | Canonical allowlists reject schemes, userinfo, malformed ports, unsupported forms, and non-approved endpoints. | `aegis/proxy/egress_guard.py` and tests. This does not replace firewall, namespace, NetworkPolicy, or cloud egress controls. |
@@ -101,17 +103,29 @@ cd aegis-latent-core
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --require-hashes -r requirements.lock
+python -m pip install --no-deps -e .
 python -m compileall -q aegis aegis_server
 pytest -q
 ```
 
-For a minimal local gateway, use the repository’s example configuration and a local or mocked upstream. Never put provider keys, bearer tokens, signing secrets, WAL records, or customer payloads into source control.
+For a minimal source-checkout gateway, use the declared `aegis` console entry point with a local or mocked upstream:
 
-## Current-main SDKs
+```bash
+export AEGIS_SECURITY_ENFORCEMENT_MODE=development
+export AEGIS_DEBUG_MODE=true
+export AEGIS_AUTH_DISABLED=true
+export AEGIS_BACKEND_URL='http://127.0.0.1:9001/v1'
+export AEGIS_WAL_PATH='/tmp/aegis-evaluation.wal.jsonl'
+aegis
+```
 
-The current-main Python distribution in [`sdk/python`](sdk/python) is a drop-in integration that subclasses the official OpenAI and Anthropic clients. Existing request/response model types and sync/async resource APIs are preserved while Aegis tenant, session, and bearer-auth headers are injected at construction. The native Anthropic `/v1/messages` ingress requires `AEGIS_PROVIDER=anthropic`; it preserves the Anthropic Messages response shape instead of translating it to OpenAI objects.
+`development` is the only accepted non-strict mode in the current settings model; the older `permissive` value and `uvicorn aegis.main:app` command are stale. Never put provider keys, bearer tokens, signing secrets, WAL records, or customer payloads into source control.
 
-The edge-compatible current-main TypeScript package in [`sdk/typescript`](sdk/typescript) verifies `aegis-mmr-inclusion-v1` proofs with Web Crypto and supplies provider-native wrappers and constructor options rather than re-declaring provider payloads. The official OpenAI and Anthropic packages are peer dependencies, so their native resources, request parameters, response models, streaming iterators, retries and error types remain authoritative. Both SDKs consume the same frozen proof vectors under `sdk/shared/`.
+## Merged-source SDKs
+
+The merged-source Python distribution in [`sdk/python`](sdk/python) is a drop-in integration that subclasses the official OpenAI and Anthropic clients. Existing request/response model types and sync/async resource APIs are preserved while Aegis tenant, session, and bearer-auth headers are injected at construction. The native Anthropic `/v1/messages` ingress requires `AEGIS_PROVIDER=anthropic`; it preserves the Anthropic Messages response shape instead of translating it to OpenAI objects.
+
+The edge-compatible merged-source TypeScript package in [`sdk/typescript`](sdk/typescript) verifies `aegis-mmr-inclusion-v1` proofs with Web Crypto and supplies provider-native wrappers and constructor options rather than re-declaring provider payloads. The official OpenAI and Anthropic packages are peer dependencies, so their native resources, request parameters, response models, streaming iterators, retries and error types remain authoritative. Both SDKs consume the same frozen proof vectors under `sdk/shared/`.
 
 The unreleased Python SDK candidate also includes privacy-minimized LangChain and LlamaIndex callback adapters. Publication workflows are disabled unless external trusted-publisher, environment, signed-tag, and repository-variable prerequisites are configured. See [`docs/DEVELOPER_INTEGRATIONS_GUIDE.md`](docs/DEVELOPER_INTEGRATIONS_GUIDE.md).
 
@@ -131,9 +145,9 @@ response = client.chat.completions.create(
 
 Proof verification is opt-in because callers must obtain the trusted MMR root through an independently approved channel. Enabling verification while trusting the root from the same untrusted response would detect corruption but would not provide an independent trust anchor.
 
-## Current-main forensic audit dashboard
+## Merged-source forensic audit dashboard
 
-The current-main [`dashboard`](dashboard) is a read-only Next.js 16 and React 19 interface. It renders only authenticated gateway data: overview health, a filterable retained-window ledger, canonical JCS and DAG-CBOR node projections with CIDv1 identifiers, an interactive MMR verifier with a local Web Crypto sandbox, live Prometheus-derived metrics, and a bounded forensic export workflow. It contains no fallback sample data.
+The merged-source [`dashboard`](dashboard) is a read-only Next.js 16 and React 19 interface. It renders only authenticated gateway data: overview health, a filterable retained-window ledger, canonical JCS and DAG-CBOR node projections with CIDv1 identifiers, an interactive MMR verifier with a local Web Crypto sandbox, live Prometheus-derived metrics, and a bounded forensic export workflow. It contains no fallback sample data.
 
 ```bash
 cd sdk/typescript && npm ci && npm run build
@@ -214,7 +228,7 @@ Governed responses expose `X-Aegis-Request-ID`, `X-Aegis-Session-ID`, `X-Aegis-E
 
 Operators should alert on evidence-commit failures, WAL synchronization failures, rate-limit backend failures, queue saturation, circuit opening, upstream error spikes, keyring reload failures, missing key overlap, signer unavailability, Seccomp/LSM startup rejection, and integrity-verification failure. Preserve WAL segments and reports read-only during incident handling. Roll back to the prior signed/image-digest release when a kill criterion is met.
 
-On current main, when the PyO3 extension is available, each terminal streaming record is also appended once to an auxiliary CRC32-framed, memory-mapped `RustWal` segment at `<AEGIS_WAL_PATH>.stream.rwal` inside the same executor call that performs the authoritative JSONL ledger commit. The native segment is bounded to 256 MiB. If its append fails after the JSONL commit, Aegis increments `aegis_native_stream_wal_errors_total`, logs the degradation, disables the auxiliary segment for the process and preserves the client-visible terminal marker because the JSONL chain remains the replay authority. Streaming telemetry also exposes duration histograms, token counters and bounded-category redaction counters without payload labels.
+In the merged-source baseline, when the PyO3 extension is available, each terminal streaming record is also appended once to an auxiliary CRC32-framed, memory-mapped `RustWal` segment at `<AEGIS_WAL_PATH>.stream.rwal` inside the same executor call that performs the authoritative JSONL ledger commit. The native segment is bounded to 256 MiB. If its append fails after the JSONL commit, Aegis increments `aegis_native_stream_wal_errors_total`, logs the degradation, disables the auxiliary segment for the process and preserves the client-visible terminal marker because the JSONL chain remains the replay authority. Streaming telemetry also exposes duration histograms, token counters and bounded-category redaction counters without payload labels.
 
 ## Deployment topologies
 
@@ -233,7 +247,7 @@ The repository separates dispatch microbenchmarks, client-visible proxy overhead
 
 The previously published 2.70 µs result is a background-dispatch microbenchmark, not end-to-end gateway latency. Per-worker throughput is constrained by the interpreter, event-loop scheduling, upstream behavior, storage, and deployment topology. No README claim of “zero latency,” “zero overhead,” “10k RPS capacity,” or “1B RPM” is authorized without a new artifact that satisfies the claim matrix.
 
-The current-main Phase 2 in-process streaming harness is [`benchmarks/bench_streaming_sse.py`](benchmarks/bench_streaming_sse.py). Its retained working-tree measurement is [`evidence/commercial_phase2_streaming_benchmark.json`](evidence/commercial_phase2_streaming_benchmark.json). It exercises 1,000 deterministic SSE events per round and reports first-byte latency, transformation throughput, queue high-water marks and `tracemalloc` peak memory. It excludes network and durable-WAL latency and therefore is not an end-to-end capacity result.
+The merged-source Phase 2 in-process streaming harness is [`benchmarks/bench_streaming_sse.py`](benchmarks/bench_streaming_sse.py). Its retained working-tree measurement is [`evidence/commercial_phase2_streaming_benchmark.json`](evidence/commercial_phase2_streaming_benchmark.json). It exercises 1,000 deterministic SSE events per round and reports first-byte latency, transformation throughput, queue high-water marks and `tracemalloc` peak memory. It excludes network and durable-WAL latency and therefore is not an end-to-end capacity result.
 
 See [`docs/benchmarks/README.md`](docs/benchmarks/README.md), [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md), and [`docs/performance/SCALING_GUIDE.md`](docs/performance/SCALING_GUIDE.md).
 
@@ -322,7 +336,7 @@ The repository is licensed under the terms in [`LICENSE`](LICENSE) and [`COMMERC
 
 ## Current release
 
-The current published release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). The baseline before this branch is post-PR #100 at commit `7647fad798b3b79a98cc15323299f40d185b7b4c`; the enterprise-maturation work described above is an **unreleased candidate** and is not attributed to the `v3.1.0` tag. No `v4.0.0` version, tag, registry publication, OCI release, WORM status, SLSA level, legal admissibility, or production-readiness claim is made. The ML-DSA `verify` timing claim remains blocked because the retained experiment returned `p=0.0`; a published release is not evidence that every deployment prerequisite or external assurance requirement has been satisfied.
+The latest published release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). Commit `2050a310ec295afc61d033ff842c9a535a4f3105` is the merged v4.0.0 source baseline with fourteen synchronized `4.0.0` version anchors, but it remains **unpublished source**: no v4 tag, GitHub Release, PyPI package, or npm package is claimed. No OCI publication, WORM status, SLSA level, legal admissibility, or production-readiness claim is made. The ML-DSA `verify` timing claim remains blocked because the retained experiment returned `p=0.0`; a source merge or published release is not evidence that every deployment prerequisite or external assurance requirement has been satisfied.
 
 ## External reference boundaries
 

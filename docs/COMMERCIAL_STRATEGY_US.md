@@ -3,14 +3,14 @@
 This document describes a US-market positioning and packaging hypothesis for Aegis Latent Core. It is for commercial stakeholders, founders, product owners, procurement and support planners. It is not a binding offer, a forecast, legal advice, or evidence of market validation.
 
 **Last verified:** 2026-08-22 UTC
-**Release baseline:** published `v3.1.0`
-**Current-main baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
+**Release baseline:** published `v3.1.0` (latest published)
+**Merged v4 source baseline:** commit `2050a310ec295afc61d033ff842c9a535a4f3105` with 14 synchronized `4.0.0` anchors; no v4 tag, GitHub Release, PyPI/npm/OCI publication, or production-release acceptance
 **Market scope:** United States, self-hosted enterprise AI infrastructure
 **Positioning decision:** [`docs/architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md`](architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md)
 
 ## Baseline discipline
 
-The published product baseline is **v3.1.0**. Current main after PR #99 adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` exports, an auxiliary `RustWal` stream segment, and a bounded in-process SSE benchmark. These are current-main implementation and evidence items, not v3.1.0 release claims. Any proposal must identify the exact deliverable baseline.
+The latest published product baseline remains **v3.1.0**. Commit `2050a310ec295afc61d033ff842c9a535a4f3105` is the merged v4 source baseline and contains 14 synchronized `4.0.0` anchors. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` exports, an auxiliary `RustWal` stream segment, and a bounded in-process SSE benchmark. These are merged-source implementation and evidence items, not v3.1.0 release claims. The synchronized anchors do not constitute a v4 tag, GitHub Release, PyPI/npm/OCI publication, or production-release acceptance. Any proposal must identify the exact deliverable baseline.
 
 ## Positioning
 

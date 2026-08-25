@@ -10,16 +10,16 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 **Audiencia:** equipos de plataforma, AppSec, AI engineering, compliance, legal y procurement
 **Estado:** release publicado y prospecto de producto; no es certificación, dictamen legal, SLO ni oferta comercial vinculante.
 **Last verified:** 2026-08-22 UTC
-**Published release baseline:** `v3.1.0`
-**Current-main baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
+**Línea base de release publicada:** `v3.1.0` (última publicada)
+**Línea base del código v4 integrado:** commit `2050a310ec295afc61d033ff842c9a535a4f3105` con 14 anclas `4.0.0` sincronizadas; sin tag v4, GitHub Release, publicación en PyPI/npm/OCI ni aceptación de release para producción
 
 ## Baselines
 
-La release publicada es **v3.1.0**. El estado de current main posterior al PR #99 corresponde al commit `45d95188d40792639fdd654369765a7233bef09a`. Streaming SSE acotado con evidencia `pending-terminal`, Anthropic nativo `POST /v1/messages`, SDKs Python y TypeScript, proofs MMR portables, dashboard forense, export ZIP JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` y el segmento auxiliar `RustWal` son capacidades de current main; **no se atribuyen al tag v3.1.0**.
+La última release publicada sigue siendo **v3.1.0**. El commit `2050a310ec295afc61d033ff842c9a535a4f3105` es la línea base del código v4 integrado y contiene 14 anclas `4.0.0` sincronizadas. Streaming SSE acotado con evidencia `pending-terminal`, Anthropic nativo `POST /v1/messages`, SDKs Python y TypeScript, proofs MMR portables, dashboard forense, export ZIP JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` y el segmento auxiliar `RustWal` son capacidades del código integrado; **no se atribuyen al tag v3.1.0**. Las anclas sincronizadas no constituyen un tag v4, una GitHub Release, publicación en PyPI/npm/OCI ni aceptación de release para producción.
 
 ## Resumen ejecutivo
 
-Aegis Latent Core es un gateway compatible con OpenAI para tráfico de IA gobernado; current main también expone Anthropic nativo `POST /v1/messages` conservando sus wire types. Autentica clientes, aplica política de solicitudes y egress, ejecuta controles WAF y de sesión, aplica rate limiting distribuido, reenvía al proveedor configurado y persiste evidencia firmada antes de devolver una respuesta gobernada no-streaming exitosa. En streaming, el header inicial es `pending-terminal`; el relay acotado persiste un resumen terminal firmado antes del marcador terminal de protocolo y el proof se recupera después de terminar. El registro enlaza hashes de solicitud y respuesta, cadena, metadata del signer, identificadores de request y estado de durabilidad dentro de los límites declarados.
+Aegis Latent Core es un gateway compatible con OpenAI para tráfico de IA gobernado; el código v4 integrado también expone Anthropic nativo `POST /v1/messages` conservando sus wire types. Autentica clientes, aplica política de solicitudes y egress, ejecuta controles WAF y de sesión, aplica rate limiting distribuido, reenvía al proveedor configurado y persiste evidencia firmada antes de devolver una respuesta gobernada no-streaming exitosa. En streaming, el header inicial es `pending-terminal`; el relay acotado persiste un resumen terminal firmado antes del marcador terminal de protocolo y el proof se recupera después de terminar. El registro enlaza hashes de solicitud y respuesta, cadena, metadata del signer, identificadores de request y estado de durabilidad dentro de los límites declarados.
 
 El producto central es un **límite de evidencia**. No convierte automáticamente un sistema, modelo, organización o jurisdicción en compliant. Proporciona un punto de control y rutas reproducibles de evidencia para un programa de gobernanza más amplio.
 
@@ -27,17 +27,17 @@ El producto central es un **límite de evidencia**. No convierte automáticament
 
 | Capacidad | Resultado | Límite |
 |---|---|---|
-| Ingress de proveedores y SDKs | Superficie compatible con OpenAI y, en current main, Anthropic `POST /v1/messages`; Python es drop-in mediante subclases oficiales y TypeScript usa wrappers provider-native con SDKs oficiales como peer dependencies. | Parámetros, streaming y errores de cada proveedor requieren pruebas propias; estas adiciones no se atribuyen a v3.1.0. |
+| Ingress de proveedores y SDKs | Superficie compatible con OpenAI y, en el código v4 integrado, Anthropic `POST /v1/messages`; Python es drop-in mediante subclases oficiales y TypeScript usa wrappers provider-native con SDKs oficiales como peer dependencies. | Parámetros, streaming y errores de cada proveedor requieren pruebas propias; estas adiciones no se atribuyen a v3.1.0. |
 | Evidencia durable firmada | Hash, firma, WAL, flush y `fsync` antes del camino de éxito gobernado. | Storage, backups, host e inmutabilidad externa dependen del despliegue. |
 | Evidencia de errores | Registra errores upstream, circuit-open y fallos de red cuando el boundary sigue disponible. | Un fallo de storage después de admission es incidente fail-closed, no éxito. |
 | WAF y policy | Normalización, patrones críticos, guardas estructurales y análisis local. | Es boundary de aplicación; HTTP/2 en ingress es separado. |
 | Key rotation | Keyring HMAC versionado con overlap, expiry, reload atómico y `key_id`. | Tres réplicas y secret manager requieren evidencia real de despliegue. |
 | Enrichment acotado | Análisis opcional después de la evidencia authoritative. | Puede retrasarse o rechazarse sin debilitar la evidencia. |
-| Proof y export forense | Current main ofrece proofs MMR portables, dashboard read-only y ZIP acotado con manifest JCS, ledger DAG-CBOR/CIDv1, proof JSON, PDF técnico y `VERIFY.sh`. | La raíz requiere un trust anchor independiente; no determina admisibilidad legal. |
+| Proof y export forense | El código v4 integrado ofrece proofs MMR portables, dashboard read-only y ZIP acotado con manifest JCS, ledger DAG-CBOR/CIDv1, proof JSON, PDF técnico y `VERIFY.sh`. | La raíz requiere un trust anchor independiente; no determina admisibilidad legal. |
 
 ## Evidencia de resiliencia y WAF
 
-Current main conserva además un benchmark SSE in-process acotado de 7 rondas × 1.000 eventos deterministas. Excluye red, proveedor y latencia de WAL durable; no demuestra capacidad ni SLO. El segmento nativo `RustWal` es auxiliar y el ledger JSONL conserva la autoridad de replay.
+El código v4 integrado conserva además un benchmark SSE in-process acotado de 7 rondas × 1.000 eventos deterministas. Excluye red, proveedor y latencia de WAL durable; no demuestra capacidad ni SLO. El segmento nativo `RustWal` es auxiliar y el ledger JSONL conserva la autoridad de replay.
 
 El release v3.1.0 conserva un harness local con 10.000 requests ofrecidos a 10k RPS y 2 ms de `fsync` inyectado: observó 10.000 commits durables, cero fallos, cero IDs faltantes, cero duplicados e integridad válida; el p99 de commit fue 1.189,89 ms. Es un fault injection acotado, no capacidad aceptada de producción ni un SLO.
 

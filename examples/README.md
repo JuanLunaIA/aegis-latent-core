@@ -3,12 +3,23 @@
 Runnable, reproducible examples. Each one is self-contained and exits non-zero
 on failure, so they double as smoke tests.
 
-## `demo.py` — end-to-end value demo (< 1 minute)
+These examples run against the v4 source tree, not a published package. From a
+clean checkout, run the following **from the repository root** so `python -m`
+can resolve `examples` and the editable install points at the root project:
 
 ```bash
-pip install -e ".[storage-sqlite]"
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[storage-sqlite]"
 python -m examples.demo
 ```
+
+The separately distributed Python SDK is also named `aegis-latent-sdk`, but it
+is not required by this in-process core demo and is not published to PyPI. See
+the [repository overview](../README.md), [developer quickstart](../docs/DEVELOPER_QUICKSTART.md),
+and [Python SDK source instructions](../sdk/python/README.md).
+
+## `demo.py` — end-to-end value demo (< 1 minute)
 
 No provider API key, no external network, no real secrets. The demo boots the
 Aegis proxy in-process against a mock OpenAI-compatible upstream and walks

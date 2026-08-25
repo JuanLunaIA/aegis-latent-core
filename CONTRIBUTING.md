@@ -8,8 +8,9 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 This document defines the contribution workflow, DCO sign-off, forward-looking CLA language, test expectations and public-claim review for Aegis. It is for prospective contributors, maintainers and organizations evaluating contribution rights. It is not legal advice.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
+**Last verified:** 2026-08-25 UTC
+**Release baseline:** published `v3.1.0`
+**Merged-source baseline:** `2050a310ec295afc61d033ff842c9a535a4f3105` (fourteen `4.0.0` anchors; unpublished)
 
 Thank you for your interest in contributing. This project is maintained by its
 sole copyright holder, **Juan Luna** (`juan.c.luna04@gmail.com`), and is
@@ -177,9 +178,10 @@ copy of the CLA by email before merging.
 1. **Fork** the repository and create a feature branch.
 2. **Install** the dev environment:
    ```bash
-   python -m venv .venv && source .venv/bin/activate
-   pip install -e ".[dev]"
+   python3 -m venv .venv && source .venv/bin/activate
+   python -m pip install -e ".[dev]"
    ```
+   CI currently resolves the development extras from `pyproject.toml`; they are minimum-version ranges, not a hash-locked test-toolchain snapshot. For runtime-only reproduction, install `requirements.lock` with `--require-hashes` and then install the source with `python -m pip install --no-deps -e .`.
 3. **Make your change.** New source files must carry the standard header:
    ```bash
    python scripts/apply_license_headers.py
@@ -187,8 +189,21 @@ copy of the CLA by email before merging.
 4. **Test and lint** — all must pass:
    ```bash
    pytest tests/ -x -q
-   mypy aegis/ --ignore-missing-imports
-   ruff check aegis/
+   mypy --config-file=mypy-ci.ini \
+     aegis/config.py aegis/auth/apikey.py aegis/auth/principal.py \
+     aegis/auth/oidc.py aegis/auth/mtls.py aegis/anchoring/rfc3161.py \
+     aegis/core/mmr.py aegis/core/crypto_audit.py aegis/core/forensic.py \
+     aegis/core/ratelimiter.py aegis/core/normalization.py \
+     aegis/core/session_manager.py aegis/core/moe_monitor.py \
+     aegis/core/leak_detector.py aegis/core/seccomp_guard.py \
+     aegis/core/lsm_guard.py aegis/core/math_utils.py aegis/core/telemetry.py \
+     aegis/proxy/waf.py aegis/proxy/schemas.py aegis/proxy/forwarder.py \
+     aegis/proxy/streaming.py aegis/proxy/audit_api.py \
+     aegis/proxy/dependencies.py aegis/proxy/rate_limiter.py \
+     aegis/storage/s3_worm.py aegis/storage/segment_manifest.py \
+     aegis/telemetry/events.py aegis/telemetry/otel.py aegis/telemetry/siem.py
+   ruff check aegis aegis_server integrations tests tools/visualizer tools/forensic tools/benchmarks tools/security benchmarks
+   ruff format --check aegis aegis_server integrations tests tools/visualizer tools/forensic tools/benchmarks tools/security benchmarks
    # Rust changes:
    cargo test --manifest-path aegis_rust_v2/Cargo.toml --all-features
 

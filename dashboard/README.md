@@ -2,6 +2,27 @@
 
 This is a read-only Next.js interface for the primary Aegis proxy. It renders only values returned by the configured deployment. It does not import sample builders, invent audit rows, or synthesize historical metrics.
 
+The dashboard consumes the unpublished v4 **`aegis-latent-sdk`** package from
+`../sdk/typescript`. A clean checkout must install and build that sibling SDK
+before installing or building the dashboard:
+
+```bash
+# Run from the repository root.
+cd sdk/typescript
+npm ci
+npm run build
+
+cd ../../dashboard
+npm ci
+```
+
+Do not replace the `file:../sdk/typescript` dependency with an npm registry
+install; the v4 SDK is not published. Keep commands in their indicated component
+directories so each `npm ci` uses the correct lockfile. See the
+[repository overview](../README.md), [developer quickstart](../docs/DEVELOPER_QUICKSTART.md),
+and [platform operator guide](../docs/PLATFORM_OPERATOR_GUIDE.md) for canonical
+project documentation.
+
 ## Configuration
 
 Set server-side environment variables before `npm run build`/`npm start`:
@@ -9,10 +30,13 @@ Set server-side environment variables before `npm run build`/`npm start`:
 ```bash
 export AEGIS_PRIMARY_BASE_URL='https://aegis.internal'
 export AEGIS_DASHBOARD_API_KEY='read-only-audit-token'
-npm ci
 npm run build
 npm start
 ```
+
+Run that block from `dashboard/`, after completing the sibling-SDK setup above.
+For an interactive development server, use `npm run dev` instead of the final
+two commands.
 
 The current implementation reads `AEGIS_DASHBOARD_API_KEY` only in explicit server route handlers; the no-fabrication test also rejects exposure through a `NEXT_PUBLIC_*` variable. Deploy behind an authenticated reverse proxy and use a dedicated least-privilege audit key. The dashboard does not mutate ledger records, but its Forensics page can request and download a bounded evidence ZIP through the same-origin server route. That operation requires the backend `audit:export` scope and should be treated as sensitive data export.
 
@@ -26,8 +50,9 @@ Offset pagination is not snapshot-stable under concurrent appends or eviction. I
 
 ## Verification
 
+After building `sdk/typescript` as shown above, run from `dashboard/`:
+
 ```bash
-npm ci
 npm run typecheck
 npm test
 npm run build

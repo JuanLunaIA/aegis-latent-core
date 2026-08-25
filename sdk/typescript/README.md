@@ -1,6 +1,28 @@
 # Aegis TypeScript SDK
 
-This package provides a strict, dependency-free runtime for `aegis-mmr-inclusion-v1` verification and transparent provider-operation instrumentation.
+The **`aegis-latent-sdk`** package provides a strict, dependency-free runtime for `aegis-mmr-inclusion-v1` verification and transparent provider-operation instrumentation.
+
+## Develop from a clean checkout
+
+The v4 package is not published to npm. Use the source in this checkout; do not
+substitute a registry package with a similar name. Run these commands from the
+repository root:
+
+```bash
+cd sdk/typescript
+npm ci
+npm run typecheck
+npm test
+npm run build
+npm pack --dry-run
+```
+
+`npm run check` is the equivalent combined typecheck, test, and build gate. The
+`cd sdk/typescript` step is required because the lockfile, TypeScript configs,
+tests, and generated `dist/` package are component-relative. See the
+[repository overview](../../README.md), [developer quickstart](../../docs/DEVELOPER_QUICKSTART.md),
+and [integration guide](../../docs/DEVELOPER_INTEGRATIONS_GUIDE.md) for canonical
+project documentation.
 
 Use the structural constructor options with the official provider packages; Aegis does not replace or re-declare their response types:
 

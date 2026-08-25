@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<security-supply-chain-manifest schema="1" role="advisory">
+<security-supply-chain-manifest schema="2" role="advisory">
   <baseline>
     <published version="v3.1.0" release="https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0"/>
-    <current-main state="unreleased">Post-v3.1.0 changes require a future immutable release and publication evidence before being called released.</current-main>
+    <merged-v4-source commit="2050a310ec295afc61d033ff842c9a535a4f3105" version="4.0.0" synchronized-version-anchors="14" state="unpublished">Immutable source anchor only. No v4 tag, GitHub Release, PyPI/npm package, OCI image, Helm chart, Rust crate, or other registry publication is asserted.</merged-v4-source>
+    <working-tree state="mutable">Manifest hashes describe generated working-tree bytes and are not a commit, tag, release, provenance statement, or publication record.</working-tree>
   </baseline>
   <authoritative-sources>
     <source path="SECURITY.md" purpose="security policy, threat boundary, reporting"/>
@@ -19,6 +20,7 @@
     <check command="python scripts/verify_github_action_pins.py" path="scripts/verify_github_action_pins.py">Reject remote workflow actions not pinned to a full commit SHA.</check>
     <check command="python scripts/verify_release_contract.py --root ." path="scripts/verify_release_contract.py">Validate static tag, metadata, workflow, permission, ancestry, and enablement contracts.</check>
     <check command="scripts/verify_formal_artifacts.sh" path="scripts/verify_formal_artifacts.sh">Run installed formal checkers and expose unavailable-tool boundaries.</check>
+    <check command="python scripts/verify_ai_context_manifest.py" path="scripts/verify_ai_context_manifest.py">Verify stable hashes for explicit context and governed inputs; the manifest excludes itself.</check>
     <check command="pytest -q tests/test_ai_context.py" path="tests/test_ai_context.py">Validate this context pack offline.</check>
   </offline-checks>
   <artifact-generation>
@@ -39,7 +41,7 @@
   </external-acceptance>
   <nonclaims>
     <item>No source-only proof of vulnerability absence, production readiness, legal compliance, certification, FIPS validation, court admissibility, or accepted capacity.</item>
-    <item>No v4 release is asserted by this manifest.</item>
+    <item>No v4 tag, GitHub Release, registry package, image, chart, crate, or trusted-publisher acceptance is asserted by this manifest.</item>
     <item>The portable MMR is a non-ZK O(log n) inclusion mechanism; it is not a privacy or zero-knowledge system.</item>
   </nonclaims>
 </security-supply-chain-manifest>

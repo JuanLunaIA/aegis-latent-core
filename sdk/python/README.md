@@ -2,6 +2,29 @@
 
 `aegis-latent-sdk` supplies typed subclasses of the official OpenAI and Anthropic clients plus a stateless verifier for `aegis-mmr-inclusion-v1` proofs.
 
+## Develop from a clean checkout
+
+The v4 distribution is named **`aegis-latent-sdk`** (its Python import package is
+`aegis_sdk`). It is not published to PyPI; install it from this checkout rather
+than using a registry package. Run these commands from the repository root:
+
+```bash
+cd sdk/python
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+python -m pytest
+python -m ruff check src tests
+python -m mypy
+python -m pip wheel . --no-deps --wheel-dir dist
+```
+
+The `cd sdk/python` step is required: `pyproject.toml`, the SDK tests, and the
+resulting `dist/` directory are component-relative. See the
+[repository overview](../../README.md), [developer quickstart](../../docs/DEVELOPER_QUICKSTART.md),
+and [integration guide](../../docs/DEVELOPER_INTEGRATIONS_GUIDE.md) for the
+canonical project documentation.
+
 ```python
 from aegis_sdk.openai import OpenAI
 

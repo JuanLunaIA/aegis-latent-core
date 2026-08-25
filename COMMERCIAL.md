@@ -2,9 +2,9 @@
 
 This document summarizes the open-source and commercial licensing boundary and the current packaging hypothesis for Aegis Latent Core. It is for procurement, legal, commercial and technical buyers. It is not legal advice, a binding offer, a warranty, a support SLA or a regulatory representation.
 
-**Last verified:** 2026-08-22 UTC
+**Last verified:** 2026-08-25 UTC
 **Release baseline:** published `v3.1.0`
-**Current-main baseline:** post-PR #99, commit `45d95188d40792639fdd654369765a7233bef09a`
+**Merged-source baseline:** `2050a310ec295afc61d033ff842c9a535a4f3105` (fourteen `4.0.0` anchors; unpublished)
 **License source:** [`LICENSE`](LICENSE)
 **Commercial strategy:** [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md)
 
@@ -16,7 +16,7 @@ This file does not determine whether a specific use triggers AGPL obligations, w
 
 ## Product baseline for commercial review
 
-The published release remains **v3.1.0**. Current main after PR #99 adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP exports, and an auxiliary `RustWal` streaming segment. These capabilities must not be represented as part of the v3.1.0 tag; a commercial scope must name the exact commit or future release it covers.
+The latest published release remains **v3.1.0**. Merged source commit `2050a310ec295afc61d033ff842c9a535a4f3105` adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP exports, and an auxiliary `RustWal` streaming segment. Its fourteen version anchors are synchronized at `4.0.0`, but no v4 tag, GitHub Release, PyPI publication, or npm publication is claimed. These capabilities must not be represented as part of the v3.1.0 tag or as a completed v4 production release; a commercial scope must name the exact commit or a future published release.
 
 For non-streaming calls, durable evidence and MMR proof headers are available after commit. For streams, initial headers remain `pending-terminal`; the terminal record is committed before the protocol terminal marker and proof retrieval occurs after termination.
 

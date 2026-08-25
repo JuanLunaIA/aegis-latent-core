@@ -73,6 +73,24 @@ Both registry workflows currently use the shared repository variable `AEGIS_TRUS
 
 Repository API readback confirms vulnerability alerts, Dependabot security updates, secret scanning, secret-scanning push protection, private vulnerability reporting, and release immutability are enabled. The Dependabot, code-scanning, and secret-scanning alert-list endpoints each return HTTP 403 to the current integration. Feature enablement is therefore verified, but a clean or complete alert inventory is **not** claimed.
 
+## Documentation and AI-onboarding audit
+
+PR #113 was expanded from a post-merge evidence-only change into a repository documentation and AI-onboarding correction. The current documentation now uses a two-baseline model: published `v3.1.0` artifacts remain the distribution baseline, while `2050a310ec295afc61d033ff842c9a535a4f3105` is the merged, unpublished v4 source anchor. Obsolete `current-main` hashes were removed from current buyer, procurement, operator, architecture, quickstart, SDK, dashboard, roadmap, claim-control, and repository-navigation documents. Historical benchmark, security, and execution bodies were preserved and marked as historical instead of being rewritten as v4 results.
+
+The repository now uses root `AGENTS.md` as the canonical shared coding-agent policy. Thin adapters exist for Claude Code (`CLAUDE.md`), Gemini CLI (`GEMINI.md`), and GitHub Copilot (`.github/copilot-instructions.md`); current Cursor operation is routed through `AGENTS.md`, and legacy `.cursorrules` was removed. `.aegis_ai_context/README.md` provides progressive disclosure, while `10_TOOL_ADAPTER_COMPATIBILITY.md` records the documented loading mechanism and precedence boundary for each tool.[2] [3] [4] [5] [6] These files provide reproducible project procedures, sources, commands, stop conditions, and evidence boundaries. They do not reproduce private model reasoning, override tool/system/user policy, or guarantee identical interpretation across products.
+
+| Documentation/context gate | Result |
+|---|---|
+| Strict repository documentation verifier | **PASS:** 27 required files, 0 errors, 0 warnings |
+| Tracked/untracked documentation link and stale-reference scan | **PASS:** 97 Markdown files, 567 relative links, 0 errors |
+| Deterministic corpus audit | **PASS:** 816 files; 707 UTF-8 text files; 0 UTF-8 failures, non-NFC files, CRLF files, institutional placeholders, or post-write hash mismatches |
+| AI-context manifest | **PASS:** 63 explicit context/governed files; deterministic hash verification; self-hash excluded to avoid circularity |
+| Focused context/release/docs/air-gap tests | **PASS:** 89 tests |
+| Release source contract | **PASS:** fourteen anchors at `4.0.0` |
+| GitHub Actions pin verifier | **PASS:** 95 remote references use full commit SHAs |
+
+The root package maturity classifier was changed from `Production/Stable` to `Beta`, and the developer air-gap image tag was changed from the stale `3.0.1-airgap` value to `4.0.0-source-airgap`. Neither metadata change is a publication, image-existence, production-readiness, or target-acceptance claim.
+
 ## Release blockers and falsification criteria
 
 | Blocker | Current observation | Release-enabling evidence |
@@ -97,3 +115,8 @@ The repository owner should create the annotated signed `v4.0.0` tag from an app
 ## References
 
 [1]: [npm, “Trusted publishing for npm packages”](https://docs.npmjs.com/trusted-publishers/)
+[2]: [OpenAI, “Custom instructions with AGENTS.md”](https://developers.openai.com/codex/agent-configuration/agents-md)
+[3]: [Anthropic, “Manage Claude's memory”](https://code.claude.com/docs/en/memory)
+[4]: [Google, “Provide context with GEMINI.md files”](https://geminicli.com/docs/cli/gemini-md/)
+[5]: [GitHub, “Add repository custom instructions for GitHub Copilot”](https://docs.github.com/en/copilot/how-tos/configure-custom-instructions-in-your-ide/add-repository-instructions-in-your-ide)
+[6]: [Cursor, “Rules”](https://cursor.com/docs/rules)
