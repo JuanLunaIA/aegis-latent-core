@@ -1,124 +1,73 @@
-# Aegis Latent Core
+# 🛡️ Aegis Latent Core
 
-**AI governance and evidence gateway for multi-provider LLM applications.**
+> **AI Governance and Cryptographic Evidence Gateway**
 
-Aegis Latent Core is an OpenAI-compatible gateway that applies request policy, WAF, egress, rate-limit, and session controls before forwarding traffic to an upstream model provider. For governed traffic, it builds a canonical evidence record, signs the record, commits it to a durable write-ahead log, and exposes the evidence status to the caller. Optional response enrichment runs behind a bounded queue and is never a substitute for the authoritative evidence commit.
+**Provider-independent request controls, bounded streaming PII redaction, and client-verifiable Merkle Mountain Range inclusion proofs for governed LLM traffic.**
 
-> **Product boundary:** Aegis is an AI Governance and Evidence Gateway. It is not an LLM, a universal WAF, a compliance certification, a legal-admissibility ruling, a production SLO, or a replacement for network, identity, privacy, retention, or incident-response controls.
+![Aegis Latent Core — verifiable control plane for governed LLM calls](docs/assets/art-hero.png)
 
-<!-- ==================== BADGES GRID ==================== -->
-<p align="center">
-  <a href="https://github.com/JuanLunaIA/aegis-latent-core/releases"><img src="https://img.shields.io/github/v/release/JuanLunaIA/aegis-latent-core?sort=semver&color=2563eb&label=Release&logo=github" alt="GitHub Release"></a>
-  <a href="https://pypi.org/project/aegis-latent-sdk/"><img src="https://img.shields.io/pypi/v/aegis-latent-sdk?color=3b82f6&label=PyPI%20SDK&logo=pypi&logoColor=white" alt="PyPI Package"></a>
-  <a href="https://www.npmjs.com/package/aegis-latent-sdk"><img src="https://img.shields.io/npm/v/aegis-latent-sdk?color=ef4444&label=npm%20SDK&logo=npm&logoColor=white" alt="npm Package"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPLv3%20%2B%20Commercial-blue.svg" alt="License"></a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/JuanLunaIA/aegis-latent-core/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white" alt="CI Status"></a>
-  <a href="https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml"><img src="https://img.shields.io/github/actions/workflow/status/JuanLunaIA/aegis-latent-core/security.yml?branch=main&label=Security&logo=githubactions&logoColor=white" alt="Security Status"></a>
-  <img src="https://img.shields.io/badge/Tests-5%2C700%2B%20Passed-10b981?logo=pytest&logoColor=white" alt="Tests Passed">
-  <img src="https://img.shields.io/badge/Coverage-89.7%25-10b981?logo=codecov&logoColor=white" alt="Code Coverage">
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776ab?logo=python&logoColor=white" alt="Python Versions">
-  <img src="https://img.shields.io/badge/TypeScript-%3E%3D5.0-3178c6?logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/Rust-Native%20Engine-black?logo=rust&logoColor=white" alt="Rust Native Engine">
-  <img src="https://img.shields.io/badge/Formal%20Methods-Z3%20%7C%20Lean%204%20%7C%20TLA%2B-7c3aed" alt="Formal Verification">
-  <img src="https://img.shields.io/badge/Supply%20Chain-Cosign%20%7C%20SPDX%202.3-0ea5e9?logo=sigstore&logoColor=white" alt="Supply Chain Security">
-</p>
-<!-- ===================================================== -->
+[![GitHub Release: v4.0.1](https://img.shields.io/badge/GitHub%20Release-v4.0.1-blue.svg)](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1)
+[![Artifact version: 4.0.0](https://img.shields.io/badge/artifact%20version-4.0.0-orange.svg)](https://github.com/JuanLunaIA/aegis-latent-core/commit/2050a310ec295afc61d033ff842c9a535a4f3105)
+[![PyPI: 4.0.0](https://img.shields.io/pypi/v/aegis-latent-sdk?label=PyPI)](https://pypi.org/project/aegis-latent-sdk/4.0.0/)
+[![npm: 4.0.0](https://img.shields.io/npm/v/aegis-latent-sdk?label=npm)](https://www.npmjs.com/package/aegis-latent-sdk)
+[![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
+[![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
+[![Candidate tests: 5,707 passed](https://img.shields.io/badge/candidate%20tests-5%2C707%20passed-success.svg)](evidence/v4_0_0_release_candidate_gate_2026-08-24.md)
+[![Candidate coverage: 89.72%](https://img.shields.io/badge/candidate%20coverage-89.72%25-success.svg)](evidence/v4_0_0_release_candidate_gate_2026-08-24.md)
+[![License: AGPLv3 or commercial](https://img.shields.io/badge/license-AGPLv3%20or%20commercial-blue.svg)](LICENSE)
 
 **Last verified:** 2026-08-25 UTC
-**Release baseline:** published [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0)
-**Merged-source baseline:** `2050a310ec295afc61d033ff842c9a535a4f3105` (PR #112; fourteen version anchors synchronized at `4.0.0`)
 
-## Baselines and claim scope
+**Release baseline:** GitHub Release [`v4.0.1`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1), whose source and attached package assets declare `4.0.0`
 
-The immutable public release baseline is **v3.1.0**. Commit `2050a310ec295afc61d033ff842c9a535a4f3105` is the merged v4 source baseline; its source release contract reports all fourteen version anchors synchronized at `4.0.0`. Streaming SSE with bounded `pending-terminal` evidence, native Anthropic `POST /v1/messages`, the Python and TypeScript SDKs, portable MMR proofs, the forensic dashboard and ZIP export, the auxiliary `RustWal` stream segment, and the SSE benchmark are merged-source capabilities; they are **not attributed to the v3.1.0 tag**.
+**Artifact and registry version:** `4.0.0`; PyPI and npm publish `aegis-latent-sdk@4.0.0`
 
-The merged source remains unreleased and unpublished. At the 2026-08-25 audit there was no `v4.0.0` tag, GitHub Release, PyPI publication, or npm publication. Release evidence and source implementation evidence must be evaluated separately. The release-readiness checker evaluates source contracts only: it does not prove a tag, GitHub environment approval, signer trust path, registry policy, artifact attestation, multi-architecture runtime, or external acceptance.
+**Release target:** `6469904380218584ae0b5221334bc9a46500f5ba`; the `v4.0.1` ref is lightweight, so `git verify-tag v4.0.1` fails by construction
 
-## Who should evaluate Aegis
+[**🚀 Local quickstart**](#4-quickstart-for-local-evaluation) · [**🏛️ Architecture**](#5-request-and-evidence-lifecycle) · [**📦 SDKs**](#published-sdks-and-source-verification) · [**📊 Dashboard**](#6-forensic-audit-dashboard) · [**📑 Enterprise pilot**](#8-commercial-path)
 
-Aegis is intended for platform, application-security, and AI-engineering teams operating more than one model provider or requiring provider-independent evidence for governed AI traffic. The initial commercial focus is B2B SaaS, fintech, and regulated enterprise platform teams that need private deployment and verifiable evidence but are not asking this repository to become a universal authorization or certification product.
+> **Version boundary:** GitHub exposes a **`v4.0.1` Release label**, while the tagged commit, fourteen source anchors, attached artifacts, and published SDKs identify **`4.0.0`**. The lightweight tag cannot satisfy `git verify-tag`, and the tag-triggered release/publication workflows did not complete successfully. Treat `v4.0.1` as the current GitHub Release label—not as proof that the underlying artifacts were rebuilt at semantic version 4.0.1.
 
-The relevant buyer committee typically includes the CISO or AppSec owner, platform engineering, AI/ML engineering, compliance or legal, procurement, and an executive sponsor. The recommended proof sequence is **local evaluation → evidence replay → controlled pilot → security review → procurement package → production rollout**.
+## 2. Version and epistemic boundaries
 
-## The problem Aegis addresses
+> [!NOTE]
+> **Version status.** GitHub Release [`v4.0.1`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1) was published on **2026-08-25** and points to `6469904380218584ae0b5221334bc9a46500f5ba`. Its ten named binary/package assets are versioned `4.0.0`; PyPI and npm independently expose `aegis-latent-sdk` version `4.0.0`. The `v4.0.1` ref is a lightweight commit ref rather than an annotated signed tag, and the associated tag-triggered Release, PyPI, npm and OCI validation workflows report failure or startup failure. Historical pre-publication NO-GO records remain valid for their observation times but are superseded for the fact that public release/package objects now exist.
 
-Standard access logs can show that an API call occurred. They do not, by themselves, establish the exact governed request and response hashes, the policy path, the evidence commit boundary, the signing scheme, the chain predecessor, or whether the request was rejected before or after the evidence boundary. Aegis makes those transitions explicit and verifiable under declared deployment controls.
+> [!IMPORTANT]
+> **Product boundary.** Aegis is an AI Governance and Evidence Gateway. It can implement tested technical controls and produce structured cryptographic evidence under declared conditions; it is not an LLM, a universal WAF, a compliance certification, a legal-admissibility ruling, a production SLO, or a substitute for network, identity, privacy, retention, incident-response, and deployment controls. Regulatory mappings describe possible technical contributions only and require customer-specific legal, organizational, and technical assessment.
 
-## Request and evidence lifecycle
+Public claims use distinct evidence states:
 
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant A as Aegis Gateway
-    participant W as Policy/WAF/Egress
-    participant U as Upstream Model
-    participant L as Signed WAL
-    participant Q as Bounded Enrichment
+| State | Meaning |
+|---|---|
+| **Implemented** | Source and regression tests establish behavior within stated conditions. |
+| **Measured** | A named workload, revision, environment, date, and retained artifact establish a bounded result. |
+| **Configuration-dependent** | The control requires validation in the target deployment. |
+| **Roadmap** | The capability is incomplete or unmeasured and must not be described as available. |
+| **Legal-review-required** | Regulatory, certification, procurement, contractual, and admissibility conclusions remain outside repository evidence. |
 
-    C->>A: Authenticated OpenAI-compatible or Anthropic request
-    A->>W: Size, canonicalization, WAF, session, rate-limit
-    W-->>C: Fail-closed response + durable error evidence when rejected
-    W->>U: Forward only after admission
-    U-->>A: Complete response or bounded SSE events
-    A->>L: Non-stream: hash, sign, append, flush, fsync
-    L-->>A: Non-stream durable evidence status
-    A->>Q: Optional bounded response analysis
-    A-->>C: Non-stream response + portable MMR proof headers
-    A-->>C: Stream events through bounded queue
-    A->>L: Stream terminal summary, sign, append, flush, fsync
-    L-->>A: Terminal commit complete
-    A-->>C: Protocol terminal marker
-```
+Publication does not by itself prove a signed-tag trust path, successful automated provenance workflow, production acceptance, or independent assurance. The controlling references are the [Public Claims Matrix](docs/CLAIMS_MATRIX.md) and [Unsupported Claims Report](docs/institutional/UNSUPPORTED_CLAIMS.md).
 
-The strict lifecycle is:
+## 3. Four technical pillars
 
-1. Authenticate the caller and assign a request identifier.
-2. Enforce request-size bounds and canonicalize the request representation.
-3. Apply WAF, session-behavior, egress, and rate-limit controls.
-4. Reject on a required-control failure instead of silently weakening the security path.
-5. Forward to the configured upstream provider.
-6. For non-streaming calls, capture the response, compute canonical hashes, sign the evidence, append to the WAL, flush, and `fsync` before returning it.
-7. For SSE calls, relay sanitized logical events through a byte-accounted bounded queue. Incrementally hash the exact emitted bytes; on termination, commit one signed terminal summary before emitting the protocol terminal marker. The initial streaming header is therefore `X-Aegis-Evidence-Status: pending-terminal`, not `durable`.
-8. Run optional response enrichment through a bounded worker path after the authoritative record exists.
+> [!NOTE]
+> These pillars describe source baseline `2050a310ec295afc61d033ff842c9a535a4f3105`, whose version anchors are synchronized at `4.0.0`. That source is included in the later `v4.0.1` tag target. Publication does not imply acceptance for a target deployment.
 
-## Core contract
-
-| Control | Implemented behavior | Evidence and boundary |
+| Pillar | What the merged source implements | Evidence boundary |
 |---|---|---|
-| Evidence durability | For non-streaming governed calls, the core proxy commits request/response evidence before returning and emits `X-Aegis-Evidence-Status: durable`. Streaming SSE starts with `pending-terminal`; one signed terminal summary is committed before the protocol terminal marker, and the proof is retrieved after termination. | `tests/test_p0_release_gates.py`, `tests/test_proxy_streaming.py`, proxy failure-path tests and WAL integrity tests. The target filesystem and storage provider still require deployment validation. |
-| Durable terminal errors | Upstream non-2xx responses, circuit-open paths, and network faults use the durable error-evidence path when the evidence boundary is available. | `tests/test_enterprise_durable_evidence.py` and v3.1.0 release evidence. A storage failure after admission is a fail-closed operational incident, not a successful response. |
-| Chain integrity | Audit nodes bind predecessor, request hash, response hash, Merkle root, signature, and scheme metadata. | `aegis/core/crypto_audit.py` and `verify_integrity()`. Detection of tampering is not the same as immutable external storage. |
-| Strong signing | Strict ledgers reject the ephemeral Ed25519 fallback. HMAC-SHA256, configured PKCS#11, or configured native signing must satisfy the selected policy; the legacy HSM interface now fails closed instead of deriving a software key. | Signer tests and strict startup gates. Mocked PKCS#11 tests are adapter evidence only, HMAC is symmetric, and no HSM interoperability, key non-exportability, FIPS validation, or third-party non-repudiation is established. |
-| Key rotation | The enterprise signer supports an atomic, versioned HMAC keyring with one active key, historical verify keys, explicit expiry, and non-secret `key_id` metadata. | `aegis_server/crypto/keyring.py`, `tests/test_keyring_rotation.py`. Three-replica deployment evidence remains required for a production claim. |
-| Rate limiting | Redis-backed distributed limiting fails closed when the backend is unavailable; development in-memory limiting is not a production substitute. | Rate-limiter tests and deployment configuration. Redis/TLS/HA behavior is deployment-dependent. |
-| Enterprise identity and tenant binding | The unreleased candidate derives immutable principals from configured API-key mappings, strict OIDC claims, or explicitly pinned mTLS certificates. Tenant/session headers do not select the evidence tenant or quota key. | `aegis/auth/`, `aegis/proxy/dependencies.py`, and auth integration tests. IdP, TLS terminator, certificate lifecycle, and Redis acceptance remain deployment-dependent; current mTLS source is leaf-pin mode, not universal PKI validation. |
-| Finalized-segment archival | Rotated JSONL WAL segments receive versioned manifests and can be uploaded through the optional S3 Object Lock adapter with SHA-256, version, lock-mode, and retention verification. Optional RFC 3161 acceptance requires OpenSSL verification against an explicit CA file. | `aegis/storage/`, `aegis/anchoring/`, and focused tests. This is not a regulatory WORM, legal-admissibility, or external-time guarantee without target acceptance. |
-| Privacy-safe telemetry | Closed-schema security events omit prompt/response/token text, embeddings, raw tenant/session identifiers, signer names, and exception strings; an optional bounded SQLite spool exports to supported SIEM encodings. | `aegis/telemetry/` and privacy sentinel tests. Downstream delivery, retention, access control, and operational SLOs are external. |
-| Capability reporting | `aegis.crypto` exposes a machine-readable inventory that distinguishes implemented, optional-runtime, stub, and external-validation-required states. | `aegis/crypto/capabilities.py` and focused tests. The current ZK API is a non-real test stub, portable MMR proofs grow O(log n), and no FIPS validation is claimed. |
-| TEE attestation boundary | TEE device nodes are reported as discovery only. Caller-authored legacy reports are rejected; an injected verifier can provide authenticated normalized claims for exact measurement, signer, nonce, freshness, debug, TCB, and report-data policy evaluation. | `aegis/core/tee_manager.py` and hardware-module tests. The repository does not implement an enclave loader, vendor quote parsing, certificate/collateral validation, host-root confidentiality, or target attestation acceptance. |
-| Differential-privacy boundary | An internal Laplace count primitive uses sensitivity one and a system CSPRNG for one release under add/remove-one-record adjacency. | `aegis/core/dp_analytics.py` and deterministic tests. No DP HTTP endpoint is published; repeated releases require a durable accountant, stable dataset/query identity, memoization, and reviewed contribution bounds that are not implemented here. |
-| Fuzzing capability boundary | Fuzzing is available only when `cargo`, `cargo-fuzz`, a private workspace, a bounded parseable manifest, and all exact confined regular target files exist; run state distinguishes clean, crash artifact, tool error, timeout, and unavailable. | `aegis/core/fuzzing_harness.py` and focused tests. The current tree has no cargo-fuzz workspace or Kani harness, measured coverage remains unavailable, and bounded tests are not exhaustive proof. |
-| Advisory AI context | `AGENTS.md`, `llms.txt`, and `.aegis_ai_context/` provide repository navigation and claim boundaries for coding assistants. | These files are advisory data: they cannot override authorization, establish runtime behavior, or turn merged source into a release. |
-| Request bounds | Oversized bodies are rejected before normal application processing. | P0/P1 release tests. Limits must be sized for the deployed provider and streaming policy. |
-| WAF | NFKC normalization, zero-width stripping, critical pattern blocks, structural depth guard, and weighted local analysis run at the application boundary. | `tests/data/waf_corpus_v1.json` and `tools/security/run_waf_corpus.py`. Ingress HTTP/2 parsing is outside the application boundary. |
-| Egress | Canonical allowlists reject schemes, userinfo, malformed ports, unsupported forms, and non-approved endpoints. | `aegis/proxy/egress_guard.py` and tests. This does not replace firewall, namespace, NetworkPolicy, or cloud egress controls. |
-| Kernel controls | Strict startup can require Seccomp and LSM/AppArmor/SELinux capabilities and rejects missing enforcement outside explicit sandbox mode. | `aegis/core/seccomp_guard.py`, `aegis/core/lsm_guard.py`, deployment tests. The target kernel still needs acceptance testing. |
-| Response enrichment | Analysis is bounded, observable, and serialized per session where required. It is optional and cannot weaken the durable evidence contract. | Analyzer and queue tests. Queue behavior under real I/O saturation is described in the backpressure runbook. |
-| Portable inclusion proof | Every new ledger record stores a self-contained `aegis-mmr-inclusion-v1` proof, leaf digest, ordered peaks, and root. Non-streaming responses return these as `X-Aegis-MMR-*` headers; streamed calls expose an authenticated post-terminal proof link. | Cross-language golden vectors and WAL-replay/tamper tests. A valid proof establishes inclusion in the declared MMR root; it does not by itself establish external timestamping, retention, or legal admissibility. |
+| **Durable evidence and portable inclusion proofs** | Governed evidence is committed to the authoritative fsynced JSONL WAL. The core can generate portable `aegis-mmr-inclusion-v1` proofs, and the core plus both SDK verifiers can validate them against an independently trusted root. When the native extension is available, stream terminal records are also copied to a bounded, memory-mapped, CRC32-framed `RustWal`. | The native `RustWal` is an optional auxiliary segment, not the replay authority. A valid proof establishes inclusion relative to the supplied trusted root; it does not establish external immutability, global ordering, timestamping, or legal provenance. See the [MMR proof implementation](aegis/core/mmr.py), [portable-proof tests](tests/test_mmr_portable.py), and [claims matrix](docs/CLAIMS_MATRIX.md). |
+| **Bounded streaming redaction and terminal evidence** | Admitted SSE is processed incrementally as sanitized canonical events through a byte-accounted bounded queue. A finite character holdback redacts supported identifier forms that cross chunk boundaries; SHA-256 covers the exact emitted bytes, one terminal summary is committed, and the protocol terminal marker is emitted only after that commit succeeds. | Initial stream evidence and proof status is `pending-terminal`. Queue, event, output, redaction-window, preview, and duration bounds apply per admitted stream; aggregate retained memory still scales with admitted concurrency. This is not a zero-copy claim or universal de-identification guarantee. See the [streaming path](aegis/proxy/streaming.py), [streaming deidentifier](aegis/core/streaming_deidentifier.py), and [streaming regressions](tests/test_proxy_streaming.py). |
+| **Tested Python and TypeScript provider integrations** | Source and public `4.0.0` packages provide Aegis gateway configuration, tested OpenAI/Anthropic integrations, and portable-proof verification. Python provides official-client subclasses; TypeScript provides provider-native subclasses and gateway-option helpers while retaining the official provider packages as peer dependencies. | Both registries use `aegis-latent-sdk`; Python imports use `aegis_sdk`. Compatibility is limited to tested routes, dependency ranges, and behaviors. Proof verification requires an independently pinned root; streaming proofs are retrieved after terminal commit. See the [Python SDK guide](sdk/python/README.md), [TypeScript SDK guide](sdk/typescript/README.md), and [integration guide](docs/DEVELOPER_INTEGRATIONS_GUIDE.md). |
+| **Bounded formal checks of declared invariants** | The formal gate runs Z3 over two SMT-LIB checks, Lean 4 over the durable-before-emission theorem, and TLC over finite-state models for commit-before-emission, append-only ledger prefixes, and session-to-ledger binding. The gate is wired into CI and fails on unexpected solver results, type-check failures, timeouts, or TLC errors. | These artifacts verify their stated formulas and bounded abstractions; they are not a refinement proof of the Python/Rust implementation, target filesystem, or deployment. See the [formal verification guide](docs/formal/FORMAL_VERIFICATION.md), [verification script](scripts/verify_formal_artifacts.sh), and [formal specifications](specs/). |
 
-## Quickstart for local evaluation
+## 4. Quickstart for local evaluation
 
-The local path is for development, tests, and evidence replay. It is not a production deployment profile.
+The local profile is for development, tests, and evidence replay, not production deployment. Python 3.11 or later is required. Use a pinned checkout to evaluate the complete gateway; the public registries contain the SDKs only.
 
 ```bash
 git clone https://github.com/JuanLunaIA/aegis-latent-core.git
 cd aegis-latent-core
+git checkout 2050a310ec295afc61d033ff842c9a535a4f3105
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --require-hashes -r requirements.lock
@@ -127,7 +76,7 @@ python -m compileall -q aegis aegis_server
 pytest -q
 ```
 
-For a minimal source-checkout gateway, use the declared `aegis` console entry point with a local or mocked upstream:
+To start a development gateway against an OpenAI-compatible service listening on `127.0.0.1:9001`, run:
 
 ```bash
 export AEGIS_SECURITY_ENFORCEMENT_MODE=development
@@ -138,23 +87,31 @@ export AEGIS_WAL_PATH='/tmp/aegis-evaluation.wal.jsonl'
 aegis
 ```
 
-`development` is the only accepted non-strict mode in the current settings model; the older `permissive` value and `uvicorn aegis.main:app` command are stale. Never put provider keys, bearer tokens, signing secrets, WAL records, or customer payloads into source control.
+There is no `aegis --dev` option. API calls require the configured upstream to be running. The gateway smoke test does not prove provider compatibility, production acceptance, or a production security posture. Do not commit provider keys, gateway bearer tokens, signing secrets, WAL records, or customer payloads. See the [developer quickstart](docs/DEVELOPER_QUICKSTART.md) and [deployment guide](DEPLOYMENT_GUIDE.md) for the complete source-development and deployment gates.
 
-## Merged-source SDKs
+### Published SDKs and source verification
 
-The merged-source Python distribution in [`sdk/python`](sdk/python) is a drop-in integration that subclasses the official OpenAI and Anthropic clients. Existing request/response model types and sync/async resource APIs are preserved while Aegis tenant, session, and bearer-auth headers are injected at construction. The native Anthropic `/v1/messages` ingress requires `AEGIS_PROVIDER=anthropic`; it preserves the Anthropic Messages response shape instead of translating it to OpenAI objects.
+PyPI and npm publish version `4.0.0` under the unscoped name `aegis-latent-sdk`; the Python import namespace is `aegis_sdk`. The GitHub Release label is `v4.0.1`, but its attached SDK assets also carry version `4.0.0`.
 
-The edge-compatible merged-source TypeScript package in [`sdk/typescript`](sdk/typescript) verifies `aegis-mmr-inclusion-v1` proofs with Web Crypto and supplies provider-native wrappers and constructor options rather than re-declaring provider payloads. The official OpenAI and Anthropic packages are peer dependencies, so their native resources, request parameters, response models, streaming iterators, retries and error types remain authoritative. Both SDKs consume the same frozen proof vectors under `sdk/shared/`.
+### Python SDK from the source tree
 
-The unreleased Python SDK candidate also includes privacy-minimized LangChain and LlamaIndex callback adapters. Publication workflows are disabled unless external trusted-publisher, environment, signed-tag, and repository-variable prerequisites are configured. See [`docs/DEVELOPER_INTEGRATIONS_GUIDE.md`](docs/DEVELOPER_INTEGRATIONS_GUIDE.md).
+Install the OpenAI-enabled Python package from [PyPI](https://pypi.org/project/aegis-latent-sdk/4.0.0/):
+
+```bash
+python -m pip install 'aegis-latent-sdk[openai]==4.0.0'
+```
+
+The wrapper subclasses the official OpenAI client and preserves its native resource and response types within the declared and tested dependency range:
 
 ```python
+import os
+
 from aegis_sdk.openai import OpenAI
 
 client = OpenAI(
-    aegis_api_key="gateway-token",
-    gateway_url="https://aegis.internal",
-    tenant_id="tenant-42",
+    aegis_api_key=os.environ["AEGIS_API_KEY"],
+    gateway_url=os.environ["AEGIS_GATEWAY_URL"],
+    tenant_id=os.environ["AEGIS_TENANT_ID"],
 )
 response = client.chat.completions.create(
     model="gpt-4.1-mini",
@@ -162,213 +119,200 @@ response = client.chat.completions.create(
 )
 ```
 
-Proof verification is opt-in because callers must obtain the trusted MMR root through an independently approved channel. Enabling verification while trusting the root from the same untrusted response would detect corruption but would not provide an independent trust anchor.
+The SDK also provides `Anthropic`, `AsyncOpenAI`, and `AsyncAnthropic`. Native Anthropic Messages calls require the gateway itself to run with `AEGIS_PROVIDER=anthropic`. Model availability remains upstream-dependent.
 
-## Merged-source forensic audit dashboard
+### TypeScript SDK from the source tree
 
-The merged-source [`dashboard`](dashboard) is a read-only Next.js 16 and React 19 interface. It renders only authenticated gateway data: overview health, a filterable retained-window ledger, canonical JCS and DAG-CBOR node projections with CIDv1 identifiers, an interactive MMR verifier with a local Web Crypto sandbox, live Prometheus-derived metrics, and a bounded forensic export workflow. It contains no fallback sample data.
+Install the package from [npm](https://www.npmjs.com/package/aegis-latent-sdk) with the OpenAI peer dependency:
 
 ```bash
-cd sdk/typescript && npm ci && npm run build
-cd ../../dashboard && npm ci
+npm install aegis-latent-sdk@4.0.0 openai@^6.49.0
+```
+
+Use its OpenAI wrapper subpath:
+
+```typescript
+import OpenAI from "aegis-latent-sdk/openai";
+
+const client = new OpenAI({
+  aegisApiKey: process.env.AEGIS_API_KEY!,
+  gatewayUrl: process.env.AEGIS_GATEWAY_URL!,
+  tenantId: process.env.AEGIS_TENANT_ID!,
+});
+
+const response = await client.chat.completions.create({
+  model: "gpt-4.1-mini",
+  messages: [{ role: "user", content: "hello" }],
+});
+```
+
+Both SDKs leave proof verification disabled by default. Enabling `verify_proof` or `verifyProof` also requires an independently provisioned `trusted_mmr_root` or `trustedMmrRoot` containing exactly 64 lowercase hexadecimal characters. A root copied from the same untrusted response is not an independent trust anchor, and an initial `pending-terminal` streaming response is not a terminal inclusion proof. Compatibility is limited to tested routes, behaviors, and dependency ranges; these integrations are not universal replacements for every provider endpoint. For source verification, use the component commands in the [integration guide](docs/DEVELOPER_INTEGRATIONS_GUIDE.md).
+
+## 5. Request and evidence lifecycle
+
+> **Baseline boundary:** The sequence below describes the `4.0.0` source baseline at commit `2050a310ec295afc61d033ff842c9a535a4f3105`, which is included in the `v4.0.1` tag target. The version label mismatch does not change the code-level behavior described here.
+
+```mermaid
+sequenceDiagram
+    participant C as Client / authorized proof reader
+    participant A as Aegis Gateway
+    participant P as Admission controls
+    participant U as Upstream model
+    participant L as Authoritative JSONL WAL
+    participant Q as Optional bounded enrichment
+
+    C->>A: Authenticated OpenAI-compatible or Anthropic request
+    A->>P: Bound body, parse and normalize, apply WAF, session, egress, and rate-limit controls
+    alt Required admission control rejects or is unavailable
+        P-->>C: Fail-closed HTTP response
+        Note over P,C: Rejection evidence is configuration- and path-dependent
+    else Request admitted
+        P->>U: Forward governed request
+        alt Non-streaming response or terminal upstream error
+            U-->>A: Complete response
+            A->>L: Hash, sign, append JSON line, flush, fsync
+            L-->>A: Commit complete and portable MMR proof available
+            A->>Q: Optionally enqueue bounded enrichment
+            A-->>C: Response with durable status and MMR proof headers
+        else SSE response
+            U-->>A: Upstream SSE events
+            A-->>C: Sanitized non-terminal events through byte-bounded queue
+            Note over A,C: Initial evidence and proof status is pending-terminal
+            A->>L: Commit one signed terminal summary
+            L-->>A: Terminal commit complete and proof available
+            A-->>C: Protocol terminal marker
+            C->>A: Authenticated GET /v1/audit/proofs/{request_id}
+            A-->>C: Portable MMR inclusion proof
+        end
+    end
+```
+
+For **non-streaming** governed calls, Aegis returns the response only after the signed audit node has been appended to the authoritative JSONL WAL, flushed, and passed to `fsync`. The response reports `X-Aegis-Evidence-Status: durable` and includes `X-Aegis-MMR-*` proof headers when portable proof metadata is present. Optional enrichment is queued only after that authoritative commit. A commit failure prevents a governed success at this evidence boundary.
+
+For merged-source **SSE**, sanitized non-terminal events can be emitted while evidence remains `pending-terminal`. The gateway applies finite event, response-byte, duration, queue, and de-identification bounds while incrementally hashing the canonical emitted bytes. It commits one signed terminal summary before emitting the OpenAI `[DONE]` or Anthropic `message_stop` marker. The initial response links to `/v1/audit/proofs/{request_id}`; an authorized `audit:read` caller can retrieve the proof after terminal commit while the record remains in the retained ledger window.
+
+Not every pre-admission rejection is guaranteed to receive durable evidence. Authentication, WAF, malformed-body, request-bound, session, and rate-limit rejection behavior varies by route and configuration. A successful `fsync` means the process requested operating-system synchronization; it does not by itself prove power-loss durability, replication, immutable external custody, or retention. Likewise, a valid MMR proof establishes inclusion in the declared root, not external timestamping, regulatory compliance, or legal admissibility. See the [architecture and failure semantics](docs/architecture/ARCHITECTURE.md) and [portable MMR proof format](docs/api/MMR_PROOF_V1.md).
+
+## 6. Forensic audit dashboard
+
+> **Distribution boundary:** The [`dashboard`](dashboard) source is included in the `v4.0.1` tag target. Its private package uses Next.js 16 and React 19 and consumes the local [`aegis-latent-sdk`](sdk/typescript) workspace dependency. This does not establish a hosted dashboard service or a separately published dashboard package.
+
+The dashboard is a read-only interface for authenticated gateway audit data. It does not substitute sample rows or generated history when data is empty or unavailable.
+
+| Surface | Implemented behavior | Boundary |
+|---|---|---|
+| **Ledger** | Filters and paginates the retained audit window and exposes restricted-domain RFC 8785 JCS JSON plus deterministic DAG-CBOR evidence identified by CIDv1. | Pagination is offset-based and not snapshot-stable under concurrent appends or eviction. The retained window is not a regulatory WORM store. |
+| **MMR explorer** | Retrieves an `aegis-mmr-inclusion-v1` proof, verifies it in the browser with Web Crypto, visualizes the inclusion path and ordered peaks, and provides a local paste-in verification sandbox. | A valid proof establishes inclusion in the named root only. The root requires an independently approved trust channel; the result does not establish event truth, time, retention, or legal status. |
+| **Metrics** | Parses an allowlisted set of Aegis values from the current `/metrics` scrape. | A scrape is a current snapshot, not historical telemetry. Missing or malformed data is reported rather than replaced with zero or demo values. |
+| **Forensic export** | Reviews a UTC range, operator, acquisition reason, and optional tenant before requesting a bounded ZIP from `POST /v1/audit/forensics/export`. | Production access requires the `audit:export` scope. The export is sensitive technical evidence, not an ISO certification or legal-admissibility determination. |
+
+The bounded export contains `manifest.json`, `ledger_slice.cbor`, `merkle_proof.json`, `audit_certificate.pdf`, and `VERIFY.sh`. The manifest uses the bundle's restricted RFC 8785 JCS domain and records the CIDv1 of the deterministic DAG-CBOR ledger slice. `VERIFY.sh` checks embedded file-byte SHA-256 values; it does not authenticate the archive or independently verify signatures, MMR proofs, canonical encodings, or a trusted root.
+
+```bash
+# Run from the repository root.
+cd sdk/typescript
+npm ci
+npm run build
+
+cd ../../dashboard
+npm ci
 export AEGIS_PRIMARY_BASE_URL='https://aegis.internal'
-export AEGIS_DASHBOARD_API_KEY='retrieve-from-your-secret-manager'
+export AEGIS_DASHBOARD_API_KEY='read-only-audit-token'
 npm run dev
 ```
 
-`AEGIS_DASHBOARD_API_KEY` is server-only and is never serialized into browser bundles. The export endpoint requires the `audit:export` scope when per-key scopes are configured. Each bounded ZIP contains an RFC 8785 JCS `manifest.json`, canonical DAG-CBOR `ledger_slice.cbor` identified by CIDv1, `merkle_proof.json`, `audit_certificate.pdf`, and `VERIFY.sh`. The certificate is a technical integrity report, not a certification or legal-admissibility conclusion.
+`AEGIS_DASHBOARD_API_KEY` is consumed by server-side route code and forwarded to the gateway as a bearer token. Deploy the dashboard behind an authenticated reverse proxy and use a dedicated least-privilege audit key. Browser-facing authentication is a deployment responsibility. See the [`dashboard` deployment notes](dashboard/README.md) for production build and verification commands.
 
-## Strict deployment path
+## 7. Regulatory contribution matrix
 
-Strict mode is the intended production posture. It requires authentication, durable evidence, strong signing, bounded request bodies, a distributed rate-limit backend, durable storage, and the configured kernel controls. Use a secret manager and mount the WAL on a durable, owner-readable path.
+> **Contribution boundary:** Aegis supplies technical controls and evidence paths for customer assessment; it does **not** determine regulatory applicability, establish compliance or certification, create regulatory WORM storage, or decide legal admissibility. The deploying organization and its qualified reviewers remain responsible for scope, configuration, retention, custody, operating effectiveness, and jurisdiction-specific conclusions. See the [compliance contribution map](docs/compliance/COMPLIANCE_MAPPING.md) and [public claims matrix](docs/CLAIMS_MATRIX.md).
+>
+> **Baseline:** The implementation and focused tests cited below are present in the audited source tree included by the `v4.0.1` tag target. Assess each cited path against the exact revision being deployed.
 
-```bash
-export AEGIS_SECURITY_ENFORCEMENT_MODE=strict
-export AEGIS_API_KEYS='replace-with-a-secret-manager-reference'
-export AEGIS_SIGNING_KEY='at-least-32-bytes-of-secret-material'
-export AEGIS_RATE_LIMIT_BACKEND=redis
-export AEGIS_REDIS_URL='rediss://redis.internal:6380/0'
-export AEGIS_REQUIRE_DISTRIBUTED_LIMITER=true
-export AEGIS_REQUIRE_DURABLE_EVIDENCE=true
-export AEGIS_REQUIRE_LSM=true
-export AEGIS_REQUIRE_SECCOMP=true
-export AEGIS_MAX_REQUEST_BODY_BYTES=1048576
-export AEGIS_BACKEND_URL='https://llm.internal.example/v1'
-export AEGIS_WAL_PATH='/var/lib/aegis/aegis.wal.jsonl'
-```
-
-For zero-restart HMAC rotation, configure an owner-readable keyring path instead of relying on a single process-start secret:
-
-```bash
-export AEGIS_SIGNER_PROVIDER=hmac
-export AEGIS_HMAC_KEYRING_PATH='/var/lib/aegis/secrets/hmac-keyring.json'
-export AEGIS_HMAC_KEYRING_RELOAD_INTERVAL_S=1
-```
-
-The keyring protocol, overlap window, expiry, rollback, and three-replica acceptance criteria are in [`docs/operations/KEY_ROTATION_RUNBOOK.md`](docs/operations/KEY_ROTATION_RUNBOOK.md). A keyring path is not a secret manager; the deployment must still establish custody, access control, atomic delivery, backup, destruction, and auditability.
-
-## Evidence and signing model
-
-The local ledger is an append-only JSONL WAL with an in-memory bounded chain and optional archived segments. Each record contains request and response hashes, chain linkage, a Merkle root, signature metadata, and the request identifier. The WAL is flushed and synchronized before the durable response path completes.
-
-Supported signing choices are deployment-dependent:
-
-| Signer | Appropriate boundary | Important limitation |
-|---|---|---|
-| HMAC-SHA256 | Single-node or shared-secret self-hosted deployments | Symmetric key; every verifier that holds the key can also sign. HMAC is classical, not quantum-resistant. |
-| HSM/Vault-backed signer | Enterprise deployments requiring key isolation or remote custody | Availability, policy, TLS/mTLS, rotation, and offline verification require the target deployment’s own evidence. |
-| Native ML-DSA-65 signer | Environments that build and load the real Rust backend | The retained 1M-sample candidate artifact found no significant timing difference for `sign` (`p=0.8521504207157158`) but did not meet the threshold for `verify` (`p=0.0`); no constant-time claim is approved. See [`docs/security/PQC_CONSTANT_TIME.md`](docs/security/PQC_CONSTANT_TIME.md). |
-
-Aegis does not fabricate ML-DSA signatures when the native backend is unavailable. It reports the backend as unavailable and requires an explicit real fallback policy. A timing result with `p > 0.05` would mean only that statistically significant leakage was not detected under the named experiment; it would not prove constant-time execution.
-
-## Backpressure and failure semantics
-
-Durable evidence is a hot-path invariant. Under storage or `fsync` stall, the request path may block or reject according to the configured bounds; it must not silently drop authoritative evidence. The enrichment queue may reject optional work, but a queue policy cannot turn a governed accepted response into an unrecorded response.
-
-The deterministic fault-injection harness is:
-
-```bash
-PYTHONPATH=. .venv/bin/python tools/benchmarks/run_backpressure_stall.py \
-  --duration-s 0.25 --offered-rps 10000 --fsync-delay-ms 2 --max-workers 64 \
-  --output evidence/backpressure_stall_report.json
-```
-
-The retained v3.1.0 run offered 10,000 requests at 10,000 RPS with a 2 ms injected `fsync` delay. It recorded 10,000 durable commits, zero failures, zero missing IDs, zero duplicate IDs, and valid chain integrity. The observed p99 commit latency was 1,189.89 ms. This is a bounded fault-injection result with substantial queueing. It is not a production capacity or SLO claim. See [`docs/operations/BACKPRESSURE_RUNBOOK.md`](docs/operations/BACKPRESSURE_RUNBOOK.md).
-
-## WAF and ingress boundary
-
-The local corpus currently covers 15 executable malicious cases and 8 benign cases. The v3.1.0 candidate run recorded zero observed bypasses and zero benign false positives for that pinned corpus. Because the corpus is small, its confidence interval is wide; the result is a regression signal, not universal detection coverage.
-
-The application harness does not execute HTTP/2 fragmentation, pseudo-header ordering, continuation-boundary differentials, compressed-body parser differences, or ingress-specific normalization. `nuclei-templates/waf-bypass` is not treated as executed unless a pinned revision runs against an authorized disposable local target and produces a retained artifact. See [`docs/security/WAF_TESTING.md`](docs/security/WAF_TESTING.md).
-
-## Observability and operations
-
-Governed responses expose `X-Aegis-Request-ID`, `X-Aegis-Session-ID`, `X-Aegis-Evidence-Status`, `X-Aegis-Analysis-Status`, and, after a non-streaming durable commit, the `X-Aegis-MMR-Format`, `X-Aegis-MMR-Leaf`, `X-Aegis-MMR-Proof`, and `X-Aegis-MMR-Root` proof headers. Streaming responses expose a `Link` to `/v1/audit/proofs/{request_id}` and remain `pending-terminal` until the authenticated terminal lookup succeeds. Authoritative records are in the evidence store.
-
-Operators should alert on evidence-commit failures, WAL synchronization failures, rate-limit backend failures, queue saturation, circuit opening, upstream error spikes, keyring reload failures, missing key overlap, signer unavailability, Seccomp/LSM startup rejection, and integrity-verification failure. Preserve WAL segments and reports read-only during incident handling. Roll back to the prior signed/image-digest release when a kill criterion is met.
-
-In the merged-source baseline, when the PyO3 extension is available, each terminal streaming record is also appended once to an auxiliary CRC32-framed, memory-mapped `RustWal` segment at `<AEGIS_WAL_PATH>.stream.rwal` inside the same executor call that performs the authoritative JSONL ledger commit. The native segment is bounded to 256 MiB. If its append fails after the JSONL commit, Aegis increments `aegis_native_stream_wal_errors_total`, logs the degradation, disables the auxiliary segment for the process and preserves the client-visible terminal marker because the JSONL chain remains the replay authority. Streaming telemetry also exposes duration histograms, token counters and bounded-category redaction counters without payload labels.
-
-## Deployment topologies
-
-| Topology | Use | Evidence boundary | Open risk |
+| Review lens | Technical contribution | Repository evidence | Required boundary |
 |---|---|---|---|
-| Single process / single durable WAL | Local evaluation and small self-hosted deployments | One process owns the chain and storage path | Process, volume, and key custody are single failure domains. |
-| One worker per pod | Horizontal application scaling with independent local bundles | Each pod produces an independently verifiable bundle | Cross-replica global ordering is not implied. |
-| Three replicas with shared key control | Rotation and failover exercise | Each node includes key ID and can verify overlap material | Secret-manager propagation, clock, storage, and replica orchestration require acceptance evidence. |
-| Centralized writer | Ordered evidence across stateless gateway replicas | A single writer or approved ordering service owns the durable sequence | Writer availability, queue behavior, and cross-region failure modes remain architecture work. |
+| **EU AI Act, Article 12** | Governed request outcomes can produce linked, signed audit records with request/response hashes and event metadata, which may provide technical inputs to a logging analysis. | [`aegis/core/crypto_audit.py`](aegis/core/crypto_audit.py), [`tests/test_enterprise_durable_evidence.py`](tests/test_enterprise_durable_evidence.py) | Article 12 applies to high-risk AI systems in scope. Aegis does not determine classification, conformity, required log content, retention, provider/deployer roles, or operating effectiveness. |
+| **HIPAA Privacy Rule, 45 CFR § 164.514** | An opt-in, best-effort text scrubber replaces regex matches for selected forms inspired by Safe Harbor identifier categories and records category/count metadata without the matched values. | [`aegis/core/phi_deidentifier.py`](aegis/core/phi_deidentifier.py), [`tests/test_phi_deidentifier.py`](tests/test_phi_deidentifier.py) | This is **not** the complete Safe Harbor method or Expert Determination. It does not establish removal of all required identifiers, the no-actual-knowledge condition, HIPAA compliance, or suitability for a particular dataset. |
+| **MiFID II record keeping** | A standalone helper can create communication records containing content hashes, timestamps, direction, instrument/advice metadata, retention-policy metadata, and optional HMAC protection. | [`aegis/core/mifid_record_keeper.py`](aegis/core/mifid_record_keeper.py), [`tests/test_mifid_record_keeper.py`](tests/test_mifid_record_keeper.py) | The helper cites Articles 16(6)/25(1) and RTS 6/7; it is not wired into the gateway request path. It does not establish RTS 25 clock synchronization, trusted time, record completeness, regulatory WORM, or compliance. |
+| **ISO/IEC 27037-oriented evidence handling** | Standalone helpers can package acquisition metadata, custody events, ledger nodes and an integrity seal, and can append sequential HMAC-protected custody-transfer records with `fsync`. | [`aegis/core/iso27037_evidence.py`](aegis/core/iso27037_evidence.py), [`aegis/core/custody_transfer.py`](aegis/core/custody_transfer.py), [`tests/test_iso27037_evidence.py`](tests/test_iso27037_evidence.py), [`tests/test_custody_transfer.py`](tests/test_custody_transfer.py) | These technical artifacts do not establish ISO/IEC conformity, complete chain of custody, examiner competence, external immutability, authorship, or legal admissibility. HMAC is symmetric and depends on customer-controlled key custody. |
 
-Cross-replica global audit ordering and multi-region HA are not claimed by the current release. Use the scaling guide and roadmap as the authoritative boundary.
+External laws, standards, and guidance can change. Qualified counsel or an assessor should verify the applicable text, role, jurisdiction, dataset, deployment, retention policy, clock source, and operating evidence before relying on a contribution mapping.
 
-## Benchmark interpretation
+## 8. Commercial path
 
-The repository separates dispatch microbenchmarks, client-visible proxy overhead, upstream-inclusive latency, WAL durability throughput, WAF corpus metrics, and native crypto timing. Each measurement must identify workload, hardware, warmup, sample count, percentile method, raw artifact, and boundary.
+> **Commercial boundary.** The current GitHub Release is [`v4.0.1`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1), while source and package artifacts declare `4.0.0`. Any evaluation, quote, acceptance plan, and evidence package must identify the exact commit and artifact versions rather than relying on the release label alone.
 
-The previously published 2.70 µs result is a background-dispatch microbenchmark, not end-to-end gateway latency. Per-worker throughput is constrained by the interpreter, event-loop scheduling, upstream behavior, storage, and deployment topology. No README claim of “zero latency,” “zero overhead,” “10k RPS capacity,” or “1B RPM” is authorized without a new artifact that satisfies the claim matrix.
+Aegis is distributed under the terms in [`LICENSE`](LICENSE). A separate commercial agreement may be available for organizations that require terms different from the AGPLv3, but only an executed agreement defines licensing, support, warranty, redistribution, and other contractual rights. [`COMMERCIAL.md`](COMMERCIAL.md) is a procurement summary, not legal advice or an automatic AGPL exemption.
 
-The merged-source Phase 2 in-process streaming harness is [`benchmarks/bench_streaming_sse.py`](benchmarks/bench_streaming_sse.py). Its retained working-tree measurement is [`evidence/commercial_phase2_streaming_benchmark.json`](evidence/commercial_phase2_streaming_benchmark.json). It exercises 1,000 deterministic SSE events per round and reports first-byte latency, transformation throughput, queue high-water marks and `tracemalloc` peak memory. It excludes network and durable-WAL latency and therefore is not an end-to-end capacity result.
-
-See [`docs/benchmarks/README.md`](docs/benchmarks/README.md), [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md), and [`docs/performance/SCALING_GUIDE.md`](docs/performance/SCALING_GUIDE.md).
-
-## Security and supply-chain posture
-
-The release process produces a lockfile, SBOM, dependency/advisory results, provenance envelope, release-gate record, repository manifest, asset hashes, and rollback instructions. The security policy is in [`SECURITY.md`](SECURITY.md); the public claim controls are in [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md). Vulnerability reports should use the private reporting path described in `SECURITY.md`, not public issue comments.
-
-The repository does not claim SOC 2, HIPAA, FedRAMP, EU AI Act conformity, GDPR compliance, FIPS 140 validation, or court admissibility by itself. It provides code and evidence paths that an organization may evaluate as part of a broader control system and independent assessment. Framework references are contribution mappings, not certifications or legal conclusions.
-
-## Commercial path
-
-The commercial model is intentionally staged:
-
-| Package | Scope | Promise boundary |
+| Package | Directional scope | Commercial boundary |
 |---|---|---|
-| Community / OSS | AGPL self-hosted evaluation and open-source use | No support or SLA promise. |
-| Team / Pilot | Time-bounded, production-like evaluation with a named scope | Fixed scope, evidence replay, deployment checklist, and explicit support hours. |
-| Production | Commercial self-hosted deployment, updates, and deployment guidance | Annual commercial terms sized by deployment and request tier; no unsupported certification promise. |
-| Enterprise | Procurement, architecture assistance, security review, and negotiated response targets | Requires an accountable support operation, legal terms, data-retention statement, and explicit exclusions. |
-| Sovereign / OEM | Air-gapped, redistribution, embedded, escrow, or dedicated assurance | Future offer only after capacity, legal review, and independent assurance exist. |
+| **Community / OSS** | Self-hosted evaluation and open-source use under AGPLv3, with source, tests, and public documentation | No contractual support, SLA, private onboarding, or customer-specific assurance package. |
+| **Team / Pilot** | One named workload; written acceptance criteria; evidence replay; deployment checklist; bounded architecture and implementation assistance | Fixed-scope, time-boxed engagement quoted after scoping; no production SLO, certification, or unlimited engineering promise. |
+| **Production** | Commercial self-hosted terms, release updates, deployment guidance, and a defined support window | Annual terms depend on topology, environments, request tier, retention, and support requirements. |
+| **Enterprise** | Multiple environments or procurement-heavy deployment, with architecture and security-review assistance plus negotiated response targets | Requires accountable staffing, an operating support model, legal terms, data-handling boundaries, and explicit exclusions. |
+| **Sovereign / OEM** | Air-gapped, embedded, redistribution, escrow, or dedicated-assurance requirements | Future/custom only; not a default offer or present assurance commitment. |
 
-Pricing hypotheses, cost-to-serve assumptions, procurement blockers, and buyer questions are in [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md) and [`docs/BUYER_GUIDE_US.md`](docs/BUYER_GUIDE_US.md). The repository does not fabricate customer logos, testimonials, adoption numbers, support coverage, or ROI guarantees.
+The retained planning ranges—**USD 10,000–30,000** for a **4–8 week Team/Pilot**, **USD 40,000–100,000 annually** for Production, and **USD 100,000–250,000+ annually** for Enterprise—are **internal hypotheses to validate**. They are **not public list prices, observed contract values, valuations, or binding offers**. A defensible quote requires the target topology, environments, request volume, providers, streaming profile, retention and residency needs, storage and key custody, support hours, escalation path, security-review scope, geography, and legal entity.
 
-## Repository map
+A pilot should use the buyer's actual workload and produce a customer-owned report. Its declared acceptance plan should cover request/response evidence correlation, upstream failure, Redis/rate-limit failure, WAL replay and integrity, key rotation, the pinned WAF corpus, rollback, and the target ingress, storage, secret manager, and container profile. The report should record workload and volume, environment, rejected traffic, evidence completeness, failures, support hours, exclusions, and residual risk. Passing a pilot does not establish certification, regulatory compliance, production SLOs, or legal admissibility.
+
+See [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md) for the packaging hypothesis, [`docs/BUYER_GUIDE_US.md`](docs/BUYER_GUIDE_US.md) for pilot acceptance and procurement blockers, and [`docs/FAQ_PROCUREMENT.md`](docs/FAQ_PROCUREMENT.md) for licensing, pricing, support, and assurance boundaries.
+
+## Related documents — 9. Audience navigation
+
+The current GitHub Release label is **v4.0.1**, targeting commit `6469904380218584ae0b5221334bc9a46500f5ba`; the source and SDK artifact version is **4.0.0**. Use each document's declared baseline and boundaries. Publication does not establish production acceptance, certification, or legal conclusions.
+
+| Audience | Start here | Scope boundary |
+|---|---|---|
+| **CISO, AppSec, and security reviewers** | [`SECURITY.md`](SECURITY.md) · [`Threat model`](docs/security/THREAT_MODEL.md) · [`Security FAQ`](docs/FAQ_SECURITY.md) · [`Claims matrix`](docs/CLAIMS_MATRIX.md) | Review implemented controls, evidence locators, deployment dependencies, and residual risk; these documents are not independent assurance or certification. |
+| **Developers and AI/ML engineers** | [`Developer quickstart`](docs/DEVELOPER_QUICKSTART.md) · [`Integrations guide`](docs/DEVELOPER_INTEGRATIONS_GUIDE.md) · [`Python SDK source guide`](sdk/python/README.md) · [`TypeScript SDK source guide`](sdk/typescript/README.md) | PyPI and npm expose SDK version `4.0.0`. Validate dependency extras, peer dependencies, trust-root handling, and supported routes for the target integration. |
+| **Platform engineering, DevOps, and SRE** | [`Platform operator guide`](docs/PLATFORM_OPERATOR_GUIDE.md) · [`Deployment guide`](DEPLOYMENT_GUIDE.md) · [`Helm chart source`](deploy/helm/Chart.yaml) · [`Backpressure runbook`](docs/operations/BACKPRESSURE_RUNBOOK.md) · [`Key-rotation runbook`](docs/operations/KEY_ROTATION_RUNBOOK.md) · [`Rollback runbook`](docs/operations/ROLLBACK_RUNBOOK.md) | Validate the target kernel, storage, identity, network, signer, Redis, backup, and incident-response environment; repository guidance does not establish a production SLO or target acceptance. |
+| **Buyers, procurement, legal, compliance, and privacy reviewers** | [`Buyer guide`](docs/BUYER_GUIDE_US.md) · [`Procurement FAQ`](docs/FAQ_PROCUREMENT.md) · [`Commercial hypotheses`](docs/COMMERCIAL_STRATEGY_US.md) · [`Compliance contribution map`](docs/compliance/COMPLIANCE_MAPPING.md) · [`Data-retention and privacy boundaries`](docs/privacy/DATA_RETENTION.md) | Commercial ranges are non-binding hypotheses. Framework mappings and evidence exports do not establish compliance, certification, legal admissibility, or a universal retention policy. |
+
+## 10. Verified metrics, repository map and integrity
+
+> [!NOTE]
+> **Metric scope matters.** The current GitHub Release label is [`v4.0.1`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1), while source and SDK artifacts declare `4.0.0`. Candidate figures below come from the retained **2026-08-24** source-candidate gate for commit `2050a310ec295afc61d033ff842c9a535a4f3105`, unless a row says otherwise. Publication-gate documentation was audited on **2026-08-25** at `6469904380218584ae0b5221334bc9a46500f5ba`. These results are regression evidence for named revisions and environments, not production capacity, an SLO, certification, or a legal conclusion.
+
+### Verified metrics
+
+| Scope | Dated, verified result | Boundary |
+|---|---|---|
+| Python suite | **5,707 passed; 37 skipped** in the retained 2026-08-24 candidate gate | Not a fresh full-suite run on documentation `main`. |
+| Python line coverage | **89.7169%** (14,832/16,532 statements) in the retained 2026-08-24 candidate gate | Candidate-run measurement. CI enforces a 65% floor; this is not an evergreen coverage claim. |
+| Ruff | **Lint and format checks passed** in the retained 2026-08-24 candidate gate | This does not imply repository-wide strict typing; the broad strict-mypy audit remained red. |
+| Rust extension | **29 release tests passed**; format, Clippy with `-D warnings`, and an abi3 wheel build passed in the candidate gate | Local/CI-equivalent source verification, not registry publication or platform-wide acceptance. |
+| SDKs and dashboard | **16 Python SDK tests**, **12 TypeScript SDK tests**, and **6 dashboard tests** passed; configured builds/type checks passed in the candidate gate | PyPI/npm package publication is separately observable at version `4.0.0`; the dashboard has no standalone publication claim. |
+| Formal artifacts | **Z3, Lean 4, and TLA+/TLC gate passed** in the candidate gate | Two Z3 formulas, one Lean theorem, and three bounded TLC models. See [`docs/formal/FORMAL_VERIFICATION.md`](docs/formal/FORMAL_VERIFICATION.md); this is not an implementation-refinement or compliance proof. |
+| README overhaul branch | On **2026-08-25**, documentation verifier: **27 required files, 0 errors, 0 warnings**; release contract: **14 synchronized `4.0.0` source anchors**; workflow pins: **95 full-SHA references** | Reverified locally after this README rewrite on a branch derived from `6469904380218584ae0b5221334bc9a46500f5ba`. Synchronized source metadata does not publish a release. |
+
+Historical performance and security measurements remain attached to the published v3.1.0 evidence baseline and retain their workload limits; see [`docs/benchmarks/BENCHMARK_RESULTS.md`](docs/benchmarks/BENCHMARK_RESULTS.md). No SLSA level, universal compliance, legal admissibility, zero-copy behavior, or production-readiness conclusion follows from these metrics.
+
+### Repository map
 
 | Path | Purpose |
 |---|---|
-| `docs/DEVELOPER_QUICKSTART.md` | Clone, install, run, test and extend the repository without weakening the evidence gate. |
-| `docs/PLATFORM_OPERATOR_GUIDE.md` | Deployment topology, storage, Redis, kernel posture, telemetry and rollback boundaries. |
-| `docs/FAQ_TECHNICAL.md` | Technical questions about lifecycle, failure semantics, WAF, timing and topology. |
-| `docs/FAQ_PROCUREMENT.md` | Procurement questions about support, licensing, pricing hypotheses and assurance boundaries. |
-| `docs/FAQ_SECURITY.md` | Security questions about FIPS, PQC, HTTP/2, WAF and supply chain. |
-| `docs/compliance/COMPLIANCE_MAPPING.md` | Framework contribution map with customer-assessment boundaries. |
-| `docs/privacy/DATA_RETENTION.md` | Persisted data, retention decisions, privacy risks and operator controls. |
-| `docs/architecture/ARCHITECTURE.md` | System boundary, request state machine and topology behavior. |
-| `docs/benchmarks/BENCHMARK_RESULTS.md` | Canonical v3.1.0 benchmark results and reproduction commands. |
-| `docs/operations/ROLLBACK_RUNBOOK.md` | Evidence-preserving rollback and recovery procedure. |
-| `docs/institutional/README.md` | Six-volume institutional architecture, security, operations, regulatory, and procurement review suite with claim controls. |
-| `aegis/proxy/app.py` | Core FastAPI proxy lifecycle, request controls, evidence gate, streaming policy, headers, and bounded enrichment. |
-| `aegis/proxy/waf.py` | Application-layer WAF and normalization pipeline. |
-| `aegis/proxy/egress_guard.py` | Canonical egress allowlist and endpoint validation. |
-| `aegis/core/crypto_audit.py` | Canonical forensic ledger, signatures, WAL persistence, rotation, and integrity verification. |
-| `aegis/core/forensic_bundle.py` | Bounded JCS/DAG-CBOR evidence bundle, CIDv1 manifest, PDF certificate and offline verifier. |
-| `dashboard/` | Read-only Next.js forensic dashboard and server-side authenticated BFF. |
-| `sdk/python/` and `sdk/typescript/` | Python drop-in official-client subclasses; TypeScript provider-native wrappers with provider SDK peer dependencies; portable MMR proof verification. |
-| `benchmarks/bench_streaming_sse.py` | Reproducible 1,000+ event in-process SSE transformation benchmark. |
-| `aegis/core/ratelimiter.py` | In-memory development limiter and fail-closed Redis limiter. |
-| `aegis/core/seccomp_guard.py` | Seccomp capability and enforcement guard. |
-| `aegis/core/lsm_guard.py` | AppArmor/SELinux detection and strict assertion. |
-| `aegis_server/crypto/keyring.py` | Versioned HMAC keyring with atomic reload and overlap verification. |
-| `aegis_server/` | Enterprise persistence and compliance API lifecycle. |
-| `tests/test_p0_release_gates.py` | Blocking P0/P1 regression tests for the v3.1.0 release line. |
-| `tests/test_market_hardening_gates.py` | New WAF and fsync fault-injection regression gates. |
-| `tools/benchmarks/run_backpressure_stall.py` | Reproducible local WAL-stall benchmark. |
-| `tools/security/run_waf_corpus.py` | Reproducible local WAF corpus harness. |
-| `tools/benchmarks/run_key_rotation.py` | Local multi-instance atomic key rotation exercise. |
-| `tools/benchmarks/run_pqc_timing.py` | Native ML-DSA timing harness with raw-sample retention. |
-| `docs/CLAIMS_MATRIX.md` | Public claim status, evidence locator, and falsification boundary. |
-| `docs/architecture/` | Architecture index and decision records. |
-| `docs/operations/` | Backpressure, rotation, rollback, and operational runbooks. |
-| `docs/security/` | Threat model, WAF testing, PQC assessment, and assurance roadmap. |
-| `docs/benchmarks/` | Measurement contract and interpretation rules. |
-| `requirements.lock` | Hash-checked dependency resolution. |
+| [`aegis/proxy/app.py`](aegis/proxy/app.py) | Primary FastAPI gateway lifecycle, admission controls, provider forwarding, evidence commit, and streaming integration. |
+| [`aegis/proxy/streaming.py`](aegis/proxy/streaming.py) | Bounded SSE transformation and terminal-evidence ordering. |
+| [`aegis/core/crypto_audit.py`](aegis/core/crypto_audit.py) | Authoritative JSONL hash chain, signatures, WAL persistence, replay, and integrity checks. |
+| [`aegis/core/mmr.py`](aegis/core/mmr.py) | Merkle Mountain Range state and portable inclusion-proof generation. |
+| [`aegis/core/forensic_bundle.py`](aegis/core/forensic_bundle.py) | Bounded forensic ZIP construction and integrity-report artifacts. |
+| [`sdk/python/`](sdk/python/) | Local Python SDK source; distribution `aegis-latent-sdk`, import package `aegis_sdk`. |
+| [`sdk/typescript/`](sdk/typescript/) | Local unscoped TypeScript package source, `aegis-latent-sdk`; not `@aegis-latent/sdk`. |
+| [`dashboard/`](dashboard/) | Private read-only forensic dashboard source; no hosted-service claim. |
+| [`tests/`](tests/) | Python regression and release-gate tests. |
+| [`specs/`](specs/) | Z3, Lean, and TLA+ formal artifacts. |
+| [`.github/workflows/`](.github/workflows/) | CI, security, release, publication, and build workflow definitions. |
+| [`docs/REPOSITORY_MAP.md`](docs/REPOSITORY_MAP.md) | Canonical detailed path, package-name, test, and evidence map. |
+| [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md) | Public-claim status, evidence locators, boundaries, and falsification rules. |
+| [`evidence/INDEX.md`](evidence/INDEX.md) | Entry point for retained historical and source-readiness evidence. |
 
-## Documentation index
+### Integrity and project links
 
-| Audience | Start here |
-|---|---|
-| Developer | [`docs/DEVELOPER_QUICKSTART.md`](docs/DEVELOPER_QUICKSTART.md), [`docs/REPOSITORY_MAP.md`](docs/REPOSITORY_MAP.md), and [`CONTRIBUTING.md`](CONTRIBUTING.md). |
-| Platform operator | [`docs/PLATFORM_OPERATOR_GUIDE.md`](docs/PLATFORM_OPERATOR_GUIDE.md), [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md), and the operations runbooks. |
-| Security reviewer | [`SECURITY.md`](SECURITY.md), [`docs/security/THREAT_MODEL.md`](docs/security/THREAT_MODEL.md), [`docs/FAQ_SECURITY.md`](docs/FAQ_SECURITY.md), and [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md). |
-| Buyer and procurement | [`docs/PRODUCT_BRIEF_US.md`](docs/PRODUCT_BRIEF_US.md), [`docs/BUYER_GUIDE_US.md`](docs/BUYER_GUIDE_US.md), [`docs/FAQ_PROCUREMENT.md`](docs/FAQ_PROCUREMENT.md), and [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md). |
-| Compliance and privacy | [`docs/compliance/COMPLIANCE_MAPPING.md`](docs/compliance/COMPLIANCE_MAPPING.md) and [`docs/privacy/DATA_RETENTION.md`](docs/privacy/DATA_RETENTION.md). |
-| Institutional reviewer | [`docs/institutional/README.md`](docs/institutional/README.md), its claim-evidence graph, unsupported-claims report, and document-control record. |
-| Release owner | [`CHANGELOG.md`](CHANGELOG.md), [`docs/benchmarks/BENCHMARK_RESULTS.md`](docs/benchmarks/BENCHMARK_RESULTS.md), release artifacts, and the gate record. |
+- **Release:** [`v4.0.1`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1) is the current GitHub Release label; its target, attached artifacts, and registry packages identify `4.0.0`, and its lightweight tag is not cryptographically verifiable with `git verify-tag`.
+- **Security:** Follow [`SECURITY.md`](SECURITY.md) for supported reporting channels and scope.
+- **Contributing:** See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- **License:** Use is governed by [`LICENSE`](LICENSE) and, where applicable, [`COMMERCIAL.md`](COMMERCIAL.md). This README is not legal advice.
+- **Repository:** [JuanLunaIA/aegis-latent-core](https://github.com/JuanLunaIA/aegis-latent-core) · [Releases](https://github.com/JuanLunaIA/aegis-latent-core/releases) · [Issues](https://github.com/JuanLunaIA/aegis-latent-core/issues)
 
-## Non-goals and residual risk
-
-Application-layer controls do not replace network segmentation, firewall policy, Kubernetes NetworkPolicy, cloud IAM, a secret manager, immutable backup, disaster-recovery testing, or an incident-response program. Strict startup checks prove configured prerequisites at initialization; they do not prove that an external provider, filesystem, kernel, signer, or network remains healthy indefinitely. HMAC-SHA256 is classical and symmetric; long-lived or quantum-sensitive evidence requires a reviewed migration or hybrid architecture. ML-DSA availability is not equivalent to constant-time proof, FIPS 140 validation, or certification.
-
-A release is blocked when a governed accepted response lacks durable evidence in the declared test scope, a chain fails verification, a critical WAF corpus case bypasses, a valid key rotation loses or invalidates a record, a timing experiment exposes leakage, a supply-chain gate fails, or public documentation overstates the evidence. See [`docs/SECURITY_ASSURANCE_ROADMAP.md`](docs/SECURITY_ASSURANCE_ROADMAP.md) for the external-assurance path.
-
-## License
-
-The repository is licensed under the terms in [`LICENSE`](LICENSE) and [`COMMERCIAL.md`](COMMERCIAL.md). Commercial use cases, AGPL obligations, exemptions, future-version rights, and contractual terms require the applicable license text and legal review; this README is not legal advice.
-
-## Current release
-
-The latest published release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). Commit `2050a310ec295afc61d033ff842c9a535a4f3105` is the merged v4.0.0 source baseline with fourteen synchronized `4.0.0` version anchors, but it remains **unpublished source**: no v4 tag, GitHub Release, PyPI package, or npm package is claimed. No OCI publication, WORM status, SLSA level, legal admissibility, or production-readiness claim is made. The ML-DSA `verify` timing claim remains blocked because the retained experiment returned `p=0.0`; a source merge or published release is not evidence that every deployment prerequisite or external assurance requirement has been satisfied.
-
-## External reference boundaries
-
-The documentation uses NIST AI RMF, NIST CSF, NIST FIPS 204, W3C WCAG 2.2, CISA Secure by Design, IETF HTTP/2 and other primary sources as reference frameworks. These sources define terminology or review lenses. They do not certify Aegis or replace customer-specific legal, security, privacy or accessibility review.
-
-## Related documents
-
-- [`docs/DEVELOPER_QUICKSTART.md`](docs/DEVELOPER_QUICKSTART.md)
-- [`docs/DEVELOPER_INTEGRATIONS_GUIDE.md`](docs/DEVELOPER_INTEGRATIONS_GUIDE.md)
-- [`docs/PLATFORM_OPERATOR_GUIDE.md`](docs/PLATFORM_OPERATOR_GUIDE.md)
-- [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)
-- [`docs/FAQ_TECHNICAL.md`](docs/FAQ_TECHNICAL.md)
-- [`docs/FAQ_SECURITY.md`](docs/FAQ_SECURITY.md)
-- [`docs/FAQ_PROCUREMENT.md`](docs/FAQ_PROCUREMENT.md)
-- [`docs/compliance/COMPLIANCE_MAPPING.md`](docs/compliance/COMPLIANCE_MAPPING.md)
-- [`docs/privacy/DATA_RETENTION.md`](docs/privacy/DATA_RETENTION.md)
+Aegis supplies software controls and bounded technical evidence. Deployment acceptance, regulatory applicability, compliance determinations, storage immutability, signer trust, and legal admissibility remain the responsibility of the deploying organization and its qualified reviewers.
