@@ -99,8 +99,8 @@
     {
       "category": "governed_input",
       "path": "README.md",
-      "sha256": "d5dc47feb78cafeec63d1af2eecb2423b1523200dcf233c38d7f18a3f101d1df",
-      "size": 37355
+      "sha256": "87c37b2c671238e40c5bd07fa48703ef0f4a0e510e3034b3da404656c5b9cd4f",
+      "size": 34659
     },
     {
       "category": "governed_input",
@@ -153,8 +153,8 @@
     {
       "category": "governed_input",
       "path": "evidence/INDEX.md",
-      "sha256": "288c8238dadee9925e29d621fd2837eb5cb20f639358f5641ca680f675c67009",
-      "size": 9044
+      "sha256": "bae28a07befa15bd16c29878bbc459bb569a026c0708ef8ee92ee642244ae695",
+      "size": 9721
     },
     {
       "category": "governed_input",
