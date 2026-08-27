@@ -26,6 +26,10 @@ jobs:
           fetch-depth: 0
           ref: main
 
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
       - name: Verify exact protected main release candidate
         run: |
           set -euo pipefail

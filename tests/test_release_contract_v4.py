@@ -414,6 +414,12 @@ def test_release_contract_binds_package_identity_and_rust_runtime_version(
             'echo "tags=${IMAGE}:${VERSION},${IMAGE}:sha-${GITHUB_SHA},${IMAGE}:latest"',
             "oci.immutable-tags",
         ),
+        (
+            "create_release_tag.yml",
+            'python-version: "3.12"',
+            'python-version: "3.10"',
+            "tag-workflow.python-runtime",
+        ),
     ],
 )
 def test_contract_rejects_unreachable_or_alternate_publication_paths(
