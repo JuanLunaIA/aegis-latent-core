@@ -4,7 +4,7 @@ This directory is an **advisory, progressively disclosed repository-navigation a
 
 ## Baselines
 
-The public immutable release baseline is **v3.1.0**. The merged v4 source baseline is the immutable Git commit **`2050a310ec295afc61d033ff842c9a535a4f3105`**. Its **14 synchronized version anchors read `4.0.0`**, but that source state is **unpublished**: no v4 tag, GitHub Release, PyPI/npm package, OCI image, or other registry publication is asserted. A mutable working tree may be descended from the anchor and may differ from it; record `git rev-parse HEAD` and `git status --short` rather than treating the manifest as a checkout identity.
+Keep the evidence classes independent. The **historical immutable source baseline** is Git commit **`fdace8844568eb788216740b2cb5daf187d99d3b`**, where all **14 version anchors read `4.0.0`**. The **historical published GitHub Release** is **v4.0.1**; its lightweight tag targets commit **`6469904380218584ae0b5221334bc9a46500f5ba`**. Prior public **PyPI and npm registry observations** show the `aegis-latent-sdk` packages at **`4.0.0`**; registry existence does not establish which workflow produced them, so no provenance is attributed to failed or other workflow runs. The **checked-out source release target** is **v4.0.2**, with **14 synchronized anchors at `4.0.2`**. External lifecycle state—tag, GitHub Release, PyPI, npm, OCI, and attestations—must be independently read back and is not encoded by source metadata. Record `git rev-parse HEAD` and `git status --short`; manifest hashes are neither release identity nor external lifecycle evidence.
 
 ## Progressive routes
 
@@ -25,4 +25,4 @@ The public immutable release baseline is **v3.1.0**. The merged v4 source baseli
 
 ## Authority and use
 
-For claims, consult [`docs/CLAIMS_MATRIX.md`](../docs/CLAIMS_MATRIX.md); for security boundaries, [`SECURITY.md`](../SECURITY.md); for release history, [`CHANGELOG.md`](../CHANGELOG.md); and for behavior, implementation plus executable tests. Regenerate this pack's manifest only after reviewing authorized changes: `python scripts/generate_ai_context_manifest.py`, then `python scripts/verify_ai_context_manifest.py` and `pytest -q tests/test_ai_context.py`.
+For claims, consult [`docs/CLAIMS_MATRIX.md`](../docs/CLAIMS_MATRIX.md); for security boundaries, [`SECURITY.md`](../SECURITY.md); for release history, [`CHANGELOG.md`](../CHANGELOG.md); and for behavior, implementation plus executable tests. A source commit, GitHub Release, registry observation, source release target, configured workflow, successful run, and external lifecycle read-back are different evidence classes and must not be linked without direct evidence. Regenerate this pack's manifest only after reviewing authorized changes: `python scripts/generate_ai_context_manifest.py`, then `python scripts/verify_ai_context_manifest.py` and `pytest -q tests/test_ai_context.py`.

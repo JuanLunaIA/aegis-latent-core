@@ -1,7 +1,7 @@
 """
 session_manager.py - Session Lifecycle & Isolation Layer (Tier-4 Rust acceleration)
 
-Tier-4 upgrade (v3.1.0):
+Optional Tier-4 Rust path:
     When aegis_rust is compiled, session *metadata* (ID registry, request counts,
     last-seen timestamps, LRU eviction) is delegated to `RustSessionStore` — a
     DashMap-backed store with 64-way sharding.
@@ -11,9 +11,9 @@ Tier-4 upgrade (v3.1.0):
     stores are kept in sync: every `get_monitor` call also touches the Rust
     store for accurate metrics and eviction.
 
-    Concurrency improvement: Python `threading.RLock` is a global reentrant
-    lock; DashMap shards to 64 sub-locks.  At 1M concurrent sessions with
-    uniform distribution, expected lock contention drops from ~100% to ~1.5%.
+    The Python `threading.RLock` is a global reentrant lock, while DashMap
+    shards state across internal locks. Performance remains workload- and
+    build-dependent and must be measured in the target environment.
 
 Provides a centralized manager for telemetry monitors to ensure strict isolation
 between concurrent users/sessions, preventing EMA contamination.

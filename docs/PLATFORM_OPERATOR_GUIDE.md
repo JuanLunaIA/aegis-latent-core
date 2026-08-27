@@ -2,10 +2,11 @@
 
 This guide is for SRE, platform, infrastructure, and security operations teams deploying Aegis in a controlled environment. It defines the deployment dependencies, topology choices, telemetry, failure handling, backup expectations, and rollback boundaries. It does not establish an availability SLO, compliance status, or authorization.
 
-**Last verified:** 2026-08-25 UTC
-**Release baseline:** two-baseline model
-**Source baseline:** merged v4 source state documented by the post-merge audit
-**Distribution baseline:** published `v3.1.0` artifacts; no v4 deployment or target acceptance is asserted
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** `v4.0.2` source; external release status requires independent readback
+**Source baseline:** `v4.0.2`; source metadata does not establish publication or target acceptance
+**Retained evidence baseline:** published `v3.1.0` artifacts; retained measurements remain historical
+**Distribution verification:** resolve the signed tag, GitHub Release assets, package registries, OCI digest, and attestations independently before deployment
 **Audience:** Platform engineering, SRE, security operations
 **Primary deployment contract:** [`DEPLOYMENT_GUIDE.md`](../DEPLOYMENT_GUIDE.md)
 

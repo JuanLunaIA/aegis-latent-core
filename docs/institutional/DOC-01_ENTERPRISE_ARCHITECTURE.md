@@ -3,8 +3,8 @@
 **Document ID:** DOC-01
 **Title:** Enterprise Architecture and Mechanistic Lifecycle Specification
 **Canonical language:** US English
-**Repository baseline:** Aegis Latent Core v3.1.0 claim-control baseline
-**Inspection date:** 2026-08-20 UTC
+**Source baseline:** checked-out source metadata is synchronized at `v4.0.2`; external tag, release, registry, OCI, deployment, and acceptance claims require independent readback
+**Historical inspection scope:** findings and evidence dated 2026-08-20 UTC remain a `v3.1.0`-era review record unless a claim is explicitly revalidated against the current source
 **Status:** Architecture review record with bounded claims
 **Normative claim control:** [`docs/CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)
 **Primary human-review owners:** Release owner, platform/SRE owner, storage owner, qualified security reviewer, and formal-methods reviewer

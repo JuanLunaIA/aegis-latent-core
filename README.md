@@ -6,32 +6,33 @@
 
 ![Aegis Latent Core — verifiable control plane for governed LLM calls](docs/assets/art-hero.png)
 
-[![GitHub Release: v4.0.1](https://img.shields.io/badge/GitHub%20Release-v4.0.1-blue.svg)](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1)
-[![Artifact version: 4.0.0](https://img.shields.io/badge/artifact%20version-4.0.0-orange.svg)](https://github.com/JuanLunaIA/aegis-latent-core/commit/2050a310ec295afc61d033ff842c9a535a4f3105)
-[![PyPI: 4.0.0](https://img.shields.io/pypi/v/aegis-latent-sdk?label=PyPI)](https://pypi.org/project/aegis-latent-sdk/4.0.0/)
-[![npm: 4.0.0](https://img.shields.io/npm/v/aegis-latent-sdk?label=npm)](https://www.npmjs.com/package/aegis-latent-sdk)
+[![Source baseline: 4.0.2](https://img.shields.io/badge/source%20baseline-4.0.2-blue.svg)](pyproject.toml)
+[![PyPI observed: 4.0.0](https://img.shields.io/badge/PyPI%20observed-4.0.0-blue.svg)](https://pypi.org/project/aegis-latent-sdk/4.0.0/)
+[![npm observed: 4.0.0](https://img.shields.io/badge/npm%20observed-4.0.0-blue.svg)](https://www.npmjs.com/package/aegis-latent-sdk)
 [![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
 [![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
 [![Candidate tests: 5,707 passed](https://img.shields.io/badge/candidate%20tests-5%2C707%20passed-success.svg)](evidence/v4_0_0_release_candidate_gate_2026-08-24.md)
 [![Candidate coverage: 89.72%](https://img.shields.io/badge/candidate%20coverage-89.72%25-success.svg)](evidence/v4_0_0_release_candidate_gate_2026-08-24.md)
 [![License: AGPLv3 or commercial](https://img.shields.io/badge/license-AGPLv3%20or%20commercial-blue.svg)](LICENSE)
 
-**Last verified:** 2026-08-25 UTC
+**Last verified:** 2026-08-27 UTC
 
-**Release baseline:** GitHub Release [`v4.0.1`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1), whose source and attached package assets declare `4.0.0`
+**Release baseline:** checked-out source baseline/release target `v4.0.2` with 14 synchronized anchors
 
-**Artifact and registry version:** `4.0.0`; PyPI and npm publish `aegis-latent-sdk@4.0.0`
+**Source baseline/release target:** `4.0.2`, with fourteen synchronized source anchors
 
-**Release target:** `6469904380218584ae0b5221334bc9a46500f5ba`; the `v4.0.1` ref is lightweight, so `git verify-tag v4.0.1` fails by construction
+**Immutable source comparison:** parent `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen synchronized `4.0.0` anchors
 
-[**🚀 Local quickstart**](#4-quickstart-for-local-evaluation) · [**🏛️ Architecture**](#5-request-and-evidence-lifecycle) · [**📦 SDKs**](#published-sdks-and-source-verification) · [**📊 Dashboard**](#6-forensic-audit-dashboard) · [**📑 Enterprise pilot**](#8-commercial-path)
+**External baseline:** the previous public GitHub label `v4.0.1` is a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`; its tag workflows failed. PyPI and npm were observed at `4.0.0`, without provenance attribution to those failed workflows.
 
-> **Version boundary:** GitHub exposes a **`v4.0.1` Release label**, while the tagged commit, fourteen source anchors, attached artifacts, and published SDKs identify **`4.0.0`**. The lightweight tag cannot satisfy `git verify-tag`, and the tag-triggered release/publication workflows did not complete successfully. Treat `v4.0.1` as the current GitHub Release label—not as proof that the underlying artifacts were rebuilt at semantic version 4.0.1.
+[**🚀 Local quickstart**](#4-quickstart-for-local-evaluation) · [**🏛️ Architecture**](#5-request-and-evidence-lifecycle) · [**📦 SDKs**](#sdk-registry-and-source-verification) · [**📊 Dashboard**](#6-forensic-audit-dashboard) · [**📑 Enterprise pilot**](#8-commercial-path)
+
+> **Version boundary:** The checked-out source baseline/release target is **`4.0.2`** with fourteen synchronized anchors. Source metadata does not establish external lifecycle state; verify the `v4.0.2` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback. Historically, public label `v4.0.1` is a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`; its tag-triggered workflows failed, and observed `4.0.0` registry objects have no attributed provenance from those workflows.
 
 ## 2. Version and epistemic boundaries
 
 > [!NOTE]
-> **Version status.** GitHub Release [`v4.0.1`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1) was published on **2026-08-25** and points to `6469904380218584ae0b5221334bc9a46500f5ba`. Its ten named binary/package assets are versioned `4.0.0`; PyPI and npm independently expose `aegis-latent-sdk` version `4.0.0`. The `v4.0.1` ref is a lightweight commit ref rather than an annotated signed tag, and the associated tag-triggered Release, PyPI, npm and OCI validation workflows report failure or startup failure. Historical pre-publication NO-GO records remain valid for their observation times but are superseded for the fact that public release/package objects now exist.
+> **Version status.** The repository source and release candidate is `4.0.2`; fourteen release-contract anchors are synchronized at that version. Its immutable parent/source comparison, `fdace8844568eb788216740b2cb5daf187d99d3b`, has fourteen `4.0.0` anchors. The prior public GitHub baseline remains label `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`, with failed tag-triggered workflows. PyPI and npm were separately observed at `aegis-latent-sdk` version `4.0.0`, but provenance is not attributed to those failed runs. External `v4.0.2` publication must be established by post-publication readback; source metadata alone does not establish it.
 
 > [!IMPORTANT]
 > **Product boundary.** Aegis is an AI Governance and Evidence Gateway. It can implement tested technical controls and produce structured cryptographic evidence under declared conditions; it is not an LLM, a universal WAF, a compliance certification, a legal-admissibility ruling, a production SLO, or a substitute for network, identity, privacy, retention, incident-response, and deployment controls. Regulatory mappings describe possible technical contributions only and require customer-specific legal, organizational, and technical assessment.
@@ -51,13 +52,13 @@ Publication does not by itself prove a signed-tag trust path, successful automat
 ## 3. Four technical pillars
 
 > [!NOTE]
-> These pillars describe source baseline `2050a310ec295afc61d033ff842c9a535a4f3105`, whose version anchors are synchronized at `4.0.0`. That source is included in the later `v4.0.1` tag target. Publication does not imply acceptance for a target deployment.
+> These pillars describe the checked-out `v4.0.2` source baseline/release target. Its fourteen synchronized anchors do not establish external publication or acceptance for a target deployment. The immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` retains fourteen `4.0.0` anchors.
 
 | Pillar | What the merged source implements | Evidence boundary |
 |---|---|---|
 | **Durable evidence and portable inclusion proofs** | Governed evidence is committed to the authoritative fsynced JSONL WAL. The core can generate portable `aegis-mmr-inclusion-v1` proofs, and the core plus both SDK verifiers can validate them against an independently trusted root. When the native extension is available, stream terminal records are also copied to a bounded, memory-mapped, CRC32-framed `RustWal`. | The native `RustWal` is an optional auxiliary segment, not the replay authority. A valid proof establishes inclusion relative to the supplied trusted root; it does not establish external immutability, global ordering, timestamping, or legal provenance. See the [MMR proof implementation](aegis/core/mmr.py), [portable-proof tests](tests/test_mmr_portable.py), and [claims matrix](docs/CLAIMS_MATRIX.md). |
 | **Bounded streaming redaction and terminal evidence** | Admitted SSE is processed incrementally as sanitized canonical events through a byte-accounted bounded queue. A finite character holdback redacts supported identifier forms that cross chunk boundaries; SHA-256 covers the exact emitted bytes, one terminal summary is committed, and the protocol terminal marker is emitted only after that commit succeeds. | Initial stream evidence and proof status is `pending-terminal`. Queue, event, output, redaction-window, preview, and duration bounds apply per admitted stream; aggregate retained memory still scales with admitted concurrency. This is not a zero-copy claim or universal de-identification guarantee. See the [streaming path](aegis/proxy/streaming.py), [streaming deidentifier](aegis/core/streaming_deidentifier.py), and [streaming regressions](tests/test_proxy_streaming.py). |
-| **Tested Python and TypeScript provider integrations** | Source and public `4.0.0` packages provide Aegis gateway configuration, tested OpenAI/Anthropic integrations, and portable-proof verification. Python provides official-client subclasses; TypeScript provides provider-native subclasses and gateway-option helpers while retaining the official provider packages as peer dependencies. | Both registries use `aegis-latent-sdk`; Python imports use `aegis_sdk`. Compatibility is limited to tested routes, dependency ranges, and behaviors. Proof verification requires an independently pinned root; streaming proofs are retrieved after terminal commit. See the [Python SDK guide](sdk/python/README.md), [TypeScript SDK guide](sdk/typescript/README.md), and [integration guide](docs/DEVELOPER_INTEGRATIONS_GUIDE.md). |
+| **Tested Python and TypeScript provider integrations** | The checked-out `v4.0.2` source baseline/release target and the separately observed public `4.0.0` packages provide Aegis gateway configuration, tested OpenAI/Anthropic integrations, and portable-proof verification. Python provides official-client subclasses; TypeScript provides provider-native subclasses and gateway-option helpers while retaining the official provider packages as peer dependencies. | Both registries use `aegis-latent-sdk`; Python imports use `aegis_sdk`. Compatibility is limited to tested routes, dependency ranges, and behaviors. Proof verification requires an independently pinned root; streaming proofs are retrieved after terminal commit. See the [Python SDK guide](sdk/python/README.md), [TypeScript SDK guide](sdk/typescript/README.md), and [integration guide](docs/DEVELOPER_INTEGRATIONS_GUIDE.md). |
 | **Bounded formal checks of declared invariants** | The formal gate runs Z3 over two SMT-LIB checks, Lean 4 over the durable-before-emission theorem, and TLC over finite-state models for commit-before-emission, append-only ledger prefixes, and session-to-ledger binding. The gate is wired into CI and fails on unexpected solver results, type-check failures, timeouts, or TLC errors. | These artifacts verify their stated formulas and bounded abstractions; they are not a refinement proof of the Python/Rust implementation, target filesystem, or deployment. See the [formal verification guide](docs/formal/FORMAL_VERIFICATION.md), [verification script](scripts/verify_formal_artifacts.sh), and [formal specifications](specs/). |
 
 ## 4. Quickstart for local evaluation
@@ -67,7 +68,7 @@ The local profile is for development, tests, and evidence replay, not production
 ```bash
 git clone https://github.com/JuanLunaIA/aegis-latent-core.git
 cd aegis-latent-core
-git checkout 2050a310ec295afc61d033ff842c9a535a4f3105
+# Check out the exact reviewed 4.0.2 candidate commit before evaluation
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --require-hashes -r requirements.lock
@@ -89,16 +90,22 @@ aegis
 
 There is no `aegis --dev` option. API calls require the configured upstream to be running. The gateway smoke test does not prove provider compatibility, production acceptance, or a production security posture. Do not commit provider keys, gateway bearer tokens, signing secrets, WAL records, or customer payloads. See the [developer quickstart](docs/DEVELOPER_QUICKSTART.md) and [deployment guide](DEPLOYMENT_GUIDE.md) for the complete source-development and deployment gates.
 
-### Published SDKs and source verification
+### SDK registry and source verification
 
-PyPI and npm publish version `4.0.0` under the unscoped name `aegis-latent-sdk`; the Python import namespace is `aegis_sdk`. The GitHub Release label is `v4.0.1`, but its attached SDK assets also carry version `4.0.0`.
+The current SDK source version is `4.0.2`; the Python import namespace is `aegis_sdk` and both distributions use the unscoped name `aegis-latent-sdk`. PyPI and npm were last observed at `4.0.0`, without attributed provenance from the failed `v4.0.1` tag workflows. Do not assume `4.0.2` is available from either registry until successful publication and registry readback.
 
 ### Python SDK from the source tree
 
-Install the OpenAI-enabled Python package from [PyPI](https://pypi.org/project/aegis-latent-sdk/4.0.0/):
+After PyPI successfully publishes and readback confirms version `4.0.2`, install the OpenAI-enabled package with:
 
 ```bash
-python -m pip install 'aegis-latent-sdk[openai]==4.0.0'
+python -m pip install 'aegis-latent-sdk[openai]==4.0.2'
+```
+
+Until that readback succeeds, install the candidate from a pinned source checkout:
+
+```bash
+python -m pip install './sdk/python[openai]'
 ```
 
 The wrapper subclasses the official OpenAI client and preserves its native resource and response types within the declared and tested dependency range:
@@ -123,10 +130,18 @@ The SDK also provides `Anthropic`, `AsyncOpenAI`, and `AsyncAnthropic`. Native A
 
 ### TypeScript SDK from the source tree
 
-Install the package from [npm](https://www.npmjs.com/package/aegis-latent-sdk) with the OpenAI peer dependency:
+After npm successfully publishes and readback confirms version `4.0.2`, install it with the OpenAI peer dependency:
 
 ```bash
-npm install aegis-latent-sdk@4.0.0 openai@^6.49.0
+npm install aegis-latent-sdk@4.0.2 openai@^6.49.0
+```
+
+Until that readback succeeds, build and install the candidate from a pinned source checkout:
+
+```bash
+npm --prefix sdk/typescript ci
+npm --prefix sdk/typescript run build
+npm install ./sdk/typescript openai@^6.49.0
 ```
 
 Use its OpenAI wrapper subpath:
@@ -150,7 +165,7 @@ Both SDKs leave proof verification disabled by default. Enabling `verify_proof` 
 
 ## 5. Request and evidence lifecycle
 
-> **Baseline boundary:** The sequence below describes the `4.0.0` source baseline at commit `2050a310ec295afc61d033ff842c9a535a4f3105`, which is included in the `v4.0.1` tag target. The version label mismatch does not change the code-level behavior described here.
+> **Baseline boundary:** The sequence below describes the checked-out `v4.0.2` source baseline/release target. Confirm the exact reviewed commit before deployment; source version metadata does not establish an external `v4.0.2` publication.
 
 ```mermaid
 sequenceDiagram
@@ -195,7 +210,7 @@ Not every pre-admission rejection is guaranteed to receive durable evidence. Aut
 
 ## 6. Forensic audit dashboard
 
-> **Distribution boundary:** The [`dashboard`](dashboard) source is included in the `v4.0.1` tag target. Its private package uses Next.js 16 and React 19 and consumes the local [`aegis-latent-sdk`](sdk/typescript) workspace dependency. This does not establish a hosted dashboard service or a separately published dashboard package.
+> **Distribution boundary:** The [`dashboard`](dashboard) source is present in the checked-out `v4.0.2` source baseline/release target. Its private package uses Next.js 16 and React 19 and consumes the local [`aegis-latent-sdk`](sdk/typescript) workspace dependency. This does not establish a hosted dashboard service or a separately published dashboard package.
 
 The dashboard is a read-only interface for authenticated gateway audit data. It does not substitute sample rows or generated history when data is empty or unavailable.
 
@@ -240,7 +255,7 @@ External laws, standards, and guidance can change. Qualified counsel or an asses
 
 ## 8. Commercial path
 
-> **Commercial boundary.** The current GitHub Release is [`v4.0.1`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1), while source and package artifacts declare `4.0.0`. Any evaluation, quote, acceptance plan, and evidence package must identify the exact commit and artifact versions rather than relying on the release label alone.
+> **Commercial boundary.** The checked-out source baseline/release target is `4.0.2`; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback. The historical public `v4.0.1` label and observed `4.0.0` registry objects remain distinct baselines. Any evaluation, quote, acceptance plan, and evidence package must identify the exact commit and artifact versions rather than relying on the release label alone.
 
 Aegis is distributed under the terms in [`LICENSE`](LICENSE). A separate commercial agreement may be available for organizations that require terms different from the AGPLv3, but only an executed agreement defines licensing, support, warranty, redistribution, and other contractual rights. [`COMMERCIAL.md`](COMMERCIAL.md) is a procurement summary, not legal advice or an automatic AGPL exemption.
 
@@ -260,19 +275,19 @@ See [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md) for the p
 
 ## Related documents — 9. Audience navigation
 
-The current GitHub Release label is **v4.0.1**, targeting commit `6469904380218584ae0b5221334bc9a46500f5ba`; the source and SDK artifact version is **4.0.0**. Use each document's declared baseline and boundaries. Publication does not establish production acceptance, certification, or legal conclusions.
+The checked-out source baseline/release target is **4.0.2** with fourteen synchronized anchors. The prior public **v4.0.1** label targets `6469904380218584ae0b5221334bc9a46500f5ba`; observed registry packages remain **4.0.0** and are not attributed to its failed workflows. Use each document's declared baseline and boundaries. Publication does not establish production acceptance, certification, or legal conclusions.
 
 | Audience | Start here | Scope boundary |
 |---|---|---|
 | **CISO, AppSec, and security reviewers** | [`SECURITY.md`](SECURITY.md) · [`Threat model`](docs/security/THREAT_MODEL.md) · [`Security FAQ`](docs/FAQ_SECURITY.md) · [`Claims matrix`](docs/CLAIMS_MATRIX.md) | Review implemented controls, evidence locators, deployment dependencies, and residual risk; these documents are not independent assurance or certification. |
-| **Developers and AI/ML engineers** | [`Developer quickstart`](docs/DEVELOPER_QUICKSTART.md) · [`Integrations guide`](docs/DEVELOPER_INTEGRATIONS_GUIDE.md) · [`Python SDK source guide`](sdk/python/README.md) · [`TypeScript SDK source guide`](sdk/typescript/README.md) | PyPI and npm expose SDK version `4.0.0`. Validate dependency extras, peer dependencies, trust-root handling, and supported routes for the target integration. |
+| **Developers and AI/ML engineers** | [`Developer quickstart`](docs/DEVELOPER_QUICKSTART.md) · [`Integrations guide`](docs/DEVELOPER_INTEGRATIONS_GUIDE.md) · [`Python SDK source guide`](sdk/python/README.md) · [`TypeScript SDK source guide`](sdk/typescript/README.md) | PyPI and npm were observed at SDK version `4.0.0`; use `4.0.2` registry commands only after successful publication and readback. Validate dependency extras, peer dependencies, trust-root handling, and supported routes for the target integration. |
 | **Platform engineering, DevOps, and SRE** | [`Platform operator guide`](docs/PLATFORM_OPERATOR_GUIDE.md) · [`Deployment guide`](DEPLOYMENT_GUIDE.md) · [`Helm chart source`](deploy/helm/Chart.yaml) · [`Backpressure runbook`](docs/operations/BACKPRESSURE_RUNBOOK.md) · [`Key-rotation runbook`](docs/operations/KEY_ROTATION_RUNBOOK.md) · [`Rollback runbook`](docs/operations/ROLLBACK_RUNBOOK.md) | Validate the target kernel, storage, identity, network, signer, Redis, backup, and incident-response environment; repository guidance does not establish a production SLO or target acceptance. |
 | **Buyers, procurement, legal, compliance, and privacy reviewers** | [`Buyer guide`](docs/BUYER_GUIDE_US.md) · [`Procurement FAQ`](docs/FAQ_PROCUREMENT.md) · [`Commercial hypotheses`](docs/COMMERCIAL_STRATEGY_US.md) · [`Compliance contribution map`](docs/compliance/COMPLIANCE_MAPPING.md) · [`Data-retention and privacy boundaries`](docs/privacy/DATA_RETENTION.md) | Commercial ranges are non-binding hypotheses. Framework mappings and evidence exports do not establish compliance, certification, legal admissibility, or a universal retention policy. |
 
 ## 10. Verified metrics, repository map and integrity
 
 > [!NOTE]
-> **Metric scope matters.** The current GitHub Release label is [`v4.0.1`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1), while source and SDK artifacts declare `4.0.0`. Candidate figures below come from the retained **2026-08-24** source-candidate gate for commit `2050a310ec295afc61d033ff842c9a535a4f3105`, unless a row says otherwise. Publication-gate documentation was audited on **2026-08-25** at `6469904380218584ae0b5221334bc9a46500f5ba`. These results are regression evidence for named revisions and environments, not production capacity, an SLO, certification, or a legal conclusion.
+> **Metric scope matters.** The checked-out source baseline/release target is `4.0.2`; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback. The historical public `v4.0.1` label and observed `4.0.0` registry objects are separate from the dated candidate evidence below. Candidate figures below come from the retained **2026-08-24** source-candidate gate for commit `2050a310ec295afc61d033ff842c9a535a4f3105`, unless a row says otherwise. Publication-gate documentation was audited on **2026-08-25** at `6469904380218584ae0b5221334bc9a46500f5ba`. These results are regression evidence for named revisions and environments, not production capacity, an SLO, certification, or a legal conclusion.
 
 ### Verified metrics
 
@@ -309,7 +324,7 @@ Historical performance and security measurements remain attached to the publishe
 
 ### Integrity and project links
 
-- **Release:** [`v4.0.1`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1) is the current GitHub Release label; its target, attached artifacts, and registry packages identify `4.0.0`, and its lightweight tag is not cryptographically verifiable with `git verify-tag`.
+- **Release:** Source baseline/release target `4.0.2` has fourteen synchronized anchors, while source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback. Historically, `v4.0.1` is a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba` whose tag workflows failed; registries were observed at `4.0.0` without attributed provenance.
 - **Security:** Follow [`SECURITY.md`](SECURITY.md) for supported reporting channels and scope.
 - **Contributing:** See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - **License:** Use is governed by [`LICENSE`](LICENSE) and, where applicable, [`COMMERCIAL.md`](COMMERCIAL.md). This README is not legal advice.

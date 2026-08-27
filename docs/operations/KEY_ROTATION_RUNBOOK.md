@@ -2,8 +2,13 @@
 
 This runbook is for security operators and platform engineers rotating HMAC keys without a process restart. It defines the versioned keyring contract, overlap window, rollback and acceptance boundary. The local result does not prove a real secret-manager or orchestrator deployment.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** four-layer truth model
+**Source baseline/release target:** `v4.0.2` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
+**Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` with `4.0.0` anchors
+**Previous public GitHub Release:** `v4.0.1` lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
+**Observed registries:** PyPI/npm `4.0.0`, without workflow provenance attribution
+**Historical evidence baseline:** retained `v3.1.0`-era test statements remain historical and are not `v4.0.2` results
 **Scope:** Versioned HMAC keyring for enterprise self-hosted deployments
 **Implementation:** `aegis_server.crypto.keyring.RotatingHMACSigner`
 
@@ -50,7 +55,7 @@ The regression suite covers atomic reload, key ID selection, overlap verificatio
 
 ## Three-replica acceptance test
 
-The current repository contains the signer, deterministic unit contract, and `tools/benchmarks/run_key_rotation.py`. The retained v2 local multi-instance artifact recorded 2,239 signatures across three independent signer instances, observed both key IDs, reported zero failed commits, zero unverifiable records, atomic replacement, and `0o600` keyring permissions. This artifact is retained outside the source tree as `key_rotation_report_v2.json`; it is a local signer exercise, not a Kubernetes, secret-manager, clock-skew, or restart acceptance.
+The current repository contains the signer, deterministic unit contract, and `tools/benchmarks/run_key_rotation.py`. The retained historical `v3.1.0`-era v2 local multi-instance artifact recorded 2,239 signatures across three independent signer instances, observed both key IDs, reported zero failed commits, zero unverifiable records, atomic replacement, and `0o600` keyring permissions. This artifact is retained outside the source tree as `key_rotation_report_v2.json`; it is a local signer exercise, not a Kubernetes, secret-manager, clock-skew, or restart acceptance.
 
 A production three-replica run additionally requires a disposable orchestrated environment with three independent process lifecycles, the actual secret-manager propagation path, independent storage, staggered reload, one delayed replica, restart/replay, and rollback. The acceptance artifact must correlate every committed node with its replica, key ID, timestamp, signature verification result, and request ID.
 

@@ -8,9 +8,10 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 This document defines the contribution workflow, DCO sign-off, forward-looking CLA language, test expectations and public-claim review for Aegis. It is for prospective contributors, maintainers and organizations evaluating contribution rights. It is not legal advice.
 
-**Last verified:** 2026-08-25 UTC
-**Release baseline:** published `v3.1.0`
-**Merged-source baseline:** `2050a310ec295afc61d033ff842c9a535a4f3105` (fourteen `4.0.0` anchors; unpublished)
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** current source/release candidate
+**Source/release candidate:** `4.0.2` with fourteen synchronized anchors; no external `v4.0.2` publication is claimed before readback
+**Historical external baseline:** lightweight `v4.0.1` tag at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 
 Thank you for your interest in contributing. This project is maintained by its
 sole copyright holder, **Juan Luna** (`juan.c.luna04@gmail.com`), and is

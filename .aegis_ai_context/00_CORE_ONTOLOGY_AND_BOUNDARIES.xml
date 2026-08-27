@@ -17,9 +17,10 @@
     <source path="specs/">bounded abstract models, not implementation refinement proofs</source>
   </authority>
   <release-status>
-    <published version="v3.1.0" url="https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0">Immutable published GitHub release baseline. Use its release assets and hashes for statements about that release.</published>
-    <source-baseline commit="2050a310ec295afc61d033ff842c9a535a4f3105" version-metadata="4.0.0" synchronized-version-anchors="14" release-state="merged-unpublished">Immutable merged v4 source anchor. Its synchronized metadata is source readiness only: no v4 tag, GitHub Release, PyPI/npm package, OCI image, chart, crate, or other registry publication is asserted.</source-baseline>
-    <working-tree state="mutable">The active checkout may descend from and differ from the source anchor. Record HEAD and status, verify the context manifest, and never treat mutable working-tree hashes as a commit or release identity.</working-tree>
+    <source-baseline commit="fdace8844568eb788216740b2cb5daf187d99d3b" version-metadata="4.0.0" synchronized-version-anchors="14">Immutable source evidence only; it is not the identity of a later release or mutable checkout.</source-baseline>
+    <github-release version="v4.0.1" tag-kind="lightweight" target-commit="6469904380218584ae0b5221334bc9a46500f5ba" url="https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1">Public GitHub Release observation. The tag and target do not establish registry provenance.</github-release>
+    <registry-observation version="4.0.0" registries="PyPI,npm" package="aegis-latent-sdk">Public package existence was observed independently. Do not attribute provenance to failed workflows or infer which workflow produced the packages.</registry-observation>
+    <source-release-target version="v4.0.2" synchronized-version-anchors="14" kind="checked-out-source" external-lifecycle-state="requires-independent-readback">The checked-out source release target has 14 synchronized anchors at 4.0.2. External lifecycle state (tag, GitHub Release, PyPI, npm, OCI, and attestations) must be independently read back and is not encoded by source metadata; record HEAD and status, and never treat manifest hashes as a commit or release identity.</source-release-target>
   </release-status>
   <ontology>
     <term id="request">An inbound provider-compatible operation crossing authentication, authorization, bounds, policy, forwarding, and evidence controls.</term>
@@ -27,6 +28,7 @@
     <term id="ledger">The append-oriented hash-linked structure implemented in <path>aegis/core/crypto_audit.py</path>.</term>
     <term id="mmr">The Merkle Mountain Range in <path>aegis/core/mmr.py</path>. Its portable inclusion proof is a non-zero-knowledge disclosure proof with O(log n) sibling-path growth plus one peak per set bit of n; verification is portable but does not conceal the leaf or metadata.</term>
     <term id="formal-model">A bounded or theorem-checked abstraction under assumptions in <path>specs/</path>; it is not a refinement proof of Python, Rust, storage, orchestration, or a target deployment.</term>
+    <term id="external-lifecycle">State outside the checked-out source—including a tag, GitHub Release, PyPI, npm, OCI, and attestations—that must be independently read back from the authoritative external system and is not encoded by source metadata.</term>
     <term id="external-acceptance">Evidence gathered in the actual target environment for identity, TLS/ingress, Redis, filesystem and backup durability, key custody/rotation, secret manager, kernel controls, provider behavior, capacity, recovery, and operational ownership.</term>
   </ontology>
   <boundaries>
@@ -34,6 +36,6 @@
     <boundary>Static Kubernetes, Helm, Compose, or policy manifests do not prove enforcement by a cluster, cloud, kernel, storage system, CA, or operator.</boundary>
     <boundary>Framework mappings are contribution aids, not legal conclusions, certifications, conformity findings, or customer acceptance.</boundary>
     <boundary>Portable MMR inclusion is non-ZK and O(log n); it is not anonymity, confidentiality, non-membership, consensus, timestamping, or external anchoring.</boundary>
-    <boundary>Claims about production fitness, compliance, release publication, performance, cryptographic validation, or court admissibility require explicit authoritative evidence and external acceptance where applicable.</boundary>
+    <boundary>Claims about production fitness, compliance, release publication, package provenance, performance, cryptographic validation, or court admissibility require explicit authoritative evidence and external acceptance where applicable.</boundary>
   </boundaries>
 </aegis-context>

@@ -1,9 +1,12 @@
-# Aegis Architecture Index — v3.1.0
+# Aegis Architecture Index — v4.0.2 Source Baseline
 
 This index routes readers to the current architecture description, trust-boundary decisions, state machine, and related operational evidence. It is for engineers, security reviewers, and technical buyers who need a fast route into the system design. The linked documents describe the implemented repository boundary and its residual risks.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** four-layer truth model
+**Source baseline:** checked-out source metadata is synchronized at `v4.0.2`
+**External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
+**Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical
 **Primary architecture document:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 
 ## Start with the full architecture

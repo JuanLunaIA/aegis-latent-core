@@ -1,0 +1,79 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+
+name: Create signed release tag
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  create-tag:
+    name: Create Sigstore-signed release tag
+    runs-on: ubuntu-22.04
+    environment:
+      name: release
+    permissions:
+      actions: write
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Verify exact protected main release candidate
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "${GITHUB_SHA}" = "$(git rev-parse origin/main)"
+          test -z "$(git status --short)"
+
+      - name: Derive and validate the synchronized release version
+        id: release
+        run: |
+          set -euo pipefail
+          VERSION="$(python - <<'PY'
+          import tomllib
+          from pathlib import Path
+          with Path('pyproject.toml').open('rb') as stream:
+              print(tomllib.load(stream)['project']['version'])
+          PY
+          )"
+          TAG="v${VERSION}"
+          python scripts/verify_release_contract.py --root . --tag "${TAG}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "::error::Remote tag ${TAG} already exists"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+
+      - name: Create, verify, and push the keyless signed annotated tag
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          EXPECTED_IDENTITY="https://github.com/JuanLunaIA/aegis-latent-core/.github/workflows/create_release_tag.yml@refs/heads/main"
+          GITSIGN_BIN="$(scripts/install_gitsign.sh)"
+          git config --local gpg.x509.program "${GITSIGN_BIN}"
+          git config --local gpg.format x509
+          git config --local user.name "${EXPECTED_IDENTITY}"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag --sign --annotate "${RELEASE_TAG}" --message "Aegis Latent Core ${RELEASE_TAG}"
+          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"
+          git push origin "refs/tags/${RELEASE_TAG}"
+
+      - name: Dispatch release, SDK publication, and OCI publication workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          for workflow in release.yml publish_pypi.yml publish_npm.yml publish_oci.yml; do
+            gh workflow run "${workflow}" --ref "${RELEASE_TAG}"
+          done

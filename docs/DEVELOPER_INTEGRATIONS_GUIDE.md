@@ -1,6 +1,7 @@
 # Aegis Enterprise Integrations Guide
 
-**Status:** `UNRELEASED` implementation candidate on the post-`v3.1.0` development line  
+**Status:** checked-out source baseline/release target `v4.0.2` with fourteen synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
+
 **Claim boundary:** Source support and tests do not prove target-environment availability, regulatory retention, identity-provider correctness, legal admissibility, trusted publishing, or production readiness.
 
 ## 1. Security model
@@ -11,7 +12,7 @@ Aegis binds every governed request to an immutable `Principal` containing a subj
 |---|---|---|
 | `api_key` | API keys; in strict mode, `auth_identity_hmac_key` and an HMAC-SHA256-keyed `api_key_principals_json` mapping | Constant-time key match plus server-side tenant/scope mapping |
 | `oidc` | HTTPS issuer, exact audience, pinned HTTPS JWKS URL, explicit algorithms, PyJWT extra | JWT signature and exact claims; deployment owns IdP, TLS, key rotation, and revocation policy |
-| `mtls` | Fingerprint and SAN allowlists; direct verified TLS state or allowlisted immediate proxy | Current source implements explicit leaf pinning, validity, SAN, and unique tenant binding; it is not a general PKI path/revocation engine |
+| `mtls` | Fingerprint and SAN allowlists; direct verified TLS state or allowlisted immediate proxy | Current source implements explicit leaf pinning, validity, SAN, and unique tenant binding. Trusted proxies may provide `X-Forwarded-Client-Cert` with `X-SSL-Client-SHA256`; the historical `X-Client-Cert-SHA256` alias remains accepted. This is not a general PKI path/revocation engine. |
 | `api_key_mtls` / `oidc_mtls` | Both corresponding configurations | Both factors must authenticate and bind the same tenant |
 
 Built-in roles grant only the following scopes: `admin` grants all declared scopes; `proxy_user` grants `proxy:completions`; `auditor` grants `audit:read`, `audit:export`, and `audit:analytics`; `audit_reader` grants `audit:read`. Audit records and proofs are tenant-confined for non-admin principals, while tenant inventory is admin-only.
@@ -20,7 +21,7 @@ Built-in roles grant only the following scopes: `admin` grants all declared scop
 
 The v4 candidate uses atomic request and generated-token buckets keyed by a SHA-256 pseudonym of authenticated tenant and credential identity. Session and tenant headers cannot reset these buckets. Redis mode executes one Lua transaction over both buckets and uses Redis `TIME`, avoiding host-clock disagreement. Memory mode is process-local and is not a distributed enforcement claim.
 
-The gateway reserves the configured output maximum before forwarding. Non-streaming responses refund only when the authenticated upstream returns a valid provider usage count. Streaming retains the reservation because terminal event counting is not treated as authoritative billing telemetry. Responses expose request/token limit and remaining headers; 429 responses add finite `Retry-After` when a reset can be computed.
+The gateway reserves the configured output maximum before forwarding. Non-streaming responses refund only when the authenticated upstream returns a valid provider usage count. Streaming retains the reservation because terminal event counting is not treated as authoritative billing telemetry. Responses expose generic request-bucket fields (`X-RateLimit-Limit`, `X-RateLimit-Remaining`) plus request/token dimension-specific fields; 429 responses add finite `Retry-After` when a reset can be computed.
 
 ## 3. Finalized WAL archival and timestamps
 
@@ -48,7 +49,7 @@ The PyPI and npm workflows build and test exact SDK artifacts, require a signed 
 
 External setup is mandatory: configure protected immutable tag rules, signing-key trust, GitHub environments and reviewers, PyPI/npm trusted-publisher identities bound to the exact workflow and environment, package ownership, and registry policy. The repository cannot prove those controls. The dashboard image accepts credentials only at runtime; credentials are not Docker build arguments.
 
-No `v4.0.0` version bump, tag, registry publication, GitHub Release, WORM certification, SLSA level, legal-admissibility statement, or production-readiness assertion is authorized by this candidate alone.
+Historically, public `v4.0.1` is a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`, and public `aegis-latent-sdk` version `4.0.0` registry objects do not establish that its failed tag-triggered workflows produced them. The `4.0.2` candidate must not be described as externally published until tag, release, package, and OCI readback succeeds. The lightweight tag does not satisfy `git verify-tag`. No WORM certification, SLSA level, legal-admissibility statement, or production-readiness assertion follows from their existence.
 
 ## 7. External acceptance checklist
 

@@ -1,16 +1,18 @@
 symbol	kind	authoritative_path	role	status_or_boundary
-PublishedReleaseBaseline	release	CHANGELOG.md	Published v3.1.0 baseline	Immutable published release; distinct from merged v4 source.
-MergedV4SourceAnchor	commit	CHANGELOG.md	Source anchor 2050a310ec295afc61d033ff842c9a535a4f3105	Merged and immutable but unpublished; 14 version anchors read 4.0.0; no v4 tag, release, or registry publication is asserted.
-SynchronizedVersionAnchors	contract	scripts/verify_release_contract.py	Load and compare all 14 source version anchors	Source readiness only; a passing contract is not publication evidence.
-CorePythonDistribution	package	pyproject.toml	Python distribution identity and core anchor	Identity and 4.0.0 metadata are source facts, not v4 PyPI publication.
-PythonSDKDistribution	package	sdk/python/pyproject.toml	Python SDK distribution identity and anchor	Linked to OpenAI/Anthropic client adapters; unpublished v4 source.
-TypeScriptSDKPackage	package	sdk/typescript/package.json	TypeScript SDK package identity and anchor	Linked to OpenAI/Anthropic wrappers and proof verifier; unpublished v4 source.
+ImmutableSourceBaseline	commit	git object fdace8844568eb788216740b2cb5daf187d99d3b	Historical source baseline with 14 anchors at 4.0.0	Immutable source evidence; not active-release, registry, or checked-out-source identity.
+PublishedGitHubRelease	release	https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1	Published v4.0.1 GitHub Release	Lightweight tag targets 6469904380218584ae0b5221334bc9a46500f5ba; says nothing by itself about registries.
+RegistryPackageObservation	observation	PyPI and npm public metadata	aegis-latent-sdk observed at 4.0.0	Existence/version only; provenance is not attributed to failed workflows or any unverified run.
+SourceReleaseTarget	source-target	scripts/verify_release_contract.py	Checked-out source release target v4.0.2 with 14 synchronized anchors	External lifecycle requires independent read-back; source metadata is not publication evidence.
+SynchronizedVersionAnchors	contract	scripts/verify_release_contract.py	Load and compare all 14 checked-out-source version anchors	Agreement at 4.0.2 defines the source release target; a passing contract is not publication evidence.
+CorePythonDistribution	package	pyproject.toml	Python distribution identity and core anchor	Checked-out 4.0.2 metadata is a source-target fact, not PyPI publication.
+PythonSDKDistribution	package	sdk/python/pyproject.toml	Python SDK distribution identity and anchor	Source release target is 4.0.2; prior PyPI observation remains independently 4.0.0.
+TypeScriptSDKPackage	package	sdk/typescript/package.json	TypeScript SDK package identity and anchor	Source release target is 4.0.2; prior npm observation remains independently 4.0.0.
 AuditDashboardPackage	package	dashboard/package.json	Private dashboard package and anchor	Local TypeScript SDK dependency; private application package.
 RustCoreCrate	package	aegis_rust_v2/Cargo.toml	Rust crate/module identity and anchor	No v4 crates.io publication asserted.
 RustPythonDistribution	package	aegis_rust_v2/pyproject.toml	Rust Python-extension distribution and anchor	Wheel build metadata is not registry publication.
 HelmChartPackage	package	deploy/helm/Chart.yaml	Helm chart identity, chart anchor, and app anchor	Configured version/image tag does not prove chart or OCI publication.
 ProviderAdapterRegistry	registry	aegis/providers/__init__.py	Maps OpenAI, Anthropic, Gemini, and OpenRouter to adapter classes	Compatibility is bounded by implementation and tests.
-ReleaseWorkflowContract	workflow	scripts/verify_release_contract.py	Validates package identity, 14 anchors, and workflow gates	Does not query or prove tags, releases, registries, environments, or trusted publishers.
+ReleaseWorkflowContract	workflow	scripts/verify_release_contract.py	Validates package identity, 14 anchors, and configured workflow gates	Does not query or prove tags, GitHub Releases, registries, environments, runs, OCI digests, attestations, provenance, or trusted publishers.
 AegisSettings	class	aegis/config.py	Runtime configuration schema	Inspect validators and deployment-specific values; configuration is not acceptance.
 AuditNode	dataclass	aegis/core/crypto_audit.py	Canonical ledger record and hashes	Serialization/signature meaning is defined by implementation, not this index.
 CryptographicAuditLedger	class	aegis/core/crypto_audit.py	Commit, WAL persistence, integrity verification, and export	Durability depends on configured storage and target filesystem acceptance.

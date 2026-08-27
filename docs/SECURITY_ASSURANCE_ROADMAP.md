@@ -2,14 +2,17 @@
 
 This roadmap distinguishes **repository evidence** from **deployment acceptance** and **independent assurance**. Passing repository tests does not create a certification, attestation or customer-specific production SLO.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`; bounded SSE, portable MMR proofs, SDKs, forensic export, and dashboard are current-`main` post-release scope
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** four-layer truth model
+**Source baseline:** checked-out source metadata is synchronized at `v4.0.2`
+**External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
+**Historical evidence baseline:** retained `v3.1.0` release evidence remains historical and is not a `v4.0.2` assurance result
 
 ## Assurance layers
 
 | Layer | Current status | Required artifact | Owner |
 |---|---|---|---|
-| Source and regression | v3.1.0 release evidence remains published; PR #99 modules are implemented and CI-gated on current `main` but not published in that tag | Test output, lint, dependency scan, SDK/dashboard builds, SBOM, source/tree identity, and future release assets | Release owner |
+| Source and regression | Checked-out source metadata is synchronized at `v4.0.2`; retained `v3.1.0` release evidence remains historical. Source state does not prove any `v4.0.2` external publication. | Test output, lint, dependency scan, SDK/dashboard builds, SBOM, source/tree identity, and external tag/release/registry/OCI readback | Release owner |
 | Deployment controls | Configuration-dependent | Target kernel/LSM/Seccomp, ingress, storage, Redis, signer, TLS, backup, and recovery evidence | Customer platform/SRE |
 | Adversarial application testing | Local WAF corpus passed; HTTP/2 ingress corpus not executed | Pinned corpus, minimized regressions, ingress boundary, raw results | Security reviewer |
 | Key custody and rotation | File-backed keyring contract implemented; three-replica production run unverified | Secret-manager propagation, overlap, rollback, expiry, replica evidence | Security/platform owner |

@@ -22,7 +22,7 @@ from aegis.core.iso27037_evidence import (
 
 _SIGNING_KEY = "test-iso27037-signing-key-not-for-production"
 _OPERATOR = "Test Operator <test@example.org>"
-_TOOL_VERSION = "3.1.0"
+_TOOL_VERSION = "4.0.2"
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -110,14 +110,14 @@ class TestAcquisitionMetadata:
     def test_to_dict_values(self):
         am = AcquisitionMetadata(
             tool_name="aegis-latent-core",
-            tool_version="3.1.0",
+            tool_version="4.0.2",
             operator=_OPERATOR,
             acquisition_timestamp_iso="2026-06-21T12:00:00+00:00",
             acquisition_reason="audit",
         )
         d = am.to_dict()
         assert d["tool_name"] == "aegis-latent-core"
-        assert d["tool_version"] == "3.1.0"
+        assert d["tool_version"] == "4.0.2"
         assert d["hash_algorithm"] == "SHA-256"
         assert d["standard_reference"] == "ISO/IEC 27037:2012"
 

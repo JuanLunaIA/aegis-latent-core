@@ -4,9 +4,11 @@ The **`aegis-latent-sdk`** package provides a strict, dependency-free runtime fo
 
 ## Develop from a clean checkout
 
-The v4 package is not published to npm. Use the source in this checkout; do not
-substitute a registry package with a similar name. Run these commands from the
-repository root:
+The checked-out source baseline/release target is `v4.0.2` with 14 synchronized anchors. npm was last observed at `4.0.0`, but
+[registry presence](https://www.npmjs.com/package/aegis-latent-sdk) does not prove
+that the failed `v4.0.1` tag workflow produced it. Do not use a `4.0.2` registry
+install until publication and readback succeed; for source development, use this checkout and do not substitute a similarly named
+package. Run these commands from the repository root:
 
 ```bash
 cd sdk/typescript
@@ -21,8 +23,9 @@ npm pack --dry-run
 `cd sdk/typescript` step is required because the lockfile, TypeScript configs,
 tests, and generated `dist/` package are component-relative. See the
 [repository overview](../../README.md), [developer quickstart](../../docs/DEVELOPER_QUICKSTART.md),
-and [integration guide](../../docs/DEVELOPER_INTEGRATIONS_GUIDE.md) for canonical
-project documentation.
+[SDK guide](../../docs/DEVELOPER_SDK_GUIDE.md), and
+[integration guide](../../docs/DEVELOPER_INTEGRATIONS_GUIDE.md) for canonical project
+documentation.
 
 Use the structural constructor options with the official provider packages; Aegis does not replace or re-declare their response types:
 

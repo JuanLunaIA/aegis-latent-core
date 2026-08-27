@@ -1,18 +1,16 @@
 """
 aegis.proxy.waf — Web Application Firewall for LLM Payloads.
 
-Two-layer detection pipeline (v3.1.0 — Tier-4 Rust acceleration):
+Two-layer detection pipeline (v4.0.2 source with optional Rust pre-filter):
 
-Tier-4 WAF fast path (when aegis_rust is compiled):
-  - RustWaf.scan_messages() runs an Aho-Corasick SIMD pre-filter on all message
-    text in O(n + m) time (n = text length, m = pattern set).  Processes a
-    typical 1 KB prompt in ~250 ns vs ~50 µs for Python's re module.
+Rust WAF pre-filter (when aegis_rust is compiled):
+  - RustWaf.scan_messages() runs an Aho-Corasick pre-filter on message text.
   - If RustWaf blocks → return immediately (never enters Python regex loop).
   - If RustWaf passes → Python Layer 1 + Layer 2 still execute as authoritative
     checks.  Python patterns use .{0,20}? bridges that Aho-Corasick cannot
     express; both layers are needed for complete coverage.
-  - Net effect: clean requests bypass Python regex for exact-match patterns;
-    blocked requests are caught at <1 µs.
+  - Performance is environment-dependent and requires a version-specific
+    benchmark before any latency claim.
 
 Two-layer detection pipeline (v2.2.1):
 

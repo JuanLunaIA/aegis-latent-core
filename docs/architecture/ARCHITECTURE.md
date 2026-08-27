@@ -2,10 +2,11 @@
 
 This document explains the Aegis request lifecycle, evidence boundary, state machine, trust boundaries, topology choices, and failure semantics in the v4 source baseline. It is for platform engineers, security reviewers, developers, and buyer technical evaluators. It does not establish package publication, deployment acceptance, global ordering, multi-region availability, a production SLO, or regulatory certification.
 
-**Last verified:** 2026-08-25 UTC
-**Release baseline:** two-baseline model
-**Source baseline:** merged v4 source state documented by the post-merge audit
-**Distribution baseline:** `v3.1.0` artifact set; source-baseline behavior is not attributed to that distribution
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** four-layer truth model
+**Source baseline:** checked-out source metadata is synchronized at `v4.0.2`
+**External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
+**Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical; `v4.0.2` source behavior is not attributed to that distribution
 **Audience:** Engineering, security and architecture review
 **Decision record:** [`ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md`](ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md)
 

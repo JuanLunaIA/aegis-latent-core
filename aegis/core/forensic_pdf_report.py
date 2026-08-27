@@ -31,6 +31,8 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
+from aegis import __version__ as aegis_version
+
 
 class ReportClassification(StrEnum):
     """Sensitivity classification for forensic reports."""
@@ -172,7 +174,7 @@ class ForensicReportBuilder:
         operator_identity: str,
         acquisition_reason: str,
         classification: ReportClassification = ReportClassification.UNCLASSIFIED,
-        tool_version: str = "3.1.0",
+        tool_version: str = aegis_version,
     ) -> None:
         self._operator_identity = operator_identity
         self._acquisition_reason = acquisition_reason

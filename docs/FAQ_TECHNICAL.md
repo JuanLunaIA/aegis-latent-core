@@ -2,14 +2,15 @@
 
 This FAQ answers implementation and operating questions for developers and platform engineers. Each answer states the current boundary and links to the implementation or verification path. It is not a substitute for the architecture or deployment guides.
 
-**Last verified:** 2026-08-25 UTC
-**Release baseline:** two-baseline model
-**Published evidence baseline:** `v3.1.0`; retained measurements are historical evidence for that release only
-**Merged-source anchor:** `2050a310ec295afc61d033ff842c9a535a4f3105` (unpublished v4 source; no v4 publication or deployment acceptance is asserted)
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** `v4.0.2` source; external release status requires independent readback
+**Source baseline:** `v4.0.2`; the source version does not by itself prove that the tag, packages, images, or attestations were published
+**Retained evidence baseline:** `v3.1.0`; retained measurements are historical evidence for that release only
+**Comparison anchor:** `fdace8844568eb788216740b2cb5daf187d99d3b` (the pre-v4.0.2 source snapshot; its active version anchors were `4.0.0`)
 **Audience:** Developers, platform engineers and technical evaluators
 **Root document:** [`README.md`](../README.md)
 
-Answers about implementation behavior refer to the merged v4 source anchor unless they identify retained evidence. All retained numeric measurements in this FAQ belong to the published `v3.1.0` historical evidence baseline; they must not be promoted to v4 capacity, latency, availability, detection, security, or SLO claims without a v4 rerun and applicable target-environment acceptance evidence.
+Answers about implementation behavior refer to the `v4.0.2` source unless they identify retained evidence. Publication status must be verified independently against the Git tag, GitHub Release, package registries, OCI registry, and their attestations. All retained numeric measurements in this FAQ belong to the published `v3.1.0` historical evidence baseline; they must not be promoted to v4 capacity, latency, availability, detection, security, or SLO claims without a v4 rerun and applicable target-environment acceptance evidence.
 
 ## What does Aegis do?
 

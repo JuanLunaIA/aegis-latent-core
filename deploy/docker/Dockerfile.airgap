@@ -17,7 +17,7 @@
 #   docker build --network=none \
 #       --build-arg PYTHON_BASE_DIGEST=sha256:<digest-from-step-2> \
 #       -f deploy/docker/Dockerfile.airgap \
-#       -t aegis-latent-core:3.1.0-airgap .
+#       -t aegis-latent-core:4.0.2-airgap .
 #
 # ─── Required env vars (same as standard image) ───────────────────────────────
 #   AEGIS_SIGNING_KEY   — HMAC-SHA256 or ML-DSA signing key (must be separate
@@ -28,7 +28,7 @@
 # ── Digest pinning ────────────────────────────────────────────────────────────
 # Override with the sha256 digest obtained from `docker inspect` or
 # `docker manifest inspect python:3.11-slim` on the networked prep machine.
-ARG PYTHON_BASE_DIGEST=sha256:c56af7e73c7b0cf23f4e83fa9c8acb0a63a5c10a3cd83f04c1f9dba3dd4d6d69
+ARG PYTHON_BASE_DIGEST=sha256:be1575ed968de893bd54f4c56315ff7c4736ce522c1bca08fd521731aafc0d76
 
 # ── Stage 1: builder ──────────────────────────────────────────────────────────
 FROM python:3.11-slim@${PYTHON_BASE_DIGEST} AS builder
@@ -64,7 +64,7 @@ RUN pip install \
 FROM python:3.11-slim@${PYTHON_BASE_DIGEST}
 
 LABEL org.opencontainers.image.title="Aegis Latent Core (Air-Gapped)" \
-      org.opencontainers.image.version="3.1.0" \
+      org.opencontainers.image.version="4.0.2" \
       org.opencontainers.image.description="Enterprise LLM proxy — air-gapped build, all layers vendored" \
       org.opencontainers.image.licenses="AGPL-3.0" \
       aegis.airgap="true" \

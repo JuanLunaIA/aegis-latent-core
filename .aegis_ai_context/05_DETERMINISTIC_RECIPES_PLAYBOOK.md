@@ -6,9 +6,9 @@ These recipes are **advisory** and offline unless a publication check explicitly
 
 1. Record `git rev-parse HEAD`, `git status --short`, and the active branch.
 2. Read [`CHANGELOG.md`](../CHANGELOG.md), [`docs/CLAIMS_MATRIX.md`](../docs/CLAIMS_MATRIX.md), and [`SECURITY.md`](../SECURITY.md).
-3. Classify statements as **published v3.1.0**, **merged unpublished v4 source**, **mutable working tree**, **configuration-dependent**, **measured in a named environment**, or **externally unverified**.
-4. Record immutable source anchor `2050a310ec295afc61d033ff842c9a535a4f3105`. Run `python scripts/verify_release_contract.py --root .` and confirm all 14 source anchors agree at `4.0.0`.
-5. Do not infer release status from synchronized metadata. Stop any publication claim unless a v4 tag, immutable GitHub Release assets, and each intended registry state have been independently verified; none is asserted by this pack.
+3. Classify statements as **immutable source baseline**, **published GitHub Release**, **registry observation**, **checked-out source release target**, **external lifecycle read-back**, **configuration-dependent**, **measured in a named environment**, or **externally unverified**.
+4. Record immutable source baseline `fdace8844568eb788216740b2cb5daf187d99d3b`, whose 14 anchors read `4.0.0`; separately record published GitHub Release `v4.0.1`, whose lightweight tag targets `6469904380218584ae0b5221334bc9a46500f5ba`.
+5. Record the prior public PyPI/npm `aegis-latent-sdk` observations at `4.0.0` without attributing provenance to failed workflows. Run `python scripts/verify_release_contract.py --root .` and confirm that the checked-out source release target v4.0.2 has 14 synchronized anchors at `4.0.2`. Independently read back external lifecycle state for the tag, GitHub Release, PyPI, npm, OCI, and attestations; source metadata does not encode that state.
 
 ## 2. Trace a behavior before editing
 
@@ -43,7 +43,7 @@ Run `scripts/verify_formal_artifacts.sh`, retain tool versions and output, and r
 
 Run `python scripts/verify_github_action_pins.py` and `python scripts/verify_release_contract.py --root .`. Inspect [`requirements.lock`](../requirements.lock), package lockfiles, [`.github/workflows/`](../.github/workflows/), and [`scripts/generate_sbom.sh`](../scripts/generate_sbom.sh). These checks inspect the checkout; they do not prove registry publication, artifact provenance, runner integrity, vulnerability absence, or trusted-publisher configuration.
 
-The PyPI and npm workflows are conditional publication paths, the GitHub Release workflow is tag-bound and create-only, the legacy Python package workflow is build-validation-only, and the OCI workflow is explicitly `push: false`. Stop if those roles drift or if source controls are presented as evidence of a successful external run.
+The PyPI and npm workflows are conditional publication paths gated by `AEGIS_TRUSTED_PUBLISHING_ENABLED == 'true'`, their respective `pypi` and `npm` environments, and OIDC. The GitHub Release workflow is tag-bound and create-only, while the legacy Python package workflow is build-validation-only. `publish_oci.yml` is configured to publish linux/amd64 and linux/arm64 gateway and dashboard images to GHCR, attest each published digest, and keyless-sign each digest with Sigstore. These are configured mechanisms, not evidence that any run or external publication succeeded. Stop if workflow roles drift or source controls, runs, and external observations are presented as provenance for one another.
 
 ## 7. Build an external acceptance record
 
@@ -55,4 +55,4 @@ Treat generated patches as untrusted proposals. Restrict changes to authorized p
 
 ## 9. Verify this context pack
 
-Run `python scripts/generate_ai_context_manifest.py` only after authorized context or governed-input changes. Then run `python scripts/verify_ai_context_manifest.py` and `pytest -q tests/test_ai_context.py`. The manifest hashes explicit context and governed input bytes but excludes itself to prevent circular hashing. Stop on any hash drift; do not reinterpret mutable working-tree hashes as the immutable source anchor.
+Run `python scripts/generate_ai_context_manifest.py` only after authorized context or governed-input changes. Then run `python scripts/verify_ai_context_manifest.py` and `pytest -q tests/test_ai_context.py`. The manifest hashes explicit context and governed input bytes but excludes itself to prevent circular hashing. Stop on any hash drift; do not reinterpret checked-out-source hashes as the immutable source anchor or as external lifecycle evidence.

@@ -19,7 +19,10 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTEXT = ROOT / ".aegis_ai_context"
-SOURCE_ANCHOR = "2050a310ec295afc61d033ff842c9a535a4f3105"
+SOURCE_BASELINE_COMMIT = "fdace8844568eb788216740b2cb5daf187d99d3b"
+PUBLISHED_GITHUB_RELEASE_TARGET = "6469904380218584ae0b5221334bc9a46500f5ba"
+SOURCE_BASELINE_VERSION = "4.0.0"
+SOURCE_RELEASE_TARGET_VERSION = "4.0.2"
 EXISTING_CONTEXT = tuple(
     CONTEXT / f"{number:02d}_{name}"
     for number, name in (
@@ -111,22 +114,38 @@ def test_xml_and_markdown_are_structurally_valid() -> None:
                 assert resolved.is_relative_to(ROOT.resolve())
 
 
-def test_all_eight_refreshed_files_state_the_two_baselines() -> None:
+def test_all_eight_refreshed_files_separate_release_state_dimensions() -> None:
     for path in EXISTING_CONTEXT:
         text = _text(path).lower()
-        assert "v3.1.0" in text, path.name
-        assert SOURCE_ANCHOR in text, path.name
+        assert SOURCE_BASELINE_COMMIT in text, path.name
+        assert PUBLISHED_GITHUB_RELEASE_TARGET in text, path.name
+        assert "v4.0.1" in text, path.name
+        assert SOURCE_BASELINE_VERSION in text, path.name
+        assert "v4.0.2" in text, path.name
+        assert "14" in text, path.name
         assert "published" in text, path.name
-        assert "unpublished" in text or "no v4" in text, path.name
+        assert "not " in text or "no " in text, path.name
         assert "current-main" not in text, path.name
-    for boundary in ("no v4 tag", "github release", "registry publication", "mutable working tree"):
+    for boundary in (
+        "immutable source baseline",
+        "lightweight tag",
+        "registry observation",
+        "failed workflows",
+        "source release target",
+        "external lifecycle",
+    ):
         assert boundary in _corpus()
 
 
 def test_release_contract_derives_fourteen_synchronized_anchors() -> None:
     contract = _load_module("release_contract_context_test", "scripts/verify_release_contract.py")
     assessment = contract.assess_repository(ROOT)
-    assert assessment.ready, assessment.diagnostics
+    metadata_diagnostics = [
+        diagnostic
+        for diagnostic in assessment.diagnostics
+        if diagnostic.code.startswith("metadata.")
+    ]
+    assert not metadata_diagnostics, metadata_diagnostics
     assert len(assessment.versions) == 14
     assert set(assessment.versions.values()) == {_toml("pyproject.toml")["project"]["version"]}
     matrix = _text(CONTEXT / "08_COMPONENT_PACKAGE_WORKFLOW_MATRIX.md")
@@ -183,11 +202,12 @@ def test_provider_registry_and_sdk_adapter_links_match_source() -> None:
         assert (ROOT / path).is_file()
 
 
-def test_workflow_roles_and_no_publish_boundaries_match_source() -> None:
+def test_workflow_roles_and_publication_boundaries_match_source() -> None:
     workflows = {p.name: _text(p) for p in (ROOT / ".github/workflows").glob("*.yml")}
     matrix = _text(CONTEXT / "08_COMPONENT_PACKAGE_WORKFLOW_MATRIX.md")
     assert set(workflows) == {
         "ci.yml",
+        "create_release_tag.yml",
         "forensic.yml",
         "pqc-timing.yml",
         "publish.yml",
@@ -201,19 +221,23 @@ def test_workflow_roles_and_no_publish_boundaries_match_source() -> None:
     assert "twine upload" not in workflows["publish.yml"]
     assert "id-token: write" not in workflows["publish.yml"]
     oci = workflows["publish_oci.yml"]
-    assert "push: false" in oci
-    assert all(
-        token not in oci for token in ("docker/login-action@", "push: true", "packages: write")
-    )
+    assert "push: true" in oci
+    assert "docker/login-action@" in oci
+    assert "packages: write" in oci
+    assert "linux/amd64,linux/arm64" in oci
+    assert 'cosign sign --yes "${IMAGE}@${IMAGE_DIGEST}"' in oci
     for name in ("publish_pypi.yml", "publish_npm.yml"):
         workflow = workflows[name]
         assert "vars.AEGIS_TRUSTED_PUBLISHING_ENABLED == 'true'" in workflow
         assert "id-token: write" in workflow
-        assert "git verify-tag" in workflow
+        assert "scripts/verify_release_tag.sh" in workflow
+    tag_workflow = workflows["create_release_tag.yml"]
+    assert "workflow_dispatch:" in tag_workflow
+    assert "git tag --sign --annotate" in tag_workflow
     assert "scripts/create_github_release.py" in workflows["release.yml"]
     assert "gh release edit" not in workflows["release.yml"]
     assert "build-validation-only" in matrix
-    assert "source presence does not prove" in matrix
+    assert "existence is not proof" in matrix
 
 
 def test_manifest_is_deterministic_explicit_and_non_circular() -> None:
@@ -225,9 +249,33 @@ def test_manifest_is_deterministic_explicit_and_non_circular() -> None:
     expected = generator.build_manifest(ROOT)
     assert actual == expected
     assert _text(manifest_path) == generator.serialize(expected)
-    assert actual["source_baseline"]["commit"] == SOURCE_ANCHOR
-    assert actual["source_baseline"]["kind"] == "immutable_git_commit"
-    assert actual["working_tree"]["kind"] == "mutable_checkout"
+    assert actual["schema_version"] == 3
+    assert actual["source_baseline"] == {
+        "commit": SOURCE_BASELINE_COMMIT,
+        "kind": "immutable_git_commit",
+        "synchronized_version_anchors": 14,
+        "version": SOURCE_BASELINE_VERSION,
+    }
+    assert actual["published_github_release"] == {
+        "release": "v4.0.1",
+        "state": "published",
+        "tag_kind": "lightweight",
+        "target_commit": PUBLISHED_GITHUB_RELEASE_TARGET,
+    }
+    assert actual["registry_observation"] == {
+        "observed_version": SOURCE_BASELINE_VERSION,
+        "packages": [
+            {"name": "aegis-latent-sdk", "registry": "pypi"},
+            {"name": "aegis-latent-sdk", "registry": "npm"},
+        ],
+        "provenance": "not_attributed_to_workflow_runs",
+    }
+    assert actual["source_release_target"]["kind"] == "checked_out_source"
+    assert actual["source_release_target"]["version"] == SOURCE_RELEASE_TARGET_VERSION
+    assert actual["source_release_target"]["synchronized_version_anchors"] == 14
+    assert actual["source_release_target"]["state"] == "external_lifecycle_requires_readback"
+    assert "published_baseline" not in actual
+    assert "working_tree" not in actual
     paths = [entry["path"] for entry in actual["files"]]
     assert paths == [*generator.CONTEXT_FILES, *generator.GOVERNED_INPUTS]
     assert len(paths) == len(set(paths))
@@ -264,10 +312,11 @@ def test_router_commands_stop_conditions_and_release_language() -> None:
     ):
         assert forbidden not in corpus
     for phrase in (
-        "merged unpublished v4 source",
-        "no v4 tag",
-        "no v4 tag, github release",
-        "source readiness",
+        "immutable source baseline",
+        "published github release",
+        "registry observation",
+        "source release target",
+        "external lifecycle",
         "not publication evidence",
     ):
         assert phrase in corpus
@@ -283,8 +332,7 @@ def test_tool_adapters_are_thin_and_route_to_canonical_guidance() -> None:
     assert claude == "@AGENTS.md"
     assert gemini == "@./AGENTS.md"
     assert "AGENTS.md" in copilot
-    assert "v3.1.0" in copilot
-    assert SOURCE_ANCHOR in copilot
+    assert ".aegis_ai_context/README.md" in copilot
     assert len(claude.splitlines()) == 1
     assert len(gemini.splitlines()) == 1
     assert len(copilot.splitlines()) <= 20

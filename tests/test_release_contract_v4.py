@@ -46,6 +46,8 @@ def _copy_contract_repository(destination: Path) -> Path:
     for relative_path in (
         ".github/workflows",
         "aegis/__init__.py",
+        "aegis/core/forensic_pdf_report.py",
+        "aegis_server/__init__.py",
         "aegis_rust_v2/Cargo.lock",
         "aegis_rust_v2/Cargo.toml",
         "aegis_rust_v2/pyproject.toml",
@@ -54,8 +56,13 @@ def _copy_contract_repository(destination: Path) -> Path:
         "dashboard/package-lock.json",
         "dashboard/package.json",
         "deploy/docker/Dockerfile",
+        "deploy/docker/Dockerfile.airgap",
+        "deploy/docker/docker-compose.enterprise.yml",
+        "deploy/docker/docker-compose.yml",
         "deploy/helm/Chart.yaml",
         "deploy/helm/values.yaml",
+        "deploy/k8s/aegis-operator/crd.yaml",
+        "deploy/k8s/aegis-operator/operator.py",
         "pyproject.toml",
         "sdk/python/pyproject.toml",
         "sdk/python/src/aegis_sdk/__init__.py",
@@ -63,7 +70,11 @@ def _copy_contract_repository(destination: Path) -> Path:
         "sdk/typescript/package.json",
         "scripts/create_github_release.py",
         "scripts/extract_release_notes.py",
+        "scripts/install_aegis.sh",
+        "scripts/install_gitsign.sh",
         "scripts/prepare_release_assets.py",
+        "scripts/verify_release_tag.sh",
+        "scripts/vendor_wheels.sh",
     ):
         source = ROOT / relative_path
         target = destination / relative_path
@@ -81,8 +92,8 @@ def test_release_source_contract_is_complete_without_external_claims() -> None:
     assert len(set(assessment.versions.values())) == 1
     assert assessment.ready
     assert assessment.diagnostics == ()
-    assert set(assessment.versions.values()) == {"4.0.0"}
-    assert _git("tag", "--list", "v4.0.0").stdout.strip() == ""
+    assert set(assessment.versions.values()) == {"4.0.2"}
+    assert _git("tag", "--list", "v4.0.2").stdout.strip() == ""
     assert "published" not in assessment.to_dict()
     assert "released" not in assessment.to_dict()
 
@@ -95,7 +106,7 @@ def test_release_contract_cli_reports_source_contract_as_json() -> None:
             "--root",
             str(ROOT),
             "--tag",
-            "v4.0.0",
+            "v4.0.2",
             "--json",
         ],
         cwd=ROOT,
@@ -109,7 +120,7 @@ def test_release_contract_cli_reports_source_contract_as_json() -> None:
     assert report["diagnostics"] == []
 
 
-@pytest.mark.parametrize("tag", ["v3.1.0", "4.0.0", "v04.0.0", "v4.0.0-rc1"])
+@pytest.mark.parametrize("tag", ["v4.0.1", "4.0.2", "v04.0.2", "v4.0.2-rc1"])
 def test_release_contract_rejects_mismatched_or_noncanonical_tag(tag: str) -> None:
     assessment = assess_repository(ROOT, release_tag=tag)
     assert "metadata.tag-version-mismatch" in {item.code for item in assessment.diagnostics}
@@ -120,7 +131,7 @@ def test_release_notes_require_one_exact_nonempty_stable_section() -> None:
     changelog = "# Changes\n\n## [3.1.0] — 2026-08-18\n\nShipped.\n\n## [3.0.0]\nOld.\n"
     assert extract_release_notes(changelog, "3.1.0") == "Shipped.\n"
     with pytest.raises(ValueError, match="exactly one"):
-        extract_release_notes(changelog, "4.0.0")
+        extract_release_notes(changelog, "4.0.2")
     with pytest.raises(ValueError, match="empty"):
         extract_release_notes("## [3.1.0]\n\n## [3.0.0]\nOld.\n", "3.1.0")
     with pytest.raises(ValueError, match="invalid stable"):
@@ -128,24 +139,27 @@ def test_release_notes_require_one_exact_nonempty_stable_section() -> None:
 
 
 def test_release_creator_builds_only_create_command_with_hashed_assets(tmp_path: Path) -> None:
-    assets = tmp_path / "assets"
-    assets.mkdir()
-    wheel = assets / "aegis-4.0.0-py3-none-any.whl"
+    source = tmp_path / "source"
+    source.mkdir()
+    wheel = source / "aegis-4.0.2-py3-none-any.whl"
     wheel.write_bytes(b"wheel")
-    (assets / f"{wheel.name}.sha256").write_text("0" * 64 + f"  {wheel.name}\n", encoding="ascii")
+    assets = tmp_path / "assets"
+    prepare_release_assets(source, assets)
     notes = tmp_path / "notes.md"
     notes.write_text("Release notes\n", encoding="utf-8")
     command = build_create_command(
-        tag="v4.0.0", version="4.0.0", notes_file=notes, asset_directory=assets
+        tag="v4.0.2", version="4.0.2", notes_file=notes, asset_directory=assets
     )
-    assert command[:4] == ("gh", "release", "create", "v4.0.0")
+    assert command[:4] == ("gh", "release", "create", "v4.0.2")
+    assert any(str(item).endswith("release-asset-manifest.json") for item in command)
+    assert any(str(item).endswith("SHA256SUMS") for item in command)
     assert "--verify-tag" in command
     assert "upload" not in command
     assert "edit" not in command
     assert "--clobber" not in command
     with pytest.raises(ValueError, match="exactly equal"):
         build_create_command(
-            tag="v3.1.0", version="4.0.0", notes_file=notes, asset_directory=assets
+            tag="v4.0.1", version="4.0.2", notes_file=notes, asset_directory=assets
         )
 
 
@@ -154,7 +168,13 @@ def test_release_asset_preparation_is_deterministic_and_rejects_duplicates(tmp_p
     (source / "one").mkdir(parents=True)
     (source / "one/aegis.whl").write_bytes(b"one")
     outputs = prepare_release_assets(source, tmp_path / "output")
-    assert [path.name for path in outputs] == ["aegis.whl", "aegis.whl.sha256"]
+    assert [path.name for path in outputs] == [
+        "aegis.whl",
+        "aegis.whl.sha256",
+        "release-asset-manifest.json",
+        "release-asset-manifest.json.sha256",
+        "SHA256SUMS",
+    ]
     assert (
         (tmp_path / "output/aegis.whl.sha256").read_text(encoding="ascii").endswith("  aegis.whl\n")
     )
@@ -168,50 +188,67 @@ def test_release_asset_preparation_is_deterministic_and_rejects_duplicates(tmp_p
         prepare_release_assets(duplicate_source, tmp_path / "duplicate-output")
 
 
+def test_release_creator_rejects_payload_tampering(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "aegis-latent-sdk-4.0.2.tgz").write_bytes(b"package")
+    assets = tmp_path / "assets"
+    prepare_release_assets(source, assets)
+    (assets / "aegis-latent-sdk-4.0.2.tgz").write_bytes(b"tampered")
+    notes = tmp_path / "notes.md"
+    notes.write_text("Release notes\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="sidecar mismatch"):
+        build_create_command(
+            tag="v4.0.2", version="4.0.2", notes_file=notes, asset_directory=assets
+        )
+
+
 def test_publish_workflows_are_tag_only_and_publish_downloaded_artifacts() -> None:
     pypi = (ROOT / ".github/workflows/publish_pypi.yml").read_text()
     npm = (ROOT / ".github/workflows/publish_npm.yml").read_text()
     for workflow in (pypi, npm):
-        assert "workflow_dispatch" not in workflow
+        assert "workflow_dispatch" in workflow
         assert '      - "v*"' in workflow
         assert "environment:" in workflow
         assert "id-token: write" in workflow
-        assert "git verify-tag" in workflow
-        assert "git merge-base --is-ancestor" in workflow
+        assert 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"' in workflow
         assert "AEGIS_TRUSTED_PUBLISHING_ENABLED" in workflow
     assert "packages-dir: release-artifact" in pypi
     assert "npm publish release-artifact/*.tgz --access public --provenance" in npm
 
 
-def test_oci_workflow_validates_multiarch_without_publishing() -> None:
+def test_oci_workflow_publishes_multiarch_by_digest_with_keyless_signature() -> None:
     workflow = (ROOT / ".github/workflows/publish_oci.yml").read_text()
     assert "linux/amd64,linux/arm64" in workflow
     assert "component: gateway" in workflow
     assert "component: dashboard" in workflow
-    assert "git verify-tag" in workflow
-    assert "git merge-base --is-ancestor" in workflow
+    assert "workflow_dispatch" in workflow
+    assert 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"' in workflow
     assert "dockerfile: deploy/docker/Dockerfile" in workflow
-    assert "push: false" in workflow
-    assert "push: true" not in workflow
-    assert "packages: write" not in workflow
-    assert "docker/login-action@" not in workflow
-    assert "cosign sign" not in workflow
+    assert "dockerfile: dashboard/Dockerfile" in workflow
+    assert "push: true" in workflow
+    assert "packages: write" in workflow
+    assert "attestations: write" in workflow
+    assert "docker/login-action@" in workflow
+    assert 'cosign sign --yes "${IMAGE}@${IMAGE_DIGEST}"' in workflow
+    assert "push-to-registry: true" in workflow
     assert ":latest" not in workflow
 
 
 def test_release_workflow_is_tag_bound_create_only_and_protected() -> None:
     workflow = (ROOT / ".github/workflows/release.yml").read_text()
-    assert "workflow_dispatch" not in workflow
+    assert "workflow_dispatch" in workflow
     assert '      - "v[0-9]*"' in workflow
-    assert "git verify-tag" in workflow
-    assert "git cat-file -t" in workflow
-    assert "git merge-base --is-ancestor" in workflow
-    assert "origin/main" in workflow
+    assert 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"' in workflow
     assert 'python scripts/verify_release_contract.py --root . --tag "${RELEASE_TAG}"' in workflow
     assert "python scripts/extract_release_notes.py" in workflow
     assert "python scripts/create_github_release.py" in workflow
     assert "python scripts/prepare_release_assets.py" in workflow
     assert "name: release" in workflow
+    assert "sdk/python/dist/*.whl" in workflow
+    assert "sdk/typescript/dist/*.tgz" in workflow
+    assert ".spdx.json" in workflow
+    assert "syft-version: v1.51.0" in workflow
     assert "--clobber" not in workflow
     assert "gh release upload" not in workflow
     assert "gh release edit" not in workflow
@@ -232,8 +269,26 @@ def test_release_contract_detects_version_drift_missing_dockerfile_and_backend(
     tmp_path: Path,
 ) -> None:
     cases = [
-        ("aegis/__init__.py", '"4.0.0"', '"4.0.1"', "metadata.version-drift"),
+        ("aegis/__init__.py", '"4.0.2"', '"4.0.3"', "metadata.version-drift"),
         ("pyproject.toml", "hatchling==1.28.0", "hatchling>=1.24", "build.backend-unpinned"),
+        (
+            "pyproject.toml",
+            'packages = ["aegis", "aegis_server", "integrations"]',
+            'packages = ["aegis", "integrations"]',
+            "metadata.core-wheel-packages",
+        ),
+        (
+            "deploy/k8s/aegis-operator/operator.py",
+            "aegis-latent-core:4.0.2",
+            "aegis-latent-core:3.1.0",
+            "deployment.version-drift",
+        ),
+        (
+            "scripts/install_aegis.sh",
+            'verify_sha256 "${WHEEL_PATH}" "${SIDECAR_PATH}"',
+            'test -s "${WHEEL_PATH}"',
+            "deployment.version-drift",
+        ),
     ]
     for index, (relative, old, new, code) in enumerate(cases):
         repository = _copy_contract_repository(tmp_path / f"case-{index}")
@@ -269,6 +324,24 @@ def test_release_contract_detects_version_drift_missing_dockerfile_and_backend(
             'm.add("__version__", "4.0.0")?;',
             "metadata.rust-runtime-version-unbound",
         ),
+        (
+            "aegis_server/__init__.py",
+            "from aegis import __version__",
+            '__version__ = "4.0.2"',
+            "metadata.server-runtime-version-unbound",
+        ),
+        (
+            "aegis/core/forensic_pdf_report.py",
+            "tool_version: str = aegis_version",
+            'tool_version: str = "4.0.2"',
+            "metadata.forensic-report-version-unbound",
+        ),
+        (
+            ".github/workflows/ci.yml",
+            "cp requirements.lock requirements.lock.new",
+            "rm -f requirements.lock.new",
+            "ci.lock-seeded",
+        ),
     ],
 )
 def test_release_contract_binds_package_identity_and_rust_runtime_version(
@@ -289,8 +362,8 @@ def test_release_contract_binds_package_identity_and_rust_runtime_version(
     [
         (
             "release.yml",
-            'git verify-tag "${RELEASE_TAG}"',
-            'exit 0\n          git verify-tag "${RELEASE_TAG}"',
+            'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"',
+            'exit 0\n          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"',
             "release.validation-executable",
         ),
         (
@@ -313,34 +386,33 @@ def test_release_contract_binds_package_identity_and_rust_runtime_version(
         ),
         (
             "publish_oci.yml",
-            'git verify-tag "${RELEASE_TAG}"',
-            'exit 0\n          git verify-tag "${RELEASE_TAG}"',
+            'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"',
+            'exit 0\n          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"',
             "oci.provenance-executable",
         ),
-        ("publish_oci.yml", "push: false", "push: true", "oci.publication-disabled"),
         (
             "publish_oci.yml",
-            "      - name: Build exact multi-architecture image without registry output",
-            "      - name: Forbidden registry shell\n        run: docker login ghcr.io\n      - name: Build exact multi-architecture image without registry output",
-            "oci.publication-disabled",
+            "push: true",
+            "push: false",
+            "oci.publish-by-action",
         ),
         (
             "publish_oci.yml",
-            "      - name: Build exact multi-architecture image without registry output",
-            "      - name: Forbidden push shell\n        run: docker push ghcr.io/example/image:v3.1.0\n      - name: Build exact multi-architecture image without registry output",
-            "oci.publication-disabled",
+            "      - name: Build and publish exact multi-architecture image",
+            "      - name: Forbidden registry shell\n        run: docker push ghcr.io/example/image:v4.0.2\n      - name: Build and publish exact multi-architecture image",
+            "oci.publish-by-action",
         ),
         (
             "publish_oci.yml",
-            "      - name: Build exact multi-architecture image without registry output",
-            "      - name: Forbidden signer\n        run: cosign attest ghcr.io/example/image:v3.1.0\n      - name: Build exact multi-architecture image without registry output",
-            "oci.publication-disabled",
+            'cosign sign --yes "${IMAGE}@${IMAGE_DIGEST}"',
+            'cosign verify "${IMAGE}@${IMAGE_DIGEST}"',
+            "oci.keyless-signature",
         ),
         (
-            "publish.yml",
-            "run: twine check dist/*",
-            "run: twine upload dist/*",
-            "legacy-build.publication-disabled",
+            "publish_oci.yml",
+            'echo "tags=${IMAGE}:${VERSION},${IMAGE}:sha-${GITHUB_SHA}"',
+            'echo "tags=${IMAGE}:${VERSION},${IMAGE}:sha-${GITHUB_SHA},${IMAGE}:latest"',
+            "oci.immutable-tags",
         ),
     ],
 )

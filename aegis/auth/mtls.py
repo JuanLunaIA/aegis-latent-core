@@ -33,7 +33,8 @@ class MTLSVerificationConfig:
     san_allowlist: frozenset[str] = frozenset()
     tenant_san_prefix: str = "tenant:"
     forwarded_certificate_header: str = "x-forwarded-client-cert"
-    forwarded_fingerprint_header: str = "x-client-cert-sha256"
+    forwarded_fingerprint_header: str = "x-ssl-client-sha256"
+    forwarded_fingerprint_header_aliases: tuple[str, ...] = ("x-client-cert-sha256",)
 
     def __post_init__(self) -> None:
         if not self.allowed_sha256_fingerprints:
@@ -50,7 +51,18 @@ class MTLSVerificationConfig:
         )
         if "" in normalized:
             raise ValueError("configured SHA-256 fingerprints must contain 64 hexadecimal digits")
+        fingerprint_headers = (
+            self.forwarded_fingerprint_header,
+            *self.forwarded_fingerprint_header_aliases,
+        )
+        normalized_headers = tuple(value.strip().lower() for value in fingerprint_headers)
+        if any(not value for value in normalized_headers):
+            raise ValueError("forwarded fingerprint header names must not be empty")
+        if len(set(normalized_headers)) != len(normalized_headers):
+            raise ValueError("forwarded fingerprint header names must be unique")
         object.__setattr__(self, "allowed_sha256_fingerprints", normalized)
+        object.__setattr__(self, "forwarded_fingerprint_header", normalized_headers[0])
+        object.__setattr__(self, "forwarded_fingerprint_header_aliases", normalized_headers[1:])
 
 
 class MTLSVerifier:
@@ -98,9 +110,23 @@ class MTLSVerifier:
             forwarded = normalized_headers.get(self.config.forwarded_certificate_header.lower())
             if forwarded:
                 certificate_input = forwarded
-            asserted_fingerprint = normalized_headers.get(
-                self.config.forwarded_fingerprint_header.lower()
+            fingerprint_assertions = tuple(
+                value
+                for name in (
+                    self.config.forwarded_fingerprint_header,
+                    *self.config.forwarded_fingerprint_header_aliases,
+                )
+                if (value := normalized_headers.get(name)) is not None
             )
+            normalized_assertions = {
+                normalized
+                for value in fingerprint_assertions
+                if (normalized := _normalize_fingerprint(value))
+            }
+            if len(normalized_assertions) > 1:
+                raise MTLSVerificationError("conflicting forwarded fingerprint assertions")
+            if fingerprint_assertions:
+                asserted_fingerprint = fingerprint_assertions[0]
         # Deliberately do not inspect forwarded headers from an untrusted source.
         if certificate_input is None:
             raise MTLSVerificationError("a verified client certificate is required")

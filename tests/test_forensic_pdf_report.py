@@ -14,6 +14,7 @@ from typing import Any
 
 import pytest
 
+from aegis import __version__
 from aegis.core.forensic_pdf_report import (
     ForensicReport,
     ForensicReportBuilder,
@@ -78,6 +79,11 @@ def three_nodes() -> list[dict[str, Any]]:
 def test_build_empty_nodes_returns_report(builder: ForensicReportBuilder) -> None:
     report = builder.build_from_nodes([])
     assert isinstance(report, ForensicReport)
+
+
+def test_default_tool_version_uses_package_version(builder: ForensicReportBuilder) -> None:
+    report = builder.build_from_nodes([])
+    assert report.tool_version == __version__
 
 
 def test_build_empty_nodes_zero_count(builder: ForensicReportBuilder) -> None:

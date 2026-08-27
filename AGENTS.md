@@ -4,8 +4,8 @@ These are the canonical shared rules for coding agents. Tool-specific files shou
 
 ## Baselines and claims
 
-- The latest published release is **v3.1.0**.
-- Commit `2050a310ec295afc61d033ff842c9a535a4f3105` is the merged v4.0.0 source baseline with fourteen synchronized `4.0.0` anchors. It is not a v4 publication: do not claim a v4 tag, GitHub Release, PyPI package, npm package, or completed production release.
+- The checked-out source baseline/release target is **4.0.2** with fourteen synchronized anchors. Source metadata does not establish external lifecycle state; verify the `v4.0.2` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback.
+- Historical comparison: parent `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors; public `v4.0.1` is a lightweight tag at `6469904380218584ae0b5221334bc9a46500f5ba` with failed workflows; registries were observed at `4.0.0` without attributed provenance.
 - Distinguish **implemented**, **locally tested**, **measured**, **configuration-dependent**, **published**, and **externally accepted**. Preserve historical claims in their original scope.
 - `docs/CLAIMS_MATRIX.md` controls public claims. Do not assert certification, legal compliance, court admissibility, production readiness/capacity, or external assurance without direct evidence.
 

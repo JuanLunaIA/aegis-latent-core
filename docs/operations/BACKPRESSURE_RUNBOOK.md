@@ -2,14 +2,17 @@
 
 This runbook is for platform engineering, SRE, security operations and release reviewers who must diagnose storage or `fsync` stall without losing authoritative evidence. It describes the local injected seam, operator actions, recovery and residual risk. A `dm-delay` test remains a separate privileged lab operation.
 
-**Last verified:** 2026-08-25 UTC
-**Release baseline:** two-baseline model
-**Published evidence baseline:** `v3.1.0`; retained measurements are historical evidence for that release only
-**Merged-source anchor:** `2050a310ec295afc61d033ff842c9a535a4f3105` (unpublished v4 source; no v4 publication or deployment acceptance is asserted)
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** four-layer truth model
+**Source baseline/release target:** `v4.0.2` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
+**Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` with `4.0.0` anchors
+**Previous public GitHub Release:** `v4.0.1` lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
+**Observed registries:** PyPI/npm `4.0.0`, without workflow provenance attribution
+**Historical evidence baseline:** `v3.1.0`; retained measurements are historical evidence for that release only
 **Scope:** Aegis local WAL and governed-request evidence path
 **Audience:** Platform engineering, SRE, security operations and release reviewers
 
-The retained numeric results below belong to the published `v3.1.0` evidence baseline. The merged v4 source anchor identifies the implementation under documentation review, not a rerun of those measurements. Do not promote the v3.1.0 results to v4 capacity, latency, availability, or SLO claims without a v4 rerun and target-environment acceptance evidence.
+The retained numeric results below belong to the published `v3.1.0` evidence baseline. The checked-out `v4.0.2` source baseline/release target and immutable comparison source identify implementations under documentation review, not a rerun of those measurements. Do not promote the v3.1.0 results to v4 capacity, latency, availability, or SLO claims without a v4 rerun and target-environment acceptance evidence.
 
 ## Runtime contract
 
