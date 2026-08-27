@@ -57,6 +57,8 @@ GOVERNED_INPUTS = (
     "docs/REPOSITORY_MAP.md",
     "evidence/INDEX.md",
     "pyproject.toml",
+    "requirements.txt",
+    "requirements.lock",
     "aegis/__init__.py",
     "sdk/python/pyproject.toml",
     "sdk/python/src/aegis_sdk/__init__.py",

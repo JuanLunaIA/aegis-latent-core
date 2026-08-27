@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "3cfc6c7d61af5b89f377215cc34730d66218224e73f71f07a1a0b7f8ff454997",
-      "size": 38808
+      "sha256": "6dff99c7d7087804ebb5a5c1f47b85c0a1751a301fd521d3d28bd82fae31dfcd",
+      "size": 39029
     },
     {
       "category": "governed_input",
@@ -191,6 +191,18 @@
       "path": "pyproject.toml",
       "sha256": "c994c1fcea4ca879e2092bc19c04ed7a8d922dc10981ac57e8fe30ca64317be9",
       "size": 8881
+    },
+    {
+      "category": "governed_input",
+      "path": "requirements.txt",
+      "sha256": "8b1015b7881accd0bc1c30deba13a9aa45353357a505ca158524b94eb340a6df",
+      "size": 542
+    },
+    {
+      "category": "governed_input",
+      "path": "requirements.lock",
+      "sha256": "c2c17b98550fbb7bd354e4515e05d163e1a31b8b3d2afb8a8f697e82b489eb48",
+      "size": 90258
     },
     {
       "category": "governed_input",
@@ -309,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "cf035fa0eaf52bf58020ef15c54710985933a16e7a75f77177b498622485d4e9",
-      "size": 22406
+      "sha256": "774bb2d3c9d96d5d69b880598ce4855641704dc38e0290d746eef0922783c597",
+      "size": 22708
     },
     {
       "category": "governed_input",
@@ -453,8 +465,8 @@
     {
       "category": "governed_input",
       "path": "scripts/verify_release_contract.py",
-      "sha256": "4aaf7261fdc85c0c86554ce431f09e2363ba28e5db470bbf3abb507ca0292621",
-      "size": 37973
+      "sha256": "96e0e6511a887b939e8181d83d83f1d8d4909ff53492c83132bf1f4d61d5b02c",
+      "size": 38755
     },
     {
       "category": "governed_input",
@@ -471,8 +483,8 @@
     {
       "category": "governed_input",
       "path": "scripts/generate_ai_context_manifest.py",
-      "sha256": "2b06f8fa7717d34531d47c6a1c9e58b17e4f4bfd12357e5f688bfaa45d987e86",
-      "size": 7338
+      "sha256": "f2902517b1cfa997a47aace9ebfd0bb35780eee9057f1c8005258567adb40ed3",
+      "size": 7387
     },
     {
       "category": "governed_input",

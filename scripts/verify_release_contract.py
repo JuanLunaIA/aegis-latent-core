@@ -854,6 +854,24 @@ def _validate_active_deployment_versions(root: Path, diagnostics: list[Diagnosti
         )
 
 
+def _validate_ci_lock_gate(root: Path, diagnostics: list[Diagnostic]) -> None:
+    relative_path = ".github/workflows/ci.yml"
+    workflow_path = root / relative_path
+    if not workflow_path.is_file():
+        diagnostics.append(Diagnostic("ci.missing", "CI workflow is missing", relative_path))
+        return
+    workflow = workflow_path.read_text(encoding="utf-8")
+    _add_if_false(
+        diagnostics,
+        "cp requirements.lock requirements.lock.new" in workflow
+        and "pip-compile --generate-hashes --output-file=requirements.lock.new requirements.txt"
+        in workflow,
+        "ci.lock-seeded",
+        "lock verification must seed pip-compile from the reviewed requirements.lock",
+        relative_path,
+    )
+
+
 def assess_repository(root: Path, *, release_tag: str | None = None) -> Assessment:
     root = root.resolve()
     diagnostics: list[Diagnostic] = []
@@ -861,6 +879,7 @@ def assess_repository(root: Path, *, release_tag: str | None = None) -> Assessme
     _validate_build_backends(root, diagnostics)
     _validate_package_identity(root, diagnostics)
     _validate_active_deployment_versions(root, diagnostics)
+    _validate_ci_lock_gate(root, diagnostics)
     if release_tag is not None:
         expected = versions.get("core")
         tag_version = release_tag.removeprefix("v")

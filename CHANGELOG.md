@@ -29,6 +29,7 @@ No changes are recorded after the `v4.0.2` source release target.
 - Expanded GitHub Release assets to include the core package, Python SDK wheel/sdist, TypeScript SDK tarball, supported Rust wheels, SPDX JSON SBOM, per-file SHA-256 sidecars, a canonical release-asset manifest, and `SHA256SUMS`; release creation now rejects missing, unexpected, or byte-mismatched assets.
 - Synchronized all fourteen governed version anchors—core, runtimes, both SDKs and locks, dashboard and lock, Rust metadata and lock, and Helm chart/app/image—to `4.0.2`.
 - Included `aegis_server` in the core wheel, aligned active operator/Compose/airgap defaults to `4.0.2`, pinned multiarch Python and Node container bases by digest, and made the versioned installer verify the release-wheel SHA-256 sidecar before installation.
+- Refreshed the hash-locked runtime closure and made its CI drift check seed `pip-compile` from the reviewed lock, so compatible transitive releases appearing later do not make identical source fail nondeterministically.
 - Configured OCI publication for gateway and dashboard multiarch images with digest attestations and keyless Cosign signatures. PyPI/npm trusted publishing remains environment- and registry-controlled, and no release, package, image, signature, attestation, or provenance claim is made without successful external readback.
 
 ## [4.0.0 source candidate] — merged 2026-08-24

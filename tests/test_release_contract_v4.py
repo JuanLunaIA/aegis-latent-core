@@ -336,6 +336,12 @@ def test_release_contract_detects_version_drift_missing_dockerfile_and_backend(
             'tool_version: str = "4.0.2"',
             "metadata.forensic-report-version-unbound",
         ),
+        (
+            ".github/workflows/ci.yml",
+            "cp requirements.lock requirements.lock.new",
+            "rm -f requirements.lock.new",
+            "ci.lock-seeded",
+        ),
     ],
 )
 def test_release_contract_binds_package_identity_and_rust_runtime_version(
