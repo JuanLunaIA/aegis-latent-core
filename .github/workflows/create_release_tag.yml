@@ -79,5 +79,7 @@ jobs:
         run: |
           set -euo pipefail
           for workflow in release.yml publish_pypi.yml publish_npm.yml publish_oci.yml; do
-            gh workflow run "${workflow}" --ref "${RELEASE_TAG}"
+            gh workflow run "${workflow}" --ref main \
+              -f release_tag="${RELEASE_TAG}" \
+              -f expected_target="${GITHUB_SHA}"
           done

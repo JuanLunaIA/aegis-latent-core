@@ -5,12 +5,22 @@ name: Publish Python SDK to PyPI
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
+    inputs:
+      release_tag:
+        description: "Existing signed release tag to publish"
+        required: true
+        type: string
+      expected_target:
+        description: "Full commit SHA signed by release_tag"
+        required: true
+        type: string
 
 permissions:
   contents: read
+
+env:
+  RELEASE_TAG: ${{ inputs.release_tag }}
+  EXPECTED_TAG_TARGET: ${{ inputs.expected_target }}
 
 concurrency:
   group: publish-pypi-${{ github.ref }}
@@ -25,11 +35,10 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
+          ref: main
       - name: Verify immutable release provenance
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"
+          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"
 
   build:
     name: Build and verify Python SDK
@@ -38,6 +47,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.EXPECTED_TAG_TARGET }}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
@@ -46,7 +57,7 @@ jobs:
       - name: Verify release tag matches Python SDK version
         working-directory: sdk/python
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
         run: |
           python - <<'PY'
           import os
@@ -75,7 +86,7 @@ jobs:
       - name: Upload immutable Python SDK distributions
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: python-sdk-dist-${{ github.sha }}
+          name: python-sdk-dist-${{ inputs.expected_target }}
           path: |
             sdk/python/dist/*.whl
             sdk/python/dist/*.tar.gz
@@ -98,7 +109,7 @@ jobs:
       - name: Download exact Python SDK artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: python-sdk-dist-${{ github.sha }}
+          name: python-sdk-dist-${{ inputs.expected_target }}
           path: release-artifact
       - name: Publish to PyPI with OIDC trusted publishing
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1

@@ -14,9 +14,15 @@ name: Release
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v[0-9]*"
+    inputs:
+      release_tag:
+        description: "Existing signed release tag to publish"
+        required: true
+        type: string
+      expected_target:
+        description: "Full commit SHA signed by release_tag"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -24,6 +30,8 @@ permissions:
 env:
   PYTHON_BUILD_VERSION: "3.12"
   CARGO_TERM_COLOR: always
+  RELEASE_TAG: ${{ inputs.release_tag }}
+  EXPECTED_TAG_TARGET: ${{ inputs.expected_target }}
 
 jobs:
   validate:
@@ -35,16 +43,22 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
+          ref: main
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ env.PYTHON_BUILD_VERSION }}
 
       - name: Verify Sigstore-signed annotated tag and protected-branch ancestry
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"
+          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"
+
+      - name: Check out the exact signed source commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          ref: ${{ env.EXPECTED_TAG_TARGET }}
 
       - name: Verify full release contract
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           python scripts/verify_release_contract.py --root . --tag "${RELEASE_TAG}"
 
@@ -64,7 +78,7 @@ jobs:
 
       - name: Check tag matches pyproject version
         run: |
-          TAG="${GITHUB_REF#refs/tags/v}"
+          TAG="${RELEASE_TAG#v}"
           PKG="${{ steps.ver.outputs.version }}"
           if [ "$TAG" != "$PKG" ]; then
             echo "::error::Tag v$TAG does not match pyproject.toml version $PKG"
@@ -79,6 +93,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
+          ref: ${{ env.EXPECTED_TAG_TARGET }}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_BUILD_VERSION }}
@@ -101,6 +116,8 @@ jobs:
     needs: validate
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.EXPECTED_TAG_TARGET }}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_BUILD_VERSION }}
@@ -144,6 +161,8 @@ jobs:
     needs: validate
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.EXPECTED_TAG_TARGET }}
       - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
           path: .
@@ -173,6 +192,8 @@ jobs:
           - { runner: windows-2022,  target: x86_64-pc-windows-msvc }
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.EXPECTED_TAG_TARGET }}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_BUILD_VERSION }}
@@ -214,6 +235,10 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
+          ref: ${{ env.EXPECTED_TAG_TARGET }}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ env.PYTHON_BUILD_VERSION }}
       - name: Download all artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
@@ -234,7 +259,7 @@ jobs:
       - name: Create a new GitHub Release without an update path
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
           VERSION: ${{ needs.validate.outputs.version }}
         run: |
           python scripts/create_github_release.py --tag "${RELEASE_TAG}" --version "${VERSION}" --notes-file release_body.md --asset-directory release

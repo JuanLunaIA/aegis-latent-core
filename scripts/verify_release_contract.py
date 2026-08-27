@@ -183,7 +183,7 @@ def _is_unconditional_step(block: str) -> bool:
     return bool(block) and re.search(r"(?m)^\s+(?:if|continue-on-error):", block) is None
 
 
-def _has_release_trigger(workflow: str, pattern: str) -> bool:
+def _has_verified_dispatch_trigger(workflow: str) -> bool:
     lines = workflow.splitlines()
     try:
         start = lines.index("on:")
@@ -197,10 +197,13 @@ def _has_release_trigger(workflow: str, pattern: str) -> bool:
             block.append(line)
     trigger = "\n".join(block)
     return (
-        "  push:" in trigger
-        and "    tags:" in trigger
-        and f'      - "{pattern}"' in trigger
-        and "  workflow_dispatch:" in trigger
+        "  workflow_dispatch:" in trigger
+        and "    inputs:" in trigger
+        and "      release_tag:" in trigger
+        and "      expected_target:" in trigger
+        and trigger.count("        required: true") == 2
+        and trigger.count("        type: string") == 2
+        and "  push:" not in trigger
         and "schedule:" not in trigger
         and "pull_request:" not in trigger
     )
@@ -381,22 +384,24 @@ def _validate_pypi_workflow(root: Path, diagnostics: list[Diagnostic]) -> None:
     workflow = path.read_text(encoding="utf-8")
     _validate_publish_permissions(relative_path, workflow, diagnostics)
     requirements = {
-        "pypi.release-trigger": _has_release_trigger(workflow, "v*"),
-        "pypi.version-gate": "github.ref_name" in workflow
+        "pypi.release-trigger": _has_verified_dispatch_trigger(workflow),
+        "pypi.version-gate": "RELEASE_TAG" in workflow
         and "sdk/python" in workflow
         and "pyproject.toml" in workflow,
         "pypi.tests": all(token in workflow for token in ("ruff check", "mypy", "pytest -q")),
         "pypi.build": "python -m build" in workflow and "twine check" in workflow,
         "pypi.artifact-upload": "sdk/python/dist/*.whl" in workflow
         and "sdk/python/dist/*.tar.gz" in workflow,
-        "pypi.exact-artifact": "python-sdk-dist-${{ github.sha }}" in workflow
+        "pypi.exact-artifact": "python-sdk-dist-${{ inputs.expected_target }}" in workflow
         and "packages-dir: release-artifact" in workflow,
         "pypi.environment": "name: pypi" in workflow,
         "pypi.oidc": "pypa/gh-action-pypi-publish@" in workflow and "id-token: write" in workflow,
-        "pypi.main-ancestry": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"'
+        "pypi.main-ancestry": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"'
         in workflow,
-        "pypi.signed-tag": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"'
+        "pypi.signed-tag": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"'
         in workflow,
+        "pypi.exact-source": "ref: main" in workflow
+        and "ref: ${{ env.EXPECTED_TAG_TARGET }}" in workflow,
         "pypi.external-enable": "vars.AEGIS_TRUSTED_PUBLISHING_ENABLED == 'true'" in workflow,
     }
     for code, condition in requirements.items():
@@ -414,14 +419,14 @@ def _validate_npm_workflow(root: Path, diagnostics: list[Diagnostic]) -> None:
     workflow = path.read_text(encoding="utf-8")
     _validate_publish_permissions(relative_path, workflow, diagnostics)
     requirements = {
-        "npm.release-trigger": _has_release_trigger(workflow, "v*"),
-        "npm.version-gate": "github.ref_name" in workflow
+        "npm.release-trigger": _has_verified_dispatch_trigger(workflow),
+        "npm.version-gate": "RELEASE_TAG" in workflow
         and "sdk/typescript" in workflow
         and "package.json" in workflow,
         "npm.tests": "npm run check" in workflow,
         "npm.pack": "npm pack --json" in workflow,
         "npm.artifact-upload": "sdk/typescript/*.tgz" in workflow,
-        "npm.exact-artifact": "typescript-sdk-package-${{ github.sha }}" in workflow
+        "npm.exact-artifact": "typescript-sdk-package-${{ inputs.expected_target }}" in workflow
         and "release-artifact/*.tgz" in workflow,
         "npm.environment": "name: npm" in workflow,
         "npm.oidc": "id-token: write" in workflow
@@ -430,10 +435,12 @@ def _validate_npm_workflow(root: Path, diagnostics: list[Diagnostic]) -> None:
             r"npm publish\s+release-artifact/\*\.tgz[^\n]*--provenance", workflow
         )
         is not None,
-        "npm.main-ancestry": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"'
+        "npm.main-ancestry": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"'
         in workflow,
-        "npm.signed-tag": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"'
+        "npm.signed-tag": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"'
         in workflow,
+        "npm.exact-source": "ref: main" in workflow
+        and "ref: ${{ env.EXPECTED_TAG_TARGET }}" in workflow,
         "npm.external-enable": "vars.AEGIS_TRUSTED_PUBLISHING_ENABLED == 'true'" in workflow,
     }
     for code, condition in requirements.items():
@@ -456,8 +463,11 @@ def _validate_release_architectures(root: Path, diagnostics: list[Diagnostic]) -
     provenance_step = _step_block(
         provenance_job, "Verify immutable release provenance and synchronized versions"
     )
+    contract_step = _step_block(provenance_job, "Verify synchronized source contract")
     expected_provenance = (
-        'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"',
+        'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"',
+    )
+    expected_contract = (
         'python scripts/verify_release_contract.py --root . --tag "${RELEASE_TAG}"',
     )
     expected_actions = (
@@ -475,14 +485,21 @@ def _validate_release_architectures(root: Path, diagnostics: list[Diagnostic]) -
         values for indent, values in _permission_blocks(publish_job) if indent == 4
     ]
     requirements = {
-        "oci.release-trigger": _has_release_trigger(workflow, "v[0-9]*"),
+        "oci.release-trigger": _has_verified_dispatch_trigger(workflow),
         "oci.multiarch": "linux/amd64,linux/arm64" in publish_job,
         "oci.components": "component: gateway" in publish_job
         and "component: dashboard" in publish_job
         and "ghcr.io/juanlunaia/aegis-latent-core" in publish_job
         and "ghcr.io/juanlunaia/aegis-latent-core-dashboard" in publish_job,
         "oci.provenance-executable": _is_unconditional_step(provenance_step)
-        and _run_blocks(provenance_step) == (expected_provenance,),
+        and _run_blocks(provenance_step) == (expected_provenance,)
+        and _is_unconditional_step(contract_step)
+        and _run_blocks(contract_step) == (expected_contract,),
+        "oci.exact-source": "ref: main" in provenance_job
+        and "ref: ${{ env.EXPECTED_TAG_TARGET }}" in provenance_job
+        and "ref: ${{ env.EXPECTED_TAG_TARGET }}" in publish_job
+        and "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1" in provenance_job
+        and 'python-version: "3.12"' in provenance_job,
         "oci.permissions": top_permissions == [{"contents": "read"}]
         and publish_permissions
         == [
@@ -503,7 +520,7 @@ def _validate_release_architectures(root: Path, diagnostics: list[Diagnostic]) -
         and "sbom: true" in publish_job
         and "push-to-registry: true" in publish_job,
         "oci.keyless-signature": 'cosign sign --yes "${IMAGE}@${IMAGE_DIGEST}"' in publish_job,
-        "oci.immutable-tags": 'echo "tags=${IMAGE}:${VERSION},${IMAGE}:sha-${GITHUB_SHA}"'
+        "oci.immutable-tags": 'echo "tags=${IMAGE}:${VERSION},${IMAGE}:sha-${EXPECTED_TAG_TARGET}"'
         in publish_job
         and "latest" not in publish_job,
     }
@@ -559,7 +576,7 @@ def _validate_release_workflow(root: Path, diagnostics: list[Diagnostic]) -> Non
     )
     changelog_step = _step_block(release_job, "Extract CHANGELOG excerpt for this release")
     create_step = _step_block(release_job, "Create a new GitHub Release without an update path")
-    expected_signed = ('scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"',)
+    expected_signed = ('scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"',)
     expected_contract = (
         'python scripts/verify_release_contract.py --root . --tag "${RELEASE_TAG}"',
     )
@@ -574,6 +591,7 @@ def _validate_release_workflow(root: Path, diagnostics: list[Diagnostic]) -> Non
     )
     expected_actions = (
         "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
+        "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
         "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
         "actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018",
     )
@@ -582,11 +600,14 @@ def _validate_release_workflow(root: Path, diagnostics: list[Diagnostic]) -> Non
     release_permissions = [v for indent, v in _permission_blocks(release_job) if indent == 4]
     prepare_helper = (root / "scripts/prepare_release_assets.py").read_text(encoding="utf-8")
     requirements = {
-        "release.release-trigger": _has_release_trigger(workflow, "v[0-9]*"),
+        "release.release-trigger": _has_verified_dispatch_trigger(workflow),
         "release.validation-executable": _is_unconditional_step(signed_step)
         and _run_blocks(signed_step) == (expected_signed,)
         and _is_unconditional_step(contract_step)
         and _run_blocks(contract_step) == (expected_contract,),
+        "release.exact-source": "ref: main" in validate_job
+        and validate_job.count("ref: ${{ env.EXPECTED_TAG_TARGET }}") == 1
+        and workflow.count("ref: ${{ env.EXPECTED_TAG_TARGET }}") == 6,
         "release.exact-changelog": _is_unconditional_step(changelog_step)
         and _run_blocks(changelog_step) == (expected_changelog,),
         "release.create-only": _is_unconditional_step(prepare_step)
@@ -618,7 +639,8 @@ def _validate_release_workflow(root: Path, diagnostics: list[Diagnostic]) -> Non
             )
         ),
         "release.build-tools-pinned": "pip install build==1.3.0 twine==6.2.0" in workflow
-        and "syft-version: v1.51.0" in workflow,
+        and "syft-version: v1.51.0" in workflow
+        and workflow.count("python-version: ${{ env.PYTHON_BUILD_VERSION }}") >= 5,
         "release.complete-assets": all(
             token in workflow + prepare_helper
             for token in (
@@ -681,7 +703,9 @@ def _validate_release_tag_workflow(root: Path, diagnostics: list[Diagnostic]) ->
             name in job
             for name in ("release.yml", "publish_pypi.yml", "publish_npm.yml", "publish_oci.yml")
         )
-        and 'gh workflow run "${workflow}" --ref "${RELEASE_TAG}"' in job,
+        and 'gh workflow run "${workflow}" --ref main' in job
+        and '-f release_tag="${RELEASE_TAG}"' in job
+        and '-f expected_target="${GITHUB_SHA}"' in job,
     }
     for code, condition in requirements.items():
         _add_if_false(

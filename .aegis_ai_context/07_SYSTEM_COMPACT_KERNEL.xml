@@ -60,6 +60,7 @@
     <step>Make the smallest reviewable change; never include secrets or unrelated edits.</step>
     <step>Run deterministic focused tests, then applicable static, formal, parity, release-contract, and supply-chain checks.</step>
     <step>Verify all 14 source anchors, package identities, adapter links, configured workflow publication boundaries, and the context manifest.</step>
+    <step>For publication dispatch, require release_tag plus a full expected_target, execute verifier code from protected main, and build only after checking out the exact commit signed by that tag.</step>
     <step>For publish_oci.yml, verify the configured linux/amd64 and linux/arm64 gateway/dashboard GHCR publication, digest attestation, and per-digest keyless signing; configuration is not successful-run evidence.</step>
     <step>For PyPI and npm, verify the AEGIS_TRUSTED_PUBLISHING_ENABLED gate, respective pypi/npm environments, and OIDC; independently read back registry state.</step>
     <step>Inspect the full diff and report passes, skips, failures, unavailable tools, and remaining external acceptance.</step>
