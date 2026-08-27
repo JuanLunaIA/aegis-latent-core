@@ -5,12 +5,22 @@ name: Publish multi-architecture OCI images
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v[0-9]*"
+    inputs:
+      release_tag:
+        description: "Existing signed release tag to publish"
+        required: true
+        type: string
+      expected_target:
+        description: "Full commit SHA signed by release_tag"
+        required: true
+        type: string
 
 permissions:
   contents: read
+
+env:
+  RELEASE_TAG: ${{ inputs.release_tag }}
+  EXPECTED_TAG_TARGET: ${{ inputs.expected_target }}
 
 concurrency:
   group: publish-oci-${{ github.ref }}
@@ -25,11 +35,20 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
+          ref: main
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
       - name: Verify immutable release provenance and synchronized versions
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"
+          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"
+      - name: Check out and verify the exact signed source commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          ref: ${{ env.EXPECTED_TAG_TARGET }}
+      - name: Verify synchronized source contract
+        run: |
           python scripts/verify_release_contract.py --root . --tag "${RELEASE_TAG}"
 
   publish-images:
@@ -58,19 +77,21 @@ jobs:
             image: ghcr.io/juanlunaia/aegis-latent-core-dashboard
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.EXPECTED_TAG_TARGET }}
       - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Derive exact immutable image tags
         id: image
         env:
           IMAGE: ${{ matrix.image }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
         run: |
           set -euo pipefail
           VERSION="${RELEASE_TAG#v}"
           test "${RELEASE_TAG}" = "v${VERSION}"
           echo "name=${IMAGE}" >> "${GITHUB_OUTPUT}"
-          echo "tags=${IMAGE}:${VERSION},${IMAGE}:sha-${GITHUB_SHA}" >> "${GITHUB_OUTPUT}"
+          echo "tags=${IMAGE}:${VERSION},${IMAGE}:sha-${EXPECTED_TAG_TARGET}" >> "${GITHUB_OUTPUT}"
       - name: Login to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:

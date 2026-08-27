@@ -5,12 +5,22 @@ name: Publish TypeScript SDK to npm
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
+    inputs:
+      release_tag:
+        description: "Existing signed release tag to publish"
+        required: true
+        type: string
+      expected_target:
+        description: "Full commit SHA signed by release_tag"
+        required: true
+        type: string
 
 permissions:
   contents: read
+
+env:
+  RELEASE_TAG: ${{ inputs.release_tag }}
+  EXPECTED_TAG_TARGET: ${{ inputs.expected_target }}
 
 concurrency:
   group: publish-npm-${{ github.ref }}
@@ -25,11 +35,10 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
+          ref: main
       - name: Verify immutable release provenance
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"
+          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"
 
   build:
     name: Build and verify TypeScript SDK
@@ -38,6 +47,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.EXPECTED_TAG_TARGET }}
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: "22"
@@ -46,7 +57,7 @@ jobs:
       - name: Verify release tag matches TypeScript SDK version
         working-directory: sdk/typescript
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
         run: |
           node --input-type=module <<'JS'
           import {readFileSync} from "node:fs";
@@ -69,7 +80,7 @@ jobs:
       - name: Upload immutable TypeScript SDK tarball
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: typescript-sdk-package-${{ github.sha }}
+          name: typescript-sdk-package-${{ inputs.expected_target }}
           path: sdk/typescript/*.tgz
           if-no-files-found: error
           retention-days: 7
@@ -104,7 +115,7 @@ jobs:
       - name: Download exact TypeScript SDK artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: typescript-sdk-package-${{ github.sha }}
+          name: typescript-sdk-package-${{ inputs.expected_target }}
           path: release-artifact
       - name: Publish to npm with OIDC provenance
         run: npm publish release-artifact/*.tgz --access public --provenance

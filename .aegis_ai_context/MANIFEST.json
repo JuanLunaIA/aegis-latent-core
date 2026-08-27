@@ -39,20 +39,20 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/05_DETERMINISTIC_RECIPES_PLAYBOOK.md",
-      "sha256": "1ebc328b87dc01c502ff479e09630b26383d08e3006d37178f0f8865837deff5",
-      "size": 6610
+      "sha256": "cbc1a3ccd383d5627b7231ea100713e2a94f67fd3bab68fe1503cc7e27359b24",
+      "size": 6881
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/06_SECURITY_AND_SUPPLY_CHAIN_MANIFEST.xml",
-      "sha256": "9a0e702492ce51ee9db30d3246e462379a61d27bfe7e98c1b51d39e1cdb385ff",
-      "size": 6492
+      "sha256": "f55552a04e22d6927991b2c39ac5e978e581759ba8a936a4c6aca24407c73810",
+      "size": 6907
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/07_SYSTEM_COMPACT_KERNEL.xml",
-      "sha256": "4963017d0e56c9d86f5396ed694699072c679f43eb77265c59a0bb05106f9bd3",
-      "size": 7517
+      "sha256": "797192189642d8402349891be4e6e91b49640ba4a5ca48da213ffe87a6bee0b3",
+      "size": 7723
     },
     {
       "category": "context",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "00dbb728307e839b0560e11d0d64fa9d369a072205eaa20bf65944aff8098dc3",
-      "size": 23152
+      "sha256": "535684248b5ba1d2aa8c5fe4c80a7d879393b6f49f381ceb2e4a42473b7a17fe",
+      "size": 23232
     },
     {
       "category": "governed_input",
@@ -327,8 +327,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/create_release_tag.yml",
-      "sha256": "4778ad8dbb8434dbbb2ffab5a236c2d9a95c14d0e80fc407cd6c261894f3dfbb",
-      "size": 3087
+      "sha256": "3cc2a9f89ed23f79a4142cfbbef48ad4ac02bfb989979f2b4d41f1c74cf9491d",
+      "size": 3174
     },
     {
       "category": "governed_input",
@@ -351,26 +351,26 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/publish_npm.yml",
-      "sha256": "aecc2538f2435f6ab4f4e78822550b10dd99bb5cb3532b2469526c0673511594",
-      "size": 4110
+      "sha256": "8c9edee74535d409613f49f1c942b8e3040fa6e033bf1e24d9b060be41926f36",
+      "size": 4498
     },
     {
       "category": "governed_input",
       "path": ".github/workflows/publish_oci.yml",
-      "sha256": "529f29e5e098f0475df62e8f4f364d283138352b587bbf10ed4c087a1ac89ece",
-      "size": 3690
+      "sha256": "5ffcff8599feca47a4ffc0462558c5b270e19d7458e92b18b9296b79bb5d4d1d",
+      "size": 4479
     },
     {
       "category": "governed_input",
       "path": ".github/workflows/publish_pypi.yml",
-      "sha256": "b018503a351b88fa1a48c5e628686e4c382d420bbb4a0ee7a14d13264f05d51e",
-      "size": 3652
+      "sha256": "c15a6312d036f975298a2ced51f79b99866a8c737311b2285865e9878bf6feb5",
+      "size": 4040
     },
     {
       "category": "governed_input",
       "path": ".github/workflows/release.yml",
-      "sha256": "05e01255950a9035d6ef015d396a49f649ed28ec6dfbdbac7a05518f89b5d917",
-      "size": 9267
+      "sha256": "6c7a03d3d37019f1a8126090680a51f3bea3906ae1fa851a398a12084664cd4d",
+      "size": 10288
     },
     {
       "category": "governed_input",
@@ -465,8 +465,8 @@
     {
       "category": "governed_input",
       "path": "scripts/verify_release_contract.py",
-      "sha256": "cac40c520ffea00380de879b719d90a1bb923db283f3949e68faa5a6ce49ae6f",
-      "size": 38918
+      "sha256": "6e5c2f6f335b36cb1b4f7b139050107e0e1bc3965264e09dba9ed9e77c9d522a",
+      "size": 40427
     },
     {
       "category": "governed_input",

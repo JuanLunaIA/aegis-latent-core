@@ -36,12 +36,6 @@ VERSION_LABELS = {
 }
 
 
-def _git(*arguments: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603 - fixed git executable
-        ["git", *arguments], cwd=ROOT, check=False, capture_output=True, text=True
-    )
-
-
 def _copy_contract_repository(destination: Path) -> Path:
     for relative_path in (
         ".github/workflows",
@@ -93,7 +87,6 @@ def test_release_source_contract_is_complete_without_external_claims() -> None:
     assert assessment.ready
     assert assessment.diagnostics == ()
     assert set(assessment.versions.values()) == {"4.0.2"}
-    assert _git("tag", "--list", "v4.0.2").stdout.strip() == ""
     assert "published" not in assessment.to_dict()
     assert "released" not in assessment.to_dict()
 
@@ -203,15 +196,19 @@ def test_release_creator_rejects_payload_tampering(tmp_path: Path) -> None:
         )
 
 
-def test_publish_workflows_are_tag_only_and_publish_downloaded_artifacts() -> None:
+def test_publish_workflows_are_verified_dispatch_only_and_publish_downloaded_artifacts() -> None:
     pypi = (ROOT / ".github/workflows/publish_pypi.yml").read_text()
     npm = (ROOT / ".github/workflows/publish_npm.yml").read_text()
     for workflow in (pypi, npm):
         assert "workflow_dispatch" in workflow
-        assert '      - "v*"' in workflow
+        assert "release_tag:" in workflow
+        assert "expected_target:" in workflow
+        assert "\n  push:\n" not in workflow
         assert "environment:" in workflow
         assert "id-token: write" in workflow
-        assert 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"' in workflow
+        assert 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"' in workflow
+        assert "ref: main" in workflow
+        assert "ref: ${{ env.EXPECTED_TAG_TARGET }}" in workflow
         assert "AEGIS_TRUSTED_PUBLISHING_ENABLED" in workflow
     assert "packages-dir: release-artifact" in pypi
     assert "npm publish release-artifact/*.tgz --access public --provenance" in npm
@@ -223,7 +220,9 @@ def test_oci_workflow_publishes_multiarch_by_digest_with_keyless_signature() -> 
     assert "component: gateway" in workflow
     assert "component: dashboard" in workflow
     assert "workflow_dispatch" in workflow
-    assert 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"' in workflow
+    assert "\n  push:\n" not in workflow
+    assert 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"' in workflow
+    assert 'echo "tags=${IMAGE}:${VERSION},${IMAGE}:sha-${EXPECTED_TAG_TARGET}"' in workflow
     assert "dockerfile: deploy/docker/Dockerfile" in workflow
     assert "dockerfile: dashboard/Dockerfile" in workflow
     assert "push: true" in workflow
@@ -238,8 +237,12 @@ def test_oci_workflow_publishes_multiarch_by_digest_with_keyless_signature() -> 
 def test_release_workflow_is_tag_bound_create_only_and_protected() -> None:
     workflow = (ROOT / ".github/workflows/release.yml").read_text()
     assert "workflow_dispatch" in workflow
-    assert '      - "v[0-9]*"' in workflow
-    assert 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"' in workflow
+    assert "\n  push:\n" not in workflow
+    assert "release_tag:" in workflow
+    assert "expected_target:" in workflow
+    assert 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"' in workflow
+    assert "ref: main" in workflow
+    assert workflow.count("ref: ${{ env.EXPECTED_TAG_TARGET }}") == 6
     assert 'python scripts/verify_release_contract.py --root . --tag "${RELEASE_TAG}"' in workflow
     assert "python scripts/extract_release_notes.py" in workflow
     assert "python scripts/create_github_release.py" in workflow
@@ -362,8 +365,8 @@ def test_release_contract_binds_package_identity_and_rust_runtime_version(
     [
         (
             "release.yml",
-            'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"',
-            'exit 0\n          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"',
+            'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"',
+            'exit 0\n          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"',
             "release.validation-executable",
         ),
         (
@@ -386,8 +389,8 @@ def test_release_contract_binds_package_identity_and_rust_runtime_version(
         ),
         (
             "publish_oci.yml",
-            'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"',
-            'exit 0\n          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"',
+            'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"',
+            'exit 0\n          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"',
             "oci.provenance-executable",
         ),
         (
@@ -410,8 +413,8 @@ def test_release_contract_binds_package_identity_and_rust_runtime_version(
         ),
         (
             "publish_oci.yml",
-            'echo "tags=${IMAGE}:${VERSION},${IMAGE}:sha-${GITHUB_SHA}"',
-            'echo "tags=${IMAGE}:${VERSION},${IMAGE}:sha-${GITHUB_SHA},${IMAGE}:latest"',
+            'echo "tags=${IMAGE}:${VERSION},${IMAGE}:sha-${EXPECTED_TAG_TARGET}"',
+            'echo "tags=${IMAGE}:${VERSION},${IMAGE}:sha-${EXPECTED_TAG_TARGET},${IMAGE}:latest"',
             "oci.immutable-tags",
         ),
         (
