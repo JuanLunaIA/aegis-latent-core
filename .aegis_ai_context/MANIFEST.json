@@ -327,8 +327,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/create_release_tag.yml",
-      "sha256": "c850e98e51d2cf803c824fb08730a903e254c648f2a56772e8f1d8545afff9d1",
-      "size": 2958
+      "sha256": "4778ad8dbb8434dbbb2ffab5a236c2d9a95c14d0e80fc407cd6c261894f3dfbb",
+      "size": 3087
     },
     {
       "category": "governed_input",
@@ -465,8 +465,8 @@
     {
       "category": "governed_input",
       "path": "scripts/verify_release_contract.py",
-      "sha256": "96e0e6511a887b939e8181d83d83f1d8d4909ff53492c83132bf1f4d61d5b02c",
-      "size": 38755
+      "sha256": "cac40c520ffea00380de879b719d90a1bb923db283f3949e68faa5a6ce49ae6f",
+      "size": 38918
     },
     {
       "category": "governed_input",

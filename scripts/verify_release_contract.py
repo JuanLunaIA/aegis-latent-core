@@ -657,6 +657,9 @@ def _validate_release_tag_workflow(root: Path, diagnostics: list[Diagnostic]) ->
         "tag-workflow.dispatch-only": _has_dispatch_only_trigger(workflow),
         "tag-workflow.environment": re.search(r"(?m)^    environment:\s*$", job) is not None
         and re.search(r"(?m)^      name:\s*release\s*$", job) is not None,
+        "tag-workflow.python-runtime": "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
+        in job
+        and 'python-version: "3.12"' in job,
         "tag-workflow.permissions": top_permissions == [{"contents": "read"}]
         and job_permissions == [{"actions": "write", "contents": "write", "id-token": "write"}],
         "tag-workflow.exact-main": "ref: main" in job
