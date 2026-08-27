@@ -1,9 +1,11 @@
 # Rust Extension Build Guide
 
-**Last verified:** 2026-08-25 UTC
-**Release baseline:** two-baseline model
-**Source baseline:** merged v4 source state verified by [`evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md`](../evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md)
-**Distribution baseline:** previously published `v3.1.0` artifacts; no distribution is asserted for the source baseline
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** four-layer truth model
+**Source baseline:** checked-out Rust and Python package metadata is synchronized at `v4.0.2`
+**Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` retains the historical `4.0.0` comparison anchors documented by [`evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md`](../evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md)
+**External lifecycle boundary:** source metadata and a successful local build do not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
+**Historical evidence baseline:** previously published `v3.1.0` artifacts remain historical
 
 The Rust component has four different names. Keeping them distinct prevents broken imports and incorrect distribution claims.
 
@@ -14,7 +16,7 @@ The Rust component has four different names. Keeping them distinct prevents brok
 | Python wheel distribution metadata | `aegis-rust` | `aegis_rust_v2/pyproject.toml` `[project].name` |
 | Python import module | `aegis_rust` | maturin `module-name` and PyO3 module declaration |
 
-No crates.io, PyPI, or other registry availability is asserted for this v4 source baseline. Build from the checked-out source.
+No crates.io, PyPI, or other registry availability is inferred from the `v4.0.2` source metadata. Build from the checked-out source unless external registry readback establishes an artifact and its provenance.
 
 ## Prerequisites
 

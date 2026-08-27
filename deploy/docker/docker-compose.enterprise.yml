@@ -22,7 +22,7 @@ services:
 
   # ── Aegis Proxy ─────────────────────────────────────────────────────────────
   aegis:
-    image: ghcr.io/juanlunia/aegis-latent-core:3.1.0
+    image: ghcr.io/juanlunaia/aegis-latent-core:4.0.2
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
@@ -93,7 +93,7 @@ services:
       com.aegis.compliance.preset:   "${AEGIS_COMPLIANCE_PRESET:-standard}"
       com.aegis.compliance.sec17a4:  "${ENABLE_SEC17A4_LABELS:-false}"
       com.aegis.compliance.hipaa:    "${ENABLE_HIPAA_LABELS:-false}"
-      com.aegis.version:             "3.1.0"
+      com.aegis.version:             "4.0.2"
 
   # ── Redis (distributed rate-limit + session store) ───────────────────────
   redis:
@@ -153,7 +153,7 @@ services:
   # Hosts /v1/enterprise/compliance/export and the ComplianceExporter.
   # Runs on port 8090 — keep internal, never externally reachable.
   aegis-server:
-    image: ghcr.io/juanlunia/aegis-latent-core:3.1.0
+    image: ghcr.io/juanlunaia/aegis-latent-core:4.0.2
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile

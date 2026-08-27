@@ -1,6 +1,6 @@
 # Formal Specifications Mapping
 
-The files under [`specs/`](../specs/) describe **selected abstractions**. The executable entry point is [`scripts/verify_formal_artifacts.sh`](../scripts/verify_formal_artifacts.sh), also referenced by [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). A green result is not a refinement proof of Python/Rust code or a target platform. Release scope is separate: **v3.1.0** is published, while merged unpublished v4 source anchor **`2050a310ec295afc61d033ff842c9a535a4f3105`** has **14 synchronized `4.0.0` anchors** but no asserted v4 tag, GitHub Release, or registry publication.
+The files under [`specs/`](../specs/) describe **selected abstractions**. The executable entry point is [`scripts/verify_formal_artifacts.sh`](../scripts/verify_formal_artifacts.sh), also referenced by [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). A green result is not a refinement proof of Python/Rust code or a target platform. Release scope is separate: historical immutable source baseline **`fdace8844568eb788216740b2cb5daf187d99d3b`** has 14 `4.0.0` anchors; historical published GitHub Release **v4.0.1** is a lightweight tag targeting **`6469904380218584ae0b5221334bc9a46500f5ba`**; prior public PyPI/npm packages are independently observed at `4.0.0` without workflow-provenance attribution; and the checked-out **source release target v4.0.2** has 14 synchronized `4.0.2` anchors. External lifecycle state must be independently read back and is not encoded by source metadata.
 
 | Artifact | Property represented | Checker / expected result | Related runtime path | Explicit limit |
 |---|---|---|---|---|
@@ -18,6 +18,6 @@ The files under [`specs/`](../specs/) describe **selected abstractions**. The ex
 3. Treat missing tools, skipped checks, widened bounds, or changed assumptions as review findings—not implicit passes.
 4. Compare modeled transitions with authoritative implementation diffs and executable tests.
 5. Record external acceptance separately for storage, clocks, identity, network, providers, secrets, orchestration, and recovery.
-6. Stop if the checkout differs from the recorded mutable working-tree state, the context manifest is stale, or formal results are being used to infer release publication.
+6. Stop if the checkout differs from the recorded source release target, the context manifest is stale, or formal results are being used to infer external lifecycle state.
 
-The authoritative claim boundary is the formal-method row in [`docs/CLAIMS_MATRIX.md`](../docs/CLAIMS_MATRIX.md): bounded checks can falsify the declared models, but cannot establish production fitness, universal correctness, certification, or release publication. The source anchor is immutable; a descendant or dirty working tree is mutable and must be reported separately.
+The authoritative claim boundary is the formal-method row in [`docs/CLAIMS_MATRIX.md`](../docs/CLAIMS_MATRIX.md): bounded checks can falsify the declared models, but cannot establish production fitness, universal correctness, certification, or release publication. Historical source baseline, historical GitHub Release, prior registry observation, checked-out source release target, and current external lifecycle read-back must be reported separately.

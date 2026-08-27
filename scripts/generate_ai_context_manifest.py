@@ -13,7 +13,14 @@ import json
 from pathlib import Path
 from typing import Any
 
-SOURCE_ANCHOR = "2050a310ec295afc61d033ff842c9a535a4f3105"
+SOURCE_BASELINE_COMMIT = "fdace8844568eb788216740b2cb5daf187d99d3b"
+# Backward-compatible name used by the manifest verifier; not an active-release link.
+SOURCE_ANCHOR = SOURCE_BASELINE_COMMIT
+SOURCE_BASELINE_VERSION = "4.0.0"
+PUBLISHED_GITHUB_RELEASE = "v4.0.1"
+PUBLISHED_GITHUB_RELEASE_TARGET = "6469904380218584ae0b5221334bc9a46500f5ba"
+SOURCE_RELEASE_TARGET_VERSION = "4.0.2"
+SYNCHRONIZED_VERSION_ANCHORS = 14
 MANIFEST_PATH = ".aegis_ai_context/MANIFEST.json"
 CONTEXT_FILES = (
     ".aegis_ai_context/README.md",
@@ -41,7 +48,12 @@ GOVERNED_INPUTS = (
     "CONTRIBUTING.md",
     "Makefile",
     "docs/CLAIMS_MATRIX.md",
+    "docs/DEVELOPER_INTEGRATIONS_GUIDE.md",
     "docs/DEVELOPER_QUICKSTART.md",
+    "docs/DEVELOPER_SDK_GUIDE.md",
+    "docs/FAQ_SECURITY.md",
+    "docs/FAQ_TECHNICAL.md",
+    "docs/PLATFORM_OPERATOR_GUIDE.md",
     "docs/REPOSITORY_MAP.md",
     "evidence/INDEX.md",
     "pyproject.toml",
@@ -58,7 +70,14 @@ GOVERNED_INPUTS = (
     "aegis_rust_v2/src/lib.rs",
     "deploy/helm/Chart.yaml",
     "deploy/helm/values.yaml",
+    "deploy/docker/Dockerfile",
+    "deploy/docker/Dockerfile.airgap",
+    "deploy/docker/docker-compose.yml",
+    "deploy/docker/docker-compose.enterprise.yml",
+    "deploy/k8s/aegis-operator/crd.yaml",
+    "deploy/k8s/aegis-operator/operator.py",
     ".github/workflows/ci.yml",
+    ".github/workflows/create_release_tag.yml",
     ".github/workflows/forensic.yml",
     ".github/workflows/pqc-timing.yml",
     ".github/workflows/publish.yml",
@@ -77,7 +96,13 @@ GOVERNED_INPUTS = (
     "sdk/typescript/src/index.ts",
     "sdk/typescript/src/openai.ts",
     "sdk/typescript/src/anthropic.ts",
+    "scripts/create_github_release.py",
+    "scripts/extract_release_notes.py",
+    "scripts/install_gitsign.sh",
+    "scripts/prepare_release_assets.py",
     "scripts/verify_release_contract.py",
+    "scripts/verify_release_tag.sh",
+    "scripts/vendor_wheels.sh",
     "scripts/generate_ai_context_manifest.py",
     "scripts/verify_ai_context_manifest.py",
     "tests/test_ai_context.py",
@@ -109,16 +134,33 @@ def build_manifest(root: Path) -> dict[str, Any]:
                 }
             )
     return {
-        "schema_version": 1,
+        "schema_version": 3,
         "source_baseline": {
-            "commit": SOURCE_ANCHOR,
+            "commit": SOURCE_BASELINE_COMMIT,
             "kind": "immutable_git_commit",
-            "release_state": "merged_unpublished_v4_source",
+            "synchronized_version_anchors": SYNCHRONIZED_VERSION_ANCHORS,
+            "version": SOURCE_BASELINE_VERSION,
         },
-        "published_baseline": {"release": "v3.1.0", "state": "published"},
-        "working_tree": {
-            "kind": "mutable_checkout",
-            "meaning": "Hashes describe file bytes at generation time; they are not a commit, tag, release, or registry-publication record.",
+        "published_github_release": {
+            "release": PUBLISHED_GITHUB_RELEASE,
+            "state": "published",
+            "tag_kind": "lightweight",
+            "target_commit": PUBLISHED_GITHUB_RELEASE_TARGET,
+        },
+        "registry_observation": {
+            "observed_version": SOURCE_BASELINE_VERSION,
+            "packages": [
+                {"name": "aegis-latent-sdk", "registry": "pypi"},
+                {"name": "aegis-latent-sdk", "registry": "npm"},
+            ],
+            "provenance": "not_attributed_to_workflow_runs",
+        },
+        "source_release_target": {
+            "kind": "checked_out_source",
+            "state": "external_lifecycle_requires_readback",
+            "synchronized_version_anchors": SYNCHRONIZED_VERSION_ANCHORS,
+            "version": SOURCE_RELEASE_TARGET_VERSION,
+            "meaning": "Hashes describe source file bytes at generation time. Source metadata does not establish the external tag, GitHub Release, registry, OCI, signature, or attestation state; read back each surface independently.",
         },
         "hash_algorithm": "sha256",
         "manifest_self_hash": "excluded_to_avoid_circularity",

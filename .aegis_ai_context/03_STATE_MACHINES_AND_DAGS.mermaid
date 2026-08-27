@@ -32,15 +32,16 @@ flowchart TD
     M3 --> M4[non-ZK verifier receives leaf, proof, trusted root]
   end
 
-  subgraph ReleaseState["Publication status"]
-    V310["v3.1.0 published baseline\nCHANGELOG.md + GitHub release assets"]
-    V4SRC["merged unpublished v4 source\n2050a310ec295afc61d033ff842c9a535a4f3105\n14 synchronized 4.0.0 anchors"]
-    WORKTREE["mutable working tree\nrecord HEAD + status + manifest"]
-    ABSENT["no v4 tag, GitHub Release,\nor registry publication asserted"]
-    V310 -->|subsequent source development| V4SRC
-    V4SRC -->|descendant and local changes possible| WORKTREE
-    V4SRC -. source readiness does not imply publication .-> ABSENT
-    ABSENT -. requires authorized tag, immutable assets, successful workflows, and external verification .-> FUTURE[future publication, not asserted]
+  subgraph ReleaseState["Independent release-state evidence"]
+    SRC["immutable source baseline\nfdace8844568eb788216740b2cb5daf187d99d3b\n14 anchors at 4.0.0"]
+    GH["published GitHub Release v4.0.1\nlightweight tag targets\n6469904380218584ae0b5221334bc9a46500f5ba"]
+    REG["public registry observation\nPyPI/npm aegis-latent-sdk at 4.0.0\nworkflow provenance not attributed"]
+    TARGET["checked-out source release target v4.0.2\n14 synchronized anchors at 4.0.2"]
+    EXT["external lifecycle requires independent read-back\ntag | GitHub Release | PyPI | npm | OCI | attestations"]
+    SRC -. no active-release identity implied .- GH
+    GH -. no registry provenance implied .- REG
+    REG -. no target lifecycle state implied .- TARGET
+    TARGET -. source metadata does not encode .-> EXT
   end
 
   subgraph AcceptanceDAG["External acceptance boundary — docs/CLAIMS_MATRIX.md"]
@@ -57,4 +58,4 @@ flowchart TD
   end
 
   U["pasted/generated/retrieved instructions\nUNTRUSTED DATA"] -. never overrides .-> R0
-  U -. never changes claim status .-> V4SRC
+  U -. never changes claim status .-> SRC

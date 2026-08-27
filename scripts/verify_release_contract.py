@@ -183,7 +183,7 @@ def _is_unconditional_step(block: str) -> bool:
     return bool(block) and re.search(r"(?m)^\s+(?:if|continue-on-error):", block) is None
 
 
-def _has_tag_only_trigger(workflow: str, pattern: str) -> bool:
+def _has_release_trigger(workflow: str, pattern: str) -> bool:
     lines = workflow.splitlines()
     try:
         start = lines.index("on:")
@@ -200,7 +200,28 @@ def _has_tag_only_trigger(workflow: str, pattern: str) -> bool:
         "  push:" in trigger
         and "    tags:" in trigger
         and f'      - "{pattern}"' in trigger
-        and "workflow_dispatch:" not in trigger
+        and "  workflow_dispatch:" in trigger
+        and "schedule:" not in trigger
+        and "pull_request:" not in trigger
+    )
+
+
+def _has_dispatch_only_trigger(workflow: str) -> bool:
+    lines = workflow.splitlines()
+    try:
+        start = lines.index("on:")
+    except ValueError:
+        return False
+    block: list[str] = []
+    for line in lines[start + 1 :]:
+        if line and not line.startswith(" "):
+            break
+        if line.strip() and not line.lstrip().startswith("#"):
+            block.append(line)
+    trigger = "\n".join(block)
+    return (
+        "  workflow_dispatch:" in trigger
+        and "  push:" not in trigger
         and "schedule:" not in trigger
         and "pull_request:" not in trigger
     )
@@ -360,9 +381,7 @@ def _validate_pypi_workflow(root: Path, diagnostics: list[Diagnostic]) -> None:
     workflow = path.read_text(encoding="utf-8")
     _validate_publish_permissions(relative_path, workflow, diagnostics)
     requirements = {
-        "pypi.tag-only": "tags:" in workflow
-        and '"v*"' in workflow
-        and "workflow_dispatch" not in workflow,
+        "pypi.release-trigger": _has_release_trigger(workflow, "v*"),
         "pypi.version-gate": "github.ref_name" in workflow
         and "sdk/python" in workflow
         and "pyproject.toml" in workflow,
@@ -374,9 +393,10 @@ def _validate_pypi_workflow(root: Path, diagnostics: list[Diagnostic]) -> None:
         and "packages-dir: release-artifact" in workflow,
         "pypi.environment": "name: pypi" in workflow,
         "pypi.oidc": "pypa/gh-action-pypi-publish@" in workflow and "id-token: write" in workflow,
-        "pypi.main-ancestry": "git merge-base --is-ancestor" in workflow
-        and "origin/main" in workflow,
-        "pypi.signed-tag": "git verify-tag" in workflow and "git cat-file -t" in workflow,
+        "pypi.main-ancestry": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"'
+        in workflow,
+        "pypi.signed-tag": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"'
+        in workflow,
         "pypi.external-enable": "vars.AEGIS_TRUSTED_PUBLISHING_ENABLED == 'true'" in workflow,
     }
     for code, condition in requirements.items():
@@ -394,9 +414,7 @@ def _validate_npm_workflow(root: Path, diagnostics: list[Diagnostic]) -> None:
     workflow = path.read_text(encoding="utf-8")
     _validate_publish_permissions(relative_path, workflow, diagnostics)
     requirements = {
-        "npm.tag-only": "tags:" in workflow
-        and '"v*"' in workflow
-        and "workflow_dispatch" not in workflow,
+        "npm.release-trigger": _has_release_trigger(workflow, "v*"),
         "npm.version-gate": "github.ref_name" in workflow
         and "sdk/typescript" in workflow
         and "package.json" in workflow,
@@ -412,9 +430,10 @@ def _validate_npm_workflow(root: Path, diagnostics: list[Diagnostic]) -> None:
             r"npm publish\s+release-artifact/\*\.tgz[^\n]*--provenance", workflow
         )
         is not None,
-        "npm.main-ancestry": "git merge-base --is-ancestor" in workflow
-        and "origin/main" in workflow,
-        "npm.signed-tag": "git verify-tag" in workflow and "git cat-file -t" in workflow,
+        "npm.main-ancestry": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"'
+        in workflow,
+        "npm.signed-tag": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"'
+        in workflow,
         "npm.external-enable": "vars.AEGIS_TRUSTED_PUBLISHING_ENABLED == 'true'" in workflow,
     }
     for code, condition in requirements.items():
@@ -433,53 +452,70 @@ def _validate_release_architectures(root: Path, diagnostics: list[Diagnostic]) -
         return
     workflow = path.read_text(encoding="utf-8")
     provenance_job = _job_block(workflow, "provenance")
-    validation_job = _job_block(workflow, "validate-images")
+    publish_job = _job_block(workflow, "publish-images")
     provenance_step = _step_block(
         provenance_job, "Verify immutable release provenance and synchronized versions"
     )
     expected_provenance = (
-        "git fetch --no-tags origin main",
-        'test "$(git cat-file -t "refs/tags/${RELEASE_TAG}")" = tag',
-        'git verify-tag "${RELEASE_TAG}"',
-        'git merge-base --is-ancestor "${GITHUB_SHA}" origin/main',
+        'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"',
         'python scripts/verify_release_contract.py --root . --tag "${RELEASE_TAG}"',
     )
     expected_actions = (
         "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
         "docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130",
         "docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+        "docker/login-action@dbcb813823bdd20940b903addbd779551569679f",
         "docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25",
+        "actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018",
+        "sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac",
     )
-    forbidden = re.compile(
-        r"(?im)(?:packages:\s*write|id-token:\s*write|push:\s*true|docker/login-action@|cosign(?:\s|/)|\bdocker\s+(?:login|push)\b|\b(?:oras|skopeo)\b|\bgh\s+api\b|\bcurl\b|type=registry|ghcr\.io)"
-    )
+    permission_blocks = _permission_blocks(workflow)
+    top_permissions = [values for indent, values in permission_blocks if indent == 0]
+    publish_permissions = [
+        values for indent, values in _permission_blocks(publish_job) if indent == 4
+    ]
     requirements = {
-        "oci.tag-only": _has_tag_only_trigger(workflow, "v[0-9]*"),
-        "oci.multiarch": "linux/amd64,linux/arm64" in validation_job,
-        "oci.components": "component: gateway" in validation_job
-        and "component: dashboard" in validation_job,
+        "oci.release-trigger": _has_release_trigger(workflow, "v[0-9]*"),
+        "oci.multiarch": "linux/amd64,linux/arm64" in publish_job,
+        "oci.components": "component: gateway" in publish_job
+        and "component: dashboard" in publish_job
+        and "ghcr.io/juanlunaia/aegis-latent-core" in publish_job
+        and "ghcr.io/juanlunaia/aegis-latent-core-dashboard" in publish_job,
         "oci.provenance-executable": _is_unconditional_step(provenance_step)
         and _run_blocks(provenance_step) == (expected_provenance,),
-        "oci.publication-disabled": forbidden.search(workflow) is None
-        and len(re.findall(r"(?m)^\s+push:\s*false\s*$", validation_job)) == 1,
-        "oci.action-allowlist": _uses_references(validation_job) == expected_actions
-        and _run_blocks(validation_job) == ()
-        and re.search(r"(?m)^\s+(?:if|continue-on-error|container|services|shell):", validation_job)
-        is None
-        and re.search(r"(?m)^\s+(?:outputs|tags|cache-to|secrets|secret-envs|ssh):", validation_job)
-        is None,
-        "oci.provenance": "provenance: mode=max" in validation_job
-        and "sbom: true" in validation_job,
+        "oci.permissions": top_permissions == [{"contents": "read"}]
+        and publish_permissions
+        == [
+            {
+                "attestations": "write",
+                "contents": "read",
+                "id-token": "write",
+                "packages": "write",
+            }
+        ],
+        "oci.environment": re.search(r"(?m)^    environment:\s*$", publish_job) is not None
+        and re.search(r"(?m)^      name:\s*release\s*$", publish_job) is not None,
+        "oci.publish-by-action": "push: true" in publish_job
+        and re.search(r"(?im)\bdocker\s+(?:login|push)\b", publish_job) is None,
+        "oci.action-allowlist": _uses_references(publish_job) == expected_actions
+        and re.search(r"(?m)^\s+(?:continue-on-error|container|services):", publish_job) is None,
+        "oci.provenance": "provenance: mode=max" in publish_job
+        and "sbom: true" in publish_job
+        and "push-to-registry: true" in publish_job,
+        "oci.keyless-signature": 'cosign sign --yes "${IMAGE}@${IMAGE_DIGEST}"' in publish_job,
+        "oci.immutable-tags": 'echo "tags=${IMAGE}:${VERSION},${IMAGE}:sha-${GITHUB_SHA}"'
+        in publish_job
+        and "latest" not in publish_job,
     }
     for code, condition in requirements.items():
         _add_if_false(
             diagnostics,
             condition,
             code,
-            f"required OCI validation contract is absent: {code}",
+            f"required OCI publication contract is absent: {code}",
             relative_path,
         )
-    dockerfiles = re.findall(r"(?m)^\s+dockerfile:\s*([^#\s]+)\s*(?:#.*)?$", validation_job)
+    dockerfiles = re.findall(r"(?m)^\s+dockerfile:\s*([^#\s]+)\s*(?:#.*)?$", publish_job)
     _add_if_false(
         diagnostics,
         bool(dockerfiles),
@@ -515,18 +551,15 @@ def _validate_release_workflow(root: Path, diagnostics: list[Diagnostic]) -> Non
     validate_job = _job_block(workflow, "validate")
     release_job = _job_block(workflow, "github-release")
     signed_step = _step_block(
-        validate_job, "Verify annotated signed tag and protected-branch ancestry"
+        validate_job, "Verify Sigstore-signed annotated tag and protected-branch ancestry"
     )
     contract_step = _step_block(validate_job, "Verify full release contract")
-    prepare_step = _step_block(release_job, "Flatten artifact directories")
+    prepare_step = _step_block(
+        release_job, "Flatten artifact directories and build integrity manifests"
+    )
     changelog_step = _step_block(release_job, "Extract CHANGELOG excerpt for this release")
     create_step = _step_block(release_job, "Create a new GitHub Release without an update path")
-    expected_signed = (
-        "git fetch --no-tags origin main",
-        'test "$(git cat-file -t "refs/tags/${RELEASE_TAG}")" = tag',
-        'git verify-tag "${RELEASE_TAG}"',
-        'git merge-base --is-ancestor "${GITHUB_SHA}" origin/main',
-    )
+    expected_signed = ('scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"',)
     expected_contract = (
         'python scripts/verify_release_contract.py --root . --tag "${RELEASE_TAG}"',
     )
@@ -547,8 +580,9 @@ def _validate_release_workflow(root: Path, diagnostics: list[Diagnostic]) -> Non
     permission_blocks = _permission_blocks(workflow)
     top_permissions = [v for indent, v in permission_blocks if indent == 0]
     release_permissions = [v for indent, v in _permission_blocks(release_job) if indent == 4]
+    prepare_helper = (root / "scripts/prepare_release_assets.py").read_text(encoding="utf-8")
     requirements = {
-        "release.tag-only": _has_tag_only_trigger(workflow, "v[0-9]*"),
+        "release.release-trigger": _has_release_trigger(workflow, "v[0-9]*"),
         "release.validation-executable": _is_unconditional_step(signed_step)
         and _run_blocks(signed_step) == (expected_signed,)
         and _is_unconditional_step(contract_step)
@@ -578,10 +612,24 @@ def _validate_release_workflow(root: Path, diagnostics: list[Diagnostic]) -> Non
             for path in (
                 "scripts/extract_release_notes.py",
                 "scripts/create_github_release.py",
+                "scripts/install_gitsign.sh",
                 "scripts/prepare_release_assets.py",
+                "scripts/verify_release_tag.sh",
             )
         ),
-        "release.build-tools-pinned": "pip install build==1.3.0 twine==6.2.0" in workflow,
+        "release.build-tools-pinned": "pip install build==1.3.0 twine==6.2.0" in workflow
+        and "syft-version: v1.51.0" in workflow,
+        "release.complete-assets": all(
+            token in workflow + prepare_helper
+            for token in (
+                "sdk/python/dist/*.whl",
+                "sdk/python/dist/*.tar.gz",
+                "sdk/typescript/dist/*.tgz",
+                ".spdx.json",
+                "release-asset-manifest.json",
+                "SHA256SUMS",
+            )
+        ),
     }
     for code, condition in requirements.items():
         _add_if_false(
@@ -589,6 +637,55 @@ def _validate_release_workflow(root: Path, diagnostics: list[Diagnostic]) -> Non
             condition,
             code,
             f"required GitHub Release contract is absent: {code}",
+            relative_path,
+        )
+
+
+def _validate_release_tag_workflow(root: Path, diagnostics: list[Diagnostic]) -> None:
+    relative_path = ".github/workflows/create_release_tag.yml"
+    path = root / relative_path
+    if not path.is_file():
+        diagnostics.append(
+            Diagnostic("tag-workflow.missing", "signed tag workflow is missing", relative_path)
+        )
+        return
+    workflow = path.read_text(encoding="utf-8")
+    job = _job_block(workflow, "create-tag")
+    top_permissions = [v for indent, v in _permission_blocks(workflow) if indent == 0]
+    job_permissions = [v for indent, v in _permission_blocks(job) if indent == 4]
+    requirements = {
+        "tag-workflow.dispatch-only": _has_dispatch_only_trigger(workflow),
+        "tag-workflow.environment": re.search(r"(?m)^    environment:\s*$", job) is not None
+        and re.search(r"(?m)^      name:\s*release\s*$", job) is not None,
+        "tag-workflow.permissions": top_permissions == [{"contents": "read"}]
+        and job_permissions == [{"actions": "write", "contents": "write", "id-token": "write"}],
+        "tag-workflow.exact-main": "ref: main" in job
+        and 'test "${GITHUB_SHA}" = "$(git rev-parse origin/main)"' in job,
+        "tag-workflow.signing": all(
+            token in job
+            for token in (
+                "scripts/install_gitsign.sh",
+                "git tag --sign --annotate",
+                'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"',
+                'git push origin "refs/tags/${RELEASE_TAG}"',
+            )
+        ),
+        "tag-workflow.no-rewrite": not re.search(
+            r"(?im)(?:git\s+tag\s+.*(?:--force|-f\b)|git\s+push\s+.*(?:--force|-f\b)|git\s+tag\s+-d)",
+            job,
+        ),
+        "tag-workflow.dispatches": all(
+            name in job
+            for name in ("release.yml", "publish_pypi.yml", "publish_npm.yml", "publish_oci.yml")
+        )
+        and 'gh workflow run "${workflow}" --ref "${RELEASE_TAG}"' in job,
+    }
+    for code, condition in requirements.items():
+        _add_if_false(
+            diagnostics,
+            condition,
+            code,
+            f"required signed-tag workflow contract is absent: {code}",
             relative_path,
         )
 
@@ -622,13 +719,16 @@ def _validate_legacy_build_workflow(root: Path, diagnostics: list[Diagnostic]) -
 
 
 def _validate_package_identity(root: Path, diagnostics: list[Diagnostic]) -> None:
-    """Bind public distribution names and the Rust runtime version export."""
+    """Bind public distribution names and runtime versions to canonical metadata."""
     try:
+        root_metadata = _read_toml(root / "pyproject.toml")
         python_name = _nested_string(
             _read_toml(root / "sdk/python/pyproject.toml"), "project", "name"
         )
         typescript_name = _nested_string(_read_json(root / "sdk/typescript/package.json"), "name")
         rust_source = (root / "aegis_rust_v2/src/lib.rs").read_text(encoding="utf-8")
+        server_source = (root / "aegis_server/__init__.py").read_text(encoding="utf-8")
+        report_source = (root / "aegis/core/forensic_pdf_report.py").read_text(encoding="utf-8")
     except (OSError, ValueError, KeyError, TypeError) as exc:
         diagnostics.append(
             Diagnostic(
@@ -638,6 +738,20 @@ def _validate_package_identity(root: Path, diagnostics: list[Diagnostic]) -> Non
             )
         )
         return
+    _add_if_false(
+        diagnostics,
+        _nested_string(root_metadata, "project", "name") == "aegis-latent-core"
+        and root_metadata.get("tool", {})
+        .get("hatch", {})
+        .get("build", {})
+        .get("targets", {})
+        .get("wheel", {})
+        .get("packages")
+        == ["aegis", "aegis_server", "integrations"],
+        "metadata.core-wheel-packages",
+        "core wheel must include aegis, aegis_server, and integrations",
+        "pyproject.toml",
+    )
     _add_if_false(
         diagnostics,
         python_name == "aegis-latent-sdk",
@@ -659,6 +773,85 @@ def _validate_package_identity(root: Path, diagnostics: list[Diagnostic]) -> Non
         "Rust Python runtime version must derive from CARGO_PKG_VERSION",
         "aegis_rust_v2/src/lib.rs",
     )
+    _add_if_false(
+        diagnostics,
+        "from aegis import __version__" in server_source
+        and re.search(r"(?m)^__version__\s*=", server_source) is None,
+        "metadata.server-runtime-version-unbound",
+        "server runtime version must derive from aegis.__version__",
+        "aegis_server/__init__.py",
+    )
+    _add_if_false(
+        diagnostics,
+        "from aegis import __version__ as aegis_version" in report_source
+        and "tool_version: str = aegis_version" in report_source,
+        "metadata.forensic-report-version-unbound",
+        "forensic report default version must derive from aegis.__version__",
+        "aegis/core/forensic_pdf_report.py",
+    )
+
+
+def _validate_active_deployment_versions(root: Path, diagnostics: list[Diagnostic]) -> None:
+    """Reject stale active image owners, tags, labels, and air-gap package pins."""
+    expectations = {
+        "deploy/docker/Dockerfile": (
+            "ARG PYTHON_IMAGE=python:3.12-slim@sha256:7a8b475003c4fe15a2cd4e55e5cfc2f3560bdc9333d624f24cdd6d4340fd7a17",
+            'org.opencontainers.image.version="4.0.2"',
+        ),
+        "deploy/k8s/aegis-operator/operator.py": (
+            'DEFAULT_AEGIS_IMAGE = "ghcr.io/juanlunaia/aegis-latent-core:4.0.2"',
+        ),
+        "deploy/k8s/aegis-operator/crd.yaml": (
+            'default: "ghcr.io/juanlunaia/aegis-latent-core:4.0.2"',
+        ),
+        "deploy/docker/docker-compose.yml": ("image: ghcr.io/juanlunaia/aegis-latent-core:4.0.2",),
+        "deploy/docker/docker-compose.enterprise.yml": (
+            "image: ghcr.io/juanlunaia/aegis-latent-core:4.0.2",
+            'com.aegis.version:             "4.0.2"',
+        ),
+        "deploy/docker/Dockerfile.airgap": (
+            "ARG PYTHON_BASE_DIGEST=sha256:be1575ed968de893bd54f4c56315ff7c4736ce522c1bca08fd521731aafc0d76",
+            'org.opencontainers.image.version="4.0.2"',
+            "-t aegis-latent-core:4.0.2-airgap",
+        ),
+        "scripts/vendor_wheels.sh": (
+            '"aegis-latent-core[storage-sqlite]==4.0.2"',
+            "-t aegis-latent-core:4.0.2-airgap",
+        ),
+        "scripts/install_aegis.sh": (
+            'AEGIS_VERSION="4.0.2"',
+            'AEGIS_WHEEL_SHA256_URL="${AEGIS_WHEEL_URL}.sha256"',
+            'verify_sha256 "${WHEEL_PATH}" "${SIDECAR_PATH}"',
+            'pip install "${WHEEL_PATH}"',
+        ),
+    }
+    for relative_path, required_literals in expectations.items():
+        path = root / relative_path
+        try:
+            contents = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            diagnostics.append(
+                Diagnostic(
+                    "deployment.version-unreadable",
+                    f"cannot read active deployment version contract: {exc}",
+                    relative_path,
+                )
+            )
+            continue
+        _add_if_false(
+            diagnostics,
+            all(literal in contents for literal in required_literals),
+            "deployment.version-drift",
+            "active deployment reference is not synchronized to v4.0.2",
+            relative_path,
+        )
+        _add_if_false(
+            diagnostics,
+            "3.1.0" not in contents and "juanlunia" not in contents,
+            "deployment.stale-reference",
+            "active deployment file retains a stale release or registry owner",
+            relative_path,
+        )
 
 
 def assess_repository(root: Path, *, release_tag: str | None = None) -> Assessment:
@@ -667,6 +860,7 @@ def assess_repository(root: Path, *, release_tag: str | None = None) -> Assessme
     versions = _load_versions(root, diagnostics)
     _validate_build_backends(root, diagnostics)
     _validate_package_identity(root, diagnostics)
+    _validate_active_deployment_versions(root, diagnostics)
     if release_tag is not None:
         expected = versions.get("core")
         tag_version = release_tag.removeprefix("v")
@@ -685,6 +879,7 @@ def assess_repository(root: Path, *, release_tag: str | None = None) -> Assessme
     _validate_npm_workflow(root, diagnostics)
     _validate_release_architectures(root, diagnostics)
     _validate_release_workflow(root, diagnostics)
+    _validate_release_tag_workflow(root, diagnostics)
     _validate_legacy_build_workflow(root, diagnostics)
     return Assessment(str(root), versions, tuple(diagnostics))
 

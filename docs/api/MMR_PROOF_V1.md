@@ -1,11 +1,12 @@
 # Portable MMR Inclusion Proof v1
 
-**Release baseline:** two-baseline model
+**Release baseline:** four-layer truth model
 **Format identifier:** `aegis-mmr-inclusion-v1`
-**Status:** implemented in the v4 source baseline and covered by cross-language golden vectors
-**Last reviewed:** 2026-08-25 UTC
-**Source baseline:** merged v4 source state documented by the post-merge audit
-**Distribution baseline:** not included in the `v3.1.0` distribution; no v4 package publication is asserted
+**Status:** implemented in the checked-out `v4.0.2` source baseline and covered by cross-language golden vectors
+**Last reviewed:** 2026-08-27 UTC
+**Source baseline:** checked-out source metadata is synchronized at `v4.0.2`
+**External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
+**Historical distribution boundary:** this format was not included in the `v3.1.0` distribution
 
 ## Purpose and claim boundary
 

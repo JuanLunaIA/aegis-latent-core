@@ -3,7 +3,7 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 #
-# install_aegis.sh — Zero-touch POSIX installer for Aegis Latent Core v3.1.0
+# install_aegis.sh — Zero-touch POSIX installer for Aegis Latent Core v4.0.2
 #
 # Supported platforms: Linux (x86_64, aarch64), macOS (x86_64, Apple Silicon)
 # Requires: Python 3.11+, curl or wget, git (optional for source install)
@@ -16,8 +16,11 @@
 set -euo pipefail
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-AEGIS_VERSION="3.1.0"
-AEGIS_PACKAGE="aegis-latent-core==${AEGIS_VERSION}"
+AEGIS_VERSION="4.0.2"
+AEGIS_WHEEL_NAME="aegis_latent_core-${AEGIS_VERSION}-py3-none-any.whl"
+AEGIS_RELEASE_BASE_URL="https://github.com/JuanLunaIA/aegis-latent-core/releases/download/v${AEGIS_VERSION}"
+AEGIS_WHEEL_URL="${AEGIS_RELEASE_BASE_URL}/${AEGIS_WHEEL_NAME}"
+AEGIS_WHEEL_SHA256_URL="${AEGIS_WHEEL_URL}.sha256"
 DEFAULT_INSTALL_DIR="${HOME}/.aegis"
 VENV_DIR=""
 INSTALL_DEV=false
@@ -30,6 +33,43 @@ info()    { echo -e "${BLUE}[aegis]${NC} $*"; }
 success() { echo -e "${GREEN}[aegis]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[aegis]${NC} $*"; }
 error()   { echo -e "${RED}[aegis]${NC} $*" >&2; }
+
+download_file() {
+    local url="$1"
+    local output="$2"
+    if command -v curl &>/dev/null; then
+        curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+            "${url}" --output "${output}"
+    elif command -v wget &>/dev/null; then
+        wget --https-only --quiet --output-document="${output}" "${url}"
+    else
+        error "curl or wget is required to download release assets."
+        return 1
+    fi
+}
+
+verify_sha256() {
+    local payload="$1"
+    local sidecar="$2"
+    local expected filename actual
+    read -r expected filename < "${sidecar}"
+    if [[ "${filename}" != "$(basename "${payload}")" || ! "${expected}" =~ ^[0-9a-f]{64}$ ]]; then
+        error "Malformed SHA-256 sidecar for $(basename "${payload}")."
+        return 1
+    fi
+    if command -v sha256sum &>/dev/null; then
+        actual="$(sha256sum "${payload}" | awk '{print $1}')"
+    elif command -v shasum &>/dev/null; then
+        actual="$(shasum -a 256 "${payload}" | awk '{print $1}')"
+    else
+        error "sha256sum or shasum is required to verify release assets."
+        return 1
+    fi
+    if [[ "${actual}" != "${expected}" ]]; then
+        error "SHA-256 verification failed for $(basename "${payload}")."
+        return 1
+    fi
+}
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 INSTALL_DIR="${DEFAULT_INSTALL_DIR}"
@@ -115,11 +155,21 @@ source "${VENV_DIR}/bin/activate"
 pip install --quiet --upgrade pip setuptools wheel
 
 # ── Install Aegis ─────────────────────────────────────────────────────────────
-info "Installing ${AEGIS_PACKAGE}..."
+umask 077
+DOWNLOAD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/aegis-install.XXXXXX")"
+trap 'rm -rf "${DOWNLOAD_DIR}"' EXIT
+WHEEL_PATH="${DOWNLOAD_DIR}/${AEGIS_WHEEL_NAME}"
+SIDECAR_PATH="${WHEEL_PATH}.sha256"
+info "Downloading Aegis Latent Core v${AEGIS_VERSION} and its SHA-256 sidecar..."
+download_file "${AEGIS_WHEEL_URL}" "${WHEEL_PATH}"
+download_file "${AEGIS_WHEEL_SHA256_URL}" "${SIDECAR_PATH}"
+verify_sha256 "${WHEEL_PATH}" "${SIDECAR_PATH}"
+success "Release wheel SHA-256 verified."
+info "Installing the verified Aegis Latent Core v${AEGIS_VERSION} wheel..."
 if "${INSTALL_DEV}"; then
-    pip install "${AEGIS_PACKAGE}[dev]"
+    pip install "aegis-latent-core[dev] @ file://${WHEEL_PATH}"
 else
-    pip install "${AEGIS_PACKAGE}"
+    pip install "${WHEEL_PATH}"
 fi
 success "Aegis installed."
 

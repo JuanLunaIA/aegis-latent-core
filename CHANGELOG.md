@@ -2,9 +2,11 @@
 
 All notable changes to **Aegis Latent Core** are documented in this file.
 
-**Last verified:** 2026-08-25 UTC
-**Release baseline:** published `v3.1.0`
-**Merged-source baseline:** `2050a310ec295afc61d033ff842c9a535a4f3105` (fourteen `4.0.0` anchors; unpublished)
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** `v4.0.2` checked-out source release target; source metadata does not establish external lifecycle state, which requires independent readback.
+**Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
+**Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
+**Source release target:** `v4.0.2` (fourteen synchronized `4.0.2` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts)
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
@@ -12,10 +14,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Clarified the audited two-baseline model after the v4 source merge and migrated shared coding-agent guidance from legacy `.cursorrules` to `AGENTS.md` with thin tool adapters.
+No changes are recorded after the `v4.0.2` source release target.
+
+## [4.0.2] — 2026-08-27
+
+- Added trusted-proxy support for the documented `X-SSL-Client-SHA256` mTLS fingerprint assertion while preserving the historical `X-Client-Cert-SHA256` alias; conflicting assertions now fail closed.
+- Added generic request-bucket `X-RateLimit-Limit` and `X-RateLimit-Remaining` response headers alongside the existing request/token dimension-specific fields.
+- Added an all-targets, all-features Clippy gate with warnings denied to the Rust CI job and documented the reproducible source-development SDK contract in `docs/DEVELOPER_SDK_GUIDE.md`.
+- Corrected the SDK documentation to acknowledge the public `aegis-latent-sdk` 4.0.0 registry objects without attributing them to the failed tag-triggered publication workflows.
+- Clarified the audited immutable-source, external-object, registry-observation, and source-release-target layers after the v4 source merge and migrated shared coding-agent guidance from legacy `.cursorrules` to `AGENTS.md` with thin tool adapters.
 - Added a deterministic, source-derived `.aegis_ai_context` manifest, progressive context router, component/workflow matrix, command/CI matrix, evidence index, and freshness tests. These are advisory repository aids, not hidden model instructions or release evidence.
-- Recorded the current `main` policy of eight exact required GitHub Actions contexts, strict freshness, required signatures, linear history, disabled force pushes/deletions, and administrator enforcement disabled. The candidate head later reached success for all eight contexts; this does not retroactively prove that they all completed before the administrator-bypass merge.
-- Registered the exact pending PyPI trusted-publisher coordinates for `aegis-latent-sdk` without publishing a package. npm ownership/bootstrap, a verifiable signed tag, broad strict-mypy debt, release-environment approval, and complete security-alert inventory remain unresolved release boundaries.
+- Recorded the current `main` policy of eight exact required GitHub Actions contexts, strict freshness, required signatures, linear history, disabled force pushes/deletions, and administrator enforcement disabled. Remote check results remain per-commit GitHub evidence and are not inferred from source metadata.
+- Added a protected, manually dispatched GitHub Actions path that creates a Sigstore keyless signed annotated tag from the exact `main` head, verifies its workflow identity and ancestry, rejects tag replacement, and dispatches release, SDK publication, and signed OCI publication workflows against that immutable tag.
+- Expanded GitHub Release assets to include the core package, Python SDK wheel/sdist, TypeScript SDK tarball, supported Rust wheels, SPDX JSON SBOM, per-file SHA-256 sidecars, a canonical release-asset manifest, and `SHA256SUMS`; release creation now rejects missing, unexpected, or byte-mismatched assets.
+- Synchronized all fourteen governed version anchors—core, runtimes, both SDKs and locks, dashboard and lock, Rust metadata and lock, and Helm chart/app/image—to `4.0.2`.
+- Included `aegis_server` in the core wheel, aligned active operator/Compose/airgap defaults to `4.0.2`, pinned multiarch Python and Node container bases by digest, and made the versioned installer verify the release-wheel SHA-256 sidecar before installation.
+- Configured OCI publication for gateway and dashboard multiarch images with digest attestations and keyless Cosign signatures. PyPI/npm trusted publishing remains environment- and registry-controlled, and no release, package, image, signature, attestation, or provenance claim is made without successful external readback.
 
 ## [4.0.0 source candidate] — merged 2026-08-24
 

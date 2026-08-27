@@ -90,6 +90,33 @@ def test_trusted_proxy_may_forward_cert_and_matching_fingerprint() -> None:
     assert principal.subject == "workload-7"
 
 
+def test_trusted_proxy_accepts_x_ssl_client_sha256() -> None:
+    pem = make_certificate()
+    principal = verifier(pem).verify(
+        source_ip="10.20.3.4",
+        tenant_id="tenant-a",
+        headers={
+            "X-Forwarded-Client-Cert": pem.decode().replace("\n", "%0A"),
+            "X-SSL-Client-SHA256": certificate_sha256(pem),
+        },
+    )
+    assert principal.tenant_id == "tenant-a"
+
+
+def test_trusted_proxy_rejects_conflicting_fingerprint_headers() -> None:
+    pem = make_certificate()
+    with pytest.raises(MTLSVerificationError, match="conflicting"):
+        verifier(pem).verify(
+            source_ip="10.20.3.4",
+            tenant_id="tenant-a",
+            headers={
+                "X-Forwarded-Client-Cert": pem.decode(),
+                "X-SSL-Client-SHA256": certificate_sha256(pem),
+                "X-Client-Cert-SHA256": "00" * 32,
+            },
+        )
+
+
 def test_rejects_fingerprint_mismatch_and_non_allowlisted_fingerprint() -> None:
     pem = make_certificate()
     other = make_certificate(sans=("client.example.test", "tenant:tenant-a", "other"))

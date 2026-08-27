@@ -2,17 +2,18 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 #
-# release.yml — Full release pipeline triggered on "v*" tag pushes.
+# release.yml — Full release pipeline executed for an immutable signed tag.
 #
 # Flow:
-#   1. Build multi-platform Python wheels (manylinux, macOS, Windows)
-#   2. Build Rust extension wheels for each platform via maturin
-#   3. Generate SHA-256 hashes for all artifacts
-#   4. Create GitHub Release with CHANGELOG excerpt and all artifacts
-#   5. Attest artifacts with GitHub's artifact attestation (SLSA Level 2)
+#   1. Verify the Sigstore-signed annotated tag and protected-main ancestry.
+#   2. Build core Python, both SDK packages, and the supported Rust wheels.
+#   3. Generate an SPDX JSON SBOM, a canonical asset manifest, and SHA-256 files.
+#   4. Create a GitHub Release from the exact CHANGELOG section and assets.
+#   5. Attach GitHub artifact attestations to the built payloads.
 name: Release
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v[0-9]*"
@@ -25,7 +26,6 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # ── Validate the tag matches pyproject.toml version ─────────────────────
   validate:
     name: Validate release tag
     runs-on: ubuntu-22.04
@@ -36,14 +36,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify annotated signed tag and protected-branch ancestry
+      - name: Verify Sigstore-signed annotated tag and protected-branch ancestry
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          git fetch --no-tags origin main
-          test "$(git cat-file -t "refs/tags/${RELEASE_TAG}")" = tag
-          git verify-tag "${RELEASE_TAG}"
-          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"
 
       - name: Verify full release contract
         env:
@@ -66,7 +63,6 @@ jobs:
           echo "Detected version: $VERSION"
 
       - name: Check tag matches pyproject version
-        if: startsWith(github.ref, 'refs/tags/')
         run: |
           TAG="${GITHUB_REF#refs/tags/v}"
           PKG="${{ steps.ver.outputs.version }}"
@@ -75,98 +71,118 @@ jobs:
             exit 1
           fi
 
-  # ── Pure-Python sdist + wheel (platform-independent) ────────────────────
   build-python:
-    name: Build Python package
+    name: Build Python core package
     runs-on: ubuntu-22.04
     needs: validate
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_BUILD_VERSION }}
           cache: pip
-
-      - name: Install build tools
-        run: pip install build==1.3.0 twine==6.2.0
-
-      - name: Build sdist and wheel
-        run: python -m build
-
-      - name: Verify distribution
-        run: twine check dist/*
-
-      - name: Generate SHA-256 hashes
+      - name: Build and verify core distributions
         run: |
-          cd dist
-          for f in *; do
-            sha256sum "$f" > "$f.sha256"
-          done
-          cat *.sha256
-
+          python -m pip install build==1.3.0 twine==6.2.0
+          python -m build
+          twine check dist/*
+          test "$(find dist -maxdepth 1 -type f | wc -l)" -eq 2
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: python-dist
+          name: python-core-dist
           path: dist/
+          if-no-files-found: error
 
-  # ── Rust extension wheels (deterministic cross-platform matrix) ─────────
-  # One abi3 (cp311-abi3) wheel per platform target covers every supported
-  # CPython >= 3.11, so there is no Python-version axis. PyO3/maturin-action
-  # builds glibc wheels inside pinned manylinux2014 containers and musl wheels
-  # inside musllinux_1_2 containers (reproducible toolchains), cross-compiling
-  # aarch64/armv7 via the action's bundled cross/zig support. macOS and Windows
-  # build natively on their respective hosted runners.
-  #
-  #   Linux  glibc  : x86_64, aarch64            (manylinux2014)
-  #   Linux  musl   : x86_64, aarch64, armv7     (musllinux_1_2 — edge / OT / IL5)
-  #   macOS         : x86_64 (Intel), arm64 (Apple Silicon)
-  #   Windows       : x86_64 (MSVC)
+  build-sdks:
+    name: Build Python and TypeScript SDK packages
+    runs-on: ubuntu-22.04
+    needs: validate
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ env.PYTHON_BUILD_VERSION }}
+          cache: pip
+          cache-dependency-path: sdk/python/pyproject.toml
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+      - name: Build and verify Python SDK distributions
+        run: |
+          python -m pip install build==1.3.0 twine==6.2.0 "./sdk/python[dev]"
+          cd sdk/python
+          ruff check src tests
+          mypy --config-file pyproject.toml
+          pytest -q
+          python -m build
+          twine check dist/*
+          test "$(find dist -maxdepth 1 -type f | wc -l)" -eq 2
+      - name: Build and pack TypeScript SDK
+        working-directory: sdk/typescript
+        run: |
+          npm ci --ignore-scripts
+          npm run check
+          mkdir -p dist
+          npm pack --pack-destination dist
+          test "$(find dist -maxdepth 1 -type f -name '*.tgz' | wc -l)" -eq 1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sdk-dist
+          path: |
+            sdk/python/dist/*.whl
+            sdk/python/dist/*.tar.gz
+            sdk/typescript/dist/*.tgz
+          if-no-files-found: error
+
+  build-sbom:
+    name: Generate source SBOM
+    runs-on: ubuntu-22.04
+    needs: validate
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: .
+          format: spdx-json
+          syft-version: v1.51.0
+          output-file: aegis-latent-core-${{ needs.validate.outputs.version }}.spdx.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-sbom
+          path: aegis-latent-core-${{ needs.validate.outputs.version }}.spdx.json
+          if-no-files-found: error
+
   build-rust:
     name: Rust wheel (${{ matrix.platform.target }})
     runs-on: ${{ matrix.platform.runner }}
     needs: validate
     strategy:
-      # Never let one target's failure cancel the others — every platform
-      # must build independently for a complete release.
       fail-fast: false
       matrix:
         platform:
-          # ── Linux glibc (manylinux2014) ──
           - { runner: ubuntu-22.04,  target: x86_64-unknown-linux-gnu,        manylinux: "2014" }
-          # aarch64-unknown-linux-gnu is deliberately not published here:
-          # pqcrypto-internals v0.2.11 emits armv8.2-a+sha3, which the available
-          # cross toolchains reject. Do not ship an unverified glibc wheel.
-          # ── Linux musl (static — air-gapped / edge / industrial) ──
           - { runner: ubuntu-22.04,  target: x86_64-unknown-linux-musl,       manylinux: musllinux_1_2 }
           - { runner: ubuntu-22.04,  target: aarch64-unknown-linux-musl,      manylinux: musllinux_1_2 }
           - { runner: ubuntu-22.04,  target: armv7-unknown-linux-musleabihf,  manylinux: musllinux_1_2 }
-          # ── macOS (native) ──
-          # macos-14 is the available hosted runner; x86_64 is cross-compiled
-          # with the macOS SDK instead of waiting on the retired macos-13 label.
           - { runner: macos-14,      target: x86_64-apple-darwin }
           - { runner: macos-14,      target: aarch64-apple-darwin }
-          # ── Windows (native, MSVC) ──
           - { runner: windows-2022,  target: x86_64-pc-windows-msvc }
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_BUILD_VERSION }}
-
       - name: Build abi3 wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
         env:
-          # Allow building an abi3-py311 wheel against a newer interpreter.
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
         with:
           working-directory: aegis_rust_v2
           target: ${{ matrix.platform.target }}
-          # `auto` is a no-op on macOS/Windows; the container image is only
-          # consulted for the Linux targets above.
           manylinux: ${{ matrix.platform.manylinux || 'auto' }}
           docker-options: --env CFLAGS=-std=gnu99
           maturin-version: v1.11.5
@@ -175,53 +191,46 @@ jobs:
               yum install -y perl-IPC-Cmd perl-Time-Piece
             fi
           args: --release --locked --compatibility pypi -i python3.12 --out dist --features extension-module
-
       - name: Verify wheel was produced
         shell: bash
         run: ls -lh aegis_rust_v2/dist/*.whl
-
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: rust-dist-${{ matrix.platform.target }}
           path: aegis_rust_v2/dist/
+          if-no-files-found: error
 
-  # ── Create GitHub Release ────────────────────────────────────────────────
   github-release:
     name: Create GitHub Release
     runs-on: ubuntu-22.04
-    needs: [validate, build-python, build-rust]
+    needs: [validate, build-python, build-sdks, build-sbom, build-rust]
     environment:
       name: release
     permissions:
       contents: write
-      id-token: write   # for artifact attestation
+      id-token: write
       attestations: write
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-
       - name: Download all artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           path: release-assets/
-
-      - name: Flatten artifact directories
+      - name: Flatten artifact directories and build integrity manifests
         run: |
           python scripts/prepare_release_assets.py --input release-assets --output release
-
-      - name: Attest build artifacts (SLSA Level 2)
+      - name: Attest build artifacts
         uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1
         with:
-          subject-path: "release/*.whl,release/*.tar.gz"
-
+          subject-path: "release/*.whl,release/*.tar.gz,release/*.tgz,release/*.spdx.json,release/release-asset-manifest.json,release/SHA256SUMS"
       - name: Extract CHANGELOG excerpt for this release
         id: changelog
         env:
           VERSION: ${{ needs.validate.outputs.version }}
         run: |
           python scripts/extract_release_notes.py --changelog CHANGELOG.md --version "${VERSION}" --output release_body.md
-
       - name: Create a new GitHub Release without an update path
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

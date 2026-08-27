@@ -5,8 +5,10 @@
 ## Develop from a clean checkout
 
 The v4 distribution is named **`aegis-latent-sdk`** (its Python import package is
-`aegis_sdk`). It is not published to PyPI; install it from this checkout rather
-than using a registry package. Run these commands from the repository root:
+`aegis_sdk`). The checked-out source baseline/release target is `v4.0.2` with 14 synchronized anchors. PyPI was last observed at
+[`4.0.0`](https://pypi.org/project/aegis-latent-sdk/4.0.0/), without provenance
+attributed to the failed `v4.0.1` tag workflow. Do not use a `4.0.2` registry install
+until publication and readback succeed; for source development, install this checkout. Run these commands from the repository root:
 
 ```bash
 cd sdk/python
@@ -22,8 +24,9 @@ python -m pip wheel . --no-deps --wheel-dir dist
 The `cd sdk/python` step is required: `pyproject.toml`, the SDK tests, and the
 resulting `dist/` directory are component-relative. See the
 [repository overview](../../README.md), [developer quickstart](../../docs/DEVELOPER_QUICKSTART.md),
-and [integration guide](../../docs/DEVELOPER_INTEGRATIONS_GUIDE.md) for the
-canonical project documentation.
+[SDK guide](../../docs/DEVELOPER_SDK_GUIDE.md), and
+[integration guide](../../docs/DEVELOPER_INTEGRATIONS_GUIDE.md) for the canonical
+project documentation.
 
 ```python
 from aegis_sdk.openai import OpenAI

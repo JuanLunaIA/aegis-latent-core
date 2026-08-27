@@ -2,15 +2,16 @@
 
 This document describes a US-market positioning and packaging hypothesis for Aegis Latent Core. It is for commercial stakeholders, founders, product owners, procurement and support planners. It is not a binding offer, a forecast, legal advice, or evidence of market validation.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** published `v3.1.0` (latest published)
-**Merged v4 source baseline:** commit `2050a310ec295afc61d033ff842c9a535a4f3105` with 14 synchronized `4.0.0` anchors; no v4 tag, GitHub Release, PyPI/npm/OCI publication, or production-release acceptance
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** checked-out source baseline/release target `v4.0.2` with 14 synchronized anchors
+**Source baseline/release target:** `v4.0.2` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
+**Historical external baseline:** lightweight `v4.0.1` tag at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **Market scope:** United States, self-hosted enterprise AI infrastructure
 **Positioning decision:** [`docs/architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md`](architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md)
 
 ## Baseline discipline
 
-The latest published product baseline remains **v3.1.0**. Commit `2050a310ec295afc61d033ff842c9a535a4f3105` is the merged v4 source baseline and contains 14 synchronized `4.0.0` anchors. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` exports, an auxiliary `RustWal` stream segment, and a bounded in-process SSE benchmark. These are merged-source implementation and evidence items, not v3.1.0 release claims. The synchronized anchors do not constitute a v4 tag, GitHub Release, PyPI/npm/OCI publication, or production-release acceptance. Any proposal must identify the exact deliverable baseline.
+The checked-out source baseline/release target is **4.0.2** with 14 synchronized anchors. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` exports, an auxiliary `RustWal` stream segment, and a bounded in-process SSE benchmark. These are checked-out-source implementation and evidence items. They do not establish external lifecycle or production-acceptance state; verify the `v4.0.2` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback. Any proposal must identify the exact deliverable baseline.
 
 ## Positioning
 

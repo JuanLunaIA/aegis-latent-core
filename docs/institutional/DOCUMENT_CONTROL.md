@@ -1,13 +1,14 @@
 # Institutional Documentation Control Record
 
-**Release baseline:** two-baseline model
+**Release baseline:** four-layer truth model
 **Control record:** `AEGIS-DOC-CONTROL-2026-08-22`
 **Suite version:** 1.0
 **Repository:** `JuanLunaIA/aegis-latent-core`
-**Source baseline:** merged v4 source state documented by the 2026-08-25 post-merge audit
-**Distribution baseline:** published `v3.1.0` artifacts
-**Current change set:** documentation alignment only; no tag, release, registry, deployment, SLO, compliance, or acceptance decision
-**Status:** Technical source record; publication and domain acceptance remain blocked
+**Source baseline:** checked-out source metadata is synchronized at `v4.0.2`
+**External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, SLO, compliance result, or acceptance; verify each surface by external readback
+**Historical evidence baseline:** published `v3.1.0` artifacts and retained measurements remain historical
+**Current change set:** documentation alignment only; no external lifecycle or acceptance decision
+**Status:** Technical source record; external publication and domain acceptance require independent evidence
 
 ## 1. Authority and source hierarchy
 
@@ -34,7 +35,7 @@ A higher-ranked source can still require legal or specialist interpretation. Cod
 | Regulatory and legal labels | Unauthorized legal conclusion | Mapped as technical contributions with counsel/assessor gates. | DOC-05 and unsupported report block compliance/admissibility wording. |
 | Performance and commercial numbers | Measurement and promise inflation | Compared with retained artifacts and contracts; unsupported values downgraded. | Claims matrix contains only bounded measurements. |
 | Example secret-like values | Secret normalization risk | Not copied into canonical runbooks or production configuration. | Secret scans and repository diff review must remain clean. |
-| Pasted `v4.0.0`, WORM, SLSA, admissibility, enterprise, and production assertions | Release/compliance self-certification | Treated as requirements rather than proof. Source anchors were later aligned and audited, but tag creation, publication, deployment acceptance, and external guarantees remain separate blocked decisions. | Claims matrix and developer integration guide retain `UNRELEASED`, `CONFIGURATION-DEPENDENT`, and external-acceptance states. |
+| Pasted `v4.0.0`, WORM, SLSA, admissibility, enterprise, and production assertions | Release/compliance self-certification | Treated as requirements rather than proof. Source anchors were later aligned and audited, but tag, release, registry, OCI, deployment-acceptance, and external-guarantee state remain separate facts requiring external readback or qualified acceptance. | Claims matrix and developer integration guide retain lifecycle-neutral external-readback, `CONFIGURATION-DEPENDENT`, and acceptance boundaries. |
 
 **Falsification:** containment fails if pasted text changes governing policy, accesses a secret, authorizes an external action beyond the user's request, or enters the canonical suite as fact without evidence and status.
 

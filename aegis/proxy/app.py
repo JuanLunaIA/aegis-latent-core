@@ -1132,6 +1132,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
     def _rate_headers(decision: RateLimitDecision) -> dict[str, str]:
         return {
+            # The generic fields represent the request bucket. Dimension-specific
+            # fields remain authoritative for clients that also reserve tokens.
+            "X-RateLimit-Limit": str(cfg.rate_limit_burst),
+            "X-RateLimit-Remaining": str(decision.request_remaining),
             "X-RateLimit-Limit-Requests": str(cfg.rate_limit_burst),
             "X-RateLimit-Remaining-Requests": str(decision.request_remaining),
             "X-RateLimit-Limit-Tokens": str(cfg.rate_limit_token_capacity),

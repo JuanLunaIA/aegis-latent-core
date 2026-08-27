@@ -2,8 +2,13 @@
 
 This document defines the application-layer WAF corpus, metrics, reproduction method and ingress boundary for security reviewers. It does not provide universal prompt-injection detection, HTTP/2 parser coverage, or a production WAF certification.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** four-layer truth model
+**Source baseline/release target:** `v4.0.2` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
+**Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` with `4.0.0` anchors
+**Previous public GitHub Release:** `v4.0.1` lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
+**Observed registries:** PyPI/npm `4.0.0`, without workflow provenance attribution
+**Historical evidence baseline:** retained `v3.1.0` corpus results remain historical and are not `v4.0.2` results
 **Scope:** Aegis application-layer payload inspection
 **Current artifact:** `evidence/market_hardening_v3_1/waf_corpus_report_v1_candidate.json` outside the source tree
 
@@ -32,7 +37,7 @@ false_positive_rate  = benign_cases_blocked / executable_benign_cases
 
 The `<5%` threshold is a release threshold for the named corpus and configuration only. It is not a universal WAF guarantee. A critical-severity bypass blocks the gate regardless of the aggregate rate. The denominator must exclude invalid or ambiguous cases and must be preserved with the artifact.
 
-## Current result
+## Historical v3.1.0 result
 
 The v3.1.0 candidate corpus contains 15 executable malicious cases and 8 benign cases. The current local run recorded **0 bypasses and 0 false positives**, with the observed bypass rate below the corpus threshold. The Wilson interval remains wide because the corpus is small; the result is a regression signal, not statistical proof of universal detection coverage.
 

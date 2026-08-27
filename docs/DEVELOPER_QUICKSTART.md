@@ -1,9 +1,10 @@
 # Developer Quickstart — Aegis Latent Core
 
-**Last verified:** 2026-08-25 UTC
-**Release baseline:** two-baseline model
-**Source baseline:** merged v4 source state verified by [`evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md`](../evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md)
-**Distribution baseline:** previously published `v3.1.0` artifacts; no distribution is asserted for the source baseline
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** `v4.0.2` source; external release status requires independent readback
+**Source baseline:** `v4.0.2`; source metadata alone does not establish publication
+**Retained evidence baseline:** previously published `v3.1.0` artifacts; retained measurements remain historical
+**Distribution verification:** confirm the signed tag, release assets, registry versions, OCI digest, and attestations before using a registry install
 
 This is a source-tree quickstart. It does not assume that `aegis-latent-core`, `aegis-latent-sdk`, or `aegis-rust` can be installed from a public registry, and it does not establish a production deployment or external acceptance.
 

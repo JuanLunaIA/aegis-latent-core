@@ -6,11 +6,11 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 # Aegis Latent Core — Engineering and Market Roadmap
 
-**Status:** v4 source baseline verified; publication, external assurance, and target acceptance remain open
-**Last verified:** 2026-08-25 UTC
-**Release baseline:** two-baseline model
-**Source baseline:** merged v4 source state documented by the post-merge audit
-**Distribution baseline:** previously published `v3.1.0` artifacts; historical v3.1.0 results below remain scoped to that baseline
+**Status:** checked-out source baseline/release target `v4.0.2` has 14 synchronized anchors; source metadata does not establish external lifecycle or target-acceptance state
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** checked-out source baseline/release target `v4.0.2` with 14 synchronized anchors, plus historical external observations
+**Source baseline:** fourteen synchronized `4.0.2` anchors; immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
+**External baseline:** prior lightweight `v4.0.1` tag at `6469904380218584ae0b5221334bc9a46500f5ba` had failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **Purpose:** Single source of truth for work that is implemented, measured, deployment-dependent, or still open.
 
 ## Status rules
@@ -27,7 +27,7 @@ A checkbox may not be changed to `[x]` because a stub, dashboard sample, docstri
 
 ## Two-baseline current state
 
-The **v4 source baseline** is the merged tree checked by the 2026-08-25 post-merge audit: source anchors report `4.0.0`, required repository contexts reached terminal success on the candidate tree, and the audit decision is source-merge verified with publication no-go. The **distribution baseline** remains the previously published `v3.1.0` artifact set. Source version metadata does not establish a v4 tag, release, registry artifact, deployed service, SLO, compliance result, or external acceptance.
+The current **source baseline/release target** is `4.0.2` with fourteen synchronized anchors. Its immutable parent/source comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors. The prior public GitHub baseline is lightweight tag `v4.0.1` targeting `6469904380218584ae0b5221334bc9a46500f5ba`; its tag workflows failed, and observed PyPI/npm `4.0.0` objects have no attributed provenance from those runs. Source metadata does not establish an external `v4.0.2` tag, release, registry artifact, deployed service, SLO, compliance result, or acceptance; successful readback is required.
 
 Historical v3.1.0 benchmark, security, remediation, and release records retain their original values and scope. They are not superseded as historical observations, but they must not be presented as measurements of the v4 source baseline without rerunning the named workload. See [`evidence/INDEX.md`](../evidence/INDEX.md).
 
@@ -52,9 +52,9 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 - [x] **Module C — bounded forensic export:** retained-window export produces the contract-tested ZIP and rejects empty or unbounded acquisition requests. Locators: `aegis/core/forensic_bundle.py`, `tests/test_forensic_bundle.py`, and `tests/test_audit_api_new.py::test_forensic_export_returns_verifiable_zip`. It does not establish authorship, complete custody, certification, legal admissibility, or external immutability.
 - [x] **Module D — forensic dashboard:** the read-only dashboard uses real gateway responses, server-side credential handling, explicit empty/unavailable/error states, and tested proof/contract parsing. Locators: `dashboard/src/`, `dashboard/tests/`, `.github/workflows/ci.yml` job `dashboard`, and `evidence/commercial_phase2_dashboard_qa.md`. A local visual-QA artifact is not customer telemetry, production availability, capacity, or independent assurance.
 - [m] The seven-round, 1,000-event local SSE artifact is retained at `evidence/commercial_phase2_streaming_benchmark.json`; it excludes network and durable-WAL latency and is not an end-to-end capacity result.
-- [x] Source-only release contracts now require 14 synchronized version anchors, exact candidate-tag binding, pinned Python build backends, signed annotated-tag/main ancestry commands, exact release-note extraction, deterministic asset preparation, and a create-only GitHub Release command. The OCI workflow builds both declared architectures without publication primitives.
+- [x] Source-only release contracts now require 14 synchronized version anchors, exact candidate-tag binding, pinned Python build backends, signed annotated-tag/main ancestry commands, exact release-note extraction, deterministic asset preparation, and a create-only GitHub Release command. The configured tag workflow publishes gateway and dashboard multiarch images, attests their digests, and keyless-signs those digests; actual publication still requires a successful run and independent readback.
 - [ ] Establish and independently verify release-environment reviewers, trusted signer roots, immutable release settings, registry privileges/immutability, OIDC/Sigstore verification, SBOM attachment policy, architecture runtime smoke tests, and trusted-root distribution before any future publication claim.
-- [ ] Package and publish a future release before describing Modules A–D as release-tagged capabilities.
+- External lifecycle claims for `v4.0.2` require independent readback of the tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation before Modules A–D are described as externally published capabilities.
 - [ ] Provide cross-replica global ordering and multi-region failover/recovery evidence; current implementation does not establish multi-region HA.
 - [ ] Complete independent security, cryptographic, deployment, accessibility, and forensic-process assurance appropriate to the claimed scope. Repository tests and local QA are not external assurance.
 
@@ -158,7 +158,7 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 
 ## Release gate
 
-The historical v3.1.0 distribution passed its declared publication gate, but it does not contain the later Phase 2/3 modules in the v4 source baseline. A future market-facing release containing those modules remains blocked until the affected source and tests pass, version anchors are coherent, the claim matrix is updated, documentation has no stronger language than the artifacts, the SBOM and dependency gates are clean or explicitly excepted, release provenance is regenerated, rollback and kill criteria are documented, and a qualified reviewer accepts the residual risk.
+The historical v3.1.0 distribution passed its declared publication gate, but it does not contain the later Phase 2/3 modules in the v4 source baseline. External publication of the `4.0.2` candidate remains blocked until the affected source and tests pass, version anchors are coherent, the claim matrix is updated, documentation has no stronger language than the artifacts, the SBOM and dependency gates are clean or explicitly excepted, release provenance is regenerated, rollback and kill criteria are documented, and a qualified reviewer accepts the residual risk.
 
 ## Related documents
 

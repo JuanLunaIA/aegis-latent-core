@@ -1,10 +1,11 @@
-# Security Policy — Aegis Latent Core v3.1.0
+# Security Policy — Aegis Latent Core 4.0.x
 
 This policy defines the vulnerability-reporting path, support boundary, production security baseline, runtime evidence rules and release security gates. It is for security researchers, customers, maintainers and operators. It is not a contractual SLA, certification, legal opinion or guarantee of future remediation.
 
-**Last verified:** 2026-08-25 UTC
-**Release baseline:** published `v3.1.0`
-**Merged-source baseline:** `2050a310ec295afc61d033ff842c9a535a4f3105` (fourteen `4.0.0` anchors; unpublished)
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** current source/release candidate
+**Current candidate/source line:** `4.0.2` with fourteen synchronized anchors; supported as the current source line without asserting external publication
+**Historical external baseline:** lightweight `v4.0.1` tag at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **Private reporting path:** GitHub Private Vulnerability Reporting
 
 ## Scope and support posture
@@ -13,11 +14,12 @@ Aegis Latent Core is security-sensitive infrastructure. The repository provides 
 
 | Version line | Support status |
 |---|---|
-| `3.1.x` | Published v3.1.0 market-hardening line; fixes remain subject to the project's actual operating capacity and supported-version policy. |
+| `4.0.x` | Current candidate and supported source line (`4.0.2`); support does not assert an external `v4.0.2` tag, release, or package publication. |
+| `3.1.x` | Historical v3.1.0 market-hardening line; fixes remain subject to the project's actual operating capacity and supported-version policy. |
 | `3.0.x` | Published v3.0.1 baseline. Upgrade to the candidate line for new hardening; security fixes remain subject to the project’s actual operating capacity. |
 | `<3.0.0` | Historical releases. Upgrade before requesting support; no default security-fix commitment is made. |
 
-The latest immutable public release is [`v3.1.0`](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v3.1.0). Commit `2050a310ec295afc61d033ff842c9a535a4f3105` is a merged v4.0.0 source baseline, not a published release; no v4 tag, GitHub Release, PyPI publication, or npm publication is claimed. Release support must be evaluated from published artifacts, while source behavior must be evaluated from the named commit, tests, and deployment prerequisites.
+The current supported source line is `4.0.x`, with candidate `4.0.2` and fourteen synchronized anchors. External `v4.0.2` publication is not claimed until tag, release, and registry readback succeeds. The previous public GitHub baseline is lightweight tag `v4.0.1` targeting `6469904380218584ae0b5221334bc9a46500f5ba`; its tag workflows failed, while PyPI/npm were separately observed at `4.0.0` without attributed provenance. Release support must be evaluated from published artifacts, while source behavior must be evaluated from the named commit, tests, and deployment prerequisites.
 
 ## Reporting a vulnerability
 

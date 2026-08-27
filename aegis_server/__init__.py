@@ -10,5 +10,6 @@ Sub-packages:
     compliance — SOC2 / HIPAA cryptographically sealed export bundles.
 """
 
-__version__ = "3.1.0"
+from aegis import __version__
+
 __all__ = ["__version__"]

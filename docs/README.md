@@ -1,11 +1,11 @@
 # Documentation Index
 
-**Last verified:** 2026-08-25 UTC
-**Release baseline:** two-baseline model
-**Source baseline:** merged v4 source state verified by [`evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md`](../evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md)
-**Distribution baseline:** previously published `v3.1.0` artifacts; no distribution is asserted for the source baseline
+**Last verified:** 2026-08-27 UTC
+**Release baseline:** checked-out source baseline/release target `v4.0.2` with 14 synchronized anchors, plus historical external observations
+**Source baseline:** `4.0.2` with fourteen synchronized anchors; immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
+**External baseline:** prior lightweight `v4.0.1` tag at `6469904380218584ae0b5221334bc9a46500f5ba` had failed tag workflows; PyPI/npm were observed at `4.0.0` without attributed provenance; source metadata does not establish the external lifecycle state of `v4.0.2`, which requires independent readback
 
-This directory documents two distinct baselines. The **source baseline** is the merged v4 tree whose version anchors and repository gates were checked in the named post-merge audit. The **distribution baseline** remains the previously published `v3.1.0` artifact set. A source version and successful repository checks do not establish a tag, release, package-index upload, container publication, deployment acceptance, production service level, or compliance result.
+This directory distinguishes the current **`4.0.2` source baseline/release target** from historical external observations. The candidate has fourteen synchronized source anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback. The prior public GitHub baseline is lightweight `v4.0.1`, while PyPI/npm were observed at `4.0.0` without attributed workflow provenance. A source version and successful repository checks do not establish a tag, release, package-index upload, container publication, deployment acceptance, production service level, or compliance result.
 
 ## Start here
 
@@ -19,7 +19,7 @@ This directory documents two distinct baselines. The **source baseline** is the 
 
 ## Baseline rule
 
-Use **source baseline** for statements about code and tests present in the merged v4 tree. Use **distribution baseline** only for statements tied to the immutable `v3.1.0` artifacts and their historical evidence. Never transfer a v3.1.0 benchmark or security result to v4 without a rerun, and never infer publication from source metadata set to `4.0.0`.
+Use **source baseline** for statements about code and tests in the checked-out `v4.0.2` source baseline/release target. Use **historical baseline** only for statements tied to named immutable revisions or artifacts. Never transfer a historical benchmark or security result to the checked-out source baseline/release target without a rerun, and never infer publication from source metadata.
 
 ## Technical references
 
@@ -31,7 +31,7 @@ Use **source baseline** for statements about code and tests present in the merge
 
 ## Publication boundary
 
-Repository documentation and evidence are review material. They do not by themselves authorize or prove a v4 tag, GitHub Release, PyPI/npm/OCI publication, production deployment, operational SLO, certification, conformity, legal admissibility, or customer acceptance. The post-merge audit records a source verification decision and an explicit publication no-go.
+Repository documentation and evidence are review material. They do not by themselves authorize or prove an external `v4.0.2` tag, GitHub Release, PyPI/npm/OCI publication, production deployment, operational SLO, certification, conformity, legal admissibility, or customer acceptance. Publication may be claimed only after successful external readback.
 
 ## Related documents
 

@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aegis-latent-core"
-version = "4.0.0"
+version = "4.0.2"
 description = "Fail-closed LLM gateway with durable signed forensic evidence and bounded response enrichment"
 readme = "README.md"
 license = { text = "AGPL-3.0-only" }
@@ -119,7 +119,7 @@ Repository = "https://github.com/JuanLunaIA/aegis-latent-core"
 Changelog = "https://github.com/JuanLunaIA/aegis-latent-core/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
-packages = ["aegis", "integrations"]
+packages = ["aegis", "aegis_server", "integrations"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

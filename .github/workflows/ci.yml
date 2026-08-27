@@ -365,6 +365,11 @@ jobs:
         env:
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
         run: cargo test --release
+      - name: Clippy (all targets and features)
+        working-directory: aegis_rust_v2
+        env:
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
       - name: Build Python wheel (smoke check)
         working-directory: aegis_rust_v2
         env:

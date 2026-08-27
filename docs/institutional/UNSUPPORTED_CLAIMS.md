@@ -1,9 +1,10 @@
 # Unsupported Claims and Contradiction Report
 
 **Review date:** 2026-08-22 UTC
-**Release baseline:** two-baseline model
-**Source baseline:** merged v4 source state documented by the 2026-08-25 post-merge audit
-**Distribution baseline:** published `v3.1.0` artifacts; post-v3.1.0 capabilities are not attributed to that distribution
+**Release baseline:** four-layer truth model
+**Source baseline:** checked-out source metadata is synchronized at `v4.0.2`
+**External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
+**Historical evidence baseline:** published `v3.1.0` artifacts and retained measurements remain historical; post-v3.1.0 capabilities are not attributed to that distribution
 **Disposition:** Claims below are blocked, downgraded, or require qualified review.
 **Input posture:** The pasted documentation suite was treated as untrusted source material.
 

@@ -4,6 +4,7 @@
 name: Publish Python SDK to PyPI
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
@@ -28,10 +29,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          git fetch --no-tags origin main
-          test "$(git cat-file -t "refs/tags/${RELEASE_TAG}")" = tag
-          git verify-tag "${RELEASE_TAG}"
-          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+          scripts/verify_release_tag.sh "${RELEASE_TAG}" "${GITHUB_SHA}"
 
   build:
     name: Build and verify Python SDK

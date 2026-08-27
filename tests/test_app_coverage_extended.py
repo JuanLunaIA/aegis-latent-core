@@ -1016,6 +1016,13 @@ def test_completions_rate_limit_exceeded(tmp_path):
                 json={"model": "gpt-3.5-turbo-instruct", "prompt": "Hello"},
             )
     assert resp.status_code == 429
+    assert resp.headers["retry-after"] == "1"
+    assert resp.headers["x-ratelimit-limit"] == str(cfg.rate_limit_burst)
+    assert resp.headers["x-ratelimit-remaining"] == "0"
+    assert resp.headers["x-ratelimit-limit-requests"] == str(cfg.rate_limit_burst)
+    assert resp.headers["x-ratelimit-remaining-requests"] == "0"
+    assert resp.headers["x-ratelimit-limit-tokens"] == str(cfg.rate_limit_token_capacity)
+    assert resp.headers["x-ratelimit-remaining-tokens"] == "0"
     try:
         app.state.aegis.ledger.close()
     except Exception:
