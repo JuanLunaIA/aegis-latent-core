@@ -3,8 +3,8 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/README.md",
-      "sha256": "f945cd6d7b198e3fac9da4c89d4d4ea6f7a98d761228ff27b8df569c6e9cd06d",
-      "size": 4676
+      "sha256": "c7c8e09375210c5f5dc3006dac09ffe198c76a0c3980fb18ac0f5e2d5e2f01b9",
+      "size": 4827
     },
     {
       "category": "context",
@@ -141,8 +141,8 @@
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_INTEGRATIONS_GUIDE.md",
-      "sha256": "cedffdc2f7c241b403217b9e327f3f71e92d9dcaeacdd1cc27689fd9049a834b",
-      "size": 9849
+      "sha256": "4b0739755b4abb9c9d0d399b394f7d779f7809885cf55e82111684607854b687",
+      "size": 10191
     },
     {
       "category": "governed_input",

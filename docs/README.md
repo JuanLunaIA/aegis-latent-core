@@ -3,9 +3,9 @@
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** checked-out source baseline/release target `v4.0.2` with 14 synchronized anchors, plus historical external observations
 **Source baseline:** `4.0.2` with fourteen synchronized anchors; immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
-**External baseline:** prior lightweight `v4.0.1` tag at `6469904380218584ae0b5221334bc9a46500f5ba` had failed tag workflows; PyPI/npm were observed at `4.0.0` without attributed provenance; source metadata does not establish the external lifecycle state of `v4.0.2`, which requires independent readback
+**External state:** signed annotated `v4.0.2` targets `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`; GitHub Release and GHCR gateway/dashboard readbacks passed on 2026-08-28; PyPI/npm remain at observed `4.0.0` because their trusted-publishing jobs were skipped
 
-This directory distinguishes the current **`4.0.2` source baseline/release target** from historical external observations. The candidate has fourteen synchronized source anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback. The prior public GitHub baseline is lightweight `v4.0.1`, while PyPI/npm were observed at `4.0.0` without attributed workflow provenance. A source version and successful repository checks do not establish a tag, release, package-index upload, container publication, deployment acceptance, production service level, or compliance result.
+This directory distinguishes the current **`4.0.2` source baseline** from historical external observations and the independently verified release objects. The signed tag, GitHub Release asset envelope, GHCR multi-architecture manifests, GitHub attestations, and keyless OCI signatures were read back successfully. PyPI/npm were not published by the dispatched workflows because the repository trusted-publishing enablement variable was not readable and the publish jobs were skipped; their observed public version remains `4.0.0`. A source version, successful repository checks, or a GitHub Release does not establish package-index upload, deployment acceptance, production service level, or compliance result.
 
 ## Start here
 
@@ -19,7 +19,7 @@ This directory distinguishes the current **`4.0.2` source baseline/release targe
 
 ## Baseline rule
 
-Use **source baseline** for statements about code and tests in the checked-out `v4.0.2` source baseline/release target. Use **historical baseline** only for statements tied to named immutable revisions or artifacts. Never transfer a historical benchmark or security result to the checked-out source baseline/release target without a rerun, and never infer publication from source metadata.
+Use **source baseline** for statements about code and tests in the checked-out `v4.0.2` source baseline. Use **verified external object** only for the named signed tag, GitHub Release assets, and GHCR objects recorded in the release report. Use **historical baseline** only for statements tied to named immutable revisions or artifacts. Never transfer a historical benchmark or security result to the checked-out source baseline without a rerun, and never infer PyPI/npm publication from the GitHub Release or source metadata.
 
 ## Technical references
 

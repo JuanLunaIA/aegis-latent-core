@@ -1,6 +1,6 @@
 # Aegis Enterprise Integrations Guide
 
-**Status:** checked-out source baseline/release target `v4.0.2` with fourteen synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
+**Status:** checked-out `v4.0.2` source baseline with fourteen synchronized anchors; signed tag, GitHub Release asset envelope, and GHCR gateway/dashboard objects were independently read back on 2026-08-28; PyPI/npm remain observed at `4.0.0` because trusted-publishing jobs were skipped
 
 **Claim boundary:** Source support and tests do not prove target-environment availability, regulatory retention, identity-provider correctness, legal admissibility, trusted publishing, or production readiness.
 
@@ -19,7 +19,7 @@ Built-in roles grant only the following scopes: `admin` grants all declared scop
 
 ## 2. Distributed request and token quotas
 
-The v4 candidate uses atomic request and generated-token buckets keyed by a SHA-256 pseudonym of authenticated tenant and credential identity. Session and tenant headers cannot reset these buckets. Redis mode executes one Lua transaction over both buckets and uses Redis `TIME`, avoiding host-clock disagreement. Memory mode is process-local and is not a distributed enforcement claim.
+The v4.0.2 source uses atomic request and generated-token buckets keyed by a SHA-256 pseudonym of authenticated tenant and credential identity. Session and tenant headers cannot reset these buckets. Redis mode executes one Lua transaction over both buckets and uses Redis `TIME`, avoiding host-clock disagreement. Memory mode is process-local and is not a distributed enforcement claim.
 
 The gateway reserves the configured output maximum before forwarding. Non-streaming responses refund only when the authenticated upstream returns a valid provider usage count. Streaming retains the reservation because terminal event counting is not treated as authoritative billing telemetry. Responses expose generic request-bucket fields (`X-RateLimit-Limit`, `X-RateLimit-Remaining`) plus request/token dimension-specific fields; 429 responses add finite `Retry-After` when a reset can be computed.
 
@@ -45,11 +45,11 @@ The Python SDK includes optional LangChain and LlamaIndex callback adapters. The
 
 ## 6. Publishing and OCI boundaries
 
-The PyPI and npm workflows build and test exact SDK artifacts, require a signed annotated `v*` tag, require the peeled tag commit to be reachable from `origin/main`, pass artifacts by commit-specific names, and grant OIDC only in environment-gated publish jobs. Publication also requires repository variable `AEGIS_TRUSTED_PUBLISHING_ENABLED=true`. Leaving the variable unset keeps publication disabled.
+The PyPI and npm workflows build and test exact SDK artifacts, require a signed annotated tag plus its full expected target, verify the tag from protected `main`, check out the exact signed source commit, pass artifacts by commit-specific names, and grant OIDC only in environment-gated publish jobs. Publication also requires repository variable `AEGIS_TRUSTED_PUBLISHING_ENABLED=true`; the v4.0.2 dispatches built successfully but skipped their publish jobs, so PyPI/npm remain at the observed `4.0.0`.
 
 External setup is mandatory: configure protected immutable tag rules, signing-key trust, GitHub environments and reviewers, PyPI/npm trusted-publisher identities bound to the exact workflow and environment, package ownership, and registry policy. The repository cannot prove those controls. The dashboard image accepts credentials only at runtime; credentials are not Docker build arguments.
 
-Historically, public `v4.0.1` is a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`, and public `aegis-latent-sdk` version `4.0.0` registry objects do not establish that its failed tag-triggered workflows produced them. The `4.0.2` candidate must not be described as externally published until tag, release, package, and OCI readback succeeds. The lightweight tag does not satisfy `git verify-tag`. No WORM certification, SLSA level, legal-admissibility statement, or production-readiness assertion follows from their existence.
+Historically, public `v4.0.1` is a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`, and public `aegis-latent-sdk` version `4.0.0` registry objects do not establish that its failed tag-triggered workflows produced them. The signed `v4.0.2` tag, GitHub Release, asset hashes, GHCR manifests, GitHub attestations, and Cosign signatures were read back successfully; PyPI/npm publication was not observed because the publish jobs were skipped. The lightweight historical tag does not satisfy `git verify-tag`. No WORM certification, SLSA level, legal-admissibility statement, or production-readiness assertion follows from these objects.
 
 ## 7. External acceptance checklist
 
@@ -62,8 +62,8 @@ Historically, public `v4.0.1` is a lightweight tag targeting `6469904380218584ae
 | TSA | Approved HTTPS TSA, CA/revocation/policy configuration, timestamp renewal and offline verification | External acceptance required |
 | SIEM/OTel | Endpoint authentication, egress policy, spool capacity, downstream parsing, outage and recovery drill | External acceptance required |
 | Registries | Trusted-publisher binding, environment protection, signed-tag policy, package ownership | External acceptance required |
-| OCI | Execute and verify the candidate multi-architecture gateway/dashboard build, SBOM, provenance, keyless signatures, architecture smoke tests, and rollback in target GHCR | External acceptance required |
-| Release | Full CI/security/formal/docs/dependency gates plus required human/domain approvals | Not yet accepted |
+| OCI | Execute and verify the v4.0.2 multi-architecture gateway/dashboard build, SBOM, provenance, keyless signatures, architecture smoke tests, and rollback in target GHCR | Build, attestation, and signature readback passed; smoke/rollback acceptance required |
+| Release | Full CI/security/formal/docs/dependency gates plus required human/domain approvals | GitHub Release and asset readback passed; package publication remains unavailable |
 
 ## 8. Falsification criteria
 
