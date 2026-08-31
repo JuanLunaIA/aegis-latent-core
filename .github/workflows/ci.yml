@@ -475,7 +475,7 @@ jobs:
           output-file: sbom.spdx.json
       - name: Attest source SBOM
         if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-        uses: actions/attest-sbom@bd218ad0dbcb3e146bd073d1d9c6d78e08aa8a0b # v2
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
         with:
           subject-path: aegis-source-${{ github.sha }}.tar.gz
           sbom-path: sbom.spdx.json
