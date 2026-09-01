@@ -236,6 +236,34 @@ Production approval must be denied until each applicable gate has a named human 
 | Evidentiary use | Intended use, custody, preservation, verifier, authentication, testimony, legal hold, and jurisdiction analyzed | Litigation/regulatory counsel when applicable | “Court-admissible” or equivalent conclusion without jurisdiction-specific legal basis |
 | Production authorization | All prior gates closed; residual risk accepted; rollout and kill criteria approved | Buyer accountable executive | Any blocking gate open |
 
+### 10.1 Vendor-risk questionnaire alignment (SIG and CAIQ)
+
+Third-party risk teams normally issue a Shared Assessments **SIG** or a Cloud Security Alliance **CAIQ**. Both instruments assume a vendor that *operates a service and processes customer data*. For a self-hosted AGPL deployment that assumption does not hold, and answering as though it did produces a materially misleading assessment in both directions.
+
+The determining question is the deployment model, and it must be settled before a single control is answered:
+
+| Deployment model | Who operates the runtime | Who processes customer data | Whose control environment is under assessment |
+|---|---|---|---|
+| Self-hosted open source | The customer | The customer, plus the chosen upstream model provider | The customer's own environment; the project supplies software, not operations |
+| Self-hosted with a commercial agreement | The customer | The customer, plus the upstream provider | The customer's environment; the agreement covers software, guidance, and defined engineering scope |
+| Managed or hosted service | Not offered | Not applicable | No such offering exists in this repository |
+
+Because no managed service is offered, whole SIG and CAIQ domains are **not applicable to the project as a vendor** and are instead inherited by the deploying organisation. Answering them "compliant" would misattribute the customer's own controls to the software supplier.
+
+| Questionnaire domain | Correct respondent | Project-side contribution | Answer discipline |
+|---|---|---|---|
+| Datacentre and physical security | Customer / their cloud provider | None | Mark not applicable to the project; do not claim inherited cloud certifications as project controls. |
+| Business continuity and disaster recovery | Customer | Backup, restore, and rollback runbooks in DOC-04 | Documented procedure is not a tested recovery objective; no RTO/RPO is committed. |
+| Identity and access management | Customer | API-key, OIDC, and pinned-mTLS principal derivation | Mechanisms exist; IdP policy, joiner-mover-leaver, and privileged access are the customer's. |
+| Encryption and key management | Customer | HMAC keyring, optional PKCS#11 and Vault paths | Key custody, ceremony, and rotation authority are the customer's. No validated cryptographic module status is claimed. |
+| Application security and SDLC | Project | Pinned CI actions, SBOM, dependency and container scanning, signed release tag, reproducible source contract | Supply-chain gates are real and citable; they are not a penetration test or an independent audit. |
+| Logging and monitoring | Shared | Named metrics and durable evidence model | The project supplies signals; retention, alerting, and response are the customer's. |
+| Subprocessors and data transfer | Customer | None | The upstream model provider is the customer's subprocessor decision, not the project's. |
+| Incident response | Shared | Vulnerability intake in `SECURITY.md`, DOC-04 runbooks | The project handles software defects. Operational incident response and breach notification are the customer's. |
+| Independent certification (SOC 2, ISO 27001) | Neither | None | No certification exists. State this plainly rather than citing a roadmap as partial credit. |
+
+The correct posture in a diligence pack is therefore: answer the software-supply-chain and application-security domains with citable repository evidence; mark operational domains as customer-owned with a pointer to the relevant runbook; and record explicitly that no certification, attestation, or independent audit report exists. A questionnaire returned with unqualified affirmative answers across operational domains is a finding against the respondent, not a strength.
+
 ## 11. Cost-to-serve and quote input schedule
 
 No monetary values, margins, ROI, or validated package prices are supplied. A quote should be built from observable drivers and named assumptions rather than a generic tier label.
@@ -271,6 +299,40 @@ A defensible quote must state the legal entity, term, package stage, environment
 | Acceptance plan | Tests, environment, workload, evidence, thresholds, exceptions, approvers, and retest procedure | Framework supplied in Section 6; values must be agreed |
 | Business continuity and exit | Backup/restore, continuity, termination, transition, data return/deletion, evidence verification, source/escrow if negotiated, and key continuity | Requires operational and legal design |
 | Claim and assurance schedule | Approved claims, artifacts, boundaries, falsification criteria, independent reports, and usage rights | Claim register supplied below; transaction-specific claims require review |
+
+### 12.1 Statement of work template
+
+This is a drafting skeleton for a fixed-scope engagement. Every angle-bracketed field is a value the parties must supply; an unfilled field is a defect, not a default. The template deliberately contains no price, no duration, and no service commitment, because none of those is established by this repository.
+
+| SOW section | Required content | Failure mode if omitted |
+|---|---|---|
+| Parties and authority | Legal entities, signatories, and the named technical owner on each side | Escalation stalls when a decision is needed mid-engagement. |
+| Scope statement | The single workload under evaluation: `<application>`, `<upstream provider and model>`, `<request classes>` | Scope creep converts a fixed engagement into an unbounded one. |
+| Environment definition | `<cluster or host topology>`, `<storage backend>`, `<signer configuration>`, `<enforcement mode>` | Results become unattributable; a measurement without a named environment is not evidence. |
+| Data handling | Whether production data, masked data, or synthetic data is used; who may access it; where it resides | Privacy review cannot proceed and a lawful-basis gap surfaces late. |
+| In-scope deliverables | Enumerated artifacts, for example a deployment checklist, an evidence-replay walkthrough, and a written findings record | Disputes about "done" at the end of the engagement. |
+| Explicit exclusions | Items expressly not delivered: certification, legal opinions, capacity guarantees, production operation, round-the-clock response | Buyer assumes assurance that was never offered. |
+| Acceptance criteria | The measurable tests of §12.2, each with a named environment and a pass threshold agreed in advance | Acceptance becomes a matter of opinion. |
+| Assumptions and dependencies | Customer-supplied access, credentials, upstream quota, and review availability | Delay is attributed to the wrong party. |
+| Change control | How scope changes are proposed, priced, and approved in writing | Informal expansion without agreement. |
+| Term and termination | Start, end, and the effect of termination on delivered artifacts and licences | Ambiguity over retained rights and evidence. |
+| Licensing basis | Which licence governs the engagement output: AGPLv3 or the commercial licence, with the boundary stated | Downstream distribution obligations discovered after deployment. |
+| Support boundary | What response means during the engagement, in business hours, with named exclusions | Buyer infers an operational service level that does not exist. |
+
+### 12.2 Pilot acceptance criteria
+
+Acceptance tests must be falsifiable, measured in a named environment, and agreed before the pilot starts. The following are the technical criteria the architecture actually supports; each states its own falsification condition.
+
+| Criterion | Definition | Measurement method | Pass condition | Falsified by |
+|---|---|---|---|---|
+| Evidence completeness | Every admitted governed request yields exactly one durable evidence node before its response is returned | Reconcile admitted-request identifiers against committed ledger nodes over the pilot window | Ratio of committed nodes to admitted governed requests equals 1.0, with zero responses returned under a `durable` header lacking a node | Any accepted governed response without a corresponding committed node |
+| Chain and frame integrity | No torn frame or broken linkage in the pilot's evidence | `verify_integrity()` sweep over the retained window, plus a full native-WAL read that reaches the final committed frame without CRC truncation | Sweep returns clean; the WAL loader reads every frame written during the window; `aegis_native_stream_wal_errors_total` is zero | A non-zero counter, a CRC-truncated read, or a first-violation index from the sweep |
+| Terminal-commit ordering under streaming | The terminal marker is never emitted before its summary commit returns | Inspect emitted byte order for a sample of streams, including induced commit failures | No stream emits its terminal marker without a preceding successful terminal commit | A terminal marker observed on a stream whose commit raised |
+| Redaction under backpressure | Supported identifier classes stay redacted when the queue is saturated and identifiers are split across chunk boundaries | Replay a fixture corpus with identifiers deliberately fragmented across SSE chunks, while driving the queue to its byte ceiling | Zero unredacted occurrences of the supported classes in emitted bytes; holdback bound never exceeded without a fail-closed error | Any supported identifier released in cleartext, or a silent release past the holdback bound |
+| Bounded memory under load | Per-stream retained memory stays within the declared ceiling | Observe retained-byte accounting against `R_max = 4W + Q + E + P` for the configured parameters | Observed retained bytes never exceed the declared per-stream ceiling | Any stream exceeding the ceiling, or growth proportional to response length |
+| Failure transparency | Upstream and storage faults are recorded rather than masked | Inject upstream errors and storage faults; inspect resulting evidence and headers | Every injected fault produces a recorded outcome and no false `durable` claim | A fault that yields a success claim or no record |
+
+Two constraints on interpretation. First, a pilot pass is evidence about **the named environment, workload, and window only**; it is not a capacity result, an availability result, or a statement about any other deployment. Second, none of these criteria is a compliance, certification, or admissibility outcome, and no pilot report should be drafted as though passing them produced one.
 
 ## 13. Controlled material claim register
 

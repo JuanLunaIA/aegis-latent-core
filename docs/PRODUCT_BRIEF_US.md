@@ -58,6 +58,20 @@ Portkey, Helicone, LiteLLM and Protect AI provide directional market signals aro
 
 Aegis is not an LLM, a complete model-safety system, a universal WAF, an authorization to process regulated data, a SOC 2 report, a HIPAA determination, a FedRAMP authorization, an EU AI Act conformity assessment, GDPR legal basis, FIPS 140 validation, a court-admissibility ruling, or a substitute for customer identity, network, privacy, retention or incident-response controls.
 
+## Value framing by stakeholder
+
+Each row states what the role gains, the single artifact that role should verify first, and the claim that role must not carry into an internal business case. The third column is the operative one: most failed evaluations trace to a stakeholder assuming a property from an adjacent column.
+
+| Stakeholder | What the gateway offers this role | Verify first | Must not be claimed by this role |
+|---|---|---|---|
+| CISO / AppSec lead | A governed admission path and a tamper-evident record of what was asked and answered, with failure paths that fail closed rather than silently degrade | The threat model's non-goals, then its controls | Certification, independent audit, protection against a host-root or hypervisor adversary, or prevention of prompt injection |
+| Platform / SRE engineer | Deterministic, bounded resource behavior per stream, named metrics, and written runbooks for stall, corruption, rotation, and rollback | The topology boundary matrix for the intended deployment | An availability target, a recovery objective, capacity, or evidence continuity across failover |
+| AI / data engineer | An OpenAI-compatible surface and native Anthropic route with drop-in clients, plus bounded incremental redaction that settles identifiers before release | Drop-in behavior and redaction scope against your own traffic | Any latency or throughput figure not measured on your workload, or detection of identifier classes outside the supported grammars |
+| Chief compliance officer / legal counsel | Technical inputs that may contribute to a control narrative: retention controls, minimisation by hashing rather than body storage, and a signed, linked record | The regulatory dossier read as contribution mapping | Conformity, certification, safe-harbour status, admissibility, or resolution of an erasure obligation |
+| CFO / procurement director | A self-hosted deployment with no per-token metering, an inspectable licence boundary, and a quote built from named cost drivers | The licence path and the cost-driver input schedule | Observed contract value, return-on-investment percentage, avoided fines, customer counts, or a valuation |
+
+Two cross-cutting cautions. First, the runtime is customer-operated in every supported model, so operational cost, availability, and recovery belong to the buyer regardless of which commercial tier is selected. Second, the evidence model records governed interactions; it does not evaluate whether a model's answer was correct, safe, or appropriate, and no stakeholder should present it as a quality or safety assurance for model output.
+
 ## Buyer diligence questions
 
 A buyer should ask which HTTP/2 component owns normalization, which storage system provides durability, how key custody and rotation are performed, how a response is correlated with exactly one evidence record, what happens when Redis or the signer is unavailable, how a three-replica rotation is verified, and what independent review has been completed. The repository provides explicit answers and marks missing evidence rather than filling gaps with marketing language.

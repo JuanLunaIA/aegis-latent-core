@@ -125,6 +125,37 @@ The code historically used `Admissible`, `Conditional`, and `Compromised` labels
 
 FRE 902(13)/(14) can permit authentication by certification, but case-specific certification, notice, declarant qualification, process foundation, objections, and other evidence rules remain necessary. A cryptographic hash can support sameness; it does not prove truth, authorship, lawful acquisition, relevance, or absence of hearsay.
 
+### 5.7 MiFID II record-keeping and clock synchronisation
+
+`[LEGAL-REVIEW-REQUIRED]` A frequent drafting error must be corrected before any mapping is attempted. **RTS 25** — Commission Delegated Regulation (EU) 2017/574 — governs the **level of accuracy of business clocks**: maximum divergence from UTC and timestamp granularity for reportable events. It is *not* the order record-keeping instrument. Order record-keeping sits under RTS 24 (Delegated Regulation (EU) 2017/580), and the recording of telephone and electronic communications sits under MiFID II Article 16(7) with Article 76 of Delegated Regulation (EU) 2017/565. Citing RTS 25 for "order and communication records" conflates three distinct obligations and must not appear in customer-facing material.
+
+| Obligation area | What the instrument concerns | Possible Aegis technical contribution | Status | What Aegis does **not** establish |
+|---|---|---|---|---|
+| Clock accuracy (RTS 25) | Divergence from UTC and timestamp granularity for reportable events | Records carry timestamps and a monotonic in-process append order; RFC 3161 exchanges can be persisted where configured | `CONFIGURATION-DEPENDENT` | Aegis performs **no** UTC traceability, no clock-divergence measurement, and no NTP/PTP discipline. Host clock accuracy is entirely a platform property. A recorded timestamp is not a compliant business-clock timestamp. |
+| Order record-keeping (RTS 24) | Prescribed order-lifecycle fields and retention | Governed request/response evidence with hashes, identifiers, and chain linkage | `ROADMAP` | Aegis has no order model, no instrument or venue identifiers, and no field-level mapping to the prescribed schema. It is not an order record-keeping system. |
+| Communication recording (Art. 16(7)) | Capture and retention of client-related communications | Where an LLM interaction is itself in scope, the gateway can record a hash-linked, signed account of it | `LEGAL-REVIEW-REQUIRED` | Whether an LLM interaction constitutes a recordable communication is a legal determination. Aegis does not decide scope, retention period, or supervisory access. |
+
+The single most consequential boundary in this section is clock trust. An evidence record's usefulness for a timing obligation depends on the accuracy and traceability of the clock that produced its timestamp, and Aegis inherits the host clock without measuring or attesting it. Any firm intending to rely on these records for a timing obligation must supply its own synchronised, traceable time source and its own evidence of divergence bounds. That evidence is external to this repository.
+
+### 5.8 GDPR data minimisation, storage limitation, and the erasure tension
+
+`[LEGAL-REVIEW-REQUIRED]` Aegis processes content that may contain personal data. Nothing in this section is a legal basis, an adequacy finding, a DPIA, or advice; the controller determines lawfulness, and the controller/processor allocation depends on the deployment.
+
+| Principle | Article | Technical contribution | Status | Boundary |
+|---|---|---|---|---|
+| Data minimisation | Art. 5(1)(c) | Ledger nodes store cryptographic digests and bounded metadata rather than full request/response bodies; the de-identifier can remove supported identifier classes before release | `IMPLEMENTED` as a mechanism | Minimisation is judged against the controller's purpose, not against a hashing choice. Payloads still exist in process memory and are forwarded to the upstream provider. |
+| Storage limitation | Art. 5(1)(e) | Retention windows and segment rotation are configurable; see [`DATA_RETENTION.md`](../privacy/DATA_RETENTION.md) | `CONFIGURATION-DEPENDENT` | Aegis enforces the retention parameters it is given. Choosing a lawful period, and applying it across backups, replicas, and exports, is the controller's duty. |
+| Integrity and confidentiality | Art. 32 | Signing, chain linkage, MMR roots, transport and access controls | `CONFIGURATION-DEPENDENT` | Appropriateness under Art. 32 is a risk assessment, not a feature list. |
+| Data protection by design | Art. 25 | Hash-not-body evidence model and fail-closed redaction bounds | `IMPLEMENTED` as a design property | Art. 25 compliance is assessed over the whole processing operation, not one component. |
+
+**The erasure tension must be surfaced rather than finessed.** An append-only, hash-linked, signed ledger is deliberately resistant to selective modification. That property is what makes it useful as evidence, and it is in direct structural tension with the right to erasure (Art. 17) and the right to rectification (Art. 16) when a record's content falls within scope. Three facts frame the tension honestly:
+
+1. Deleting or editing a node breaks chain linkage and invalidates the MMR root for every subsequent record. There is no supported selective-redaction-with-preserved-proof operation in this repository.
+2. A digest of personal data is generally treated as pseudonymised rather than anonymous where re-identification remains reasonably likely — a hash of a low-entropy identifier is vulnerable to confirmation by guessing. Storing digests instead of bodies reduces exposure; it does not automatically remove the data from scope.
+3. Where an exemption is relied upon — for example a legal-obligation or establishment-of-legal-claims ground — that reliance is a controller decision documented by the controller, and it must be made **before** the ledger is used for in-scope personal data, not after an erasure request arrives.
+
+The practical consequence for architecture review: decide what may enter the governed evidence path in the first place. Retention design, minimisation at ingestion, and the lawful basis for retaining evidence are all upstream controls. No configuration of this gateway resolves an erasure obligation once an in-scope record has been committed and anchored.
+
 ## 6. Material claim register
 
 | Claim ID | Status | Controlled claim | Repository locator | Falsification or acceptance test | Human owner |

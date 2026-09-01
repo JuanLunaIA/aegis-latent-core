@@ -109,6 +109,37 @@ C(o)=\operatorname{UTF8}(\operatorname{JSON}(o,\;\text{sort\_keys}=\text{true},\
 
 followed by `SHA-256(C(o))`. This exact pattern appears in `aegis/core/rfc3161_timestamper.py:480-515`, `aegis/core/forensic_pdf_report.py:109-119`, `aegis/core/iso27037_evidence.py:305-331`, and `aegis/core/dfir_export.py:478-479`. It is deterministic for the accepted Python object and serializer behavior, but it is not presented as RFC 8785 JSON Canonicalization Scheme.
 
+### 5.1 Peak bagging and the portable inclusion proof
+
+An MMR over `n` leaves decomposes into a forest of perfect binary trees whose heights are the set bits of `n`. The number of peaks is therefore exactly the population count of the leaf count, and the implementation enforces this as a verification predicate rather than treating it as an informal property (`aegis/core/mmr.py:255`):
+
+\[
+|\mathrm{peaks}| = \operatorname{popcount}(n).
+\]
+
+Bagging orders peaks by **descending height**, concatenates their hexadecimal text, and hashes once (`aegis/core/mmr.py:211`; Rust parity at `aegis_rust_v2/src/mmr.rs:111-114`):
+
+\[
+\mathrm{root} = \operatorname{hex}\left(\operatorname{SHA256}\left(\operatorname{UTF8}\left(p_1 \mathbin{\|} p_2 \mathbin{\|} \cdots \mathbin{\|} p_k\right)\right)\right).
+\]
+
+The portable proof is a self-contained envelope that a verifier can check without any local MMR state. Its exact field set is fixed by `MMRInclusionProofV1` (`aegis/core/mmr.py:216-225`) and pinned by the cross-language vector corpus `sdk/shared/mmr-inclusion-v1.json`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `version` | string | Literal `aegis-mmr-inclusion-v1`; any other value fails closed. |
+| `algorithm` | string | Literal `sha256-asciihex`; records that concatenation occurs over hexadecimal text, not decoded digests. |
+| `leaf_index` | integer | Zero-based index of the disclosed leaf; must satisfy `0 <= leaf_index < leaf_count`. |
+| `leaf_count` | integer | Total leaves at proof time; fixes the peak structure through its population count. |
+| `path` | array | Ordered sibling steps from leaf to its peak; each step is `{"direction": "L"｜"R", "sibling_hash": <hex>}`. |
+| `peak_index` | integer | Index, within the descending-height peak list, of the peak that roots the disclosed leaf. |
+| `peaks` | array | Full descending-height peak list as `{"height": h, "hash": <hex>}`. |
+| `root` | string | Bagged root the proof reconstructs to. |
+
+Verification is strict and ordered (`aegis/core/mmr.py:239-257`): the leaf digest must be SHA-256 hexadecimal; `version` and `algorithm` must match their literals; index bounds must hold; the supplied `trusted_root` must itself be SHA-256 hexadecimal **and** equal `proof.root`; the peak count must equal `popcount(leaf_count)`; and `peak_index` must address a real peak. Only then is the path folded and the peak list bagged.
+
+Two consequences follow and are easy to state incorrectly. First, `verify_portable_inclusion_hash` accepts a **leaf digest** rather than leaf bytes, so a verifier can confirm membership without receiving the underlying record content; this is a disclosure-minimising interface, **not** a zero-knowledge proof, and the digest still identifies the record to anyone holding it. Second, the `trusted_root` argument is compared for equality with the root inside the envelope, so the proof establishes inclusion **relative to a root the verifier already trusts by other means**. Supplying the envelope's own root as the trusted root is circular and proves only internal consistency. Establishing that a root is the authentic root at a point in time requires an external anchor and is outside this construction.
+
 ## 6. MMR audit findings
 
 `MerkleMountainRange.add_leaf` hashes raw leaf bytes, merges equal-height rightmost peaks, and stores parent/child relations at `aegis/core/mmr.py:40-77`. `get_root_hash` sorts peaks by height descending and hashes their concatenated text at `aegis/core/mmr.py:79-90`. The Rust implementation mirrors those transformations at `aegis_rust_v2/src/mmr.rs:60-115`.
@@ -136,6 +167,20 @@ Signing uses the active record and returns its non-secret key ID. Verification e
 The retained `evidence/execution_2026-08-20/key_rotation_report.json:1-24` records 2,033 records across three independent local signer instances, both old and new key IDs, zero failed commits, zero unverifiable records, and mode `0o600`. Its own boundary states `LOCAL_ONLY` and excludes Kubernetes, secret-manager propagation, clock skew, and orchestrator restart. The operator sequence and release gates are specified in `docs/operations/KEY_ROTATION_RUNBOOK.md:16-65`. A production rotation must not be approved from the local artifact alone.
 
 Operationally, key creation and custody belong to an approved secret manager; only the versioned file snapshot crosses into this signer. The deployment owner must atomically install a complete file, maintain an overlap window long enough for historical verification, observe the active key ID, reject any secret in logs, and roll back to the previous valid snapshot if any committed record becomes unverifiable. Distributed propagation and deletion require separate evidence.
+
+### 8.1 PKCS#11 HSM interface and its fail-closed boundary
+
+The legacy HSM backend is an adapter to a PKCS#11 token, not a key-management system. Its governing rule is stated in the module contract: when `python-pkcs11` is absent, the configured library is unusable, or the token cannot be reached, signing **fails closed**, and any software-signing fallback is a separate explicit policy rather than an automatic degradation (`aegis/core/hsm.py:9-11`).
+
+| Property | Implemented behavior | Locator |
+|---|---|---|
+| Dependency probe | Module-level lazy import guard sets `_PKCS11_AVAILABLE = False` on `ImportError`; the import is deferred because the binding requires CFFI/libffi at load time. | `aegis/core/hsm.py:44-51` |
+| Unavailable backend | `sign` raises `HSMUnavailableError` rather than returning an unsigned or software-signed result. | `aegis/core/hsm.py:165-180` |
+| Transient token fault | One session refresh is attempted; if the retry also fails, `HSMUnavailableError` propagates. | `aegis/core/hsm.py:186-191` |
+| Key selection | The private key object is addressed by its `CKA_LABEL` within the token. | `aegis/core/hsm.py:76` |
+| Declared mechanisms | `pkcs11-rsa-pss-sha256` (RSA-PSS, MGF1-SHA-256, salt length 32) and `pkcs11-ecdsa-sha256`. | `aegis/core/hsm.py:171-172` |
+
+Boundary. Repository tests exercise this adapter through injected PKCS#11 mocks. Mock-driven tests establish adapter control flow — that unavailability raises, that a refresh is attempted once, that a labelled key is requested — and nothing more. They do not establish vendor interoperability, private-key non-exportability, token side-channel behavior, availability under load, key-ceremony correctness, operator separation of duties, or any FIPS validation status. Every one of those properties is **`CONFIGURATION-DEPENDENT`** on a named device in a named deployment and requires target acceptance evidence from the HSM owner. Presence of this interface is not evidence that an HSM is in use.
 
 ## 9. ML-DSA-65 boundary
 
@@ -176,6 +221,36 @@ The repository has multiple serialization paths. They must not be conflated:
 The forensic report builder accepts `integrity_status` and `legal_admissibility` arguments and defaults them to `UNCHECKED` and `Conditional` (`aegis/core/forensic_pdf_report.py:184-235`). A report seal binds those values but does not validate their truth. Tests correctly demonstrate that a changed field changes or invalidates a seal (`tests/test_forensic_pdf_report.py:296-319`), while separate tests demonstrate that caller-selected admissibility strings are retained (`tests/test_forensic_pdf_report.py:349-397`).
 
 The ISO-style evidence builder snapshots the ledger, calls `verify_integrity`, copies node and custody metadata, allows an explicit legal-admissibility override, then computes an unkeyed SHA-256 seal (`aegis/core/iso27037_evidence.py:343-459`). Tests cover tampering, deterministic sealing of an unchanged object, JSON round-trip, custody re-sealing, and override coverage at `tests/test_iso27037_evidence.py:413-501,580-626,716-883`. These are useful technical controls. They do not authorize the override, establish examiner competence, or determine admissibility under any jurisdiction.
+
+### 12.1 Deterministic binary encoding and content identifiers
+
+The forensic bundle exposes two canonicalisation paths and one content-identifier derivation. They serve different purposes and must not be substituted for one another.
+
+| Function | Standard | Output | Locator |
+|---|---|---|---|
+| `canonical_jcs_bytes` | RFC 8785 (JCS) | Canonical JSON text bytes over a restricted domain | `aegis/core/forensic_bundle.py:131-133` |
+| `canonical_dag_cbor_bytes` | RFC 8949 (CBOR), DAG-CBOR profile | Deterministic binary encoding | `aegis/core/forensic_bundle.py:136-146` |
+| `dag_cbor_cid` | CIDv1 + multihash + multibase | Base32 content identifier string | `aegis/core/forensic_bundle.py:125-128,149-151` |
+
+**Admissible value domain.** DAG-CBOR determinism is only achievable if ambiguous values are refused rather than coerced. `_dag_cbor_value` fails closed on every ambiguity (`aegis/core/forensic_bundle.py:76-110`): non-finite floats (`NaN`, `±Inf`), negative zero, map keys that are not strings, strings or keys that are not encodable as Unicode scalar values (lone surrogates), integers outside native CBOR bounds, and any unsupported Python type. Each raises `ForensicBundleError`. This is the mechanism that makes the encoding reproducible; it is not a schema validator and does not check semantic correctness of the evidence.
+
+**Float determinism.** CBOR permits half, single, and double precision for the same numeric value. The encoder overrides float serialization to emit major type 7 with additional information 27 unconditionally — the literal prefix byte `0xfb` followed by eight big-endian IEEE-754 bytes (`aegis/core/forensic_bundle.py:139-141`). Every float therefore has exactly one encoding, removing the most common source of CBOR non-determinism. Map ordering determinism comes from `canonical=True`.
+
+**CIDv1 derivation.** The identifier is assembled from four unsigned varints followed by the raw digest, then multibase-encoded (`aegis/core/forensic_bundle.py:125-128`):
+
+```text
+digest    = SHA-256(payload)                       # 32 bytes
+cid_bytes = varint(0x01)   # CID version 1
+          ‖ varint(0x71)   # multicodec: dag-cbor
+          ‖ varint(0x12)   # multihash function: sha2-256
+          ‖ varint(0x20)   # digest length: 32
+          ‖ digest
+cid       = "b" ‖ base32_lower_unpadded(cid_bytes) # multibase "b"
+```
+
+The leading `b` is the multibase prefix for lowercase base32 without padding; padding is stripped explicitly. The codec byte `0x71` asserts that the hashed bytes are DAG-CBOR, so a CID computed over JCS text would be mislabelled and must not be produced by this path.
+
+**Boundary.** A CID is a deterministic name for bytes. It establishes that two parties hold identical bytes and detects modification of those bytes. It does not by itself establish authorship, time of creation, custody, authorisation, publication to any content-addressed network, or retrievability: nothing in this repository pins a CID to IPFS or any external system. Content addressing is also not confidentiality — an identifier derived from a low-entropy payload is subject to confirmation by guessing. Where the bundle needs authenticity rather than identity, that property comes from the signing and MMR constructions described in sections 7 through 9, not from the CID.
 
 ## 13. Controlled claim register
 

@@ -30,6 +30,73 @@ Aegis is most relevant when an organization wants a provider-independent gateway
 | SRE | What happens when storage stalls? | Non-streaming calls return durable headers only after commit. Streams begin `pending-terminal`; their byte/item-bounded relay commits one terminal summary before the protocol terminal marker. The optional native `RustWal` stream segment is auxiliary, while JSONL remains the replay authority. |
 | Security architecture | What happens when a key rotates? | The versioned keyring supports one active key, historical verification keys with expiry, atomic reload and non-secret key IDs. A production three-replica claim still requires a real deployment run. |
 
+## Role decision frameworks
+
+The table above answers questions. This section sequences them into an ordered evaluation each role can run, with an explicit gate at the end. A gate that cannot be answered from a cited artifact is a **stop**, not a caveat: the correct outcome is to defer the decision until the evidence exists, because every unresolved gate below has been the cause of a late-stage procurement failure in comparable deployments.
+
+### CISO and AppSec lead
+
+| Step | Action | Artifact to demand | Disqualifying finding |
+|---|---|---|---|
+| 1 | Fix the risk tier and the data classes that will transit the gateway | Written data-classification decision | Regulated data admitted before a lawful basis exists |
+| 2 | Read the threat model's non-goals before its controls | `docs/institutional/DOC-03_THREAT_MODEL.md` §5.3 | An assumed control that the non-goals explicitly exclude |
+| 3 | Confirm who is trusted: host root, operators, key holders | Trust-boundary table, DOC-01 §7 | Integrity expectation that survives a hostile administrator |
+| 4 | Establish signer custody and whether symmetric HMAC is acceptable for the intended dispute posture | Key-management design | Non-repudiation expected from a symmetric key |
+| 5 | Review supply-chain gates rather than accepting a summary | Pinned actions, SBOM, signed tag, dependency and container scans | Any claim of certification or independent audit |
+| 6 | Scope an independent security review for the intended tier | Statement of work for that review | Reliance on repository self-assessment alone |
+
+**Gate.** Proceed only when the residual risks are written down, owned by name, and accepted by the accountable executive. No certification, attestation, or independent audit report exists for this project; a review that assumes one has already failed.
+
+### Head of AI and ML engineering
+
+| Step | Action | Artifact to demand | Disqualifying finding |
+|---|---|---|---|
+| 1 | Enumerate the provider surfaces and routes actually used | Integration inventory | A route or provider version outside the tested surface |
+| 2 | Validate drop-in behavior against your own client code | SDK test evidence and a local spike | Divergence in streaming, tool-calling, or error semantics |
+| 3 | Measure added latency on your workload, in your environment | Your own benchmark run | Any performance figure taken from documentation rather than measured locally |
+| 4 | Decide redaction scope: which identifier classes must never leave | De-identifier configuration and window sizing | An identifier class outside the supported bounded grammars |
+| 5 | Test split-boundary and backpressure behavior deliberately | Fixture replay with fragmented identifiers | Cleartext release of an in-scope identifier |
+| 6 | Confirm evidence semantics for streaming responses | Terminal-summary and proof-retrieval walkthrough | An assumption that every SSE event is individually committed |
+
+**Gate.** Proceed only when the redaction scope is explicitly bounded, the residual classes are documented, and latency is measured on your traffic. Provider models and their behavior remain authoritative; the gateway governs and records, it does not change model output quality.
+
+### Platform and SRE owner
+
+| Step | Action | Artifact to demand | Disqualifying finding |
+|---|---|---|---|
+| 1 | Choose a topology and read its evidence semantics first | DOC-01 §8.5 boundary matrix | Multiple workers sharing one WAL path |
+| 2 | Align ingress timeouts with the stream duration bound | Ingress configuration review | Idle timeout shorter than the configured stream bound |
+| 3 | Establish storage durability expectations with the storage owner | Target storage design and acceptance | Reliance on a returned `fsync` as media-survival proof |
+| 4 | Rehearse the corruption-containment and rollback runbooks | DOC-04 §8.4 and §12 executed in a lab | An untested restore or rollback path |
+| 5 | Wire the named metrics and define alert thresholds | DOC-04 §11 metric names | Alerting on inferred rather than implemented metric names |
+
+**Gate.** Proceed only when a named owner has executed backup, restore, rollback, and corruption containment in a non-production environment. No recovery objective is committed by this project.
+
+### Chief compliance officer and legal counsel
+
+| Step | Action | Artifact to demand | Disqualifying finding |
+|---|---|---|---|
+| 1 | Determine controller and processor roles for the deployment | Written data-protection analysis | Assuming the project is a processor in a self-hosted deployment |
+| 2 | Decide the lawful basis for retaining evidence **before** committing in-scope records | Counsel memorandum | Discovering the erasure tension after records are anchored |
+| 3 | Read the regulatory dossier as contribution mapping, not conformity | `docs/institutional/DOC-05_REGULATORY_DOSSIER.md` | Any reading of a mapping row as a conformity conclusion |
+| 4 | Fix retention, residency, and access with the privacy owner | `docs/privacy/DATA_RETENTION.md` and deployment settings | Retention chosen by default rather than by decision |
+| 5 | Record which determinations remain reserved to counsel | Claim register with owners | An expectation that a technical control settles a legal question |
+
+**Gate.** Proceed only when the lawful basis, retention period, and erasure posture are decided in writing. This project makes no certification, conformity, admissibility, or legal-privilege determination, and none may be inferred from any control it implements.
+
+### CFO and procurement director
+
+| Step | Action | Artifact to demand | Disqualifying finding |
+|---|---|---|---|
+| 1 | Establish the licence path: AGPLv3 obligations or a commercial agreement | Open-source review by counsel | Distribution obligations discovered after deployment |
+| 2 | Treat published package ranges as planning hypotheses, not quotes | `docs/COMMERCIAL_STRATEGY_US.md` packaging table | A range cited to the business as an observed market price |
+| 3 | Require a quote built from named cost drivers | DOC-06 §11 input schedule | A tier label priced without an environment and scope |
+| 4 | Separate software cost from the cost you will carry operationally | Your own infrastructure and staffing estimate | Assuming the supplier operates the runtime |
+| 5 | Fix acceptance criteria in the agreement before the pilot starts | DOC-06 §12.2 criteria with agreed thresholds | Acceptance defined after results are known |
+| 6 | Confirm what support actually means, in hours and exclusions | Written support schedule with staffing behind it | An inferred round-the-clock or restoration commitment |
+
+**Gate.** Proceed only when the support boundary is staffed and written, acceptance is measurable and pre-agreed, and no unvalidated financial claim has entered the business case. This project publishes no observed contract value, customer count, return-on-investment percentage, or valuation, and none may be constructed from its documentation.
+
 ## v4.0.2 source forensic verification
 
 The checked-out `v4.0.2` source stores portable `aegis-mmr-inclusion-v1` proofs. Non-streaming responses can carry `X-Aegis-MMR-*` headers; streams provide post-terminal proof retrieval because no completed proof exists in their initial headers. The read-only dashboard exposes retained evidence without fallback sample data and can request a bounded ZIP containing a JCS manifest, canonical DAG-CBOR ledger slice with CIDv1, proof JSON, technical PDF and `VERIFY.sh`. The buyer must pin the trusted MMR root independently, and the export does not determine legal admissibility.

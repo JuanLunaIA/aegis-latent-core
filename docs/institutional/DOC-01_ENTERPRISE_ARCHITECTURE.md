@@ -175,6 +175,48 @@ The corresponding streaming path constructs a `StreamingResponse` with `pending-
 
 If the upstream ends without its terminal marker, the stream finalizes once with `terminal_outcome="upstream_incomplete"`, does not synthesize or emit the terminal marker, and records the hash and size of bytes actually emitted. Initial headers remain `pending-terminal`; callers retrieve proof after terminal commit through the linked proof endpoint. A completed terminal summary therefore binds the observed terminal outcome and exact emitted bytes but does not imply that the upstream completed normally.
 
+### 4.4 Per-stream retained-memory arithmetic
+
+The streaming path is bounded rather than buffered: no code path accumulates the full upstream response in RAM. The proxy retains a rolling SHA-256 state, a bounded queue, a bounded de-identification holdback, and a fixed-size preview. The implemented accessor sums exactly three retained regions (`aegis/proxy/streaming.py:169-172`):
+
+```text
+retained_bytes = queue.retained_bytes
+               + deidentifier.retained_chars * 4
+               + len(preview)
+```
+
+The per-stream ceiling declared by `specs/aegis_stream_buffer.smt2` adds the single in-flight canonical event:
+
+\[
+R_{\max} = 4W + Q + E + P
+\]
+
+| Symbol | Meaning | Implemented bound | Locator |
+|---|---|---|---|
+| `W` | De-identification holdback window in characters | `64 <= W <= 4096`; default `128` | `aegis/core/streaming_deidentifier.py:71-73`; `aegis/proxy/streaming.py:126` |
+| `4W` | Conservative UTF-8 byte cost of the retained character holdback | Four bytes per retained character | `aegis/proxy/streaming.py:171`; `specs/aegis_stream_buffer.smt2:15-16` |
+| `Q` | Byte-accounted queue budget | Operator-configured `queue_max_bytes`; SMT range `1024 … 16777216` | `aegis/proxy/streaming.py:70-99`; `specs/aegis_stream_buffer.smt2:11` |
+| `E` | Largest single canonical SSE event | `max_event_bytes`, constrained `256 <= E <= Q` | `aegis/proxy/streaming.py:403-405`; `specs/aegis_stream_buffer.smt2:12` |
+| `P` | Response preview retained for evidence | `0 <= P <= 65536`; default `65_536` | `aegis/proxy/streaming.py:125,412-414`; `specs/aegis_stream_buffer.smt2:13` |
+
+The holdback is additionally fail-closed: `feed` raises `StreamingDeidentificationError` when pending text exceeds `2W`, and the unbounded URL, magnetic-track, email, and address grammars are rejected rather than released (`aegis/core/streaming_deidentifier.py:100-107,120-157`). The queue refuses any single item larger than its whole byte budget (`aegis/proxy/streaming.py:82-84`).
+
+Boundary. `R_max` is a **per-admitted-stream** ceiling under the declared configuration. It is arithmetic over declared parameters, not a measurement, not an allocator or fragmentation model, and not a process-wide bound: aggregate retained memory scales with the number of concurrently admitted streams, so total footprint remains **`CONFIGURATION-DEPENDENT`** on deployment-level admission and concurrency control. The SMT file checks only this arithmetic; it does not model the Python object graph, interpreter overhead, or TLS buffers.
+
+### 4.5 Failure semantics under degraded infrastructure
+
+| Failure mode | Implemented behavior | Evidence consequence | Classification | Locator |
+|---|---|---|---|---|
+| Slow or stalled `fsync` | The commit runs in a worker thread through `asyncio.to_thread`; the awaiting request does not return until write, flush, and `fsync` return. A stalled device therefore converts into request latency and, for streams, into queue backpressure that blocks the producer rather than growing memory. | No premature `durable` claim; the terminal marker is not emitted. | `CONFIGURATION-DEPENDENT` on filesystem and device | `aegis/core/crypto_audit.py:417-419`; `aegis/proxy/streaming.py:85-92` |
+| `fsync` or signer raises | Handler transitions to `COMMIT FAILURE`; no durable claim is made and, on the streaming path, the terminal marker is withheld. | Absence of evidence is surfaced rather than masked. | `IMPLEMENTED` | `aegis/proxy/app.py:851-857`; `tests/test_proxy_streaming.py::test_commit_failure_omits_done` |
+| Redis unreachable or partitioned | Strict mode converts limiter backend exceptions into `503` instead of admitting unlimited traffic. | Request is rejected pre-admission; no handler evidence node. | `CONFIGURATION-DEPENDENT` | `tests/test_p0_release_gates.py::test_distributed_rate_limit_never_fails_open` |
+| Upstream provider fault or open circuit | Transition to `UPSTREAM ERROR`; the error outcome is itself durably committed before the response is returned. | Failure is evidence-bearing, not silent. | `IMPLEMENTED` | `aegis/proxy/app.py:1145-1184`; `tests/test_app_coverage_extended.py::test_chat_generic_forward_error_is_durably_rejected` |
+| Upstream ends without its terminal marker | Stream finalizes once with `terminal_outcome="upstream_incomplete"`; no marker is synthesized. | Terminal summary binds only the bytes actually emitted. | `IMPLEMENTED` | `aegis/proxy/streaming.py:270-273` |
+| Client disconnects mid-stream | Cancellation is owned by the proxy: the producer is cancelled and a shielded finalize records `client_disconnected`. | Partial delivery is recorded rather than lost. | `IMPLEMENTED` | `aegis/proxy/streaming.py:223-231` |
+| Auxiliary native WAL append fails | The authoritative JSONL summary is committed **first**; the auxiliary append is then attempted. On any exception the counter `aegis_native_stream_wal_errors_total` increments, the event is logged, and `state.native_stream_wal` is set to `None`. | Fail-open for client completion; JSONL remains authoritative. | `IMPLEMENTED` | `aegis/proxy/app.py:701,709-719`; `aegis/core/observability.py:168-171` |
+
+Two properties of the auxiliary-WAL path are frequently misread and are stated explicitly. First, the auxiliary segment is **not** a second authority: the JSONL terminal commit has already returned before the append is attempted, so an auxiliary failure cannot invalidate or reorder committed evidence. Second, the failure handler disables the auxiliary segment for the **remaining lifetime of that process object**, rather than skipping a single frame; a subsequent operator investigation must therefore treat a non-zero counter as "auxiliary capture stopped at first error", not as "one frame missing". Neither property establishes stable-media durability for either file.
+
 ## 5. Evidence and cryptographic data model
 
 For a core ledger node `n_i`, the implementation computes:
@@ -266,6 +308,36 @@ A centralized writer can be an operational design for one total order, but its c
 | Enterprise app with shared SQLite | Awaited row commits; chain race remains | Single request's storage call completed | Concurrent fork-free chain | Database owner |
 | Enterprise app with PostgreSQL/DynamoDB | Awaited backend write; chain race remains | Backend acknowledged individual record under its configuration | Atomic global append or cross-region total order | Database/cloud owner |
 | Dedicated centralized writer | Architectural option only | `ROADMAP` | Available global ordering | Architecture review board |
+
+### 8.6 Active-passive high availability with storage synchronization
+
+No active-passive failover controller, lease manager, or chain-head handover protocol exists in the audited source. This subsection therefore specifies the **evidence semantics an operator would inherit** if they built one on the current implementation; it is an architectural analysis and an acceptance checklist, not a description of shipped behavior.
+
+The controlling fact is that authoritative chain state is process-local. The predecessor hash, the MMR peak set, and the retained node deque live inside one `CryptographicAuditLedger` instance and are rebuilt only from what the WAL loader can read at start (`aegis/core/crypto_audit.py:378-419`). A passive replica that has never loaded the active node's WAL holds no chain head.
+
+| Failover concern | Consequence on the current implementation | Required operator control | Classification |
+|---|---|---|---|
+| Chain-head continuity | A promoted passive starts from whatever its loader reconstructs. If it cannot read the active node's committed WAL bytes, it starts a new chain rather than extending the old one. | Shared or synchronously replicated WAL storage that the promoted node reads before admitting traffic. | `ROADMAP` |
+| Split-brain double-write | Two processes appending to one WAL path is already unsupported for a single ordered chain (§8.2). A failover that admits traffic on the passive while the active still writes reproduces exactly that fork. | Fencing: a lease, `RWO` volume detach, or STONITH that provably stops the old writer before the new one admits traffic. | `ROADMAP` |
+| Replication lag | Asynchronous block or object replication can acknowledge a client response whose evidence bytes have not reached the replica. Committed-then-lost evidence is indistinguishable, after the fact, from never-committed evidence. | Synchronous replication, or an explicit accepted RPO with the evidence custodian. | `CONFIGURATION-DEPENDENT` |
+| MMR reconstruction | Peak state is derived from loaded leaves; a truncated or partially replicated WAL yields a different root. | Verify the reconstructed root against the last root observed on the active node before admitting traffic. | `CONFIGURATION-DEPENDENT` |
+| Retained-window queries | The in-memory deque is not replicated. Proof and forensic-export endpoints on a freshly promoted node serve only what it reloaded. | Treat post-failover retained-window gaps as expected, and source completeness from the WAL rather than the process. | `IMPLEMENTED` limitation |
+
+Safe claim for this topology: *a promoted replica can continue producing verifiable evidence for traffic it admits after promotion.* Prohibited claims: uninterrupted chain continuity across failover, zero evidence loss, or automatic fork avoidance. None of these is established by the current source, and an active-passive design must be accepted by the platform, storage, and evidence-custodian owners before governed traffic is admitted.
+
+### 8.7 Centralized ingress and TLS termination
+
+Aegis does not implement ingress. The gateway is an ASGI application whose transport, TLS termination, HTTP framing, and client-identity headers are supplied by an external controller. The application boundary explicitly excludes the ingress parser (§3), and the client-to-ingress and ingress-to-gateway hops are enumerated as distinct trust boundaries (§7).
+
+| Ingress responsibility | Aegis-side behavior | Residual risk retained by the operator |
+|---|---|---|
+| TLS termination and cipher policy | Not performed by the gateway; optional launch-configuration TLS/mTLS exists for direct exposure. | Certificate lifecycle, revocation, protocol downgrade, and cipher policy are external. |
+| HTTP framing and request smuggling | Request-smuggling middleware and a body limit apply after the ingress has parsed the request. | Ingress and ASGI must agree on framing; HTTP/2 and intermediary parsing differences are not covered by the local WAF corpus. |
+| Client identity propagation | Tenant principals derive from API-key mappings, strict OIDC claims, or pinned mTLS identities rather than from free-form forwarded headers. | A misconfigured ingress that forges or strips identity headers is outside the gateway's detection boundary. |
+| Load distribution | Distribution across replicas interacts directly with §8.3: each replica is its own evidence boundary. | Routing does not create cross-replica order; a single logical session may produce evidence in several independent chains. |
+| Termination of long-lived SSE | Ingress read and idle timeouts can close a stream before its terminal commit. | The proxy records `client_disconnected`; the operator must align ingress timeouts with `max_duration_seconds`. |
+
+The final row is the one most often missed in deployment review: an ingress idle timeout shorter than the configured stream duration bound will systematically truncate long streams, producing a population of `client_disconnected` terminal summaries that reflect ingress policy rather than client behavior. Timeout alignment is an operator acceptance item, and the resulting outcome distribution must not be read as client-side evidence.
 
 ## 9. Formal models and their limits
 
