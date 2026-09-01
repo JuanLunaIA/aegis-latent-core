@@ -60,6 +60,50 @@ annual_floor = (engineering_hours × loaded_hourly_cost)
 
 ROI should be presented as a customer-specific sensitivity model based on evidence-reconstruction effort, provider-switching cost, incident triage time and procurement requirements. Do not promise avoided fines, avoided incidents or a fixed percentage reduction in regulatory risk.
 
+## Unit economics model skeleton
+
+This section supplies **structure only**. Every symbol below is an input the commercial owner must measure; no value is filled in, because this repository holds no customer, cost, pipeline, or renewal data from which one could be derived. A populated version of this model is a business artifact produced after the validation plan runs — it is not a documentation deliverable, and any number appearing here without a cited measurement source should be treated as a defect.
+
+### Input register
+
+| Symbol | Input | How it must be obtained | Status |
+|---|---|---|---|
+| `S_h` | Fully loaded hourly cost of engineering and support staff | Payroll and overhead accounting | Not held in this repository |
+| `E_p` | Engineering hours consumed per pilot | Time logged against a real paid pilot | Requires at least the two pilots named in the validation plan |
+| `E_o` | Recurring support and release hours per production account per year | Logged support and maintenance time | Requires a staffed support window to exist |
+| `I_c` | Infrastructure and lab cost attributable per account | Cloud and lab billing, allocated | Not held in this repository |
+| `A_c` | Assurance cost per account: questionnaires, reviews, remediation | Logged security and legal effort | Not held in this repository |
+| `M_c` | Marketing and demand-generation spend in a period | Marketing ledger | No spend history exists |
+| `Sa_c` | Sales and pre-sales cost in the same period | Sales compensation and pre-sales time | No sales organisation exists yet |
+| `N_w` | New customers won in that period | Signed agreements | Zero observed to date |
+| `P` | Realised annual contract value per account | Executed contracts, not the hypothesis ranges | No executed commercial agreement is recorded |
+| `r` | Annual retention rate | Renewal outcomes across at least one full term | No renewal cycle has elapsed |
+
+### Definitions
+
+```text
+gross_margin      = (P - (E_o × S_h) - I_c - A_c) / P
+CAC               = (M_c + Sa_c) / N_w
+LTV               = (P × gross_margin) / (1 - r)          # r < 1
+payback_months    = CAC / ((P × gross_margin) / 12)
+pilot_cost        = E_p × S_h
+```
+
+The `annual_floor` expression in the previous section is the lower bound that `P` must clear before any of these ratios can be positive; a package priced below its own floor cannot be rescued by volume.
+
+### Interpretation rules
+
+1. **Every ratio is undefined until its inputs are measured.** `N_w` is currently zero, so `CAC` is undefined rather than low. `r` has never been observed, so `LTV` is undefined rather than favourable. Presenting an undefined ratio as an attractive one is the specific failure this section exists to prevent.
+2. **`P` means realised contract value.** The packaging hypothesis ranges are planning inputs, not observations, and must never be substituted for `P` to manufacture a margin or `LTV` figure.
+3. **Self-hosted deployment changes the cost shape.** The customer operates the runtime and pays for its own infrastructure, so `I_c` covers only supplier-side lab and support environments. Gateway request volume is therefore a poor proxy for cost-to-serve; support and assurance effort dominate.
+4. **Assurance cost is not amortised by default.** `A_c` tends to be front-loaded and buyer-specific; a regulated buyer can consume more review effort in one procurement cycle than several unregulated accounts combined. Model it per account, not as a fixed percentage.
+5. **`r` requires an elapsed term.** Retention cannot be estimated from interest, pilots, or intent. Until one full term has elapsed for at least one paying account, `LTV` remains unavailable.
+6. **Nothing in this model is a forecast.** These are accounting identities. They describe how measured inputs combine; they do not predict demand, win rate, or willingness to pay, and they must not be presented to an investor or buyer as evidence of either.
+
+### Publication guardrails
+
+Do not publish CAC, LTV, gross margin, payback, ROI percentages, avoided-fine estimates, avoided-incident counts, or any customer-count claim until the corresponding input is measured and its source is citable. Where a buyer requests an ROI case, supply a customer-specific sensitivity model built from that buyer's own evidence-reconstruction effort, provider-switching cost, and procurement overhead, with the assumptions stated and owned by the buyer. This repository does not contain an evidence-backed vertical ACV, replacement-cost figure, or company valuation, and none may be inferred from this section.
+
 ## Validation plan
 
 The pricing hypothesis should be treated as falsifiable. Before publishing a quote, complete at least the following:

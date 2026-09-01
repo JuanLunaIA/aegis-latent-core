@@ -92,6 +92,29 @@ Test the target ingress, TLS, provider, storage, backup/restore, Redis, secret m
 
 Use the repository verifier and the retained export manifest for the applicable release. Preserve the original bytes and metadata. Offline integrity verification shows that the declared data matches the declared hash/signature chain; it does not establish the truth of the upstream content or legal admissibility.
 
+## What performance overhead does Aegis add?
+
+No general overhead figure is published, and none should be quoted, because overhead depends on your workload, hardware, storage device, provider latency, and configuration. Two retained measurements exist, each valid only inside its declared scope, and both are recorded in [`BENCHMARK_RESULTS.md`](benchmarks/BENCHMARK_RESULTS.md).
+
+| Retained measurement | Scope | Result | What it does not establish |
+|---|---|---|---|
+| Bounded SSE transformation | In-process transform on a recorded sandbox host; 7 rounds × 1,000 deterministic events | First-byte p50 `2.030 ms`, p95 `2.295 ms`; `3,155.654` events/s p50; queue high-water `664` bytes / `8` items; allocation peak `141,338` bytes | Excludes network, provider, and durable-WAL latency. It opens no socket and performs no ledger commit, so it does not establish gateway capacity, end-to-end latency, or an absence of measurable cost. |
+| Backpressure under injected I/O stall | 10,000 offered requests at 10,000 RPS with a 2 ms injected `fsync` delay | 10,000 durable commits, 0 failures, 0 missing identifiers, 0 duplicates, valid chain; p50 `202.136 ms`, p95 `614.083 ms`, p99 `1,189.891 ms` | The queue is explicitly not low-latency under this stall. It is a bounded-behavior gate, not a service level objective, and does not model a real block device. |
+
+The structural point matters more than either number. On the non-streaming path a governed response returns only after its evidence commit, so **storage latency is request latency by design**. Choosing a slow or contended device converts directly into user-visible latency rather than into silent evidence loss. Measure on your own workload before committing to any internal target; do not promote either figure above into a capacity, availability, or service-level claim.
+
+## Is Aegis quantum-ready?
+
+No such claim is made. ML-DSA-65 is reachable through the native Rust dependency when that extension is present, and hybrid key-encapsulation surfaces are documented as boundaries rather than delivered guarantees. Availability of an algorithm is not a migration: key custody, protocol negotiation, interoperability with your counterparties, and provider-side support all remain external.
+
+The repository does not claim a validated implementation, and the retained ML-DSA timing experiment returned `p = 0.0`, so no timing-resistance claim is approved. A p-value above 0.05 in any such experiment would not prove constant-time execution either; it would only mean the experiment did not detect a difference at its declared sensitivity. Treat post-quantum readiness as a programme you run, not a checkbox this gateway satisfies.
+
+## Does Aegis have FIPS validation?
+
+No. There is no FIPS 140-2 or 140-3 validated cryptographic module in this repository, and no validation certificate exists for any component. The cryptographic capability report deliberately labels FIPS validation as absent rather than pending, so that a reader cannot infer partial credit.
+
+If your programme requires a validated module, that requirement is satisfied by the platform you deploy onto — a validated OpenSSL provider, an HSM with its own certificate, or an equivalent — and it must be evidenced by that vendor's certificate, not by this project. Nothing in the gateway's use of SHA-256, HMAC, or an HSM interface confers validation status.
+
 ## Related documents
 
 - [`docs/DEVELOPER_QUICKSTART.md`](DEVELOPER_QUICKSTART.md)

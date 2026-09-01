@@ -6,11 +6,13 @@
 
 ![Aegis Latent Core — verifiable control plane for governed LLM calls](docs/assets/art-hero.png)
 
+[![GitHub Release: v4.0.2 with 31 assets](https://img.shields.io/badge/GitHub%20Release-v4.0.2%20%C2%B7%2031%20assets-blue.svg)](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.2)
 [![Source baseline: 4.0.2](https://img.shields.io/badge/source%20baseline-4.0.2-blue.svg)](pyproject.toml)
 [![PyPI observed: 4.0.0](https://img.shields.io/badge/PyPI%20observed-4.0.0-blue.svg)](https://pypi.org/project/aegis-latent-sdk/4.0.0/)
 [![npm observed: 4.0.0](https://img.shields.io/badge/npm%20observed-4.0.0-blue.svg)](https://www.npmjs.com/package/aegis-latent-sdk)
 [![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
 [![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
+[![Formal verification: Z3, Lean 4, TLA+](https://img.shields.io/badge/formal%20verification-Z3%20%7C%20Lean%204%20%7C%20TLA%2B-success.svg)](scripts/verify_formal_artifacts.sh)
 [![Candidate tests: 5,707 passed](https://img.shields.io/badge/candidate%20tests-5%2C707%20passed-success.svg)](evidence/v4_0_0_release_candidate_gate_2026-08-24.md)
 [![Candidate coverage: 89.72%](https://img.shields.io/badge/candidate%20coverage-89.72%25-success.svg)](evidence/v4_0_0_release_candidate_gate_2026-08-24.md)
 [![License: AGPLv3 or commercial](https://img.shields.io/badge/license-AGPLv3%20or%20commercial-blue.svg)](LICENSE)
@@ -33,6 +35,11 @@
 
 > [!NOTE]
 > **Version status.** The repository source and release candidate is `4.0.2`; fourteen release-contract anchors are synchronized at that version. Its immutable parent/source comparison, `fdace8844568eb788216740b2cb5daf187d99d3b`, has fourteen `4.0.0` anchors. The prior public GitHub baseline remains label `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`, with failed tag-triggered workflows. PyPI and npm were separately observed at `aegis-latent-sdk` version `4.0.0`, but provenance is not attributed to those failed runs. External `v4.0.2` publication must be established by post-publication readback; source metadata alone does not establish it.
+
+> [!NOTE]
+> **Release-envelope readback, 2026-09-01.** A read-only GitHub API readback recorded the following and does not by itself establish registry availability, artifact integrity, or acceptance: the `v4.0.2` GitHub Release exists as a non-draft, non-prerelease entry carrying **31 assets** — `SHA256SUMS`, `release-asset-manifest.json`, two SPDX SBOMs, Python core and SDK wheels plus sdists, the TypeScript tarball, seven `aegis_rust` platform wheels, and a `.sha256` sidecar for each artifact. The annotated tag `v4.0.2` resolves to commit `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca` and carries a Sigstore keyless signature whose certificate identity is the repository's `create_release_tag.yml@refs/heads/main` workflow under issuer `token.actions.githubusercontent.com`.
+>
+> Three limits apply to that readback and must travel with it. GitHub's native signature check reports the tag as unverified with reason `bad_cert`, which is the expected presentation for short-lived Sigstore certificates and means trust requires `gitsign` or `cosign` validation against the transparency log rather than the GitHub badge. Asset bytes were not downloaded, so `SHA256SUMS` was not checked and no artifact digest was confirmed. PyPI and npm remain observed at `4.0.0`, so the presence of assets in a release envelope is not registry publication.
 
 > [!IMPORTANT]
 > **Product boundary.** Aegis is an AI Governance and Evidence Gateway. It can implement tested technical controls and produce structured cryptographic evidence under declared conditions; it is not an LLM, a universal WAF, a compliance certification, a legal-admissibility ruling, a production SLO, or a substitute for network, identity, privacy, retention, incident-response, and deployment controls. Regulatory mappings describe possible technical contributions only and require customer-specific legal, organizational, and technical assessment.
@@ -242,7 +249,7 @@ npm run dev
 
 > **Contribution boundary:** Aegis supplies technical controls and evidence paths for customer assessment; it does **not** determine regulatory applicability, establish compliance or certification, create regulatory WORM storage, or decide legal admissibility. The deploying organization and its qualified reviewers remain responsible for scope, configuration, retention, custody, operating effectiveness, and jurisdiction-specific conclusions. See the [compliance contribution map](docs/compliance/COMPLIANCE_MAPPING.md) and [public claims matrix](docs/CLAIMS_MATRIX.md).
 >
-> **Baseline:** The implementation and focused tests cited below are present in the audited source tree included by the `v4.0.1` tag target. Assess each cited path against the exact revision being deployed.
+> **Baseline:** Every implementation path and focused test cited below is present in the checked-out `4.0.2` source baseline. Assess each cited path against the exact revision being deployed rather than against this table.
 
 | Review lens | Technical contribution | Repository evidence | Required boundary |
 |---|---|---|---|
@@ -294,6 +301,7 @@ The checked-out source baseline/release target is **4.0.2** with fourteen synchr
 | Scope | Dated, verified result | Boundary |
 |---|---|---|
 | Python suite | **5,707 passed; 37 skipped** in the retained 2026-08-24 candidate gate | Not a fresh full-suite run on documentation `main`. |
+| Python suite, independent re-run | **5,661 passed; 81 skipped; 0 failed** on the `4.0.2` source baseline, 2026-09-01, in a clean container | Skips are uninstalled optional backends (PostgreSQL, DynamoDB, S3, native PQC, GPU), so the count differs from the candidate gate by environment rather than by regression. Recorded in the [cold-start reproduction audit](evidence/cold_start_reproduction_audit_2026-09-01.md). No coverage was measured in that run. |
 | Python line coverage | **89.7169%** (14,832/16,532 statements) in the retained 2026-08-24 candidate gate | Candidate-run measurement. CI enforces a 65% floor; this is not an evergreen coverage claim. |
 | Ruff | **Lint and format checks passed** in the retained 2026-08-24 candidate gate | This does not imply repository-wide strict typing; the broad strict-mypy audit remained red. |
 | Rust extension | **29 release tests passed**; format, Clippy with `-D warnings`, and an abi3 wheel build passed in the candidate gate | Local/CI-equivalent source verification, not registry publication or platform-wide acceptance. |

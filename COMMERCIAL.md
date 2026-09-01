@@ -33,6 +33,20 @@ For non-streaming calls, durable evidence and MMR proof headers are available af
 
 The project does not publish a permanent one-time price, lifetime update promise, automatic AGPL exemption, unlimited feature entitlement, 24/7 support commitment or sovereign assurance claim. Internal planning retains Team/Pilot USD 10,000–30,000, Production USD 40,000–100,000, and Enterprise USD 100,000–250,000+ solely as hypotheses. They are **not list prices, observed ACV, or a valuation**, and this repository contains no evidence-backed vertical ACV or startup/IP valuation. Those commitments require an executed agreement, an accountable support organization and legal review.
 
+## Financial-claim discipline
+
+The ranges above are planning inputs held by the project, not offers, quotes, or market observations. To keep that boundary enforceable rather than aspirational, the following rules apply to every document, deck, and conversation derived from this file.
+
+| Rule | Reason |
+|---|---|
+| A range may never be restated as a list price, a quote, or an observed contract value. | The ranges are unvalidated hypotheses; no executed commercial agreement is recorded in this repository. |
+| A quote must name the legal entity, term, environments, scope, assumptions, exclusions, and validity period. | A tier label without a named environment and scope cannot be costed or accepted. |
+| Unit-economics ratios may not be published until their inputs are measured. | Customer acquisition cost, lifetime value, gross margin, and payback are undefined here; the model skeleton and its input register are in [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md). |
+| Return-on-investment material must be customer-specific and buyer-owned. | Avoided fines, avoided incidents, and fixed risk-reduction percentages are not evidenced and must not be asserted. |
+| No customer count, logo, reference, or valuation may be implied. | None exists. Absence of a reference list is a fact to state plainly, not to soften. |
+
+A buyer or investor encountering a figure that does not satisfy these rules should treat it as unsupported and request its measurement source.
+
 ## What a commercial engagement can provide
 
 A defined engagement may include release provenance, SBOM and dependency reports, evidence-replay assistance, deployment hardening review, key-rotation planning, backpressure testing, WAF corpus review, rollback planning and a documented support matrix. The exact scope must identify environments, request volume, retention, provider topology, data handling, support hours, response targets, exclusions and customer-owned controls.
@@ -67,6 +81,7 @@ The practical next step is a bounded evaluation against the buyer's actual ingre
 - [`docs/BUYER_GUIDE_US.md`](docs/BUYER_GUIDE_US.md)
 - [`docs/FAQ_PROCUREMENT.md`](docs/FAQ_PROCUREMENT.md)
 - [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md)
+- [`docs/institutional/DOC-06_COMMERCIAL_PROCUREMENT.md`](docs/institutional/DOC-06_COMMERCIAL_PROCUREMENT.md)
 
 ## Copyright
 

@@ -178,6 +178,42 @@ PYTHONPATH=. .venv/bin/python tools/benchmarks/run_backpressure_stall.py \
 
 **Expected observation:** the process exits zero and prints `passed: true`, with no failures, missing IDs, duplicates, or integrity error in the JSON. The in-tree 2026-08-20 report contains 2,500 offered requests, not the 10,000-request result described in older narrative documents; treat the JSON workload as authoritative for this in-tree artifact. **Failure branch:** retain the JSON and adjacent WAL; block release; compare environment and source identity. **Boundary:** the seam calls real `os.fsync` after an injected sleep, but it does not reproduce power loss, controller caches, CSI behavior, or a distributed filesystem. A privileged `dm-delay` test remains a separate disposable-device exercise and is unexecuted in the retained evidence.
 
+### 8.4 WAL and ledger corruption containment runbook
+
+Corruption is handled as an **evidence-preservation incident**, not a service-restoration incident. The governing rule is that no operator repairs evidence bytes in place: a corrupted segment is preserved and quarantined, and a new segment is started, so that the boundary between trustworthy and untrustworthy records stays auditable.
+
+#### 8.4.1 Detection surfaces
+
+| Surface | Signal | Semantics | Locator |
+|---|---|---|---|
+| Native streaming WAL | Frame CRC32 mismatch or non-UTF-8 payload during open | The loader stops at the **first** bad frame and treats everything after it as absent. This is fail-closed truncation of the readable view, not a silent skip-and-continue. | `aegis_rust_v2/src/wal.rs:186-207,228-254` |
+| Native streaming WAL | `aegis_native_stream_wal_errors_total` non-zero | Auxiliary append failed; the auxiliary segment was disabled for the remaining life of that process object. The authoritative JSONL commit already succeeded. | `aegis/proxy/app.py:709-719` |
+| JSONL ledger | `verify_integrity()` returns `(False, index)` | First violating node index in the retained window: self-inconsistent `node_hash`, `prev_hash` linkage break, or invalid HMAC signature. | `aegis/core/crypto_audit.py:634-668` |
+| Storage backend | Backend read/verify error | Backend-specific; inherits the configured engine's own corruption semantics. | `aegis/storage/` |
+
+Two scope facts must be stated before any conclusion is drawn from a sweep. First, `verify_integrity()` walks the in-memory retained window anchored by `_window_anchor_hash`; it is **not** a full-history verification after deque rollover, so a clean result means "the retained window is self-consistent", not "no record was ever altered". Second, a CRC32 frame check detects accidental torn writes and media faults; it is not adversarial integrity and provides no protection against a capable actor who recomputes the checksum.
+
+#### 8.4.2 Containment sequence
+
+1. **Freeze the writer.** Stop admitting governed traffic to the affected replica before any diagnosis. A process that keeps appending past a detected fault destroys the evidentiary boundary. Drain or remove the replica from the ingress pool; do not restart it in place.
+2. **Preserve the bytes.** Copy the affected WAL and ledger files byte-for-byte to quarantine storage before any tool touches them. Record the copy's SHA-256 and the copying operator. Never run a repair, truncate, or reformat utility against the original.
+3. **Record the observation.** Capture the failing index or offset, the exact tool output, the process identity, and the wall-clock window. This becomes the boundary marker between records that remain in scope and records that do not.
+4. **Classify the fault.** Determine whether the signal indicates a torn write at the tail (typical of an abrupt stop), a mid-file inconsistency (indicates media, filesystem, or actor involvement), or a linkage or signature failure (indicates content alteration or key mismatch rather than media). Mid-file and signature classes escalate to the security owner, not the storage owner.
+5. **Start a new segment.** Bring the service back on a **new** WAL path with a fresh segment rather than reusing the damaged one. Chain continuity across that boundary is not claimed; the quarantine record is what links the two eras.
+6. **Bound the blast radius.** Enumerate the request identifiers whose evidence falls at or after the boundary and mark them as evidence-incomplete in the incident record. Do not describe them as "durable"; do not reconstruct them from application logs and present the result as ledger evidence.
+7. **Escalate for custody.** Notify the evidence custodian and, where a regulated workload is affected, the compliance owner. Whether a gap is reportable is a legal determination and is not made by the platform team.
+
+#### 8.4.3 Recovery semantics that operators frequently misread
+
+- **A valid prefix remains valid.** Frames before the first CRC failure verify normally and remain usable evidence. Corruption at offset *k* does not invalidate records committed before *k*.
+- **The tail is unreadable, not repaired.** The loader positions the write head at the end of the valid prefix. Subsequent appends overwrite the damaged region. A zero-length terminator is written and flushed after each frame specifically so that a same-size replacement cannot make a stale, otherwise-valid suffix reachable again on a later open (`aegis_rust_v2/src/wal.rs:156-163`; regression `recovery_terminator_prevents_corrupt_suffix_resurrection`).
+- **Restart is not remediation.** Because the loader silently adopts the valid prefix, a restarted process appears healthy. Absent step 3, the truncation event leaves no operator-visible trace. The incident record is the only durable evidence that a boundary exists.
+- **`fsync` returned is not media-survival.** A completed `fsync` means the process requested synchronization; power-loss survival remains a property of the device, controller, and filesystem. Corruption after a clean shutdown therefore warrants hardware and filesystem investigation rather than an application bug hunt.
+
+#### 8.4.4 Exit criteria
+
+Containment is complete when: quarantined copies exist with recorded digests; the boundary marker is written to the incident record; the service runs on a new segment; a post-restart `verify_integrity()` sweep returns clean for the new window; affected request identifiers are enumerated and classified evidence-incomplete; and the evidence custodian has acknowledged the record. Restoring availability alone does not close the incident.
+
 ## 9. Signing-key rotation runbook
 
 ### 9.1 Scope gate

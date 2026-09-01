@@ -59,6 +59,45 @@ The ATLAS identifiers in this document were checked against MITRE's official [`m
 | Denial of service | Oversized or deeply nested payload, expensive prompt, Redis failure, upstream saturation, WAL/fsync stall, full WAL, resource exhaustion | Streaming body bound, depth guard, fail-closed distributed limiter path, synchronous evidence backpressure, bounded analysis queue, Seccomp/LSM prerequisites in strict mode. | HTTP/2/ingress coverage is unexecuted; cgroups helper is not production-wired; network DDoS and provider saturation are out of scope; storage stall increases latency. | `DOC03-C007`, `C011`, `C015`–`C018` |
 | Elevation of privilege | Prompt causes a tool action, process invokes dangerous syscall, unconfined process reads files, config disables authentication | Prompt text has no code authority; strict mode rejects disabled auth; Seccomp default-kill and LSM checks can be required. | Aegis does not itself establish a complete tool authorization architecture; deployment Seccomp profile differs from in-process profile; host root and vulnerable native code remain dominant risks. | `DOC03-C005`, `C016`–`C019` |
 
+### 5.1 DREAD prioritization
+
+DREAD is used here as a **structured elicitation aid, not a measurement**. Each axis is an ordinal analyst judgment on a 1–3 scale (1 low, 3 high) recorded so that disagreement becomes visible and arguable; the totals are ranking aids, not probabilities, loss expectancies, or risk quantification. No score in this table is derived from telemetry, incident history, or a red-team exercise, because none of those exists for this repository. A reviewer who disputes a cell should change it and re-rank rather than treat the number as evidence.
+
+| Threat | Damage | Reproducibility | Exploitability | Affected users | Discoverability | Total | Dominant mitigating fact |
+|---|---|---|---|---|---|---|---|
+| Host-root or privileged-operator tampering with WAL, keys, or code | 3 | 3 | 1 | 3 | 1 | 11 | Out of scope by design; detection depends on external custody, not on the gateway. |
+| Symmetric HMAC key disclosure enabling record forgery | 3 | 3 | 1 | 3 | 1 | 11 | HMAC is symmetric; forgery by a key holder is indistinguishable from authentic signing. |
+| Identifier split across SSE chunk boundaries defeating redaction | 3 | 2 | 2 | 2 | 2 | 11 | Holdback window settles text before release; split cases are regression-tested. |
+| Multi-worker shared-WAL chain fork | 2 | 3 | 2 | 2 | 2 | 11 | Topology is documented as unsupported; enforcement is operational, not code-enforced. |
+| Unbounded or slow stream exhausting memory | 2 | 3 | 2 | 2 | 3 | 12 | Byte-accounted queue and holdback bounds; aggregate load remains an admission-control duty. |
+| Prompt-injection-driven exfiltration through model output | 3 | 2 | 3 | 2 | 3 | 13 | Pattern scanning is partial; egress allowlist is optional and off by default. |
+| Stolen API key replay | 2 | 3 | 3 | 2 | 2 | 12 | Strict mode requires credentials; rotation and replay windows are deployment duties. |
+| Process memory disclosure exposing in-flight payloads | 3 | 1 | 1 | 3 | 1 | 9 | Plaintext necessarily exists in memory during governance; no in-memory encryption is claimed. |
+
+### 5.2 Named adversary scenarios
+
+| Scenario | Mechanism | Implemented boundary | Residual risk |
+|---|---|---|---|
+| **Token-boundary split attack** | A sensitive identifier is deliberately fragmented so that no single provider chunk matches a redaction pattern. | The streaming de-identifier retains a holdback window and only releases the settled prefix, so a bounded identifier is reassembled before any character is emitted. Overlong open URL, magnetic-track, email, and address grammars raise rather than release (`aegis/core/streaming_deidentifier.py:90-157`). | Detection is limited to the supported bounded grammars. An identifier longer than the configured window, or one belonging to no supported pattern, is not detected. Window sizing is an operator decision. |
+| **RAM-dump and side-channel disclosure** | An adversary with host access, a core dump, swap, or hibernation image reads in-flight prompts and responses. | Ledger nodes store hashes rather than bodies, and keyring errors omit secret values. | Governing content requires plaintext in process memory. No in-memory encryption, memory locking, secure erase, or micro-architectural side-channel resistance is implemented or claimed. This is an accepted non-goal (§5.3). |
+| **Malicious administrator log tampering** | A privileged operator edits, truncates, reorders, or deletes WAL records and re-signs them. | Chain linkage, per-node signatures, and MMR roots make undetected *modification* difficult for an actor without the signing key. Optional S3 Object Lock and RFC 3161 paths exist. | An actor holding the symmetric HMAC key can rewrite history consistently. Truncation of a valid tail is not self-evident without an externally retained expected count or root. Defence is external custody and separation of duties, not the gateway. |
+| **Denial of service by unbounded stream** | A client or hostile upstream emits an endless or extremely large SSE stream. | Per-stream duration, cumulative-byte, per-event, queue-item, queue-byte, and holdback bounds all fail closed; the queue blocks the producer rather than growing (`aegis/proxy/streaming.py:70-99,255-268`). | Bounds are per admitted stream. Aggregate exhaustion across many concurrent streams requires deployment-level admission and concurrency control. Network-layer DDoS is out of scope. |
+
+### 5.3 Explicit non-goals
+
+The following are outside this threat model. They are recorded so that absence of a control is not mistaken for an oversight, and so that no reader infers coverage the implementation does not provide.
+
+| Non-goal | Rationale |
+|---|---|
+| Physical attacks on hosts, devices, or media | No tamper-evident hardware, secure boot chain, or physical custody control is implemented. |
+| Hypervisor, firmware, or host-kernel compromise | The gateway executes inside the trust of its host; a compromised host reads keys and memory directly. |
+| Host-root adversaries on the gateway node | Root can replace code, keys, and storage. Integrity claims assume root is trusted. |
+| Micro-architectural side channels | No timing, cache, speculative-execution, or power-analysis resistance is claimed anywhere in this document. |
+| Guaranteed prevention of prompt injection | Injection is an open research problem. Aegis records and constrains behavior; it does not certify that a model cannot be manipulated. |
+| Upstream provider trustworthiness | Forwarded content is visible to the provider under its own terms, retention, and jurisdiction. |
+| Network-layer distributed denial of service | Absorption and scrubbing belong to the network and ingress tiers. |
+| Legal admissibility of any artifact | A determination reserved to counsel and a tribunal; no technical control in this repository establishes it. |
+
 ## 6. Material claim register
 
 | Claim ID | Status | Material claim and exact repository locator | Assumptions and operational boundary | Falsification criterion | Human-review owner |

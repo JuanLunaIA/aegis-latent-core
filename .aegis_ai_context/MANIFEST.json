@@ -99,8 +99,8 @@
     {
       "category": "governed_input",
       "path": "README.md",
-      "sha256": "197def0c86963b8de9c61a4c100af5809cfc8e71a5b32936b706526ff0735fca",
-      "size": 36106
+      "sha256": "4b05478b416fab8271aa96db629dbd345d2c378619287246911e09306f486273",
+      "size": 38302
     },
     {
       "category": "governed_input",
@@ -153,8 +153,8 @@
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_SDK_GUIDE.md",
-      "sha256": "1ce38ca9e5057f0e3a3eb518e25140214d3676b26309dafe9380e7e8ae861cac",
-      "size": 8441
+      "sha256": "29406c2c70a72ee55426f9078a0052661624647a026792a68d4264cff874cce8",
+      "size": 16259
     },
     {
       "category": "governed_input",
@@ -165,14 +165,14 @@
     {
       "category": "governed_input",
       "path": "docs/FAQ_TECHNICAL.md",
-      "sha256": "f2214b56c2795b07a2c461ba887d00d3bebab7667bb183b2c869d387a29b2fee",
-      "size": 9724
+      "sha256": "c43159d3d7f13476dc107073d9367140aae7739762c6829aa3fffec48a6de47f",
+      "size": 13113
     },
     {
       "category": "governed_input",
       "path": "docs/PLATFORM_OPERATOR_GUIDE.md",
-      "sha256": "dac133f2f20a1c9b8e0fd1203e65ab394c26ec42bb83886392c569eba97144b2",
-      "size": 11974
+      "sha256": "8bfb478fb0af80ae732d76cc2659975acef3f0b87d85ebd1815b9592fc0c9f80",
+      "size": 15463
     },
     {
       "category": "governed_input",

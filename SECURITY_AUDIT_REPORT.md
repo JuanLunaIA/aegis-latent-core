@@ -4,7 +4,7 @@ Security Audit Report — Aegis Latent Core
 > **Historical archive.** This automated report is retained for the historical
 > run it describes. Its findings and remediation notes are not a statement of
 > current v4 status and are superseded for current navigation by the
-> [v4 evidence index](artifacts/v4-enterprise-maturation-2026-08-23/EVIDENCE.md),
+> [v4 evidence index](evidence/INDEX.md),
 > which records newer gates, bounded evidence, and unresolved external blockers.
 
 Summary (automated findings)

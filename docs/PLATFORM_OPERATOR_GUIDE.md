@@ -42,6 +42,37 @@ AEGIS_STREAM_DEIDENTIFIER_WINDOW_CHARS=128
 
 Use an external secret manager or protected signer service for `AEGIS_SIGNING_KEY`, upstream credentials, Redis credentials, and keyring material. Mount only the evidence directory as writable when the container posture permits it. Run as a non-root identity, drop unnecessary Linux capabilities, use a read-only root filesystem, and apply the target Seccomp and AppArmor/SELinux profiles.
 
+## Configuration surfaces and enumerated settings
+
+The repository contains **two** settings classes, and both bind environment variables with the prefix `AEGIS_`. An operator who does not first establish which surface is deployed can set a variable that the running process never reads.
+
+| Surface | Settings class | Entry point | Locator |
+|---|---|---|---|
+| Primary gateway | `AegisSettings` | `aegis` / `aegis-server` console scripts mapped to `aegis.proxy.app:main` | `aegis/config.py:22-24` |
+| Alternate server | separate settings model | `aegis_server` package | `aegis_server/config.py:35` |
+
+Both declare `env_prefix="AEGIS_"`, so a field named `security_enforcement_mode` is supplied as `AEGIS_SECURITY_ENFORCEMENT_MODE` on either surface. Because the literal variable name never appears in the source, searching the code for the variable string returns nothing; resolve names through the field definition instead.
+
+**Enumerated settings and their accepted values.** These reject unknown values at startup rather than falling back to a default, so a typo is a startup failure and not a silent downgrade.
+
+| Variable | Surface | Accepted values | Default | Locator |
+|---|---|---|---|---|
+| `AEGIS_SECURITY_ENFORCEMENT_MODE` | Primary gateway | `strict`, `development` | `strict` | `aegis/config.py:348-352` |
+| `AEGIS_AUTH_MODE` | Primary gateway | `api_key`, `oidc`, `mtls`, `api_key_mtls`, `oidc_mtls` | `api_key` | `aegis/config.py:148-151` |
+| `AEGIS_SIEM_FORMAT` | Primary gateway | `cef`, `rfc5424`, `splunk`, `datadog` | `cef` | `aegis/config.py:714` |
+| `AEGIS_SECURITY_ENFORCEMENT_MODE` | Alternate server | `strict`, `development` | `strict` | `aegis_server/config.py:45` |
+| `AEGIS_LOG_LEVEL` | Alternate server | `DEBUG`, `INFO`, `WARNING`, `ERROR` | `INFO` | `aegis_server/config.py:54` |
+| `AEGIS_STORAGE_PROVIDER` | Alternate server | `sqlite`, `postgres`, `dynamodb` | see field | `aegis_server/config.py:121` |
+| `AEGIS_SIGNER_PROVIDER` | Alternate server | `hmac`, `vault` | see field | `aegis_server/config.py:169` |
+
+Composite authentication modes require both factors: `api_key_mtls` and `oidc_mtls` do not fall back to a single factor when the second is unavailable.
+
+**Naming corrections.** Two variable names circulate in external material and are wrong. There is no `AEGIS_STORAGE_BACKEND`; the field is `storage_provider`, so the variable is `AEGIS_STORAGE_PROVIDER`. The value `permissive` is not accepted for the enforcement mode; the only values are `strict` and `development`. Setting either incorrect name or value produces a startup validation error rather than the intended behavior, which is the desired fail-closed outcome but is frequently misdiagnosed as an unrelated fault.
+
+**Dependent requirements.** Several providers impose conditional requirements that are validated at startup: selecting `postgres` requires a DSN, and selecting `vault` requires a Vault URL plus credentials (`aegis_server/config.py:262-271`). Configure the dependent values in the same change as the provider selection.
+
+**Isolated local evaluation only.** `AEGIS_SECURITY_ENFORCEMENT_MODE=development` relaxes required authentication, durable evidence, distributed limiting, and privileged kernel controls. Combined with `AEGIS_DEBUG_MODE=true`, `AEGIS_AUTH_DISABLED=true`, and a mock upstream, it is intended for isolated local evaluation. It must never be selected for governed traffic, and evidence produced under it must not be presented as governed evidence.
+
 ## Topology decision table
 
 | Topology | Evidence behavior | Suitable use | Not proven |

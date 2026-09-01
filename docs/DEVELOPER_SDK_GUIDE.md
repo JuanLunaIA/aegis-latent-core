@@ -69,6 +69,127 @@ cd sdk/python
 python -m pytest -q tests/integrations
 ```
 
+### 2.4 Worked Python patterns
+
+Every symbol below is exported by the checked-out `4.0.2` source tree. The constructors are keyword-only; `aegis_api_key`, `gateway_url`, and `tenant_id` are required.
+
+**Synchronous drop-in.** The class subclasses the official client, so the request surface is unchanged.
+
+```python
+from aegis_sdk.openai import OpenAI
+
+client = OpenAI(
+    aegis_api_key="<gateway key>",
+    gateway_url="https://aegis.internal.example",
+    tenant_id="team-platform",
+    session_id="optional-session-correlator",
+)
+
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "Summarize this incident report."}],
+)
+```
+
+**Asynchronous drop-in.** `AsyncOpenAI` and `AsyncAnthropic` take the same keyword arguments.
+
+```python
+import asyncio
+from aegis_sdk.openai import AsyncOpenAI
+
+async def main() -> None:
+    client = AsyncOpenAI(
+        aegis_api_key="<gateway key>",
+        gateway_url="https://aegis.internal.example",
+        tenant_id="team-platform",
+    )
+    result = await client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": "ping"}],
+    )
+    print(result.choices[0].message.content)
+
+asyncio.run(main())
+```
+
+**Anthropic native route.** The gateway exposes `POST /v1/messages` in addition to the OpenAI-compatible surface.
+
+```python
+from aegis_sdk.anthropic import Anthropic
+
+client = Anthropic(
+    aegis_api_key="<gateway key>",
+    gateway_url="https://aegis.internal.example",
+    tenant_id="team-platform",
+)
+
+message = client.messages.create(
+    model="claude-sonnet-4-5",
+    max_tokens=512,
+    messages=[{"role": "user", "content": "Explain the retention policy."}],
+)
+```
+
+**Automatic proof verification.** Setting `verify_proof=True` without a `trusted_mmr_root` raises: the root must be pinned out of band, never taken from the response being checked.
+
+```python
+from aegis_sdk.openai import OpenAI
+
+client = OpenAI(
+    aegis_api_key="<gateway key>",
+    gateway_url="https://aegis.internal.example",
+    tenant_id="team-compliance",
+    verify_proof=True,
+    trusted_mmr_root="<64-hex root pinned from an independent channel>",
+)
+```
+
+A response-level hook then validates the proof headers on each non-streaming response and raises `AegisProofError` on mismatch.
+
+**Streaming and the `pending-terminal` boundary.** This is the single most misread behavior in the SDK. A stream's initial headers are emitted before the terminal evidence record exists, so they carry `X-Aegis-Evidence-Status: pending-terminal` and **no** final proof. The verification hook deliberately returns early for those responses rather than failing, so `verify_proof=True` does not verify a stream inline.
+
+```python
+from aegis_sdk.openai import OpenAI
+
+client = OpenAI(
+    aegis_api_key="<gateway key>",
+    gateway_url="https://aegis.internal.example",
+    tenant_id="team-platform",
+)
+
+with client.chat.completions.stream(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "Stream a summary."}],
+) as stream:
+    for event in stream:
+        ...  # consume incrementally; nothing is buffered whole by the gateway
+```
+
+To obtain evidence for a stream, follow the returned proof `Link` **after** the terminal marker, once the single terminal summary has been committed. Treat a stream as unverified until that retrieval succeeds, and never infer a terminal outcome from receipt of content alone.
+
+**Framework callbacks.** Both adapters record bounded counters, timing, correlation, and proof state only. They retain no prompt, response, node, or embedding content, and they do not intercept every internal framework operation.
+
+```python
+from aegis_sdk.integrations import (
+    AegisLangChainCallback,
+    AegisLlamaIndexCallback,
+    MemoryMetricSink,
+)
+
+sink = MemoryMetricSink()
+langchain_callback = AegisLangChainCallback(sink, trusted_root="<pinned root>")
+llamaindex_callback = AegisLlamaIndexCallback(sink, trusted_root="<pinned root>")
+
+# LangChain and LangGraph both accept handlers through the callbacks argument:
+#   chain.invoke(payload, config={"callbacks": [langchain_callback]})
+# LlamaIndex registers through its callback manager.
+
+for metric in sink.metrics:
+    print(metric)
+```
+
+`LangChainCallbackHandler` and `LlamaIndexCallbackHandler` are exported aliases of the same classes for readers who prefer framework-conventional names. Because these adapters observe framework events rather than gateway admission, a metric recorded here is telemetry about your application, not gateway evidence; the authoritative record remains the ledger node.
+
 ## 3. TypeScript SDK
 
 ### 3.1 Clean-checkout development
@@ -114,6 +235,72 @@ const valid = await verifyInclusionHash(leafHashHeader, proof, pinnedRoot);
 ```
 
 The verifier binds the leaf index, leaf count, mountain topology, path directions, complete peak set, and independently supplied root. The v1 construction hashes lowercase hexadecimal strings to remain wire-compatible with the Python and Rust accumulator; it is not a conventional binary-digest MMR.
+
+### 3.4 Worked TypeScript patterns
+
+The package ships subpath exports `.`, `./proof`, `./providers`, `./gateway`, `./openai`, `./anthropic`, `./verifier`, and `./types`. Provider clients are **peer dependencies**, not bundled: install `openai` in the range `>=4 <7` or `@anthropic-ai/sdk` in the range `>=0.39 <1` alongside the SDK. Because they are peers, the provider package your application resolves is the one the wrapper extends, which keeps provider behavior authoritative and avoids a duplicated client instance.
+
+```bash
+npm install aegis-latent-sdk openai
+```
+
+**Drop-in client.** `OpenAI` extends the official client, so the request surface is unchanged.
+
+```ts
+import { OpenAI } from "aegis-latent-sdk/openai";
+
+const client = new OpenAI({
+  aegisApiKey: process.env.AEGIS_API_KEY!,
+  gatewayUrl: "https://aegis.internal.example",
+  tenantId: "team-platform",
+});
+
+const completion = await client.chat.completions.create({
+  model: "gpt-4o-mini",
+  messages: [{ role: "user", content: "Summarize this incident report." }],
+});
+```
+
+**Option builders.** When you would rather construct the official client yourself, the gateway module returns the option objects instead of subclassing.
+
+```ts
+import { openAIGatewayOptions, anthropicGatewayOptions } from "aegis-latent-sdk/gateway";
+
+const options = openAIGatewayOptions({
+  aegisApiKey: process.env.AEGIS_API_KEY!,
+  gatewayUrl: "https://aegis.internal.example",
+  tenantId: "team-platform",
+});
+```
+
+A session identifier and a W3C trace context are generated with `globalThis.crypto.randomUUID()` when you do not supply them, so correlation works without extra wiring.
+
+**Portable proof verification with Web Crypto.** Verification is asynchronous because it runs on `SubtleCrypto`, obtained from `globalThis.crypto?.subtle`. It therefore works in browsers, Node, Deno, and workers without a Node-specific crypto import, and a `SubtleCrypto` instance can be injected for tests.
+
+```ts
+import {
+  parseInclusionProof,
+  verifyInclusion,
+  verifyInclusionHash,
+  verifyProofHeaders,
+} from "aegis-latent-sdk/proof";
+
+// Pin the root from an independent channel — never from the response under test.
+const trustedRoot = process.env.AEGIS_TRUSTED_MMR_ROOT!;
+
+const proof = parseInclusionProof(await proofResponse.json());
+const ok = await verifyInclusion(leafBytes, proof, trustedRoot);
+
+// Verify without disclosing the record body:
+const okByDigest = await verifyInclusionHash(leafSha256Hex, proof, trustedRoot);
+
+// Or verify directly from a non-streaming response's headers:
+await verifyProofHeaders(response.headers, trustedRoot);
+```
+
+`parseInclusionProof` validates the envelope shape before any hashing occurs, so a malformed or version-mismatched proof is rejected rather than partially processed. As on the Python side, a stream's initial headers carry `pending-terminal` and contain no final proof; retrieve it from the linked proof endpoint after the terminal marker.
+
+**Environments without Web Crypto.** `resolveSubtleCrypto` throws when no implementation is reachable rather than silently degrading to a non-cryptographic fallback. If you hit that error, supply an implementation explicitly instead of disabling verification.
 
 ## 4. Authentication, tenancy, and rate limits
 
