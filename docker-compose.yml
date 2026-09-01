@@ -1,0 +1,75 @@
+# Aegis Latent Core — local evaluation profile.
+#
+# This file is for evaluating the gateway on your own machine. It runs in
+# development enforcement mode with authentication disabled, which is NOT a
+# deployment configuration. For a hardened deployment that fails closed when
+# secrets are absent, use deploy/docker/docker-compose.yml instead.
+#
+# Usage:
+#   export AEGIS_BACKEND_URL="https://api.openai.com/v1"   # your upstream
+#   export AEGIS_BACKEND_API_KEY="sk-..."                  # upstream credential
+#   docker compose up
+#
+# Then send a request:
+#   curl -s http://127.0.0.1:8080/health
+#
+# Evidence is written to the named volume `aegis-evidence` and survives
+# `docker compose down`. Remove it with `docker compose down -v`.
+
+services:
+  aegis:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+    image: aegis-latent-core:eval
+    restart: unless-stopped
+    ports:
+      # Bound to loopback: this profile disables authentication, so it must not
+      # be reachable from the network. Override only on an isolated host.
+      - "127.0.0.1:${AEGIS_PORT:-8080}:8080"
+    environment:
+      # Evaluation posture. Never use these values for governed traffic.
+      AEGIS_SECURITY_ENFORCEMENT_MODE: development
+      AEGIS_DEBUG_MODE: "true"
+      AEGIS_AUTH_DISABLED: "true"
+      # The image sets a strict deployment posture in its own ENV block
+      # (deploy/docker/Dockerfile). Compose inherits those values, so every one
+      # that needs infrastructure this profile does not run is overridden here.
+      #
+      # Without this override the image's AEGIS_RATE_LIMIT_BACKEND=redis is
+      # inherited, RedisRateLimitBackend is constructed with an empty
+      # AEGIS_REDIS_URL, and startup fails with "redis_url must not be empty".
+      AEGIS_RATE_LIMIT_BACKEND: memory
+      # These three are only enforced when the mode is strict, but they are
+      # pinned explicitly so this profile does not depend on that coupling.
+      AEGIS_REQUIRE_DURABLE_EVIDENCE: "false"
+      AEGIS_REQUIRE_LSM: "false"
+      AEGIS_REQUIRE_SECCOMP: "false"
+      # Upstream provider. Required: compose fails fast if unset.
+      AEGIS_BACKEND_URL: ${AEGIS_BACKEND_URL:?set AEGIS_BACKEND_URL to your OpenAI-compatible upstream, e.g. https://api.openai.com/v1}
+      AEGIS_BACKEND_API_KEY: ${AEGIS_BACKEND_API_KEY:-}
+      # Evidence path inside the container, backed by the named volume below.
+      AEGIS_WAL_PATH: /data/aegis.wal.jsonl
+      AEGIS_HOST: 0.0.0.0
+      AEGIS_PORT: "8080"
+    volumes:
+      - aegis-evidence:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).status == 200 else 1)",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  aegis-evidence:

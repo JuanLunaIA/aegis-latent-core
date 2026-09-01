@@ -29,37 +29,16 @@
 
 [**🚀 Local quickstart**](#4-quickstart-for-local-evaluation) · [**🏛️ Architecture**](#5-request-and-evidence-lifecycle) · [**📦 SDKs**](#sdk-registry-and-source-verification) · [**📊 Dashboard**](#6-forensic-audit-dashboard) · [**📑 Enterprise pilot**](#8-commercial-path)
 
-> **Version boundary:** The checked-out source baseline/release target is **`4.0.2`** with fourteen synchronized anchors. Source metadata does not establish external lifecycle state; verify the `v4.0.2` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback. Historically, public label `v4.0.1` is a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`; its tag-triggered workflows failed, and observed `4.0.0` registry objects have no attributed provenance from those workflows.
+Aegis sits between your application and your model provider. Every governed call gets a signed, hash-linked evidence record committed before the response returns — and a portable inclusion proof your client can verify on its own.
 
-## 2. Version and epistemic boundaries
-
-> [!NOTE]
-> **Version status.** The repository source and release candidate is `4.0.2`; fourteen release-contract anchors are synchronized at that version. Its immutable parent/source comparison, `fdace8844568eb788216740b2cb5daf187d99d3b`, has fourteen `4.0.0` anchors. The prior public GitHub baseline remains label `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`, with failed tag-triggered workflows. PyPI and npm were separately observed at `aegis-latent-sdk` version `4.0.0`, but provenance is not attributed to those failed runs. External `v4.0.2` publication must be established by post-publication readback; source metadata alone does not establish it.
+## 2. Status
 
 > [!NOTE]
-> **Release-envelope readback, 2026-09-01.** A read-only GitHub API readback recorded the following and does not by itself establish registry availability, artifact integrity, or acceptance: the `v4.0.2` GitHub Release exists as a non-draft, non-prerelease entry carrying **31 assets** — `SHA256SUMS`, `release-asset-manifest.json`, two SPDX SBOMs, Python core and SDK wheels plus sdists, the TypeScript tarball, seven `aegis_rust` platform wheels, and a `.sha256` sidecar for each artifact. The annotated tag `v4.0.2` resolves to commit `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca` and carries a Sigstore keyless signature whose certificate identity is the repository's `create_release_tag.yml@refs/heads/main` workflow under issuer `token.actions.githubusercontent.com`.
->
-> Three limits apply to that readback and must travel with it. GitHub's native signature check reports the tag as unverified with reason `bad_cert`, which is the expected presentation for short-lived Sigstore certificates and means trust requires `gitsign` or `cosign` validation against the transparency log rather than the GitHub badge. Asset bytes were not downloaded, so `SHA256SUMS` was not checked and no artifact digest was confirmed. PyPI and npm remain observed at `4.0.0`, so the presence of assets in a release envelope is not registry publication.
+> **Current release candidate:** `v4.0.2` (source, fourteen synchronized anchors). **Registries:** `aegis-latent-sdk` observed at `4.0.0`. The gateway ships from source; the registries carry the SDKs only. Provenance, signature verification, and why GitHub shows the tag as `bad_cert` are covered in [Release Status](docs/RELEASE_STATUS.md).
 
-> [!IMPORTANT]
-> **Product boundary.** Aegis is an AI Governance and Evidence Gateway. It can implement tested technical controls and produce structured cryptographic evidence under declared conditions; it is not an LLM, a universal WAF, a compliance certification, a legal-admissibility ruling, a production SLO, or a substitute for network, identity, privacy, retention, incident-response, and deployment controls. Regulatory mappings describe possible technical contributions only and require customer-specific legal, organizational, and technical assessment.
-
-Public claims use distinct evidence states:
-
-| State | Meaning |
-|---|---|
-| **Implemented** | Source and regression tests establish behavior within stated conditions. |
-| **Measured** | A named workload, revision, environment, date, and retained artifact establish a bounded result. |
-| **Configuration-dependent** | The control requires validation in the target deployment. |
-| **Roadmap** | The capability is incomplete or unmeasured and must not be described as available. |
-| **Legal-review-required** | Regulatory, certification, procurement, contractual, and admissibility conclusions remain outside repository evidence. |
-
-Publication does not by itself prove a signed-tag trust path, successful automated provenance workflow, production acceptance, or independent assurance. The controlling references are the [Public Claims Matrix](docs/CLAIMS_MATRIX.md) and [Unsupported Claims Report](docs/institutional/UNSUPPORTED_CLAIMS.md).
+Aegis applies request policy to LLM traffic and commits a signed, hash-linked record of every governed interaction before the response returns. It is a governance and evidence layer — not a model, a WAF, a certification, or a legal ruling. Boundaries are consolidated in [Boundaries](docs/BOUNDARIES.md); [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md) controls public claims.
 
 ## 3. Four technical pillars
-
-> [!NOTE]
-> These pillars describe the checked-out `v4.0.2` source baseline/release target. Its fourteen synchronized anchors do not establish external publication or acceptance for a target deployment. The immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` retains fourteen `4.0.0` anchors.
 
 | Pillar | What the merged source implements | Evidence boundary |
 |---|---|---|
@@ -70,7 +49,36 @@ Publication does not by itself prove a signed-tag trust path, successful automat
 
 ## 4. Quickstart for local evaluation
 
-The local profile is for development, tests, and evidence replay, not production deployment. Python 3.11 or later is required. Use a pinned checkout to evaluate the complete gateway; the public registries contain the SDKs only.
+The local profile is for development, tests, and evidence replay — not a deployment configuration. The gateway runs from source; the registries carry the SDKs only.
+
+### Option A — Docker
+
+Point it at any OpenAI-compatible upstream and bring it up:
+
+```bash
+git clone https://github.com/JuanLunaIA/aegis-latent-core.git
+cd aegis-latent-core
+export AEGIS_BACKEND_URL="https://api.openai.com/v1"
+export AEGIS_BACKEND_API_KEY="sk-your-upstream-key"
+docker compose up
+```
+
+Check it is live, then send a governed call through it:
+
+```bash
+curl -s http://127.0.0.1:8080/health
+
+curl -s http://127.0.0.1:8080/v1/chat/completions \
+  -H 'content-type: application/json' \
+  -d '{"model":"gpt-4.1-mini","messages":[{"role":"user","content":"hello"}]}' \
+  -D - -o /dev/null | grep -i '^x-aegis'
+```
+
+The `x-aegis-*` response headers carry the evidence status and the proof link for that call. Evidence persists in the `aegis-evidence` volume. The root [`docker-compose.yml`](docker-compose.yml) runs development enforcement with authentication disabled; for a hardened profile that fails closed when secrets are absent, use [`deploy/docker/docker-compose.yml`](deploy/docker/docker-compose.yml).
+
+### Option B — From source
+
+Python 3.11 or later is required.
 
 ```bash
 git clone https://github.com/JuanLunaIA/aegis-latent-core.git
@@ -95,25 +103,17 @@ export AEGIS_WAL_PATH='/tmp/aegis-evaluation.wal.jsonl'
 aegis
 ```
 
-There is no `aegis --dev` option. API calls require the configured upstream to be running. The gateway smoke test does not prove provider compatibility, production acceptance, or a production security posture. Do not commit provider keys, gateway bearer tokens, signing secrets, WAL records, or customer payloads. See the [developer quickstart](docs/DEVELOPER_QUICKSTART.md) and [deployment guide](DEPLOYMENT_GUIDE.md) for the complete source-development and deployment gates.
+There is no `aegis --dev` shortcut, and calls require your upstream to be running. Never commit provider keys, gateway tokens, signing secrets, WAL records, or payloads. For hardening and deployment gates, see the [developer quickstart](docs/DEVELOPER_QUICKSTART.md) and [deployment guide](DEPLOYMENT_GUIDE.md).
 
-### SDK registry and source verification
+### Python SDK
 
-The current SDK source version is `4.0.2`; the Python import namespace is `aegis_sdk` and both distributions use the unscoped name `aegis-latent-sdk`. PyPI and npm were last observed at `4.0.0`, without attributed provenance from the failed `v4.0.1` tag workflows. Do not assume `4.0.2` is available from either registry until successful publication and registry readback.
-
-### Python SDK from the source tree
-
-After PyPI successfully publishes and readback confirms version `4.0.2`, install the OpenAI-enabled package with:
-
-```bash
-python -m pip install 'aegis-latent-sdk[openai]==4.0.2'
-```
-
-Until that readback succeeds, install the candidate from a pinned source checkout:
+Install from the source tree you just cloned:
 
 ```bash
 python -m pip install './sdk/python[openai]'
 ```
+
+The published package is named `aegis-latent-sdk` on both registries; the Python import namespace is `aegis_sdk`. Registries currently serve `4.0.0` — see [Release Status](docs/RELEASE_STATUS.md) before pinning a registry version.
 
 The wrapper subclasses the official OpenAI client and preserves its native resource and response types within the declared and tested dependency range:
 
@@ -135,15 +135,9 @@ response = client.chat.completions.create(
 
 The SDK also provides `Anthropic`, `AsyncOpenAI`, and `AsyncAnthropic`. Native Anthropic Messages calls require the gateway itself to run with `AEGIS_PROVIDER=anthropic`. Model availability remains upstream-dependent.
 
-### TypeScript SDK from the source tree
+### TypeScript SDK
 
-After npm successfully publishes and readback confirms version `4.0.2`, install it with the OpenAI peer dependency:
-
-```bash
-npm install aegis-latent-sdk@4.0.2 openai@^6.49.0
-```
-
-Until that readback succeeds, build and install the candidate from a pinned source checkout:
+Build and install from the source tree, with `openai` as a peer dependency:
 
 ```bash
 npm --prefix sdk/typescript ci
@@ -168,11 +162,9 @@ const response = await client.chat.completions.create({
 });
 ```
 
-Both SDKs leave proof verification disabled by default. Enabling `verify_proof` or `verifyProof` also requires an independently provisioned `trusted_mmr_root` or `trustedMmrRoot` containing exactly 64 lowercase hexadecimal characters. A root copied from the same untrusted response is not an independent trust anchor, and an initial `pending-terminal` streaming response is not a terminal inclusion proof. Compatibility is limited to tested routes, behaviors, and dependency ranges; these integrations are not universal replacements for every provider endpoint. For source verification, use the component commands in the [integration guide](docs/DEVELOPER_INTEGRATIONS_GUIDE.md).
+Proof verification is off by default. Enabling `verify_proof` (Python) or `verifyProof` (TypeScript) requires an independently provisioned `trusted_mmr_root` / `trustedMmrRoot` — 64 lowercase hex characters, pinned through a channel other than the response being verified. Streaming responses start `pending-terminal`; fetch the proof after the terminal marker. Details in the [integration guide](docs/DEVELOPER_INTEGRATIONS_GUIDE.md).
 
 ## 5. Request and evidence lifecycle
-
-> **Baseline boundary:** The sequence below describes the checked-out `v4.0.2` source baseline/release target. Confirm the exact reviewed commit before deployment; source version metadata does not establish an external `v4.0.2` publication.
 
 ```mermaid
 sequenceDiagram
@@ -262,9 +254,7 @@ External laws, standards, and guidance can change. Qualified counsel or an asses
 
 ## 8. Commercial path
 
-> **Commercial boundary.** The checked-out source baseline/release target is `4.0.2`; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback. The historical public `v4.0.1` label and observed `4.0.0` registry objects remain distinct baselines. Any evaluation, quote, acceptance plan, and evidence package must identify the exact commit and artifact versions rather than relying on the release label alone.
-
-Aegis is distributed under the terms in [`LICENSE`](LICENSE). A separate commercial agreement may be available for organizations that require terms different from the AGPLv3, but only an executed agreement defines licensing, support, warranty, redistribution, and other contractual rights. [`COMMERCIAL.md`](COMMERCIAL.md) is a procurement summary, not legal advice or an automatic AGPL exemption.
+Aegis is distributed under [`LICENSE`](LICENSE) (AGPLv3). A separate commercial agreement may be available for organizations that need terms different from the AGPLv3; only an executed agreement defines licensing, support, warranty, and redistribution rights. [`COMMERCIAL.md`](COMMERCIAL.md) is a procurement summary, not legal advice or an automatic AGPL exemption.
 
 | Package | Directional scope | Commercial boundary |
 |---|---|---|
@@ -274,15 +264,13 @@ Aegis is distributed under the terms in [`LICENSE`](LICENSE). A separate commerc
 | **Enterprise** | Multiple environments or procurement-heavy deployment, with architecture and security-review assistance plus negotiated response targets | Requires accountable staffing, an operating support model, legal terms, data-handling boundaries, and explicit exclusions. |
 | **Sovereign / OEM** | Air-gapped, embedded, redistribution, escrow, or dedicated-assurance requirements | Future/custom only; not a default offer or present assurance commitment. |
 
-The retained planning ranges—**USD 10,000–30,000** for a **4–8 week Team/Pilot**, **USD 40,000–100,000 annually** for Production, and **USD 100,000–250,000+ annually** for Enterprise—are **internal hypotheses to validate**. They are **not public list prices, observed contract values, valuations, or binding offers**. A defensible quote requires the target topology, environments, request volume, providers, streaming profile, retention and residency needs, storage and key custody, support hours, escalation path, security-review scope, geography, and legal entity.
+No prices are published here. Planning ranges, packaging hypotheses, and the unit-economics model live in [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md). They are internal hypotheses pending validation, not list prices or observed contract values.
 
-A pilot should use the buyer's actual workload and produce a customer-owned report. Its declared acceptance plan should cover request/response evidence correlation, upstream failure, Redis/rate-limit failure, WAL replay and integrity, key rotation, the pinned WAF corpus, rollback, and the target ingress, storage, secret manager, and container profile. The report should record workload and volume, environment, rejected traffic, evidence completeness, failures, support hours, exclusions, and residual risk. Passing a pilot does not establish certification, regulatory compliance, production SLOs, or legal admissibility.
-
-See [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md) for the packaging hypothesis, [`docs/BUYER_GUIDE_US.md`](docs/BUYER_GUIDE_US.md) for pilot acceptance and procurement blockers, and [`docs/FAQ_PROCUREMENT.md`](docs/FAQ_PROCUREMENT.md) for licensing, pricing, support, and assurance boundaries.
+Run a pilot on your own workload and keep the report. [`docs/BUYER_GUIDE_US.md`](docs/BUYER_GUIDE_US.md) has the acceptance criteria and the procurement blockers to clear first; [`docs/FAQ_PROCUREMENT.md`](docs/FAQ_PROCUREMENT.md) covers licensing, support, and assurance.
 
 ## Related documents — 9. Audience navigation
 
-The checked-out source baseline/release target is **4.0.2** with fourteen synchronized anchors. The prior public **v4.0.1** label targets `6469904380218584ae0b5221334bc9a46500f5ba`; observed registry packages remain **4.0.0** and are not attributed to its failed workflows. Use each document's declared baseline and boundaries. Publication does not establish production acceptance, certification, or legal conclusions.
+Each document declares its own baseline and boundaries.
 
 | Audience | Start here | Scope boundary |
 |---|---|---|
@@ -294,7 +282,7 @@ The checked-out source baseline/release target is **4.0.2** with fourteen synchr
 ## 10. Verified metrics, repository map and integrity
 
 > [!NOTE]
-> **Metric scope matters.** The checked-out source baseline/release target is `4.0.2`; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback. The historical public `v4.0.1` label and observed `4.0.0` registry objects are separate from the dated candidate evidence below. Candidate figures below come from the retained **2026-08-24** source-candidate gate for commit `2050a310ec295afc61d033ff842c9a535a4f3105`, unless a row says otherwise. Publication-gate documentation was audited on **2026-08-25** at `6469904380218584ae0b5221334bc9a46500f5ba`. These results are regression evidence for named revisions and environments, not production capacity, an SLO, certification, or a legal conclusion.
+> **Metric scope.** Candidate figures come from the retained **2026-08-24** source-candidate gate at commit `2050a310ec295afc61d033ff842c9a535a4f3105`, unless a row says otherwise. These are regression results for named revisions and environments — not capacity, an SLO, certification, or a legal conclusion.
 
 ### Verified metrics
 
@@ -330,12 +318,27 @@ Historical performance and security measurements remain attached to the publishe
 | [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md) | Public-claim status, evidence locators, boundaries, and falsification rules. |
 | [`evidence/INDEX.md`](evidence/INDEX.md) | Entry point for retained historical and source-readiness evidence. |
 
-### Integrity and project links
+## 11. Community and contributing
 
-- **Release:** Source baseline/release target `4.0.2` has fourteen synchronized anchors, while source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback. Historically, `v4.0.1` is a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba` whose tag workflows failed; registries were observed at `4.0.0` without attributed provenance.
-- **Security:** Follow [`SECURITY.md`](SECURITY.md) for supported reporting channels and scope.
-- **Contributing:** See [`CONTRIBUTING.md`](CONTRIBUTING.md).
-- **License:** Use is governed by [`LICENSE`](LICENSE) and, where applicable, [`COMMERCIAL.md`](COMMERCIAL.md). This README is not legal advice.
-- **Repository:** [JuanLunaIA/aegis-latent-core](https://github.com/JuanLunaIA/aegis-latent-core) · [Releases](https://github.com/JuanLunaIA/aegis-latent-core/releases) · [Issues](https://github.com/JuanLunaIA/aegis-latent-core/issues)
+Aegis is built in the open. If you find a gap in the evidence chain, we want to know about it.
 
-Aegis supplies software controls and bounded technical evidence. Deployment acceptance, regulatory applicability, compliance determinations, storage immutability, signer trust, and legal admissibility remain the responsibility of the deploying organization and its qualified reviewers.
+- **Issues and feature requests:** [GitHub Issues](https://github.com/JuanLunaIA/aegis-latent-core/issues)
+- **Security reports:** [`SECURITY.md`](SECURITY.md) — please use the private advisory channel, not a public issue
+- **Contributing:** [`CONTRIBUTING.md`](CONTRIBUTING.md) covers the dev setup, the test commands, and the PR checklist
+- **Release provenance:** [`docs/RELEASE_STATUS.md`](docs/RELEASE_STATUS.md) · [Releases](https://github.com/JuanLunaIA/aegis-latent-core/releases)
+- **License:** [`LICENSE`](LICENSE) (AGPLv3). Alternative terms: [`COMMERCIAL.md`](COMMERCIAL.md)
+
+## 12. Boundaries and limitations
+
+Aegis provides technical controls and cryptographic evidence. It is not a model, a WAF, a compliance certification, a legal ruling, or a service level objective. The following are the limits worth knowing before you deploy; each links to the detail.
+
+- **Durability is a hardware property.** A returned `fsync` means the kernel was asked to flush, not that bytes survived a power cut. Substrate requirements: [storage requirements](docs/operations/STORAGE_REQUIREMENTS.md).
+- **Proofs are relative to a trusted root.** Inclusion is proven against a root you pin independently — not authorship, time, ordering, or external immutability. See [boundaries](docs/BOUNDARIES.md).
+- **The default signer is symmetric.** HMAC detects modification by anyone without the key; it is not third-party non-repudiation.
+- **Redaction is deterministic pattern matching.** It settles supported identifier grammars across chunk boundaries. It is not the complete HIPAA Safe Harbor method and does not catch every encoding or paraphrase.
+- **Formal artifacts verify models, not runtimes.** Z3, Lean, and TLC check stated formulas and bounded abstractions, not the Python or Rust runtime or the FFI boundary.
+- **Topology decides evidence semantics.** One writer per log path. Multiple workers sharing a path do not produce one ordered chain — see [architecture](docs/institutional/DOC-01_ENTERPRISE_ARCHITECTURE.md) §8.
+- **Regulatory applicability is yours.** Mappings are technical contributions; scope, retention, custody, and admissibility belong to your organization and its reviewers.
+- **Out of the threat model by design:** physical attacks, hypervisor or host-root compromise, side channels, guaranteed prevention of prompt injection, and network-layer denial of service. See [threat model](docs/security/THREAT_MODEL.md).
+
+Full claim register: [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md). Consolidated boundaries: [`docs/BOUNDARIES.md`](docs/BOUNDARIES.md).
