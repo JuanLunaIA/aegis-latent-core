@@ -67,7 +67,7 @@ The 14 synchronized anchors reported by the validator: `core`, `core-runtime`, `
 |---|---|---|---|
 | Rust lint | `cargo clippy --locked --all-targets --all-features -- -D warnings` | VERIFIED-LOCAL | clean (exit 0) |
 | Rust tests | `cargo test --locked` | VERIFIED-LOCAL | **29 passed, 0 failed** |
-| Python suite | `pytest -q` | VERIFIED-LOCAL | **5661 passed, 81 skipped, 0 failed** (5741 collected) |
+| Python suite | `pytest -q` | VERIFIED-LOCAL | **5661 passed, 81 skipped, 0 failed** (5742 items executed; a separate `--collect-only` pass reported 5741) |
 | Python SDK | `pytest sdk/python/tests` | VERIFIED-LOCAL | **16 passed** (required `openai`/`anthropic` peer packages) |
 | TypeScript SDK | `npm ci && npm test` (`sdk/typescript`) | VERIFIED-LOCAL | **12 passed** (providers, proof, dropin, gateway); 0 npm vulns |
 | Dashboard tests | `npm test` (`dashboard`) | VERIFIED-LOCAL | **6 passed** (contracts, no-fabrication, states) |
@@ -209,7 +209,7 @@ commit time).
     "action_sha_pins": {"remote_references": 112, "status": "PASS", "execution": "VERIFIED-LOCAL"}
   },
   "tests": {
-    "python": {"passed": 5661, "skipped": 81, "failed": 0, "collected": 5741, "execution": "VERIFIED-LOCAL"},
+    "python": {"passed": 5661, "skipped": 81, "failed": 0, "executed": 5742, "collect_only_reported": 5741, "execution": "VERIFIED-LOCAL"},
     "rust": {"passed": 29, "failed": 0, "clippy_deny_warnings": true, "execution": "VERIFIED-LOCAL"},
     "sdk_python": {"passed": 16, "execution": "VERIFIED-LOCAL"},
     "sdk_typescript": {"passed": 12, "execution": "VERIFIED-LOCAL"},
