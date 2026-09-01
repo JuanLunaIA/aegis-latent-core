@@ -2,7 +2,7 @@
 
 > **Historical archive (2026-06-13).** This execution log is retained unchanged
 > as evidence for its stated version and scope; it does not describe current v4
-> status. Use the [current evidence index](artifacts/v4-enterprise-maturation-2026-08-23/EVIDENCE.md)
+> status. Use the [current evidence index](evidence/INDEX.md)
 > for newer gates, bounded observations, and outstanding external blockers.
 
 **Project:** Aegis Latent Core v2.3.0  
