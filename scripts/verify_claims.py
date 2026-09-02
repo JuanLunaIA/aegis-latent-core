@@ -13,9 +13,10 @@ Checks performed:
 1. Every claim row parses and carries a recognised evidence state.
 2. Claim identifiers are unique and contiguous.
 3. ``IMPLEMENTED`` and ``MEASURED`` rows carry an evidence locator.
-4. ``ROADMAP`` rows carry no evidence locator, because a Roadmap item has
-   nothing to locate. A locator on a Roadmap row usually means the row is
-   mis-stated, not that the evidence exists.
+4. A ``ROADMAP`` row that cites source carries a boundary that denies the
+   capability. Citing source on a Roadmap row is legitimate — it explains why
+   the capability is not claimed — but without a denial in the boundary a
+   reader takes the citation as confirmation that it exists.
 5. Every row carries a boundary. A claim without a stated boundary is the
    failure mode this register exists to prevent.
 6. Every ``CLM-NNN`` referenced anywhere in the corpus is defined here.
