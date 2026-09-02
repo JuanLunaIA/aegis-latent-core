@@ -26,7 +26,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def _load(name: str, relative: str):
     spec = importlib.util.spec_from_file_location(name, ROOT / relative)
-    assert spec and spec.loader
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
     spec.loader.exec_module(module)
@@ -54,7 +55,7 @@ def _rules(findings) -> set[str]:
 
 
 @pytest.mark.parametrize(
-    "sentence,phrase",
+    ("sentence", "phrase"),
     [
         ("Aegis is fully compliant with SOC 2.", "fully compliant"),
         ("Evidence produced by the gateway is legally admissible.", "legally admissible"),
