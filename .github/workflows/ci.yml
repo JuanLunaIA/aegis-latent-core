@@ -22,6 +22,14 @@ env:
   # Prevent seccomp filter from interfering with CI runners
   HERMES_SANDBOX: "true"
 
+# Workflow-wide floor for GITHUB_TOKEN. Without it, every job here inherits the
+# repository default, which may be read/write across all scopes. The two jobs
+# that genuinely need to write (sbom: attestations; docker: packages) declare
+# their own block, and a job-level block replaces this one rather than adding
+# to it — so raising a job's privilege stays an explicit, reviewable act.
+permissions:
+  contents: read
+
 jobs:
   # ── License headers ──────────────────────────────────────────────────────────
   license-check:

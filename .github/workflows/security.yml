@@ -18,9 +18,12 @@ on:
     - cron: "0 3 * * 1"
   workflow_dispatch: {}
 
+# Read-only floor. ``security-events: write`` is granted per job, and only to
+# the four jobs that upload SARIF — pip-audit and cargo-audit report through
+# their exit status and never need it. GitHub replaces this block when a job
+# declares its own, so each grant below is the job's complete scope.
 permissions:
   contents: read
-  security-events: write
 
 jobs:
   # ── CodeQL static analysis ───────────────────────────────────────────────
@@ -28,6 +31,9 @@ jobs:
     name: CodeQL (${{ matrix.language }})
     runs-on: ubuntu-22.04
     # Findings and analysis failures are release-relevant; this job is blocking.
+    permissions:
+      contents: read
+      security-events: write
     strategy:
       fail-fast: false
       matrix:
@@ -54,6 +60,9 @@ jobs:
   bandit:
     name: Bandit SAST
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
@@ -119,6 +128,9 @@ jobs:
   trivy:
     name: Trivy Container Scan
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
@@ -147,6 +159,9 @@ jobs:
   osv-scanner:
     name: OSV Scanner
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
