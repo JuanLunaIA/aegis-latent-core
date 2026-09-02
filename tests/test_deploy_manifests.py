@@ -96,6 +96,14 @@ def test_helm_ships_a_default_deny_network_policy() -> None:
     assert policy["ingressFrom"] == []
     assert policy["egressTo"] == []
     assert policy["dnsTo"], "DNS egress must name a resolver, not be unrestricted"
+    for peer in policy["dnsTo"]:
+        # namespaceSelector and podSelector in one peer AND together. A peer
+        # carrying only a namespaceSelector opens port 53 to every pod in that
+        # namespace, which is broader than "the cluster resolver".
+        assert "podSelector" in peer, (
+            f"DNS egress peer {peer} selects a whole namespace; add a podSelector "
+            "so the rule reaches resolver pods only"
+        )
 
     template = (HELM / "templates/networkpolicy.yaml").read_text()
     assert "kind: NetworkPolicy" in template

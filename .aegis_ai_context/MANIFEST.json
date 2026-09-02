@@ -279,8 +279,8 @@
     {
       "category": "governed_input",
       "path": "deploy/helm/values.yaml",
-      "sha256": "6cc1a2e3ed853d8d635713b589c2d641640005b921aced3073d3ef6416998962",
-      "size": 8716
+      "sha256": "78fd496c50105aef13437fd1d8b2e92237df259254d29b6c0b211f9d5d6b0e8a",
+      "size": 9374
     },
     {
       "category": "governed_input",

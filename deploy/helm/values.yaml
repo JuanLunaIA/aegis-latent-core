@@ -197,12 +197,24 @@ networkPolicy:
   #         port: 6379
   egressTo: []
 
-  # Cluster DNS resolver. Override if the resolver is not kube-dns in
-  # kube-system, or narrow it further with a podSelector.
+  # Cluster DNS resolver. namespaceSelector and podSelector sit in the SAME
+  # list entry, so they AND together and this reaches only resolver pods —
+  # a namespaceSelector alone would permit port 53 to every pod in
+  # kube-system, including a compromised one listening on that port.
+  #
+  # k8s-app: kube-dns is the label CoreDNS keeps for kube-dns compatibility
+  # and matches a standard install, but distributions differ. Verify with
+  #   kubectl -n kube-system get pods --show-labels | grep -i dns
+  # and override this list if the resolver is elsewhere or labelled
+  # differently — a selector that matches nothing denies DNS outright, which
+  # fails closed but will look like a name-resolution outage.
   dnsTo:
     - namespaceSelector:
         matchLabels:
           kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
 
 # ── Prometheus SLO burn-rate alerting ─────────────────────────────────────────
 # Requires the Prometheus Operator (kube-prometheus-stack or standalone).

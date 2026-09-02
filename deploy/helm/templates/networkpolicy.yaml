@@ -37,8 +37,10 @@ spec:
   ingress: []
   {{- end }}
   egress:
-    # DNS resolution, restricted to the cluster resolver rather than the
-    # whole cluster. Egress is otherwise denied unless egressTo names a peer.
+    # DNS resolution. The default peer selects the resolver namespace AND the
+    # resolver pods, not the namespace alone — a namespace-only peer would
+    # permit port 53 to every pod in kube-system. Egress is otherwise denied
+    # unless egressTo names a peer.
     - to:
         {{- toYaml .Values.networkPolicy.dnsTo | nindent 8 }}
       ports:
