@@ -47,7 +47,7 @@ controlled by deployment admission/concurrency policy.
 Sources of truth: `aegis/proxy/app.py`, `aegis/proxy/streaming.py`,
 `tests/test_proxy_streaming.py`, and the per-stream arithmetic contract in
 `specs/aegis_stream_buffer.smt2`. The scheduling figures in
-[BENCHMARKS Claim 1](../BENCHMARKS.md#claim-1--zero-forensic-latency) characterize an
+[BENCHMARKS result summary](../BENCHMARKS.md#result-summary) characterize an
 optional background-dispatch microbenchmark, not the authoritative evidence path or
 end-to-end proxy latency.
 
@@ -141,7 +141,7 @@ Each commit:
 | **Consistency** | O(log N) | "chain state B is an append-only extension of state A" |
 
 Measured Rust vs Python throughput (leaf insertion):
-**avg 3.01× / max 3.34×** ([BENCHMARKS Claim 2](../BENCHMARKS.md#claim-2--rust-extension-performance-mmr)).
+**avg 3.01× / max 3.34×** ([BENCHMARKS result summary](../BENCHMARKS.md#result-summary)).
 
 ---
 
@@ -224,7 +224,7 @@ Every Rust tier has a functionally complete Python fallback; the extension is op
 
 Only Tier 7 (MMR) has a committed benchmark today; Tiers 1–6 carry design-target
 speedups that are **not yet measured** — see
-[BENCHMARKS "Claims Without Benchmarks"](../BENCHMARKS.md#claims-without-benchmarks).
+[BENCHMARKS release language controls](../BENCHMARKS.md#release-language-controls).
 
 ---
 

@@ -1,84 +1,187 @@
 # Release Status and Provenance
 
-**Last verified:** 2026-09-01 UTC
-**Release baseline:** checked-out source baseline/release target `4.0.2` with fourteen synchronized anchors
+**Audience:** release owners, security reviewers, platform engineers, procurement.
+**Scope:** the version, publication, and provenance record for this repository.
+**Boundary:** this is the only document that states publication state. Every other document links here. Source metadata never establishes publication; readback does.
 
-This document holds the complete version, publication, and provenance record so that `README.md` can state the current status once and link here. It is the authoritative place for release-lifecycle detail; the README is not.
+**Last verified:** 2026-09-02 UTC
+**Source baseline:** `4.0.2`, fourteen synchronized anchors
 
-## Current status at a glance
+---
 
-| Surface | Observed state | How to confirm it yourself |
-|---|---|---|
-| Source baseline | `4.0.2`, fourteen synchronized anchors | `python scripts/verify_release_contract.py --root . --tag v4.0.2` |
-| Git tag | `v4.0.2`, annotated and Sigstore-signed, resolving to commit `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca` | `git show v4.0.2` after fetching tags |
-| GitHub Release | Present, non-draft, non-prerelease, 31 assets | [Release page](https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.2) |
-| PyPI (`aegis-latent-sdk`) | Observed at `4.0.0` | [PyPI project page](https://pypi.org/project/aegis-latent-sdk/) |
-| npm (`aegis-latent-sdk`) | Observed at `4.0.0` | [npm package page](https://www.npmjs.com/package/aegis-latent-sdk) |
+## 1. Publication state
 
-The gateway itself is not distributed on PyPI or npm. Those registries carry the SDKs only, so a source checkout is the supported way to run the gateway regardless of registry state.
+Each row is a separate observable. A `Confirmed` cell means the readback command in §2 was executed on the date shown and returned the stated result.
 
-## Version anchors
+| Surface | State | Observed value | Readback |
+| --- | --- | --- | --- |
+| Source baseline | Confirmed | `4.0.2`, fourteen synchronized anchors | §2.1 |
+| GitHub tag | Confirmed | `v4.0.2` → `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca` | §2.2 |
+| GitHub Release | Confirmed | Published 2026-08-28, non-draft, non-prerelease, 31 assets | §2.3 |
+| PyPI (`aegis-latent-sdk`) | **Not published at 4.0.2** | Latest `4.0.0`; only release is `4.0.0` | §2.4 |
+| npm (`aegis-latent-sdk`) | **Not published at 4.0.2** | `dist-tags.latest = 4.0.0`; only version is `4.0.0` | §2.5 |
+| PyPI / npm (gateway) | Not applicable | The gateway is not distributed on either registry | §2.4, §2.5 |
+| OCI image (gateway) | Confirmed | `ghcr.io/juanlunaia/aegis-latent-core:4.0.2` → `sha256:5b59352f17d3f602d045af8ba9cd54a18b808acd2e66b2c256af4519f106302a` | §2.6 |
+| OCI image (dashboard) | Confirmed | `ghcr.io/juanlunaia/aegis-latent-core-dashboard:4.0.2` present | §2.6 |
+| SBOMs | Confirmed as release assets | Two SPDX JSON documents, each with a `.sha256` sidecar | §2.3 |
+| Image signatures | Confirmed present | A cosign signature object exists for the gateway `4.0.2` digest | §2.7 |
+| Release-asset signatures | **Absent by design** | The release carries `.sha256` sidecars and `SHA256SUMS`, not detached signatures | §2.8 |
+| Build attestations | Confirmed in workflow; verify per artifact | `actions/attest-build-provenance` covers wheels, sdists, tgz, SBOMs, manifest and `SHA256SUMS` | §2.8 |
+| Tag signature | Confirmed, shows `bad_cert` on GitHub | Sigstore keyless; see §3 | §2.9 |
 
-The release contract requires fourteen version anchors to agree before a tag is cut. At `4.0.2` they are: `core`, `core-runtime`, `python-sdk`, `python-sdk-runtime`, `typescript-sdk`, `typescript-lock`, `dashboard`, `dashboard-lock`, `rust-cargo`, `rust-pyproject`, `rust-lock`, `helm-chart`, `helm-app`, and `helm-image`.
+**The two rows that matter most for a consumer:** the SDKs on PyPI and npm are at `4.0.0`, not `4.0.2`. Do not describe `4.0.2` as released to those registries. The gateway ships from source; the registries carry SDKs only.
 
-The immutable parent comparison commit `fdace8844568eb788216740b2cb5daf187d99d3b` retains fourteen synchronized `4.0.0` anchors and is the reference point for diffing source metadata between the two baselines.
+## 2. Readback commands
 
-## Release envelope readback, 2026-09-01
+Run these yourself. Do not accept this document's table as evidence of the current state — it records what was observed on the date above.
 
-A read-only GitHub API readback recorded the following. It confirms that a release envelope exists with the expected shape; it is not a byte-level integrity check and not a registry publication.
-
-**Assets (31).** `SHA256SUMS`; `release-asset-manifest.json`; two SPDX SBOMs (`aegis-latent-core-4.0.2.spdx.json`, `aegis-latent-core-build-sbom.spdx.json`); the Python core wheel and sdist; the Python SDK wheel and sdist; the TypeScript tarball `aegis-latent-sdk-4.0.2.tgz`; and seven `aegis_rust-4.0.2-cp311-abi3` platform wheels covering macOS x86-64 and arm64, manylinux2014 x86-64, musllinux x86-64, aarch64 and armv7l, and Windows amd64. Every artifact ships a matching `.sha256` sidecar.
-
-**Tag signature.** The annotated tag carries a Sigstore keyless signature. The certificate's subject alternative name is the repository's own `create_release_tag.yml@refs/heads/main` workflow, the OIDC issuer is `token.actions.githubusercontent.com`, the trigger was `workflow_dispatch`, and the build environment was `release`.
-
-## Why GitHub shows the tag as unverified
-
-GitHub's native signature badge reports `v4.0.2` as unverified with reason `bad_cert`. **This is expected and is not a defect.**
-
-Sigstore issues short-lived certificates — valid for roughly ten minutes — and records the signing event in a public transparency log. GitHub's native verifier expects a long-lived GPG or S/MIME key it can resolve to a registered account, so a Fulcio certificate that has already expired by design reads as a bad certificate. The signature is validated against the transparency log rather than against certificate lifetime.
-
-To verify the tag properly, use a Sigstore-aware verifier and check the workflow identity rather than the GitHub badge:
+### 2.1 Source baseline
 
 ```bash
-# Verify the signed tag against the Sigstore transparency log.
+python scripts/verify_release_contract.py --root . --tag v4.0.2
+```
+
+### 2.2 GitHub tag
+
+```bash
+git fetch --tags origin
+git rev-list -n 1 v4.0.2      # expect a6eb58dcc03f8b638c8f3e35f0300f5443a926ca
+git cat-file -t v4.0.2        # expect "tag" (annotated), not "commit" (lightweight)
+```
+
+### 2.3 GitHub Release
+
+```bash
+gh release view v4.0.2 --repo JuanLunaIA/aegis-latent-core
+gh release view v4.0.2 --repo JuanLunaIA/aegis-latent-core --json assets \
+  --jq '.assets | length'     # expect 31
+```
+
+### 2.4 PyPI
+
+```bash
+curl -sS https://pypi.org/pypi/aegis-latent-sdk/json \
+  | python3 -c 'import sys,json; d=json.load(sys.stdin); print("latest:", d["info"]["version"]); print("releases:", sorted(d["releases"]))'
+```
+
+Observed 2026-09-02: `latest: 4.0.0`, `releases: ['4.0.0']`.
+
+### 2.5 npm
+
+```bash
+npm view aegis-latent-sdk version
+npm view aegis-latent-sdk versions --json
+```
+
+Observed 2026-09-02: `4.0.0`, and `4.0.0` as the only version.
+
+### 2.6 OCI images
+
+```bash
+crane ls ghcr.io/juanlunaia/aegis-latent-core
+crane digest ghcr.io/juanlunaia/aegis-latent-core:4.0.2
+```
+
+Without `crane`, the registry API works anonymously for a public package:
+
+```bash
+TOKEN=$(curl -sS "https://ghcr.io/token?scope=repository:juanlunaia/aegis-latent-core:pull&service=ghcr.io" \
+  | python3 -c 'import sys,json; print(json.load(sys.stdin)["token"])')
+curl -sSI -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: application/vnd.oci.image.index.v1+json" \
+  https://ghcr.io/v2/juanlunaia/aegis-latent-core/manifests/4.0.2 \
+  | grep -i docker-content-digest
+```
+
+Observed 2026-09-02: `sha256:5b59352f17d3f602d045af8ba9cd54a18b808acd2e66b2c256af4519f106302a`.
+
+### 2.7 Image signature
+
+```bash
+cosign verify ghcr.io/juanlunaia/aegis-latent-core:4.0.2 \
+  --certificate-identity-regexp 'https://github\.com/JuanLunaIA/aegis-latent-core/\.github/workflows/.+' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+```
+
+A cosign signature object for the `4.0.2` digest was observed present on 2026-09-02. Presence of the object is not the same as a successful verification: run the command above and read its output.
+
+### 2.8 Release artifacts
+
+Artifact integrity is checked against the published digest list, and provenance against GitHub's attestation store:
+
+```bash
+gh release download v4.0.2 --repo JuanLunaIA/aegis-latent-core --dir ./v4.0.2
+cd v4.0.2
+sha256sum --check --strict SHA256SUMS
+
+gh attestation verify aegis_latent_core-4.0.2-py3-none-any.whl \
+  --repo JuanLunaIA/aegis-latent-core
+```
+
+The release does **not** carry detached `.sig`, `.pem`, or `.sigstore` assets, so there is no `cosign verify-blob` step for release files. Integrity comes from `SHA256SUMS` plus the sidecars, and provenance from the attestation store. `cosign verify` applies to the OCI images (§2.7), not to release blobs.
+
+### 2.9 Tag signature
+
+```bash
 gitsign verify \
   --certificate-identity 'https://github.com/JuanLunaIA/aegis-latent-core/.github/workflows/create_release_tag.yml@refs/heads/main' \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
   v4.0.2
 ```
 
-A verification that succeeds establishes that the signing workflow in this repository produced the tag. It does not establish that the artifacts attached to the release were built from that tag; that is a separate attestation check.
+## 3. Why GitHub shows the tag as unverified
 
-## Verifying release artifacts
+GitHub's native signature badge reports `v4.0.2` as unverified with reason `bad_cert`. **This is expected and is not by itself an indication of compromise.**
 
-Download the assets and check them against the published digest list:
+Sigstore issues short-lived certificates — valid for roughly ten minutes — and records the signing event in a public transparency log. GitHub's native verifier expects a long-lived GPG or S/MIME key it can resolve to a registered account, so a Fulcio certificate that has already expired by design reads as a bad certificate. Trust comes from the transparency-log entry, not from certificate lifetime, so use the §2.9 command rather than the badge.
 
-```bash
-gh release download v4.0.2 --repo JuanLunaIA/aegis-latent-core --dir ./v4.0.2
-cd v4.0.2
-sha256sum --check --strict SHA256SUMS
-```
+A successful `gitsign verify` establishes that the signing workflow in this repository produced the tag. It does not establish that the artifacts attached to the release were built from that tag; that is the separate attestation check in §2.8.
 
-For build provenance on the container images:
+## 4. Version anchors
 
-```bash
-gh attestation verify oci://ghcr.io/juanlunaia/aegis-latent-core:4.0.2 \
-  --repo JuanLunaIA/aegis-latent-core
-```
+The release contract requires fourteen version anchors to agree before a tag is cut. At `4.0.2` they are: `core`, `core-runtime`, `python-sdk`, `python-sdk-runtime`, `typescript-sdk`, `typescript-lock`, `dashboard`, `dashboard-lock`, `rust-cargo`, `rust-pyproject`, `rust-lock`, `helm-chart`, `helm-app`, and `helm-image`.
 
-## Historical baseline
+The immutable parent comparison commit `fdace8844568eb788216740b2cb5daf187d99d3b` retains fourteen synchronized `4.0.0` anchors and is the reference point for diffing source metadata between the two baselines.
+
+## 5. Release envelope detail
+
+**Assets (31), observed 2026-09-02.** `SHA256SUMS`; `release-asset-manifest.json`; two SPDX SBOMs (`aegis-latent-core-4.0.2.spdx.json`, `aegis-latent-core-build-sbom.spdx.json`); the Python core wheel and sdist; the Python SDK wheel and sdist; the TypeScript tarball `aegis-latent-sdk-4.0.2.tgz`; and seven `aegis_rust-4.0.2-cp311-abi3` platform wheels covering macOS x86-64 and arm64, manylinux2014 x86-64, musllinux x86-64, aarch64 and armv7l, and Windows amd64. Every artifact ships a matching `.sha256` sidecar.
+
+**Tag signature.** The annotated tag carries a Sigstore keyless signature. The certificate's subject alternative name is the repository's own `create_release_tag.yml@refs/heads/main` workflow, the OIDC issuer is `token.actions.githubusercontent.com`, the trigger was `workflow_dispatch`, and the build environment was `release`.
+
+**Tag target versus branch head.** `v4.0.2` resolves to `a6eb58d`. The default branch has advanced past that commit. A reader evaluating the tagged release must check out the tag, not the branch head, or they are evaluating different source.
+
+## 6. Historical baseline
 
 The previous public label `v4.0.1` is a **lightweight** tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`. Its tag-triggered workflows failed, so no artifact published under that label carries attributed provenance from those runs. The `4.0.0` objects observed on PyPI and npm predate and are unrelated to those failed runs.
 
 Two subsequent fixes addressed the tag-workflow failure: `a6eb58d` provisioned Python for the signed tag workflow, and `ed47d9c` bound publication dispatch to the signed target. The `v4.0.2` tag was cut after both landed.
 
-## What a version number does and does not tell you
+An OCI tag `4.0.1` exists in the registry. It predates the fixes above and does not inherit provenance from the failed tag workflows; treat it as unattributed and prefer `4.0.2`.
 
-Source metadata is a statement about the working tree, not about the world. A synchronized anchor set means the repository agrees with itself; it does not mean a tag exists, a release was published, a registry accepted an upload, an image was pushed, a signature validates, or any deployment accepted the result. Each of those is a separate observable, and the commands in this document are how you check them.
+## 7. Rollback
 
-## Related documents
+Rolling back a release is a provenance operation, not only a deployment one.
 
-- [`docs/CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md) — controlling public claims register.
-- [`docs/BOUNDARIES.md`](BOUNDARIES.md) — consolidated product and evidence boundaries.
-- [`evidence/INDEX.md`](../evidence/INDEX.md) — dated evidence catalog.
-- [`SECURITY.md`](../SECURITY.md) — vulnerability reporting.
+**Selecting a target.** Roll back only to a version whose tag, release, and image digest you have re-verified with §2. A version number in a manifest is not a rollback target; a digest is. Pin by digest:
+
+```bash
+ghcr.io/juanlunaia/aegis-latent-core@sha256:<digest-from-§2.6>
+```
+
+**Constraints that apply to every rollback:**
+
+- Preserve every WAL before changing versions. A rollback that discards evidence cannot be undone.
+- Confirm WAL and export schema compatibility between the running version and the target before switching. An older gateway reading a newer WAL is not a supported path.
+- Never roll back across the Helm topology change without following the migration procedure in [Operations Playbook §6.4](institutional/DOC-04_OPERATIONS_PLAYBOOK.md). The workload kind and the claim names both change; a naive rollback strands per-replica volumes.
+- A rollback does not retract a published artifact. Registry and release objects are additive; yanking or deprecating a published version is a separate, deliberate act.
+
+**Procedure and verification** are in [Rollback Runbook](operations/ROLLBACK_RUNBOOK.md).
+
+## 8. What a version number does and does not tell you
+
+Source metadata is a statement about the working tree, not about the world. A synchronized anchor set means the repository agrees with itself; it does not mean a tag exists, a release was published, a registry accepted an upload, an image was pushed, a signature validates, or any deployment accepted the result. Each of those is a separate observable, and §2 is how you check them.
+
+---
+
+**Related:** [Claims Matrix](CLAIMS_MATRIX.md) · [Boundaries](BOUNDARIES.md) · [Evidence Index](../evidence/INDEX.md) · [Rollback Runbook](operations/ROLLBACK_RUNBOOK.md) · [SECURITY](../SECURITY.md)

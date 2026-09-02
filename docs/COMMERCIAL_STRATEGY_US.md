@@ -1,3 +1,5 @@
+> **INTERNAL DOCUMENT — NOT FOR EXTERNAL DISTRIBUTION**
+
 # US Commercial Strategy — Aegis Latent Core
 
 This document describes a US-market positioning and packaging hypothesis for Aegis Latent Core. It is for commercial stakeholders, founders, product owners, procurement and support planners. It is not a binding offer, a forecast, legal advice, or evidence of market validation.

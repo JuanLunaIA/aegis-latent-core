@@ -99,14 +99,14 @@
     {
       "category": "governed_input",
       "path": "README.md",
-      "sha256": "07cf7d11059a4c3185e3aa354d6130f3db7c5c2c32f5a610e87503a7adac7d3f",
-      "size": 33566
+      "sha256": "a4637c7425485a2c8f865dcefcba8ed0702912eedb6f2e0d444b35b6a27fb376",
+      "size": 12952
     },
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "6dff99c7d7087804ebb5a5c1f47b85c0a1751a301fd521d3d28bd82fae31dfcd",
-      "size": 39029
+      "sha256": "fe8d8fad19791048e3f3368e508dc9f95c7eb134713f23d2f9af79dc6588dbb2",
+      "size": 42170
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "1d204a041cd6ceea1c6903e1a341ae7ff461e5637a520ab6616e725b716da9c9",
-      "size": 25732
+      "sha256": "e662efb1013298f3f7c9d9c13d6fd71991857a986baec92ea9bb05bad12f6a8c",
+      "size": 34827
     },
     {
       "category": "governed_input",
@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "0f93bf4edad56d793951e335b3a095fe40628c22d06b5380c05dcfc609fb7075",
-      "size": 23594
+      "sha256": "6656d88e30933309f52f15fd4d1727f389b6569dc73fe6a13c4aa99266015101",
+      "size": 24740
     },
     {
       "category": "governed_input",
