@@ -7,6 +7,11 @@ Threat WAL-02: two writers appending to one WAL path produce divergent
 ``prev_hash`` relationships that the loader cannot represent as one verified
 chain. The topology was previously documented as unsupported but not enforced,
 so the fork could occur silently. These tests pin the enforcement.
+
+``CryptographicAuditLedger.__exit__`` calls ``close()``, so each ledger is held
+in a ``with`` block: the writer is released on the normal path and on a failed
+assertion alike, which matters here because a leaked handle would hold the lock
+and cascade into every later test on the same path.
 """
 
 from __future__ import annotations
@@ -24,67 +29,55 @@ _KEY = "k" * 32
 def test_second_writer_on_same_path_is_refused(tmp_path):
     """A live writer must prevent a second ledger from opening the same path."""
     wal = str(tmp_path / "a.wal.jsonl")
-    first = CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY)
-    try:
+    with CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY):
         with pytest.raises(WalWriterConflictError):
             CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY)
-    finally:
-        first.close()
 
 
 def test_refused_writer_leaks_no_descriptor(tmp_path):
     """The losing writer must close its descriptor rather than leak it."""
     wal = str(tmp_path / "b.wal.jsonl")
-    first = CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY)
-    try:
+    with CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY) as first:
         for _ in range(50):
             with pytest.raises(WalWriterConflictError):
                 CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY)
         # A descriptor leak would exhaust the process limit well before 50.
         assert first._wal_handle is not None
-    finally:
-        first.close()
 
 
 def test_restart_reacquires_the_lock(tmp_path):
     """Releasing the writer must allow a later process to reopen the path."""
     wal = str(tmp_path / "c.wal.jsonl")
-    first = CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY)
-    first.commit_state("s0", 1.0, b"payload", tenant_id="t1")
-    first.close()
+    with CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY) as first:
+        first.commit_state("s0", 1.0, b"payload", tenant_id="t1")
 
-    second = CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY)
-    try:
+    with CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY) as second:
         assert len(second.chain) >= 1
         ok, _ = second.verify_integrity()
         assert ok is True
-    finally:
-        second.close()
 
 
 def test_distinct_paths_are_independent(tmp_path):
     """The guard must not block legitimate per-replica WAL paths."""
-    one = CryptographicAuditLedger(
-        persistence_path=str(tmp_path / "r1.wal.jsonl"), signing_key=_KEY
-    )
-    two = CryptographicAuditLedger(
-        persistence_path=str(tmp_path / "r2.wal.jsonl"), signing_key=_KEY
-    )
-    try:
+    with (
+        CryptographicAuditLedger(
+            persistence_path=str(tmp_path / "r1.wal.jsonl"), signing_key=_KEY
+        ) as one,
+        CryptographicAuditLedger(
+            persistence_path=str(tmp_path / "r2.wal.jsonl"), signing_key=_KEY
+        ) as two,
+    ):
         one.commit_state("s0", 1.0, b"a", tenant_id="t1")
         two.commit_state("s0", 1.0, b"b", tenant_id="t1")
         assert one.verify_integrity()[0] is True
         assert two.verify_integrity()[0] is True
-    finally:
-        one.close()
-        two.close()
 
 
 def _child_try_open(wal: str, result) -> None:
     """Open the WAL in a separate process and report the outcome."""
     try:
-        ledger = CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY)
-        ledger.close()
+        with CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY):
+            pass
         result.value = 0  # acquired — a fork would have been possible
     except WalWriterConflictError:
         result.value = 1  # correctly refused
@@ -96,8 +89,7 @@ def _child_try_open(wal: str, result) -> None:
 def test_cross_process_writer_is_refused(tmp_path):
     """The guard must hold across processes, which is the real threat."""
     wal = str(tmp_path / "d.wal.jsonl")
-    holder = CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY)
-    try:
+    with CryptographicAuditLedger(persistence_path=wal, signing_key=_KEY):
         ctx = mp.get_context("spawn")
         result = ctx.Value("i", -1)
         child = ctx.Process(target=_child_try_open, args=(wal, result))
@@ -105,5 +97,3 @@ def test_cross_process_writer_is_refused(tmp_path):
         child.join(timeout=60)
         assert child.exitcode == 0
         assert result.value == 1, "a second process acquired the WAL lock"
-    finally:
-        holder.close()
