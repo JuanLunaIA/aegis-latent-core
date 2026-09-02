@@ -45,7 +45,13 @@ import hmac
 import json
 import logging
 import os
+import sys
 import time
+
+try:  # POSIX advisory locking. Absent on Windows; see _lock_wal_fd.
+    import fcntl
+except ImportError:  # pragma: no cover - platform dependent
+    fcntl = None  # type: ignore[assignment]
 from collections import deque
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
@@ -64,6 +70,45 @@ logger = logging.getLogger(__name__)
 
 MAX_PAYLOAD_BYTES: int = 1_048_576  # 1 MiB hard cap
 _DEFAULT_MAX_FORENSIC_BYTES: int = 65_536
+
+
+class WalWriterConflictError(RuntimeError):
+    """Another process already holds the append lock for this WAL path.
+
+    Two processes appending to one WAL path produce divergent ``prev_hash``
+    relationships that the loader cannot represent as a single verified chain.
+    The topology is documented as unsupported; this exception makes it
+    enforced rather than merely documented, so the fork cannot occur silently.
+    """
+
+
+def _lock_wal_fd(fd: int, path: str) -> None:
+    """Take an exclusive, non-blocking advisory lock on an open WAL fd.
+
+    The lock is released automatically when the descriptor is closed or the
+    process exits, so a restart re-acquires it without operator action.
+
+    On platforms without ``fcntl`` the guard cannot be enforced in-process and
+    single-writer discipline remains an operator responsibility; that case is
+    logged at warning level rather than failing open silently.
+    """
+    if fcntl is None:  # pragma: no cover - platform dependent
+        logger.warning(
+            "Advisory WAL locking is unavailable on %s; single-writer "
+            "discipline for %s is operator-enforced, not process-enforced.",
+            sys.platform,
+            path,
+        )
+        return
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError as exc:
+        raise WalWriterConflictError(
+            f"WAL path is already locked by another writer: {path}. "
+            "Exactly one process may append to a WAL path; concurrent writers "
+            "fork the evidence chain."
+        ) from exc
+
 
 # ── Rust / PQC detection ──────────────────────────────────────────────────────
 try:
@@ -825,6 +870,13 @@ class CryptographicAuditLedger:
                 os.O_WRONLY | os.O_CREAT | os.O_APPEND,
                 0o600,
             )
+            # WAL-02: exactly one writer per WAL path. Acquire before the
+            # handle is published so a losing writer never appends a frame.
+            try:
+                _lock_wal_fd(fd, self.persistence_path)
+            except WalWriterConflictError:
+                os.close(fd)
+                raise
             # Tighten a pre-existing WAL whose mode predates this hardening.
             try:
                 os.chmod(self.persistence_path, 0o600)

@@ -92,6 +92,11 @@ async def test_ledger_integration_via_proxy():
                 # 2. Verify persistence
                 assert os.path.exists(wal_path)
 
+                # Release the gateway's writer first: reconstruction models a
+                # restart. One writer per WAL path is enforced, so a live
+                # handle would (correctly) refuse this second open.
+                app.state.aegis.ledger.close()
+
                 new_ledger = CryptographicAuditLedger(persistence_path=wal_path)
                 assert len(new_ledger.chain) >= 1
                 assert new_ledger.chain[-1].tenant_id == "development"
