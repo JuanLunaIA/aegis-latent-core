@@ -1,0 +1,189 @@
+{{- /*
+StatefulSet, not Deployment. The JSONL WAL is the authoritative evidence
+store and admits exactly one writer per path: two writers produce divergent
+prev_hash relationships that the loader cannot reconstruct as one verified
+chain. A Deployment over a single shared PVC gave every replica the same WAL
+path. volumeClaimTemplates gives each replica its own claim and therefore its
+own path, so replicas scale without forking the chain.
+
+The in-process guard is the backstop, not the design: the ledger takes a POSIX
+advisory lock on the WAL path, so a second writer fails closed at startup
+rather than corrupting evidence. aegis.workers is pinned to "1" for the same
+reason — AEGIS_WORKERS forks that many uvicorn processes inside one pod, all
+of them sharing this pod's WAL path.
+*/ -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "aegis-latent-core.fullname" . }}
+  labels:
+    {{- include "aegis-latent-core.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "aegis-latent-core.fullname" . }}-headless
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  # Ordered rollout: a replica's successor starts only once the predecessor is
+  # Ready, so a stuck WAL never has two pods contending for one volume.
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "aegis-latent-core.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "aegis-latent-core.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "aegis-latent-core.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: aegis
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: AEGIS_BACKEND_URL
+              value: {{ .Values.aegis.backendUrl | quote }}
+            - name: AEGIS_SECURITY_ENFORCEMENT_MODE
+              value: {{ .Values.aegis.securityEnforcementMode | quote }}
+            - name: AEGIS_REQUIRE_DURABLE_EVIDENCE
+              value: {{ .Values.aegis.requireDurableEvidence | quote }}
+            - name: AEGIS_REQUIRE_LSM
+              value: {{ .Values.aegis.requireLsm | quote }}
+            - name: AEGIS_REQUIRE_SECCOMP
+              value: {{ .Values.aegis.requireSeccomp | quote }}
+            - name: AEGIS_MAX_REQUEST_BODY_BYTES
+              value: {{ .Values.aegis.maxRequestBodyBytes | quote }}
+            - name: AEGIS_ANALYSIS_QUEUE_SIZE
+              value: {{ .Values.aegis.analysisQueueSize | quote }}
+            - name: AEGIS_ANALYSIS_WORKER_COUNT
+              value: {{ .Values.aegis.analysisWorkerCount | quote }}
+            - name: AEGIS_ANALYSIS_SAMPLE_RATE
+              value: {{ .Values.aegis.analysisSampleRate | quote }}
+            - name: AEGIS_ANALYSIS_TIMEOUT_SECONDS
+              value: {{ .Values.aegis.analysisTimeoutSeconds | quote }}
+            - name: AEGIS_RATE_LIMIT_BACKEND
+              value: {{ .Values.aegis.rateLimitBackend | quote }}
+            - name: AEGIS_REDIS_URL
+              value: {{ .Values.aegis.redisUrl | quote }}
+            - name: AEGIS_FORCE_LOGPROBS
+              value: {{ .Values.aegis.forceLogprobs | quote }}
+            - name: AEGIS_LOG_LEVEL
+              value: {{ .Values.aegis.logLevel | quote }}
+            - name: AEGIS_KL_ALERT_THRESHOLD
+              value: {{ .Values.aegis.klAlertThreshold | quote }}
+            - name: AEGIS_JS_ALERT_THRESHOLD
+              value: {{ .Values.aegis.jsAlertThreshold | quote }}
+            - name: AEGIS_ENTROPY_ALERT_THRESHOLD_BITS
+              value: {{ .Values.aegis.entropyAlertThresholdBits | quote }}
+            - name: AEGIS_WEBHOOK_URL
+              value: {{ .Values.aegis.webhookUrl | quote }}
+            - name: AEGIS_WORKERS
+              value: {{ .Values.aegis.workers | quote }}
+            - name: AEGIS_WAL_PATH
+              value: {{ .Values.persistence.mountPath }}/aegis.wal.jsonl
+            - name: AEGIS_PHI_DEIDENTIFY
+              value: {{ .Values.aegis.phiDeidentify | quote }}
+            - name: AEGIS_WAF_SESSION_WINDOW
+              value: {{ .Values.aegis.wafSessionWindow | quote }}
+            - name: AEGIS_WAF_SESSION_CUMULATIVE_THRESHOLD
+              value: {{ .Values.aegis.wafSessionCumulativeThreshold | quote }}
+            - name: AEGIS_WAF_SESSION_CRESCENDO_TURNS
+              value: {{ .Values.aegis.wafSessionCrescendoTurns | quote }}
+            {{- if .Values.aegis.existingSecret }}
+            - name: AEGIS_BACKEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aegis.existingSecret }}
+                  key: AEGIS_BACKEND_API_KEY
+                  optional: true
+            - name: AEGIS_API_KEYS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aegis.existingSecret }}
+                  key: AEGIS_API_KEYS
+            - name: AEGIS_AUDIT_API_KEYS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aegis.existingSecret }}
+                  key: AEGIS_AUDIT_API_KEYS
+                  optional: true
+            - name: AEGIS_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aegis.existingSecret }}
+                  key: {{ .Values.aegis.signingKeySecretKey }}
+                  optional: true
+            {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: wal-data
+              mountPath: {{ .Values.persistence.mountPath }}
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        {{- if not .Values.persistence.enabled }}
+        # Evidence is lost on pod restart. Evaluation only — a governed
+        # deployment must set persistence.enabled=true.
+        - name: wal-data
+          emptyDir: {}
+        {{- end }}
+        - name: tmp
+          emptyDir: {}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- range .Values.topologySpreadConstraints }}
+        - maxSkew: {{ .maxSkew }}
+          topologyKey: {{ .topologyKey | quote }}
+          whenUnsatisfiable: {{ .whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              {{- include "aegis-latent-core.selectorLabels" $ | nindent 14 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: wal-data
+        labels:
+          {{- include "aegis-latent-core.labels" . | nindent 10 }}
+      spec:
+        accessModes:
+          - {{ .Values.persistence.accessMode }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+  {{- end }}

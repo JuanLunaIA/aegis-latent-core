@@ -237,8 +237,8 @@
     {
       "category": "governed_input",
       "path": "dashboard/package.json",
-      "sha256": "19ede7ab528ff7f4d223c59fb35ddc6255f8a29e8c696fa7002806f90c2b1fa3",
-      "size": 964
+      "sha256": "8e7a6cbf78bda8b65c68e3df4a717b9147f3dba87499cc04794d90981be14ba2",
+      "size": 1072
     },
     {
       "category": "governed_input",
@@ -279,8 +279,8 @@
     {
       "category": "governed_input",
       "path": "deploy/helm/values.yaml",
-      "sha256": "836a156aba320387ba9cf71b8721af7283a0f8e87b15aad720de61293b50614e",
-      "size": 6720
+      "sha256": "6cc1a2e3ed853d8d635713b589c2d641640005b921aced3073d3ef6416998962",
+      "size": 8716
     },
     {
       "category": "governed_input",
@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "774bb2d3c9d96d5d69b880598ce4855641704dc38e0290d746eef0922783c597",
-      "size": 22708
+      "sha256": "0f93bf4edad56d793951e335b3a095fe40628c22d06b5380c05dcfc609fb7075",
+      "size": 23594
     },
     {
       "category": "governed_input",
@@ -333,8 +333,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/forensic.yml",
-      "sha256": "4f799591f8c8c368c3ecb03b34236365b49b4357ffac737a18830689ab100f66",
-      "size": 2928
+      "sha256": "3cc351b056b281fe31c0d78d381685885d881d2d9d516bab0ab2a2f9fe34d740",
+      "size": 3303
     },
     {
       "category": "governed_input",
@@ -375,8 +375,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/security.yml",
-      "sha256": "dc63e3b05533d7050fd04cdf58d4ec4a76cebf21fb7dffad24f4cb5f7b156c95",
-      "size": 7397
+      "sha256": "0312d6bbfb55b1b64b51a21413ed67898f2685ea2b4cc4ba489549a378101bdc",
+      "size": 7943
     },
     {
       "category": "governed_input",

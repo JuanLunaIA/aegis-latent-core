@@ -1,0 +1,22 @@
+{{- /*
+Governing Service for the StatefulSet. It exists to give each replica a stable
+DNS identity (<pod>.<svc>.<ns>.svc) so a restarted pod reattaches to the same
+WAL volume under the same name; it is not the traffic entry point. The
+ClusterIP Service in service.yaml carries client traffic.
+*/ -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "aegis-latent-core.fullname" . }}-headless
+  labels:
+    {{- include "aegis-latent-core.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: false
+  ports:
+    - port: {{ .Values.service.targetPort }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "aegis-latent-core.selectorLabels" . | nindent 4 }}
