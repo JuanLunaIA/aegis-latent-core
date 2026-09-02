@@ -1,0 +1,57 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- /*
+Default-deny for both directions, then the minimum each direction needs.
+
+Without this the gateway's pods can reach every other pod in the cluster and
+be reached by them, which turns any neighbouring compromise into direct access
+to an audit endpoint and to the WAL volume's writer.
+
+A NetworkPolicy is only enforced where a CNI implements it (Calico, Cilium,
+Antrea, and others). Where the CNI ignores policy this manifest is inert, so
+target acceptance must confirm enforcement rather than assume it.
+*/ -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegis-latent-core.fullname" . }}
+  labels:
+    {{- include "aegis-latent-core.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "aegis-latent-core.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  {{- if .Values.networkPolicy.ingressFrom }}
+  ingress:
+    - from:
+        {{- toYaml .Values.networkPolicy.ingressFrom | nindent 8 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.targetPort }}
+  {{- else }}
+  # No source selector configured, so nothing may reach the gateway. Set
+  # networkPolicy.ingressFrom to the ingress controller or client namespace
+  # before sending traffic — an unset list denies rather than permits.
+  ingress: []
+  {{- end }}
+  egress:
+    # DNS resolution. The default peer selects the resolver namespace AND the
+    # resolver pods, not the namespace alone — a namespace-only peer would
+    # permit port 53 to every pod in kube-system. Egress is otherwise denied
+    # unless egressTo names a peer.
+    - to:
+        {{- toYaml .Values.networkPolicy.dnsTo | nindent 8 }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- with .Values.networkPolicy.egressTo }}
+    # Upstream LLM backend, Redis, SIEM, TSA, and object storage. Every target
+    # is caller-supplied: the chart cannot know the operator's endpoints, and
+    # guessing one would silently widen egress.
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

@@ -107,6 +107,44 @@
         },
         "redisUrl": {
           "type": "string"
+        },
+        "workers": {
+          "description": "AEGIS_WORKERS forks this many uvicorn processes inside one pod, and each opens the same AEGIS_WAL_PATH. Two writers fork the evidence chain, so the ledger takes an advisory lock and any worker past the first fails closed at startup. Scale with replicaCount, which gives each StatefulSet replica its own WAL volume.",
+          "type": "string",
+          "const": "1"
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "accessMode": {
+          "description": "Rendered per replica via volumeClaimTemplates. A shared-write mode would put every replica on one WAL path.",
+          "type": "string",
+          "enum": [
+            "ReadWriteOnce",
+            "ReadWriteOncePod"
+          ]
+        }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "ingressFrom": {
+          "type": "array"
+        },
+        "egressTo": {
+          "type": "array"
+        },
+        "dnsTo": {
+          "type": "array",
+          "minItems": 1
         }
       }
     }

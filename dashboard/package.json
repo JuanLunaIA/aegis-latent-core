@@ -9,7 +9,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check:bundle-secrets": "node scripts/check-client-bundle-secrets.mjs",
+    "check": "npm run typecheck && npm test && npm run build && npm run check:bundle-secrets"
   },
   "dependencies": {
     "aegis-latent-sdk": "file:../sdk/typescript",

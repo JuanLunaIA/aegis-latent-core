@@ -624,6 +624,15 @@ def create_proxy_app(settings: AegisSettings | None = None) -> FastAPI:
 def create_app(settings: AegisSettings | None = None) -> FastAPI:
     cfg = settings or get_settings()
 
+    # Publish enforcement posture on /metrics, not /health: the health contract
+    # is that it never leaks config values. This is a single posture bit, so a
+    # governed deployment can alert on a runtime that came up in development
+    # mode. Set before any other construction so the gauge reflects the config
+    # this process actually loaded.
+    observability.SECURITY_ENFORCEMENT_MODE.set(
+        1 if cfg.security_enforcement_mode == "strict" else 0
+    )
+
     state = _AppState()
     state.settings = cfg
     state.mtls_auth = None  # populated in lifespan when mtls_required or ssl_ca_certs is set

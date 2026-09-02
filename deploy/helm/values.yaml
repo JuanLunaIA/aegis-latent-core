@@ -51,13 +51,21 @@ aegis:
   jsAlertThreshold: "0.5"
   entropyAlertThresholdBits: "1.0"
   webhookUrl: ""
-  workers: "2"
+  # Must stay "1". AEGIS_WORKERS forks that many uvicorn processes inside one
+  # pod, and every one of them opens this pod's AEGIS_WAL_PATH. Two writers on
+  # one WAL path fork the evidence chain, so the ledger takes a POSIX advisory
+  # lock and any worker past the first fails closed at startup. Scale with
+  # replicaCount instead: each StatefulSet replica gets its own WAL volume.
+  workers: "1"
   phiDeidentify: "false"
   wafSessionWindow: "10"
   wafSessionCumulativeThreshold: "2.0"
   wafSessionCrescendoTurns: "3"
 
 # ── WAL persistence ───────────────────────────────────────────────────────────
+# Rendered as the StatefulSet's volumeClaimTemplates, so each replica gets its
+# own claim and therefore its own WAL path. ReadWriteOnce is correct and
+# deliberate here: a shared volume would put every replica on one WAL path.
 persistence:
   enabled: true
   storageClass: ""          # "" = cluster default
@@ -159,6 +167,54 @@ topologySpreadConstraints:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# ── Network policy ────────────────────────────────────────────────────────────
+# Default-deny ingress and egress around the gateway pods. Enforced only where
+# the cluster CNI implements NetworkPolicy; confirm enforcement on the target
+# rather than assuming it.
+#
+# ingressFrom and egressTo are intentionally empty: the chart cannot know the
+# operator's ingress controller, Redis, SIEM or upstream endpoints, and a
+# guessed default would silently widen the policy. With both unset the gateway
+# can resolve DNS and nothing else, which fails closed — populate them before
+# sending traffic. Each entry is a NetworkPolicyPeer / NetworkPolicyEgressRule.
+networkPolicy:
+  enabled: true
+
+  # e.g.
+  #   - namespaceSelector:
+  #       matchLabels:
+  #         kubernetes.io/metadata.name: ingress-nginx
+  ingressFrom: []
+
+  # e.g.
+  #   - to:
+  #       - podSelector:
+  #           matchLabels:
+  #             app.kubernetes.io/name: redis
+  #     ports:
+  #       - protocol: TCP
+  #         port: 6379
+  egressTo: []
+
+  # Cluster DNS resolver. namespaceSelector and podSelector sit in the SAME
+  # list entry, so they AND together and this reaches only resolver pods —
+  # a namespaceSelector alone would permit port 53 to every pod in
+  # kube-system, including a compromised one listening on that port.
+  #
+  # k8s-app: kube-dns is the label CoreDNS keeps for kube-dns compatibility
+  # and matches a standard install, but distributions differ. Verify with
+  #   kubectl -n kube-system get pods --show-labels | grep -i dns
+  # and override this list if the resolver is elsewhere or labelled
+  # differently — a selector that matches nothing denies DNS outright, which
+  # fails closed but will look like a name-resolution outage.
+  dnsTo:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
 
 # ── Prometheus SLO burn-rate alerting ─────────────────────────────────────────
 # Requires the Prometheus Operator (kube-prometheus-stack or standalone).

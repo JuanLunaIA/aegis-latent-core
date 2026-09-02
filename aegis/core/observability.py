@@ -169,6 +169,13 @@ if _PROM:
         "aegis_native_stream_wal_errors_total",
         "Auxiliary native streaming WAL append failures; JSONL remains authoritative.",
     )
+    SECURITY_ENFORCEMENT_MODE: Any = Gauge(
+        "aegis_security_enforcement_mode",
+        "Active enforcement mode: 1 = strict, 0 = development. Development "
+        "relaxes required authentication, durable evidence, distributed "
+        "limiting and kernel controls, so a governed environment should alert "
+        "on 0. This gauge exposes posture only; it carries no config values.",
+    )
 else:
     # No-op stubs — identical API surface so callers never branch on _PROM.
     # All methods are silent no-ops; the proxy runs identically when
@@ -202,6 +209,7 @@ else:
     STREAM_TOKENS = _NoopMetric()
     STREAM_REDACTIONS = _NoopMetric()
     NATIVE_STREAM_WAL_ERRORS = _NoopMetric()
+    SECURITY_ENFORCEMENT_MODE = _NoopMetric()
     WAL_REPLICATION_LAG = _NoopMetric()
     SCHEDULING_JITTER = _NoopMetric()
 

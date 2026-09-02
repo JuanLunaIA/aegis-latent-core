@@ -42,7 +42,7 @@ Escalate immediately to the incident commander, security owner, evidence custodi
 | Evidence failure path | `aegis/proxy/app.py:826-856,1058-1066,1283-1289` | Durable-commit and Redis failures return `503`. |
 | Runtime metrics | `aegis/core/observability.py:41-187` | Exact metric names and optional-export boundary. |
 | Burn-rate rules | `deploy/helm/templates/prometheusrule.yaml:1-254`; `aegis/core/slo_alerting.py:117-211` | Existing window pairs and metric expressions; disabled by default in Helm. |
-| Helm deployment | `deploy/helm/values.yaml:4-178`; `deploy/helm/templates/deployment.yaml:7-147`; `deploy/helm/templates/pvc.yaml:1-17`; `deploy/helm/templates/pdb.yaml:1-13` | Replicas, probes, security context, PVC, disruption budget, and topology constraints. |
+| Helm deployment | `deploy/helm/values.yaml:4-225`; `deploy/helm/values.schema.json`; `deploy/helm/templates/statefulset.yaml`; `deploy/helm/templates/networkpolicy.yaml`; `deploy/helm/templates/pdb.yaml:1-13` | Replicas, probes, security context, per-replica WAL claims, single-writer pinning, network reachability, disruption budget, and topology constraints. |
 | Compose deployment | `deploy/docker/docker-compose.yml:1-68`; `deploy/docker/Dockerfile:5-98` | Strict local-container startup contract and image entry point. |
 | WAL stall runbook/tool | `docs/operations/BACKPRESSURE_RUNBOOK.md:10-59`; `tools/benchmarks/run_backpressure_stall.py:58-212` | Local injected `fsync` seam and recovery criteria. |
 | WAL stall evidence | `evidence/execution_2026-08-20/backpressure_stall_report.json:1-45` | In-tree bounded measurement: 2,500 offered requests with a 2 ms injected delay. |
@@ -68,9 +68,10 @@ Escalate immediately to the incident commander, security owner, evidence custodi
 | `DOC04-CLM-008` | The backup manager copies active and archived WAL files, verifies the copy, writes a manifest, and verifies a restore before and after copying. | `IMPLEMENTED` | `aegis/core/wal_backup.py:100-190,192-287`; `tests/test_wal_backup.py:43-227` | Quiesced or externally snapshotted source; correct signing material when HMAC verification is required; trusted destination. | Tampered input is accepted, a successful result lacks integrity verification, or named tests fail. | Evidence custodian |
 | `DOC04-CLM-009` | Crash-consistent live backup and atomic multi-file restore are not established. | `ROADMAP` | `aegis/core/wal_backup.py:128-171,245-264` | `shutil.copy2` is used file by file; the implementation comment says atomic restore, but no temporary-file-and-rename transaction covers the restored file set. | A reviewed implementation and power-loss/concurrent-writer fault tests prove a declared snapshot and atomic replacement boundary. | Evidence custodian |
 | `DOC04-CLM-010` | Prometheus metric objects exist for requests, pipeline latency, audit commit latency/errors, pending commits, limiter failures, optional analysis failures, circuit state, and replication lag. | `IMPLEMENTED` | `aegis/core/observability.py:51-151`; metric tests in `tests/test_observability.py`, `tests/test_observability_new.py`, `tests/test_chaos.py:300-335` | `prometheus-client` is installed; metric existence does not mean collection, alert delivery, or SLO acceptance. | A named metric is absent or its declared labels differ. | Observability owner |
-| `DOC04-CLM-011` | The current proxy does not attach a `/metrics` endpoint, and Prometheus support is optional; metric-based production monitoring therefore requires an environment-specific exporter/instrumentation integration. | `CONFIGURATION-DEPENDENT` | `aegis/core/observability.py:7-15,185-187`; `aegis/proxy/app.py:630-1402`; `pyproject.toml:76` | No external sidecar or custom application wrapper is assumed. | The deployed artifact exposes and is successfully scraped for all referenced metric series under a reviewed integration. | Observability owner |
+| `DOC04-CLM-011` | The proxy attaches `/metrics` only when `prometheus-client` is importable, which is an optional extra (`aegis[metrics]`); without it every metric is a no-op stub and no endpoint is registered, so metric-based production monitoring depends on an environment-specific install and scrape integration. | `CONFIGURATION-DEPENDENT` | `aegis/proxy/app.py` (`create_app`, `if observability.prometheus_available()`); `aegis/core/observability.py`; `pyproject.toml:79` | No external sidecar or custom application wrapper is assumed. | The deployed artifact exposes and is successfully scraped for all referenced metric series under a reviewed integration. | Observability owner |
+| `DOC04-CLM-016` | `aegis_security_enforcement_mode` reports the loaded enforcement posture as `1` (strict) or `0` (development). It is a posture bit only and carries no configuration values or labels; it does not assert that strict-mode invariants passed, only which mode the process loaded. | `IMPLEMENTED` | `aegis/proxy/app.py` (`create_app`); `aegis/core/observability.py`; `tests/security/test_enforcement_mode_metric.py` | Requires the `metrics` extra and a working scrape; inherits `DOC04-CLM-011`. `/health` deliberately does not carry it, because that endpoint contracts to leak no configuration. | The series is absent under a reviewed scrape, or reads a mode the process did not load. | Observability owner |
 | `DOC04-CLM-012` | Existing multi-window rules use `aegis_requests_total` and `aegis_request_duration_seconds_bucket`/`_count` in 1h/5m, 6h/30m, 24h/2h, and 72h/6h pairs. | `CONFIGURATION-DEPENDENT` | `deploy/helm/templates/prometheusrule.yaml:31-254`; `deploy/helm/values.yaml:160-178` | Prometheus Operator, metric export, nonzero denominators, routing, runbooks, and approved SLO semantics exist. Rules are disabled by default. | Rendered rules reference absent series, invalid labels, unapproved semantics, or fail an alert-delivery exercise. | Observability owner and service owner |
-| `DOC04-CLM-013` | The Helm chart can create replicas, rolling updates, probes, a PDB, topology spread, and a PVC, but these objects do not prove service or evidence high availability. | `CONFIGURATION-DEPENDENT` | `deploy/helm/templates/deployment.yaml:7-147`; `deploy/helm/templates/pdb.yaml:1-13`; `deploy/helm/templates/pvc.yaml:1-17`; `deploy/helm/values.yaml:4,58-64,121-154` | Scheduler, zones, storage class, ingress, Redis, and disruption behavior must be accepted in the target cluster. | A declared target failure violates its tested service objective or loses/unverifiably forks evidence. | Platform/SRE owner |
+| `DOC04-CLM-013` | The Helm chart can create replicas, rolling updates, probes, a PDB, topology spread, per-replica WAL claims, and a default-deny NetworkPolicy, but these objects do not prove service or evidence high availability. | `CONFIGURATION-DEPENDENT` | `deploy/helm/templates/statefulset.yaml`; `deploy/helm/templates/pdb.yaml:1-13`; `deploy/helm/templates/networkpolicy.yaml`; `deploy/helm/values.yaml:4,53-59,69-73,181-205` | Scheduler, zones, storage class, ingress, Redis, and disruption behavior must be accepted in the target cluster. A NetworkPolicy is inert unless the cluster CNI enforces it. | A declared target failure violates its tested service objective or loses/unverifiably forks evidence. | Platform/SRE owner |
 | `DOC04-CLM-014` | Cross-replica global ordering, cross-pod atomicity, and multi-region HA are not currently established. | `ROADMAP` | `docs/CLAIMS_MATRIX.md:46`; `docs/performance/SCALING_GUIDE.md:16-25`; `tests/test_gossip_wal_sync.py:1-20` | Current supported wording is “independently verifiable per-replica evidence bundle.” | A deployed, reviewed consensus or centralized-writer design passes partition, failover, recovery, ordering, and restore acceptance. | Architecture owner and release owner |
 | `DOC04-CLM-015` | Any statement that restored evidence is legally admissible, compliant, or satisfies a retention mandate requires qualified review. | `LEGAL-REVIEW-REQUIRED` | `docs/CLAIMS_MATRIX.md:48,57-59`; `docs/operations/ROLLBACK_RUNBOOK.md:1-3` | Technical integrity metadata is not a legal conclusion. | Qualified counsel or assessor rejects the statement, or jurisdiction/customer facts change. | Privacy/legal owner |
 
@@ -124,7 +125,7 @@ curl -fsS http://127.0.0.1:${AEGIS_PORT:-8080}/ready
 
 ### 6.3 Kubernetes deployment template
 
-The following is an **explicit deployment template**, not a universal command. Replace the values-file and namespace through the approved deployment system. The chart currently renders image references as `repository:tag`, not digest syntax (`deploy/helm/templates/deployment.yaml:34`); an immutable-digest production workflow requires a reviewed chart change or registry admission policy.
+The following is an **explicit deployment template**, not a universal command. Replace the values-file and namespace through the approved deployment system. The chart currently renders image references as `repository:tag`, not digest syntax (`deploy/helm/templates/statefulset.yaml:49`); an immutable-digest production workflow requires a reviewed chart change or registry admission policy.
 
 ```bash
 # DEPLOYMENT TEMPLATE: target-cluster context and reviewed values are required.
@@ -132,11 +133,36 @@ helm upgrade --install aegis deploy/helm \
   --namespace aegis --create-namespace \
   -f /approved/config/aegis-values.yaml \
   --wait --atomic
-kubectl -n aegis rollout status deployment/aegis-latent-core
+kubectl -n aegis rollout status statefulset/aegis-aegis-latent-core
 kubectl -n aegis get pods,pvc,pdb
 ```
 
-**Expected observation:** strict startup completes, readiness gates traffic, the PVC is bound to accepted storage, the PDB and spread constraints match the approved topology, and each governed test request can be correlated to exactly one durable record in its declared evidence scope. **Failure branch:** `--atomic` returns the Helm release to the prior revision for deployment failure, but this does not verify evidence continuity. Freeze traffic, preserve WALs, and use Section 12. **Escalation:** any PVC attach conflict, shared-writer ambiguity, or cross-zone scheduling conflict blocks multi-replica acceptance.
+The workload is a `StatefulSet`, so `rollout status` must name that kind; the object name is `<release>-<chart>`, which is `aegis-aegis-latent-core` for a release named `aegis`.
+
+**Expected observation:** strict startup completes, readiness gates traffic, one PVC per replica is bound to accepted storage, the PDB and spread constraints match the approved topology, and each governed test request can be correlated to exactly one durable record in its declared evidence scope. **Failure branch:** `--atomic` returns the Helm release to the prior revision for deployment failure, but this does not verify evidence continuity. Freeze traffic, preserve WALs, and use Section 12. **Escalation:** any PVC attach conflict, shared-writer ambiguity, or cross-zone scheduling conflict blocks multi-replica acceptance.
+
+### 6.4 Migrating an existing release off the shared-PVC topology
+
+This applies only to a release installed from a chart revision that rendered a `Deployment` with one shared claim. Read it before upgrading, because the claim names do not overlap and nothing adopts the old volume automatically.
+
+| | Superseded topology | Current topology |
+|---|---|---|
+| Workload kind | `Deployment` | `StatefulSet` |
+| WAL claim | one claim, `<release>-<chart>-wal` | one claim per replica, `wal-data-<release>-<chart>-<ordinal>` |
+| Mounted by | every replica, at the same path | exactly one replica each |
+
+Two consequences follow, and both are easy to miss:
+
+1. **`helm upgrade` cannot convert the workload in place.** Kubernetes does not change an existing object's kind. The upgrade fails, or leaves the old `Deployment` running alongside the new `StatefulSet` — which briefly reproduces the multi-writer condition this change exists to remove. Scale the old workload to zero **before** installing the new one.
+2. **The retained PVC is not picked up.** `wal-data-<release>-<chart>-0` and `<release>-<chart>-wal` are different names, so the StatefulSet provisions an empty volume, replica 0 begins an empty chain, and the prior WAL remains in an orphaned claim that nothing mounts. It is still there until someone deletes it — but nothing reports that it is stranded.
+
+Choose an option deliberately, and rehearse it in a non-production namespace first. None of these is verified against a live cluster in this repository; each requires target acceptance.
+
+- **Archive and start a new chain (default).** Copy the retained WAL out to the accepted evidence store, verify it there, then install the new topology and let replica 0 begin a fresh chain. This is usually correct rather than a compromise: the pre-migration WAL was written under a topology that permitted concurrent writers, so its continuity was never guaranteed, and verifying the archived file is a stronger claim than carrying it forward untested.
+- **Rebind the existing volume to replica 0.** Set the bound PV's `persistentVolumeReclaimPolicy` to `Retain`, delete the old PVC, clear the PV's `claimRef`, and create a PVC named `wal-data-<release>-<chart>-0` bound to it **before** installing the StatefulSet. Verify chain integrity on the first start. This preserves the file but not a guarantee about it.
+- **Copy into the new volume.** Install the new topology, scale to zero, copy the retained WAL into replica 0's volume, then scale up. The ledger holds an advisory lock on the WAL path while running, so the copy must happen with the pod stopped; copying into a live path is refused, which is the intended fail-closed behavior and not a fault to work around.
+
+**Verification, whichever option is chosen:** confirm exactly one writer per path (`kubectl -n aegis get pvc` shows one claim per replica and no shared mount), confirm the ledger reports valid integrity for its declared scope, and record which option was used in the change record. **Escalation:** a `WalWriterConflictError` at startup means two writers were pointed at one path; do not remove the lock — find the second writer.
 
 ## 7. Normal-operation checklist
 
@@ -331,8 +357,10 @@ The following are **deployment templates** and require approved release names an
 # DEPLOYMENT TEMPLATE: inspect and approve the target revision before execution.
 helm -n aegis history aegis
 helm -n aegis rollback aegis APPROVED_REVISION --wait
-kubectl -n aegis rollout status deployment/aegis-latent-core
+kubectl -n aegis rollout status statefulset/aegis-aegis-latent-core
 ```
+
+A rollback that crosses the topology change in Section 6.4 is not a routine revision step: it reverts the workload kind, so the retained per-replica claims are not the claim the older revision expects. Treat it as a migration in the reverse direction, under Section 6.4, and preserve every WAL before starting.
 
 For Compose, update the approved deployment definition to the reviewed immutable image reference through change control, then execute:
 
@@ -373,7 +401,9 @@ Before enabling more than one governed replica, require all of the following:
 | Observability | Per-replica labels, scrape coverage, alert delivery, and denominator checks | Block HA acceptance because blind replicas cannot be operated safely. |
 | Recovery | Replica loss, volume loss, Redis loss, signer loss, and restore rehearsal | Escalate to architecture and DR owners; retain `ROADMAP` status. |
 
-The default chart’s `RollingUpdate` strategy uses `maxSurge: 1` and `maxUnavailable: 0` (`deploy/helm/templates/deployment.yaml:14-18`), PDB default is `minAvailable: 1`, and topology spread is configured. These are availability mechanisms only. They do not solve shared-PVC write coordination, evidence ordering, signer propagation, Redis HA, or disaster recovery.
+The default chart uses a `StatefulSet` with `updateStrategy.type: RollingUpdate` and `podManagementPolicy: OrderedReady` (`deploy/helm/templates/statefulset.yaml`), PDB default is `minAvailable: 1`, and topology spread is configured. These are availability mechanisms only. Shared-PVC write coordination is no longer among the gaps — each replica now owns its claim and its WAL path — but evidence ordering across replicas, signer propagation, Redis HA, and disaster recovery remain unsolved by the chart.
+
+Note the surge behaviour changed with the topology. A `StatefulSet` replaces a pod in place rather than surging a new one alongside it, so the old `maxSurge: 1` / `maxUnavailable: 0` Deployment strategy no longer applies and a rolling update now briefly reduces capacity by one replica. Size `replicaCount` and the PDB for that, and reject an update plan that assumed surge-first replacement.
 
 ## 14. Assumptions, falsification, and review record
 

@@ -23,6 +23,14 @@ env:
   PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
   HERMES_SANDBOX: "true"
 
+# Least privilege for GITHUB_TOKEN. Without an explicit block the workflow
+# inherits the repository default, which may be read/write across every scope —
+# a token this workflow hands to third-party actions and to code under audit.
+# Nothing here writes to the repository; artifact upload uses the runtime token,
+# not a GITHUB_TOKEN scope.
+permissions:
+  contents: read
+
 jobs:
   forensic:
     name: Forensic checks (Python ${{ matrix.python-version }})

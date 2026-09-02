@@ -1,4 +1,10 @@
 {{- if .Values.autoscaling.enabled }}
+{{- /*
+Scaling a StatefulSet retains each replica's PVC on scale-down, so a replica
+that is removed and later restored reattaches to its own WAL volume and its
+evidence survives. Scaling out is safe for the same reason: a new ordinal gets
+a new claim, never a share of an existing WAL path.
+*/ -}}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -8,7 +14,7 @@ metadata:
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
-    kind: Deployment
+    kind: StatefulSet
     name: {{ include "aegis-latent-core.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}

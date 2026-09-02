@@ -22,6 +22,14 @@ env:
   # Prevent seccomp filter from interfering with CI runners
   HERMES_SANDBOX: "true"
 
+# Workflow-wide floor for GITHUB_TOKEN. Without it, every job here inherits the
+# repository default, which may be read/write across all scopes. The two jobs
+# that genuinely need to write (sbom: attestations; docker: packages) declare
+# their own block, and a job-level block replaces this one rather than adding
+# to it — so raising a job's privilege stays an explicit, reviewable act.
+permissions:
+  contents: read
+
 jobs:
   # ── License headers ──────────────────────────────────────────────────────────
   license-check:
@@ -243,6 +251,14 @@ jobs:
           npm test
           npm run build
           npm audit --audit-level=high
+
+      # The build above ran with AEGIS_DASHBOARD_API_KEY set, so that value is
+      # a canary: if any inlining path put it into browser-served output, it is
+      # sitting in .next/static or a prerendered payload right now. Exit 2 means
+      # the check could not run (no build output, no value) and also fails.
+      - name: Assert no server-only secret reached the client bundle
+        working-directory: dashboard
+        run: npm run check:bundle-secrets
 
   # ── Tests ─────────────────────────────────────────────────────────────────
   test:

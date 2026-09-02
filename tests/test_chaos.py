@@ -97,6 +97,11 @@ class TestWALWriteFailure:
         with wal_path.open("a") as fh:
             fh.write('{"index": 99, "node_hash": "ab')  # truncated
 
+        # Release the writer before reopening: this models a process restart.
+        # One writer per WAL path is enforced, so a live first handle would
+        # (correctly) refuse the second open.
+        ledger.close()
+
         # New ledger must replay the three good nodes and skip the truncated one.
         ledger2 = CryptographicAuditLedger(str(wal_path))
         assert len(ledger2.chain) >= 3  # good nodes preserved

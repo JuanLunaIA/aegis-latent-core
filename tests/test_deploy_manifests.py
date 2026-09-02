@@ -38,6 +38,79 @@ def test_helm_values_are_hardened_and_external_dependencies_are_caller_supplied(
     assert values["containerSecurityContext"]["capabilities"]["drop"] == ["ALL"]
 
 
+def test_helm_gives_every_replica_its_own_wal_volume() -> None:
+    """One WAL path per writer. A Deployment over a shared PVC violated that.
+
+    Two processes appending to one WAL produce divergent ``prev_hash``
+    relationships that the loader cannot reconstruct as a single verified
+    chain, so replicas must not share a claim.
+    """
+    templates = HELM / "templates"
+    assert not (templates / "deployment.yaml").exists(), (
+        "a Deployment gives every replica the same WAL path"
+    )
+    assert not (templates / "pvc.yaml").exists(), (
+        "a standalone PVC is shared by all replicas; use volumeClaimTemplates"
+    )
+
+    statefulset = (templates / "statefulset.yaml").read_text()
+    assert "kind: StatefulSet" in statefulset
+    assert "volumeClaimTemplates:" in statefulset
+    assert "serviceName:" in statefulset
+
+    # The governing Service the StatefulSet names must actually exist, or the
+    # replicas never get the stable identity that pins them to their volume.
+    assert (templates / "service-headless.yaml").exists()
+    assert "clusterIP: None" in (templates / "service-headless.yaml").read_text()
+
+    # An HPA still pointed at a Deployment would silently scale nothing.
+    assert "kind: StatefulSet" in (templates / "hpa.yaml").read_text()
+    assert "kind: Deployment" not in (templates / "hpa.yaml").read_text()
+
+
+def test_helm_pins_one_uvicorn_worker_per_pod() -> None:
+    """AEGIS_WORKERS forks processes that all share the pod's WAL path."""
+    values = yaml.safe_load((HELM / "values.yaml").read_text())
+    assert values["aegis"]["workers"] == "1"
+
+    schema = json.loads((HELM / "values.schema.json").read_text())
+    assert schema["properties"]["aegis"]["properties"]["workers"]["const"] == "1", (
+        "an operator must not be able to raise workers past the single-writer limit"
+    )
+
+    access_mode = schema["properties"]["persistence"]["properties"]["accessMode"]
+    assert "ReadWriteMany" not in access_mode["enum"], (
+        "a shared-write volume reintroduces the multi-writer fork"
+    )
+    assert values["persistence"]["accessMode"] in access_mode["enum"]
+
+
+def test_helm_ships_a_default_deny_network_policy() -> None:
+    """Gateway pods must not be reachable by, or able to reach, the whole cluster."""
+    values = yaml.safe_load((HELM / "values.yaml").read_text())
+    policy = values["networkPolicy"]
+    assert policy["enabled"] is True
+
+    # Caller-supplied peers stay empty: a guessed default would silently widen
+    # the policy, and an empty list denies rather than permits.
+    assert policy["ingressFrom"] == []
+    assert policy["egressTo"] == []
+    assert policy["dnsTo"], "DNS egress must name a resolver, not be unrestricted"
+    for peer in policy["dnsTo"]:
+        # namespaceSelector and podSelector in one peer AND together. A peer
+        # carrying only a namespaceSelector opens port 53 to every pod in that
+        # namespace, which is broader than "the cluster resolver".
+        assert "podSelector" in peer, (
+            f"DNS egress peer {peer} selects a whole namespace; add a podSelector "
+            "so the rule reaches resolver pods only"
+        )
+
+    template = (HELM / "templates/networkpolicy.yaml").read_text()
+    assert "kind: NetworkPolicy" in template
+    for direction in ("- Ingress", "- Egress"):
+        assert direction in template, f"policyTypes must include {direction.strip('- ')}"
+
+
 def test_helm_values_schema_is_valid_json_and_rejects_latest() -> None:
     schema = json.loads((HELM / "values.schema.json").read_text())
     tag_schema = schema["properties"]["image"]["properties"]["tag"]
