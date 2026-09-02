@@ -133,11 +133,36 @@ helm upgrade --install aegis deploy/helm \
   --namespace aegis --create-namespace \
   -f /approved/config/aegis-values.yaml \
   --wait --atomic
-kubectl -n aegis rollout status deployment/aegis-latent-core
+kubectl -n aegis rollout status statefulset/aegis-aegis-latent-core
 kubectl -n aegis get pods,pvc,pdb
 ```
 
-**Expected observation:** strict startup completes, readiness gates traffic, the PVC is bound to accepted storage, the PDB and spread constraints match the approved topology, and each governed test request can be correlated to exactly one durable record in its declared evidence scope. **Failure branch:** `--atomic` returns the Helm release to the prior revision for deployment failure, but this does not verify evidence continuity. Freeze traffic, preserve WALs, and use Section 12. **Escalation:** any PVC attach conflict, shared-writer ambiguity, or cross-zone scheduling conflict blocks multi-replica acceptance.
+The workload is a `StatefulSet`, so `rollout status` must name that kind; the object name is `<release>-<chart>`, which is `aegis-aegis-latent-core` for a release named `aegis`.
+
+**Expected observation:** strict startup completes, readiness gates traffic, one PVC per replica is bound to accepted storage, the PDB and spread constraints match the approved topology, and each governed test request can be correlated to exactly one durable record in its declared evidence scope. **Failure branch:** `--atomic` returns the Helm release to the prior revision for deployment failure, but this does not verify evidence continuity. Freeze traffic, preserve WALs, and use Section 12. **Escalation:** any PVC attach conflict, shared-writer ambiguity, or cross-zone scheduling conflict blocks multi-replica acceptance.
+
+### 6.4 Migrating an existing release off the shared-PVC topology
+
+This applies only to a release installed from a chart revision that rendered a `Deployment` with one shared claim. Read it before upgrading, because the claim names do not overlap and nothing adopts the old volume automatically.
+
+| | Superseded topology | Current topology |
+|---|---|---|
+| Workload kind | `Deployment` | `StatefulSet` |
+| WAL claim | one claim, `<release>-<chart>-wal` | one claim per replica, `wal-data-<release>-<chart>-<ordinal>` |
+| Mounted by | every replica, at the same path | exactly one replica each |
+
+Two consequences follow, and both are easy to miss:
+
+1. **`helm upgrade` cannot convert the workload in place.** Kubernetes does not change an existing object's kind. The upgrade fails, or leaves the old `Deployment` running alongside the new `StatefulSet` — which briefly reproduces the multi-writer condition this change exists to remove. Scale the old workload to zero **before** installing the new one.
+2. **The retained PVC is not picked up.** `wal-data-<release>-<chart>-0` and `<release>-<chart>-wal` are different names, so the StatefulSet provisions an empty volume, replica 0 begins an empty chain, and the prior WAL remains in an orphaned claim that nothing mounts. It is still there until someone deletes it — but nothing reports that it is stranded.
+
+Choose an option deliberately, and rehearse it in a non-production namespace first. None of these is verified against a live cluster in this repository; each requires target acceptance.
+
+- **Archive and start a new chain (default).** Copy the retained WAL out to the accepted evidence store, verify it there, then install the new topology and let replica 0 begin a fresh chain. This is usually correct rather than a compromise: the pre-migration WAL was written under a topology that permitted concurrent writers, so its continuity was never guaranteed, and verifying the archived file is a stronger claim than carrying it forward untested.
+- **Rebind the existing volume to replica 0.** Set the bound PV's `persistentVolumeReclaimPolicy` to `Retain`, delete the old PVC, clear the PV's `claimRef`, and create a PVC named `wal-data-<release>-<chart>-0` bound to it **before** installing the StatefulSet. Verify chain integrity on the first start. This preserves the file but not a guarantee about it.
+- **Copy into the new volume.** Install the new topology, scale to zero, copy the retained WAL into replica 0's volume, then scale up. The ledger holds an advisory lock on the WAL path while running, so the copy must happen with the pod stopped; copying into a live path is refused, which is the intended fail-closed behavior and not a fault to work around.
+
+**Verification, whichever option is chosen:** confirm exactly one writer per path (`kubectl -n aegis get pvc` shows one claim per replica and no shared mount), confirm the ledger reports valid integrity for its declared scope, and record which option was used in the change record. **Escalation:** a `WalWriterConflictError` at startup means two writers were pointed at one path; do not remove the lock — find the second writer.
 
 ## 7. Normal-operation checklist
 
@@ -332,8 +357,10 @@ The following are **deployment templates** and require approved release names an
 # DEPLOYMENT TEMPLATE: inspect and approve the target revision before execution.
 helm -n aegis history aegis
 helm -n aegis rollback aegis APPROVED_REVISION --wait
-kubectl -n aegis rollout status deployment/aegis-latent-core
+kubectl -n aegis rollout status statefulset/aegis-aegis-latent-core
 ```
+
+A rollback that crosses the topology change in Section 6.4 is not a routine revision step: it reverts the workload kind, so the retained per-replica claims are not the claim the older revision expects. Treat it as a migration in the reverse direction, under Section 6.4, and preserve every WAL before starting.
 
 For Compose, update the approved deployment definition to the reviewed immutable image reference through change control, then execute:
 
