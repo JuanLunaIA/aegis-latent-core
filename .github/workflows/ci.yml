@@ -252,6 +252,14 @@ jobs:
           npm run build
           npm audit --audit-level=high
 
+      # The build above ran with AEGIS_DASHBOARD_API_KEY set, so that value is
+      # a canary: if any inlining path put it into browser-served output, it is
+      # sitting in .next/static or a prerendered payload right now. Exit 2 means
+      # the check could not run (no build output, no value) and also fails.
+      - name: Assert no server-only secret reached the client bundle
+        working-directory: dashboard
+        run: npm run check:bundle-secrets
+
   # ── Tests ─────────────────────────────────────────────────────────────────
   test:
     name: Test (Python ${{ matrix.python-version }})
