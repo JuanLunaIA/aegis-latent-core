@@ -17,9 +17,23 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _write_document(path: Path, claim: str) -> None:
+    """Write a fixture that satisfies every structural rule, whatever its path.
+
+    The structural rules differ by path: the repository README routes to
+    docs/RELEASE_STATUS.md because release status lives in exactly one place,
+    while other documents carry the inline metadata. Rather than guess which
+    rule applies — the basename alone cannot tell docs/benchmarks/README.md
+    from the root README.md — the fixture satisfies both, so the structural
+    rule never fires and mask the claim rule under test.
+
+    Paths are written as plain text, not Markdown links: the fixture tree has
+    no docs/ directory, and a link check would fire for the same reason.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         "# Fixture\n\n"
+        "> Current release candidate: fixture baseline. "
+        "See `docs/RELEASE_STATUS.md` and `docs/BOUNDARIES.md`.\n\n"
         "Last verified: 2026-08-23\n\n"
         "Release baseline: source fixture\n\n"
         f"{claim}\n\n"

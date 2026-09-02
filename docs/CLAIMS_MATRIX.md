@@ -100,7 +100,7 @@ Governance metadata for each claim, keyed by ID. The register is split from the 
 
 Forbidden phrasing is additive to the global prohibitions in [Style Guide §3](STYLE_GUIDE.md#3-prohibited-language), which apply to every claim without being repeated here.
 
-| ID range | Domain | Forbidden phrasing specific to this domain | Last reviewed | Owner |
+| ID range | Domain | Do not use, in this domain | Last reviewed | Owner |
 |---|---|---|---|---|
 | `CLM-001`–`CLM-008` | Gateway surface, streaming, SDKs, forensic export, dashboard | "complete audit trail", "tamper-proof", "every request is proven" | 2026-09-02 | Architecture owner |
 | `CLM-009`–`CLM-013` | Ledger integrity, WAL topology, storage adapters, enforcement posture | "immutable", "WORM", "cannot be altered", "guaranteed durability" | 2026-09-02 | Architecture owner + Platform/SRE owner |
@@ -110,7 +110,7 @@ Forbidden phrasing is additive to the global prohibitions in [Style Guide §3](S
 | `CLM-033`–`CLM-038` | Egress guard, WAF corpus, backpressure, throughput, microbenchmark | "blocks all attacks", "10k RPS in production", "zero overhead" | 2026-09-02 | Security owner + Performance owner |
 | `CLM-039`–`CLM-042` | Scaling, samples, regulatory contribution, support and pricing | "compliant", "certified", "court-admissible", "enterprise SLA", "validated pricing" | 2026-09-02 | Release owner + Privacy/legal owner |
 | `CLM-043`–`CLM-047` | Durability, proof semantics, WAL authority, streaming state, redaction | "power-loss safe", "zero-knowledge proof", "removes all PII", "guaranteed redaction" | 2026-09-02 | Architecture owner + Privacy/legal owner |
-| `CLM-048`–`CLM-050` | Publication and provenance state | "released on PyPI", "published 4.0.2", "signature verified by GitHub" | 2026-09-02 | Release owner |
+| `CLM-048`–`CLM-050` | Publication and provenance state | Do not use: "released on PyPI"; "published 4.0.2"; "signature verified by GitHub". None is established by readback. | 2026-09-02 | Release owner |
 | `CLM-051`–`CLM-053` | Service levels and storage immutability | "SLA", "uptime guarantee", "immutable", "WORM" | 2026-09-02 | Release owner + Platform/SRE owner |
 
 ## Required wording controls

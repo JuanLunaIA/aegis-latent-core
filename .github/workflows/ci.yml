@@ -93,6 +93,28 @@ jobs:
       - name: Check bounded safety models
         run: scripts/verify_formal_artifacts.sh
 
+  # ── Documentation gates ───────────────────────────────────────────────────
+  docs:
+    name: Documentation Gates
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      # Four checkers with distinct jobs; see docs/DOCUMENTATION_GOVERNANCE.md.
+      # None supersedes another, so all four run and all four must pass.
+      - name: Required corpus, links, placeholders, prohibited phrasing
+        run: python scripts/verify_docs.py --root .
+      - name: Claims register coherence and reference integrity
+        run: python scripts/verify_claims.py --root .
+      - name: Relative links and heading anchors
+        run: bash scripts/verify_links.sh --root .
+      - name: Prose boundary language
+        run: python tools/docs/verify_documentation.py --root . --strict
+      - name: Whitespace
+        run: git diff --check
+
   # ── Lint & format ─────────────────────────────────────────────────────────
   lint:
     name: Lint & Format

@@ -14,7 +14,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No changes are recorded after the `v4.0.2` source release target.
+Source-only changes after the `v4.0.2` release target. None alters the release
+target, and none is published; registry, image and release state remain
+external readback facts recorded in `docs/RELEASE_STATUS.md`.
+
+### Added
+
+- Single-writer enforcement on the JSONL WAL: `CryptographicAuditLedger` takes a POSIX advisory lock before publishing the handle, so a second writer raises `WalWriterConflictError` at startup rather than forking the evidence chain silently.
+- `aegis_security_enforcement_mode` gauge reporting the loaded enforcement posture as `1` (strict) or `0` (development), set before dependent construction and exposed on `/metrics` rather than `/health`.
+- Helm chart renders a `StatefulSet` with per-replica `volumeClaimTemplates`, a headless governing Service, and a default-deny `NetworkPolicy`; `values.schema.json` pins `aegis.workers` to `"1"` and constrains `persistence.accessMode`.
+- Post-build check asserting no server-only secret reaches browser-served dashboard output, wired into CI after the dashboard build.
+- Documentation corpus: claim-control foundations (`docs/STYLE_GUIDE.md`, `docs/DOCUMENTATION_GOVERNANCE.md`, `docs/INDEX.md`), security volume, operations runbooks, API references, four framework technical-input documents, privacy boundaries, enterprise and corporate volumes, assurance index, and root governance files.
+- Four documentation gates run in CI: `scripts/verify_docs.py`, `scripts/verify_claims.py`, `scripts/verify_links.sh`, and the pre-existing `tools/docs/verify_documentation.py`.
+- Eleven claims-matrix rows covering the `fsync` durability boundary, trusted-root independence, the native WAL's auxiliary role, `pending-terminal` semantics, redaction as best-effort, registry publication state, the `bad_cert` explanation, and explicit denials for production SLO, WORM and immutability; stable `CLM-NNN` identifiers on all 53 rows.
+
+### Changed
+
+- Least-privilege `GITHUB_TOKEN`: read-only workflow-level floor in `ci.yml` and `forensic.yml`, and `security-events: write` moved from workflow scope to the four SARIF-uploading jobs in `security.yml`.
+- `README.md` restructured and reduced from roughly 33 KB to 13 KB, stating release status once and routing to `docs/RELEASE_STATUS.md`.
+- `docs/RELEASE_STATUS.md` records a 2026-09-02 readback of every publication surface, with per-surface commands and a publication-state table.
+
+### Fixed
+
+- Release-artifact verification instruction corrected: assets carry attestations and `SHA256SUMS`, not detached signatures, so the check is `gh attestation verify`, not `cosign verify-blob`; `cosign verify` applies to the OCI images.
+- `DOC04-CLM-011` corrected: the proxy does attach `/metrics` whenever `prometheus-client` is importable.
+- DNS egress in the Helm `NetworkPolicy` scoped to resolver pods via a `podSelector`; a namespace-only peer permitted port 53 to every pod in `kube-system` while the comment claimed otherwise.
+- Three stale heading anchors in `docs/architecture/DEEP_DIVE.md` pointing at `docs/BENCHMARKS.md` sections that no longer exist.
+- Stale `rollout status` commands in `docs/institutional/DOC-04_OPERATIONS_PLAYBOOK.md` naming `deployment/` and omitting the release prefix.
 
 ## [4.0.2] — 2026-08-27
 

@@ -296,6 +296,11 @@ def check_document(path: Path, root: Path, *, strict: bool = False) -> list[Find
             if "-->" in stripped:
                 in_leading_comment = False
             continue
+        # The internal-distribution marker from docs/STYLE_GUIDE.md section 9
+        # is a handling notice and sits above the title deliberately, so a
+        # reader cannot miss it. Treat it like the legal comments above.
+        if stripped.startswith(">") and "INTERNAL DOCUMENT" in stripped:
+            continue
         first_content_line = index
         break
     if (
@@ -311,11 +316,34 @@ def check_document(path: Path, root: Path, *, strict: bool = False) -> list[Find
                 "document must start with an H1 heading after legal comments",
             )
         )
-    for required in ("Last verified:", "Release baseline:", "## Related documents"):
-        if required not in text:
-            findings.append(
-                Finding("ERROR", relative, 1, f"missing required metadata or section: {required}")
-            )
+    if relative == "README.md":
+        # Release status lives in exactly one place and README links to it;
+        # see docs/DOCUMENTATION_GOVERNANCE.md. Requiring the inline metadata
+        # the old README carried would now force the duplication that
+        # scripts/verify_docs.py rejects, so require the routing instead.
+        readme_required = (
+            "Current release candidate:",
+            "docs/RELEASE_STATUS.md",
+            "docs/BOUNDARIES.md",
+        )
+        for required in readme_required:
+            if required not in text:
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        relative,
+                        1,
+                        f"README must surface status and route onward: missing {required}",
+                    )
+                )
+    else:
+        for required in ("Last verified:", "Release baseline:", "## Related documents"):
+            if required not in text:
+                findings.append(
+                    Finding(
+                        "ERROR", relative, 1, f"missing required metadata or section: {required}"
+                    )
+                )
 
     previous_level = 0
     fence: str | None = None
