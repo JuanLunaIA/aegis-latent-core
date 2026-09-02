@@ -169,10 +169,6 @@ INTERNAL_MARKER = "**INTERNAL DOCUMENT — NOT FOR EXTERNAL DISTRIBUTION**"
 
 # ── Patterns ──────────────────────────────────────────────────────────────────
 
-PLACEHOLDER_RE = re.compile(
-    r"\b(TODO|TBD|FIXME|XXX|Lorem ipsum|Coming soon|PLACEHOLDER)\b", re.IGNORECASE
-)
-
 #: Prohibited assurance and marketing language. Matched case-insensitively on
 #: prose only, and only when asserted (see ``_is_negated``).
 PROHIBITED_PHRASES = (
@@ -228,6 +224,36 @@ CLAIM_STATE_RE = re.compile(
 #: A heading or line that asks a question is not making a claim.
 QUESTION_RE = re.compile(r"^\s*#{1,6}\s.*\?\s*$|\?\s*$")
 
+#: A heading that scopes its whole section as denial, exclusion or limitation.
+#: Bullets under "What is not controlled here" carry no negation of their own —
+#: the heading supplies it — so the section context has to be carried down.
+DENIAL_HEADING_RE = re.compile(
+    r"(?:\bnot\b|\bno\b|\bnever\b|\bout of scope\b|\bexclusions?\b|\blimits?\b|"
+    r"\blimitations?\b|\bboundar(?:y|ies)\b|\bprohibited\b|\bforbidden\b|"
+    r"\bunsupported\b|\bdoes not\b|\bdo not\b|\bcannot\b|\bgaps?\b|"
+    r"\bwhat .* not\b|\bnever say\b|\bavoid\b|\bcaveats?\b)",
+    re.IGNORECASE,
+)
+
+HEADING_LINE_RE = re.compile(r"^\s*(#{1,6})\s+(.+?)\s*$")
+
+#: An editorial placeholder marker, as opposed to the same letters occurring
+#: inside an identifier or a reference to markers elsewhere. ``TODO:`` at the
+#: start of a clause is a placeholder; ``ci-build-placeholder`` is a literal
+#: value name and ``critical TODO/FIXME markers listed in ...`` is a reference.
+PLACEHOLDER_RE = re.compile(
+    r"(?<![\w-])(TODO|TBD|FIXME|XXX)(?![\w-])|(?<![\w-])(Lorem ipsum|Coming soon)(?![\w-])",
+    re.IGNORECASE,
+)
+
+#: Words that mark a placeholder token as being discussed rather than left behind.
+PLACEHOLDER_REFERENCE_RE = re.compile(
+    r"(?:\bmarkers?\b|\blisted\b|\bresolve[sd]?\b|\bremove[sd]?\b|\bcontains?\b|"
+    r"\bsearch(?:es|ed)?\b|\bgrep\b|\bcheck(?:s|ed)?\b|\bflags?\b|\bforbid(?:s|den)?\b|"
+    r"\bno\b|\bnot\b|\bprohibited\b|\bplaceholders?\b)",
+    re.IGNORECASE,
+)
+
 #: Internal pricing shapes that must never reach README.md.
 PRICING_RE = re.compile(
     r"(?:\$\s?\d[\d,]*(?:\.\d+)?\s*(?:k|m|/|per\b)|\bARR\b|\bMRR\b|"
@@ -265,17 +291,33 @@ def _iter_markdown(root: Path) -> list[Path]:
 
 def _strip_code_blocks(lines: list[str]) -> list[tuple[int, str]]:
     """Return (1-indexed line number, text) for prose lines only."""
-    prose: list[tuple[int, str]] = []
+    return [(number, text) for number, text, _ in _prose_with_headings(lines)]
+
+
+def _prose_with_headings(lines: list[str]) -> list[tuple[int, str, str]]:
+    """Return (line number, prose text, nearest preceding heading).
+
+    The heading travels with the line because denial is often scoped by the
+    section rather than by the sentence: a bullet reading "Guaranteed
+    prevention of prompt injection." under "What is not controlled here"
+    carries no negation of its own, and flagging it would punish the document
+    for being well organised.
+    """
+    out: list[tuple[int, str, str]] = []
     in_fence = False
+    heading = ""
     for index, raw in enumerate(lines, start=1):
         if FENCE_RE.match(raw):
             in_fence = not in_fence
             continue
         if in_fence:
             continue
+        match = HEADING_LINE_RE.match(raw)
+        if match:
+            heading = match.group(2)
         # Inline code is not prose either; a backticked env var is not a claim.
-        prose.append((index, re.sub(r"`[^`]*`", " ", raw)))
-    return prose
+        out.append((index, re.sub(r"`[^`]*`", " ", raw), heading))
+    return out
 
 
 def _is_quoted(text: str, hit_start: int, hit_end: int) -> bool:
@@ -290,7 +332,7 @@ def _is_quoted(text: str, hit_start: int, hit_end: int) -> bool:
     return False
 
 
-def _is_denial(text: str, hit_start: int, hit_end: int) -> bool:
+def _is_denial(text: str, hit_start: int, hit_end: int, heading: str = "") -> bool:
     """True when the line denies, prohibits, quotes or interrogates the phrase.
 
     Boundary and claim-control prose must be able to name a prohibited term in
@@ -303,6 +345,8 @@ def _is_denial(text: str, hit_start: int, hit_end: int) -> bool:
     if CLAIM_STATE_RE.search(text):
         return True
     if _is_quoted(text, hit_start, hit_end):
+        return True
+    if heading and DENIAL_HEADING_RE.search(heading):
         return True
     return bool(NEGATION_RE.search(text))
 
@@ -322,18 +366,26 @@ def check_required_files(root: Path) -> list[Finding]:
 
 def check_placeholders(path: Path, rel: str, lines: list[str]) -> list[Finding]:
     findings = []
-    for line_no, text in _strip_code_blocks(lines):
+    for line_no, text, heading in _prose_with_headings(lines):
         match = PLACEHOLDER_RE.search(text)
-        if match:
-            findings.append(
-                Finding(
-                    rel,
-                    line_no,
-                    "placeholder",
-                    f"{match.group(0)!r} must be resolved, marked "
-                    "[UNKNOWN_MISSING_PRIMARY_SOURCE], or moved to ROADMAP.md",
-                )
+        if not match:
+            continue
+        # A line that talks *about* placeholder markers - a checker's own rule
+        # list, an audit item saying "resolve the TODO markers listed in X" -
+        # is not itself a placeholder left behind.
+        if PLACEHOLDER_REFERENCE_RE.search(text):
+            continue
+        if heading and DENIAL_HEADING_RE.search(heading):
+            continue
+        findings.append(
+            Finding(
+                rel,
+                line_no,
+                "placeholder",
+                f"{match.group(0)!r} must be resolved, marked "
+                "[UNKNOWN_MISSING_PRIMARY_SOURCE], or moved to ROADMAP.md",
             )
+        )
     return findings
 
 
@@ -341,12 +393,12 @@ def check_prohibited_phrases(rel: str, lines: list[str]) -> list[Finding]:
     if rel in CLAIM_CONTROL_FILES:
         return []
     findings = []
-    for line_no, text in _strip_code_blocks(lines):
+    for line_no, text, heading in _prose_with_headings(lines):
         lowered = text.lower()
         for phrase in PROHIBITED_PHRASES:
             start = lowered.find(phrase)
             while start != -1:
-                if not _is_denial(text, start, start + len(phrase)):
+                if not _is_denial(text, start, start + len(phrase), heading):
                     findings.append(
                         Finding(
                             rel,
