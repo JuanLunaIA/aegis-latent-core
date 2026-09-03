@@ -95,6 +95,28 @@ PYTHONPATH=. .venv/bin/python tools/benchmarks/run_pqc_timing.py \
 
 The harness measures the current Python-to-Rust boundary, including public-key/signature decoding performed by the binding. It returns `2` and writes `UNAVAILABLE` when the real backend is absent. A p-value above 0.05 is **non-detection under the experiment**, not proof of constant-time execution. The retained release measurement passed the `sign` experiment and failed the `verify` experiment.
 
+## Evidence-path measurements on the current source baseline
+
+The table above is the retained **v3.1.0** record and is not restated here. The measurements
+below were taken on **2026-09-03** against commit `f77420a` in one ephemeral container —
+`Linux-6.18.44-fc-v24-x86_64`, CPython 3.11.15, cargo 1.94.1, **4 shared unpinned logical
+CPUs**. The full record, including every boundary, is
+[`evidence/evidence_path_measurements_2026-09-03.md`](../evidence/evidence_path_measurements_2026-09-03.md).
+
+| Experiment | Observed result | What it establishes | What remains unproven |
+|---|---|---|---|
+| MMR append, Rust versus Python | Rust 979.57k→775.76k leaves/s; Python 202.99k→156.90k leaves/s across N ∈ {100; 1,000; 10,000; 100,000}; average 4.77×, maximum 4.94× at N = 100,000 | The native accumulator executes the same SHA-256 ASCII-hex algorithm faster on this host | Proof generation, which is served from the Python replica and is not measured; any other host |
+| Audit-chain commit | HMAC-SHA256 sign 456.78k ops/s (2.189 µs); `commit_forensic` with real `fsync` 1.24k commits/s (808.565 µs); `verify_integrity` 23.38k nodes/s (42.770 µs) | The per-node budget is dominated by MMR insertion and WAL `fsync`, not by signing | That `fsync` returning means bytes reached stable media; accepted capacity at any concurrency |
+| Commit cost versus chain length | Flat within noise after the checkpoint change (`1.00× → 0.87× → 1.04× → 0.95×` at 0/500/1,000/2,000 prior leaves) against `1.00× → 17.65×` before it | Per-commit cost no longer grows with the length of the chain | Absolute throughput; the figures exclude durable-write cost by default |
+| Background dispatch overhead | n = 5,000: p50 2.490 µs, p95 9.426 µs, p99 31.869 µs, max 42,597.965 µs, mean 13.322 µs, σ 602.830 µs | The common path costs a few microseconds; the tail on a shared 4-CPU host reaches tens of milliseconds | End-to-end request latency, which this does not measure and must not be presented as |
+| Steady-state memory | ΔRSS +3.81 MiB across 6,000 commits; +1.75 MiB after warm-up. Repeats at 500/1,000/2,000 commits gave 6.36/6.48/6.15 MiB — constant, not proportional | No per-commit growth: a leak would scale with commit count and does not | Absence of a leak. Fragmentation over days, behaviour under memory pressure, other allocators |
+| ML-DSA-65 signing latency | n = 2,000: p50 103.11 µs, p95 278.69 µs, p99 405.07 µs, max 660.68 µs, mean 125.47 µs, σ 75.97 µs; mean exceeds median by 1.22× | Signing latency is right-skewed, the expected shape for FIPS 204 rejection sampling | Constant-time behaviour — a latency sample cannot address it. The average rejection-iteration count was not measured |
+
+**The mean dispatch figure exceeds the p90.** One 42.6 ms outlier on a shared runner is
+responsible. Quote the median with the tail, never the mean alone. No ratio against provider
+round-trip time appears here: this repository has measured no provider RTT, so any such ratio
+would be a claim about someone else's network.
+
 ## Release language controls
 
 Use **“measured under the named workload,” “no statistically significant difference detected under the named experiment,”** and **“offered load.”** Do not use “zero latency,” “zero overhead,” “10k RPS capacity,” “1B RPM,” “constant-time,” “universal WAF” or “production SLO” without a matching artifact, boundary, environment, owner-approved gate and qualified review.

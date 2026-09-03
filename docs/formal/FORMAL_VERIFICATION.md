@@ -28,6 +28,34 @@ The gate runs with Z3 4.8.12, Lean 4.33.0, Java 21, and TLA+ Tools built from so
 | TLC commit-before-emission | No error | 433 generated states, 201 distinct states, depth 13. |
 | TLC append-only ledger | No error | 121 generated and distinct states, depth 5. |
 | TLC session binding | No error | 599 generated states, 194 distinct states, depth 7. |
+| Kani WAL frame bounds | 5 harnesses verified, 0 failures | `mod verification` in `aegis_rust_v2/src/wal.rs`, Kani 0.67.0; re-executed 2026-09-03. |
+
+## Kani bit-level model checking
+
+Kani 0.67.0 checks the frame-bounds arithmetic of the memory-mapped WAL. Five
+`#[kani::proof]` harnesses run over the entire `usize` domain — symbolic exploration, not
+sampling — against `header_range` and `payload_range` in `aegis_rust_v2/src/wal.rs`. Every slice
+taken during a frame walk in `read_all`, `scan_write_pos` and `open` is bounded through those two
+functions, so an out-of-bounds index during a walk would require one of these properties to fail:
+
+| Harness | Property |
+|---|---|
+| `header_range_is_in_bounds` | A returned range lies inside the supplied limit and is exactly one header long; a refusal means overflow or non-fit. |
+| `payload_range_is_in_bounds` | A returned payload range lies inside the limit, starts immediately after the header, and is exactly `payload_len` bytes. |
+| `zero_length_payload_is_never_a_frame` | The zero-length recovery terminator is refused at every position and every limit. |
+| `a_frame_walk_strictly_advances` | The cursor advances strictly, which is what makes both walks terminate on arbitrary mapped bytes. |
+| `header_and_payload_do_not_overlap` | A frame's length field can never be read out of its own payload. |
+
+**These differ in kind from the artifacts above.** Z3, Lean and TLA+ check abstractions written
+separately from the code; Kani checks the real functions, so the refinement gap does not apply to
+them. The exemption is exactly as narrow as it sounds and is bounded in
+[Formal Verification Limits](FORMAL_VERIFICATION_LIMITS.md): Kani models no `mmap`, no
+`flush_range`, no filesystem and no concurrency, so nothing here establishes durability, crash
+consistency, power-loss behaviour, or that `capacity` equals the mapped length. It does not make
+the WAL "memory-safe" as a whole, and it is not a whole-system refinement proof.
+
+Reproduce with `cd aegis_rust_v2 && cargo kani`. CI runs it as the `Kani Model Checking` job,
+pinned to Kani 0.67.0.
 
 ## Mechanistic trace
 

@@ -20,6 +20,10 @@ external readback facts recorded in `docs/RELEASE_STATUS.md`.
 
 ### Added
 
+- `benchmarks/bench_dispatch_overhead.py`: distribution over `aegis.proxy.app._spawn_background` and RSS sampling across repeated commit batches, reporting steady state separately from round-one warm-up so allocator growth is not read as a per-commit leak.
+- `evidence/evidence_path_measurements_2026-09-03.md`: MMR append throughput (Rust versus Python), audit-chain commit and verification, dispatch overhead, steady-state memory and ML-DSA signing latency, all taken on commit `f77420a` in one named container, with per-measurement boundaries and an explicit list of what was not measured.
+- Five claims-matrix rows (`CLM-054`–`CLM-058`) covering Kani frame-bounds model checking, the O(log N) MMR rollback token, POSIX advisory single-writer locking, streaming viable-prefix guards, and native-WAL segment growth — each with its forbidden phrasing recorded in the control register.
+- `docs/formal/FORMAL_VERIFICATION.md` documents the Kani harnesses, the property each checks, and why they differ in kind from the Z3, Lean and TLA+ artifacts.
 - Single-writer enforcement on the JSONL WAL: `CryptographicAuditLedger` takes a POSIX advisory lock before publishing the handle, so a second writer raises `WalWriterConflictError` at startup rather than forking the evidence chain silently.
 - `aegis_security_enforcement_mode` gauge reporting the loaded enforcement posture as `1` (strict) or `0` (development), set before dependent construction and exposed on `/metrics` rather than `/health`.
 - Helm chart renders a `StatefulSet` with per-replica `volumeClaimTemplates`, a headless governing Service, and a default-deny `NetworkPolicy`; `values.schema.json` pins `aegis.workers` to `"1"` and constrains `persistence.accessMode`.
@@ -34,6 +38,8 @@ external readback facts recorded in `docs/RELEASE_STATUS.md`.
 
 ### Changed
 
+- `docs/BENCHMARKS.md` carries an evidence-path section for the current source baseline alongside the retained v3.1.0 record, and `docs/architecture/DEEP_DIVE.md` replaces a stale Rust/Python MMR ratio (`3.01x` / `3.34x`) with the 2026-09-03 measurement (`4.77x` average, `4.94x` maximum) plus the environment it belongs to. The ratio is a property of the host, not the code.
+- `docs/benchmarks/BENCHMARK_METHOD.md` gains three measurement classes and three prohibited phrasings: a ratio against unmeasured provider round-trip time, "zero memory leaks" from a bounded run, and a mean quoted without its tail. The 2026-09-03 dispatch sample is the worked example — one 42.6 ms outlier put the mean above the p90.
 - Least-privilege `GITHUB_TOKEN`: read-only workflow-level floor in `ci.yml` and `forensic.yml`, and `security-events: write` moved from workflow scope to the four SARIF-uploading jobs in `security.yml`.
 - `README.md` restructured and reduced from roughly 33 KB to 13 KB, stating release status once and routing to `docs/RELEASE_STATUS.md`.
 - `docs/RELEASE_STATUS.md` records a 2026-09-02 readback of every publication surface, with per-surface commands and a publication-state table.

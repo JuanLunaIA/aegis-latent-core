@@ -27,6 +27,9 @@ A number without these four things is not a measurement:
 | Test suite outcome | `pytest -q` | Environments where optional backends are absent produce skips |
 | Background dispatch | Microbenchmark of the dispatch path | Everything else: upstream, network, storage, serialization |
 | Commit-cost scaling | `benchmarks/bench_commit_scaling.py` — per-commit latency at increasing chain lengths | Network, provider, request handling, and (by default) durable-write cost; reports the shape of the curve, not a throughput figure |
+| Background dispatch overhead | `benchmarks/bench_dispatch_overhead.py` — distribution over `_spawn_background` | Everything the caller does not pay for inline; it is not request latency |
+| Steady-state memory | Same harness — RSS sampled across repeated commit batches | Fragmentation over days, behaviour under memory pressure, every other allocator |
+| ML-DSA signing latency | Direct sample of the native signer | Constant-time behaviour, which a latency sample cannot address at all |
 | Native MMR operations | Rust criterion benchmarks | Python interop overhead |
 | Backpressure under injected `fsync` delay | Local harness with a seam | Real storage behaviour, real network, real provider |
 | WAF corpus | Pinned corpus replay | Traffic outside the corpus |
@@ -110,6 +113,12 @@ cd aegis_rust_v2 && cargo bench
 
 # Commit-cost scaling
 python -m benchmarks.bench_commit_scaling --json
+
+# Dispatch overhead and steady-state memory
+python -m benchmarks.bench_dispatch_overhead --json
+
+# MMR append throughput, Rust versus Python
+python -m benchmarks.bench_mmr
 ```
 
 Record your environment alongside any result. A number without its environment is not reproducible, and an irreproducible number is not evidence.
@@ -124,6 +133,16 @@ Record your environment alongside any result. A number without its environment i
 | "93.91% coverage" alone | Add artifact and date |
 | "5,707 tests pass" | Run it on the commit you are evaluating |
 | "Benchmarked at scale" | No scale measurement exists |
+| "Overhead is negligible versus network round-trip" | State the measured stage. A ratio against an unmeasured provider RTT is a claim about someone else's network, and this repository has measured none |
+| "Zero memory leaks" | Say what was sampled and over how many operations. Flat RSS over a bounded run is evidence against a leak, never proof of absence |
+| Quoting a mean alone | Give the median with the tail. A single outlier on a shared runner can pull a mean above its own p90, which happened in the 2026-09-03 dispatch sample |
+
+### The mean is the easiest number to misuse
+
+The 2026-09-03 dispatch measurement recorded a median of 2.490 µs and a mean of 13.322 µs over
+the same 5,000 samples. Both are correct. The mean is larger than the p90 because one 42.6 ms
+outlier is in the sample. Reporting either alone misleads in opposite directions, so the record
+carries the full distribution and the rule here is to quote the median with the tail.
 
 ---
 
