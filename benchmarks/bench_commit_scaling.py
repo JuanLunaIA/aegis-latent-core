@@ -70,29 +70,30 @@ def measure_at_length(prefill: int, batch: int, k: int, *, real_fsync: bool) -> 
     key = secrets.token_hex(32)
     latencies: list[float] = []
     for trial in range(k):
-        with tempfile.TemporaryDirectory() as tmp:
-            ledger = CryptographicAuditLedger(
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            CryptographicAuditLedger(
                 persistence_path=str(Path(tmp) / f"scaling_{trial}.wal.jsonl"),
                 signing_key=key,
                 fsync_fn=None if real_fsync else _noop_fsync,
-            )
-            try:
-                for i in range(prefill):
-                    ledger.commit_forensic(
-                        state_id=f"prefill-{trial}-{i}",
-                        request_bytes=_REQUEST,
-                        response_bytes=_RESPONSE,
-                    )
-                start = time.perf_counter()
-                for i in range(batch):
-                    ledger.commit_forensic(
-                        state_id=f"measured-{trial}-{i}",
-                        request_bytes=_REQUEST,
-                        response_bytes=_RESPONSE,
-                    )
-                elapsed = time.perf_counter() - start
-            finally:
-                ledger.close()
+            ) as ledger,
+        ):
+            for i in range(prefill):
+                ledger.commit_forensic(
+                    state_id=f"prefill-{trial}-{i}",
+                    request_bytes=_REQUEST,
+                    response_bytes=_RESPONSE,
+                )
+            start = time.perf_counter()
+            for i in range(batch):
+                ledger.commit_forensic(
+                    state_id=f"measured-{trial}-{i}",
+                    request_bytes=_REQUEST,
+                    response_bytes=_RESPONSE,
+                )
+            # Taken before the ledger closes, so the timed region excludes the
+            # final flush and fsync that `__exit__` performs.
+            elapsed = time.perf_counter() - start
         latencies.append(elapsed / batch)
     best = min(latencies)
     return {
