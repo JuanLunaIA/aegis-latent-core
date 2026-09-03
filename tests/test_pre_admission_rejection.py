@@ -42,8 +42,7 @@ def _ledger(path: Path) -> CryptographicAuditLedger:
 
 
 def test_rejection_is_signed_chained_and_anchored(tmp_path: Path) -> None:
-    ledger = _ledger(tmp_path / "wal.jsonl")
-    try:
+    with _ledger(tmp_path / "wal.jsonl") as ledger:
         before = ledger.commit_forensic(
             state_id="served", request_bytes=b"ok", response_bytes=b"fine"
         )
@@ -68,33 +67,25 @@ def test_rejection_is_signed_chained_and_anchored(tmp_path: Path) -> None:
         assert node.prev_hash == before.node_hash
         assert after.prev_hash == node.node_hash
         assert ledger.verify_integrity() == (True, None)
-    finally:
-        ledger.close()
 
 
 def test_the_decision_is_bound_by_the_response_hash(tmp_path: Path) -> None:
     """Code and category are hashed, so a refusal cannot be restated later."""
-    ledger = _ledger(tmp_path / "wal.jsonl")
-    try:
+    with _ledger(tmp_path / "wal.jsonl") as ledger:
         node = ledger.commit_rejection(
             request_bytes=b"{}", rejection_code=429, reason_category="rate_limit"
         )
         assert node.response_hash == sha256_hex(b"REJECTED:429:rate_limit")
         assert node.response_hash != sha256_hex(b"REJECTED:403:rate_limit")
         assert node.request_hash == sha256_hex(b"{}")
-    finally:
-        ledger.close()
 
 
 def test_hostile_payload_is_hashed_not_stored(tmp_path: Path) -> None:
     path = tmp_path / "wal.jsonl"
-    ledger = _ledger(path)
-    try:
+    with _ledger(path) as ledger:
         node = ledger.commit_rejection(
             request_bytes=HOSTILE, rejection_code=403, reason_category="waf_block"
         )
-    finally:
-        ledger.close()
 
     written = path.read_bytes()
     assert b"ignore all previous instructions" not in written
@@ -102,8 +93,7 @@ def test_hostile_payload_is_hashed_not_stored(tmp_path: Path) -> None:
 
 
 def test_rejection_carries_a_verifiable_inclusion_proof(tmp_path: Path) -> None:
-    ledger = _ledger(tmp_path / "wal.jsonl")
-    try:
+    with _ledger(tmp_path / "wal.jsonl") as ledger:
         ledger.commit_forensic(state_id="noise", request_bytes=b"a", response_bytes=b"b")
         node = ledger.commit_rejection(
             request_bytes=HOSTILE, rejection_code=403, reason_category="waf_block"
@@ -119,20 +109,15 @@ def test_rejection_carries_a_verifiable_inclusion_proof(tmp_path: Path) -> None:
         assert node.mmr_proof is not None
         proof = MMRInclusionProofV1.from_dict(node.mmr_proof)
         assert MerkleMountainRange.verify_portable_inclusion(leaf, proof, node.merkle_root)
-    finally:
-        ledger.close()
 
 
 def test_unattributed_when_no_tenant_was_established(tmp_path: Path) -> None:
     """A request may be refused before authentication; do not invent a tenant."""
-    ledger = _ledger(tmp_path / "wal.jsonl")
-    try:
+    with _ledger(tmp_path / "wal.jsonl") as ledger:
         node = ledger.commit_rejection(
             request_bytes=b"{}", rejection_code=413, reason_category="body_too_large"
         )
         assert node.tenant_id == "unattributed"
-    finally:
-        ledger.close()
 
 
 def test_rejections_survive_a_restart(tmp_path: Path) -> None:
@@ -141,18 +126,14 @@ def test_rejections_survive_a_restart(tmp_path: Path) -> None:
     ledger.commit_rejection(request_bytes=HOSTILE, rejection_code=403, reason_category="waf_block")
     ledger.close()
 
-    reopened = _ledger(path)
-    try:
+    with _ledger(path) as reopened:
         assert [node.status for node in reopened.chain] == ["rejected"]
         assert reopened.verify_integrity() == (True, None)
         assert reopened._fault_state == "healthy"
-    finally:
-        reopened.close()
 
 
 def test_rejection_rejects_malformed_input(tmp_path: Path) -> None:
-    ledger = _ledger(tmp_path / "wal.jsonl")
-    try:
+    with _ledger(tmp_path / "wal.jsonl") as ledger:
         with pytest.raises(ValueError):
             ledger.commit_rejection(
                 request_bytes=b"{}",
@@ -166,8 +147,6 @@ def test_rejection_rejects_malformed_input(tmp_path: Path) -> None:
                 rejection_code=403,
                 reason_category="waf_block",
             )
-    finally:
-        ledger.close()
 
 
 # ── backward compatibility ────────────────────────────────────────────────────
@@ -210,13 +189,10 @@ def test_legacy_wal_records_default_to_committed() -> None:
 
 def test_status_round_trips_through_the_wal(tmp_path: Path) -> None:
     path = tmp_path / "wal.jsonl"
-    ledger = _ledger(path)
-    try:
+    with _ledger(path) as ledger:
         ledger.commit_rejection(
             request_bytes=b"{}", rejection_code=403, reason_category="waf_block"
         )
-    finally:
-        ledger.close()
     record = json.loads(path.read_text().splitlines()[0])
     assert record["status"] == "rejected"
     assert AuditNode.from_dict(record).status == "rejected"

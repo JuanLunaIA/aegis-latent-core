@@ -95,15 +95,12 @@ def test_fast_restore_reproduces_the_root_and_holds_fewer_nodes(tmp_path: Path) 
     path = tmp_path / "wal.jsonl"
     expected = _fill(path, 9)
 
-    ledger = _ledger(path, fast=True)
-    try:
+    with _ledger(path, fast=True) as ledger:
         assert ledger._mmr.get_root_hash() == expected
         assert ledger._mmr.get_leaf_count() == 9
         assert ledger._fault_state == "healthy"
         # 9 = 0b1001 -> two peaks, against the 16 nodes a full replay holds.
         assert len(ledger._mmr.nodes) == 2
-    finally:
-        ledger.close()
 
 
 def test_appends_after_a_fast_restore_match_a_full_replay(tmp_path: Path) -> None:
@@ -117,17 +114,12 @@ def test_appends_after_a_fast_restore_match_a_full_replay(tmp_path: Path) -> Non
     for path in (replayed, restored):
         _fill(path, 11)
 
-    slow = _ledger(replayed, fast=False)
-    fast = _ledger(restored, fast=True)
-    try:
+    with _ledger(replayed, fast=False) as slow, _ledger(restored, fast=True) as fast:
         slow_node = slow.commit_forensic(state_id="next", request_bytes=b"a", response_bytes=b"b")
         fast_node = fast.commit_forensic(state_id="next", request_bytes=b"a", response_bytes=b"b")
         assert fast_node.mmr_leaf_index == slow_node.mmr_leaf_index == 11
         assert fast_node.mmr_leaf_count == slow_node.mmr_leaf_count == 12
         assert fast_node.merkle_root == slow_node.merkle_root
-    finally:
-        slow.close()
-        fast.close()
 
 
 @pytest.mark.parametrize("count", [1, 2, 3, 4, 7, 8, 15, 16, 17, 31, 32])
@@ -135,28 +127,22 @@ def test_fast_restore_across_tree_shapes(tmp_path: Path, count: int) -> None:
     """Peak sets differ at every power of two; the restore must handle each."""
     path = tmp_path / f"wal-{count}.jsonl"
     expected = _fill(path, count)
-    ledger = _ledger(path, fast=True)
-    try:
+    with _ledger(path, fast=True) as ledger:
         assert ledger._mmr.get_root_hash() == expected
         assert ledger._mmr.get_leaf_count() == count
-    finally:
-        ledger.close()
 
 
 def test_proofs_issued_after_a_fast_restore_verify(tmp_path: Path) -> None:
     path = tmp_path / "wal.jsonl"
     _fill(path, 6)
 
-    ledger = _ledger(path, fast=True)
-    try:
+    with _ledger(path, fast=True) as ledger:
         node = ledger.commit_forensic(state_id="after", request_bytes=b"q", response_bytes=b"r")
         assert node.mmr_proof is not None
         proof = MMRInclusionProofV1.from_dict(node.mmr_proof)
         assert MerkleMountainRange.verify_portable_inclusion_hash(
             node.mmr_leaf_hash, proof, node.merkle_root
         )
-    finally:
-        ledger.close()
 
 
 def test_historical_leaves_refuse_rather_than_return_a_partial_path(tmp_path: Path) -> None:
@@ -173,8 +159,7 @@ def test_historical_leaves_refuse_rather_than_return_a_partial_path(tmp_path: Pa
     stored = ledger.chain[0]
     ledger.close()
 
-    reopened = _ledger(path, fast=True)
-    try:
+    with _ledger(path, fast=True) as reopened:
         # Resolved through the module rather than a from-import binding.
         # `tests/test_mmr_branch.py` calls `importlib.reload` on this module,
         # which rebuilds the exception class; a binding captured at import time
@@ -188,8 +173,6 @@ def test_historical_leaves_refuse_rather_than_return_a_partial_path(tmp_path: Pa
         assert MerkleMountainRange.verify_portable_inclusion_hash(
             stored.mmr_leaf_hash, proof, stored.merkle_root
         )
-    finally:
-        reopened.close()
 
 
 # ── the default keeps full replay ─────────────────────────────────────────────
@@ -201,14 +184,12 @@ def test_default_still_replays_and_keeps_historical_proofs(tmp_path: Path) -> No
     expected = _fill(path, 9)
     assert _state_path(path).exists()
 
-    ledger = _ledger(path)  # fast=False
-    try:
+    # fast=False
+    with _ledger(path) as ledger:
         assert ledger._mmr.get_root_hash() == expected
         assert ledger._mmr.leaf_index_base == 0
         for index in range(9):
             assert ledger._mmr.get_portable_inclusion_proof(index) is not None
-    finally:
-        ledger.close()
 
 
 # ── every failure mode falls back to replay ───────────────────────────────────
@@ -248,13 +229,10 @@ def test_a_broken_checkpoint_falls_back_to_replay(
     expected = _fill(path, 5)
     mutate(path)  # type: ignore[operator]
 
-    ledger = _ledger(path, fast=True)
-    try:
+    with _ledger(path, fast=True) as ledger:
         assert ledger._mmr.get_root_hash() == expected, label
         assert ledger._mmr.get_leaf_count() == 5, label
         assert ledger._fault_state == "healthy", label
-    finally:
-        ledger.close()
 
 
 def test_a_stale_checkpoint_replays_only_the_leaves_after_it(tmp_path: Path) -> None:
@@ -277,13 +255,10 @@ def test_a_stale_checkpoint_replays_only_the_leaves_after_it(tmp_path: Path) -> 
 
     assert json.loads(_state_path(path).read_text())["leaf_count"] == 4
 
-    recovered = _ledger(path, fast=True)
-    try:
+    with _ledger(path, fast=True) as recovered:
         assert recovered._mmr.get_root_hash() == live_root
         assert recovered._mmr.get_leaf_count() == 9
         assert recovered._fault_state == "healthy"
-    finally:
-        recovered.close()
 
 
 def test_rotation_checkpoints_and_survives_segments(tmp_path: Path) -> None:
@@ -296,12 +271,9 @@ def test_rotation_checkpoints_and_survives_segments(tmp_path: Path) -> None:
     ledger.close()
     assert segments > 0, "rotation did not occur; the test proves nothing"
 
-    reopened = _ledger(path, fast=True)
-    try:
+    with _ledger(path, fast=True) as reopened:
         assert reopened._mmr.get_root_hash() == live_root
         assert reopened._mmr.get_leaf_count() == 30
-    finally:
-        reopened.close()
 
 
 # ── the accumulator primitive ─────────────────────────────────────────────────

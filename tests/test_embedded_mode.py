@@ -263,18 +263,15 @@ def test_the_block_does_not_depend_on_the_evidence_commit(
 
 
 def test_shadow_mode_records_but_does_not_block(tmp_path: Path) -> None:
-    engine = AegisEmbedded(
+    with AegisEmbedded(
         storage_path=str(tmp_path / "shadow.jsonl"),
         signing_key=SIGNING_KEY,
         enforcement_mode="shadow",
-    )
-    try:
+    ) as engine:
         client = aegis.wrap(OpenAIClient(), engine=engine)
         response = client.chat.completions.create(**_prompt(INJECTION))
         assert response._aegis_evidence.status == "committed"
         assert len(client.completions.seen) == 1
-    finally:
-        engine.close()
 
 
 def test_an_invalid_enforcement_mode_is_refused(tmp_path: Path) -> None:
@@ -306,17 +303,14 @@ def test_non_prose_fields_are_left_alone(engine: AegisEmbedded) -> None:
 
 
 def test_request_redaction_can_be_disabled(tmp_path: Path) -> None:
-    engine = AegisEmbedded(
+    with AegisEmbedded(
         storage_path=str(tmp_path / "raw.jsonl"),
         signing_key=SIGNING_KEY,
         redact_requests=False,
-    )
-    try:
+    ) as engine:
         client = aegis.wrap(OpenAIClient(), engine=engine)
         client.chat.completions.create(**_prompt("my SSN is 123-45-6789"))
         assert "123-45-6789" in client.completions.seen[0]["messages"][0]["content"]
-    finally:
-        engine.close()
 
 
 # ── streaming ─────────────────────────────────────────────────────────────────
@@ -412,17 +406,14 @@ def test_an_upstream_error_mid_stream_is_recorded(engine: AegisEmbedded) -> None
 
 
 def test_streaming_redaction_can_be_disabled(tmp_path: Path) -> None:
-    engine = AegisEmbedded(
+    with AegisEmbedded(
         storage_path=str(tmp_path / "plain.jsonl"),
         signing_key=SIGNING_KEY,
         redact_responses=False,
-    )
-    try:
+    ) as engine:
         client = aegis.wrap(OpenAIClient(STREAM_PARTS), engine=engine)
         chunks = list(client.chat.completions.create(**_prompt(), stream=True))
         assert _openai_text(chunks) == STREAM_PLAIN
-    finally:
-        engine.close()
 
 
 # ── wrapping mechanics ────────────────────────────────────────────────────────
@@ -452,12 +443,12 @@ def test_wrap_builds_its_own_engine_when_none_is_given(tmp_path: Path) -> None:
     client = aegis.wrap(
         OpenAIClient(), storage_path=str(tmp_path / "own.jsonl"), signing_key=SIGNING_KEY
     )
-    try:
+    # `wrap` returns the client, not the engine, so the engine it built is
+    # entered here; `__enter__` is idempotent and `__exit__` closes the ledger.
+    with client._aegis:
         client.chat.completions.create(**_prompt())
         assert isinstance(client._aegis, AegisEmbedded)
         assert len(client._aegis.ledger.chain) == 1
-    finally:
-        client._aegis.close()
 
 
 def test_both_surfaces_are_wrapped_when_both_are_present(engine: AegisEmbedded) -> None:
@@ -489,12 +480,9 @@ def test_evidence_survives_a_restart(tmp_path: Path) -> None:
     node_hash = client.chat.completions.create(**_prompt())._aegis_evidence.node_hash
     engine.close()
 
-    reopened = AegisEmbedded(storage_path=path, signing_key=SIGNING_KEY)
-    try:
+    with AegisEmbedded(storage_path=path, signing_key=SIGNING_KEY) as reopened:
         assert [node.node_hash for node in reopened.ledger.chain] == [node_hash]
         assert reopened.ledger.verify_integrity() == (True, None)
-    finally:
-        reopened.close()
 
 
 def test_the_public_surface_is_exported() -> None:

@@ -206,14 +206,11 @@ def test_oversized_identifiers_are_refused(ledger: Any) -> None:
 def test_a_ledger_with_too_small_a_cap_is_refused(tmp_path: Path) -> None:
     """A truncated preview would produce a leaf no verifier could reproduce, so
     issuance refuses rather than emitting an unverifiable receipt."""
-    handle = CryptographicAuditLedger(
+    with CryptographicAuditLedger(
         str(tmp_path / "small.jsonl"), signing_key=SIGNING_KEY, max_forensic_bytes=64
-    )
-    try:
+    ) as handle:
         with pytest.raises(ValueError, match="max_forensic_bytes"):
             _issue(handle)
-    finally:
-        handle.close()
 
 
 def test_the_leaf_hash_is_reproducible_from_receipt_fields(ledger: Any) -> None:
