@@ -11,7 +11,6 @@ to ensure cross-platform cryptographic reproducibility.
 
 import math
 import struct
-from typing import Any, cast
 
 import numpy as np
 
@@ -82,7 +81,8 @@ def normalize_logits(logits: np.ndarray) -> np.ndarray:
         raise ValueError("Non-finite values detected in logits.")
     shifted = logits - np.max(logits)
     exps = np.exp(shifted)
-    return cast("np.ndarray[Any, np.dtype[Any]]", exps / np.sum(exps))
+    normalized: np.ndarray = exps / np.sum(exps)
+    return normalized
 
 
 def verify_distribution(probs: np.ndarray, tolerance: float = 1e-9) -> bool:
