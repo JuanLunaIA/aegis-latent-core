@@ -72,6 +72,34 @@ This section is the reason the document exists.
 | Images, audio, encoded blobs | Only text is scrubbed |
 | PANs failing Luhn or IIN | A mistyped or non-standard card number is not masked |
 
+### Streaming: the bounded holdback and its fail-closed edge
+
+Streamed responses are scrubbed incrementally by `StreamingDeidentifier`, which retains a finite
+suffix (`window_chars`, default 128) so an identifier split across provider chunks is matched
+before any of its characters are released. When a candidate cannot settle inside that bounded
+holdback, the stream **fails closed**: `StreamingDeidentificationError` is raised and the proxy
+reports a `privacy_failure` terminal outcome rather than emitting text it could not finish
+inspecting.
+
+Because that failure is visible to the client, its trigger has to be precise. Each open-candidate
+check now tests whether the buffered text is a **viable prefix of the detector that would redact
+it** — `_TRACK1_OPEN_PREFIX` and `_TRACK2_OPEN_PREFIX` are derived from the track-data patterns
+in `pci_detector`, and the email candidate is the trailing whitespace-free token, because the
+`EMAIL` pattern admits no whitespace. Looser tests aborted ordinary text: any semicolon followed
+by more than `window_chars` with no `?` was treated as open track data, and any `@` anywhere in
+the holdback — a mentioned address, a Python decorator — was treated as an open email. Marker
+searches are also case-insensitive now, matching the URL and track-1 detectors; previously an
+unterminated `HTTPS://` or `%b` candidate passed the guard entirely, which was a fail-open on the
+exact grammar the guard exists to catch.
+
+**One over-trigger remains, and it is not a bug in the guard.** The `ADDRESS` pattern in
+`_SAFE_HARBOR_PATTERNS` allows an unbounded `[A-Za-z0-9 ]+` between the street number and the
+street-type suffix, so a number-led run of letters, digits and spaces longer than the window is
+a genuinely viable address prefix and still fails closed. Bounding that quantifier would trade
+availability against PHI recall across the non-streaming redactor as well, so it is recorded here
+rather than changed silently. Operators streaming prose that begins with a number and runs
+punctuation-free past the window should expect `privacy_failure` on those responses.
+
 ### The re-identification limit
 
 Removing the seventeen listed categories does not make text non-identifying. Re-identification from residual detail is well documented in the de-identification literature, and a regex scrubber does nothing about it. **Do not treat scrubbed output as de-identified data.**

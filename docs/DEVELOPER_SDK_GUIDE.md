@@ -1,7 +1,7 @@
 # Aegis SDK Developer Guide
 
-**Source version:** `4.0.2`  
-**Package identities:** Python `aegis-latent-sdk` / import `aegis_sdk`; npm `aegis-latent-sdk`  
+**Source version:** `4.0.2`
+**Package identities:** Python `aegis-latent-sdk` / import `aegis_sdk`; npm `aegis-latent-sdk`
 **Status:** the checked-out `v4.0.2` source baseline/release target exists; public package artifacts were independently observed at `4.0.0`. This guide does not establish `4.0.2` registry publication, trusted-publishing provenance, production fitness, or provider certification.
 
 ## 1. Scope

@@ -40,6 +40,7 @@ The post-merge record is the current locator for the v4 **source baseline**. Its
 | [`commercial_phase2_dashboard_qa.md`](commercial_phase2_dashboard_qa.md) | Post-v3.1.0 local dashboard QA | Local source/UI review; not deployment availability, customer telemetry, accessibility certification, or acceptance. |
 | [`apex_workstreams_9_11_gate_2026-08-24.md`](apex_workstreams_9_11_gate_2026-08-24.md) | 2026-08-24 source gate record | Retains its own stated scope and limitations; not registry publication or external assurance. |
 | [`commit_scaling_measurement_2026-09-03.md`](commit_scaling_measurement_2026-09-03.md) | 2026-09-03 in-process microbenchmark of the ledger commit path | One container, one date. Excludes network, provider, and (by default) durable-write cost; establishes the shape of the per-commit cost curve, not throughput capacity or any service level. |
+| [`evidence_path_measurements_2026-09-03.md`](evidence_path_measurements_2026-09-03.md) | 2026-09-03 in-process benchmarks of the evidence path on commit `f77420a` | One container, four shared unpinned CPUs, one date. Excludes network, provider and concurrency. Records the shape and ordering of costs, not throughput capacity or any service level. Z3, Lean and TLC rows are marked NOT-EXECUTED because that tooling is absent from the container. |
 
 ## Integrity sidecars and manifests
 

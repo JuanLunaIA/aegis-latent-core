@@ -99,14 +99,14 @@
     {
       "category": "governed_input",
       "path": "README.md",
-      "sha256": "a4637c7425485a2c8f865dcefcba8ed0702912eedb6f2e0d444b35b6a27fb376",
-      "size": 12952
+      "sha256": "e211d7d7e1722164feeba0218c49645ceabcc20ba974acb82ad751bbf44caed2",
+      "size": 13372
     },
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "e28e6bd62850ee6fe85e702b59953d27ba0897e799f4aacbdbec4e9abe5c9072",
-      "size": 45202
+      "sha256": "ae494436d5f49cb578c42d306ba279e70725929f78bf041237f1a203877b136e",
+      "size": 46967
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "e662efb1013298f3f7c9d9c13d6fd71991857a986baec92ea9bb05bad12f6a8c",
-      "size": 34827
+      "sha256": "f82b93e0c742c815d4c327fdfa4291bb00ec2f5b2910d79070b8023f1a7acf22",
+      "size": 37986
     },
     {
       "category": "governed_input",
@@ -153,8 +153,8 @@
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_SDK_GUIDE.md",
-      "sha256": "29406c2c70a72ee55426f9078a0052661624647a026792a68d4264cff874cce8",
-      "size": 16259
+      "sha256": "1260aab06eae534af310baecfbbad5d88008cd2ca0ffeb75c66e4974ffc1288c",
+      "size": 16255
     },
     {
       "category": "governed_input",
@@ -183,8 +183,8 @@
     {
       "category": "governed_input",
       "path": "evidence/INDEX.md",
-      "sha256": "aff9aca774cdc58f6b725337ccd0f9c63fbfc02c4fd6f73ee446c49aea3d1f30",
-      "size": 10067
+      "sha256": "27c1fa3ad8e4e766d5f2e3e36adc5888bf4020a2dc58b3e7bafb59ccc25f5e47",
+      "size": 10516
     },
     {
       "category": "governed_input",

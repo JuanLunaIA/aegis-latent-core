@@ -133,6 +133,35 @@ Each commit:
 2. `add_leaf()` merges equal-height peaks (carry-propagation, like binary increment).
 3. The resulting **MMR root** ("bagged peaks") is stored in the node's `merkle_root`.
 
+The digest is **SHA-256 over ASCII-hex concatenation** at every level. The wire literal
+`sha256-asciihex` in `MMRInclusionProofV1` names it, and `verify_portable_inclusion_hash`
+rejects any other value, so the digest and the concatenation format are part of the proof
+contract rather than an implementation detail. The Rust accumulator implements the same
+algorithm over a `Vec` of peak indices; it is a native execution of this construction, not a
+different one.
+
+### 3.1a Rolling back a failed commit
+
+A commit appends its leaf *before* it knows whether signing and WAL persistence will succeed,
+and must revert the accumulator if either fails. That revert used to be a `copy.deepcopy` of the
+entire MMR, taken on **every** commit including the successful ones, which made per-commit cost
+grow with the length of the chain.
+
+`MerkleMountainRange.checkpoint()` now returns a rollback token holding the append-only lengths
+plus the live peak node objects, and `rollback_to()` restores from it. An append only extends
+`nodes` and `_leaf_node_indices`, and only sets `parent` on nodes as they are popped from
+`peaks` — so a node in `peaks` always has `parent is None`, and truncating the two lists and
+reinstating the recorded peaks with cleared parents reproduces the prior state exactly. Both
+operations are O(log N).
+
+Failure semantics are unchanged: a signing or persistence failure still leaves the MMR exactly
+as it was and writes no WAL record. `rollback_to` raises rather than truncating when handed a
+checkpoint that is not a prefix of the current state, so a stale token cannot destroy chain
+state. `tests/test_mmr_rollback.py` compares the result against a `deepcopy` restore across leaf
+counts straddling every power of two and asserts the ledger-level revert for both failure points
+across all three commit entry points; `tests/test_crypto_audit_rollover.py` carries a
+`slow`-marked 100,000-node sweep through a 512-node memory window.
+
 ### 3.2 Proof types
 
 | Proof | Cost | Use |
@@ -140,8 +169,14 @@ Each commit:
 | **Inclusion** | O(log N) | "node X is in the chain at position i" — compliance bundle |
 | **Consistency** | O(log N) | "chain state B is an append-only extension of state A" |
 
-Measured Rust vs Python throughput (leaf insertion):
-**avg 3.01× / max 3.34×** ([BENCHMARKS result summary](../BENCHMARKS.md#result-summary)).
+Measured Rust versus Python leaf-insertion throughput, 2026-09-03, one ephemeral container
+(`Linux-6.18.44-fc-v24-x86_64`, CPython 3.11.15, 4 shared logical CPUs): **average 4.77×,
+maximum 4.94×** at N = 100,000, across N ∈ {100; 1,000; 10,000; 100,000}
+([evidence-path measurements](../BENCHMARKS.md#evidence-path-measurements-on-the-current-source-baseline)).
+
+The ratio is a property of the host, not of the code: earlier runs on other machines recorded
+lower ratios. Cite it with its environment and date or not at all. It covers **append only** —
+`RustBackedMMR` serves proofs from the Python replica, so proof generation is not in this figure.
 
 ---
 
@@ -187,6 +222,23 @@ terminator at that offset. Each subsequent append also writes a terminator after
 valid prefix, preventing a same-size replacement from making a stale valid suffix reachable
 on the next open. This recovery behavior is tested in one process and inherits mmap,
 filesystem, kernel, controller, and device semantics.
+
+**A segment only ever grows.** `RustWal::open` treats the requested `capacity_bytes` as a floor,
+taking the larger of it and the existing file length. `OpenOptions::truncate(false)` stops `open`
+from clearing the file, but the `set_len` that follows shrinks it just as effectively: before
+this was fixed, reopening a populated segment with a smaller capacity discarded every frame past
+the new length — a 1 MiB segment holding 20 records, reopened at 64 bytes, retained 4. The
+gateway always passes 256 MiB, so the path was not reachable from `app.py`, but
+`RustWal.open` and `aegis.core.rust_integration.new_rust_wal` both accept an arbitrary capacity.
+Covered by `reopening_with_a_smaller_capacity_does_not_truncate_the_segment` and
+`reopening_with_a_larger_capacity_still_grows_the_segment` in `aegis_rust_v2/src/wal.rs`.
+
+The frame-bounds arithmetic these walks rely on is model-checked. `header_range` and
+`payload_range` bound every slice taken by `read_all`, `scan_write_pos` and `open`, and five
+Kani harnesses verify over the whole `usize` domain that a returned range stays inside its
+limit, never overflows, never treats the zero-length terminator as a frame, always advances the
+cursor, and never overlaps. Scope and limits:
+[Formal Verification](../formal/FORMAL_VERIFICATION.md#kani-bit-level-model-checking).
 
 ---
 

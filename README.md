@@ -6,7 +6,7 @@ Aegis sits between your application and your model provider. For every governed 
 
 [![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
 [![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
-[![Formal verification](https://img.shields.io/badge/formal-Z3%20%7C%20Lean%204%20%7C%20TLA%2B-informational)](docs/formal/FORMAL_VERIFICATION.md)
+[![Formal verification](https://img.shields.io/badge/formal-Z3%20%7C%20Lean%204%20%7C%20TLA%2B%20%7C%20Kani-informational)](docs/formal/FORMAL_VERIFICATION.md)
 [![Coverage](https://img.shields.io/badge/statement%20coverage-93.91%25%20(2026--08--18)-informational)](docs/benchmarks/BENCHMARK_METHOD.md)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
 
@@ -151,6 +151,8 @@ There is no hosted dashboard. You run it, and browser-facing authentication is y
 Bounded models under `specs/` check core invariants in CI: commit-before-emission, append-only ledger prefixes, session-to-ledger binding, and per-stream retained-byte arithmetic. The toolchain is Z3, Lean 4, and TLA+/TLC, gated by `scripts/verify_formal_artifacts.sh`.
 
 **These are abstractions, not runtimes.** Nothing mechanically connects a model to the Python or Rust that executes, and the state spaces are bounded. The models can be correct while the implementation is wrong.
+
+Separately, Kani 0.67.0 model-checks the native WAL's frame-bounds arithmetic over the whole `usize` domain. Those five harnesses run against the **real functions** rather than an abstraction, so the refinement gap above does not apply to them — but they cover two functions, not a system. Kani models no `mmap`, no filesystem and no concurrency, so nothing there establishes durability or crash safety.
 
 [Formal Verification](docs/formal/FORMAL_VERIFICATION.md) · [Limits](docs/formal/FORMAL_VERIFICATION_LIMITS.md)
 

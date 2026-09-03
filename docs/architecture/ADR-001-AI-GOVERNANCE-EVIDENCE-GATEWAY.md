@@ -1,7 +1,7 @@
 # ADR-001 — Position Aegis as an AI Governance and Evidence Gateway
 
-**Date:** 2026-08-18  
-**Status:** Accepted for v3.0.1 market-hardening work  
+**Date:** 2026-08-18
+**Status:** Accepted for v3.0.1 market-hardening work
 **Deciders:** Release owner; qualified security reviewer required before external enterprise claims
 
 ## Context
