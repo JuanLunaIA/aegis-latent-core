@@ -7,7 +7,7 @@ build-backend = "maturin"
 
 [project]
 name = "aegis-rust"
-version = "4.1.0"
+version = "4.1.1"
 description = "Rust acceleration extension for AEGIS Latent Core (import as aegis_rust)"
 requires-python = ">=3.11"
 license = { text = "AGPL-3.0-only" }

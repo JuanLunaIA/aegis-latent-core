@@ -5,31 +5,48 @@
 **Boundary:** this is the only document that states publication state. Every other document links here. Source metadata never establishes publication; readback does.
 
 **Last verified:** 2026-09-03 UTC (source baseline); 2026-09-02 UTC (external surfaces)
-**Source baseline:** `4.1.0`, fourteen synchronized anchors
-**Publication state of `4.1.0`:** **nothing is published.** No tag, release, registry package, image, signature or attestation exists for this version.
+**Source baseline:** `4.1.1`, fourteen synchronized anchors
+**Publication state of `4.1.1`:** **nothing is published.** No tag, release, registry package, image, signature or attestation exists for this version. For the superseded `4.1.0`, a lightweight tag and an empty immutable release exist — see §1.2.
 
 ---
 
 ## 1. Publication state
 
-**Read this section as two separate things.** The source baseline moved to `4.1.0` on 2026-09-03. Every external surface below was last read back on 2026-09-02, when the source baseline was `4.0.2`, and **those rows describe `4.0.2` — not `4.1.0`.** No readback has been performed for `4.1.0` because nothing has been published for it.
+**Read this section as three separate things.** The source baseline moved to `4.1.1` on 2026-09-03. Nothing has been published for it. A `v4.1.0` tag and GitHub Release do exist, but neither came from the release pipeline and the release carries no assets. The `4.0.2` rows were last read back on 2026-09-02 and **describe `4.0.2` only**.
 
-Nothing in this table may be restated with the version number changed. A `4.0.2` digest is not a `4.1.0` digest, and a `4.0.2` signature attests to `4.0.2` bytes.
+Nothing in this table may be restated with the version number changed. A `4.0.2` digest is not a `4.1.1` digest, and a `4.0.2` signature attests to `4.0.2` bytes.
 
 ### 1.1 The current source baseline
 
 | Surface | State | Observed value | Readback |
 | --- | --- | --- | --- |
-| Source baseline | Confirmed | `4.1.0`, fourteen synchronized anchors, contract `READY` | §2.1 |
-| GitHub tag `v4.1.0` | **Not created** | No tag exists | — |
-| GitHub Release `v4.1.0` | **Not published** | No release exists | — |
-| PyPI / npm at `4.1.0` | **Not published** | No package exists | — |
-| OCI image at `4.1.0` | **Not published** | No image exists | — |
-| Signatures / attestations for `4.1.0` | **Do not exist** | Nothing has been signed or attested | — |
+| Source baseline | Confirmed | `4.1.1`, fourteen synchronized anchors, contract `READY` | §2.1 |
+| GitHub tag `v4.1.1` | **Not created** | No tag exists | — |
+| GitHub Release `v4.1.1` | **Not published** | No release exists | — |
+| PyPI / npm at `4.1.1` | **Not published** | No package exists | — |
+| OCI image at `4.1.1` | **Not published** | No image exists | — |
+| Signatures / attestations for `4.1.1` | **Do not exist** | Nothing has been signed or attested | — |
 
-### 1.2 Historical readback — `4.0.2`, observed 2026-09-02
+### 1.2 `4.1.0` — tagged and released outside the pipeline, observed 2026-09-03
 
-Retained as the record of what that version's surfaces actually carried. These rows are historical and are not claims about `4.1.0`.
+`4.1.0` is not a usable release and is superseded by `4.1.1`. It is recorded here because the objects exist publicly and a consumer may encounter them.
+
+| Surface | State | Observed value |
+| --- | --- | --- |
+| GitHub tag `v4.1.0` | **Exists, but lightweight** | `git cat-file -t v4.1.0` → `commit`, not `tag`; targets `3c2b7e694e5bd5aa3e7211bbb9862e4f27a1017d` |
+| Tag signature | **Absent** | Created by hand, so it carries no Sigstore certificate from the `create_release_tag.yml` OIDC identity and fails `scripts/verify_release_tag.sh` |
+| GitHub Release `v4.1.0` | **Published, empty** | Release id `381803292`, published 2026-09-03T06:59:57Z, `assets: []` |
+| Release immutability | Confirmed | `immutable: true` — the asset set is frozen at publication, so this release cannot be populated afterwards |
+| PyPI / npm / OCI at `4.1.0` | **Not published** | No package or image exists |
+| Build attestations for `4.1.0` | **Do not exist** | `release.yml` never ran for this tag |
+
+**Why it is empty.** No workflow in this repository is triggered by a pushed tag. `release.yml` — which builds the wheels, SDK packages, SBOMs, `release-asset-manifest.json` and `SHA256SUMS`, and creates the release with them attached — is `workflow_dispatch` only, and was not dispatched. The absent Deployments have the same cause: they come from the `environment: release` blocks in `create_release_tag.yml` and `release.yml`.
+
+**Do not treat `v4.1.0` as a release.** It has no verifiable artifacts, no signature and no provenance. Use `4.0.2` for a published artifact, or build `4.1.1` from source.
+
+### 1.3 Historical readback — `4.0.2`, observed 2026-09-02
+
+Retained as the record of what that version's surfaces actually carried, and still the most recent release produced by the pipeline. These rows are historical and are not claims about `4.1.1`.
 
 | Surface | State | Observed value | Readback |
 | --- | --- | --- | --- |
@@ -47,9 +64,9 @@ Retained as the record of what that version's surfaces actually carried. These r
 | Build attestations | Confirmed in workflow; verify per artifact | `actions/attest-build-provenance` covers wheels, sdists, tgz, SBOMs, manifest and `SHA256SUMS` | §2.8 |
 | Tag signature | Confirmed, shows `bad_cert` on GitHub | Sigstore keyless; see §3 | §2.9 |
 
-**The two rows that matter most for a consumer:** the SDKs on PyPI and npm are at `4.0.0` — not `4.0.2`, and certainly not `4.1.0`. Do not describe either version as released to those registries. The gateway ships from source; the registries carry SDKs only.
+**The two rows that matter most for a consumer:** the SDKs on PyPI and npm are at `4.0.0` — not `4.0.2`, and certainly not `4.1.1`. Do not describe either version as released to those registries. The gateway ships from source; the registries carry SDKs only.
 
-**The registry gap is now two versions wide.** `4.0.2` was never published to PyPI or npm, and `4.1.0` is not published anywhere at all. A consumer installing from a registry receives `4.0.0`, which is two releases behind this source tree.
+**The registry gap is now three versions wide.** `4.0.2` was never published to PyPI or npm, `4.1.0` produced only an empty release object, and `4.1.1` is not published anywhere at all. A consumer installing from a registry receives `4.0.0`, which is three releases behind this source tree.
 
 ## 2. Readback commands
 

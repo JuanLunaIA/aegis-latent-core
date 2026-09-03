@@ -1,7 +1,7 @@
 # DOC-03 — Threat Model and Adversarial Defense Framework
 
 **Document ID:** `DOC-03`
-**Source boundary:** checked-out source metadata is synchronized at `v4.1.0`; it does not prove external tag, release, registry, OCI, deployment, or acceptance state
+**Source boundary:** checked-out source metadata is synchronized at `v4.1.1`; it does not prove external tag, release, registry, OCI, deployment, or acceptance state
 **Historical evidence scope:** findings dated 2026-08-20 UTC remain a `v3.1.0`-era threat-model record unless explicitly revalidated against the current source
 **Canonical language:** US English
 **Review method:** STRIDE-oriented data-flow analysis with a bounded MITRE ATLAS contribution mapping

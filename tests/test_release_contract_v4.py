@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import pathlib
 import shutil
 import subprocess
 import sys
@@ -16,6 +17,23 @@ from scripts.create_github_release import build_create_command
 from scripts.extract_release_notes import extract_release_notes
 from scripts.prepare_release_assets import prepare_release_assets
 from scripts.verify_release_contract import assess_repository
+
+
+def _source_version() -> str:
+    """The single source of truth for the release version.
+
+    Assertions below check the *repository's* version, not a fixture's, so they
+    read it rather than restating it. A hard-coded literal here turns every
+    version bump into a spurious test failure and asserts agreement with a
+    constant instead of with the release being cut.
+    """
+    import tomllib
+
+    root = pathlib.Path(__file__).resolve().parents[1]
+    with (root / "pyproject.toml").open("rb") as stream:
+        version: str = tomllib.load(stream)["project"]["version"]
+    return version
+
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION_LABELS = {
@@ -86,7 +104,7 @@ def test_release_source_contract_is_complete_without_external_claims() -> None:
     assert len(set(assessment.versions.values())) == 1
     assert assessment.ready
     assert assessment.diagnostics == ()
-    assert set(assessment.versions.values()) == {"4.1.0"}
+    assert set(assessment.versions.values()) == {_source_version()}
     assert "published" not in assessment.to_dict()
     assert "released" not in assessment.to_dict()
 
@@ -99,7 +117,7 @@ def test_release_contract_cli_reports_source_contract_as_json() -> None:
             "--root",
             str(ROOT),
             "--tag",
-            "v4.1.0",
+            f"v{_source_version()}",
             "--json",
         ],
         cwd=ROOT,
@@ -272,7 +290,7 @@ def test_release_contract_detects_version_drift_missing_dockerfile_and_backend(
     tmp_path: Path,
 ) -> None:
     cases = [
-        ("aegis/__init__.py", '"4.1.0"', '"4.0.3"', "metadata.version-drift"),
+        ("aegis/__init__.py", f'"{_source_version()}"', '"4.0.3"', "metadata.version-drift"),
         ("pyproject.toml", "hatchling==1.28.0", "hatchling>=1.24", "build.backend-unpinned"),
         (
             "pyproject.toml",
@@ -282,7 +300,7 @@ def test_release_contract_detects_version_drift_missing_dockerfile_and_backend(
         ),
         (
             "deploy/k8s/aegis-operator/operator.py",
-            "aegis-latent-core:4.1.0",
+            f"aegis-latent-core:{_source_version()}",
             "aegis-latent-core:3.1.0",
             "deployment.version-drift",
         ),

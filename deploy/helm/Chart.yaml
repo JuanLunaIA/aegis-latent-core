@@ -2,8 +2,8 @@ apiVersion: v2
 name: aegis-latent-core
 description: Forensic telemetry proxy and Merkle audit chain for LLM inference pipelines
 type: application
-version: 4.1.0
-appVersion: "4.1.0"
+version: 4.1.1
+appVersion: "4.1.1"
 keywords:
   - llm
   - ai-safety

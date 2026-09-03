@@ -1,10 +1,10 @@
 # Aegis Latent Core — Deployment Guide
 
-This guide distinguishes the current `4.1.0` source/release candidate from historical external baselines. It is for platform, SRE, security and procurement reviewers. It does not claim a v4 publication, grant regulatory certification, create a production SLO or replace an environment-specific review of kernel, storage, network, identity, secrets, backup and incident-response controls.
+This guide distinguishes the current `4.1.1` source/release candidate from historical external baselines. It is for platform, SRE, security and procurement reviewers. It does not claim a v4 publication, grant regulatory certification, create a production SLO or replace an environment-specific review of kernel, storage, network, identity, secrets, backup and incident-response controls.
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** current source/release candidate
-**Source/release candidate:** `4.1.0` with fourteen synchronized anchors; no external `v4.1.0` publication is claimed before readback
+**Source/release candidate:** `4.1.1` with fourteen synchronized anchors; no external `v4.1.1` publication is claimed before readback
 **Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **Audience:** Platform operators, SRE, security and procurement reviewers
 

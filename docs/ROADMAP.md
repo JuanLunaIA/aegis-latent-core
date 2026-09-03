@@ -6,10 +6,10 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 # Aegis Latent Core — Engineering and Market Roadmap
 
-**Status:** checked-out source baseline/release target `v4.1.0` has 14 synchronized anchors; source metadata does not establish external lifecycle or target-acceptance state
+**Status:** checked-out source baseline/release target `v4.1.1` has 14 synchronized anchors; source metadata does not establish external lifecycle or target-acceptance state
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** checked-out source baseline/release target `v4.1.0` with 14 synchronized anchors, plus historical external observations
-**Source baseline:** fourteen synchronized `4.1.0` anchors; immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
+**Release baseline:** checked-out source baseline/release target `v4.1.1` with 14 synchronized anchors, plus historical external observations
+**Source baseline:** fourteen synchronized `4.1.1` anchors; immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
 **External baseline:** prior lightweight `v4.0.1` tag at `6469904380218584ae0b5221334bc9a46500f5ba` had failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **Purpose:** Single source of truth for work that is implemented, measured, deployment-dependent, or still open.
 
@@ -27,7 +27,7 @@ A checkbox may not be changed to `[x]` because a stub, dashboard sample, docstri
 
 ## Two-baseline current state
 
-The current **source baseline/release target** is `4.1.0` with fourteen synchronized anchors, and nothing is published for it. Its immutable parent/source comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors. The most recent published GitHub baseline is signed annotated tag `v4.0.2` at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`; before it, lightweight tag `v4.0.1` targeted `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows, and observed PyPI/npm `4.0.0` objects have no attributed provenance from those runs. Source metadata does not establish an external `v4.1.0` tag, release, registry artifact, deployed service, SLO, compliance result, or acceptance; successful readback is required.
+The current **source baseline/release target** is `4.1.1` with fourteen synchronized anchors, and nothing is published for it. Its immutable parent/source comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors. The most recent published GitHub baseline is signed annotated tag `v4.0.2` at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`; before it, lightweight tag `v4.0.1` targeted `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows, and observed PyPI/npm `4.0.0` objects have no attributed provenance from those runs. Source metadata does not establish an external `v4.1.1` tag, release, registry artifact, deployed service, SLO, compliance result, or acceptance; successful readback is required.
 
 Historical v3.1.0 benchmark, security, remediation, and release records retain their original values and scope. They are not superseded as historical observations, but they must not be presented as measurements of the v4 source baseline without rerunning the named workload. See [`evidence/INDEX.md`](../evidence/INDEX.md).
 

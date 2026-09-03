@@ -10,7 +10,7 @@ Aegis sits between your application and your model provider. For every governed 
 [![Coverage](https://img.shields.io/badge/statement%20coverage-93.91%25%20(2026--08--18)-informational)](docs/benchmarks/BENCHMARK_METHOD.md)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
 
-> **Current release candidate:** `v4.1.0` source, fourteen synchronized anchors. Nothing is published for `4.1.0`. The most recent published release is `v4.0.2`; registries carry `aegis-latent-sdk` at `4.0.0`. The gateway ships from source; registries carry SDKs only. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
+> **Current release candidate:** `v4.1.1` source, fourteen synchronized anchors. Nothing is published for `4.1.1`. The last release built by the pipeline is `v4.0.2`; a `v4.1.0` release object exists but was created outside it and carries no assets. Registries carry `aegis-latent-sdk` at `4.0.0`. The gateway ships from source; registries carry SDKs only. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
 ---
 
@@ -117,7 +117,7 @@ pip install -e ./sdk/python
 cd sdk/typescript && npm ci && npm run build
 ```
 
-**Registry caution.** PyPI and npm carry `aegis-latent-sdk` at `4.0.0`, while this source tree is `4.1.0` — a gap of two releases. Installing from a registry gets you different code from what these documents describe.
+**Registry caution.** PyPI and npm carry `aegis-latent-sdk` at `4.0.0`, while this source tree is `4.1.1` — a gap of two releases. Installing from a registry gets you different code from what these documents describe.
 
 **Proof verification caution.** A proof verified against a root supplied by the same gateway that produced it establishes internal consistency only. Obtain the trusted root through an independent channel, or the verification is circular.
 
@@ -183,7 +183,7 @@ Separately, Kani 0.67.0 model-checks the native WAL's frame-bounds arithmetic ov
 | Statement coverage | 89.7169% | Candidate gate record | 2026-08-24 |
 | Python suite | 5,707 passed, 37 skipped | Candidate gate record | 2026-08-24 |
 | Python suite | 5,661 passed, 81 skipped, 0 failed | Clean-container reproduction | 2026-09-01 |
-| Python suite | 5,974 passed, 52 skipped, 0 failed | `4.1.0` source baseline | 2026-09-03 |
+| Python suite | 5,974 passed, 52 skipped, 0 failed | `4.1.1` source baseline | 2026-09-03 |
 | Rust extension | 31 tests passed; Clippy `-D warnings`; abi3 wheel built | CI | Per run |
 | Static analysis | `mypy --strict` 0 errors over 186 files; Bandit 0 findings at every severity | CI | Per run |
 | Model checking | 5 Kani harnesses verified, 0 failures, over the whole `usize` domain | CI | Per run |

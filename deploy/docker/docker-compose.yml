@@ -1,4 +1,4 @@
-# Aegis Latent Core 4.1.0 strict deployment
+# Aegis Latent Core 4.1.1 strict deployment
 # This compose file intentionally fails when required secrets and infrastructure
 # variables are absent. It does not provision an insecure plaintext Redis.
 #
@@ -8,7 +8,7 @@
 
 services:
   aegis:
-    image: ghcr.io/juanlunaia/aegis-latent-core:4.1.0
+    image: ghcr.io/juanlunaia/aegis-latent-core:4.1.1
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
