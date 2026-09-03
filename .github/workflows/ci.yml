@@ -539,9 +539,10 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: [test, security, market-hardening]
     permissions:
-      contents: read
+      contents: write
       id-token: write
       attestations: write
+      actions: read
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Build source artifact
