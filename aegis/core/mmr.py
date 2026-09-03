@@ -36,6 +36,22 @@ class MMRNode:
 
 
 @dataclass(frozen=True)
+class MMRAppendCheckpoint:
+    """Opaque marker for the MMR state preceding one or more appends.
+
+    Holds the append-only lengths plus the peak node objects that were live at
+    capture time. It is a rollback token, not a copy: it borrows references
+    into the owning MMR and is only meaningful for the instance that produced
+    it. See :meth:`MerkleMountainRange.checkpoint`.
+    """
+
+    node_count: int
+    leaf_node_index_count: int
+    leaf_count: int
+    peaks: tuple[MMRNode, ...]
+
+
+@dataclass(frozen=True)
 class MMRProofStep:
     sibling_hash: str
     direction: str
@@ -148,6 +164,52 @@ class MerkleMountainRange:
 
         self.peaks.append(current_node)
         return self.get_root_hash()
+
+    def checkpoint(self) -> MMRAppendCheckpoint:
+        """Capture the current state so a later append can be undone exactly.
+
+        Costs O(number of peaks) = O(log n), against O(n) for a deep copy of
+        the whole structure. Callers that must revert an append on a
+        downstream failure — the audit chain reverts when signing or WAL
+        persistence fails — should pair this with :meth:`rollback_to` rather
+        than snapshotting the MMR.
+
+        The token borrows the live peak node objects, so it is valid only for
+        the instance that produced it and only until it is used.
+        """
+        return MMRAppendCheckpoint(
+            node_count=len(self.nodes),
+            leaf_node_index_count=len(self._leaf_node_indices),
+            leaf_count=self._leaf_count,
+            peaks=tuple(self.peaks),
+        )
+
+    def rollback_to(self, checkpoint: MMRAppendCheckpoint) -> None:
+        """Restore the exact state captured by ``checkpoint``.
+
+        Appends only ever extend ``nodes`` and ``_leaf_node_indices`` and only
+        ever mutate ``parent`` on nodes as they are popped from ``peaks``. A
+        node in ``peaks`` therefore always has ``parent is None``, so
+        truncating the two lists and reinstating the recorded peaks with
+        cleared parents reproduces the prior state byte-for-byte.
+
+        Raises:
+            ValueError: If the checkpoint does not describe a prefix of the
+                current state, which would mean it came from another instance
+                or the MMR was truncated behind it.
+        """
+        if (
+            checkpoint.node_count > len(self.nodes)
+            or checkpoint.leaf_node_index_count > len(self._leaf_node_indices)
+            or checkpoint.leaf_count > self._leaf_count
+        ):
+            raise ValueError("MMR checkpoint does not describe a prefix of the current state")
+        del self.nodes[checkpoint.node_count :]
+        del self._leaf_node_indices[checkpoint.leaf_node_index_count :]
+        self._leaf_count = checkpoint.leaf_count
+        self.peaks = list(checkpoint.peaks)
+        for peak in self.peaks:
+            peak.parent = None
 
     def get_root_hash(self) -> str:
         """

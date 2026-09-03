@@ -39,6 +39,7 @@ The post-merge record is the current locator for the v4 **source baseline**. Its
 | [`commercial_phase2_streaming_benchmark.json`](commercial_phase2_streaming_benchmark.json) | Post-v3.1.0 local source benchmark | Bounded local workload; excludes network and durable-WAL latency and is not production capacity. |
 | [`commercial_phase2_dashboard_qa.md`](commercial_phase2_dashboard_qa.md) | Post-v3.1.0 local dashboard QA | Local source/UI review; not deployment availability, customer telemetry, accessibility certification, or acceptance. |
 | [`apex_workstreams_9_11_gate_2026-08-24.md`](apex_workstreams_9_11_gate_2026-08-24.md) | 2026-08-24 source gate record | Retains its own stated scope and limitations; not registry publication or external assurance. |
+| [`commit_scaling_measurement_2026-09-03.md`](commit_scaling_measurement_2026-09-03.md) | 2026-09-03 in-process microbenchmark of the ledger commit path | One container, one date. Excludes network, provider, and (by default) durable-write cost; establishes the shape of the per-commit cost curve, not throughput capacity or any service level. |
 
 ## Integrity sidecars and manifests
 

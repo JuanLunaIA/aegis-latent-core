@@ -26,6 +26,7 @@ A number without these four things is not a measurement:
 | Statement coverage | `coverage.py` over the suite | Branch coverage; whether tests assert anything meaningful |
 | Test suite outcome | `pytest -q` | Environments where optional backends are absent produce skips |
 | Background dispatch | Microbenchmark of the dispatch path | Everything else: upstream, network, storage, serialization |
+| Commit-cost scaling | `benchmarks/bench_commit_scaling.py` — per-commit latency at increasing chain lengths | Network, provider, request handling, and (by default) durable-write cost; reports the shape of the curve, not a throughput figure |
 | Native MMR operations | Rust criterion benchmarks | Python interop overhead |
 | Backpressure under injected `fsync` delay | Local harness with a seam | Real storage behaviour, real network, real provider |
 | WAF corpus | Pinned corpus replay | Traffic outside the corpus |
@@ -106,6 +107,9 @@ python tools/security/run_waf_corpus.py
 
 # Rust benchmarks
 cd aegis_rust_v2 && cargo bench
+
+# Commit-cost scaling
+python -m benchmarks.bench_commit_scaling --json
 ```
 
 Record your environment alongside any result. A number without its environment is not reproducible, and an irreproducible number is not evidence.

@@ -32,6 +32,28 @@ class StreamingDeidentificationError(ValueError):
     """Raised when a sensitive candidate exceeds the finite stream grammar."""
 
 
+# Viable prefixes of the detectors in ``pci_detector``. A candidate is only an
+# open track-data candidate if the pattern that would redact it could still
+# complete from what has arrived so far. Testing only for the absence of the
+# ``?`` terminator is far too loose: every semicolon in ordinary prose starts a
+# run with no ``?`` in it.
+#
+# _TRACK1 = %B\d{12,19}\^[^^]{2,26}\^\d{4,}[^?]*\?  → still inside the PAN, or
+#                                                     past the first caret.
+# _TRACK2 = ;\d{12,19}=\d{4,}[^?]*\?                → still inside the PAN, or
+#                                                     past the field separator.
+_TRACK1_OPEN_PREFIX = re.compile(r"%B(?:\d{0,19}|\d{12,19}\^[^?]*)$", re.IGNORECASE)
+_TRACK2_OPEN_PREFIX = re.compile(r";(?:\d{0,19}|\d{12,19}=[^?]*)$")
+
+# A URL candidate is open until one of the characters that ends the URL
+# grammar appears; mirrors the ``[^\s"'<>)\]]+`` body of the URL detector.
+_URL_TERMINATOR = re.compile(r"[\s\"'<>)\]]")
+
+# The trailing run with no whitespace in it. The EMAIL detector admits no
+# whitespace, so this is exactly the token that could still become an address.
+_TRAILING_TOKEN = re.compile(r"\S*$")
+
+
 @dataclass(frozen=True)
 class StreamRedactionStats:
     """Bounded, non-sensitive redaction counters."""
@@ -118,38 +140,52 @@ class StreamingDeidentifier:
         return output
 
     def _reject_overlong_open_candidate(self, cutoff: int, *, final: bool = False) -> None:
-        """Fail closed for the established unbounded URL/track grammars."""
+        """Fail closed for candidates that cannot settle inside the window.
+
+        A candidate is rejected only when it is a viable *prefix* of the
+        detector that would redact it. Looser tests reject ordinary prose:
+        matching every semicolon that is not followed by a ``?``, or treating
+        the whole holdback as one token when looking for an ``@``, aborts any
+        stream that happens to contain a semicolon or mention an email address.
+        Both are ordinary text, and an aborted stream is reported to the client
+        as ``privacy_failure``.
+
+        Marker searches are case-insensitive because the URL and track-1
+        detectors are; searching for the lowercase form alone let an uppercase
+        ``HTTPS://`` or ``%b`` candidate past the guard entirely.
+        """
         if cutoff <= 0:
             return
         lower = self._pending.lower()
-        starts = [
-            lower.rfind("http://", 0, cutoff),
-            lower.rfind("https://", 0, cutoff),
-            self._pending.rfind("%B", 0, cutoff),
-            self._pending.rfind(";", 0, cutoff),
-        ]
-        for start in starts:
+
+        for marker in ("http://", "https://"):
+            start = lower.rfind(marker, 0, cutoff)
             if start < 0:
                 continue
             candidate = self._pending[start:]
-            if len(candidate) <= self.window_chars:
+            if len(candidate) > self.window_chars and not _URL_TERMINATOR.search(candidate):
+                raise StreamingDeidentificationError("overlong open URL candidate")
+
+        for marker, open_prefix in (("%b", _TRACK1_OPEN_PREFIX), (";", _TRACK2_OPEN_PREFIX)):
+            start = lower.rfind(marker, 0, cutoff)
+            if start < 0:
                 continue
-            if candidate.startswith(("http://", "https://")):
-                if not re.search(r"[\s\"'<>)\]]", candidate):
-                    raise StreamingDeidentificationError("overlong open URL candidate")
-            elif candidate.startswith(("%B", ";")) and "?" not in candidate:
+            candidate = self._pending[start:]
+            if (
+                len(candidate) > self.window_chars
+                and "?" not in candidate
+                and open_prefix.match(candidate) is not None
+            ):
                 raise StreamingDeidentificationError("overlong open track-data candidate")
-        token_start = (
-            max(
-                self._pending.rfind(" ", 0, cutoff),
-                self._pending.rfind("\n", 0, cutoff),
-                self._pending.rfind("\t", 0, cutoff),
-            )
-            + 1
-        )
-        open_token = self._pending[token_start:]
-        if "@" in open_token and len(open_token) > self.window_chars:
-            raise StreamingDeidentificationError("overlong open email candidate")
+
+        # The EMAIL detector admits no whitespace, so the open candidate is the
+        # trailing whitespace-free run — not everything after the last space
+        # that preceded the cutoff, which spans whole settled words.
+        open_token = _TRAILING_TOKEN.search(self._pending)
+        if open_token is not None:
+            token = open_token.group(0)
+            if "@" in token and len(token) > self.window_chars:
+                raise StreamingDeidentificationError("overlong open email candidate")
         address = re.search(r"(?:^|\b)\d{1,5}\s+[A-Za-z0-9 ]+$", self._pending)
         if address is not None and len(address.group(0)) > self.window_chars:
             raise StreamingDeidentificationError("overlong open address candidate")

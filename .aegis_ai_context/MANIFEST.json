@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "fe8d8fad19791048e3f3368e508dc9f95c7eb134713f23d2f9af79dc6588dbb2",
-      "size": 42170
+      "sha256": "e28e6bd62850ee6fe85e702b59953d27ba0897e799f4aacbdbec4e9abe5c9072",
+      "size": 45202
     },
     {
       "category": "governed_input",
@@ -183,8 +183,8 @@
     {
       "category": "governed_input",
       "path": "evidence/INDEX.md",
-      "sha256": "bae28a07befa15bd16c29878bbc459bb569a026c0708ef8ee92ee642244ae695",
-      "size": 9721
+      "sha256": "aff9aca774cdc58f6b725337ccd0f9c63fbfc02c4fd6f73ee446c49aea3d1f30",
+      "size": 10067
     },
     {
       "category": "governed_input",
@@ -249,8 +249,8 @@
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/Cargo.toml",
-      "sha256": "4552b1f53630cc965a603af93c6b4b5df6116f8148f600579f563c18647064fc",
-      "size": 4211
+      "sha256": "1e5ab4be568cf70e8b1120185d9720d3391fbf1c829e95dbdf7d69fec4d867b9",
+      "size": 4504
     },
     {
       "category": "governed_input",
@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "6656d88e30933309f52f15fd4d1727f389b6569dc73fe6a13c4aa99266015101",
-      "size": 24740
+      "sha256": "2e65d2383ed54e0236234b3009a96d9d40c6e9d434ecb6aa2da9a5638a6fe4f3",
+      "size": 26740
     },
     {
       "category": "governed_input",

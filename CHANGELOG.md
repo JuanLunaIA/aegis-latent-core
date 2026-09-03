@@ -27,12 +27,17 @@ external readback facts recorded in `docs/RELEASE_STATUS.md`.
 - Documentation corpus: claim-control foundations (`docs/STYLE_GUIDE.md`, `docs/DOCUMENTATION_GOVERNANCE.md`, `docs/INDEX.md`), security volume, operations runbooks, API references, four framework technical-input documents, privacy boundaries, enterprise and corporate volumes, assurance index, and root governance files.
 - Four documentation gates run in CI: `scripts/verify_docs.py`, `scripts/verify_claims.py`, `scripts/verify_links.sh`, and the pre-existing `tools/docs/verify_documentation.py`.
 - Eleven claims-matrix rows covering the `fsync` durability boundary, trusted-root independence, the native WAL's auxiliary role, `pending-terminal` semantics, redaction as best-effort, registry publication state, the `bad_cert` explanation, and explicit denials for production SLO, WORM and immutability; stable `CLM-NNN` identifiers on all 53 rows.
+- `MerkleMountainRange.checkpoint()` and `rollback_to()`: an O(log n) rollback token that records the append-only lengths and the live peak nodes, replacing a whole-structure snapshot on the commit path.
+- Regression coverage for MMR append rollback (`tests/test_mmr_rollback.py`) and for chain integrity across memory-window rollover (`tests/test_crypto_audit_rollover.py`), including a `slow`-marked 100,000-node sweep through a 512-node window. Both the rollback path and the window anchor were previously unasserted.
+- Rust↔Python MMR parity extended beyond root equality: Python-generated portable proofs are verified against the Rust-reported root, `RustBackedMMR` is checked end to end, and the `sha256-asciihex` wire literal is pinned to the digest both implementations actually compute.
+- Kani model checking of the native WAL's frame-bounds arithmetic. `header_range` and `payload_range` in `aegis_rust_v2/src/wal.rs` now bound every slice taken during a frame walk, and five `#[kani::proof]` harnesses check over the whole `usize` domain that the returned ranges stay inside the limit, never overflow, never treat the zero-length recovery terminator as a frame, always advance the cursor, and never overlap. Wired into CI as a `Kani Model Checking` job pinned to Kani 0.67.0; scope and limits recorded in `docs/formal/FORMAL_VERIFICATION_LIMITS.md`.
 
 ### Changed
 
 - Least-privilege `GITHUB_TOKEN`: read-only workflow-level floor in `ci.yml` and `forensic.yml`, and `security-events: write` moved from workflow scope to the four SARIF-uploading jobs in `security.yml`.
 - `README.md` restructured and reduced from roughly 33 KB to 13 KB, stating release status once and routing to `docs/RELEASE_STATUS.md`.
 - `docs/RELEASE_STATUS.md` records a 2026-09-02 readback of every publication surface, with per-surface commands and a publication-state table.
+- `CryptographicAuditLedger` reverts a failed commit through the MMR checkpoint instead of `copy.deepcopy`. The deep copy ran on every commit and copied the whole accumulator, so per-commit cost grew with the length of the chain. Failure semantics are unchanged: a signing or WAL-persistence failure still leaves the MMR exactly as it was.
 
 ### Fixed
 
@@ -41,6 +46,9 @@ external readback facts recorded in `docs/RELEASE_STATUS.md`.
 - DNS egress in the Helm `NetworkPolicy` scoped to resolver pods via a `podSelector`; a namespace-only peer permitted port 53 to every pod in `kube-system` while the comment claimed otherwise.
 - Three stale heading anchors in `docs/architecture/DEEP_DIVE.md` pointing at `docs/BENCHMARKS.md` sections that no longer exist.
 - Stale `rollout status` commands in `docs/institutional/DOC-04_OPERATIONS_PLAYBOOK.md` naming `deployment/` and omitting the release prefix.
+- Streaming redaction aborted ordinary text. `StreamingDeidentifier` rejected an open track-data candidate whenever a semicolon was followed by more than `window_chars` of text containing no `?`, and an open email candidate whenever an `@` appeared anywhere in the holdback window rather than in the trailing whitespace-free token. Prose containing a semicolon, a mentioned email address, or a Python decorator therefore raised `StreamingDeidentificationError`, which the proxy reports to the client as a `privacy_failure` terminal outcome. Each guard now tests whether the candidate is a viable prefix of the detector that would redact it.
+- Open-candidate marker searches are now case-insensitive, matching the URL and track-1 detectors. An unterminated `HTTPS://` or `%b` candidate previously passed the guard entirely, which was a fail-open on the exact grammar the guard exists to catch.
+- `RustWal.open` truncated an existing segment when reopened with a smaller `capacity_bytes`. `OpenOptions::truncate(false)` prevents `open` from clearing the file, but the subsequent `set_len` shrank it just the same, discarding every frame past the new length — a 1 MiB segment holding 20 records reopened at 64 bytes retained 4. The requested capacity is now a floor rather than a resize instruction, so a segment only ever grows.
 
 ## [4.0.2] — 2026-08-27
 

@@ -62,6 +62,84 @@ def test_streaming_deidentifier_fails_closed_on_overlong_open_url() -> None:
         deidentifier.feed("https://example.test/" + "a" * 128)
 
 
+def test_streaming_deidentifier_fails_closed_on_uppercase_open_url() -> None:
+    """The URL detector is case-insensitive, so the open-candidate guard must be.
+
+    Searching only for the lowercase marker let an uppercase scheme past the
+    guard entirely — a fail-open on the very grammar the guard exists for.
+    """
+    deidentifier = StreamingDeidentifier(window_chars=64, enable_phi=True)
+    with pytest.raises(StreamingDeidentificationError, match="open URL"):
+        deidentifier.feed("HTTPS://EXAMPLE.TEST/" + "A" * 128)
+
+
+@pytest.mark.parametrize(
+    "opening",
+    [
+        ";4111111111111111=25121010000012345678",
+        "%B4111111111111111^DOE/JOHN^2512101000001",
+        "%b4111111111111111^DOE/JOHN^2512101000001",
+    ],
+)
+def test_streaming_deidentifier_fails_closed_on_overlong_open_track_data(opening: str) -> None:
+    """An unterminated track-1 or track-2 run must still fail closed.
+
+    Lowercase ``%b`` is included because the track-1 detector is
+    case-insensitive; the guard has to search the same way the detector matches.
+    """
+    deidentifier = StreamingDeidentifier(window_chars=64, enable_pci=True)
+    with pytest.raises(StreamingDeidentificationError, match="track-data"):
+        deidentifier.feed(opening + "0" * 200)
+
+
+def test_streaming_deidentifier_fails_closed_on_overlong_open_email() -> None:
+    """An address longer than the window with no whitespace cannot settle."""
+    deidentifier = StreamingDeidentifier(window_chars=64, enable_phi=True)
+    with pytest.raises(StreamingDeidentificationError, match="open email"):
+        deidentifier.feed("a" * 100 + "@example.test" + "b" * 100)
+
+
+@pytest.mark.parametrize(
+    ("label", "text"),
+    [
+        (
+            "semicolon in prose",
+            "We shipped it; " + "the rollout went smoothly across every region today. " * 4,
+        ),
+        (
+            "email mentioned mid-stream",
+            "Please contact our support desk at support@example.test and we will get back "
+            "to you within one business day about the invoice you mentioned earlier.",
+        ),
+        (
+            "email early with a long tail",
+            "support@example.test is the address; " + "and the explanation continues here. " * 4,
+        ),
+        (
+            "at-sign in code",
+            "@dataclass class Config: pass  " + "followed by more explanatory prose here. " * 4,
+        ),
+        (
+            "terminated URL followed by prose",
+            "See https://example.test/docs for details. " + "More prose follows after it. " * 4,
+        ),
+    ],
+)
+def test_streaming_deidentifier_does_not_abort_on_ordinary_prose(label: str, text: str) -> None:
+    """Ordinary text must stream through, whole or byte-chunked.
+
+    Each of these aborted the stream before the open-candidate guards were
+    tightened to test for a viable prefix of the detector they guard. A raised
+    ``StreamingDeidentificationError`` reaches the client as a
+    ``privacy_failure`` terminal outcome, so a false positive here is a
+    user-visible failure on text containing nothing sensitive.
+    """
+    for chunks in ([text], [text[i : i + 7] for i in range(0, len(text), 7)]):
+        deidentifier = StreamingDeidentifier(window_chars=128, enable_phi=True, enable_pci=True)
+        output = "".join(deidentifier.feed(chunk) for chunk in chunks) + deidentifier.flush()
+        assert output, f"{label} produced no output"
+
+
 @pytest.mark.asyncio
 async def test_success_hashes_exact_output_and_commits_before_done() -> None:
     release_commit = asyncio.Event()

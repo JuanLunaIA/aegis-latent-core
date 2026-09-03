@@ -26,6 +26,12 @@ full = ["extension-module"]  # All features
 name = "aegis_rust"
 crate-type = ["cdylib", "rlib"]
 
+[lints.rust]
+# `kani` is set by the Kani model checker, not by cargo. Declaring it here keeps
+# `cargo clippy -- -D warnings` from rejecting the `#[cfg(kani)]` proof module,
+# while an actual typo in a cfg name is still caught.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
+
 [dependencies]
 # Python bindings
 pyo3 = { version = "0.29", features = ["abi3-py311"] }
