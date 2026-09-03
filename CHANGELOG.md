@@ -30,6 +30,7 @@ external readback facts recorded in `docs/RELEASE_STATUS.md`.
 - `MerkleMountainRange.checkpoint()` and `rollback_to()`: an O(log n) rollback token that records the append-only lengths and the live peak nodes, replacing a whole-structure snapshot on the commit path.
 - Regression coverage for MMR append rollback (`tests/test_mmr_rollback.py`) and for chain integrity across memory-window rollover (`tests/test_crypto_audit_rollover.py`), including a `slow`-marked 100,000-node sweep through a 512-node window. Both the rollback path and the window anchor were previously unasserted.
 - Rust↔Python MMR parity extended beyond root equality: Python-generated portable proofs are verified against the Rust-reported root, `RustBackedMMR` is checked end to end, and the `sha256-asciihex` wire literal is pinned to the digest both implementations actually compute.
+- Kani model checking of the native WAL's frame-bounds arithmetic. `header_range` and `payload_range` in `aegis_rust_v2/src/wal.rs` now bound every slice taken during a frame walk, and five `#[kani::proof]` harnesses check over the whole `usize` domain that the returned ranges stay inside the limit, never overflow, never treat the zero-length recovery terminator as a frame, always advance the cursor, and never overlap. Wired into CI as a `Kani Model Checking` job pinned to Kani 0.67.0; scope and limits recorded in `docs/formal/FORMAL_VERIFICATION_LIMITS.md`.
 
 ### Changed
 
@@ -47,6 +48,7 @@ external readback facts recorded in `docs/RELEASE_STATUS.md`.
 - Stale `rollout status` commands in `docs/institutional/DOC-04_OPERATIONS_PLAYBOOK.md` naming `deployment/` and omitting the release prefix.
 - Streaming redaction aborted ordinary text. `StreamingDeidentifier` rejected an open track-data candidate whenever a semicolon was followed by more than `window_chars` of text containing no `?`, and an open email candidate whenever an `@` appeared anywhere in the holdback window rather than in the trailing whitespace-free token. Prose containing a semicolon, a mentioned email address, or a Python decorator therefore raised `StreamingDeidentificationError`, which the proxy reports to the client as a `privacy_failure` terminal outcome. Each guard now tests whether the candidate is a viable prefix of the detector that would redact it.
 - Open-candidate marker searches are now case-insensitive, matching the URL and track-1 detectors. An unterminated `HTTPS://` or `%b` candidate previously passed the guard entirely, which was a fail-open on the exact grammar the guard exists to catch.
+- `RustWal.open` truncated an existing segment when reopened with a smaller `capacity_bytes`. `OpenOptions::truncate(false)` prevents `open` from clearing the file, but the subsequent `set_len` shrank it just the same, discarding every frame past the new length — a 1 MiB segment holding 20 records reopened at 64 bytes retained 4. The requested capacity is now a floor rather than a resize instruction, so a segment only ever grows.
 
 ## [4.0.2] — 2026-08-27
 

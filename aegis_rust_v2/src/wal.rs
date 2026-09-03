@@ -28,6 +28,7 @@ use parking_lot::Mutex;
 use pyo3::prelude::*;
 use std::{
     fs::OpenOptions,
+    ops::Range,
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -39,6 +40,40 @@ const DEFAULT_SEGMENT_BYTES: usize = 256 * 1024 * 1024;
 
 /// [crc32: 4 B][len: 4 B]
 const FRAME_HEADER: usize = 8;
+
+/// Byte range of the frame header at `pos`, if the whole header fits in `limit`.
+///
+/// Every frame walk in this module bounds its slicing through this function and
+/// [`payload_range`] rather than through open-coded `pos + FRAME_HEADER + len`
+/// comparisons, so the arithmetic that decides whether a slice is in bounds
+/// exists in exactly one place and can be model-checked. See the `kani` module
+/// at the bottom of this file.
+#[inline]
+fn header_range(pos: usize, limit: usize) -> Option<Range<usize>> {
+    let end = pos.checked_add(FRAME_HEADER)?;
+    if end > limit {
+        return None;
+    }
+    Some(pos..end)
+}
+
+/// Byte range of a `payload_len`-byte payload following the header at `pos`,
+/// if the whole payload fits in `limit`.
+///
+/// A zero-length payload is refused: a zero length is the recovery terminator
+/// written after the valid prefix, never a real frame.
+#[inline]
+fn payload_range(pos: usize, payload_len: usize, limit: usize) -> Option<Range<usize>> {
+    if payload_len == 0 {
+        return None;
+    }
+    let start = pos.checked_add(FRAME_HEADER)?;
+    let end = start.checked_add(payload_len)?;
+    if end > limit {
+        return None;
+    }
+    Some(start..end)
+}
 
 struct WalInner {
     mmap: Mutex<MmapMut>,
@@ -86,6 +121,26 @@ impl RustWal {
             use std::os::unix::fs::PermissionsExt;
             let _ = file.set_permissions(std::fs::Permissions::from_mode(0o600));
         }
+
+        // A segment may only grow. `OpenOptions::truncate(false)` stops `open`
+        // from clearing the file, but `set_len` to a smaller size truncates it
+        // just the same: reopening a populated 256 MiB segment with a smaller
+        // `capacity_bytes` discarded every frame past the new length. Take the
+        // larger of the requested capacity and the existing file, so a
+        // misconfigured or downgraded caller cannot destroy committed frames.
+        let existing_len = file
+            .metadata()
+            .map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("RustWal metadata: {e}"))
+            })?
+            .len();
+        let capacity = usize::try_from(existing_len)
+            .map_err(|_| {
+                PyErr::new::<pyo3::exceptions::PyOverflowError, _>(
+                    "RustWal segment is larger than this platform's address space",
+                )
+            })?
+            .max(capacity);
 
         file.set_len(capacity as u64).map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("RustWal resize: {e}"))
@@ -183,16 +238,23 @@ impl RustWal {
         let mut records = Vec::new();
         let mut pos = 0usize;
 
-        while pos + FRAME_HEADER <= limit {
-            let stored_crc = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap_or([0; 4]));
-            let payload_len =
-                u32::from_le_bytes(mmap[pos + 4..pos + 8].try_into().unwrap_or([0; 4])) as usize;
+        while let Some(header) = header_range(pos, limit) {
+            let stored_crc = u32::from_le_bytes(
+                mmap[header.start..header.start + 4]
+                    .try_into()
+                    .unwrap_or([0; 4]),
+            );
+            let payload_len = u32::from_le_bytes(
+                mmap[header.start + 4..header.end]
+                    .try_into()
+                    .unwrap_or([0; 4]),
+            ) as usize;
 
-            if payload_len == 0 || pos + FRAME_HEADER + payload_len > limit {
+            let Some(body) = payload_range(pos, payload_len, limit) else {
                 break;
-            }
+            };
 
-            let payload = &mmap[pos + FRAME_HEADER..pos + FRAME_HEADER + payload_len];
+            let payload = &mmap[body.clone()];
             let mut crc = Crc32Hasher::new();
             crc.update(payload);
             if crc.finalize() != stored_crc {
@@ -203,7 +265,7 @@ impl RustWal {
                 records.push(s.to_string());
             }
 
-            pos += FRAME_HEADER + payload_len;
+            pos = body.end;
         }
 
         Ok(records)
@@ -227,28 +289,27 @@ impl RustWal {
 /// Scan the mmap to find the byte offset of the first unwritten frame.
 fn scan_write_pos(mmap: &MmapMut, capacity: usize) -> usize {
     let mut pos = 0usize;
-    while pos + FRAME_HEADER <= capacity {
-        let stored_crc = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap_or([0; 4]));
-        let len = u32::from_le_bytes(mmap[pos + 4..pos + 8].try_into().unwrap_or([0; 4])) as usize;
-        if len == 0 {
-            break;
-        }
-        let Some(end) = pos
-            .checked_add(FRAME_HEADER)
-            .and_then(|payload_start| payload_start.checked_add(len))
-        else {
+    while let Some(header) = header_range(pos, capacity) {
+        let stored_crc = u32::from_le_bytes(
+            mmap[header.start..header.start + 4]
+                .try_into()
+                .unwrap_or([0; 4]),
+        );
+        let len = u32::from_le_bytes(
+            mmap[header.start + 4..header.end]
+                .try_into()
+                .unwrap_or([0; 4]),
+        ) as usize;
+        let Some(body) = payload_range(pos, len, capacity) else {
             break;
         };
-        if end > capacity {
-            break;
-        }
-        let payload = &mmap[pos + FRAME_HEADER..end];
+        let payload = &mmap[body.clone()];
         let mut crc = Crc32Hasher::new();
         crc.update(payload);
         if crc.finalize() != stored_crc || std::str::from_utf8(payload).is_err() {
             break;
         }
-        pos = end;
+        pos = body.end;
     }
     pos
 }
@@ -371,5 +432,142 @@ mod tests {
             reopened.read_all().unwrap(),
             vec!["AAAA".to_string(), "DDDD".to_string()]
         );
+    }
+
+    #[test]
+    fn reopening_with_a_smaller_capacity_does_not_truncate_the_segment() {
+        let file = NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap().to_string();
+        let expected: Vec<String> = (0..20).map(|i| format!("record-{i:04}")).collect();
+        let written_bytes;
+        {
+            let wal = RustWal::open(&path, Some(64 * 1024)).unwrap();
+            for record in &expected {
+                wal.append(record).unwrap();
+            }
+            written_bytes = wal.write_pos();
+            assert_eq!(wal.read_all().unwrap(), expected);
+        }
+
+        // A caller that asks for less than the segment already holds must not
+        // be able to discard committed frames. `set_len` shrinks a file just as
+        // `truncate(true)` would, so the requested capacity is a floor, not a
+        // resize instruction.
+        let reopened = RustWal::open(&path, Some(64)).unwrap();
+        assert_eq!(reopened.read_all().unwrap(), expected);
+        assert_eq!(reopened.write_pos(), written_bytes);
+        assert_eq!(reopened.capacity(), 64 * 1024);
+        assert_eq!(std::fs::metadata(&path).unwrap().len(), 64 * 1024);
+    }
+
+    #[test]
+    fn reopening_with_a_larger_capacity_still_grows_the_segment() {
+        let file = NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap().to_string();
+        {
+            let wal = RustWal::open(&path, Some(4096)).unwrap();
+            wal.append("AAAA").unwrap();
+        }
+
+        let grown = RustWal::open(&path, Some(16 * 1024)).unwrap();
+        assert_eq!(grown.capacity(), 16 * 1024);
+        assert_eq!(grown.read_all().unwrap(), vec!["AAAA".to_string()]);
+    }
+}
+
+/// Bit-level model checking of the WAL's frame-bounds arithmetic.
+///
+/// Kani explores every value of the inputs symbolically rather than sampling
+/// them, so these are proofs over the whole `usize` domain — not tests. They
+/// cover exactly what is provable here: the arithmetic that decides whether a
+/// slice is in bounds, and the walk's termination.
+///
+/// They do **not** cover the mmap itself. Kani cannot model `mmap`, `flush` or
+/// the filesystem, so nothing here establishes durability, crash consistency,
+/// concurrent-append behaviour, or that `capacity` equals the mapped length.
+/// Those remain the responsibility of `open`, the mutex, and the unit tests.
+///
+/// Run with `cargo kani --harness <name>` from `aegis_rust_v2/`.
+#[cfg(kani)]
+mod verification {
+    use super::{header_range, payload_range, FRAME_HEADER};
+
+    /// A header range, when returned, is inside `limit` and is exactly one
+    /// header long. Nothing else can produce an in-bounds slice.
+    #[kani::proof]
+    fn header_range_is_in_bounds() {
+        let pos: usize = kani::any();
+        let limit: usize = kani::any();
+
+        match header_range(pos, limit) {
+            Some(range) => {
+                assert!(range.start == pos);
+                assert!(range.end <= limit);
+                assert!(range.end - range.start == FRAME_HEADER);
+            }
+            None => {
+                // Refusal is only ever for overflow or for not fitting.
+                assert!(pos.checked_add(FRAME_HEADER).is_none_or(|end| end > limit));
+            }
+        }
+    }
+
+    /// A payload range, when returned, is inside `limit`, starts immediately
+    /// after the header, and is exactly `payload_len` bytes long.
+    #[kani::proof]
+    fn payload_range_is_in_bounds() {
+        let pos: usize = kani::any();
+        let payload_len: usize = kani::any();
+        let limit: usize = kani::any();
+
+        if let Some(range) = payload_range(pos, payload_len, limit) {
+            assert!(range.end <= limit);
+            assert!(range.start >= pos);
+            assert!(range.start - pos == FRAME_HEADER);
+            assert!(range.end - range.start == payload_len);
+            assert!(payload_len > 0);
+        }
+    }
+
+    /// The recovery terminator is never mistaken for a frame: a zero-length
+    /// payload is refused at every position and every limit.
+    #[kani::proof]
+    fn zero_length_payload_is_never_a_frame() {
+        let pos: usize = kani::any();
+        let limit: usize = kani::any();
+
+        assert!(payload_range(pos, 0, limit).is_none());
+    }
+
+    /// A frame walk strictly advances. `pos = body.end` with `body.end >
+    /// pos` is what makes both `read_all` and `scan_write_pos` terminate; a
+    /// frame that did not advance the cursor would loop forever on a mapping
+    /// an attacker controls the bytes of.
+    #[kani::proof]
+    fn a_frame_walk_strictly_advances() {
+        let pos: usize = kani::any();
+        let payload_len: usize = kani::any();
+        let limit: usize = kani::any();
+
+        if let Some(body) = payload_range(pos, payload_len, limit) {
+            assert!(body.end > pos);
+            assert!(body.end <= limit);
+        }
+    }
+
+    /// Header and payload ranges never overlap, so a frame's length field can
+    /// never be read out of its own payload.
+    #[kani::proof]
+    fn header_and_payload_do_not_overlap() {
+        let pos: usize = kani::any();
+        let payload_len: usize = kani::any();
+        let limit: usize = kani::any();
+
+        if let (Some(header), Some(body)) = (
+            header_range(pos, limit),
+            payload_range(pos, payload_len, limit),
+        ) {
+            assert!(header.end <= body.start);
+        }
     }
 }
