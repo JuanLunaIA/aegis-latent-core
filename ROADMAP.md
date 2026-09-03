@@ -26,7 +26,9 @@ An item leaves this document only when it is implemented, tested, and carries a 
 
 **Durable WAL backend options.** The authoritative store is a single-writer JSONL WAL on local storage. Cross-replica ordering does not exist; each replica produces an independently verifiable bundle. Options under consideration are a centralized writer, a compare-and-append storage provider with a chain-head guard, or a consensus-backed log. None is implemented. The current limitation is described in [DOC-01 §8](docs/institutional/DOC-01_ENTERPRISE_ARCHITECTURE.md).
 
-**Cross-restart MMR continuity.** Replay reconstructs the stored node deque but does not replay leaves into the in-memory Merkle Mountain Range, so MMR roots restart from a fresh accumulator after a restart. Full cross-restart continuity is not established.
+**Cross-restart MMR continuity — closed for the JSONL WAL.** This entry previously stated that replay reconstructed the stored node deque without replaying leaves into the in-memory Merkle Mountain Range, so roots restarted from a fresh accumulator. That is not what the code does: `_load_from_wal` replays every leaf hash through `add_leaf_hash`, and `tests/test_mmr_restart.py` asserts that a reopened ledger's root equals an uninterrupted ledger's root at every shape of tree, that proofs issued after a restart verify against the live root, and that repeated restarts do not drift.
+
+What remains open is narrower than the old entry implied: continuity across *replicas* (each is an independent chain, see **Durable WAL backend options** above), and continuity of the auxiliary `RustWal` mmap segment, which is not the authoritative store.
 
 **External anchoring.** RFC 3161 timestamping and an S3 Object Lock adapter exist as configuration-dependent paths. Neither is an external immutability guarantee, and no anchoring is enabled by default.
 
