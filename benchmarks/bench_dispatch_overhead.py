@@ -129,29 +129,28 @@ def _measure_memory(rounds: int, commits_per_round: int) -> dict[str, Any]:
     from aegis.core.crypto_audit import CryptographicAuditLedger
 
     samples: list[int] = []
-    with tempfile.TemporaryDirectory() as tmp:
-        ledger = CryptographicAuditLedger(
+    with (
+        tempfile.TemporaryDirectory() as tmp,
+        CryptographicAuditLedger(
             persistence_path=str(Path(tmp) / "memory.wal.jsonl"),
             signing_key="k" * 32,
             max_memory_nodes=512,
             fsync_fn=lambda fd: None,
-        )
-        try:
-            index = 0
-            for _ in range(rounds):
-                for _ in range(commits_per_round):
-                    ledger.commit_forensic(
-                        state_id=f"mem-{index}",
-                        request_bytes=_REQUEST,
-                        response_bytes=_RESPONSE,
-                    )
-                    index += 1
-                rss = _rss_kib()
-                if rss is None:
-                    return {"available": False, "reason": "/proc/self/status unavailable"}
-                samples.append(rss)
-        finally:
-            ledger.close()
+        ) as ledger,
+    ):
+        index = 0
+        for _ in range(rounds):
+            for _ in range(commits_per_round):
+                ledger.commit_forensic(
+                    state_id=f"mem-{index}",
+                    request_bytes=_REQUEST,
+                    response_bytes=_RESPONSE,
+                )
+                index += 1
+            rss = _rss_kib()
+            if rss is None:
+                return {"available": False, "reason": "/proc/self/status unavailable"}
+            samples.append(rss)
 
     # The first round pays one-time costs — interpreter arenas, allocator
     # growth, lazily imported modules — that are not per-commit behaviour.
