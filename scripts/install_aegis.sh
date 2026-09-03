@@ -3,7 +3,7 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 #
-# install_aegis.sh — Zero-touch POSIX installer for Aegis Latent Core v4.0.2
+# install_aegis.sh — Zero-touch POSIX installer for Aegis Latent Core v4.1.0
 #
 # Supported platforms: Linux (x86_64, aarch64), macOS (x86_64, Apple Silicon)
 # Requires: Python 3.11+, curl or wget, git (optional for source install)
@@ -16,7 +16,7 @@
 set -euo pipefail
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-AEGIS_VERSION="4.0.2"
+AEGIS_VERSION="4.1.0"
 AEGIS_WHEEL_NAME="aegis_latent_core-${AEGIS_VERSION}-py3-none-any.whl"
 AEGIS_RELEASE_BASE_URL="https://github.com/JuanLunaIA/aegis-latent-core/releases/download/v${AEGIS_VERSION}"
 AEGIS_WHEEL_URL="${AEGIS_RELEASE_BASE_URL}/${AEGIS_WHEEL_NAME}"

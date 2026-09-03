@@ -1,6 +1,6 @@
 {
   "name": "aegis-latent-sdk",
-  "version": "4.0.2",
+  "version": "4.1.0",
   "description": "Edge-compatible Aegis MMR verification and provider instrumentation",
   "type": "module",
   "license": "AGPL-3.0-only OR LicenseRef-Proprietary",

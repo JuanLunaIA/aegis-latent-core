@@ -29,7 +29,7 @@ Usage::
     pkg = build_evidence_package(
         ledger=ledger,
         operator="Alice Smith <alice@example.org>",
-        tool_version="aegis-latent-core/4.0.2",
+        tool_version="aegis-latent-core/4.1.0",
         acquisition_reason="incident-response-2026-06-21",
     )
     pkg_dict = pkg.to_dict()
@@ -137,7 +137,7 @@ class AcquisitionMetadata:
     tool_name:
         Name of the acquisition tool (default: ``_TOOL_NAME``).
     tool_version:
-        Semantic version string for the tool (e.g. ``"4.0.2"``).
+        Semantic version string for the tool (e.g. ``"4.1.0"``).
     operator:
         Identity of the operator who initiated the acquisition.
     acquisition_timestamp_iso:
@@ -364,7 +364,7 @@ def build_evidence_package(
         (e.g. ``"Alice Smith <alice@example.org>"``).
     tool_version:
         Version string of the running Aegis deployment
-        (e.g. ``"4.0.2"``).
+        (e.g. ``"4.1.0"``).
     acquisition_reason:
         Optional free-form reason for this export (e.g.
         ``"scheduled-compliance-export"`` or ``"incident-response"``).

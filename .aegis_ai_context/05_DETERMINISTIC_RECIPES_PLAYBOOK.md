@@ -8,7 +8,7 @@ These recipes are **advisory** and offline unless a publication check explicitly
 2. Read [`CHANGELOG.md`](../CHANGELOG.md), [`docs/CLAIMS_MATRIX.md`](../docs/CLAIMS_MATRIX.md), and [`SECURITY.md`](../SECURITY.md).
 3. Classify statements as **immutable source baseline**, **published GitHub Release**, **registry observation**, **checked-out source release target**, **external lifecycle read-back**, **configuration-dependent**, **measured in a named environment**, or **externally unverified**.
 4. Record immutable source baseline `fdace8844568eb788216740b2cb5daf187d99d3b`, whose 14 anchors read `4.0.0`; separately record published GitHub Release `v4.0.1`, whose lightweight tag targets `6469904380218584ae0b5221334bc9a46500f5ba`.
-5. Record the prior public PyPI/npm `aegis-latent-sdk` observations at `4.0.0` without attributing provenance to failed workflows. Run `python scripts/verify_release_contract.py --root .` and confirm that the checked-out source release target v4.0.2 has 14 synchronized anchors at `4.0.2`. Independently read back external lifecycle state for the tag, GitHub Release, PyPI, npm, OCI, and attestations; source metadata does not encode that state.
+5. Record the prior public PyPI/npm `aegis-latent-sdk` observations at `4.0.0` without attributing provenance to failed workflows. Run `python scripts/verify_release_contract.py --root .` and confirm that the checked-out source release target v4.1.0 has 14 synchronized anchors at `4.1.0`. Independently read back external lifecycle state for the tag, GitHub Release, PyPI, npm, OCI, and attestations; source metadata does not encode that state.
 
 ## 2. Trace a behavior before editing
 

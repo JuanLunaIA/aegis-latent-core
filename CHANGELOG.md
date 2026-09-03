@@ -3,10 +3,10 @@
 All notable changes to **Aegis Latent Core** are documented in this file.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** `v4.0.2` checked-out source release target; source metadata does not establish external lifecycle state, which requires independent readback.
+**Release baseline:** `v4.1.0` checked-out source release target; source metadata does not establish external lifecycle state, which requires independent readback.
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
-**Source release target:** `v4.0.2` (fourteen synchronized `4.0.2` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts)
+**Source release target:** `v4.1.0` (fourteen synchronized `4.1.0` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts)
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
@@ -14,15 +14,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Source-only changes after the `v4.0.2` release target. None alters the release
-target, and none is published; registry, image and release state remain
-external readback facts recorded in `docs/RELEASE_STATUS.md`.
+No source changes since `4.1.0`.
+
+## [4.1.0] — 2026-09-03
+
+Kernel hardening and evidence-path correctness. **Source-only: nothing in this
+release is published.** No `v4.1.0` tag, GitHub Release, PyPI or npm package,
+OCI image, signature or attestation exists. `docs/RELEASE_STATUS.md` records the
+publication state, and the SDK registries remain two versions behind at `4.0.0`.
+
+### Security
+
+- Governed traffic is refused while the evidence chain is known to be broken. WAL replay marks the ledger `wal_corrupt`; until now that fault reached `/health` but not the request path, so the proxy kept forwarding and appending nodes onto a prefix it had already failed to replay. Each such commit succeeded and verified individually, which is what made the divergence silent. `_require_intact_ledger` now returns `503` at all three governed endpoints before any forwarding or commit; `/health` and `/metrics` stay reachable so the fault remains diagnosable. `docs/architecture/FAILURE_SEMANTICS.md` no longer describes this as the system's one non-fail-closed path.
+- Open-candidate marker searches in the streaming redactor are case-insensitive, matching the URL and track-1 detectors. An unterminated `HTTPS://` or `%b` candidate previously passed the guard entirely, which was a fail-open on the exact grammar the guard exists to catch.
 
 ### Added
 
 - `_require_intact_ledger` in `aegis/proxy/app.py`: every governed endpoint refuses with `503` while the ledger's `_fault_state` is not `healthy`, so a gateway that started on a corrupt WAL no longer forwards traffic or extends a prefix it already failed to replay. `/health` and `/metrics` stay reachable so the fault remains visible.
 - Regression coverage for the three remediated paths: `tests/test_app_wal_corrupt.py` (refusal on all three governed endpoints, before the upstream call, with no chain growth), `tests/test_mmr_restart.py` (accumulator continuity across one, many and every carry-shape restart, compared against an uninterrupted ledger), and `tests/test_phi_address_bound.py` (the two ADDRESS bounds agree, prose streams through, real addresses still redact, and the recall cost is asserted).
 - `benchmarks/bench_dispatch_overhead.py`: distribution over `aegis.proxy.app._spawn_background` and RSS sampling across repeated commit batches, reporting steady state separately from round-one warm-up so allocator growth is not read as a per-commit leak.
+- `benchmarks/bench_commit_scaling.py`: per-commit cost measured against prior chain length, so a length-dependent regression on the commit path is visible as a curve rather than a single number.
 - `evidence/evidence_path_measurements_2026-09-03.md`: MMR append throughput (Rust versus Python), audit-chain commit and verification, dispatch overhead, steady-state memory and ML-DSA signing latency, all taken on commit `f77420a` in one named container, with per-measurement boundaries and an explicit list of what was not measured.
 - Five claims-matrix rows (`CLM-054`–`CLM-058`) covering Kani frame-bounds model checking, the O(log N) MMR rollback token, POSIX advisory single-writer locking, streaming viable-prefix guards, and native-WAL segment growth — each with its forbidden phrasing recorded in the control register.
 - `docs/formal/FORMAL_VERIFICATION.md` documents the Kani harnesses, the property each checks, and why they differ in kind from the Z3, Lean and TLA+ artifacts.
@@ -40,6 +51,8 @@ external readback facts recorded in `docs/RELEASE_STATUS.md`.
 
 ### Changed
 
+- Per-commit cost is now independent of chain length. Measured on one container 2026-09-03: at 2,000 prior leaves, 30,154 µs → 362 µs. The pre-change curve rose `1.00× → 17.65×` with chain length; the post-change curve is flat within noise.
+- `_validate_active_deployment_versions` in `scripts/verify_release_contract.py` derives its expectation from the synchronized core version instead of a hard-coded literal. The literal made the check assert agreement with a constant rather than with the release being cut: it reported `READY` at `4.1.0` while eight deployment surfaces still named `4.0.2`. All twenty-two references are now synchronized, and `tests/test_release_contract_v4.py` fails if the derivation regresses.
 - `docs/BENCHMARKS.md` carries an evidence-path section for the current source baseline alongside the retained v3.1.0 record, and `docs/architecture/DEEP_DIVE.md` replaces a stale Rust/Python MMR ratio (`3.01x` / `3.34x`) with the 2026-09-03 measurement (`4.77x` average, `4.94x` maximum) plus the environment it belongs to. The ratio is a property of the host, not the code.
 - `docs/benchmarks/BENCHMARK_METHOD.md` gains three measurement classes and three prohibited phrasings: a ratio against unmeasured provider round-trip time, "zero memory leaks" from a bounded run, and a mean quoted without its tail. The 2026-09-03 dispatch sample is the worked example — one 42.6 ms outlier put the mean above the p90.
 - Least-privilege `GITHUB_TOKEN`: read-only workflow-level floor in `ci.yml` and `forensic.yml`, and `security-events: write` moved from workflow scope to the four SARIF-uploading jobs in `security.yml`.
@@ -49,7 +62,6 @@ external readback facts recorded in `docs/RELEASE_STATUS.md`.
 
 ### Fixed
 
-- Governed traffic was accepted while the evidence chain was known to be broken. WAL replay set `wal_corrupt`, `/health` reported it, and the request path did not consult it — so every commit past the corruption point succeeded individually while the chain as a whole became unreplayable. `docs/architecture/FAILURE_SEMANTICS.md` no longer describes this as the system's one non-fail-closed path.
 - The `ADDRESS` pattern's unbounded `[A-Za-z0-9 ]+` street-name run made any number-led prose a viable address prefix, aborting streams of ordinary text with `privacy_failure`. Bounded to 40 characters — 2.2x the longest street-name span in a sample of real addresses — with the streaming guard mirroring the bound. A viable candidate is now at most 46 characters against a 64-character minimum window, so the abort is structurally unreachable rather than merely tuned away. The cost is stated and tested: a street name longer than the bound is no longer redacted.
 - Release-artifact verification instruction corrected: assets carry attestations and `SHA256SUMS`, not detached signatures, so the check is `gh attestation verify`, not `cosign verify-blob`; `cosign verify` applies to the OCI images.
 - `DOC04-CLM-011` corrected: the proxy does attach `/metrics` whenever `prometheus-client` is importable.
@@ -57,8 +69,15 @@ external readback facts recorded in `docs/RELEASE_STATUS.md`.
 - Three stale heading anchors in `docs/architecture/DEEP_DIVE.md` pointing at `docs/BENCHMARKS.md` sections that no longer exist.
 - Stale `rollout status` commands in `docs/institutional/DOC-04_OPERATIONS_PLAYBOOK.md` naming `deployment/` and omitting the release prefix.
 - Streaming redaction aborted ordinary text. `StreamingDeidentifier` rejected an open track-data candidate whenever a semicolon was followed by more than `window_chars` of text containing no `?`, and an open email candidate whenever an `@` appeared anywhere in the holdback window rather than in the trailing whitespace-free token. Prose containing a semicolon, a mentioned email address, or a Python decorator therefore raised `StreamingDeidentificationError`, which the proxy reports to the client as a `privacy_failure` terminal outcome. Each guard now tests whether the candidate is a viable prefix of the detector that would redact it.
-- Open-candidate marker searches are now case-insensitive, matching the URL and track-1 detectors. An unterminated `HTTPS://` or `%b` candidate previously passed the guard entirely, which was a fail-open on the exact grammar the guard exists to catch.
 - `RustWal.open` truncated an existing segment when reopened with a smaller `capacity_bytes`. `OpenOptions::truncate(false)` prevents `open` from clearing the file, but the subsequent `set_len` shrank it just the same, discarding every frame past the new length — a 1 MiB segment holding 20 records reopened at 64 bytes retained 4. The requested capacity is now a floor rather than a resize instruction, so a segment only ever grows.
+
+### Boundary
+
+No claim in this release is a capacity, certification, legal-admissibility or
+production-readiness statement. The Kani proofs cover two arithmetic functions,
+not a system. ML-DSA `verify` remains **not** constant-time verified: the
+retained experiment reports `p = 0.0`, and `aegis_rust_v2/src/pqc.rs` records why
+hoisting the decode step does not address it.
 
 ## [4.0.2] — 2026-08-27
 

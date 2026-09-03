@@ -3,15 +3,15 @@
 This guide is for CISO and AppSec reviewers, platform leaders, AI/ML engineering, privacy/compliance, procurement and executive sponsors evaluating Aegis. It describes the product boundary, verification questions, pilot acceptance criteria and procurement blockers. It is not a certification, legal opinion, production SLO, or binding offer.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** checked-out source baseline/release target `v4.0.2` with 14 synchronized anchors
-**Source baseline/release target:** `v4.0.2` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
-**Historical external baseline:** lightweight `v4.0.1` tag at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
+**Release baseline:** checked-out source baseline/release target `v4.1.0` with 14 synchronized anchors
+**Source baseline/release target:** `v4.1.0` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
+**Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **Audience:** US enterprise buyer committee
 **Commercial context:** [`docs/COMMERCIAL_STRATEGY_US.md`](COMMERCIAL_STRATEGY_US.md)
 
 ## Baseline to request
 
-The checked-out source baseline/release target is **4.0.2** with 14 synchronized anchors. Its bounded SSE `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python and TypeScript SDKs, MMR proofs, forensic dashboard and bounded forensic ZIP export are checked-out-source capabilities. They do not establish external lifecycle or production-acceptance state; verify the `v4.0.2` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback. A buyer should require the quote, SBOM, test evidence and acceptance plan to identify the same baseline.
+The checked-out source baseline/release target is **4.1.0** with 14 synchronized anchors. Its bounded SSE `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python and TypeScript SDKs, MMR proofs, forensic dashboard and bounded forensic ZIP export are checked-out-source capabilities. They do not establish external lifecycle or production-acceptance state; verify the `v4.1.0` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback. A buyer should require the quote, SBOM, test evidence and acceptance plan to identify the same baseline.
 
 ## Executive answer
 
@@ -23,7 +23,7 @@ Aegis is most relevant when an organization wants a provider-independent gateway
 |---|---|---|
 | CISO / AppSec | What attack surface does Aegis cover? | The gateway covers authenticated request admission, request-size bounds, application-layer WAF/session policy, egress endpoint validation, distributed rate-limit failure handling and evidence integrity. It does not cover every model, identity, network, endpoint or semantic attack. |
 | Platform engineering | Where does it run? | Self-hosted Python/FastAPI with optional Rust acceleration and optional enterprise storage/signer integrations. The customer owns the runtime, network, secrets, storage and operating objectives. |
-| AI/ML engineering | Does it replace provider SDKs? | No. The checked-out `v4.0.2` source exposes an OpenAI-compatible surface and native Anthropic `POST /v1/messages`. Python is drop-in through official-client subclasses. TypeScript wrappers remain provider-native and use the official provider packages as peer dependencies; provider models and behavior remain authoritative. |
+| AI/ML engineering | Does it replace provider SDKs? | No. The checked-out `v4.1.0` source exposes an OpenAI-compatible surface and native Anthropic `POST /v1/messages`. Python is drop-in through official-client subclasses. TypeScript wrappers remain provider-native and use the official provider packages as peer dependencies; provider models and behavior remain authoritative. |
 | Compliance / legal | Does it make us compliant? | No. It can provide control and evidence paths that may support an organization's review. Certification, conformity, legal privilege, admissibility and regulatory conclusions belong to the customer and qualified external reviewers. |
 | Procurement | What is included? | Packaging is staged: AGPL community use, a bounded pilot, commercial self-hosted production terms and an enterprise tier only when support, response targets, legal terms and assurance capacity are explicitly available. |
 | Privacy | Does Aegis retain prompts? | The deployment controls retention and evidence content. Request/response hashes and metadata may be retained even when raw bodies are not. The customer must define lawful basis, minimization, retention, deletion, residency and access controls. |
@@ -97,9 +97,9 @@ The table above answers questions. This section sequences them into an ordered e
 
 **Gate.** Proceed only when the support boundary is staffed and written, acceptance is measurable and pre-agreed, and no unvalidated financial claim has entered the business case. This project publishes no observed contract value, customer count, return-on-investment percentage, or valuation, and none may be constructed from its documentation.
 
-## v4.0.2 source forensic verification
+## v4.1.0 source forensic verification
 
-The checked-out `v4.0.2` source stores portable `aegis-mmr-inclusion-v1` proofs. Non-streaming responses can carry `X-Aegis-MMR-*` headers; streams provide post-terminal proof retrieval because no completed proof exists in their initial headers. The read-only dashboard exposes retained evidence without fallback sample data and can request a bounded ZIP containing a JCS manifest, canonical DAG-CBOR ledger slice with CIDv1, proof JSON, technical PDF and `VERIFY.sh`. The buyer must pin the trusted MMR root independently, and the export does not determine legal admissibility.
+The checked-out `v4.1.0` source stores portable `aegis-mmr-inclusion-v1` proofs. Non-streaming responses can carry `X-Aegis-MMR-*` headers; streams provide post-terminal proof retrieval because no completed proof exists in their initial headers. The read-only dashboard exposes retained evidence without fallback sample data and can request a bounded ZIP containing a JCS manifest, canonical DAG-CBOR ledger slice with CIDv1, proof JSON, technical PDF and `VERIFY.sh`. The buyer must pin the trusted MMR root independently, and the export does not determine legal admissibility.
 
 ## What the buyer can verify
 

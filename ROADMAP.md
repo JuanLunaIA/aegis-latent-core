@@ -18,7 +18,7 @@ An item leaves this document only when it is implemented, tested, and carries a 
 
 ## Distribution and provenance
 
-**Registry publication automation.** SDK publication to PyPI and npm currently lags the source baseline: the source is at `4.0.2`, the registries carry `4.0.0`. The publication workflows exist and are dispatch-only, but the path from a signed tag to a confirmed registry object is not automated end to end, and it is not verified by readback as part of the release. Closing this means a release either publishes and confirms, or fails.
+**Registry publication automation.** SDK publication to PyPI and npm currently lags the source baseline: the source is at `4.1.0`, the registries carry `4.0.0`. The publication workflows exist and are dispatch-only, but the path from a signed tag to a confirmed registry object is not automated end to end, and it is not verified by readback as part of the release. Closing this means a release either publishes and confirms, or fails.
 
 **Consumer-side provenance verification.** Release artifacts carry attestations and `SHA256SUMS`, and OCI images carry cosign signatures. There is no single documented command that verifies an installed SDK back to a signed tag. See [Release Status](docs/RELEASE_STATUS.md) for what verification is possible today.
 

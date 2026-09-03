@@ -1,6 +1,6 @@
 # Aegis Enterprise Integrations Guide
 
-**Status:** checked-out `v4.0.2` source baseline with fourteen synchronized anchors; signed tag, GitHub Release asset envelope, and GHCR gateway/dashboard objects were independently read back on 2026-08-28; PyPI/npm remain observed at `4.0.0` because trusted-publishing jobs were skipped
+**Status:** checked-out `v4.1.0` source baseline with fourteen synchronized anchors; signed tag, GitHub Release asset envelope, and GHCR gateway/dashboard objects were independently read back on 2026-08-28; PyPI/npm remain observed at `4.0.0` because trusted-publishing jobs were skipped
 
 **Claim boundary:** Source support and tests do not prove target-environment availability, regulatory retention, identity-provider correctness, legal admissibility, trusted publishing, or production readiness.
 
@@ -19,7 +19,7 @@ Built-in roles grant only the following scopes: `admin` grants all declared scop
 
 ## 2. Distributed request and token quotas
 
-The v4.0.2 source uses atomic request and generated-token buckets keyed by a SHA-256 pseudonym of authenticated tenant and credential identity. Session and tenant headers cannot reset these buckets. Redis mode executes one Lua transaction over both buckets and uses Redis `TIME`, avoiding host-clock disagreement. Memory mode is process-local and is not a distributed enforcement claim.
+The v4.1.0 source uses atomic request and generated-token buckets keyed by a SHA-256 pseudonym of authenticated tenant and credential identity. Session and tenant headers cannot reset these buckets. Redis mode executes one Lua transaction over both buckets and uses Redis `TIME`, avoiding host-clock disagreement. Memory mode is process-local and is not a distributed enforcement claim.
 
 The gateway reserves the configured output maximum before forwarding. Non-streaming responses refund only when the authenticated upstream returns a valid provider usage count. Streaming retains the reservation because terminal event counting is not treated as authoritative billing telemetry. Responses expose generic request-bucket fields (`X-RateLimit-Limit`, `X-RateLimit-Remaining`) plus request/token dimension-specific fields; 429 responses add finite `Retry-After` when a reset can be computed.
 
@@ -62,7 +62,7 @@ Historically, public `v4.0.1` is a lightweight tag targeting `6469904380218584ae
 | TSA | Approved HTTPS TSA, CA/revocation/policy configuration, timestamp renewal and offline verification | External acceptance required |
 | SIEM/OTel | Endpoint authentication, egress policy, spool capacity, downstream parsing, outage and recovery drill | External acceptance required |
 | Registries | Trusted-publisher binding, environment protection, signed-tag policy, package ownership | External acceptance required |
-| OCI | Execute and verify the v4.0.2 multi-architecture gateway/dashboard build, SBOM, provenance, keyless signatures, architecture smoke tests, and rollback in target GHCR | Build, attestation, and signature readback passed; smoke/rollback acceptance required |
+| OCI | Execute and verify the v4.1.0 multi-architecture gateway/dashboard build, SBOM, provenance, keyless signatures, architecture smoke tests, and rollback in target GHCR | Build, attestation, and signature readback passed; smoke/rollback acceptance required |
 | Release | Full CI/security/formal/docs/dependency gates plus required human/domain approvals | GitHub Release and asset readback passed; package publication remains unavailable |
 
 ## 8. Falsification criteria

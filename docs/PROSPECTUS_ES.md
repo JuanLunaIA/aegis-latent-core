@@ -10,12 +10,12 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 **Audiencia:** equipos de plataforma, AppSec, AI engineering, compliance, legal y procurement
 **Estado:** candidato de código/release y prospecto de producto; no se afirma publicación externa y no es certificación, dictamen legal, SLO ni oferta comercial vinculante.
 **Last verified:** 2026-08-27 UTC
-**Candidato de código/release:** `4.0.2` con 14 anclas sincronizadas; no se afirma publicación externa de `v4.0.2` antes de una lectura posterior exitosa
+**Candidato de código/release:** `4.1.0` con 14 anclas sincronizadas; no se afirma publicación externa de `v4.1.0` antes de una lectura posterior exitosa
 **Línea base externa histórica:** tag ligero `v4.0.1` en `6469904380218584ae0b5221334bc9a46500f5ba` con workflows fallidos; PyPI/npm observados en `4.0.0` sin procedencia atribuida
 
 ## Baselines
 
-El candidato actual de código/release es **4.0.2** y contiene 14 anclas sincronizadas. Streaming SSE acotado con evidencia `pending-terminal`, Anthropic nativo `POST /v1/messages`, SDKs Python y TypeScript, proofs MMR portables, dashboard forense, export ZIP JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` y el segmento auxiliar `RustWal` son capacidades del código candidato. No constituyen un tag o GitHub Release externo `v4.0.2`, publicación en PyPI/npm/OCI ni aceptación de release para producción; se requiere una lectura posterior exitosa.
+El candidato actual de código/release es **4.1.0** y contiene 14 anclas sincronizadas. Streaming SSE acotado con evidencia `pending-terminal`, Anthropic nativo `POST /v1/messages`, SDKs Python y TypeScript, proofs MMR portables, dashboard forense, export ZIP JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` y el segmento auxiliar `RustWal` son capacidades del código candidato. No constituyen un tag o GitHub Release externo `v4.1.0`, publicación en PyPI/npm/OCI ni aceptación de release para producción; se requiere una lectura posterior exitosa.
 
 ## Resumen ejecutivo
 

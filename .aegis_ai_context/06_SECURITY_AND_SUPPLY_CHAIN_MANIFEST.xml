@@ -4,7 +4,7 @@
     <source commit="fdace8844568eb788216740b2cb5daf187d99d3b" version="4.0.0" synchronized-version-anchors="14">Immutable source evidence only.</source>
     <github-release version="v4.0.1" tag-kind="lightweight" target-commit="6469904380218584ae0b5221334bc9a46500f5ba" release="https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1">Published GitHub Release observation only.</github-release>
     <registry-observation version="4.0.0" registries="PyPI,npm" package="aegis-latent-sdk">Public existence/version observation; no provenance is attributed to failed workflows or another unverified run.</registry-observation>
-    <source-release-target version="v4.0.2" synchronized-version-anchors="14" kind="checked-out-source" external-lifecycle-state="requires-independent-readback">The source target has 14 synchronized anchors. Tag, GitHub Release, PyPI, npm, OCI, and attestation state must be independently read back and is not encoded by source metadata; manifest hashes describe checked-out bytes, not lifecycle evidence.</source-release-target>
+    <source-release-target version="v4.1.0" synchronized-version-anchors="14" kind="checked-out-source" external-lifecycle-state="requires-independent-readback">The source target has 14 synchronized anchors. Tag, GitHub Release, PyPI, npm, OCI, and attestation state must be independently read back and is not encoded by source metadata; manifest hashes describe checked-out bytes, not lifecycle evidence.</source-release-target>
   </baseline>
   <authoritative-sources>
     <source path="SECURITY.md" purpose="security policy, threat boundary, reporting"/>
@@ -48,7 +48,7 @@
   </external-acceptance>
   <nonclaims>
     <item>No source-only proof of vulnerability absence, production readiness, legal compliance, certification, FIPS validation, court admissibility, or accepted capacity.</item>
-    <item>No provenance link among the historical v4.0.1 GitHub Release, prior observed 4.0.0 registry packages, failed workflows, or source release target v4.0.2 is asserted. Configured publication, attestation, and signing mechanisms do not assert any current external lifecycle state.</item>
+    <item>No provenance link among the historical v4.0.1 GitHub Release, prior observed 4.0.0 registry packages, failed workflows, or source release target v4.1.0 is asserted. Configured publication, attestation, and signing mechanisms do not assert any current external lifecycle state.</item>
     <item>The portable MMR is a non-ZK O(log n) inclusion mechanism; it is not a privacy or zero-knowledge system.</item>
   </nonclaims>
 </security-supply-chain-manifest>

@@ -2,7 +2,7 @@
 
 **Document ID:** `DOC-04`
 **Title:** Operational Engineering Playbook and High-Availability Runbooks
-**Source baseline:** checked-out source metadata is synchronized at `v4.0.2`; external tag, release, registry, OCI, deployment, and acceptance claims require independent readback
+**Source baseline:** checked-out source metadata is synchronized at `v4.1.0`; external tag, release, registry, OCI, deployment, and acceptance claims require independent readback
 **Historical evidence scope:** operational findings and retained evidence through 2026-08-20 UTC remain `v3.1.0`-era records unless explicitly revalidated against the current source
 **Canonical language:** US English
 **Primary owners:** Platform/SRE owner and release owner
