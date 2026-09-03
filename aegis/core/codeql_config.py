@@ -15,6 +15,7 @@ import subprocess  # noqa: S404  # nosec B404
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,7 @@ jobs:
         uses: github/codeql-action/analyze@v3
         """
 
-    def run_local_scan(self) -> dict:
+    def run_local_scan(self) -> dict[str, Any]:
         """
         Runs a local CodeQL scan via the ``codeql`` CLI.
 

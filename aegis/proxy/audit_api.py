@@ -123,7 +123,7 @@ def build_audit_router(
     @router.get("/health", include_in_schema=True)
     async def audit_health(
         auth: object = Depends(read_dependency),
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Returns audit subsystem health and node count."""
         principal = _require(auth, SCOPE_AUDIT_READ)
         fault_state = _string_attr(ledger, "_fault_state", "healthy")
@@ -287,10 +287,10 @@ def build_audit_router(
             )
         return sorted({node.tenant_id for node in ledger.chain})
 
-    @router.get("/export/part11", response_model=list[dict])
+    @router.get("/export/part11", response_model=list[dict[str, Any]])
     async def export_part11(
         auth: object = Depends(read_dependency),
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """Export 21 CFR Part 11 annotation fields plus cryptographic bindings."""
         principal = _require(auth, SCOPE_AUDIT_EXPORT)
         records = ledger.export_part11_signatures()

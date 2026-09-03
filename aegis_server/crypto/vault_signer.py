@@ -64,7 +64,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
-import random
+import secrets
 import time
 
 import hvac
@@ -101,7 +101,7 @@ class VaultSigner(SignerProvider):
     scheme: str = "vault-transit"
 
     def __init__(
-        self,
+        self,  # nosec B107 - Vault Transit mount point, a path segment rather than a secret
         vault_url: str,
         transit_key: str,
         transit_mount: str = "transit",
@@ -312,7 +312,9 @@ class VaultSigner(SignerProvider):
         Returns:
             Sleep duration in seconds.
         """
-        return self._retry_base_delay * (2**attempt) + random.uniform(0, self._retry_base_delay)
+        return self._retry_base_delay * (2**attempt) + secrets.SystemRandom().uniform(
+            0, self._retry_base_delay
+        )
 
     @staticmethod
     def _decode_vault_signature(vault_sig: str) -> str:

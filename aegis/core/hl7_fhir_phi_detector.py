@@ -50,6 +50,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from typing import Any
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -361,7 +362,7 @@ class FHIRPHIScrubber:
     scrubbed individually.
     """
 
-    def scrub_dict(self, resource: dict) -> tuple[dict, set[str], int]:
+    def scrub_dict(self, resource: dict[str, Any]) -> tuple[dict[str, Any], set[str], int]:
         """Scrub a FHIR resource dict in-place.
 
         Returns
@@ -459,7 +460,7 @@ class HL7FHIRPHIDetector:
         """Scrub a FHIR JSON string (explicit, no format detection)."""
         return self._fhir.scrub(json_text)
 
-    def scrub_fhir_dict(self, resource: dict) -> tuple[dict, set[str], int]:
+    def scrub_fhir_dict(self, resource: dict[str, Any]) -> tuple[dict[str, Any], set[str], int]:
         """Scrub a FHIR resource dict in-place; return (dict, cats, count)."""
         return self._fhir.scrub_dict(resource)
 

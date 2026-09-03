@@ -20,7 +20,7 @@ class SecureRuntime:
     so activation fails closed.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.tpm = TPMManager()
         self.tee = TEEManager()
         self._is_shielded = False

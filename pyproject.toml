@@ -155,6 +155,30 @@ python_version = "3.11"
 strict = true
 ignore_missing_imports = true
 
+# Modules that soft-import an optional dependency inside try/except and fall
+# back when it is absent: the native `aegis_rust` extension (built only when
+# maturin runs), `torch`, `httpx`, `cachetools`, `elftools` and `Kyber1024`.
+#
+# Their `# type: ignore[import]` comments are load-bearing when the dependency
+# is missing and redundant when it is installed, so `warn_unused_ignores`
+# reports them in exactly one of the two environments. Suppressing that one
+# check here keeps `mypy --strict` environment-independent; every other strict
+# check, this file's own annotations included, still applies.
+[[tool.mypy.overrides]]
+module = [
+    "aegis.core.cfi_manager",
+    "aegis.core.crypto_audit",
+    "aegis.core.mlkem_session",
+    "aegis.core.mmr",
+    "aegis.core.pqc_signer",
+    "aegis.core.ratelimiter",
+    "aegis.core.rust_integration",
+    "aegis.core.telemetry",
+    "aegis.core.ti_sharing",
+    "aegis.proxy.app",
+]
+warn_unused_ignores = false
+
 [tool.bandit]
 exclude_dirs = ["tests"]
 skips = ["B101", "B104", "B108"]

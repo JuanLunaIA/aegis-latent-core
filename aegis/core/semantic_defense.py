@@ -36,7 +36,7 @@ class SemanticDriftMonitor:
         self.baseline_distribution: np.ndarray | None = None
         self._is_killswitch_active = False
 
-    def set_baseline(self, distribution: np.ndarray):
+    def set_baseline(self, distribution: np.ndarray) -> None:
         """Sets the 'safe' distribution for the current context."""
         self.baseline_distribution = distribution / np.sum(distribution)
         logger.info("Semantic baseline established.")
@@ -51,7 +51,7 @@ class SemanticDriftMonitor:
         p = np.clip(p, epsilon, 1.0)
         q = np.clip(q, epsilon, 1.0)
 
-        return np.sum(p * np.log(p / q))
+        return float(np.sum(p * np.log(p / q)))
 
     def analyze_logits(self, current_logits: np.ndarray) -> DriftResult:
         """
@@ -101,7 +101,7 @@ class SemanticDriftMonitor:
             action_taken=action,
         )
 
-    def reset_killswitch(self):
+    def reset_killswitch(self) -> None:
         self._is_killswitch_active = False
 
     @property

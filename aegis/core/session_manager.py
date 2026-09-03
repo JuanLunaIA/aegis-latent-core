@@ -35,6 +35,7 @@ The LRU contract is documented so that callers are not surprised by eviction.
 
 from __future__ import annotations
 
+import logging
 import threading
 import uuid
 from collections import OrderedDict
@@ -42,6 +43,8 @@ from typing import Any
 
 from aegis.core.rust_integration import new_rust_session_store
 from aegis.core.telemetry import LogitEntropyMonitor
+
+logger = logging.getLogger(__name__)
 
 
 class SessionLifecycleManager:
@@ -110,7 +113,7 @@ class SessionLifecycleManager:
                     try:
                         self._rust_store.touch(session_id)
                     except Exception:
-                        pass
+                        logger.debug("native session-store touch failed", exc_info=True)
                 return session_id, self._sessions[session_id]
 
             # Evict LRU entry if at capacity.
@@ -124,7 +127,7 @@ class SessionLifecycleManager:
                 try:
                     self._rust_store.touch(session_id)
                 except Exception:
-                    pass
+                    logger.debug("native session-store touch failed", exc_info=True)
             return session_id, monitor
 
     def terminate_session(self, session_id: str) -> None:
@@ -135,7 +138,7 @@ class SessionLifecycleManager:
             try:
                 self._rust_store.remove(session_id)
             except Exception:
-                pass
+                logger.debug("native session-store remove failed", exc_info=True)
 
     def active_sessions_count(self) -> int:
         """Return the number of currently tracked sessions."""

@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import MutableMapping
 from typing import Any, Protocol
 
 import redis.asyncio as redis
@@ -65,7 +66,9 @@ class InMemoryRateLimiter:
         try:
             from cachetools import TTLCache  # type: ignore[import-untyped]
 
-            self._buckets: dict[str, tuple[float, float]] = TTLCache(maxsize=200_000, ttl=ttl)
+            self._buckets: MutableMapping[str, tuple[float, float]] = TTLCache(
+                maxsize=200_000, ttl=ttl
+            )
             logger.debug("InMemoryRateLimiter: cachetools TTLCache active (ttl=%.0fs)", ttl)
         except ImportError:
             if not InMemoryRateLimiter._WARN_ONCE:
@@ -150,7 +153,7 @@ class DistributedRateLimiter:
                 burst_tolerance,
                 now,
             )
-            return result == 1
+            return bool(result == 1)
         except Exception as exc:
             logger.error("Redis rate-limit decision unavailable; request must be rejected: %s", exc)
             raise RateLimitBackendUnavailable("distributed rate-limit backend unavailable") from exc

@@ -24,7 +24,7 @@ Tier mapping:
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -209,7 +209,7 @@ def blake3_hash(data: bytes) -> str | None:
     if not _HAS_RUST:
         return None
     try:
-        return aegis_rust.blake3_hash(data)
+        return cast("str | None", aegis_rust.blake3_hash(data))
     except Exception:
         return None
 
@@ -219,7 +219,7 @@ def blake3_keyed_hash(key: bytes, data: bytes) -> str | None:
     if not _HAS_RUST:
         return None
     try:
-        return aegis_rust.blake3_keyed_hash(key, data)
+        return cast("str | None", aegis_rust.blake3_keyed_hash(key, data))
     except Exception:
         return None
 
@@ -236,8 +236,11 @@ def hash_audit_payload(
     if not _HAS_RUST:
         return None
     try:
-        return aegis_rust.hash_audit_payload(
-            prev_hash, state_id, timestamp, merkle_root, request_hash, response_hash
+        return cast(
+            "str | None",
+            aegis_rust.hash_audit_payload(
+                prev_hash, state_id, timestamp, merkle_root, request_hash, response_hash
+            ),
         )
     except Exception:
         return None
@@ -289,13 +292,15 @@ def rust_metrics(
                 }
             )
         except Exception:
-            pass
+            logger.debug(
+                "audit ring-buffer metrics unavailable from the native core", exc_info=True
+            )
 
     if rate_limiter is not None:
         try:
             metrics["rate_limiter_buckets"] = rate_limiter.bucket_count()
         except Exception:
-            pass
+            logger.debug("rate-limiter metrics unavailable from the native core", exc_info=True)
 
     if session_store is not None:
         try:
@@ -307,7 +312,7 @@ def rust_metrics(
                 }
             )
         except Exception:
-            pass
+            logger.debug("session-store metrics unavailable from the native core", exc_info=True)
 
     if wal is not None:
         try:
@@ -319,6 +324,6 @@ def rust_metrics(
                 }
             )
         except Exception:
-            pass
+            logger.debug("native-WAL metrics unavailable from the native core", exc_info=True)
 
     return metrics

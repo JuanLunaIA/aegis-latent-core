@@ -61,6 +61,7 @@ import logging
 import os
 import secrets
 from dataclasses import dataclass, field
+from typing import cast
 from urllib.parse import urlsplit
 
 logger = logging.getLogger(__name__)
@@ -383,7 +384,7 @@ class RFC3161Timestamper:
         if not self.tsa_url:
             return RFC3161StampResult(
                 success=False,
-                token_b64="",
+                token_b64="",  # nosec B106 - empty RFC3161 timestamp token on the failure path, not a password
                 tsa_url="",
                 pki_status=-1,
                 message_imprint_hex="",
@@ -403,7 +404,7 @@ class RFC3161Timestamper:
             logger.error("RFC3161Timestamper: TSA request failed: %s", exc)
             return RFC3161StampResult(
                 success=False,
-                token_b64="",
+                token_b64="",  # nosec B106 - empty RFC3161 timestamp token on the failure path, not a password
                 tsa_url=self.tsa_url,
                 pki_status=-1,
                 message_imprint_hex=imprint_hex,
@@ -418,7 +419,7 @@ class RFC3161Timestamper:
             logger.error("RFC3161Timestamper: response parse error: %s", exc)
             return RFC3161StampResult(
                 success=False,
-                token_b64="",
+                token_b64="",  # nosec B106 - empty RFC3161 timestamp token on the failure path, not a password
                 tsa_url=self.tsa_url,
                 pki_status=-1,
                 message_imprint_hex=imprint_hex,
@@ -462,7 +463,7 @@ class RFC3161Timestamper:
             ``"rfc3161_message_imprint_hex"``.
         """
         token_b64 = package_dict.get("rfc3161_token_b64")
-        stored_imprint = package_dict.get("rfc3161_message_imprint_hex")
+        stored_imprint = str(package_dict.get("rfc3161_message_imprint_hex") or "")
 
         if not token_b64 or not stored_imprint:
             return RFC3161VerifyResult(
@@ -530,7 +531,7 @@ class RFC3161Timestamper:
                 method="POST",
             )
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310  # nosec B310
-                return resp.read()
+                return cast("bytes", resp.read())
 
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(

@@ -53,10 +53,13 @@ Usage::
 
 from __future__ import annotations
 
+import logging
 import re
 import ssl
 from dataclasses import dataclass, field
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 try:
     import ldap3
@@ -386,7 +389,7 @@ class LDAPAuthenticator:
                 val = entry[attr_name].values
                 raw_attrs[attr_name] = [str(v) for v in val]
             except Exception:  # noqa: BLE001
-                pass
+                logger.debug("LDAP attribute %s could not be decoded", attr_name, exc_info=True)
         return entry.entry_dn, raw_attrs
 
     def _user_bind(

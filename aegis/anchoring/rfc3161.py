@@ -10,7 +10,7 @@ import hashlib
 import os
 import secrets
 import shutil
-import subprocess
+import subprocess  # nosec B404 - subprocess is required to probe host hardening state; every call site uses a fixed argv list, never a shell
 import tempfile
 import uuid
 from collections.abc import Mapping
@@ -394,7 +394,7 @@ class OpenSSLRFC3161Verifier:
             if self._untrusted_file is not None:
                 command.extend(("-untrusted", str(self._untrusted_file)))
             try:
-                completed = subprocess.run(  # noqa: S603
+                completed = subprocess.run(  # noqa: S603  # nosec B603 - argv list built from literals and configuration, never from request data; shell=False throughout
                     command,
                     stdin=subprocess.DEVNULL,
                     capture_output=True,

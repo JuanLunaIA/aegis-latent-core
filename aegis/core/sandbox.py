@@ -52,7 +52,7 @@ class SeccompFilter:
         self._phase = "INIT"
         self._filter_applied = False
 
-    def transition_to_phase(self, phase: str, new_syscalls: list[int]):
+    def transition_to_phase(self, phase: str, new_syscalls: list[int]) -> None:
         """
         Transitions the process to a new security phase, narrowing the syscall surface.
         Seccomp filters stack — each successive call to apply() adds a constraint layer,
@@ -65,7 +65,7 @@ class SeccompFilter:
             "Sandbox phase updated. New syscall surface size: %d", len(self.current_allowed)
         )
 
-    def apply(self):
+    def apply(self) -> None:
         """Applies the current filter to the process.
 
         Calls prctl(PR_SET_NO_NEW_PRIVS) to lock privilege-escalation paths, then
@@ -110,10 +110,10 @@ class LandlockManager:
     Real kernel Landlock enforcement is tracked in the ROADMAP.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._restricted = False
 
-    def restrict_filesystem(self, allowed_paths: dict[str, str]):
+    def restrict_filesystem(self, allowed_paths: dict[str, str]) -> None:
         """Record the intended filesystem restrictions (stub — no kernel call yet)."""
         try:
             logger.info(
@@ -136,7 +136,7 @@ class LandlockManager:
         return self._restricted
 
 
-def enable_hardened_sandbox(phase: str = "INIT"):
+def enable_hardened_sandbox(phase: str = "INIT") -> tuple[SeccompFilter, LandlockManager]:
     """
     Activates the full system sandbox, combining Seccomp-BPF and Landlock.
     """

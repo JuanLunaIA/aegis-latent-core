@@ -24,7 +24,7 @@ class FormalVerificationSuite:
     the properties empirically against the implementation.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         logger.info("FormalVerificationSuite initialized. Target: Mathematical Certainty.")
 
     def verify_normalization_idempotency(self, test_cases: list[str]) -> bool:
@@ -58,7 +58,10 @@ class FormalVerificationSuite:
         return True
 
     def verify_signature_soundness(
-        self, sign_fn: Callable, verify_fn: Callable, data: bytes
+        self,
+        sign_fn: Callable[[bytes], bytes],
+        verify_fn: Callable[[bytes, bytes], bool],
+        data: bytes,
     ) -> bool:
         """
         Theorem: verify(sign(m), m) = True
@@ -72,7 +75,11 @@ class FormalVerificationSuite:
         return True
 
     def verify_signature_unforgeability(
-        self, sign_fn: Callable, verify_fn: Callable, data: bytes, corrupted_data: bytes
+        self,
+        sign_fn: Callable[[bytes], bytes],
+        verify_fn: Callable[[bytes, bytes], bool],
+        data: bytes,
+        corrupted_data: bytes,
     ) -> bool:
         """
         Theorem: m != m' => verify(sign(m), m') = False

@@ -31,7 +31,9 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -270,7 +272,7 @@ class TokenSplitDetector:
     def scan_text(
         self,
         text: str,
-        tokenize_fn=None,
+        tokenize_fn: Callable[[str], list[str]] | None = None,
     ) -> TokenSplitResult:
         """Scan free-form text by tokenising it first.
 
@@ -293,7 +295,7 @@ class TokenSplitDetector:
             tokens = text.split()
         return self.scan(tokens)
 
-    def scan_messages(self, messages: list[dict]) -> TokenSplitResult:
+    def scan_messages(self, messages: list[dict[str, Any]]) -> TokenSplitResult:
         """Scan a list of chat message dicts, examining only user-role content.
 
         User messages are tokenised by whitespace and scanned independently.

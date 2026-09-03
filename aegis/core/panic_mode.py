@@ -53,11 +53,11 @@ class PanicModeController:
     """
 
     def __init__(self) -> None:
-        self._panic_callbacks: list[Callable] = []
+        self._panic_callbacks: list[Callable[[], None]] = []
         self._sensitive_buffers: list[bytearray | memoryview] = []
         logger.info("PanicModeController initialised. Kill-switch armed.")
 
-    def register_panic_callback(self, callback: Callable) -> None:
+    def register_panic_callback(self, callback: Callable[[], None]) -> None:
         """Register a function to call during the panic sequence."""
         self._panic_callbacks.append(callback)
 

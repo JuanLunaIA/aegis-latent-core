@@ -14,10 +14,11 @@ from __future__ import annotations
 
 import logging
 import os
-import subprocess
+import subprocess  # nosec B404 - subprocess is required to probe host hardening state; every call site uses a fixed argv list, never a shell
 import sys
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class LSMStatus:
     profile: str | None
     context: str | None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "lsm_type": self.lsm_type.value,
             "active": self.active,

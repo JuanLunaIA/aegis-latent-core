@@ -20,6 +20,7 @@ from __future__ import annotations
 import functools
 import logging
 from dataclasses import dataclass, field
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -93,12 +94,12 @@ class VectorClock:
 
     # ── Serialization ─────────────────────────────────────────────────────────
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable dict copy of the clock components."""
         return dict(self.clocks)
 
     @classmethod
-    def from_dict(cls, d: dict) -> VectorClock:
+    def from_dict(cls, d: dict[str, Any]) -> VectorClock:
         """Reconstruct a VectorClock from a dict produced by :meth:`to_dict`."""
         return cls(clocks={str(k): int(v) for k, v in d.items()})
 

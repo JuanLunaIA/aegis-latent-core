@@ -147,7 +147,7 @@ class CircuitBreaker:
 
             CIRCUIT_BREAKER_OPENS.labels(provider=self.name).inc()
         except Exception:
-            pass
+            logger.debug("circuit-breaker open metric not recorded", exc_info=True)
 
     def _emit_state_metric(self, value: int) -> None:
         # value: 0=CLOSED, 1=HALF_OPEN, 2=OPEN
@@ -156,7 +156,7 @@ class CircuitBreaker:
 
             CIRCUIT_BREAKER_STATE.labels(provider=self.name).set(value)
         except Exception:
-            pass
+            logger.debug("circuit-breaker state metric not recorded", exc_info=True)
 
     def check(self) -> None:
         """Raise CircuitOpenError if the circuit is OPEN.

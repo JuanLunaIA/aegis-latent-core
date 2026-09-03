@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
+from typing import Any, cast
 
 import httpx
 
@@ -110,11 +111,11 @@ class VaultManager:
                 )
 
                 logger.info("Rotated secret for path: %s", path)
-                return val
+                return cast("str | None", val)
         except Exception as e:
             logger.error("Error rotating secret from Vault: %s", e)
             return None
 
-    async def _async_auth_request(self, payload: dict) -> httpx.Response:
+    async def _async_auth_request(self, payload: dict[str, Any]) -> httpx.Response:
         async with httpx.AsyncClient(timeout=httpx.Timeout(5.0)) as client:
             return await client.post(f"{self.vault_url}/v1/auth/approle/login", json=payload)

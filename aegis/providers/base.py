@@ -141,4 +141,4 @@ class ProviderAdapter(abc.ABC):
             "but did not implement translate_stream()"
         )
         # Required to make this an async generator at the type level:
-        yield  # type: ignore[misc]  # pragma: no cover
+        yield  # pragma: no cover

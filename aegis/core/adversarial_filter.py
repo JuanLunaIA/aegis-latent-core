@@ -32,7 +32,7 @@ class LLMGuardLocal:
     can aggregate into a high-confidence block.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # High-precision patterns (Immediate Block)
         self.critical_patterns = [
             re.compile(r"ignore (all )?previous instructions", re.IGNORECASE),
@@ -85,7 +85,7 @@ class LLMGuardLocal:
                 if len(decoded) > 3:
                     normalized += f" {decoded}"
         except Exception:
-            pass
+            logger.debug("base64 candidate could not be decoded", exc_info=True)
         return normalized
 
     def analyze_input(self, text: str) -> FilterResult:

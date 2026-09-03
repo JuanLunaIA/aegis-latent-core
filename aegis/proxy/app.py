@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from secrets import randbelow
 from threading import Lock
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -136,13 +136,13 @@ class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
 
         request._receive = bounded_receive  # type: ignore[attr-defined]
         try:
-            return await call_next(request)
+            return cast("Response", await call_next(request))
         except HTTPException as exc:
             return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 class RequestSmugglingProtectionMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next: Any) -> Response:
         cl_headers = request.headers.getlist("content-length")
         if len(cl_headers) > 1:
             return JSONResponse(
@@ -171,7 +171,7 @@ class RequestSmugglingProtectionMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Unsupported or ambiguous Transfer-Encoding detected."},
             )
 
-        return await call_next(request)
+        return cast("Response", await call_next(request))
 
 
 class _AlertStore:
@@ -384,7 +384,7 @@ class _AppState:
         return self.analyzers.get(session_id)
 
 
-def _extract_payload_text(body: dict) -> str:
+def _extract_payload_text(body: dict[str, Any]) -> str:
     if "messages" in body:
         return " ".join(
             m.get("content", "") if isinstance(m, dict) else str(m) for m in body["messages"]
@@ -395,7 +395,7 @@ def _extract_payload_text(body: dict) -> str:
     return ""
 
 
-def _apply_request_entropy_guard(request: Request, body: dict, state: _AppState) -> None:
+def _apply_request_entropy_guard(request: Request, body: dict[str, Any], state: _AppState) -> None:
     """Apply Shannon-entropy payload guard using pre-initialised state singletons.
 
     FIX-APP-02: TaintEngine, PayloadEntropyAnalyzer, and XDPDynamicSegmenter
@@ -437,7 +437,9 @@ def _apply_request_entropy_guard(request: Request, body: dict, state: _AppState)
     body["_sanitized_payload"] = sanitized.value
 
 
-def _apply_phi_scrub_request(body: dict, state: _AppState) -> tuple[dict, bool, str]:
+def _apply_phi_scrub_request(
+    body: dict[str, Any], state: _AppState
+) -> tuple[dict[str, Any], bool, str]:
     """Scrub PHI from request message content when phi_deidentify is enabled.
 
     Returns ``(body, phi_scrubbed, scrub_method)``.  The original dict is not
@@ -458,7 +460,7 @@ def _apply_phi_scrub_request(body: dict, state: _AppState) -> tuple[dict, bool, 
     return body, False, ""
 
 
-def _apply_phi_scrub_response(resp_json: dict, state: _AppState) -> dict:
+def _apply_phi_scrub_response(resp_json: dict[str, Any], state: _AppState) -> dict[str, Any]:
     """Scrub PHI from response choices[].message.content when phi_deidentify is enabled.
 
     Returns a (possibly modified) response dict.  The original is not mutated.
@@ -495,7 +497,7 @@ def _apply_phi_scrub_response(resp_json: dict, state: _AppState) -> dict:
     return resp_json
 
 
-def _apply_pci_scrub_request(body: dict, state: _AppState) -> tuple[dict, bool]:
+def _apply_pci_scrub_request(body: dict[str, Any], state: _AppState) -> tuple[dict[str, Any], bool]:
     """Scrub PCI cardholder data from request message content when pci_scrub is enabled.
 
     Returns ``(body, pci_scrubbed)``.  The original dict is not mutated; a shallow
@@ -533,7 +535,7 @@ def _apply_pci_scrub_request(body: dict, state: _AppState) -> tuple[dict, bool]:
     return body, False
 
 
-def _apply_pci_scrub_response(resp_json: dict, state: _AppState) -> dict:
+def _apply_pci_scrub_response(resp_json: dict[str, Any], state: _AppState) -> dict[str, Any]:
     """Scrub PCI cardholder data from response choices[].message.content when pci_scrub is enabled.
 
     Returns a (possibly modified) response dict.  The original is not mutated.
@@ -609,9 +611,10 @@ def _scrub_anthropic_payload(
     return result, changed, "+".join(sorted(methods))
 
 
-def _extract_logprobs(resp_json: dict) -> list:
+def _extract_logprobs(resp_json: dict[str, Any]) -> list[Any]:
     try:
-        return resp_json.get("choices", [])[0].get("logprobs", {}).get("content", [])
+        content = resp_json.get("choices", [])[0].get("logprobs", {}).get("content", [])
+        return cast("list[Any]", content)
     except (IndexError, AttributeError):
         return []
 
@@ -1167,7 +1170,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 status_code=422,
                 detail="requested output token limit exceeds the configured maximum",
             )
-        return value
+        return int(value)
 
     def _rate_headers(decision: RateLimitDecision) -> dict[str, str]:
         return {
@@ -1398,7 +1401,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     async def chat_completions(
         request: Request,
         principal: Annotated[Principal, Depends(validate_proxy_auth)],
-    ):
+    ) -> Response:
         _require_intact_ledger()
         request_start = time.perf_counter()
         raw_body = await request.body()
@@ -1901,7 +1904,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     async def completions(
         request: Request,
         principal: Annotated[Principal, Depends(validate_proxy_auth)],
-    ):
+    ) -> Response:
         _require_intact_ledger()
         raw_body = await request.body()
         try:
@@ -2044,7 +2047,7 @@ def main() -> None:
     # FIX-BLOCKER-03 (server side): pass SSL/mTLS config to uvicorn.
     # ssl_certfile + ssl_keyfile: TLS for the Aegis server itself.
     # ssl_ca_certs + mtls_required: require and verify client certificates.
-    uvicorn_kwargs: dict = {
+    uvicorn_kwargs: dict[str, Any] = {
         "host": cfg.host,
         "port": cfg.port,
         "workers": cfg.workers,

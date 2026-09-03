@@ -78,7 +78,7 @@ class RedTeamFramework:
                     "choices": [
                         {
                             "logprobs": {
-                                "content": [{"token": "err", "logprob": 100.0, "top_logprobs": []}]
+                                "content": [{"token": "err", "logprob": 100.0, "top_logprobs": []}]  # nosec B105 - a synthetic logprob token in a local test fixture, not a credential
                             }
                         }
                     ]

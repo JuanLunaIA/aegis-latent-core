@@ -51,6 +51,9 @@ publication state, and the SDK registries remain two versions behind at `4.0.0`.
 
 ### Changed
 
+- `mypy --strict` passes over `aegis` and `sdk/python/src` — 153 errors in 55 files reduced to zero — and both are now CI gates so the state holds. The work was annotation, not redesign: bare `dict`/`list`/`Callable`/`re.Pattern`/`ctypes.Array` parameterised, return types supplied, and `Any` escaping an untyped boundary stated with an explicit `cast` at that boundary rather than left implicit.
+- Bandit reports zero findings across `aegis` and `aegis_server`, at every severity rather than the `-lll` floor CI enforced. Thirteen silent `except: pass` handlers now log at debug level, so a swallowed failure is diagnosable; `ldap_auth` and `session_manager` gained the module logger they lacked. Eight `subprocess` calls resolve their executable through `shutil.which(...) or <name>`, matching the convention already used in `cfi_manager` and `dependency_audit`, which removes the implicit PATH lookup. Vault retry jitter uses `secrets.SystemRandom`. The remainder are annotated with the reason they are not defects.
+- `tests/test_sse_utf8_boundaries.py` pins the SSE line framing's UTF-8 behaviour at every possible chunk-split offset, and `_iter_bounded_lines` records why an incremental decoder is not used.
 - Per-commit cost is now independent of chain length. Measured on one container 2026-09-03: at 2,000 prior leaves, 30,154 µs → 362 µs. The pre-change curve rose `1.00× → 17.65×` with chain length; the post-change curve is flat within noise.
 - `_validate_active_deployment_versions` in `scripts/verify_release_contract.py` derives its expectation from the synchronized core version instead of a hard-coded literal. The literal made the check assert agreement with a constant rather than with the release being cut: it reported `READY` at `4.1.0` while eight deployment surfaces still named `4.0.2`. All twenty-two references are now synchronized, and `tests/test_release_contract_v4.py` fails if the derivation regresses.
 - `docs/BENCHMARKS.md` carries an evidence-path section for the current source baseline alongside the retained v3.1.0 record, and `docs/architecture/DEEP_DIVE.md` replaces a stale Rust/Python MMR ratio (`3.01x` / `3.34x`) with the 2026-09-03 measurement (`4.77x` average, `4.94x` maximum) plus the environment it belongs to. The ratio is a property of the host, not the code.
@@ -72,6 +75,11 @@ publication state, and the SDK registries remain two versions behind at `4.0.0`.
 - `RustWal.open` truncated an existing segment when reopened with a smaller `capacity_bytes`. `OpenOptions::truncate(false)` prevents `open` from clearing the file, but the subsequent `set_len` shrank it just the same, discarding every frame past the new length — a 1 MiB segment holding 20 records reopened at 64 bytes retained 4. The requested capacity is now a floor rather than a resize instruction, so a segment only ever grows.
 
 ### Boundary
+
+A clean `mypy --strict` run and a zero-finding Bandit report are properties of
+those two checkers on this source, not evidence of correctness or of absence of
+vulnerabilities. Bandit findings that were annotated rather than changed are
+annotated with a stated reason; the reason is a reviewable claim, not a proof.
 
 No claim in this release is a capacity, certification, legal-admissibility or
 production-readiness statement. The Kani proofs cover two arithmetic functions,

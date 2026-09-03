@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import logging
 import os
-import subprocess
+import shutil
+import subprocess  # nosec B404 - subprocess is required to probe host hardening state; every call site uses a fixed argv list, never a shell
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +104,7 @@ class KernelHardener:
         # Method 1: Try mokutil (most reliable on most distros)
         if os.path.exists(self.MokutilPath):
             try:
-                result = subprocess.run(
+                result = subprocess.run(  # nosec B603 - argv list built from literals and configuration, never from request data; shell=False throughout
                     [self.MokutilPath, "--sb-state"],
                     capture_output=True,
                     text=True,
@@ -121,8 +123,8 @@ class KernelHardener:
 
         # Method 2: Try bootctl (systemd-boot)
         try:
-            result = subprocess.run(
-                ["bootctl", "status"],
+            result = subprocess.run(  # nosec B603 - argv list built from literals and configuration, never from request data; shell=False throughout
+                [shutil.which("bootctl") or "bootctl", "status"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -247,7 +249,7 @@ class KernelHardener:
         )
         return True
 
-    def get_security_status(self) -> dict:
+    def get_security_status(self) -> dict[str, Any]:
         """
         Get comprehensive kernel security status.
 

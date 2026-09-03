@@ -109,7 +109,7 @@ class AtomicSnapshotManager:
         )
         return snapshot.state_data
 
-    def purge_old_snapshots(self, keep_last: int = 100):
+    def purge_old_snapshots(self, keep_last: int = 100) -> None:
         """Maintains a sliding window of snapshots to avoid memory exhaustion."""
         if len(self._history) > keep_last:
             # Sort by timestamp and remove oldest

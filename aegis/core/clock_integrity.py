@@ -34,7 +34,8 @@ Usage::
 from __future__ import annotations
 
 import logging
-import subprocess
+import shutil
+import subprocess  # nosec B404 - subprocess is required to probe host hardening state; every call site uses a fixed argv list, never a shell
 import time
 from dataclasses import dataclass, field
 
@@ -212,8 +213,8 @@ class ClockIntegrityAssertion:
     def _check_timedatectl(self) -> NTPSyncStatus | None:
         """Run ``timedatectl show`` and parse ``NTPSynchronized=``."""
         try:
-            proc = subprocess.run(
-                ["timedatectl", "show"],
+            proc = subprocess.run(  # nosec B603 - argv list built from literals and configuration, never from request data; shell=False throughout
+                [shutil.which("timedatectl") or "timedatectl", "show"],
                 capture_output=True,
                 text=True,
                 timeout=self._timedatectl_timeout,

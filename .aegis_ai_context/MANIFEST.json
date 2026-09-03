@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "05b4f01df50f3bb41ebfe5882c5153e276e3b4fe11dedfbb0afb80986b112de0",
-      "size": 50519
+      "sha256": "53dc9c8189491fc163bf763bc0ce2423d996dfea63798a4c7ef7e1058c2ab385",
+      "size": 52052
     },
     {
       "category": "governed_input",
@@ -189,8 +189,8 @@
     {
       "category": "governed_input",
       "path": "pyproject.toml",
-      "sha256": "2fb6b2db55dd385701fdb3a793b97f5d3221fe43f0b59d3f9989ac337bf51e46",
-      "size": 8881
+      "sha256": "7cf28a66e5318fb837f1940505195bbecd69bcd0e58141b55f7f889530bc5017",
+      "size": 9839
     },
     {
       "category": "governed_input",
@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "2e65d2383ed54e0236234b3009a96d9d40c6e9d434ecb6aa2da9a5638a6fe4f3",
-      "size": 26740
+      "sha256": "f1d2ea3f7a5aa0a1926aa5aabfe3935a43544c03f7061ce5044c4e23e5495918",
+      "size": 27196
     },
     {
       "category": "governed_input",
@@ -381,14 +381,14 @@
     {
       "category": "governed_input",
       "path": "aegis/providers/__init__.py",
-      "sha256": "0645c289f437851d34657a9a8007427d1fae29b098c17e53c8f41fcf9238bc5f",
-      "size": 4314
+      "sha256": "83fe58d4c48f81bb9188cde4b97c6591c699d74ab035f85ee74c856cad0ac29e",
+      "size": 4343
     },
     {
       "category": "governed_input",
       "path": "aegis/providers/base.py",
-      "sha256": "d3852c6130f6fcd9224a73cf5e603e5381037b268c22d40745b21f5083f388d9",
-      "size": 5296
+      "sha256": "af6e63e6832cd0c541dc1a6409a7458c02a042ba417c6c5642be07b32064d2fe",
+      "size": 5274
     },
     {
       "category": "governed_input",

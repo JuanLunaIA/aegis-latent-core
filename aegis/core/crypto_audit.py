@@ -55,7 +55,7 @@ from collections import deque
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from threading import Lock
-from typing import Any
+from typing import Any, TextIO
 
 import numpy as np
 from cryptography.exceptions import InvalidSignature
@@ -212,7 +212,7 @@ class AuditNode:
             "response_hash": "",
             "model": "unknown",
             "endpoint": "unknown",
-            "token_trail_count": 0,
+            "token_trail_count": 0,  # nosec B105 - a counter field named token_trail_count, not a credential
             "is_fallback": False,
             "phi_scrubbed": False,
             "scrub_method": "",
@@ -228,7 +228,7 @@ class AuditNode:
         data.pop("payload", None)
         merged = {**defaults, **data}
         # Keep only known fields to avoid TypeError on unexpected keys
-        known = {f.name for f in cls.__dataclass_fields__.values()}  # type: ignore[attr-defined]
+        known = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in merged.items() if k in known}
         return cls(**filtered)
 
@@ -340,7 +340,7 @@ class CryptographicAuditLedger:
         self.chain: deque[AuditNode] = deque(maxlen=max_memory_nodes)
         self._window_anchor_hash = "0" * 64
         self._lock = Lock()
-        self._wal_handle = None
+        self._wal_handle: TextIO | None = None
         self._wal_bytes = 0
         self._fault_state: str = "healthy"
         self._mmr = MerkleMountainRange()

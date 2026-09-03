@@ -17,6 +17,7 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class AffinityResult:
     pid: int
     reason: str
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "applied": self.applied,
             "cpu_set": sorted(self.cpu_set),

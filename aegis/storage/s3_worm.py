@@ -572,7 +572,7 @@ class S3WormArchiver:
         async with self._db_lock:
             with sqlite3.connect(self._journal_path) as connection:
                 connection.execute(
-                    f"UPDATE s3_worm_archive SET {', '.join(assignments)} "  # noqa: S608
+                    f"UPDATE s3_worm_archive SET {', '.join(assignments)} "  # noqa: S608  # nosec B608 - the interpolated fragment is joined from string literals in this function; every value is bound through a ? placeholder
                     "WHERE archive_id = ?",
                     values,
                 )

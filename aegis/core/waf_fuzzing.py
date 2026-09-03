@@ -233,7 +233,7 @@ def apply_transform(
         The transformed string.
     """
     if rng is None:
-        rng = random.Random(42)
+        rng = random.Random(42)  # nosec B311 - deterministic corpus replay, not a security decision
 
     if transform == EvasionTransform.ORIGINAL:
         return text
@@ -318,7 +318,7 @@ class WAFDifferentialFuzzer:
             self._waf = waf
         self._seeds = seeds if seeds is not None else list(_SEEDS)
         self._transforms = transforms if transforms is not None else list(EvasionTransform)
-        self._rng = random.Random(rng_seed)
+        self._rng = random.Random(rng_seed)  # nosec B311 - deterministic corpus replay, not a security decision
 
     def generate_variants(self, seed: str) -> list[FuzzVariant]:
         """Generate all configured transform variants for a single *seed*."""
@@ -408,7 +408,7 @@ def hypothesis_strategy() -> Any:
     def _strategy(draw: Any) -> str:
         seed = draw(st.sampled_from(_SEEDS))
         transform = draw(st.sampled_from(transforms))
-        rng = random.Random(draw(st.integers(min_value=0, max_value=2**32 - 1)))
+        rng = random.Random(draw(st.integers(min_value=0, max_value=2**32 - 1)))  # nosec B311 - deterministic corpus replay, not a security decision
         return apply_transform(seed, transform, rng=rng)
 
     return _strategy()

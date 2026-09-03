@@ -18,7 +18,7 @@ class TaintEngine:
     Marks untrusted user input as 'tainted' and tracks its propagation.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Patterns for common injection vectors
         self._injection_patterns = {
             "SQLi": re.compile(

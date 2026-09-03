@@ -151,7 +151,7 @@ class AegisWAF:
         try:
             from aegis.core.adversarial_filter import LLMGuardLocal
 
-            self._guard = LLMGuardLocal()  # type: ignore[no-untyped-call]
+            self._guard = LLMGuardLocal()
             logger.debug("AegisWAF: LLMGuardLocal (layer 2) active")
         except ImportError:
             logger.warning(
