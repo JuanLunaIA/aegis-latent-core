@@ -53,6 +53,14 @@ _URL_TERMINATOR = re.compile(r"[\s\"'<>)\]]")
 # whitespace, so this is exactly the token that could still become an address.
 _TRAILING_TOKEN = re.compile(r"\S*$")
 
+# Viable prefix of the ADDRESS detector in ``phi_deidentifier``: a street number
+# followed by at most the same bounded street-name run, anchored at the end of
+# the buffer. The upper bound must track the detector's; if that quantifier is
+# widened without widening this one, genuinely open address candidates stop
+# being held back. ``tests/test_phi_address_bound.py`` pins the two together.
+_ADDRESS_NAME_MAX = 40
+_ADDRESS_OPEN_PREFIX = re.compile(rf"(?:^|\b)\d{{1,5}}\s+[A-Za-z0-9 ]{{0,{_ADDRESS_NAME_MAX}}}$")
+
 
 @dataclass(frozen=True)
 class StreamRedactionStats:
@@ -186,7 +194,14 @@ class StreamingDeidentifier:
             token = open_token.group(0)
             if "@" in token and len(token) > self.window_chars:
                 raise StreamingDeidentificationError("overlong open email candidate")
-        address = re.search(r"(?:^|\b)\d{1,5}\s+[A-Za-z0-9 ]+$", self._pending)
+        # Viable prefix of the ADDRESS detector, whose street-name run is bounded
+        # at 40 characters. Matching that bound here is what makes the guard a
+        # prefix test rather than a prose detector: a trailing run longer than the
+        # bound can no longer complete into an address, so it needs no holdback
+        # and must not abort the stream. `_ADDRESS_OPEN_PREFIX` is anchored at the
+        # end of the buffer, so a run that has already exceeded the bound simply
+        # fails to match and the fast path falls through.
+        address = _ADDRESS_OPEN_PREFIX.search(self._pending)
         if address is not None and len(address.group(0)) > self.window_chars:
             raise StreamingDeidentificationError("overlong open address candidate")
         if final and len(self._pending) > self.window_chars * 2:

@@ -20,6 +20,8 @@ external readback facts recorded in `docs/RELEASE_STATUS.md`.
 
 ### Added
 
+- `_require_intact_ledger` in `aegis/proxy/app.py`: every governed endpoint refuses with `503` while the ledger's `_fault_state` is not `healthy`, so a gateway that started on a corrupt WAL no longer forwards traffic or extends a prefix it already failed to replay. `/health` and `/metrics` stay reachable so the fault remains visible.
+- Regression coverage for the three remediated paths: `tests/test_app_wal_corrupt.py` (refusal on all three governed endpoints, before the upstream call, with no chain growth), `tests/test_mmr_restart.py` (accumulator continuity across one, many and every carry-shape restart, compared against an uninterrupted ledger), and `tests/test_phi_address_bound.py` (the two ADDRESS bounds agree, prose streams through, real addresses still redact, and the recall cost is asserted).
 - `benchmarks/bench_dispatch_overhead.py`: distribution over `aegis.proxy.app._spawn_background` and RSS sampling across repeated commit batches, reporting steady state separately from round-one warm-up so allocator growth is not read as a per-commit leak.
 - `evidence/evidence_path_measurements_2026-09-03.md`: MMR append throughput (Rust versus Python), audit-chain commit and verification, dispatch overhead, steady-state memory and ML-DSA signing latency, all taken on commit `f77420a` in one named container, with per-measurement boundaries and an explicit list of what was not measured.
 - Five claims-matrix rows (`CLM-054`–`CLM-058`) covering Kani frame-bounds model checking, the O(log N) MMR rollback token, POSIX advisory single-writer locking, streaming viable-prefix guards, and native-WAL segment growth — each with its forbidden phrasing recorded in the control register.
@@ -47,6 +49,8 @@ external readback facts recorded in `docs/RELEASE_STATUS.md`.
 
 ### Fixed
 
+- Governed traffic was accepted while the evidence chain was known to be broken. WAL replay set `wal_corrupt`, `/health` reported it, and the request path did not consult it — so every commit past the corruption point succeeded individually while the chain as a whole became unreplayable. `docs/architecture/FAILURE_SEMANTICS.md` no longer describes this as the system's one non-fail-closed path.
+- The `ADDRESS` pattern's unbounded `[A-Za-z0-9 ]+` street-name run made any number-led prose a viable address prefix, aborting streams of ordinary text with `privacy_failure`. Bounded to 40 characters — 2.2x the longest street-name span in a sample of real addresses — with the streaming guard mirroring the bound. A viable candidate is now at most 46 characters against a 64-character minimum window, so the abort is structurally unreachable rather than merely tuned away. The cost is stated and tested: a street name longer than the bound is no longer redacted.
 - Release-artifact verification instruction corrected: assets carry attestations and `SHA256SUMS`, not detached signatures, so the check is `gh attestation verify`, not `cosign verify-blob`; `cosign verify` applies to the OCI images.
 - `DOC04-CLM-011` corrected: the proxy does attach `/metrics` whenever `prometheus-client` is importable.
 - DNS egress in the Helm `NetworkPolicy` scoped to resolver pods via a `podSelector`; a namespace-only peer permitted port 53 to every pod in `kube-system` while the comment claimed otherwise.

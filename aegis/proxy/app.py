@@ -1104,6 +1104,36 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 detail="Durable evidence unavailable; governed request rejected",
             ) from exc
 
+    def _require_intact_ledger() -> None:
+        """Reject governed traffic once the evidence chain is known to be broken.
+
+        WAL replay sets ``_fault_state`` to ``wal_corrupt`` when it stops at a
+        line it cannot parse. Until this guard existed the fault was reported on
+        ``/health`` but not consulted at ingress, so the proxy kept forwarding
+        requests and appending nodes on top of a prefix it had already failed to
+        read back. Every node committed in that window links to a chain that
+        cannot be replayed, which is the failure mode the evidence contract
+        exists to prevent — and it is silent, because each individual commit
+        succeeds.
+
+        Fail closed instead: no forwarding, no new evidence. ``/health`` and
+        ``/metrics`` stay reachable on purpose so an operator can still see the
+        fault and the depth of the surviving chain.
+        """
+        fault = getattr(state.ledger, "_fault_state", "healthy")
+        if fault == "healthy":
+            return
+        observability.AUDIT_COMMIT_ERRORS.inc()
+        logger.error(
+            "governed request rejected: ledger fault_state=%s; refusing to extend "
+            "an unreplayable evidence chain",
+            fault,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Evidence chain is not intact; governed requests are rejected",
+        )
+
     def _proof_headers(node: AuditNode) -> dict[str, str]:
         if node.mmr_proof is None or not node.mmr_leaf_hash:
             return {}
@@ -1369,6 +1399,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         request: Request,
         principal: Annotated[Principal, Depends(validate_proxy_auth)],
     ):
+        _require_intact_ledger()
         request_start = time.perf_counter()
         raw_body = await request.body()
         try:
@@ -1653,6 +1684,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         request: Request,
         principal: Annotated[Principal, Depends(validate_proxy_auth)],
     ) -> Response:
+        _require_intact_ledger()
         request_start = time.perf_counter()
         raw_body = await request.body()
         try:
@@ -1870,6 +1902,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         request: Request,
         principal: Annotated[Principal, Depends(validate_proxy_auth)],
     ):
+        _require_intact_ledger()
         raw_body = await request.body()
         try:
             body = canonical_normalize(json.loads(raw_body))

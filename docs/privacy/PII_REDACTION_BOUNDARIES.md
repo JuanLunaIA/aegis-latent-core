@@ -92,13 +92,29 @@ searches are also case-insensitive now, matching the URL and track-1 detectors; 
 unterminated `HTTPS://` or `%b` candidate passed the guard entirely, which was a fail-open on the
 exact grammar the guard exists to catch.
 
-**One over-trigger remains, and it is not a bug in the guard.** The `ADDRESS` pattern in
-`_SAFE_HARBOR_PATTERNS` allows an unbounded `[A-Za-z0-9 ]+` between the street number and the
-street-type suffix, so a number-led run of letters, digits and spaces longer than the window is
-a genuinely viable address prefix and still fails closed. Bounding that quantifier would trade
-availability against PHI recall across the non-streaming redactor as well, so it is recorded here
-rather than changed silently. Operators streaming prose that begins with a number and runs
-punctuation-free past the window should expect `privacy_failure` on those responses.
+**The `ADDRESS` over-trigger is now closed, at a stated cost.** That pattern allowed an unbounded
+`[A-Za-z0-9 ]+` between the street number and the street-type suffix, which made any number-led
+run of letters, digits and spaces a viable address prefix — so ordinary prose beginning with a
+figure ("3 reasons the migration succeeded…", "In 2026, the company…") could not settle inside
+the holdback and aborted the stream.
+
+The run is bounded at **40 characters**, and the streaming guard mirrors the same bound. Forty is
+measured headroom rather than a tuned constant: the longest street-name span in a sample of real
+addresses was 18 characters (`500 South Buena Vista Street`), so the bound is 2.2× the observed
+maximum. It also makes the abort structurally unreachable — a viable candidate is at most 46
+characters, below the 64-character minimum `window_chars`, so an address candidate always fits
+the smallest permitted holdback.
+
+**What this costs.** A street name longer than 40 characters between the number and the street
+type is no longer matched, and therefore no longer redacted, in the streaming *and* non-streaming
+paths alike. That is a recall reduction at the far tail of the street-name length distribution,
+accepted deliberately because aborting every stream of number-led prose was judged the worse
+failure. `tests/test_phi_address_bound.py` asserts the cost directly, so it cannot be forgotten:
+one test proves a long street name passes through unredacted.
+
+**Separately, and pre-existing:** the street-type list does not include every suffix. `Plaza` and
+`Pike` are absent, so `30 Rockefeller Plaza` and `8600 Rockville Pike` are not matched — before or
+after the bound. That gap is recorded in the same test file.
 
 ### The re-identification limit
 
