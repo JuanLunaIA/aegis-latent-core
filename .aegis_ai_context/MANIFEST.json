@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "f1d2ea3f7a5aa0a1926aa5aabfe3935a43544c03f7061ce5044c4e23e5495918",
-      "size": 27196
+      "sha256": "37aaab23b749fb2a7993c6e0b7c13b2f9cb379062d0e1a0e3ce9e17246f054c8",
+      "size": 28307
     },
     {
       "category": "governed_input",

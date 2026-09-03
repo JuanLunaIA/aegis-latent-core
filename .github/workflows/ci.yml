@@ -539,10 +539,9 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: [test, security, market-hardening]
     permissions:
-      contents: write
+      contents: read
       id-token: write
       attestations: write
-      actions: read
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Build source artifact
@@ -556,6 +555,24 @@ jobs:
           path: sbom-root
           format: spdx-json
           output-file: sbom.spdx.json
+          # `anchore/sbom-action` defaults this to true, so on a
+          # `release: published` event it tried to attach an SBOM to the
+          # release and failed with "Resource not accessible by integration"
+          # against this job's `contents: read`.
+          #
+          # Raising the scope to `contents: write` would silence the error but
+          # publish an asset that `release.yml` did not produce: not listed in
+          # `release-asset-manifest.json` and not hashed in `SHA256SUMS`. The
+          # documented way to verify a release asset is to download the bytes
+          # and check them against `SHA256SUMS`, so an unmanifested asset is a
+          # hole in that instruction, not a convenience.
+          #
+          # `release.yml` is the single owner of release assets, and it emits
+          # its own canonical `aegis-latent-core-<version>.spdx.json` with a
+          # sidecar. This job's product is the workflow artifact plus the
+          # attestation below, which is why the upload is off and the token
+          # stays read-only.
+          upload-release-assets: false
       - name: Attest source SBOM
         if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         uses: actions/attest-sbom@bd218ad0dbcb3e146bd073d1d9c6d78e08aa8a0b # v2
