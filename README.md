@@ -10,7 +10,7 @@ Aegis sits between your application and your model provider. For every governed 
 [![Coverage](https://img.shields.io/badge/statement%20coverage-93.91%25%20(2026--08--18)-informational)](docs/benchmarks/BENCHMARK_METHOD.md)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
 
-> **Current release candidate:** `v4.1.1` source, fourteen synchronized anchors. Nothing is published for `4.1.1`. The last release built by the pipeline is `v4.0.2`; a `v4.1.0` release object exists but was created outside it and carries no assets. Registries carry `aegis-latent-sdk` at `4.0.0`. The gateway ships from source; registries carry SDKs only. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
+> **Current release:** `v4.1.1`, fourteen synchronized anchors. Published and read back on 2026-09-03: signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk` `4.1.1`, and GHCR gateway and dashboard images. **npm still carries `4.0.0`** — that publish step failed and is fixed but not yet re-dispatched. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The gateway ships from source and from GHCR; the SDK registries carry SDKs only. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
 ---
 
@@ -117,7 +117,7 @@ pip install -e ./sdk/python
 cd sdk/typescript && npm ci && npm run build
 ```
 
-**Registry caution.** PyPI and npm carry `aegis-latent-sdk` at `4.0.0`, while this source tree is `4.1.1` — a gap of two releases. Installing from a registry gets you different code from what these documents describe.
+**Registry caution.** PyPI carries `aegis-latent-sdk` at `4.1.1`, matching this source tree. **npm still carries `4.0.0`** — installing the SDK from npm gets you different code from what these documents describe. Check which registry you are installing from.
 
 **Proof verification caution.** A proof verified against a root supplied by the same gateway that produced it establishes internal consistency only. Obtain the trusted root through an independent channel, or the verification is circular.
 

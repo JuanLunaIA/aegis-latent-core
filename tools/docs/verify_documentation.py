@@ -321,19 +321,27 @@ def check_document(path: Path, root: Path, *, strict: bool = False) -> list[Find
         # see docs/DOCUMENTATION_GOVERNANCE.md. Requiring the inline metadata
         # the old README carried would now force the duplication that
         # scripts/verify_docs.py rejects, so require the routing instead.
-        readme_required = (
-            "Current release candidate:",
+        # The status label is an alternation because the repository's state
+        # moved: "Current release candidate:" was accurate while nothing was
+        # published, and "Current release:" is accurate now that v4.1.1 is.
+        # Both are accepted so the check survives the next transition in
+        # either direction; what it enforces is that README carries a status
+        # label at all, not which of the two the current state warrants.
+        readme_required: tuple[str | tuple[str, ...], ...] = (
+            ("Current release:", "Current release candidate:"),
             "docs/RELEASE_STATUS.md",
             "docs/BOUNDARIES.md",
         )
         for required in readme_required:
-            if required not in text:
+            accepted = required if isinstance(required, tuple) else (required,)
+            if not any(option in text for option in accepted):
                 findings.append(
                     Finding(
                         "ERROR",
                         relative,
                         1,
-                        f"README must surface status and route onward: missing {required}",
+                        "README must surface status and route onward: missing "
+                        + " or ".join(accepted),
                     )
                 )
     else:

@@ -1,10 +1,11 @@
-# Security Policy — Aegis Latent Core 4.0.x
+# Security Policy — Aegis Latent Core 4.1.x
 
 This policy defines the vulnerability-reporting path, support boundary, production security baseline, runtime evidence rules and release security gates. It is for security researchers, customers, maintainers and operators. It is not a contractual SLA, certification, legal opinion or guarantee of future remediation.
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** current source/release candidate
-**Current candidate/source line:** `4.1.1` with fourteen synchronized anchors; supported as the current source line without asserting external publication
+**Current source line:** `4.1.1` with fourteen synchronized anchors; published and read back on 2026-09-03 for every surface except npm
+**External baseline:** signed annotated `v4.1.1` tag at `5a137c86ecd914842493babb7e863033498f68c9`, with GitHub Release (31 assets), PyPI `aegis-latent-sdk` `4.1.1`, and GHCR gateway/dashboard images read back on 2026-09-03; npm remains at `4.0.0`, the one surface the release did not reach
 **Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **Private reporting path:** GitHub Private Vulnerability Reporting
 
@@ -14,13 +15,13 @@ Aegis Latent Core is security-sensitive infrastructure. The repository provides 
 
 | Version line | Support status |
 |---|---|
-| `4.1.x` | Current candidate and supported source line (`4.1.1`); nothing is published for it. Support does not assert an external `v4.1.1` tag, release, or package publication. |
-| `4.0.x` | Most recently published line (`v4.0.2` tag, GitHub Release and GHCR images). SDK registries remain at `4.0.0`. |
+| `4.1.x` | Current supported line and most recently published (`v4.1.1` tag, GitHub Release, PyPI SDK, GHCR images, read back 2026-09-03). npm still carries `4.0.0`. |
+| `4.0.x` | Previous published line (`v4.0.2` tag, GitHub Release and GHCR images). Its SDK publish jobs were skipped, so neither registry received `4.0.2`. |
 | `3.1.x` | Historical v3.1.0 market-hardening line; fixes remain subject to the project's actual operating capacity and supported-version policy. |
 | `3.0.x` | Published v3.0.1 baseline. Upgrade to the candidate line for new hardening; security fixes remain subject to the project’s actual operating capacity. |
 | `<3.0.0` | Historical releases. Upgrade before requesting support; no default security-fix commitment is made. |
 
-The current supported source line is `4.1.x`, with candidate `4.1.1` and fourteen synchronized anchors. External `v4.1.1` publication is not claimed until tag, release, and registry readback succeeds; no such readback has been performed, because nothing has been published for `4.1.1`. The most recent published line is `4.0.x`: the signed annotated tag `v4.0.2` targets `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, and its GitHub Release and GHCR images were read back on 2026-09-02. The previous public GitHub baseline is lightweight tag `v4.0.1` targeting `6469904380218584ae0b5221334bc9a46500f5ba`; its tag workflows failed, while PyPI/npm were separately observed at `4.0.0` without attributed provenance. Release support must be evaluated from published artifacts, while source behavior must be evaluated from the named commit, tests, and deployment prerequisites.
+The current supported line is `4.1.x`, with `4.1.1` and fourteen synchronized anchors, and it is also the most recently published. Readback on 2026-09-03 confirmed the signed annotated tag `v4.1.1` targeting `5a137c86ecd914842493babb7e863033498f68c9`, its GitHub Release with 31 assets, PyPI `aegis-latent-sdk` `4.1.1`, and the GHCR gateway and dashboard images. npm was not reached and still carries `4.0.0`; the cause was a defect in the publish command, not a policy gate. The previous published line is `4.0.x`: the signed annotated tag `v4.0.2` targets `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, and its GitHub Release and GHCR images were read back on 2026-09-02. The previous public GitHub baseline is lightweight tag `v4.0.1` targeting `6469904380218584ae0b5221334bc9a46500f5ba`; its tag workflows failed, while PyPI/npm were separately observed at `4.0.0` without attributed provenance. Release support must be evaluated from published artifacts, while source behavior must be evaluated from the named commit, tests, and deployment prerequisites.
 
 ## Reporting a vulnerability
 

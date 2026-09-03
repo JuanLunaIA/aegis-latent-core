@@ -3,16 +3,43 @@
 All notable changes to **Aegis Latent Core** are documented in this file.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** `v4.1.0` checked-out source release target; source metadata does not establish external lifecycle state, which requires independent readback.
+**Release baseline:** `v4.1.1`; source metadata does not establish external lifecycle state, which requires independent readback.
+**External readback (2026-09-03):** `v4.1.1` signed annotated tag at `5a137c86ecd914842493babb7e863033498f68c9`, GitHub Release with 31 assets, PyPI `aegis-latent-sdk` `4.1.1`, GHCR gateway/dashboard images; npm still `4.0.0`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
-**Source release target:** `v4.1.0` (fourteen synchronized `4.1.0` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts)
+**Source release target:** `v4.1.1` (fourteen synchronized `4.1.1` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts)
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Documentation
+
+- Corrected the corpus to the observed `4.1.1` publication state. Twenty-odd
+  documents asserted that nothing was published for `4.1.1` and that both SDK
+  registries carried `4.0.0`. Readback on 2026-09-03 contradicts both: the
+  signed annotated tag, the GitHub Release and its 31 assets, PyPI
+  `aegis-latent-sdk` `4.1.1`, and the GHCR gateway and dashboard images all
+  exist. npm alone still carries `4.0.0`.
+- `docs/RELEASE_STATUS.md` contradicted itself: its header read "nothing is
+  published" while §1.1 below it recorded a published tag, a 31-asset release
+  and PyPI at `4.1.1`. The header, the §1 lead and the "registry gap is three
+  versions wide" paragraph are corrected, and §2's readback commands now target
+  `v4.1.1` rather than `v4.0.2`, each with the value observed on 2026-09-03.
+- Recorded the OCI readback that had not been performed for this version:
+  `ghcr.io/juanlunaia/aegis-latent-core:4.1.1` resolves to
+  `sha256:5f2caaa60ee00dd82882bee1b4f2ee046ee2877131afed1af4e356b4bd8f5343` and
+  the dashboard image to `sha256:0f66c9f6f8fb7ea0327b9aa2d9df26a030bd76c7d53d2a2186a46f2385489a07`,
+  both OCI image indexes over `linux/amd64` and `linux/arm64` with a cosign
+  signature object present for each digest. A resolving `.sig` tag is not a
+  verification: `cosign verify` and `gh attestation verify` were not run, and
+  the documents say so.
+- `CLM-048` through `CLM-050` restated against the 2026-09-03 readback, and the
+  control register now forbids collapsing PyPI and npm into "the registries" —
+  they are at different versions and a single sentence about both is wrong
+  whichever version it names.
 
 ### Fixed
 

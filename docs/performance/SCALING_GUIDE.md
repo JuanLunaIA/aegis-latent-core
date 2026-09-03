@@ -7,7 +7,7 @@ This guide explains how to scale Aegis without confusing horizontal fan-out, sto
 **Source baseline/release target:** `v4.1.1` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` with `4.0.0` anchors
 **Previous public GitHub Release:** `v4.0.1` lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
-**Observed registries:** PyPI/npm `4.0.0`, without workflow provenance attribution
+**Observed registries:** PyPI `aegis-latent-sdk` `4.1.1` and GHCR `4.1.1`, read back 2026-09-03; npm still `4.0.0`
 **Historical evidence baseline:** `v3.1.0`; retained measurements are historical evidence for that release only
 **Audience:** Platform engineering and SRE
 **Primary runtime contract:** [`DEPLOYMENT_GUIDE.md`](../../DEPLOYMENT_GUIDE.md)

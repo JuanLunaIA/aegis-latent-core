@@ -5,6 +5,7 @@ This brief is for executive sponsors, economic buyers, platform leaders and secu
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** checked-out source baseline/release target `v4.1.1` with 14 synchronized anchors
 **Source baseline/release target:** `v4.1.1` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
+**External baseline:** signed annotated `v4.1.1` tag at `5a137c86ecd914842493babb7e863033498f68c9`, with GitHub Release (31 assets), PyPI `aegis-latent-sdk` `4.1.1`, and GHCR gateway/dashboard images read back on 2026-09-03; npm remains at `4.0.0`, the one surface the release did not reach
 **Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **Positioning owner:** Product and release owner
 **Primary claim control:** [`docs/CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md)
