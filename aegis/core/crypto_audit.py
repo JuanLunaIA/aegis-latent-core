@@ -39,7 +39,6 @@ FIX-CAL-01: WAL file handle lifecycle.
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
 
-import copy
 import hashlib
 import hmac
 import json
@@ -445,7 +444,10 @@ class CryptographicAuditLedger:
         with self._lock:
             prev_hash = self.chain[-1].node_hash if self.chain else "0" * 64
             timestamp = time.time()
-            mmr_before = copy.deepcopy(self._mmr)
+            # O(log n) rollback token, not a copy of the accumulator: this runs
+            # on every commit, so a deep copy would make commit cost grow with
+            # the length of the chain.
+            mmr_before = self._mmr.checkpoint()
             merkle_root = self._mmr.add_leaf(leaf)
             mmr_leaf_count = self._mmr.get_leaf_count()
             mmr_leaf_index = mmr_leaf_count - 1
@@ -464,7 +466,7 @@ class CryptographicAuditLedger:
             try:
                 signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
             except Exception:
-                self._mmr = mmr_before
+                self._mmr.rollback_to(mmr_before)
                 self._fault_state = "signing_failed"
                 raise
 
@@ -498,7 +500,7 @@ class CryptographicAuditLedger:
             try:
                 self._persist_node(node)
             except Exception:
-                self._mmr = mmr_before
+                self._mmr.rollback_to(mmr_before)
                 self._fault_state = "wal_persist_failed"
                 raise
             self._append_memory_node(node)
@@ -622,7 +624,8 @@ class CryptographicAuditLedger:
         with self._lock:
             prev_hash = self.chain[-1].node_hash if self.chain else "0" * 64
             timestamp = time.time()
-            mmr_before = copy.deepcopy(self._mmr)
+            # See commit_forensic: rollback token rather than a snapshot.
+            mmr_before = self._mmr.checkpoint()
             merkle_root = self._mmr.add_leaf(leaf)
             mmr_leaf_count = self._mmr.get_leaf_count()
             mmr_leaf_index = mmr_leaf_count - 1
@@ -637,7 +640,7 @@ class CryptographicAuditLedger:
             try:
                 signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
             except Exception:
-                self._mmr = mmr_before
+                self._mmr.rollback_to(mmr_before)
                 self._fault_state = "signing_failed"
                 raise
             node = AuditNode(
@@ -670,7 +673,7 @@ class CryptographicAuditLedger:
             try:
                 self._persist_node(node)
             except Exception:
-                self._mmr = mmr_before
+                self._mmr.rollback_to(mmr_before)
                 self._fault_state = "wal_persist_failed"
                 raise
             self._append_memory_node(node)

@@ -27,12 +27,16 @@ external readback facts recorded in `docs/RELEASE_STATUS.md`.
 - Documentation corpus: claim-control foundations (`docs/STYLE_GUIDE.md`, `docs/DOCUMENTATION_GOVERNANCE.md`, `docs/INDEX.md`), security volume, operations runbooks, API references, four framework technical-input documents, privacy boundaries, enterprise and corporate volumes, assurance index, and root governance files.
 - Four documentation gates run in CI: `scripts/verify_docs.py`, `scripts/verify_claims.py`, `scripts/verify_links.sh`, and the pre-existing `tools/docs/verify_documentation.py`.
 - Eleven claims-matrix rows covering the `fsync` durability boundary, trusted-root independence, the native WAL's auxiliary role, `pending-terminal` semantics, redaction as best-effort, registry publication state, the `bad_cert` explanation, and explicit denials for production SLO, WORM and immutability; stable `CLM-NNN` identifiers on all 53 rows.
+- `MerkleMountainRange.checkpoint()` and `rollback_to()`: an O(log n) rollback token that records the append-only lengths and the live peak nodes, replacing a whole-structure snapshot on the commit path.
+- Regression coverage for MMR append rollback (`tests/test_mmr_rollback.py`) and for chain integrity across memory-window rollover (`tests/test_crypto_audit_rollover.py`), including a `slow`-marked 100,000-node sweep through a 512-node window. Both the rollback path and the window anchor were previously unasserted.
+- Rust↔Python MMR parity extended beyond root equality: Python-generated portable proofs are verified against the Rust-reported root, `RustBackedMMR` is checked end to end, and the `sha256-asciihex` wire literal is pinned to the digest both implementations actually compute.
 
 ### Changed
 
 - Least-privilege `GITHUB_TOKEN`: read-only workflow-level floor in `ci.yml` and `forensic.yml`, and `security-events: write` moved from workflow scope to the four SARIF-uploading jobs in `security.yml`.
 - `README.md` restructured and reduced from roughly 33 KB to 13 KB, stating release status once and routing to `docs/RELEASE_STATUS.md`.
 - `docs/RELEASE_STATUS.md` records a 2026-09-02 readback of every publication surface, with per-surface commands and a publication-state table.
+- `CryptographicAuditLedger` reverts a failed commit through the MMR checkpoint instead of `copy.deepcopy`. The deep copy ran on every commit and copied the whole accumulator, so per-commit cost grew with the length of the chain. Failure semantics are unchanged: a signing or WAL-persistence failure still leaves the MMR exactly as it was.
 
 ### Fixed
 
