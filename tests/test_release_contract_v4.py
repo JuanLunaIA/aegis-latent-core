@@ -229,7 +229,19 @@ def test_publish_workflows_are_verified_dispatch_only_and_publish_downloaded_art
         assert "ref: ${{ env.EXPECTED_TAG_TARGET }}" in workflow
         assert "AEGIS_TRUSTED_PUBLISHING_ENABLED" in workflow
     assert "packages-dir: release-artifact" in pypi
-    assert "npm publish release-artifact/*.tgz --access public --provenance" in npm
+
+    # This previously asserted `npm publish release-artifact/*.tgz`, which
+    # pinned the defect as the contract. `npm publish` reads its argument as a
+    # package spec, and a bare `a/b` is npm's GitHub `owner/repo` shorthand, so
+    # that form made npm try to clone
+    # `ssh://git@github.com/release-artifact/aegis-latent-sdk-<v>.tgz.git`. The
+    # v4.1.1 dispatch died there with "Permission denied (publickey)" while
+    # PyPI published normally. A leading `./` makes npm read a filesystem path.
+    npm_without_comments = "\n".join(
+        line for line in npm.splitlines() if not line.lstrip().startswith("#")
+    )
+    assert "npm publish release-artifact/" not in npm_without_comments
+    assert "./release-artifact/*.tgz" in npm
 
 
 def test_oci_workflow_publishes_multiarch_by_digest_with_keyless_signature() -> None:

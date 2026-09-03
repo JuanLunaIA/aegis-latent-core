@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "5b4c33864d1aaee552d94ec4261566dc1f1fa83b487c78b955eefa0a0e666ad2",
-      "size": 54002
+      "sha256": "4dac410176479b9ea672436f8158fcb8dbc58eeb6c9354e815a49864a6e319b1",
+      "size": 55102
     },
     {
       "category": "governed_input",
@@ -351,8 +351,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/publish_npm.yml",
-      "sha256": "8c9edee74535d409613f49f1c942b8e3040fa6e033bf1e24d9b060be41926f36",
-      "size": 4498
+      "sha256": "1f31549c0415ffa1c95815e20c20a3f75de774d7230e0a91ee19372edff34016",
+      "size": 5511
     },
     {
       "category": "governed_input",
@@ -465,8 +465,8 @@
     {
       "category": "governed_input",
       "path": "scripts/verify_release_contract.py",
-      "sha256": "e36bfbe8e4ad65720f54211f8888f95feb86bb0680667db63a7d2efba94650d4",
-      "size": 41087
+      "sha256": "a01add9db8e5b1589ebb8a1ddf55679772486b12bb313e764748f5bf56f706ef",
+      "size": 42406
     },
     {
       "category": "governed_input",
