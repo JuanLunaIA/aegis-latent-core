@@ -5,7 +5,26 @@
 
 from __future__ import annotations
 
+import pathlib
+
 import pytest
+
+
+def _source_version() -> str:
+    """The single source of truth for the release version.
+
+    Assertions below check the *repository's* version, not a fixture's, so they
+    read it rather than restating it. A hard-coded literal here turns every
+    version bump into a spurious test failure and asserts agreement with a
+    constant instead of with the release being cut.
+    """
+    import tomllib
+
+    root = pathlib.Path(__file__).resolve().parents[1]
+    with (root / "pyproject.toml").open("rb") as stream:
+        version: str = tomllib.load(stream)["project"]["version"]
+    return version
+
 
 # ── Import guard ─────────────────────────────────────────────────────────────
 
@@ -133,7 +152,7 @@ class TestBuildDeployment:
     def test_default_image_is_version_pinned(self, operator, basic_spec: dict) -> None:
         result = operator._build_deployment("proxy-1", "aegis-system", basic_spec)
         image = result["spec"]["template"]["spec"]["containers"][0]["image"]
-        assert image == "ghcr.io/juanlunaia/aegis-latent-core:4.1.0"
+        assert image == f"ghcr.io/juanlunaia/aegis-latent-core:{_source_version()}"
 
     def test_configurable_image(self, operator, basic_spec: dict) -> None:
         basic_spec["image"] = "registry.example/aegis@sha256:" + "a" * 64

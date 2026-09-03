@@ -2,15 +2,15 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 #
-# Aegis Latent Core v4.1.0 — strict deployment image (Python 3.12)
+# Aegis Latent Core v4.1.1 — strict deployment image (Python 3.12)
 #
-# Build: docker build -f deploy/docker/Dockerfile -t aegis-latent-core:4.1.0 .
+# Build: docker build -f deploy/docker/Dockerfile -t aegis-latent-core:4.1.1 .
 # Run with host-provided profiles and bounded privileges:
 # docker run --read-only --cap-drop=ALL --security-opt no-new-privileges=true \
 #   --security-opt seccomp=/etc/aegis/seccomp.json \
 #   --security-opt apparmor=aegis-latent-core \
 #   --tmpfs /tmp:rw,noexec,nosuid,size=64m -p 8080:8080 \
-#   --env-file .env -v /var/lib/aegis:/data aegis-latent-core:4.1.0
+#   --env-file .env -v /var/lib/aegis:/data aegis-latent-core:4.1.1
 #
 # Required env vars:
 #   AEGIS_BACKEND_API_KEY   — upstream LLM API key
@@ -49,7 +49,7 @@ RUN pip install --no-cache-dir ".[storage-sqlite]"
 FROM ${PYTHON_IMAGE}
 
 LABEL org.opencontainers.image.title="Aegis Latent Core" \
-      org.opencontainers.image.version="4.1.0" \
+      org.opencontainers.image.version="4.1.1" \
       org.opencontainers.image.description="Strict LLM gateway with durable signed forensic evidence" \
       org.opencontainers.image.licenses="AGPL-3.0"
 

@@ -22,7 +22,7 @@
 #   docker save python:3.11-slim | gzip > vendor/python-3.11-slim.tar.gz
 #   # Then transfer vendor/ to the air-gapped machine and build:
 #   docker load < vendor/python-3.11-slim.tar.gz
-#   docker build --network=none -f deploy/docker/Dockerfile.airgap -t aegis-latent-core:4.1.0-airgap .
+#   docker build --network=none -f deploy/docker/Dockerfile.airgap -t aegis-latent-core:4.1.1-airgap .
 
 set -euo pipefail
 
@@ -42,7 +42,7 @@ pip download \
     --python-version 3.11 \
     --platform manylinux_2_28_x86_64 \
     --only-binary=:all: \
-    "aegis-latent-core[storage-sqlite]==4.1.0" 2>/dev/null || \
+    "aegis-latent-core[storage-sqlite]==4.1.1" 2>/dev/null || \
 pip download \
     --dest "${WHEELS_ABS}" \
     ".[storage-sqlite]" \
@@ -87,7 +87,7 @@ if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
         echo "[vendor_wheels]   docker build --network=none \\"
         echo "[vendor_wheels]     --build-arg PYTHON_BASE_DIGEST=${DIGEST} \\"
         echo "[vendor_wheels]     -f deploy/docker/Dockerfile.airgap \\"
-        echo "[vendor_wheels]     -t aegis-latent-core:4.1.0-airgap ."
+        echo "[vendor_wheels]     -t aegis-latent-core:4.1.1-airgap ."
     fi
 else
     echo "[vendor_wheels] Docker not available — skipping base image digest capture"

@@ -7,9 +7,27 @@ tests/test_rust_extension.py — aegis_rust PyO3 extension (skipped when not bui
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
 
+import pathlib
 import unittest
 
 import pytest
+
+
+def _source_version() -> str:
+    """The single source of truth for the release version.
+
+    Assertions below check the *repository's* version, not a fixture's, so they
+    read it rather than restating it. A hard-coded literal here turns every
+    version bump into a spurious test failure and asserts agreement with a
+    constant instead of with the release being cut.
+    """
+    import tomllib
+
+    root = pathlib.Path(__file__).resolve().parents[1]
+    with (root / "pyproject.toml").open("rb") as stream:
+        version: str = tomllib.load(stream)["project"]["version"]
+    return version
+
 
 try:
     import aegis_rust
@@ -23,7 +41,7 @@ except ImportError:
 class TestAegisRustExtension:
     def test_import_and_version(self) -> None:
         assert hasattr(aegis_rust, "RustForwarder")
-        assert aegis_rust.__version__ == "4.1.0"
+        assert aegis_rust.__version__ == _source_version()
 
     def test_pqc_sign_verify_roundtrip(self) -> None:
         kp = aegis_rust.generate_pqc_keypair()

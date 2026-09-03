@@ -40,7 +40,7 @@ That sentence carries the three things that matter: **ordering**, **verifiabilit
 
 **Do not lead with:** compliance, cryptography theory, or enterprise framing.
 
-**Be honest early about:** `pending-terminal` semantics, one worker per WAL path, and the SDK registry lag — a developer who installs `4.0.0` from PyPI and reads `4.1.0` documentation will hit a mismatch and lose trust.
+**Be honest early about:** `pending-terminal` semantics, one worker per WAL path, and the SDK registry lag — a developer who installs `4.0.0` from PyPI and reads `4.1.1` documentation will hit a mismatch and lose trust.
 
 ### Security reviewers
 
@@ -85,7 +85,7 @@ These are prohibited in every channel, to every audience, regardless of who is a
 | Production-ready | Source baseline; target acceptance required |
 | Guaranteed, SLA, uptime | No service level exists outside an executed agreement |
 | Enterprise-grade, best-in-class, unmatched | Say what it does |
-| Published on PyPI at 4.1.0 | SDKs are at 4.0.0; source is at 4.1.0 |
+| Published on PyPI at 4.1.1 | SDKs are at 4.0.0; source is at 4.1.1 |
 
 Full list: [Style Guide §3](../STYLE_GUIDE.md#3-prohibited-language) and [Unsupported Claims](../institutional/UNSUPPORTED_CLAIMS.md).
 

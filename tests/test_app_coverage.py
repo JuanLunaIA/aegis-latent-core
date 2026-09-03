@@ -11,11 +11,30 @@ Covers: RequestSmugglingProtectionMiddleware (all 3 rejection branches),
 
 from __future__ import annotations
 
+import pathlib
+
 import httpx
 import pytest
 
 from aegis.config import AegisSettings
 from aegis.proxy.app import create_app
+
+
+def _source_version() -> str:
+    """The single source of truth for the release version.
+
+    Assertions below check the *repository's* version, not a fixture's, so they
+    read it rather than restating it. A hard-coded literal here turns every
+    version bump into a spurious test failure and asserts agreement with a
+    constant instead of with the release being cut.
+    """
+    import tomllib
+
+    root = pathlib.Path(__file__).resolve().parents[1]
+    with (root / "pyproject.toml").open("rb") as stream:
+        version: str = tomllib.load(stream)["project"]["version"]
+    return version
+
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
 
@@ -135,7 +154,7 @@ async def test_health_returns_schema_fields(tmp_wal):
         assert "ledger" in body
         assert "analyzer_cache" in body
         assert "version" in body
-        assert body["version"] == "4.1.0"
+        assert body["version"] == _source_version()
     finally:
         _close_app_ledger(app)
 

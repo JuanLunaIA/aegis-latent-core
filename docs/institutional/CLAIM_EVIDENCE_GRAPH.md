@@ -3,7 +3,7 @@
 **Graph version:** 1.0
 **Source cutoff:** 2026-08-27 UTC
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out source metadata is synchronized at `v4.1.0`
+**Source baseline:** checked-out source metadata is synchronized at `v4.1.1`
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** published `v3.1.0` artifacts and retained measurements remain historical; post-v3.1.0 capabilities are not attributed to that distribution
 **Normative status authority:** `docs/CLAIMS_MATRIX.md`

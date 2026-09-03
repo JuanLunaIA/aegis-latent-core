@@ -3,7 +3,7 @@
 **Document ID:** `DOC-05`
 **Canonical language:** US English
 **Review date:** 2026-08-20 UTC
-**Source boundary:** checked-out source metadata is synchronized at `v4.1.0`; source metadata does not prove external tag, release, registry, OCI, deployment, compliance, or acceptance state
+**Source boundary:** checked-out source metadata is synchronized at `v4.1.1`; source metadata does not prove external tag, release, registry, OCI, deployment, compliance, or acceptance state
 **Historical evidence scope:** the technical and regulatory mapping reviewed on 2026-08-20 remains a `v3.1.0`-era record unless explicitly revalidated against the current source
 **Status:** Technical control-contribution dossier; not legal advice, certification, attestation, authorization, or conformity assessment
 **Primary owners:** Customer compliance owner, qualified counsel, independent assessor, evidence custodian, security owner, and release owner

@@ -4,7 +4,7 @@ This runbook is for platform engineering, SRE, security operations and release r
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** four-layer truth model
-**Source baseline/release target:** `v4.1.0` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
+**Source baseline/release target:** `v4.1.1` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` with `4.0.0` anchors
 **Previous public GitHub Release:** `v4.0.1` lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Observed registries:** PyPI/npm `4.0.0`, without workflow provenance attribution
@@ -12,7 +12,7 @@ This runbook is for platform engineering, SRE, security operations and release r
 **Scope:** Aegis local WAL and governed-request evidence path
 **Audience:** Platform engineering, SRE, security operations and release reviewers
 
-The retained numeric results below belong to the published `v3.1.0` evidence baseline. The checked-out `v4.1.0` source baseline/release target and immutable comparison source identify implementations under documentation review, not a rerun of those measurements. Do not promote the v3.1.0 results to v4 capacity, latency, availability, or SLO claims without a v4 rerun and target-environment acceptance evidence.
+The retained numeric results below belong to the published `v3.1.0` evidence baseline. The checked-out `v4.1.1` source baseline/release target and immutable comparison source identify implementations under documentation review, not a rerun of those measurements. Do not promote the v3.1.0 results to v4 capacity, latency, availability, or SLO claims without a v4 rerun and target-environment acceptance evidence.
 
 ## Runtime contract
 

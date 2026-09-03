@@ -1,8 +1,8 @@
 # Developer Quickstart — Aegis Latent Core
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** `v4.1.0` source; external release status requires independent readback
-**Source baseline:** `v4.1.0`; source metadata alone does not establish publication
+**Release baseline:** `v4.1.1` source; external release status requires independent readback
+**Source baseline:** `v4.1.1`; source metadata alone does not establish publication
 **Retained evidence baseline:** previously published `v3.1.0` artifacts; retained measurements remain historical
 **Distribution verification:** confirm the signed tag, release assets, registry versions, OCI digest, and attestations before using a registry install
 

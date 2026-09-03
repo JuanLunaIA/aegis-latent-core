@@ -1,18 +1,18 @@
 # Component, Package, and Workflow Matrix
 
-This map separates **package identity**, **version synchronization**, **runtime linkage**, **GitHub publication**, **registry observation**, and **provenance**. Historical immutable source baseline `fdace8844568eb788216740b2cb5daf187d99d3b` has 14 anchors at `4.0.0`. Historical published GitHub Release `v4.0.1` is a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`. Prior public PyPI/npm `aegis-latent-sdk` packages were observed at `4.0.0`, without attribution to failed workflows. The checked-out source release target is `v4.1.0` with 14 synchronized `4.1.0` anchors. External lifecycle state (tag, GitHub Release, PyPI, npm, OCI, and attestations) must be independently read back and is not encoded by source metadata.
+This map separates **package identity**, **version synchronization**, **runtime linkage**, **GitHub publication**, **registry observation**, and **provenance**. Historical immutable source baseline `fdace8844568eb788216740b2cb5daf187d99d3b` has 14 anchors at `4.0.0`. Historical published GitHub Release `v4.0.1` is a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`. Prior public PyPI/npm `aegis-latent-sdk` packages were observed at `4.0.0`, without attribution to failed workflows. The checked-out source release target is `v4.1.1` with 14 synchronized `4.1.1` anchors. External lifecycle state (tag, GitHub Release, PyPI, npm, OCI, and attestations) must be independently read back and is not encoded by source metadata.
 
 ## Fourteen synchronized version anchors
 
-The authoritative loader is `_load_versions` in [`scripts/verify_release_contract.py`](../scripts/verify_release_contract.py). Every row in the checked-out source release target resolves to `4.1.0`; this does not alter the independent historical source-baseline, GitHub Release, prior registry observations, or current external lifecycle state.
+The authoritative loader is `_load_versions` in [`scripts/verify_release_contract.py`](../scripts/verify_release_contract.py). Every row in the checked-out source release target resolves to `4.1.1`; this does not alter the independent historical source-baseline, GitHub Release, prior registry observations, or current external lifecycle state.
 
 | Anchor label | Authoritative field | Component/package identity | Publication boundary |
 |---|---|---|---|
 | `core` | [`pyproject.toml`](../pyproject.toml) `project.version` | Python distribution `aegis-latent-core` | Source-target metadata only; PyPI state requires independent read-back. |
 | `core-runtime` | [`aegis/__init__.py`](../aegis/__init__.py) `__version__` | Import package `aegis` | Runtime string is not release evidence. |
-| `python-sdk` | [`sdk/python/pyproject.toml`](../sdk/python/pyproject.toml) `project.version` | Python distribution `aegis-latent-sdk` | PyPI 4.0.0 is a separate prior public observation; source-target 4.1.0 metadata is not publication evidence. |
+| `python-sdk` | [`sdk/python/pyproject.toml`](../sdk/python/pyproject.toml) `project.version` | Python distribution `aegis-latent-sdk` | PyPI 4.0.0 is a separate prior public observation; source-target 4.1.1 metadata is not publication evidence. |
 | `python-sdk-runtime` | [`sdk/python/src/aegis_sdk/__init__.py`](../sdk/python/src/aegis_sdk/__init__.py) `__version__` | Import package `aegis_sdk` | Runtime string is not registry evidence. |
-| `typescript-sdk` | [`sdk/typescript/package.json`](../sdk/typescript/package.json) `version` | npm package `aegis-latent-sdk` | npm 4.0.0 is a separate prior public observation; source-target 4.1.0 metadata is not publication evidence. |
+| `typescript-sdk` | [`sdk/typescript/package.json`](../sdk/typescript/package.json) `version` | npm package `aegis-latent-sdk` | npm 4.0.0 is a separate prior public observation; source-target 4.1.1 metadata is not publication evidence. |
 | `typescript-lock` | [`sdk/typescript/package-lock.json`](../sdk/typescript/package-lock.json) root package version | Locked TypeScript SDK workspace | Lock metadata is not publication evidence. |
 | `dashboard` | [`dashboard/package.json`](../dashboard/package.json) `version` | Private package `aegis-audit-dashboard` | `private: true`; it is a private application package, built rather than published as npm package source. |
 | `dashboard-lock` | [`dashboard/package-lock.json`](../dashboard/package-lock.json) root package version | Locked dashboard workspace | Lock metadata is not publication evidence. |

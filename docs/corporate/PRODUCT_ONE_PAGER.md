@@ -57,7 +57,7 @@ No SaaS. No managed service. No vendor access to any deployment.
 | Cross-replica ordering | Does not exist. |
 | Assurance | No independent audit or penetration test. |
 | Maintainer capacity | Single maintainer; bus factor of one. |
-| Registry state | SDKs published at `4.0.0`; source baseline is `4.1.0`. |
+| Registry state | SDKs published at `4.0.0`; source baseline is `4.1.1`. |
 
 ---
 

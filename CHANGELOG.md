@@ -14,14 +14,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No source changes since `4.1.0`.
+No source changes since `4.1.1`.
+
+## [4.1.1] — 2026-09-03
+
+Release-engineering fix. `4.1.0`'s source is unchanged apart from the CI
+correction below; this version exists because `4.1.0` could not be published
+correctly and a published GitHub Release cannot be repaired in place.
+
+### Fixed
+
+- The `Generate SBOM` job in `ci.yml` failed on a `release: published` event
+  with "Resource not accessible by integration". `anchore/sbom-action` defaults
+  `upload-release-assets` to true and the input was never set, so the job tried
+  to attach an SBOM to the release while holding `contents: read`. The upload is
+  now disabled explicitly and the token stays read-only: `release.yml` is the
+  single owner of release assets and emits its own canonical
+  `aegis-latent-core-<version>.spdx.json` with a sidecar. Granting write instead
+  would have published an asset absent from `release-asset-manifest.json` and
+  unhashed in `SHA256SUMS`, which is the manifest a consumer is told to verify
+  against.
+
+### Boundary
+
+- **`4.1.0` was tagged and released outside the release pipeline, and the result
+  is not a usable release.** No workflow in this repository is tag-triggered, so
+  pushing a tag by hand ran nothing: the `v4.1.0` GitHub Release carries zero
+  assets, no Deployments were created, and the tag is lightweight rather than the
+  Sigstore-signed annotated tag `scripts/verify_release_tag.sh` requires. Both
+  the `v4.0.2` and `v4.1.0` releases are marked immutable, which freezes an
+  asset set at publication, so `v4.1.0` cannot be populated after the fact. It is
+  superseded by this version rather than corrected.
+- Publication of `4.1.1` establishes nothing by itself. Tag, GitHub Release,
+  PyPI, npm, OCI, signature and attestation state remain external readback facts;
+  see `docs/RELEASE_STATUS.md`.
 
 ## [4.1.0] — 2026-09-03
 
-Kernel hardening and evidence-path correctness. **Source-only: nothing in this
-release is published.** No `v4.1.0` tag, GitHub Release, PyPI or npm package,
-OCI image, signature or attestation exists. `docs/RELEASE_STATUS.md` records the
-publication state, and the SDK registries remain two versions behind at `4.0.0`.
+Kernel hardening and evidence-path correctness. **This version was never
+published through the release pipeline.** A lightweight `v4.1.0` tag and an
+empty, immutable GitHub Release were created by hand after the fact; they carry
+no assets, no Deployments and no signature, and the tag does not satisfy
+`scripts/verify_release_tag.sh`. No PyPI or npm package, OCI image or
+attestation exists for `4.1.0`. It is superseded by `4.1.1`.
+`docs/RELEASE_STATUS.md` records the readback state.
 
 ### Security
 

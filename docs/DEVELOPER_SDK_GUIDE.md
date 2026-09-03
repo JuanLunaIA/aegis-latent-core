@@ -1,8 +1,8 @@
 # Aegis SDK Developer Guide
 
-**Source version:** `4.1.0`
+**Source version:** `4.1.1`
 **Package identities:** Python `aegis-latent-sdk` / import `aegis_sdk`; npm `aegis-latent-sdk`
-**Status:** the checked-out `v4.1.0` source baseline/release target exists; public package artifacts were independently observed at `4.0.0`. This guide does not establish `4.1.0` registry publication, trusted-publishing provenance, production fitness, or provider certification; no `4.1.0` artifact is published anywhere.
+**Status:** the checked-out `v4.1.1` source baseline/release target exists; public package artifacts were independently observed at `4.0.0`. This guide does not establish `4.1.1` registry publication, trusted-publishing provenance, production fitness, or provider certification; no `4.1.1` artifact is published anywhere.
 
 ## 1. Scope
 
@@ -71,7 +71,7 @@ python -m pytest -q tests/integrations
 
 ### 2.4 Worked Python patterns
 
-Every symbol below is exported by the checked-out `4.1.0` source tree. The constructors are keyword-only; `aegis_api_key`, `gateway_url`, and `tenant_id` are required.
+Every symbol below is exported by the checked-out `4.1.1` source tree. The constructors are keyword-only; `aegis_api_key`, `gateway_url`, and `tenant_id` are required.
 
 **Synchronous drop-in.** The class subclasses the official client, so the request surface is unchanged.
 
@@ -312,7 +312,7 @@ For mTLS behind an allowlisted proxy, the gateway accepts `X-Forwarded-Client-Ce
 
 ## 5. Release and provenance boundaries
 
-The synchronized source version is `4.1.0`. The canonical package identities are `aegis-latent-sdk` for both Python and npm. Similar names such as `aegis-sdk` or `@aegis-latent/sdk` are different registry identities and must not be substituted.
+The synchronized source version is `4.1.1`. The canonical package identities are `aegis-latent-sdk` for both Python and npm. Similar names such as `aegis-sdk` or `@aegis-latent/sdk` are different registry identities and must not be substituted.
 
 A valid source gate does not prove registry provenance. Release workflows require an annotated signed tag whose semantic version exactly matches all package anchors and whose commit is reachable from `origin/main`. Publication additionally depends on protected environments, registry-side trusted-publisher configuration, and successful workflow execution.
 
@@ -325,7 +325,7 @@ A valid source gate does not prove registry provenance. Release workflows requir
 | Core Python | `python -m pytest -q` | Suite exits 0; report exact pass/skip totals |
 | Rust core | `cd aegis_rust_v2 && cargo test --locked && cargo clippy --locked --all-targets --all-features -- -D warnings` | Tests and Clippy exit 0 |
 | Formal scope | `scripts/verify_formal_artifacts.sh` | Two Z3 checks are `unsat`, Lean compiles, and all bounded TLC models report no error |
-| Release contract | `python scripts/verify_release_contract.py --root . --tag v4.1.0` | `release source contract: READY` |
+| Release contract | `python scripts/verify_release_contract.py --root . --tag v4.1.1` | `release source contract: READY` |
 
 These checks establish only their stated source and bounded-model properties. They do not imply full implementation refinement, performance, production readiness, compliance certification, or external service acceptance.
 
