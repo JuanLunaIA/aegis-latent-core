@@ -119,7 +119,24 @@ _SAFE_HARBOR_PATTERNS: list[_Pattern] = [
     # ── 2. Geographic sub-state data — street addresses ───────────────────
     _Pattern(
         "ADDRESS",
-        r"\b\d{1,5}\s+[A-Za-z0-9 ]+(?:St(?:reet)?|Ave(?:nue)?|Blvd|Rd|Road|"
+        # The street-name run is bounded at 40 characters. Unbounded, it made any
+        # number-led run of letters, digits and spaces a viable address prefix, so
+        # ordinary prose beginning with a figure ("3 reasons the migration ...")
+        # could only be resolved by reading to the end of the buffer. In the
+        # streaming path that meant the bounded holdback could never settle it and
+        # the stream aborted with `privacy_failure` on text containing no PHI.
+        #
+        # 40 is measured headroom, not a guess: the longest street-name span in a
+        # sample of real addresses was 18 characters ("500 South Buena Vista
+        # Street"), so this is 2.2x the observed maximum while keeping a whole
+        # match under ~54 characters — comfortably inside the 64-character minimum
+        # streaming window.
+        #
+        # The cost is real and one-directional: a street name longer than 40
+        # characters is no longer redacted. That is a recall reduction at the
+        # far tail of the distribution, accepted deliberately to stop aborting
+        # streams of ordinary text. See CLM-057 and PII_REDACTION_BOUNDARIES.
+        r"\b\d{1,5}\s+[A-Za-z0-9 ]{1,40}(?:St(?:reet)?|Ave(?:nue)?|Blvd|Rd|Road|"
         r"Dr(?:ive)?|Ln|Lane|Ct|Court|Pl|Place|Way|Pkwy|Hwy|Highway)\b",
         re.IGNORECASE,
     ),

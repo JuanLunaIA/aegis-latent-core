@@ -17,7 +17,7 @@ import math
 import time
 from dataclasses import dataclass, field
 from threading import Lock
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -79,7 +79,7 @@ def _looks_like_token_entry(item: object) -> bool:
     return any(hasattr(item, k) for k in _TOKEN_ENTRY_KEYS)
 
 
-def _logprobs_to_numpy(top_logprobs: list) -> np.ndarray:
+def _logprobs_to_numpy(top_logprobs: list[Any]) -> np.ndarray:
     """Convert a list of TopLogprob objects or raw dicts to a normalised probability array.
 
     Handles both Pydantic model instances (``t.logprob``) and raw dict payloads
@@ -100,7 +100,7 @@ def _logprobs_to_numpy(top_logprobs: list) -> np.ndarray:
     s = probs.sum()
     if s == 0.0:  # pragma: no cover - unreachable: max-shift forces exp(0)=1.0, so s>=1.0
         return np.ones(len(probs)) / len(probs)
-    return probs / s
+    return cast("np.ndarray[Any, np.dtype[Any]]", probs / s)
 
 
 class ResponseAnalyzer:
@@ -193,7 +193,7 @@ class ResponseAnalyzer:
                 content = getattr(first_item, "content", None)
                 if content is None and _looks_like_token_entry(first_item):
                     content = logprobs_data
-        elif hasattr(logprobs_data, "content"):
+        elif logprobs_data is not None and hasattr(logprobs_data, "content"):
             content = logprobs_data.content
 
         if not content or len(content) < _MIN_TOKENS_FOR_ANALYSIS:
@@ -338,25 +338,18 @@ class ResponseAnalyzer:
             if tok_alert:
                 alerts.append(tok_alert)
 
-            # Support both objects and dictionaries for TokenAnalysis
-            if isinstance(tok, dict):
-                token_data = {
-                    "token": tok.get("token"),
-                    "entropy_bits": entropy,
-                    "ema": ema,
-                    "kl_vs_prev": kl,
-                    "js_vs_prev": js,
-                    "alert": tok_alert,
-                }
-            else:
-                token_data = TokenAnalysis(
-                    token=tok.token,
-                    entropy_bits=entropy,
-                    ema=ema,
-                    kl_vs_prev=kl,
-                    js_vs_prev=js,
-                    alert=tok_alert,
-                )
+            # Token entries arrive either as provider dicts or as objects.
+            # Both produce a TokenAnalysis: `token_results` is a
+            # list[TokenAnalysis], and appending a raw dict here made entries
+            # from the dict path fail attribute access downstream.
+            token_data = TokenAnalysis(
+                token=str(tok.get("token") or "") if isinstance(tok, dict) else tok.token,
+                entropy_bits=entropy,
+                ema=ema,
+                kl_vs_prev=kl,
+                js_vs_prev=js,
+                alert=tok_alert,
+            )
 
             self._prev_logits = pseudo_logits
             token_results.append(token_data)

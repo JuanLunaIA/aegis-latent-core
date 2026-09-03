@@ -27,7 +27,7 @@ class AegisFormalModel:
     to reach the SISTEMA INEXPUGNABLE state.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.invariants: dict[str, FormalInvariant] = {
             "IMMUTABILITY_CHAIN": FormalInvariant(
                 name="Merkle Chain Immutability",

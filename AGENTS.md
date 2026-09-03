@@ -4,8 +4,8 @@ These are the canonical shared rules for coding agents. Tool-specific files shou
 
 ## Baselines and claims
 
-- The checked-out source baseline/release target is **4.0.2** with fourteen synchronized anchors. Source metadata does not establish external lifecycle state; verify the `v4.0.2` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback.
-- Historical comparison: parent `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors; public `v4.0.1` is a lightweight tag at `6469904380218584ae0b5221334bc9a46500f5ba` with failed workflows; registries were observed at `4.0.0` without attributed provenance.
+- The checked-out source baseline/release target is **4.1.0** with fourteen synchronized anchors. Source metadata does not establish external lifecycle state; verify the `v4.1.0` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback.
+- Historical comparison: parent `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors; the most recent published release is signed annotated tag `v4.0.2` at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, whose GitHub Release and GHCR images were read back on 2026-09-02; before it, public `v4.0.1` is a lightweight tag at `6469904380218584ae0b5221334bc9a46500f5ba` with failed workflows; registries were observed at `4.0.0` without attributed provenance.
 - Distinguish **implemented**, **locally tested**, **measured**, **configuration-dependent**, **published**, and **externally accepted**. Preserve historical claims in their original scope.
 - `docs/CLAIMS_MATRIX.md` controls public claims. Do not assert certification, legal compliance, court admissibility, production readiness/capacity, or external assurance without direct evidence.
 

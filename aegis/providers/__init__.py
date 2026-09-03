@@ -95,6 +95,7 @@ def build_provider(
     if normalized not in _PROVIDER_REGISTRY:
         raise ValueError(f"Unknown provider {name!r}. Valid options: {sorted(PROVIDER_NAMES)}")
 
+    adapter: ProviderAdapter
     if normalized == "openrouter":
         adapter = OpenRouterAdapter(
             site_url=openrouter_site_url,

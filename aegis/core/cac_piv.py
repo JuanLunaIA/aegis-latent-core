@@ -162,7 +162,7 @@ class CACPIVVerifier:
                 if m:
                     return m.group(1)
         except Exception:
-            pass
+            logger.debug("EDIPI could not be extracted from the certificate CN", exc_info=True)
 
         # 2. Try UUID from SubjectAltName URI (PIV-I / GSA PIV cards)
         try:

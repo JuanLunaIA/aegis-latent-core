@@ -4,8 +4,8 @@ This policy defines the vulnerability-reporting path, support boundary, producti
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** current source/release candidate
-**Current candidate/source line:** `4.0.2` with fourteen synchronized anchors; supported as the current source line without asserting external publication
-**Historical external baseline:** lightweight `v4.0.1` tag at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
+**Current candidate/source line:** `4.1.0` with fourteen synchronized anchors; supported as the current source line without asserting external publication
+**Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **Private reporting path:** GitHub Private Vulnerability Reporting
 
 ## Scope and support posture
@@ -14,12 +14,13 @@ Aegis Latent Core is security-sensitive infrastructure. The repository provides 
 
 | Version line | Support status |
 |---|---|
-| `4.0.x` | Current candidate and supported source line (`4.0.2`); support does not assert an external `v4.0.2` tag, release, or package publication. |
+| `4.1.x` | Current candidate and supported source line (`4.1.0`); nothing is published for it. Support does not assert an external `v4.1.0` tag, release, or package publication. |
+| `4.0.x` | Most recently published line (`v4.0.2` tag, GitHub Release and GHCR images). SDK registries remain at `4.0.0`. |
 | `3.1.x` | Historical v3.1.0 market-hardening line; fixes remain subject to the project's actual operating capacity and supported-version policy. |
 | `3.0.x` | Published v3.0.1 baseline. Upgrade to the candidate line for new hardening; security fixes remain subject to the project’s actual operating capacity. |
 | `<3.0.0` | Historical releases. Upgrade before requesting support; no default security-fix commitment is made. |
 
-The current supported source line is `4.0.x`, with candidate `4.0.2` and fourteen synchronized anchors. External `v4.0.2` publication is not claimed until tag, release, and registry readback succeeds. The previous public GitHub baseline is lightweight tag `v4.0.1` targeting `6469904380218584ae0b5221334bc9a46500f5ba`; its tag workflows failed, while PyPI/npm were separately observed at `4.0.0` without attributed provenance. Release support must be evaluated from published artifacts, while source behavior must be evaluated from the named commit, tests, and deployment prerequisites.
+The current supported source line is `4.1.x`, with candidate `4.1.0` and fourteen synchronized anchors. External `v4.1.0` publication is not claimed until tag, release, and registry readback succeeds; no such readback has been performed, because nothing has been published for `4.1.0`. The most recent published line is `4.0.x`: the signed annotated tag `v4.0.2` targets `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, and its GitHub Release and GHCR images were read back on 2026-09-02. The previous public GitHub baseline is lightweight tag `v4.0.1` targeting `6469904380218584ae0b5221334bc9a46500f5ba`; its tag workflows failed, while PyPI/npm were separately observed at `4.0.0` without attributed provenance. Release support must be evaluated from published artifacts, while source behavior must be evaluated from the named commit, tests, and deployment prerequisites.
 
 ## Reporting a vulnerability
 

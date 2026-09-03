@@ -4,18 +4,36 @@
 **Scope:** the version, publication, and provenance record for this repository.
 **Boundary:** this is the only document that states publication state. Every other document links here. Source metadata never establishes publication; readback does.
 
-**Last verified:** 2026-09-02 UTC
-**Source baseline:** `4.0.2`, fourteen synchronized anchors
+**Last verified:** 2026-09-03 UTC (source baseline); 2026-09-02 UTC (external surfaces)
+**Source baseline:** `4.1.0`, fourteen synchronized anchors
+**Publication state of `4.1.0`:** **nothing is published.** No tag, release, registry package, image, signature or attestation exists for this version.
 
 ---
 
 ## 1. Publication state
 
-Each row is a separate observable. A `Confirmed` cell means the readback command in §2 was executed on the date shown and returned the stated result.
+**Read this section as two separate things.** The source baseline moved to `4.1.0` on 2026-09-03. Every external surface below was last read back on 2026-09-02, when the source baseline was `4.0.2`, and **those rows describe `4.0.2` — not `4.1.0`.** No readback has been performed for `4.1.0` because nothing has been published for it.
+
+Nothing in this table may be restated with the version number changed. A `4.0.2` digest is not a `4.1.0` digest, and a `4.0.2` signature attests to `4.0.2` bytes.
+
+### 1.1 The current source baseline
 
 | Surface | State | Observed value | Readback |
 | --- | --- | --- | --- |
-| Source baseline | Confirmed | `4.0.2`, fourteen synchronized anchors | §2.1 |
+| Source baseline | Confirmed | `4.1.0`, fourteen synchronized anchors, contract `READY` | §2.1 |
+| GitHub tag `v4.1.0` | **Not created** | No tag exists | — |
+| GitHub Release `v4.1.0` | **Not published** | No release exists | — |
+| PyPI / npm at `4.1.0` | **Not published** | No package exists | — |
+| OCI image at `4.1.0` | **Not published** | No image exists | — |
+| Signatures / attestations for `4.1.0` | **Do not exist** | Nothing has been signed or attested | — |
+
+### 1.2 Historical readback — `4.0.2`, observed 2026-09-02
+
+Retained as the record of what that version's surfaces actually carried. These rows are historical and are not claims about `4.1.0`.
+
+| Surface | State | Observed value | Readback |
+| --- | --- | --- | --- |
+| Source baseline at that date | Confirmed | `4.0.2`, fourteen synchronized anchors | §2.1 |
 | GitHub tag | Confirmed | `v4.0.2` → `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca` | §2.2 |
 | GitHub Release | Confirmed | Published 2026-08-28, non-draft, non-prerelease, 31 assets | §2.3 |
 | PyPI (`aegis-latent-sdk`) | **Not published at 4.0.2** | Latest `4.0.0`; only release is `4.0.0` | §2.4 |
@@ -29,7 +47,9 @@ Each row is a separate observable. A `Confirmed` cell means the readback command
 | Build attestations | Confirmed in workflow; verify per artifact | `actions/attest-build-provenance` covers wheels, sdists, tgz, SBOMs, manifest and `SHA256SUMS` | §2.8 |
 | Tag signature | Confirmed, shows `bad_cert` on GitHub | Sigstore keyless; see §3 | §2.9 |
 
-**The two rows that matter most for a consumer:** the SDKs on PyPI and npm are at `4.0.0`, not `4.0.2`. Do not describe `4.0.2` as released to those registries. The gateway ships from source; the registries carry SDKs only.
+**The two rows that matter most for a consumer:** the SDKs on PyPI and npm are at `4.0.0` — not `4.0.2`, and certainly not `4.1.0`. Do not describe either version as released to those registries. The gateway ships from source; the registries carry SDKs only.
+
+**The registry gap is now two versions wide.** `4.0.2` was never published to PyPI or npm, and `4.1.0` is not published anywhere at all. A consumer installing from a registry receives `4.0.0`, which is two releases behind this source tree.
 
 ## 2. Readback commands
 

@@ -246,6 +246,14 @@ class MerkleMountainRange:
                 break
 
             parent = self.nodes[node.parent]
+            # An internal node is only ever created with both children set
+            # (`_add_parent`), so a half-linked parent means the accumulator is
+            # corrupt. Raise rather than index with None: the proof this would
+            # return is not a proof of anything.
+            if parent.left is None or parent.right is None:
+                raise ValueError(
+                    f"MMR node {parent.index} is an internal node with a missing child link"
+                )
             if node.index == parent.left:
                 # Current node is left child, sibling is right
                 sibling = self.nodes[parent.right]
@@ -535,18 +543,18 @@ try:
                 root = self._rust.add_leaf(data)
                 # Keep Python structure in sync for inclusion/consistency proofs
                 self._py.add_leaf(data)
-                return root
+                return str(root)
 
             def get_root_hash(self) -> str:
-                return self._rust.get_root_hash()
+                return str(self._rust.get_root_hash())
 
             def get_leaf_count(self) -> int:
                 return int(self._rust.get_leaf_count())
 
-            def get_inclusion_proof(self, leaf_index: int):
+            def get_inclusion_proof(self, leaf_index: int) -> list[tuple[str, str]]:
                 return self._py.get_inclusion_proof(leaf_index)
 
-            def get_portable_inclusion_proof(self, leaf_index: int):
+            def get_portable_inclusion_proof(self, leaf_index: int) -> MMRInclusionProofV1:
                 return self._py.get_portable_inclusion_proof(leaf_index)
 
             def verify_inclusion(
@@ -560,10 +568,10 @@ try:
             ) -> bool:
                 return MerkleMountainRange.verify_portable_inclusion(leaf_data, proof, trusted_root)
 
-            def get_consistency_proof(self, old_root: str, old_count: int):
+            def get_consistency_proof(self, old_root: str, old_count: int) -> tuple[str, list[str]]:
                 return self._py.get_consistency_proof(old_root, old_count)
 
-        mmr_manager = RustBackedMMR()
+        mmr_manager: RustBackedMMR | MerkleMountainRange = RustBackedMMR()
     else:
         mmr_manager = MerkleMountainRange()
 except Exception:

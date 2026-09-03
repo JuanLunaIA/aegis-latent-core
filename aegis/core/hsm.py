@@ -78,7 +78,7 @@ class HSMSigningBackend:
         When non-empty, the slot is resolved by token label rather than slot_id.
     """
 
-    def __init__(
+    def __init__(  # nosec B107 - PKCS#11 PIN defaults to None so it must be supplied explicitly; no secret is embedded
         self,
         library_path: str,
         slot_id: int = 0,

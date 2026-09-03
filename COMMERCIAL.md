@@ -4,8 +4,8 @@ This document summarizes the open-source and commercial licensing boundary and t
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** current source/release candidate
-**Source/release candidate:** `4.0.2` with fourteen synchronized anchors; external `v4.0.2` publication is not claimed before readback
-**Historical external baseline:** lightweight `v4.0.1` tag at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
+**Source/release candidate:** `4.1.0` with fourteen synchronized anchors; external `v4.1.0` publication is not claimed before readback
+**Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **License source:** [`LICENSE`](LICENSE)
 **Commercial strategy:** [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md)
 
@@ -17,7 +17,7 @@ This file does not determine whether a specific use triggers AGPL obligations, w
 
 ## Product baseline for commercial review
 
-The current source/release candidate is **4.0.2** with fourteen synchronized anchors. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP exports, and an auxiliary `RustWal` streaming segment. No external `v4.0.2` tag, GitHub Release, PyPI/npm package, or OCI image is claimed until successful readback. The prior public `v4.0.1` lightweight tag and observed `4.0.0` registry objects are historical external baselines, not provenance for this candidate; a commercial scope must name the exact commit or a future published release.
+The current source/release candidate is **4.1.0** with fourteen synchronized anchors. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP exports, and an auxiliary `RustWal` streaming segment. No external `v4.1.0` tag, GitHub Release, PyPI/npm package, or OCI image is claimed until successful readback, and none exists today. The published `v4.0.2` release objects, the prior public `v4.0.1` lightweight tag, and observed `4.0.0` registry objects are historical external baselines, not provenance for this candidate; a commercial scope must name the exact commit or a future published release.
 
 For non-streaming calls, durable evidence and MMR proof headers are available after commit. For streams, initial headers remain `pending-terminal`; the terminal record is committed before the protocol terminal marker and proof retrieval occurs after termination.
 

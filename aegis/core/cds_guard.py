@@ -38,6 +38,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Any
 
 from aegis.core.classified_marker_detector import ClassifiedMarkerDetector
 
@@ -131,7 +132,7 @@ class CDSCheckResult:
     classified_markers_found: list[str] = field(default_factory=list)
     reason: str = ""
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-safe dict for audit logging."""
         return {
             "allowed": self.allowed,

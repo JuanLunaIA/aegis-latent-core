@@ -83,7 +83,7 @@ def _prctl_enable_mte() -> bool:
             ctypes.c_ulong(0),
             ctypes.c_ulong(0),
         )
-        return ret == 0
+        return bool(ret == 0)
     except OSError:
         return False
 

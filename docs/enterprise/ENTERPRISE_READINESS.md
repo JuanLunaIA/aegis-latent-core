@@ -26,7 +26,7 @@
 | Model | Available | Notes |
 | --- | --- | --- |
 | Self-hosted from source | Yes | The supported path. See [Deployment Profiles](../operations/DEPLOYMENT_PROFILES.md). |
-| Self-hosted container | Yes | `ghcr.io/juanlunaia/aegis-latent-core:4.0.2`, digest-pinnable, cosign-signed. |
+| Self-hosted container | Yes | `ghcr.io/juanlunaia/aegis-latent-core:4.0.2` — the most recent published tag, digest-pinnable, cosign-signed. No `4.1.0` image is published. |
 | Kubernetes via Helm | Yes | `StatefulSet`, per-replica WAL volumes, default-deny NetworkPolicy. |
 | Air-gapped | Yes | With documented capability loss; no external anchoring. |
 | Vendor-hosted SaaS | No | Does not exist and is not on the roadmap. |
@@ -97,7 +97,7 @@ Stated plainly, because a readiness document that omits these is not useful.
 | **No independent assurance** | No SOC 2, ISO 27001, penetration test, or third-party audit. Nothing to hand a security team that they did not derive themselves. |
 | **No production-scale evidence** | Benchmarks are local. No capacity, throughput, or latency claim survives contact with a target environment without your own measurement. |
 | **No cross-replica ordering** | A requirement for one global timeline cannot be met today. |
-| **Registry lag** | SDKs are published at `4.0.0` while source is `4.0.2`. Installing from a registry gets you different code from the documentation. |
+| **Registry lag** | SDKs are published at `4.0.0` while source is `4.1.0`. Installing from a registry gets you different code from the documentation. |
 | **Single maintainer** | Bus factor of one. No independent second approver on the critical path. |
 | **No SLA** | Response targets are intent, not commitment, absent an executed agreement. |
 | **Untested runbooks at scale** | Procedures are written; rehearsal is yours. |

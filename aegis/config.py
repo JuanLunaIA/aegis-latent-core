@@ -66,7 +66,10 @@ class AegisSettings(BaseSettings):
 
     # ── Backend ──────────────────────────────────────────────────────────
     backend_url: AnyHttpUrl = Field(
-        default="http://localhost:11434",
+        # Built as AnyHttpUrl rather than str so the declared default matches the
+        # declared type. pydantic-settings validates defaults, so the runtime
+        # value was already AnyHttpUrl; only the annotation disagreed.
+        default=AnyHttpUrl("http://localhost:11434"),
         description=(
             "URL of the upstream LLM backend (OpenAI-compatible). "
             "Ignored for providers with a fixed base URL "

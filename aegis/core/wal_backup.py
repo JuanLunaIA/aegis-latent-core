@@ -39,6 +39,7 @@ import os
 import shutil
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -286,7 +287,7 @@ class WALBackupManager:
             logger.error("WAL restore failed: %s", exc)
             return WALRestoreResult(success=False, error=str(exc))
 
-    def list_backups(self, backup_dir: str) -> list[dict]:
+    def list_backups(self, backup_dir: str) -> list[dict[str, Any]]:
         """Return metadata for all backups in *backup_dir*, newest first.
 
         Each entry contains the manifest fields plus ``backup_dir_path``.
@@ -294,7 +295,7 @@ class WALBackupManager:
         """
         if not os.path.isdir(backup_dir):
             return []
-        results: list[dict] = []
+        results: list[dict[str, Any]] = []
         for name in os.listdir(backup_dir):
             entry_path = os.path.join(backup_dir, name)
             if not os.path.isdir(entry_path):
@@ -308,7 +309,7 @@ class WALBackupManager:
                 data["backup_dir_path"] = entry_path
                 results.append(data)
             except Exception:
-                pass
+                logger.debug("backup manifest at %s is unreadable", entry_path, exc_info=True)
         results.sort(key=lambda d: d.get("backup_timestamp", ""), reverse=True)
         return results
 

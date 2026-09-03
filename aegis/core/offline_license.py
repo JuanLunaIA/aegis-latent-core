@@ -35,6 +35,7 @@ import os
 import time
 import uuid
 from dataclasses import dataclass
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -234,7 +235,7 @@ class OfflineLicenseValidator:
     # ── Static helpers ────────────────────────────────────────────────────────
 
     @staticmethod
-    def sign_license(record_dict: dict, key_hex: str) -> str:
+    def sign_license(record_dict: dict[str, Any], key_hex: str) -> str:
         """Compute HMAC-SHA256 over canonical JSON of *record_dict* (sorted keys).
 
         Parameters
@@ -259,7 +260,7 @@ class OfflineLicenseValidator:
         features: list[str],
         days_valid: int,
         key_hex: str,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Build and sign a license dict ready to persist as JSON.
 
         Parameters
@@ -291,10 +292,10 @@ class OfflineLicenseValidator:
 
     # ── Internal helpers ──────────────────────────────────────────────────────
 
-    def _load_file(self) -> dict:
+    def _load_file(self) -> dict[str, Any]:
         try:
             with open(self._license_path, encoding="utf-8") as fh:
-                return json.load(fh)
+                return cast("dict[str, Any]", json.load(fh))
         except FileNotFoundError:
             raise LicenseNotFoundError(f"license file not found: {self._license_path}") from None
         except PermissionError:
@@ -305,7 +306,7 @@ class OfflineLicenseValidator:
             raise LicenseNotFoundError(f"license file is not valid JSON: {exc}") from exc
 
     @staticmethod
-    def _parse_record(raw: dict) -> LicenseRecord:
+    def _parse_record(raw: dict[str, Any]) -> LicenseRecord:
         features_raw = raw["features"]
         if isinstance(features_raw, list):
             features = frozenset(str(f) for f in features_raw)
@@ -339,6 +340,6 @@ class OfflineLicenseValidator:
 # ── Utility ───────────────────────────────────────────────────────────────────
 
 
-def _canonical_json(obj: dict) -> str:
+def _canonical_json(obj: dict[str, Any]) -> str:
     """Serialize *obj* to canonical JSON with sorted keys, no extra whitespace."""
     return json.dumps(obj, sort_keys=True, separators=(",", ":"))

@@ -27,7 +27,7 @@ The one deliberate exception is optional enrichment, which may be dropped withou
 | 9 | Analysis queue full | Governed call **succeeds normally** | Full governed record; enrichment skipped | No, by design |
 | 10 | Native stream WAL append failure | Nothing | JSONL record intact; counter increments | No, by design |
 | 11 | Second writer on a WAL path | Process fails to start | Existing chain untouched | Yes |
-| 12 | WAL replay finds corruption | Startup completes; health reports `wal_corrupt` | Chain truncated at the bad line | **Partially — see §4** |
+| 12 | WAL replay finds corruption | Startup completes; health reports `wal_corrupt`; governed requests are refused with `503` | Chain truncated at the bad line; no further nodes appended | **Yes — see §4** |
 
 ---
 
@@ -51,15 +51,17 @@ The circuit breaker may open under sustained failure, at which point requests ar
 
 So row 4 is fail-closed with respect to *reported* failures and silent with respect to *unreported* ones. That gap is a property of the storage layer, not something the gateway can close.
 
-## 4. WAL corruption — the honest exception
+## 4. WAL corruption
 
-Row 12 is the one place the system is not fully fail-closed, and it should be understood rather than glossed.
+Startup replay stops at the first malformed line and marks the ledger `wal_corrupt`.
 
-Startup replay stops at the first malformed line and marks the ledger `wal_corrupt`. `/v1/audit/health` reports the degradation. **But subsequent commits remain permitted, and the request path does not check the fault state before committing.**
+**Governed traffic is then refused.** `_require_intact_ledger` runs at the top of every governed endpoint — `/v1/chat/completions`, `/v1/messages`, `/v1/completions` — and returns `503` with `Evidence chain is not intact; governed requests are rejected`. Nothing is forwarded upstream and no node is appended.
 
-A gateway that started with a corrupt WAL will continue to accept governed traffic and append to the chain past the corruption point. The result is a chain whose earlier segment is unverifiable and whose later segment is fine.
+This closes a gap that earlier revisions of this document described as the one place the system was not fully fail-closed. The old behaviour was worse than it sounds: each individual commit past the corruption point succeeded and verified, so a gateway that started on a corrupt WAL would keep accepting traffic and building a chain whose earlier segment could not be replayed at all — a divergence visible only to whoever eventually tried to replay it. `tests/test_app_wal_corrupt.py` pins the refusal, that it happens before the upstream call, and that the chain does not grow.
 
-Treat `wal_corrupt` in health as an incident signal requiring action, not as a state the system will manage on your behalf. Alert on it; see [Monitoring and Alerting](../operations/MONITORING_ALERTING.md).
+**`/health` and `/metrics` stay reachable on purpose.** They fail closed in the sense of reporting `503` and `fault_state: wal_corrupt`, but they keep answering. An observability surface that went dark alongside the data path would leave an operator watching traffic stop with no way to learn why from the process itself.
+
+Recovery remains a human decision. The gateway will not repair, truncate, or roll over a corrupt WAL on your behalf; it stops so that the damage does not extend. Alert on `wal_corrupt`; see [Monitoring and Alerting](../operations/MONITORING_ALERTING.md).
 
 ## 5. Streaming failures
 

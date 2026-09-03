@@ -86,7 +86,7 @@ def test_release_source_contract_is_complete_without_external_claims() -> None:
     assert len(set(assessment.versions.values())) == 1
     assert assessment.ready
     assert assessment.diagnostics == ()
-    assert set(assessment.versions.values()) == {"4.0.2"}
+    assert set(assessment.versions.values()) == {"4.1.0"}
     assert "published" not in assessment.to_dict()
     assert "released" not in assessment.to_dict()
 
@@ -99,7 +99,7 @@ def test_release_contract_cli_reports_source_contract_as_json() -> None:
             "--root",
             str(ROOT),
             "--tag",
-            "v4.0.2",
+            "v4.1.0",
             "--json",
         ],
         cwd=ROOT,
@@ -113,7 +113,7 @@ def test_release_contract_cli_reports_source_contract_as_json() -> None:
     assert report["diagnostics"] == []
 
 
-@pytest.mark.parametrize("tag", ["v4.0.1", "4.0.2", "v04.0.2", "v4.0.2-rc1"])
+@pytest.mark.parametrize("tag", ["v4.0.1", "4.1.0", "v04.1.0", "v4.1.0-rc1"])
 def test_release_contract_rejects_mismatched_or_noncanonical_tag(tag: str) -> None:
     assessment = assess_repository(ROOT, release_tag=tag)
     assert "metadata.tag-version-mismatch" in {item.code for item in assessment.diagnostics}
@@ -124,7 +124,7 @@ def test_release_notes_require_one_exact_nonempty_stable_section() -> None:
     changelog = "# Changes\n\n## [3.1.0] — 2026-08-18\n\nShipped.\n\n## [3.0.0]\nOld.\n"
     assert extract_release_notes(changelog, "3.1.0") == "Shipped.\n"
     with pytest.raises(ValueError, match="exactly one"):
-        extract_release_notes(changelog, "4.0.2")
+        extract_release_notes(changelog, "4.1.0")
     with pytest.raises(ValueError, match="empty"):
         extract_release_notes("## [3.1.0]\n\n## [3.0.0]\nOld.\n", "3.1.0")
     with pytest.raises(ValueError, match="invalid stable"):
@@ -134,16 +134,16 @@ def test_release_notes_require_one_exact_nonempty_stable_section() -> None:
 def test_release_creator_builds_only_create_command_with_hashed_assets(tmp_path: Path) -> None:
     source = tmp_path / "source"
     source.mkdir()
-    wheel = source / "aegis-4.0.2-py3-none-any.whl"
+    wheel = source / "aegis-4.1.0-py3-none-any.whl"
     wheel.write_bytes(b"wheel")
     assets = tmp_path / "assets"
     prepare_release_assets(source, assets)
     notes = tmp_path / "notes.md"
     notes.write_text("Release notes\n", encoding="utf-8")
     command = build_create_command(
-        tag="v4.0.2", version="4.0.2", notes_file=notes, asset_directory=assets
+        tag="v4.1.0", version="4.1.0", notes_file=notes, asset_directory=assets
     )
-    assert command[:4] == ("gh", "release", "create", "v4.0.2")
+    assert command[:4] == ("gh", "release", "create", "v4.1.0")
     assert any(str(item).endswith("release-asset-manifest.json") for item in command)
     assert any(str(item).endswith("SHA256SUMS") for item in command)
     assert "--verify-tag" in command
@@ -152,7 +152,7 @@ def test_release_creator_builds_only_create_command_with_hashed_assets(tmp_path:
     assert "--clobber" not in command
     with pytest.raises(ValueError, match="exactly equal"):
         build_create_command(
-            tag="v4.0.1", version="4.0.2", notes_file=notes, asset_directory=assets
+            tag="v4.0.1", version="4.1.0", notes_file=notes, asset_directory=assets
         )
 
 
@@ -184,15 +184,15 @@ def test_release_asset_preparation_is_deterministic_and_rejects_duplicates(tmp_p
 def test_release_creator_rejects_payload_tampering(tmp_path: Path) -> None:
     source = tmp_path / "source"
     source.mkdir()
-    (source / "aegis-latent-sdk-4.0.2.tgz").write_bytes(b"package")
+    (source / "aegis-latent-sdk-4.1.0.tgz").write_bytes(b"package")
     assets = tmp_path / "assets"
     prepare_release_assets(source, assets)
-    (assets / "aegis-latent-sdk-4.0.2.tgz").write_bytes(b"tampered")
+    (assets / "aegis-latent-sdk-4.1.0.tgz").write_bytes(b"tampered")
     notes = tmp_path / "notes.md"
     notes.write_text("Release notes\n", encoding="utf-8")
     with pytest.raises(ValueError, match="sidecar mismatch"):
         build_create_command(
-            tag="v4.0.2", version="4.0.2", notes_file=notes, asset_directory=assets
+            tag="v4.1.0", version="4.1.0", notes_file=notes, asset_directory=assets
         )
 
 
@@ -272,7 +272,7 @@ def test_release_contract_detects_version_drift_missing_dockerfile_and_backend(
     tmp_path: Path,
 ) -> None:
     cases = [
-        ("aegis/__init__.py", '"4.0.2"', '"4.0.3"', "metadata.version-drift"),
+        ("aegis/__init__.py", '"4.1.0"', '"4.0.3"', "metadata.version-drift"),
         ("pyproject.toml", "hatchling==1.28.0", "hatchling>=1.24", "build.backend-unpinned"),
         (
             "pyproject.toml",
@@ -282,7 +282,7 @@ def test_release_contract_detects_version_drift_missing_dockerfile_and_backend(
         ),
         (
             "deploy/k8s/aegis-operator/operator.py",
-            "aegis-latent-core:4.0.2",
+            "aegis-latent-core:4.1.0",
             "aegis-latent-core:3.1.0",
             "deployment.version-drift",
         ),
@@ -330,13 +330,13 @@ def test_release_contract_detects_version_drift_missing_dockerfile_and_backend(
         (
             "aegis_server/__init__.py",
             "from aegis import __version__",
-            '__version__ = "4.0.2"',
+            '__version__ = "4.1.0"',
             "metadata.server-runtime-version-unbound",
         ),
         (
             "aegis/core/forensic_pdf_report.py",
             "tool_version: str = aegis_version",
-            'tool_version: str = "4.0.2"',
+            'tool_version: str = "4.1.0"',
             "metadata.forensic-report-version-unbound",
         ),
         (
@@ -402,7 +402,7 @@ def test_release_contract_binds_package_identity_and_rust_runtime_version(
         (
             "publish_oci.yml",
             "      - name: Build and publish exact multi-architecture image",
-            "      - name: Forbidden registry shell\n        run: docker push ghcr.io/example/image:v4.0.2\n      - name: Build and publish exact multi-architecture image",
+            "      - name: Forbidden registry shell\n        run: docker push ghcr.io/example/image:v4.1.0\n      - name: Build and publish exact multi-architecture image",
             "oci.publish-by-action",
         ),
         (
@@ -448,3 +448,37 @@ def test_dashboard_container_is_pinned_standalone_and_non_root() -> None:
     assert "HEALTHCHECK" in dockerfile
     assert 'CMD ["node", "dashboard/server.js"]' in dockerfile
     assert ":latest" not in dockerfile
+
+
+def test_deployment_version_check_is_derived_not_hardcoded(tmp_path: Path) -> None:
+    """Deployment drift must be detected against the release being cut.
+
+    `_validate_active_deployment_versions` used to compare the deployment surface
+    against a hard-coded version literal. That made it assert agreement with a
+    constant rather than with the release: once the fourteen metadata anchors
+    moved, every literal still named the previous version, so the contract
+    reported READY while the Dockerfiles, operator, CRD, compose files and
+    installer stayed behind — a silent, structural blind spot.
+
+    Bumping only the core anchor inside a copied tree must now block.
+    """
+    from scripts.verify_release_contract import _load_versions
+
+    tree = _copy_contract_repository(tmp_path / "drift")
+    pyproject = tree / "pyproject.toml"
+    baseline = _load_versions(tree, [])["core"]
+    bumped = "99.99.99"
+    pyproject.write_text(
+        pyproject.read_text(encoding="utf-8").replace(
+            f'version = "{baseline}"', f'version = "{bumped}"', 1
+        ),
+        encoding="utf-8",
+    )
+
+    assessment = assess_repository(tree)
+    codes = {diagnostic.code for diagnostic in assessment.diagnostics}
+    assert "deployment.version-drift" in codes, (
+        "deployment drift is not detected; the version expectation is not derived "
+        "from the synchronized core version"
+    )
+    assert not assessment.ready

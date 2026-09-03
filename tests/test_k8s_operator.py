@@ -133,7 +133,7 @@ class TestBuildDeployment:
     def test_default_image_is_version_pinned(self, operator, basic_spec: dict) -> None:
         result = operator._build_deployment("proxy-1", "aegis-system", basic_spec)
         image = result["spec"]["template"]["spec"]["containers"][0]["image"]
-        assert image == "ghcr.io/juanlunaia/aegis-latent-core:4.0.2"
+        assert image == "ghcr.io/juanlunaia/aegis-latent-core:4.1.0"
 
     def test_configurable_image(self, operator, basic_spec: dict) -> None:
         basic_spec["image"] = "registry.example/aegis@sha256:" + "a" * 64

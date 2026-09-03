@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 from collections import deque
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -71,7 +72,7 @@ class LogitEntropyMonitor:
     # FIX BUG-06: documented in README API reference but missing from code.
     # Raises ImportError with a clear message when torch is absent so callers
     # can decide whether to fall back to compute_shannon_entropy.
-    def compute_entropy_gpu(self, logits_tensor) -> float:  # type: ignore[return]
+    def compute_entropy_gpu(self, logits_tensor: Any) -> float:
         """
         Compute Shannon entropy on a GPU-resident torch.Tensor without copying
         the full distribution to CPU.

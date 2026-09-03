@@ -29,8 +29,10 @@ import json
 import logging
 import shutil
 import subprocess  # nosec B404
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +179,7 @@ class DependencyAuditor:
                 continue  # RECORD entries for .dist-info files themselves have no hash
             try:
                 # record_path is a pathlib-like object relative to site-packages
-                abs_path = Path(dist.locate_file(record_path))
+                abs_path = Path(str(dist.locate_file(record_path)))
                 digest_bytes = hashlib.sha256(abs_path.read_bytes()).digest()
                 # RECORD stores hashes as URL-safe base64 without trailing '='
                 actual_b64 = base64.urlsafe_b64encode(digest_bytes).rstrip(b"=").decode()
@@ -258,7 +260,13 @@ class DependencyInternalizer:
             len(file_results),
         )
 
-    def wrap_dependency(self, dep_name: str, original_func, *args, **kwargs):
+    def wrap_dependency(
+        self,
+        dep_name: str,
+        original_func: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
         """Call *original_func* through a security-logging wrapper."""
         if dep_name not in self._entries:
             logger.warning("Calling un-registered dependency %s!", dep_name)

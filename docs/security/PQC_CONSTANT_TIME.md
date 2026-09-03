@@ -1,14 +1,14 @@
-# ML-DSA-65 Timing Assessment — Aegis Latent Core v4.0.2 Source Baseline
+# ML-DSA-65 Timing Assessment — Aegis Latent Core v4.1.0 Source Baseline
 
 This document is for cryptography reviewers and security architects evaluating the native ML-DSA-65 timing boundary. It defines the experiment, statistical interpretation, retained result and blocked claims. It does not prove constant-time execution, side-channel absence, FIPS 140 validation or legal admissibility.
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** four-layer truth model
-**Source baseline/release target:** `v4.0.2` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
+**Source baseline/release target:** `v4.1.0` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` with `4.0.0` anchors
 **Previous public GitHub Release:** `v4.0.1` lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Observed registries:** PyPI/npm `4.0.0`, without workflow provenance attribution
-**Historical evidence baseline:** retained `v3.1.0` timing evidence remains historical and is not a `v4.0.2` result
+**Historical evidence baseline:** retained `v3.1.0` timing evidence remains historical and is not a `v4.1.0` result
 **Scope:** Native ML-DSA-65 `sign` and `verify` boundary
 **Current assurance status:** No constant-time claim is approved
 

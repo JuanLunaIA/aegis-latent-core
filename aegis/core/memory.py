@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ctypes
 import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class Zeroize:
     """
 
     @staticmethod
-    def wipe(data: bytearray | memoryview | ctypes.Array) -> None:
+    def wipe(data: bytearray | memoryview | ctypes.Array[Any]) -> None:
         """
         Securely wipes the memory buffer.
         Uses a volatile-like approach to prevent compiler optimization from skipping the write.
@@ -54,12 +55,12 @@ class HardenedMemoryManager:
     In a production environment, this would interface with mimalloc or hardened_malloc.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._initialized = False
         self._allocator_type = "standard"
         self._enforce_strict_zeroize = True
 
-    def initialize_hardened_allocator(self):
+    def initialize_hardened_allocator(self) -> None:
         """
         Attempts to load a hardened memory allocator via LD_PRELOAD.
         """
@@ -93,7 +94,7 @@ class HardenedMemoryManager:
         # In a real scenario, this would use a specific mmap call with PROT_NONE guard pages.
         return bytearray(size)
 
-    def secure_free(self, data: bytearray | memoryview | ctypes.Array) -> None:
+    def secure_free(self, data: bytearray | memoryview | ctypes.Array[Any]) -> None:
         """
         Zeroizes the data before letting it be garbage collected.
         """

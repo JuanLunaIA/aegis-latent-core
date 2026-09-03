@@ -41,6 +41,7 @@ import os
 import time
 import uuid
 from dataclasses import dataclass
+from typing import Any
 
 from aegis.core.cross_session_correlator import compute_simhash, hamming_distance
 
@@ -343,7 +344,7 @@ class JailbreakClusterRegistry:
             reason=reason,
         )
 
-    def match_messages(self, messages: list[dict]) -> ClusterMatch:
+    def match_messages(self, messages: list[dict[str, Any]]) -> ClusterMatch:
         """Concatenate user-role message content and match.
 
         Parameters

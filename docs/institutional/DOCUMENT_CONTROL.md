@@ -4,7 +4,7 @@
 **Control record:** `AEGIS-DOC-CONTROL-2026-08-22`
 **Suite version:** 1.0
 **Repository:** `JuanLunaIA/aegis-latent-core`
-**Source baseline:** checked-out source metadata is synchronized at `v4.0.2`
+**Source baseline:** checked-out source metadata is synchronized at `v4.1.0`
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, SLO, compliance result, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** published `v3.1.0` artifacts and retained measurements remain historical
 **Current change set:** documentation alignment only; no external lifecycle or acceptance decision

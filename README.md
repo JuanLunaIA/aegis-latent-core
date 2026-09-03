@@ -10,7 +10,7 @@ Aegis sits between your application and your model provider. For every governed 
 [![Coverage](https://img.shields.io/badge/statement%20coverage-93.91%25%20(2026--08--18)-informational)](docs/benchmarks/BENCHMARK_METHOD.md)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
 
-> **Current release candidate:** `v4.0.2` source, fourteen synchronized anchors. Registries: `aegis-latent-sdk` observed at `4.0.0`. The gateway ships from source; registries carry SDKs only. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
+> **Current release candidate:** `v4.1.0` source, fourteen synchronized anchors. Nothing is published for `4.1.0`. The most recent published release is `v4.0.2`; registries carry `aegis-latent-sdk` at `4.0.0`. The gateway ships from source; registries carry SDKs only. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
 ---
 
@@ -21,6 +21,7 @@ Aegis sits between your application and your model provider. For every governed 
 - **You keep custody.** Self-hosted. The licensor holds no evidence, no keys, no payloads, and has no access to your deployment.
 - **Provider independence.** An OpenAI-compatible surface; your upstream is a configured endpoint, not a lock-in.
 - **Fail-closed by default.** No signer, no distributed limiter, no durable storage means no service — rather than quietly serving unevidenced traffic.
+- **A broken chain stops traffic.** If WAL replay cannot read the ledger back, governed endpoints refuse with `503` before forwarding or committing. Appending onto a prefix you failed to replay produces records that each verify individually while the chain as a whole is unrecoverable — the failure the evidence contract exists to prevent.
 - **Claims you can check.** Every public claim carries an evidence locator and a stated boundary in [Claims Matrix](docs/CLAIMS_MATRIX.md), and CI rejects unsupported assurance language.
 
 ---
@@ -116,7 +117,7 @@ pip install -e ./sdk/python
 cd sdk/typescript && npm ci && npm run build
 ```
 
-**Registry caution.** PyPI and npm carry `aegis-latent-sdk` at `4.0.0`, while this source tree is `4.0.2`. Installing from a registry gets you different code from what these documents describe.
+**Registry caution.** PyPI and npm carry `aegis-latent-sdk` at `4.0.0`, while this source tree is `4.1.0` — a gap of two releases. Installing from a registry gets you different code from what these documents describe.
 
 **Proof verification caution.** A proof verified against a root supplied by the same gateway that produced it establishes internal consistency only. Obtain the trusted root through an independent channel, or the verification is circular.
 
@@ -138,6 +139,7 @@ There is no hosted dashboard. You run it, and browser-facing authentication is y
 
 - Authenticated principals derived from the credential, never from a client-supplied header; scopes gate audit reads and exports separately.
 - Hash-linked, signed records with tamper detection on read; one writer per WAL path, enforced by an advisory lock.
+- A ledger that failed to replay refuses governed traffic at ingress; `/health` and `/metrics` stay reachable so the fault is diagnosable rather than silent.
 - Bounded requests and streams; deterministic pattern-based redaction before the record is written.
 - **Tampering is detected, not prevented.** An operator with filesystem access can alter or delete records. Every integrity claim terminates at that boundary.
 - **Redaction protects the record, not your provider.** The request reaches them as sent.
@@ -181,13 +183,20 @@ Separately, Kani 0.67.0 model-checks the native WAL's frame-bounds arithmetic ov
 | Statement coverage | 89.7169% | Candidate gate record | 2026-08-24 |
 | Python suite | 5,707 passed, 37 skipped | Candidate gate record | 2026-08-24 |
 | Python suite | 5,661 passed, 81 skipped, 0 failed | Clean-container reproduction | 2026-09-01 |
-| Rust extension | 29 tests passed; Clippy `-D warnings`; abi3 wheel built | CI | Per run |
+| Python suite | 5,974 passed, 52 skipped, 0 failed | `4.1.0` source baseline | 2026-09-03 |
+| Rust extension | 31 tests passed; Clippy `-D warnings`; abi3 wheel built | CI | Per run |
+| Static analysis | `mypy --strict` 0 errors over 186 files; Bandit 0 findings at every severity | CI | Per run |
+| Model checking | 5 Kani harnesses verified, 0 failures, over the whole `usize` domain | CI | Per run |
+| Per-commit cost vs chain length | At 2,000 prior leaves: 30,153.9 → 361.7 µs/commit. Normalised, the prior curve rises `1.00× → 17.65×` with chain length; the current one is flat within noise | [`commit_scaling_measurement`](evidence/commit_scaling_measurement_2026-09-03.md) | 2026-09-03 |
+| MMR append, Rust vs Python | At 100,000 leaves: 775.76k vs 156.90k leaves/s (4.94×) | [`evidence_path_measurements`](evidence/evidence_path_measurements_2026-09-03.md) | 2026-09-03 |
 | WAF corpus | Zero observed bypasses, zero false positives over 15 malicious and 8 benign cases | Corpus report | Per corpus |
 | Backpressure | 2,500 offered → 2,500 durable, zero missing or duplicate IDs, p99 commit 836.35 ms under 2 ms injected `fsync` delay | Stall report | 2026-08-20 |
 
 Two coverage figures appear because two runs measured differently on different dates; both are recorded rather than one being selected. Suite counts move as tests are added — run `pytest -q` on the commit you are evaluating.
 
-**None of this is a capacity claim.** Offered load is not accepted throughput.
+**None of this is a capacity claim.** Offered load is not accepted throughput. The absolute latencies above are properties of one shared, unpinned four-CPU container; what transfers is the *shape* — that per-commit cost stopped growing with chain length — not the numbers. Re-run the harnesses in your own environment before planning against any of them.
+
+**A clean static-analysis run is not a correctness result.** `mypy --strict` and Bandit reporting zero says those two checkers found nothing on this source, which is weaker than an absence of defects or of vulnerabilities.
 
 [Evidence Index](evidence/INDEX.md) · [Benchmark Method](docs/benchmarks/BENCHMARK_METHOD.md)
 
@@ -198,7 +207,7 @@ Two coverage figures appear because two runs measured differently on different d
 Not built. No dates.
 
 - Registry publication automation, so a release either publishes and confirms or fails
-- Durable WAL backend options and cross-restart MMR continuity
+- Durable WAL backend options, and MMR continuity across replicas rather than only across restarts
 - Wider OCI attestation coverage and a documented consumer verification path
 - Framework integrations beyond the current provider surfaces
 - OpenTelemetry span model across the evidence lifecycle
@@ -228,7 +237,7 @@ Support is community best-effort with no SLA. This is a single-maintainer projec
 - **No certification.** No SOC 2, ISO 27001, HIPAA attestation, or FedRAMP. None in progress.
 - **No independent assurance.** No third-party audit or penetration test exists.
 - **No compliance determination.** The system produces technical inputs; you and your assessor decide.
-- **No legal admissibility.** A judicial determination, and no chain of custody is created.
+- **No legal admissibility.** Admissibility is a judicial determination, and no chain of custody is created.
 - **Not immutable.** Tampering is detected, not prevented; an operator with root can alter records.
 - **No universal PII removal.** Deterministic pattern matching over specific fields; it does not protect data already sent upstream.
 - **No production SLO or capacity claim.** Benchmarks are local measurements.

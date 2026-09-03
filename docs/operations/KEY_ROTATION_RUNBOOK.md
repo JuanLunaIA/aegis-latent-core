@@ -4,11 +4,11 @@ This runbook is for security operators and platform engineers rotating HMAC keys
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** four-layer truth model
-**Source baseline/release target:** `v4.0.2` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
+**Source baseline/release target:** `v4.1.0` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` with `4.0.0` anchors
 **Previous public GitHub Release:** `v4.0.1` lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Observed registries:** PyPI/npm `4.0.0`, without workflow provenance attribution
-**Historical evidence baseline:** retained `v3.1.0`-era test statements remain historical and are not `v4.0.2` results
+**Historical evidence baseline:** retained `v3.1.0`-era test statements remain historical and are not `v4.1.0` results
 **Scope:** Versioned HMAC keyring for enterprise self-hosted deployments
 **Implementation:** `aegis_server.crypto.keyring.RotatingHMACSigner`
 

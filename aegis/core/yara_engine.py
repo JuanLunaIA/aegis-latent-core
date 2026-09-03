@@ -589,7 +589,7 @@ class YARAEngine:
             raw = text.encode("utf-8", errors="replace")
             return [
                 MatchedString(name=ys.name, offset=m.start(), matched=m.group().hex())
-                for m in ys.compiled.finditer(raw)  # type: ignore[arg-type]
+                for m in ys.compiled.finditer(raw)
             ]
 
         return [

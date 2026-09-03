@@ -818,35 +818,48 @@ def _validate_package_identity(root: Path, diagnostics: list[Diagnostic]) -> Non
     )
 
 
-def _validate_active_deployment_versions(root: Path, diagnostics: list[Diagnostic]) -> None:
-    """Reject stale active image owners, tags, labels, and air-gap package pins."""
+def _validate_active_deployment_versions(
+    root: Path, diagnostics: list[Diagnostic], version: str
+) -> None:
+    """Reject stale active image owners, tags, labels, and air-gap package pins.
+
+    ``version`` is the synchronized core version, not a literal. Hard-coding the
+    expected version here made this check assert that the deployment surface
+    matched a constant rather than the release being cut: after the 14 metadata
+    anchors moved to a new version, every literal below still named the old one,
+    so the contract reported READY while the Dockerfiles, operator, CRD, compose
+    files and installer stayed behind. Deriving the expectation from
+    ``_load_versions`` is what makes this a drift check.
+    """
     expectations = {
         "deploy/docker/Dockerfile": (
             "ARG PYTHON_IMAGE=python:3.12-slim@sha256:7a8b475003c4fe15a2cd4e55e5cfc2f3560bdc9333d624f24cdd6d4340fd7a17",
-            'org.opencontainers.image.version="4.0.2"',
+            f'org.opencontainers.image.version="{version}"',
         ),
         "deploy/k8s/aegis-operator/operator.py": (
-            'DEFAULT_AEGIS_IMAGE = "ghcr.io/juanlunaia/aegis-latent-core:4.0.2"',
+            f'DEFAULT_AEGIS_IMAGE = "ghcr.io/juanlunaia/aegis-latent-core:{version}"',
         ),
         "deploy/k8s/aegis-operator/crd.yaml": (
-            'default: "ghcr.io/juanlunaia/aegis-latent-core:4.0.2"',
+            f'default: "ghcr.io/juanlunaia/aegis-latent-core:{version}"',
         ),
-        "deploy/docker/docker-compose.yml": ("image: ghcr.io/juanlunaia/aegis-latent-core:4.0.2",),
+        "deploy/docker/docker-compose.yml": (
+            f"image: ghcr.io/juanlunaia/aegis-latent-core:{version}",
+        ),
         "deploy/docker/docker-compose.enterprise.yml": (
-            "image: ghcr.io/juanlunaia/aegis-latent-core:4.0.2",
-            'com.aegis.version:             "4.0.2"',
+            f"image: ghcr.io/juanlunaia/aegis-latent-core:{version}",
+            f'com.aegis.version:             "{version}"',
         ),
         "deploy/docker/Dockerfile.airgap": (
             "ARG PYTHON_BASE_DIGEST=sha256:be1575ed968de893bd54f4c56315ff7c4736ce522c1bca08fd521731aafc0d76",
-            'org.opencontainers.image.version="4.0.2"',
-            "-t aegis-latent-core:4.0.2-airgap",
+            f'org.opencontainers.image.version="{version}"',
+            f"-t aegis-latent-core:{version}-airgap",
         ),
         "scripts/vendor_wheels.sh": (
-            '"aegis-latent-core[storage-sqlite]==4.0.2"',
-            "-t aegis-latent-core:4.0.2-airgap",
+            f'"aegis-latent-core[storage-sqlite]=={version}"',
+            f"-t aegis-latent-core:{version}-airgap",
         ),
         "scripts/install_aegis.sh": (
-            'AEGIS_VERSION="4.0.2"',
+            f'AEGIS_VERSION="{version}"',
             'AEGIS_WHEEL_SHA256_URL="${AEGIS_WHEEL_URL}.sha256"',
             'verify_sha256 "${WHEEL_PATH}" "${SIDECAR_PATH}"',
             'pip install "${WHEEL_PATH}"',
@@ -869,7 +882,7 @@ def _validate_active_deployment_versions(root: Path, diagnostics: list[Diagnosti
             diagnostics,
             all(literal in contents for literal in required_literals),
             "deployment.version-drift",
-            "active deployment reference is not synchronized to v4.0.2",
+            f"active deployment reference is not synchronized to v{version}",
             relative_path,
         )
         _add_if_false(
@@ -905,7 +918,7 @@ def assess_repository(root: Path, *, release_tag: str | None = None) -> Assessme
     versions = _load_versions(root, diagnostics)
     _validate_build_backends(root, diagnostics)
     _validate_package_identity(root, diagnostics)
-    _validate_active_deployment_versions(root, diagnostics)
+    _validate_active_deployment_versions(root, diagnostics, versions.get("core", ""))
     _validate_ci_lock_gate(root, diagnostics)
     if release_tag is not None:
         expected = versions.get("core")

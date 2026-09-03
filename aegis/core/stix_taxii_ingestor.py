@@ -73,6 +73,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass, field
+from typing import cast
 from urllib.parse import urlsplit
 
 logger = logging.getLogger(__name__)
@@ -466,6 +467,8 @@ class STIXTAXIIIngestor:
         url = f"{api_root.rstrip('/')}/collections/"
         data = self._get_json(url)
         raw = data.get("collections", [])
+        if not isinstance(raw, list):
+            return []
         return [
             TaxiiCollection(
                 id=str(c.get("id", "")),
@@ -522,19 +525,19 @@ class STIXTAXIIIngestor:
             with httpx.Client(timeout=self.timeout) as client:
                 resp = client.get(url, headers=self._headers())
                 resp.raise_for_status()
-                return resp.json()
+                return cast("dict[str, object]", resp.json())
         except ImportError:
             import json
             import urllib.request
 
             req = urllib.request.Request(url, headers=self._headers())  # noqa: S310
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310  # nosec B310
-                return json.loads(resp.read().decode())
+                return cast("dict[str, object]", json.loads(resp.read().decode()))
 
     def _discover_api_root(self) -> str:
         data = self._get_json(f"{self.taxii_url}/")
         api_roots = data.get("api_roots", [])
-        if not api_roots:
+        if not isinstance(api_roots, list) or not api_roots:
             raise ValueError("TAXII discovery returned no api_roots")
         return str(api_roots[0]).rstrip("/")
 

@@ -38,6 +38,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +113,7 @@ class TokenValidationResult:
     reason: str
     backend_used: TokenBackend
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Serialise to a plain dictionary suitable for JSON encoding."""
         return {
             "valid": self.valid,

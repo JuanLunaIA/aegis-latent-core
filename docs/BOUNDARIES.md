@@ -1,7 +1,7 @@
 # Product and Evidence Boundaries
 
 **Last verified:** 2026-09-01 UTC
-**Release baseline:** checked-out source baseline/release target `4.0.2` with fourteen synchronized anchors
+**Release baseline:** checked-out source baseline/release target `4.1.0` with fourteen synchronized anchors
 
 This document consolidates the boundary statements that apply across Aegis. It exists so that `README.md` and the developer guides can describe mechanisms plainly and link here once, instead of repeating a disclaimer beside every sentence.
 

@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import logging
 import os
-import subprocess
+import shutil
+import subprocess  # nosec B404 - subprocess is required to probe host hardening state; every call site uses a fixed argv list, never a shell
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +71,7 @@ class XDPNetworkIsolator:
             Tuple of (return_code, stdout, stderr)
         """
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603 - argv list built from literals and configuration, never from request data; shell=False throughout
                 ["sudo", "bpftool"] + cmd,
                 capture_output=True,
                 text=True,
@@ -223,12 +225,19 @@ class XDPNetworkIsolator:
         # Little-endian format for x86_64
         return "".join(f"{p:02x}" for p in reversed(parts))
 
-    def _cleanup_xdp_program(self):
+    def _cleanup_xdp_program(self) -> None:
         """Clean up partially loaded XDP program."""
         if self._xdp_program_id:
             try:
-                subprocess.run(
-                    ["sudo", "bpftool", "prog", "unload", "id", str(self._xdp_program_id)],
+                subprocess.run(  # nosec B603 - argv list built from literals and configuration, never from request data; shell=False throughout
+                    [
+                        shutil.which("sudo") or "sudo",
+                        "bpftool",
+                        "prog",
+                        "unload",
+                        "id",
+                        str(self._xdp_program_id),
+                    ],
                     capture_output=True,
                     timeout=5,
                 )
@@ -259,7 +268,7 @@ class XDPNetworkIsolator:
             logger.error("Failed to detach XDP program: %s", error_msg)
             return False
 
-    def get_status(self) -> dict:
+    def get_status(self) -> dict[str, Any]:
         """
         Get current XDP isolation status.
 
@@ -275,7 +284,7 @@ class XDPNetworkIsolator:
             "fail_secure_mode": self.fail_secure,
         }
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Destructor to ensure XDP program is detached on object destruction."""
         if getattr(self, "_is_active", False):
             try:

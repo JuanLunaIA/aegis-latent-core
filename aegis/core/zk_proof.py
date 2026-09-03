@@ -26,6 +26,7 @@ import logging
 import time
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class ZKProofResult:
     verification_key_hash: str  # SHA-256 of verification key (stub = fixed placeholder)
     generated_at: float  # UTC epoch
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict."""
         return {
             "proof_bytes_hex": self.proof_bytes.hex(),
@@ -98,7 +99,7 @@ class ZKVerificationResult:
     verified_at: float
     reason: str
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict."""
         return {
             "valid": self.valid,

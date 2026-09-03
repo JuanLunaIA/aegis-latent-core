@@ -63,7 +63,22 @@ except ImportError:
 async def _iter_bounded_lines(
     response: httpx.Response, *, max_line_bytes: int
 ) -> AsyncIterator[bytes]:
-    """Yield HTTP body lines without permitting an unbounded unterminated line."""
+    """Yield HTTP body lines without permitting an unbounded unterminated line.
+
+    Framing happens on raw bytes, before any decode, and that is what makes the
+    SSE path safe against a transport read that ends mid-character. UTF-8 is
+    self-synchronising: every byte of a multi-byte sequence has its high bit set
+    (0xC2-0xF4 lead, 0x80-0xBF continuation), so the ``b"\\n"`` this splits on
+    can never fall inside a character. A line boundary is therefore always a
+    character boundary, and the callers' ``.decode("utf-8", errors="replace")``
+    never sees a partial character however the chunks arrived.
+
+    An incremental decoder (``codecs.getincrementaldecoder``) would add
+    cross-chunk state for a condition that cannot occur here. The one case it
+    also could not fix — an upstream that truncates mid-character and closes —
+    is already handled by ``errors="replace"``. ``tests/test_sse_utf8_boundaries.py``
+    pins both behaviours at every possible split offset.
+    """
     if max_line_bytes < 1:
         raise ValueError("max_line_bytes must be positive")
     instance_attrs = vars(response)
@@ -165,7 +180,7 @@ class LLMForwarder:
         # ssl_certfile + ssl_keyfile: client certificate for mTLS to the upstream.
         # When mtls_required=True and the cert files are not set, start() logs a
         # WARNING rather than crashing — the operator must supply the cert paths.
-        ssl_context: bool | str | None = True  # default: system CA bundle
+        ssl_context: bool | str = True  # default: system CA bundle
         if self._settings.ssl_ca_certs is not None:
             ssl_context = str(self._settings.ssl_ca_certs)
             logger.info(
@@ -420,6 +435,7 @@ class LLMForwarder:
         extra_headers: dict[str, str] | None,
     ) -> AsyncIterator[tuple[bytes, Any]]:
         """Passthrough for providers that already stream in OpenAI SSE format."""
+        assert self._client is not None, "LLMForwarder.start() was not called"
         try:
             stream_ctx = self._client.stream("POST", path, json=body, headers=extra_headers)
         except (httpx.ConnectError, httpx.TimeoutException):
@@ -465,8 +481,11 @@ class LLMForwarder:
         created = int(time.time())
         original_model = original_body.get("model", "")
 
+        assert self._client is not None, "LLMForwarder.start() was not called"
+        client = self._client
+
         async def _raw_line_iter() -> AsyncIterator[str]:
-            async with self._client.stream(
+            async with client.stream(
                 "POST", provider_path, json=provider_body, headers=extra_headers
             ) as resp:
                 resp.raise_for_status()

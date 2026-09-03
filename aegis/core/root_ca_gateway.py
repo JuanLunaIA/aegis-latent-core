@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 import logging
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 class SigningRequest:
     request_id: str
     csr: str  # Certificate Signing Request
-    metadata: dict
+    metadata: dict[str, Any]
     timestamp: float
 
 
@@ -38,12 +39,12 @@ class AirGapGateway:
     between the Root CA and the external world.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._outbound_queue: list[SigningRequest] = []
         self._inbound_buffer: list[SignedCertificate] = []
         logger.info("AirGapGateway initialized. Data-Diode protocol active.")
 
-    def submit_signing_request(self, csr: str, metadata: dict) -> str:
+    def submit_signing_request(self, csr: str, metadata: dict[str, Any]) -> str:
         """
         Prepares a signing request to be transferred to the Air-Gapped CA.
         In a real scenario, this is exported as a QR code, USB, or optical diode.
@@ -61,7 +62,7 @@ class AirGapGateway:
         logger.info("Signing request %s queued for physical transfer to Root CA.", req_id)
         return req_id
 
-    def import_signed_certificate(self, encoded_payload: str):
+    def import_signed_certificate(self, encoded_payload: str) -> None:
         """
         Imports a signed certificate returning from the Air-Gapped CA.
         """

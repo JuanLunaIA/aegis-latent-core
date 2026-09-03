@@ -27,7 +27,7 @@ class TransportHardener:
     Enforces maximum security for the transport layer.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._pins: dict[str, list[str]] = {}
         self._ssl_context = self._create_hardened_context()
 
@@ -60,7 +60,7 @@ class TransportHardener:
         logger.info("SSLContext hardened: TLS 1.3 forced, strict verification enabled.")
         return context
 
-    def add_certificate_pin(self, hostname: str, spki_hash: str):
+    def add_certificate_pin(self, hostname: str, spki_hash: str) -> None:
         """
         Adds a certificate pin for a specific hostname.
         """

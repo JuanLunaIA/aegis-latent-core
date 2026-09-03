@@ -22,7 +22,7 @@ import hmac
 import json
 import logging
 import os
-import pickle
+import pickle  # nosec B403 - imported so this module can restrict it: RestrictedUnpickler allow-lists classes and HMAC-verifies payloads before any load
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
@@ -146,7 +146,7 @@ class RestrictedUnpickler(pickle.Unpickler):
     HMAC signature verification for complete protection.
     """
 
-    def __init__(self, *args, allowed_classes: set[str] | None = None, **kwargs) -> None:
+    def __init__(self, *args: Any, allowed_classes: set[str] | None = None, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.allowed_classes = allowed_classes or {
             "dict",

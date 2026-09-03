@@ -22,7 +22,6 @@ CONTEXT = ROOT / ".aegis_ai_context"
 SOURCE_BASELINE_COMMIT = "fdace8844568eb788216740b2cb5daf187d99d3b"
 PUBLISHED_GITHUB_RELEASE_TARGET = "6469904380218584ae0b5221334bc9a46500f5ba"
 SOURCE_BASELINE_VERSION = "4.0.0"
-SOURCE_RELEASE_TARGET_VERSION = "4.0.2"
 EXISTING_CONTEXT = tuple(
     CONTEXT / f"{number:02d}_{name}"
     for number, name in (
@@ -75,6 +74,13 @@ def _load_module(name: str, relative_path: str) -> ModuleType:
     return module
 
 
+# Derived from the generator rather than restated, so a version bump cannot leave
+# this expectation naming the previous release while the corpus moves on.
+SOURCE_RELEASE_TARGET_VERSION = _load_module(
+    "context_manifest_generator_version", "scripts/generate_ai_context_manifest.py"
+).SOURCE_RELEASE_TARGET_VERSION
+
+
 def _json(path: str) -> dict[str, Any]:
     value = json.loads(_text(ROOT / path))
     assert isinstance(value, dict)
@@ -121,7 +127,7 @@ def test_all_eight_refreshed_files_separate_release_state_dimensions() -> None:
         assert PUBLISHED_GITHUB_RELEASE_TARGET in text, path.name
         assert "v4.0.1" in text, path.name
         assert SOURCE_BASELINE_VERSION in text, path.name
-        assert "v4.0.2" in text, path.name
+        assert f"v{SOURCE_RELEASE_TARGET_VERSION}" in text, path.name
         assert "14" in text, path.name
         assert "published" in text, path.name
         assert "not " in text or "no " in text, path.name

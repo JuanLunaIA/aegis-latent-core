@@ -122,7 +122,7 @@ _ICD11_CHAPTER: dict[str, str] = {
 
 # ── Keyword → domain inference (for requests without explicit codes) ──────────
 
-_KEYWORD_DOMAIN: list[tuple[re.Pattern, str]] = [
+_KEYWORD_DOMAIN: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(
             r"\b(?:diabetes|insulin|glucose|thyroid|hyperthyroid|hypothyroid|HbA1c|A1C|endocrine|adrenal|cortisol|Cushing|Addison)\b",

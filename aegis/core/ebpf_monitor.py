@@ -104,7 +104,7 @@ class IntegrityMonitor:
         ]
         self._running = False
 
-    async def start(self):
+    async def start(self) -> None:
         for probe in self.probes:
             probe.load()
         self._running = True
@@ -113,7 +113,7 @@ class IntegrityMonitor:
             "eBPF Integrity Monitor active. Scanning for micro-latency, critical syscalls, and memory corruption."
         )
 
-    async def _monitor_loop(self):
+    async def _monitor_loop(self) -> None:
         while self._running:
             for probe in self.probes:
                 events = probe.poll_events()
@@ -148,7 +148,7 @@ class IntegrityMonitor:
 
             await asyncio.sleep(1)
 
-    def _trigger_fail_closed(self, pid: int):
+    def _trigger_fail_closed(self, pid: int) -> None:
         """
         Triggers a fail-closed sequence: logs the affected PID for forensic isolation.
         Full implementation requires SIGKILL and core dump capture.
@@ -157,7 +157,7 @@ class IntegrityMonitor:
             "FAIL-CLOSED TRIGGERED: Isolating PID %d and dumping forensic state...", pid
         )
 
-    def stop(self):
+    def stop(self) -> None:
         self._running = False
 
 

@@ -3,7 +3,7 @@
 **Suite version:** 1.0
 **Evidence cutoff:** 2026-08-27 UTC
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out source metadata is synchronized at `v4.0.2`
+**Source baseline:** checked-out source metadata is synchronized at `v4.1.0`
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** published `v3.1.0` artifacts and retained measurements remain historical; post-v3.1.0 capabilities are not attributed to that distribution
 **Language:** US English
@@ -11,7 +11,7 @@
 
 ## Purpose
 
-This directory is the canonical institutional review suite for the checked-out `v4.0.2` source baseline and retained historical evidence, including the published Aegis Latent Core `v3.1.0` distribution artifacts and the immutable `4.0.0` comparison record. It reconciles architecture, cryptography, security, operations, regulatory, and commercial claims against production code, tests, retained evidence, and authoritative external sources. Post-v3.1.0 source capabilities are not retroactively attributed to the `v3.1.0` distribution, and source review does not establish v4 publication or target-environment acceptance. The suite does not convert a technical feature into a certification, legal opinion, contractual commitment, production authorization, or independent assurance report.
+This directory is the canonical institutional review suite for the checked-out `v4.1.0` source baseline and retained historical evidence, including the published Aegis Latent Core `v3.1.0` distribution artifacts and the immutable `4.0.0` comparison record. It reconciles architecture, cryptography, security, operations, regulatory, and commercial claims against production code, tests, retained evidence, and authoritative external sources. Post-v3.1.0 source capabilities are not retroactively attributed to the `v3.1.0` distribution, and source review does not establish v4 publication or target-environment acceptance. The suite does not convert a technical feature into a certification, legal opinion, contractual commitment, production authorization, or independent assurance report.
 
 ## Volumes
 

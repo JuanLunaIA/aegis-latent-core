@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import ctypes
 import logging
+from typing import cast
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +197,7 @@ class SeccompSandbox:
                 len(missing),
                 missing,
             )
-        return ctx
+        return cast("int | None", ctx)
 
     def apply_filter(self) -> bool:
         """Build and load the seccomp-BPF filter into the kernel.

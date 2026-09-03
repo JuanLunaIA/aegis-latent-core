@@ -197,6 +197,13 @@ jobs:
             aegis/telemetry/events.py \
             aegis/telemetry/otel.py \
             aegis/telemetry/siem.py
+      # The strict profile now passes over the whole package. It is a separate
+      # step so a regression names itself rather than hiding inside the CI
+      # profile above, which stays as the narrower always-green floor. The
+      # Python SDK is checked strictly in the sdk-python job, which installs
+      # its own pinned dependencies.
+      - name: Mypy (strict — whole aegis package)
+        run: mypy --strict aegis
 
   # ── Public SDK contract gates ───────────────────────────────────────────────
   sdk-python:
@@ -216,6 +223,7 @@ jobs:
         run: |
           ruff check src tests
           mypy --config-file pyproject.toml
+          mypy --strict src
           pytest -q
       - name: Build standalone SDK distribution
         run: python -m build sdk/python
