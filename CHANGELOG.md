@@ -3,17 +3,17 @@
 All notable changes to **Aegis Latent Core** are documented in this file.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** `v4.1.1`; source metadata does not establish external lifecycle state, which requires independent readback.
-**External readback (2026-09-03):** `v4.1.1` signed annotated tag at `5a137c86ecd914842493babb7e863033498f68c9`, GitHub Release with 31 assets, PyPI `aegis-latent-sdk` `4.1.1`, GHCR gateway/dashboard images; npm still `4.0.0`
+**Release baseline:** `v4.1.2` source release target; source metadata does not establish external lifecycle state, which requires independent readback. Nothing is published for `4.1.2`.
+**Most recent published release (readback 2026-09-03):** `v4.1.1` signed annotated tag at `5a137c86ecd914842493babb7e863033498f68c9`, GitHub Release with 31 assets, PyPI `aegis-latent-sdk` `4.1.1`, GHCR gateway/dashboard images; npm still `4.0.0`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
-**Source release target:** `v4.1.1` (fourteen synchronized `4.1.1` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts)
+**Source release target:** `v4.1.2` (fourteen synchronized `4.1.2` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts)
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [4.1.2] — 2026-09-03
 
 ### Added
 

@@ -74,7 +74,7 @@ An honest assessment for a decision-maker:
 | **Single maintainer; bus factor of one** | High | Pin and vendor the source; build internal capability; negotiate continuity terms |
 | **No independent assurance** | High for regulated buyers | Commission your own review; the source is available |
 | **No production-scale evidence** | Medium | Measure in your own pilot; do not rely on published numbers |
-| **Registry lag** — SDKs at `4.0.0`, source at `4.1.1` | Medium | Install from source, or verify which version you actually have |
+| **Registry lag** — SDKs at `4.0.0`, source at `4.1.2` | Medium | Install from source, or verify which version you actually have |
 | **Operator-trust assumption** | Inherent | Control host access; this is not solvable in software |
 | **No SLA** | Medium | Commercial agreement, or accept it explicitly |
 | **Cross-replica ordering absent** | High if you need one timeline | No mitigation; this is a design property |

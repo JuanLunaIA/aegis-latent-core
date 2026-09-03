@@ -5,7 +5,7 @@
 This document describes a US-market positioning and packaging hypothesis for Aegis Latent Core. It is for commercial stakeholders, founders, product owners, procurement and support planners. It is not a binding offer, a forecast, legal advice, or evidence of market validation.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** checked-out source baseline/release target `v4.1.1` with 14 synchronized anchors
+**Release baseline:** checked-out source baseline/release target `v4.1.2` with 14 synchronized anchors
 **Source baseline/release target:** `v4.1.1` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
 **Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **Market scope:** United States, self-hosted enterprise AI infrastructure

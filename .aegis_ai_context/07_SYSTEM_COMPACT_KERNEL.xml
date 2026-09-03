@@ -11,7 +11,7 @@
     <source-baseline>Commit fdace8844568eb788216740b2cb5daf187d99d3b is the immutable source baseline. All 14 version anchors read 4.0.0.</source-baseline>
     <github-release>v4.0.1 is a published GitHub Release whose lightweight tag targets 6469904380218584ae0b5221334bc9a46500f5ba.</github-release>
     <registry-observation>Public PyPI and npm aegis-latent-sdk packages were observed at 4.0.0. This observation does not attribute provenance to failed workflows or any unverified run.</registry-observation>
-    <source-release-target>The checked-out source release target v4.1.1 has 14 synchronized anchors at 4.1.0. External lifecycle state—tag, GitHub Release, PyPI, npm, OCI, and attestations—must be independently read back and is not encoded by source metadata. Record HEAD and status; manifest hashes describe bytes, not lifecycle state.</source-release-target>
+    <source-release-target>The checked-out source release target v4.1.2 has 14 synchronized anchors at 4.1.2, and nothing is published for it. External lifecycle state—tag, GitHub Release, PyPI, npm, OCI, and attestations—must be independently read back and is not encoded by source metadata. Record HEAD and status; manifest hashes describe bytes, not lifecycle state.</source-release-target>
     <rule>Do not join source, GitHub Release, registry, workflow configuration, run, or external lifecycle facts without direct evidence for that relationship.</rule>
     <rule>Do not assert production readiness, certification, conformity, legal admissibility, or accepted capacity without direct authoritative evidence.</rule>
   </release-model>

@@ -4,9 +4,9 @@ This roadmap distinguishes **repository evidence** from **deployment acceptance*
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out source metadata is synchronized at `v4.1.1`
+**Source baseline:** checked-out source metadata is synchronized at `v4.1.2`
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
-**Historical evidence baseline:** retained `v3.1.0` release evidence remains historical and is not a `v4.1.1` assurance result
+**Historical evidence baseline:** retained `v3.1.0` release evidence remains historical and is not a `v4.1.2` assurance result
 
 ## Assurance layers
 

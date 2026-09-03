@@ -6,10 +6,10 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 # Aegis Latent Core — Engineering and Market Roadmap
 
-**Status:** checked-out source baseline/release target `v4.1.1` has 14 synchronized anchors; source metadata does not establish external lifecycle or target-acceptance state
+**Status:** checked-out source baseline/release target `v4.1.2` has 14 synchronized anchors; source metadata does not establish external lifecycle or target-acceptance state
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** checked-out source baseline/release target `v4.1.1` with 14 synchronized anchors, plus historical external observations
-**Source baseline:** fourteen synchronized `4.1.1` anchors; immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
+**Release baseline:** checked-out source baseline/release target `v4.1.2` with 14 synchronized anchors, plus historical external observations
+**Source baseline:** fourteen synchronized `4.1.2` anchors; immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
 **External baseline:** `v4.1.1` published and read back 2026-09-03 — signed annotated tag at `5a137c86ecd914842493babb7e863033498f68c9`, GitHub Release, PyPI `aegis-latent-sdk` `4.1.1`, GHCR gateway/dashboard images; npm still at `4.0.0`. Prior lightweight `v4.0.1` tag at `6469904380218584ae0b5221334bc9a46500f5ba` had failed tag workflows, and the `4.0.0` registry objects carry no attributed provenance from them
 **Purpose:** Single source of truth for work that is implemented, measured, deployment-dependent, or still open.
 

@@ -1,8 +1,8 @@
 # Documentation Index
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** checked-out source baseline/release target `v4.1.1` with 14 synchronized anchors, plus historical external observations
-**Source baseline:** `4.1.1` with fourteen synchronized anchors; immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
+**Release baseline:** checked-out source baseline/release target `v4.1.2` with 14 synchronized anchors, plus historical external observations
+**Source baseline:** `4.1.2` with fourteen synchronized anchors; immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
 **External state:** `4.1.1` is published, read back 2026-09-03 — signed annotated tag at `5a137c86ecd914842493babb7e863033498f68c9`, GitHub Release with 31 assets, PyPI `aegis-latent-sdk` `4.1.1`, GHCR gateway and dashboard images. npm still carries `4.0.0`. The previous published release is signed annotated `v4.0.2` at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, whose GitHub Release and GHCR readbacks passed on 2026-08-28 and whose SDK publish jobs were skipped
 
 This directory distinguishes the **`4.1.1` source baseline** from historical external observations and the independently verified release objects. `4.1.1` was published on 2026-09-03: the signed annotated tag, the GitHub Release and its 31 assets, the PyPI SDK, and both GHCR images were read back. npm is the exception and still carries `4.0.0`; its publish step failed on a defect in the publish command, which is fixed but not yet re-dispatched. For the preceding `4.0.2` release, the signed tag, GitHub Release asset envelope, GHCR multi-architecture manifests, GitHub attestations, and keyless OCI signatures were read back successfully, while both SDK publish jobs were skipped because the trusted-publishing enablement variable was not readable. A source version, successful repository checks, or a GitHub Release does not establish package-index upload, deployment acceptance, production service level, or compliance result.
@@ -19,7 +19,7 @@ This directory distinguishes the **`4.1.1` source baseline** from historical ext
 
 ## Baseline rule
 
-Use **source baseline** for statements about code and tests in the checked-out `v4.1.1` source baseline. Use **verified external object** only for the named signed tag, GitHub Release assets, and GHCR objects recorded in the release report. Use **historical baseline** only for statements tied to named immutable revisions or artifacts. Never transfer a historical benchmark or security result to the checked-out source baseline without a rerun, and never infer PyPI/npm publication from the GitHub Release or source metadata.
+Use **source baseline** for statements about code and tests in the checked-out `v4.1.2` source baseline. Use **verified external object** only for the named signed tag, GitHub Release assets, and GHCR objects recorded in the release report. Use **historical baseline** only for statements tied to named immutable revisions or artifacts. Never transfer a historical benchmark or security result to the checked-out source baseline without a rerun, and never infer PyPI/npm publication from the GitHub Release or source metadata.
 
 ## Technical references
 

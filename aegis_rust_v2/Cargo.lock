@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "aegis_rust"
-version = "4.1.1"
+version = "4.1.2"
 dependencies = [
  "aho-corasick",
  "blake3",

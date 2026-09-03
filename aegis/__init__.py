@@ -13,7 +13,7 @@ not a containment boundary against the process it runs in. See
 :mod:`aegis.embedded`.
 """
 
-__version__ = "4.1.1"
+__version__ = "4.1.2"
 
 from aegis.embedded import AegisBlockedError, AegisEmbedded, AegisEmbeddedError, wrap
 

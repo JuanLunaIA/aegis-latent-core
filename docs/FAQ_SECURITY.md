@@ -1,11 +1,11 @@
-# Security FAQ — Aegis Latent Core v4.1.1 source
+# Security FAQ — Aegis Latent Core v4.1.2 source
 
 This FAQ is for application-security reviewers, cryptography reviewers, CISOs and security procurement teams. It states the implemented mechanism, the evidence path and the residual risk for common security questions. It does not replace the threat model, security policy, independent assessment or customer controls.
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** `v4.1.1` source; external release status requires independent readback
-**Source baseline:** `v4.1.1`; source metadata is not publication, deployment-acceptance, or certification evidence
-**Retained evidence baseline:** `v3.1.0`; retained measurements remain historical and are not v4.1.1 measurements
+**Source baseline:** `v4.1.2`; source metadata is not publication, deployment-acceptance, or certification evidence
+**Retained evidence baseline:** `v3.1.0`; retained measurements remain historical and are not v4.1.2 measurements
 **Audience:** AppSec, cryptography, security architecture and procurement
 **Primary security document:** [`SECURITY.md`](../SECURITY.md)
 
@@ -13,7 +13,7 @@ This FAQ is for application-security reviewers, cryptography reviewers, CISOs an
 
 That word is too broad to be a useful claim. Aegis implements named controls such as request bounds, application-layer WAF checks, egress validation, signing, WAL integrity, fail-closed paths and strict startup prerequisites. Each control has a residual risk and deployment dependency. The claims matrix is the normative public boundary.
 
-## Are the Phase 2/3 streaming, SDK, proof, export, and dashboard modules in the v4.1.1 source?
+## Are the Phase 2/3 streaming, SDK, proof, export, and dashboard modules in the v4.1.2 source?
 Yes. They are implemented in the `v4.1.1` source and are covered by the code, tests, CI contracts, and bounded evidence locators in `docs/CLAIMS_MATRIX.md`. The immutable `v3.1.0` tag and its release assets pre-date those modules. The v4.1.1 source version alone does not prove that a signed tag, GitHub Release, packages, OCI images, or attestations exist; each publication boundary requires independent readback.
 
 ## Do regulatory mappings certify Aegis?

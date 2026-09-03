@@ -10,7 +10,7 @@ Aegis sits between your application and your model provider. For every governed 
 [![Coverage](https://img.shields.io/badge/statement%20coverage-93.91%25%20(2026--08--18)-informational)](docs/benchmarks/BENCHMARK_METHOD.md)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
 
-> **Current release:** `v4.1.1`, fourteen synchronized anchors. Published and read back on 2026-09-03: signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk` `4.1.1`, and GHCR gateway and dashboard images. **npm still carries `4.0.0`** — that publish step failed and is fixed but not yet re-dispatched. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The gateway ships from source and from GHCR; the SDK registries carry SDKs only. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
+> **Current release:** `v4.1.1`, read back on 2026-09-03 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk` `4.1.1`, and GHCR gateway and dashboard images. **npm still carries `4.0.0`** — that publish step failed and is fixed but not yet re-dispatched. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The gateway ships from source and from GHCR; the SDK registries carry SDKs only. **The source tree is ahead at `v4.1.2`**, fourteen synchronized anchors, with nothing published for it. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
 ---
 
@@ -165,7 +165,7 @@ pip install -e ./sdk/python
 cd sdk/typescript && npm ci && npm run build
 ```
 
-**Registry caution.** PyPI carries `aegis-latent-sdk` at `4.1.1`, matching this source tree. **npm still carries `4.0.0`** — installing the SDK from npm gets you different code from what these documents describe. Check which registry you are installing from.
+**Registry caution.** PyPI carries `aegis-latent-sdk` at `4.1.2`, matching this source tree. **npm still carries `4.0.0`** — installing the SDK from npm gets you different code from what these documents describe. Check which registry you are installing from.
 
 **Proof verification caution.** A proof verified against a root supplied by the same gateway that produced it establishes internal consistency only. Obtain the trusted root through an independent channel, or the verification is circular.
 
@@ -231,7 +231,7 @@ Separately, Kani 0.67.0 model-checks the native WAL's frame-bounds arithmetic ov
 | Statement coverage | 89.7169% | Candidate gate record | 2026-08-24 |
 | Python suite | 5,707 passed, 37 skipped | Candidate gate record | 2026-08-24 |
 | Python suite | 5,661 passed, 81 skipped, 0 failed | Clean-container reproduction | 2026-09-01 |
-| Python suite | 5,974 passed, 52 skipped, 0 failed | `4.1.1` source baseline | 2026-09-03 |
+| Python suite | 5,974 passed, 52 skipped, 0 failed | `4.1.2` source baseline | 2026-09-03 |
 | Rust extension | 31 tests passed; Clippy `-D warnings`; abi3 wheel built | CI | Per run |
 | Static analysis | `mypy --strict` 0 errors over 186 files; Bandit 0 findings at every severity | CI | Per run |
 | Model checking | 5 Kani harnesses verified, 0 failures, over the whole `usize` domain | CI | Per run |

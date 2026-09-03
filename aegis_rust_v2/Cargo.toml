@@ -3,7 +3,7 @@
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 [package]
 name = "aegis_rust"
-version = "4.1.1"
+version = "4.1.2"
 edition = "2021"
 description = "Tier-4 Rust core: zero-copy forwarder, Aho-Corasick WAF, BLAKE3 audit chain, mmap WAL, lock-free rate limiter & session store, ML-DSA PQC signing"
 license = "AGPL-3.0-only"

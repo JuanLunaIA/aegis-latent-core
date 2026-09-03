@@ -12,7 +12,7 @@ This guide explains how to scale Aegis without confusing horizontal fan-out, sto
 **Audience:** Platform engineering and SRE
 **Primary runtime contract:** [`DEPLOYMENT_GUIDE.md`](../../DEPLOYMENT_GUIDE.md)
 
-The checked-out `v4.1.1` source baseline/release target and immutable comparison source identify implementations under documentation review; they do not reclassify or reproduce the published `v3.1.0` evidence. Historical v3.1.0 measurements must not be used as v4 capacity, latency, availability, or SLO claims. A v4 claim requires a v4 rerun plus acceptance evidence from the actual target environment.
+The checked-out `v4.1.2` source baseline/release target and immutable comparison source identify implementations under documentation review; they do not reclassify or reproduce the published `v3.1.0` evidence. Historical v3.1.0 measurements must not be used as v4 capacity, latency, availability, or SLO claims. A v4 claim requires a v4 rerun plus acceptance evidence from the actual target environment.
 
 ## Scaling invariant
 

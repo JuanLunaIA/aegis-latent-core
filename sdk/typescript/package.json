@@ -1,6 +1,6 @@
 {
   "name": "aegis-latent-sdk",
-  "version": "4.1.1",
+  "version": "4.1.2",
   "description": "Edge-compatible Aegis MMR verification and provider instrumentation",
   "type": "module",
   "license": "AGPL-3.0-only OR LicenseRef-Proprietary",
@@ -74,7 +74,7 @@
     "check": "npm run typecheck && npm test && npm run build"
   },
   "devDependencies": {
-    "@anthropic-ai/sdk": "^0.120.0",
+    "@anthropic-ai/sdk": "^0.123.0",
     "@types/node": "22.20.1",
     "openai": "^6.49.0",
     "typescript": "5.7.3",

@@ -19,7 +19,7 @@ Built-in roles grant only the following scopes: `admin` grants all declared scop
 
 ## 2. Distributed request and token quotas
 
-The v4.1.1 source uses atomic request and generated-token buckets keyed by a SHA-256 pseudonym of authenticated tenant and credential identity. Session and tenant headers cannot reset these buckets. Redis mode executes one Lua transaction over both buckets and uses Redis `TIME`, avoiding host-clock disagreement. Memory mode is process-local and is not a distributed enforcement claim.
+The v4.1.2 source uses atomic request and generated-token buckets keyed by a SHA-256 pseudonym of authenticated tenant and credential identity. Session and tenant headers cannot reset these buckets. Redis mode executes one Lua transaction over both buckets and uses Redis `TIME`, avoiding host-clock disagreement. Memory mode is process-local and is not a distributed enforcement claim.
 
 The gateway reserves the configured output maximum before forwarding. Non-streaming responses refund only when the authenticated upstream returns a valid provider usage count. Streaming retains the reservation because terminal event counting is not treated as authoritative billing telemetry. Responses expose generic request-bucket fields (`X-RateLimit-Limit`, `X-RateLimit-Remaining`) plus request/token dimension-specific fields; 429 responses add finite `Retry-After` when a reset can be computed.
 
@@ -45,7 +45,7 @@ The Python SDK includes optional LangChain and LlamaIndex callback adapters. The
 
 ## 6. Publishing and OCI boundaries
 
-The PyPI and npm workflows build and test exact SDK artifacts, require a signed annotated tag plus its full expected target, verify the tag from protected `main`, check out the exact signed source commit, pass artifacts by commit-specific names, and grant OIDC only in environment-gated publish jobs. Publication also requires repository variable `AEGIS_TRUSTED_PUBLISHING_ENABLED=true`. The v4.0.2 dispatches built successfully but skipped their publish jobs, so neither registry received `4.0.2`. With the variable set, the v4.1.1 dispatch published to PyPI; npm failed at the publish command itself rather than at the gate, so npm remains at `4.0.0`.
+The PyPI and npm workflows build and test exact SDK artifacts, require a signed annotated tag plus its full expected target, verify the tag from protected `main`, check out the exact signed source commit, pass artifacts by commit-specific names, and grant OIDC only in environment-gated publish jobs. Publication also requires repository variable `AEGIS_TRUSTED_PUBLISHING_ENABLED=true`. The v4.0.2 dispatches built successfully but skipped their publish jobs, so neither registry received `4.0.2`. With the variable set, the v4.1.2 dispatch published to PyPI; npm failed at the publish command itself rather than at the gate, so npm remains at `4.0.0`.
 
 External setup is mandatory: configure protected immutable tag rules, signing-key trust, GitHub environments and reviewers, PyPI/npm trusted-publisher identities bound to the exact workflow and environment, package ownership, and registry policy. The repository cannot prove those controls. The dashboard image accepts credentials only at runtime; credentials are not Docker build arguments.
 

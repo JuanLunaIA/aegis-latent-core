@@ -5,16 +5,26 @@
 **Boundary:** this is the only document that states publication state. Every other document links here. Source metadata never establishes publication; readback does.
 
 **Last verified:** 2026-09-03 UTC (source baseline and `4.1.1` external surfaces); 2026-09-02 UTC (`4.0.2` external surfaces)
-**Source baseline:** `4.1.1`, fourteen synchronized anchors
+**Source baseline:** `4.1.2`, fourteen synchronized anchors
+**Publication state of `4.1.2`:** **nothing is published.** No tag, release, registry package, image, signature or attestation exists for this version. It supersedes `4.1.1` in source only.
 **Publication state of `4.1.1`:** **published, except npm.** The signed tag, the GitHub Release and its assets, the PyPI SDK, and both OCI images were read back on 2026-09-03. npm still carries `4.0.0`; see §1.1 for the cause. For the superseded `4.1.0`, a lightweight tag and an empty immutable release exist — see §1.2.
 
 ---
 
 ## 1. Publication state
 
-**Read this section as three separate things.** The source baseline moved to `4.1.1` on 2026-09-03 and was published the same day — every surface except npm, which failed on a defect in the publish command rather than on policy. A `v4.1.0` tag and GitHub Release also exist, but neither came from the release pipeline and the release carries no assets. The `4.0.2` rows were last read back on 2026-09-02 and **describe `4.0.2` only**.
+**Read this section as four separate things.** The source baseline is now `4.1.2`, and nothing is published for it. The preceding `4.1.1` was cut and published on 2026-09-03 — every surface except npm, which failed on a defect in the publish command rather than on policy, and remains unpublished at the time of writing. A `v4.1.0` tag and GitHub Release also exist, but neither came from the release pipeline and the release carries no assets. The `4.0.2` rows were last read back on 2026-09-02 and **describe `4.0.2` only**.
 
-Nothing in this table may be restated with the version number changed. A `4.0.2` digest is not a `4.1.1` digest, and a `4.0.2` signature attests to `4.0.2` bytes.
+Nothing in this table may be restated with the version number changed. A `4.0.2` digest is not a `4.1.1` digest, a `4.1.1` digest is not a `4.1.2` digest, and a `4.0.2` signature attests to `4.0.2` bytes.
+
+### 1.0 `4.1.2` — source only, nothing published
+
+| Surface | State | Observed value |
+| --- | --- | --- |
+| Source baseline | Confirmed | `4.1.2`, fourteen synchronized anchors, contract `READY` |
+| Tag, Release, PyPI, npm, OCI, attestations | **Do not exist** | No `v4.1.2` object has been created on any surface |
+
+Creating the signed tag and running the release pipeline are dispatch actions against `main`; neither is performed by a source change. Until they run and are read back, `4.1.2` is a source version and nothing more.
 
 ### 1.1 `4.1.1` — published, read back 2026-09-03
 
@@ -69,11 +79,11 @@ certificate identity, not `git verify-tag`.
 
 **Why it is empty.** No workflow in this repository is triggered by a pushed tag. `release.yml` — which builds the wheels, SDK packages, SBOMs, `release-asset-manifest.json` and `SHA256SUMS`, and creates the release with them attached — is `workflow_dispatch` only, and was not dispatched. The absent Deployments have the same cause: they come from the `environment: release` blocks in `create_release_tag.yml` and `release.yml`.
 
-**Do not treat `v4.1.0` as a release.** It has no verifiable artifacts, no signature and no provenance. Use `4.0.2` for a published artifact, or build `4.1.1` from source.
+**Do not treat `v4.1.0` as a release.** It has no verifiable artifacts, no signature and no provenance. Use `4.1.1` for a published artifact, or build `4.1.2` from source.
 
 ### 1.3 Historical readback — `4.0.2`, observed 2026-09-02
 
-Retained as the record of what that version's surfaces actually carried, and still the most recent release produced by the pipeline. These rows are historical and are not claims about `4.1.1`.
+Retained as the record of what that version's surfaces actually carried, and still the most recent release produced by the pipeline. These rows are historical and are not claims about `4.1.1` or `4.1.2`.
 
 | Surface | State | Observed value | Readback |
 | --- | --- | --- | --- |
@@ -228,11 +238,11 @@ A successful `gitsign verify` establishes that the signing workflow in this repo
 
 ## 4. Version anchors
 
-The release contract requires fourteen version anchors to agree before a tag is cut. They are: `core`, `core-runtime`, `python-sdk`, `python-sdk-runtime`, `typescript-sdk`, `typescript-lock`, `dashboard`, `dashboard-lock`, `rust-cargo`, `rust-pyproject`, `rust-lock`, `helm-chart`, `helm-app`, and `helm-image`. All fourteen read `4.1.1` at the tagged commit, and `4.0.2` at that tag.
+The release contract requires fourteen version anchors to agree before a tag is cut. They are: `core`, `core-runtime`, `python-sdk`, `python-sdk-runtime`, `typescript-sdk`, `typescript-lock`, `dashboard`, `dashboard-lock`, `rust-cargo`, `rust-pyproject`, `rust-lock`, `helm-chart`, `helm-app`, and `helm-image`. All fourteen read `4.1.2` in the working tree, `4.1.1` at the `v4.1.1` tag, and `4.0.2` at the `v4.0.2` tag.
 
 The immutable parent comparison commit `fdace8844568eb788216740b2cb5daf187d99d3b` retains fourteen synchronized `4.0.0` anchors and is the reference point for diffing source metadata between baselines.
 
-The anchor set is what the contract checks, not the whole of what carries a version. `SOURCE_RELEASE_TARGET_VERSION` in `scripts/generate_ai_context_manifest.py` is a fifteenth locus the contract does not check; it is bumped by hand and was left at `4.1.0` during the `4.1.1` cut until caught separately.
+The anchor set is what the contract checks, not the whole of what carries a version. `SOURCE_RELEASE_TARGET_VERSION` in `scripts/generate_ai_context_manifest.py` is a fifteenth locus the contract does not check; it is bumped by hand and was left at `4.1.0` during the `4.1.1` cut until caught separately. It reads `4.1.2` now.
 
 ## 5. Release envelope detail
 

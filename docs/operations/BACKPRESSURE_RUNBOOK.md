@@ -12,7 +12,7 @@ This runbook is for platform engineering, SRE, security operations and release r
 **Scope:** Aegis local WAL and governed-request evidence path
 **Audience:** Platform engineering, SRE, security operations and release reviewers
 
-The retained numeric results below belong to the published `v3.1.0` evidence baseline. The checked-out `v4.1.1` source baseline/release target and immutable comparison source identify implementations under documentation review, not a rerun of those measurements. Do not promote the v3.1.0 results to v4 capacity, latency, availability, or SLO claims without a v4 rerun and target-environment acceptance evidence.
+The retained numeric results below belong to the published `v3.1.0` evidence baseline. The checked-out `v4.1.2` source baseline/release target and immutable comparison source identify implementations under documentation review, not a rerun of those measurements. Do not promote the v3.1.0 results to v4 capacity, latency, availability, or SLO claims without a v4 rerun and target-environment acceptance evidence.
 
 ## Runtime contract
 
