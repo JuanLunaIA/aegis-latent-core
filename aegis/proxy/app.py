@@ -395,6 +395,74 @@ def _extract_payload_text(body: dict[str, Any]) -> str:
     return ""
 
 
+def _rejection_evidence_bytes(body: dict[str, Any]) -> bytes:
+    """Deterministic bytes standing for the request a guard refused.
+
+    The normalised body is used rather than the raw wire bytes because it is
+    what the guard actually inspected and judged, and it is available at every
+    rejection site. It is hashed into the leaf, never stored.
+    """
+    try:
+        return json.dumps(body, sort_keys=True, separators=(",", ":"), default=str).encode()
+    except (TypeError, ValueError):
+        # A body that will not serialise still gets a durable rejection; the
+        # hash then covers the repr rather than nothing.
+        return repr(body).encode()
+
+
+async def _commit_rejection_evidence(
+    state: _AppState,
+    *,
+    rejection_code: int,
+    reason_category: str,
+    request_bytes: bytes,
+    tenant_id: str | None = None,
+    endpoint: str = "rejected",
+) -> dict[str, str]:
+    """Durably record a pre-admission refusal and return its response headers.
+
+    **This never prevents the rejection.** A request the gateway decided to
+    block stays blocked whether or not the evidence commit succeeds: an audit
+    failure that re-admitted hostile input would invert the security property
+    the audit exists to document. When the commit does not happen the caller
+    still rejects, and the response says so via ``X-Aegis-Evidence-Status``
+    rather than implying a durability that was not achieved.
+
+    The commit is skipped outright when the ledger is already faulted. That is
+    the same rule ``_require_intact_ledger`` applies to admitted traffic: a
+    chain whose integrity is in question is not extended.
+
+    Returns:
+        Headers to attach to the error response. Always includes
+        ``X-Aegis-Evidence-Status``; includes ``X-Aegis-Rejection-ID`` only
+        when a node was actually committed.
+    """
+    fault = getattr(state.ledger, "_fault_state", "healthy")
+    if fault != "healthy":
+        logger.warning(
+            "rejection evidence skipped: ledger fault_state=%s; refusing to extend chain", fault
+        )
+        return {"X-Aegis-Evidence-Status": "rejection-uncommitted"}
+    try:
+        # The ledger is synchronous and fsyncs; keep the event loop free.
+        node = await asyncio.to_thread(
+            state.ledger.commit_rejection,
+            request_bytes=request_bytes,
+            rejection_code=rejection_code,
+            reason_category=reason_category,
+            tenant_id=tenant_id,
+            endpoint=endpoint,
+        )
+    except Exception:
+        logger.exception("rejection evidence commit failed; rejecting without durable evidence")
+        return {"X-Aegis-Evidence-Status": "rejection-uncommitted"}
+    observability.AUDIT_CHAIN_NODES.set(len(state.ledger.chain))
+    return {
+        "X-Aegis-Rejection-ID": node.state_id,
+        "X-Aegis-Evidence-Status": "durable-rejection",
+    }
+
+
 def _apply_request_entropy_guard(request: Request, body: dict[str, Any], state: _AppState) -> None:
     """Apply Shannon-entropy payload guard using pre-initialised state singletons.
 
@@ -1205,6 +1273,16 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             headers = _rate_headers(decision)
             if math.isfinite(decision.retry_after):
                 headers["Retry-After"] = str(max(1, math.ceil(decision.retry_after)))
+            headers.update(
+                await _commit_rejection_evidence(
+                    state,
+                    rejection_code=429,
+                    reason_category="rate_limit",
+                    request_bytes=_rejection_evidence_bytes(body),
+                    tenant_id=principal.tenant_id,
+                    endpoint="rate_limit",
+                )
+            )
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Request or generated-token quota exceeded",
@@ -1417,9 +1495,18 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         if not waf_result.allowed:
             layer = "layer1" if "Layer-1" in (waf_result.reason or "") else "layer2"
             observability.WAF_BLOCKS.labels(layer=layer).inc()
+            evidence = await _commit_rejection_evidence(
+                state,
+                rejection_code=403,
+                reason_category=f"waf_block_{layer}",
+                request_bytes=_rejection_evidence_bytes(body),
+                tenant_id=principal.tenant_id,
+                endpoint=request.url.path,
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Payload rejected by WAF: {waf_result.reason}",
+                headers=evidence,
             )
 
         # FIX-APP-02: pass state instead of cfg so the function uses the cached singletons.
@@ -1455,9 +1542,18 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
         if session_waf.escalated:
             observability.WAF_BLOCKS.labels(layer="session").inc()
+            evidence = await _commit_rejection_evidence(
+                state,
+                rejection_code=429,
+                reason_category="waf_block_session",
+                request_bytes=_rejection_evidence_bytes(body),
+                tenant_id=principal.tenant_id,
+                endpoint=request.url.path,
+            )
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Behavioral WAF: {session_waf.reason}",
+                headers=evidence,
             )
 
         rate_decision, reservation = await _reserve_budget(principal, body)
@@ -1705,9 +1801,18 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         waf_result = state.waf.inspect_payload(body)
         if not waf_result.allowed:
+            evidence = await _commit_rejection_evidence(
+                state,
+                rejection_code=403,
+                reason_category="waf_block",
+                request_bytes=_rejection_evidence_bytes(body),
+                tenant_id=principal.tenant_id,
+                endpoint=request.url.path,
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Payload rejected by WAF: {waf_result.reason}",
+                headers=evidence,
             )
         _apply_request_entropy_guard(request, body, state)
         body, request_scrubbed, scrub_method = _scrub_anthropic_payload(body, state)
@@ -1914,9 +2019,18 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         waf_result = state.waf.inspect_payload(body)
         if not waf_result.allowed:
+            evidence = await _commit_rejection_evidence(
+                state,
+                rejection_code=403,
+                reason_category="waf_block",
+                request_bytes=_rejection_evidence_bytes(body),
+                tenant_id=principal.tenant_id,
+                endpoint=request.url.path,
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"WAF rejected: {waf_result.reason}",
+                headers=evidence,
             )
 
         _apply_request_entropy_guard(request, body, state)
@@ -1942,9 +2056,18 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
         if session_waf.escalated:
             observability.WAF_BLOCKS.labels(layer="session").inc()
+            evidence = await _commit_rejection_evidence(
+                state,
+                rejection_code=429,
+                reason_category="waf_block_session",
+                request_bytes=_rejection_evidence_bytes(body),
+                tenant_id=principal.tenant_id,
+                endpoint=request.url.path,
+            )
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Behavioral WAF: {session_waf.reason}",
+                headers=evidence,
             )
 
         rate_decision, reservation = await _reserve_budget(principal, body)

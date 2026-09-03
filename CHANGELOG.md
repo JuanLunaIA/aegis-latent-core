@@ -15,6 +15,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Embedded mode — `aegis.wrap(client)`.** `aegis/embedded.py` runs the WAF,
+  Safe Harbor scrubbing, bounded-holdback streaming redaction and the signed
+  Merkle ledger inside the calling process, for applications that already hold
+  an `openai` or `anthropic` client and cannot add a network hop. Clients are
+  recognised by shape — `chat.completions.create` or `messages.create`, sync or
+  async — so neither SDK is imported or required. Responses carry
+  `_aegis_evidence`; blocked prompts raise `AegisBlockedError` and are never
+  dispatched. Streaming holds back the run of chunks from the last text-bearing
+  one, so the terminal record is committed before the final chunk is yielded and
+  the flushed holdback tail is still delivered to the caller. The committed
+  `response_hash` covers what the caller received, not what the provider sent.
+
+  Scope, stated because it changes a threat model: the engine governs calls made
+  through the client it wrapped. Code in the same process can call the provider
+  directly, hold an unwrapped client, or edit the WAL. It is an evidence and
+  policy layer for cooperative code, not a containment boundary against the
+  process it runs in, and not a substitute for the gateway where the application
+  is itself the thing being constrained.
+
+- **Durable pre-admission rejections.** `commit_rejection` writes a signed,
+  chain-linked, MMR-anchored node with `status="rejected"` for a request the
+  gateway refused, and the WAF and rate-limit paths emit `X-Aegis-Rejection-ID`
+  and `X-Aegis-Evidence-Status`. Previously a blocked attack left only a log
+  line, which is not evidence: logs are mutable and unchained. The body is
+  hashed, never stored — blocked input is frequently hostile and the chain must
+  not become a repository of attack payloads. The refusal never depends on the
+  commit: if evidence cannot be written the request is still refused and the
+  header reads `rejection-uncommitted`. A faulted ledger is not extended, the
+  same rule `_require_intact_ledger` applies to admitted traffic.
+
+- **Agent-to-agent receipts.** `aegis/core/a2a.py` issues and verifies receipts
+  for tool executions between agents, with verifiers ported to both SDKs
+  (`sdk/python/src/aegis_sdk/a2a.py`, `sdk/typescript/src/a2a.ts`). Arguments and
+  results travel only as SHA-256 digests. The canonical envelope is a
+  deterministic function of the receipt's own fields, so a receipt cannot be
+  re-pointed at another execution's leaf — including a genuine proof of a
+  different leaf in the same tree. A valid receipt establishes inclusion under
+  the supplied root and nothing else: not that the tool ran, not that an agent
+  identifier is authentic, not that the timestamp is true.
+
+- **`<wal>.mmr.state` peak-set checkpoint**, written atomically at close and at
+  rotation, restoring the accumulator in O(log N) rather than replaying every
+  leaf. Accepted only when the restored root equals the root the last committed
+  node recorded; a missing, stale, truncated, corrupt or disagreeing checkpoint
+  falls back to full replay, and leaves committed after a checkpoint are
+  replayed on top of it, which is the ordinary case after a crash.
+
+  **Opt-in (`mmr_fast_restore=True`), and off by default.** A peak restore
+  summarises the leaves below it, so their inclusion proofs can no longer be
+  derived from the live accumulator, and `tests/test_mmr_restart.py` asserts
+  that capability deliberately — proving every historical leaf is a stronger
+  structural check than root equality alone. Nothing forensic is lost either
+  way: each committed node carries its own self-contained `mmr_proof`, and the
+  ledger only ever asks the accumulator to prove the leaf it just appended.
+
+  This is **not** a fix for cross-restart MMR continuity. That was already
+  correct: `_load_from_wal` replays every leaf and cross-checks the rebuilt root
+  against the recorded one. This changes the cost of that reconstruction, not
+  its result — both paths produce the same root, leaf count and next leaf index.
+
+### Changed
+
+- `AuditNode` gains a `status` field (`"committed"` / `"rejected"`). It is
+  deliberately **not** a `node_hash` input, so every node written before the
+  field existed hashes identically with and without it: existing chains stay
+  verifiable and already-issued MMR proofs keep validating. Legacy WAL records
+  load as `"committed"`.
+- `tools/docs/verify_documentation.py` accepts either `Current release:` or
+  `Current release candidate:` as the README status label. It previously pinned
+  the pre-publication wording, which no longer describes a published release.
+  Removing the status line from README still fails the check.
+
+
 ### Documentation
 
 - Corrected the corpus to the observed `4.1.1` publication state. Twenty-odd

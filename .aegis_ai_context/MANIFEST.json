@@ -99,14 +99,14 @@
     {
       "category": "governed_input",
       "path": "README.md",
-      "sha256": "beff992810bff66e5b06244bfa76ce182c11e1281dde7d7ff4bb6eee662c475c",
-      "size": 15619
+      "sha256": "2cfdb35c44a2a26bac5bcc975d16d6a54a181a2e1fe77dc97709e82f02671827",
+      "size": 18861
     },
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "d786e537eb3905f0d738fb4ab32ab7e432691234798270cda7344ed025029ce2",
-      "size": 56954
+      "sha256": "1cdd2cbcf50b845905f8c3ac58f6dd362615bc1923745dbe88bce066a2f07229",
+      "size": 61666
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "f826c179cc4d97edb979bb32bc493ea6ab3c88d23cc0589e8629a01c55639cd1",
-      "size": 39709
+      "sha256": "ff92c82e7cba76e130a3e6dd1e7c8debe1c9d15a2f43cceb54ae5ec1c8a6c320",
+      "size": 43237
     },
     {
       "category": "governed_input",
@@ -207,8 +207,8 @@
     {
       "category": "governed_input",
       "path": "aegis/__init__.py",
-      "sha256": "de54a56a440ed4dd9922fdb5f3f9c8ba4effd55e7f397c22abd92d8e11721fa6",
-      "size": 312
+      "sha256": "a85b216e62b50844ec79dd8b4dadf3b125f78e4043a6eb70376caccb8d8de691",
+      "size": 1075
     },
     {
       "category": "governed_input",
@@ -219,8 +219,8 @@
     {
       "category": "governed_input",
       "path": "sdk/python/src/aegis_sdk/__init__.py",
-      "sha256": "5ad2e753a9d9e520ed248227dc7b41a87e4f75c5f0f1cc046c9a4fac5234d6e2",
-      "size": 571
+      "sha256": "559b3a02d4ac165de0baf0a0c7f37d6f850c7a3327d84b3a8dae40fc6f89f5b0",
+      "size": 668
     },
     {
       "category": "governed_input",
@@ -423,8 +423,8 @@
     {
       "category": "governed_input",
       "path": "sdk/typescript/src/index.ts",
-      "sha256": "4fa7bf4b8adecebc8f481c5068a1cd04f633ffd4b949c5da9f75a7cf0c2d07e8",
-      "size": 675
+      "sha256": "aa19a01b4e21e7606532b4f23228d28224803ee6acffbec18b8d761c29e760d5",
+      "size": 874
     },
     {
       "category": "governed_input",
