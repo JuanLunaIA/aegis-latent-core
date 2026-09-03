@@ -16,16 +16,38 @@
 
 Nothing in this table may be restated with the version number changed. A `4.0.2` digest is not a `4.1.1` digest, and a `4.0.2` signature attests to `4.0.2` bytes.
 
-### 1.1 The current source baseline
+### 1.1 `4.1.1` — published, read back 2026-09-03
 
-| Surface | State | Observed value | Readback |
-| --- | --- | --- | --- |
-| Source baseline | Confirmed | `4.1.1`, fourteen synchronized anchors, contract `READY` | §2.1 |
-| GitHub tag `v4.1.1` | **Not created** | No tag exists | — |
-| GitHub Release `v4.1.1` | **Not published** | No release exists | — |
-| PyPI / npm at `4.1.1` | **Not published** | No package exists | — |
-| OCI image at `4.1.1` | **Not published** | No image exists | — |
-| Signatures / attestations for `4.1.1` | **Do not exist** | Nothing has been signed or attested | — |
+| Surface | State | Observed value |
+| --- | --- | --- |
+| Source baseline | Confirmed | `4.1.1`, fourteen synchronized anchors, contract `READY` |
+| GitHub tag `v4.1.1` | Confirmed, signed annotated | `git cat-file -t v4.1.1` → `tag`; targets `5a137c86ecd914842493babb7e863033498f68c9`; tagger identity `.../create_release_tag.yml@refs/heads/main`; Sigstore certificate issued 2026-09-03T17:30:54Z |
+| GitHub Release `v4.1.1` | Confirmed | Published 2026-09-03T17:37:02Z, non-draft, non-prerelease, **31 assets**, `immutable: true` |
+| Release asset integrity | **Confirmed by byte check** | `sha256sum --check --strict SHA256SUMS` → OK for all fifteen artifacts |
+| PyPI (`aegis-latent-sdk`) | **Confirmed published at 4.1.1** | `pip index versions` → available: `4.1.1`, `4.0.0` |
+| npm (`aegis-latent-sdk`) | **Not published at 4.1.1** | `npm view aegis-latent-sdk version` → `4.0.0`. The publish job failed; see below |
+| OCI images at `4.1.1` | Not read back | `crane`/`cosign` were not run for this version |
+| Build attestations | Emitted by the workflow; not independently verified | Verify per artifact with `gh attestation verify` |
+
+**The npm publish failed for a fixable reason, not a policy one.** `publish_npm.yml`
+ran `npm publish release-artifact/*.tgz`. `npm publish` parses its argument as a
+package spec, and a bare `a/b` path is npm's GitHub `owner/repo` shorthand, so
+npm attempted
+`git ls-remote ssh://git@github.com/release-artifact/aegis-latent-sdk-4.1.1.tgz.git`
+and exited 128 with `Permission denied (publickey)`. The step now passes a
+`./`-prefixed path. `AEGIS_TRUSTED_PUBLISHING_ENABLED` was set correctly — PyPI
+published from the same dispatch, which is what rules the variable out as the
+cause.
+
+**Republishing npm does not need a new version.** Nothing was uploaded to the
+registry for `4.1.1`, so the corrected `publish_npm.yml` can be dispatched
+against the existing signed tag.
+
+**`git verify-tag v4.1.1` reports a missing issuer certificate.** That is the
+expected result for a Sigstore short-lived certificate under `gpgsm`, which has
+no Sigstore root, and is the same condition §3 describes for the GitHub badge.
+Trust requires `gitsign verify-tag` against the transparency log with an explicit
+certificate identity, not `git verify-tag`.
 
 ### 1.2 `4.1.0` — tagged and released outside the pipeline, observed 2026-09-03
 

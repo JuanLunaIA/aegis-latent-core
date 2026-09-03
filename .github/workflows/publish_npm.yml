@@ -118,4 +118,23 @@ jobs:
           name: typescript-sdk-package-${{ inputs.expected_target }}
           path: release-artifact
       - name: Publish to npm with OIDC provenance
-        run: npm publish release-artifact/*.tgz --access public --provenance
+        # `npm publish` parses its argument as a package spec, not as a path.
+        # A bare `a/b` is npm's GitHub shorthand for `owner/repo`, so
+        # `npm publish release-artifact/*.tgz` made npm try to clone
+        # `ssh://git@github.com/release-artifact/aegis-latent-sdk-<v>.tgz.git`
+        # and fail with "Permission denied (publickey)" — the v4.1.1 dispatch
+        # died there while PyPI published. The leading `./` is what makes npm
+        # read it as a filesystem path.
+        #
+        # The count check is not incidental: the glob previously fed whatever
+        # it matched straight to npm, so a second tarball in the directory
+        # would silently decide which artifact got published.
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          tarballs=(./release-artifact/*.tgz)
+          if [ "${#tarballs[@]}" -ne 1 ]; then
+            echo "::error::expected exactly one downloaded tarball, found ${#tarballs[@]}: ${tarballs[*]}"
+            exit 1
+          fi
+          npm publish "${tarballs[0]}" --access public --provenance

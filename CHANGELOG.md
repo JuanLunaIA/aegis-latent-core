@@ -14,7 +14,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No source changes since `4.1.1`.
+### Fixed
+
+- `publish_npm.yml` ran `npm publish release-artifact/*.tgz`. `npm publish`
+  parses its argument as a package spec, and a bare `a/b` path is npm's GitHub
+  `owner/repo` shorthand, so npm attempted
+  `git ls-remote ssh://git@github.com/release-artifact/aegis-latent-sdk-4.1.1.tgz.git`
+  and exited 128 with `Permission denied (publickey)`. The `4.1.1` dispatch died
+  there while PyPI published from the same run. The step now passes a
+  `./`-prefixed path and fails loudly if the download directory holds anything
+  other than exactly one tarball, which the glob previously left to chance.
+- The same unpublishable command was pinned in two more places: the assertion in
+  `tests/test_release_contract_v4.py` and the `npm.provenance` regex in
+  `scripts/verify_release_contract.py` both required that literal, so the
+  release contract validated a command that could not work. The contract now
+  checks the properties the release needs — provenance, public access, and a
+  path npm resolves as a file — against the workflow with comment lines removed,
+  since a comment explaining a forbidden form has to contain it.
 
 ## [4.1.1] — 2026-09-03
 

@@ -431,10 +431,21 @@ def _validate_npm_workflow(root: Path, diagnostics: list[Diagnostic]) -> None:
         "npm.environment": "name: npm" in workflow,
         "npm.oidc": "id-token: write" in workflow
         and "registry-url: https://registry.npmjs.org" in workflow,
-        "npm.provenance": re.search(
-            r"npm publish\s+release-artifact/\*\.tgz[^\n]*--provenance", workflow
-        )
-        is not None,
+        # This required the literal `npm publish release-artifact/*.tgz`, which
+        # pinned a command that cannot work: `npm publish` reads its argument as
+        # a package spec, and a bare `a/b` is npm's GitHub `owner/repo`
+        # shorthand, so npm tried to clone a repository instead of reading the
+        # tarball. The v4.1.1 dispatch failed there while PyPI published. The
+        # check now asserts the properties the release needs — provenance,
+        # public access, and a path npm resolves as a file — rather than one
+        # spelling of the command.
+        "npm.provenance": "--provenance" in workflow and "--access public" in workflow,
+        # Matched against the workflow with comment lines removed: the comment
+        # above the publish step has to name the broken form in order to
+        # explain it, exactly as the documentation gates must name a phrase to
+        # prohibit it.
+        "npm.publish-path": "./release-artifact/*.tgz" in workflow
+        and re.search(r"npm publish\s+release-artifact/", _without_yaml_comments(workflow)) is None,
         "npm.main-ancestry": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"'
         in workflow,
         "npm.signed-tag": 'scripts/verify_release_tag.sh "${RELEASE_TAG}" "${EXPECTED_TAG_TARGET}"'
@@ -816,6 +827,15 @@ def _validate_package_identity(root: Path, diagnostics: list[Diagnostic]) -> Non
         "forensic report default version must derive from aegis.__version__",
         "aegis/core/forensic_pdf_report.py",
     )
+
+
+def _without_yaml_comments(text: str) -> str:
+    """Drop whole-line YAML comments so a check cannot match its own rationale.
+
+    A comment that explains why a form is forbidden necessarily contains that
+    form. Without this, documenting the reason would trip the check.
+    """
+    return "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
 
 
 def _validate_active_deployment_versions(
