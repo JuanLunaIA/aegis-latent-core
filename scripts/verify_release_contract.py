@@ -483,11 +483,11 @@ def _validate_release_architectures(root: Path, diagnostics: list[Diagnostic]) -
     )
     expected_actions = (
         "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
-        "docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130",
-        "docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+        "docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a",
+        "docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e",
         "docker/login-action@dbcb813823bdd20940b903addbd779551569679f",
-        "docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25",
-        "actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018",
+        "docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a",
+        "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8",
         "sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac",
     )
     permission_blocks = _permission_blocks(workflow)
@@ -604,7 +604,7 @@ def _validate_release_workflow(root: Path, diagnostics: list[Diagnostic]) -> Non
         "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
         "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
         "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
-        "actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018",
+        "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8",
     )
     permission_blocks = _permission_blocks(workflow)
     top_permissions = [v for indent, v in permission_blocks if indent == 0]

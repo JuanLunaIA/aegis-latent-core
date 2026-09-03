@@ -1,4 +1,4 @@
-# Data Retention and Privacy Boundaries — Aegis Latent Core v4.1.1 Source Baseline
+# Data Retention and Privacy Boundaries — Aegis Latent Core v4.1.2 Source Baseline
 
 This document describes what Aegis may persist, what remains in memory, and which retention and privacy decisions belong to the deploying organization. It is for privacy engineers, security reviewers, platform operators, and counsel. It is not a GDPR or HIPAA determination, a records-of-processing notice, or legal advice.
 
@@ -8,7 +8,7 @@ This document describes what Aegis may persist, what remains in memory, and whic
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` with `4.0.0` anchors
 **Previous public GitHub Release:** `v4.0.1` lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Observed registries:** PyPI/npm `4.0.0`, without workflow provenance attribution
-**Historical evidence baseline:** retained `v3.1.0` schema and test statements remain historical and are not `v4.1.1` results
+**Historical evidence baseline:** retained `v3.1.0` schema and test statements remain historical and are not `v4.1.2` results
 **Owner:** Deployment owner with privacy and legal review
 **Related claim control:** [`docs/CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)
 

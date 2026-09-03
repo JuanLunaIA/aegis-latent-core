@@ -11,10 +11,21 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+class MMRHistoricalLeafUnavailableError(LookupError):
+    """A leaf's in-memory proof path was discarded by a peak-set restore.
+
+    Distinct from ``IndexError`` (a leaf that does not exist) because the leaf
+    does exist and its proof is retrievable — from the ``mmr_proof`` stored on
+    the committed audit node, which is self-contained. Raised rather than
+    returning a partial path, which would not be a proof of anything.
+    """
 
 
 def _is_sha256_hex(value: object) -> bool:
@@ -118,6 +129,17 @@ class MerkleMountainRange:
         self.peaks: list[MMRNode] = []
         self._leaf_node_indices: list[int] = []
         self._leaf_count = 0
+        # Logical index of the first leaf whose interior nodes are materialised
+        # in ``nodes``. Zero for an accumulator built entirely by appending.
+        # After :meth:`restore_from_peaks` it equals the restored leaf count:
+        # the leaves below it are summarised by the restored peak hashes and
+        # are not individually addressable in memory. See that method.
+        self._leaf_index_base = 0
+
+    @property
+    def leaf_index_base(self) -> int:
+        """First logical leaf index whose in-memory inclusion proof is derivable."""
+        return self._leaf_index_base
 
     def add_leaf(self, data: bytes) -> str:
         """
@@ -164,6 +186,81 @@ class MerkleMountainRange:
 
         self.peaks.append(current_node)
         return self.get_root_hash()
+
+    def restore_from_peaks(self, *, leaf_count: int, peaks: Sequence[MMRPeak]) -> str:
+        """Reseat an empty accumulator on a persisted peak set in O(log N).
+
+        Rebuilding an MMR by replaying N leaves costs O(N log N) time and holds
+        O(N) interior nodes. A peak set is the complete summary of those leaves
+        for every purpose this accumulator serves after a restart: appending,
+        computing the root, and proving inclusion of the leaves appended next.
+        Restoring it directly costs O(number of peaks) = O(log N).
+
+        What is given up is precise and bounded: the leaves below ``leaf_count``
+        are summarised by peak hashes and are no longer individually
+        addressable, so :meth:`get_inclusion_proof` raises
+        :class:`MMRHistoricalLeafUnavailableError` for them. Their proofs are
+        not lost — every committed node carries its own ``mmr_proof``, which is
+        self-contained and verifies against a trusted root without this
+        instance. The ledger never asks the live accumulator for a historical
+        proof; it only ever proves the leaf it just appended.
+
+        Proofs issued after a restore are unaffected. The portable verifier is
+        structural: it derives peak heights from ``leaf_count``'s set bits and
+        locates the leaf's mountain from them, so a proof whose logical
+        ``leaf_index``, ``leaf_count`` and peak hashes are correct verifies
+        identically whether the accumulator was appended to or restored.
+
+        Args:
+            leaf_count: Number of logical leaves the peak set summarises.
+            peaks: Peaks in canonical order — descending height. Their heights
+                must equal the set bits of ``leaf_count``, descending, which is
+                the same invariant ``verify_portable_inclusion_hash`` enforces.
+
+        Returns:
+            The bagged root of the restored peak set.
+
+        Raises:
+            ValueError: If this accumulator is not empty, or the peak set is not
+                a structurally valid summary of exactly ``leaf_count`` leaves.
+                Both are fail-closed: a caller that cannot restore must replay.
+        """
+        if self.nodes or self.peaks or self._leaf_count:
+            raise ValueError("restore_from_peaks requires an empty accumulator")
+        if leaf_count < 1:
+            raise ValueError("restore_from_peaks requires leaf_count >= 1")
+
+        expected_heights = [
+            bit for bit in range(leaf_count.bit_length() - 1, -1, -1) if leaf_count & (1 << bit)
+        ]
+        if [peak.height for peak in peaks] != expected_heights:
+            raise ValueError(
+                "peak heights do not match the set bits of leaf_count "
+                f"(expected {expected_heights}, got {[peak.height for peak in peaks]})"
+            )
+        if any(not _is_sha256_hex(peak.hash) for peak in peaks):
+            raise ValueError("every restored peak hash must be a lowercase SHA-256 hex digest")
+
+        for peak in peaks:
+            node = MMRNode(hash=peak.hash, height=peak.height, index=len(self.nodes))
+            self.nodes.append(node)
+            self.peaks.append(node)
+        self._leaf_count = leaf_count
+        self._leaf_index_base = leaf_count
+        return self.get_root_hash()
+
+    def _physical_leaf_node_index(self, leaf_index: int) -> int:
+        """Map a logical leaf index to its node index, or refuse to guess."""
+        if leaf_index < 0 or leaf_index >= self._leaf_count:
+            raise IndexError("Leaf index out of range")
+        physical = leaf_index - self._leaf_index_base
+        if physical < 0:
+            raise MMRHistoricalLeafUnavailableError(
+                f"leaf {leaf_index} predates this accumulator's restore point "
+                f"({self._leaf_index_base}); it is summarised by a restored peak. "
+                "Use the mmr_proof stored on the committed node."
+            )
+        return self._leaf_node_indices[physical]
 
     def checkpoint(self) -> MMRAppendCheckpoint:
         """Capture the current state so a later append can be undone exactly.
@@ -233,11 +330,8 @@ class MerkleMountainRange:
         Generates a Merkle inclusion proof for a leaf at the given index.
         Returns a list of (sibling_hash, direction) tuples, where direction is 'L' or 'R'.
         """
-        if leaf_index < 0 or leaf_index >= self._leaf_count:
-            raise IndexError("Leaf index out of range")
-
         proof: list[tuple[str, str]] = []
-        current_idx = self._leaf_node_indices[leaf_index]
+        current_idx = self._physical_leaf_node_index(leaf_index)
 
         # Traverse up from the leaf to the highest peak it belongs to
         while True:
@@ -269,13 +363,11 @@ class MerkleMountainRange:
 
     def get_portable_inclusion_proof(self, leaf_index: int) -> MMRInclusionProofV1:
         """Return a proof verifiable without access to this MMR instance."""
-        if leaf_index < 0 or leaf_index >= self._leaf_count:
-            raise IndexError("Leaf index out of range")
+        node = self.nodes[self._physical_leaf_node_index(leaf_index)]
         path = tuple(
             MMRProofStep(sibling_hash=sibling_hash, direction=direction)
             for sibling_hash, direction in self.get_inclusion_proof(leaf_index)
         )
-        node = self.nodes[self._leaf_node_indices[leaf_index]]
         while node.parent is not None:
             node = self.nodes[node.parent]
         canonical_peaks = sorted(self.peaks, key=lambda peak: peak.height, reverse=True)

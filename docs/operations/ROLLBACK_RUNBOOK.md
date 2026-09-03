@@ -1,4 +1,4 @@
-# Rollback Runbook — Aegis Latent Core v4.1.1 Source Baseline
+# Rollback Runbook — Aegis Latent Core v4.1.2 Source Baseline
 
 This runbook is for release operators and incident commanders who must stop or revert an Aegis deployment without destroying evidence continuity. It covers decision gates, preservation, rollback execution, verification, and escalation. It does not replace the customer's incident-response, legal-hold, disaster-recovery, or change-management process.
 
@@ -8,7 +8,7 @@ This runbook is for release operators and incident commanders who must stop or r
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` with `4.0.0` anchors
 **Previous public GitHub Release:** `v4.0.1` lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Observed registries:** PyPI/npm `4.0.0`, without workflow provenance attribution
-**Historical evidence baseline:** retained `v3.1.0` evidence remains historical and is not a `v4.1.1` result
+**Historical evidence baseline:** retained `v3.1.0` evidence remains historical and is not a `v4.1.2` result
 **Audience:** Release operators, SRE and incident commanders
 **Related policy:** [`SECURITY.md`](../../SECURITY.md)
 

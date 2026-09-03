@@ -5,6 +5,7 @@ This guide distinguishes the current `4.1.1` source/release candidate from histo
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** current source/release candidate
 **Source/release candidate:** `4.1.1` with fourteen synchronized anchors; no external `v4.1.1` publication is claimed before readback
+**External baseline:** signed annotated `v4.1.1` tag at `5a137c86ecd914842493babb7e863033498f68c9`, with GitHub Release (31 assets), PyPI `aegis-latent-sdk` `4.1.1`, and GHCR gateway/dashboard images read back on 2026-09-03; npm remains at `4.0.0`, the one surface the release did not reach
 **Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **Audience:** Platform operators, SRE, security and procurement reviewers
 

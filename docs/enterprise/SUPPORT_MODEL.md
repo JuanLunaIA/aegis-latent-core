@@ -91,7 +91,7 @@ Stated intent: acknowledgement within seven days, assessment within fourteen. No
 
 Fixes target the versions listed in [SECURITY.md](../../SECURITY.md). Older versions receive nothing.
 
-**Check which artifact you are actually running.** The gateway ships from source at `4.1.1`; the most recent published container tag is `4.0.2`, and the SDKs on PyPI and npm are at `4.0.0`. A support question about registry-installed SDK behaviour may concern code that the current documentation does not describe. See [Release Status](../RELEASE_STATUS.md).
+**Check which artifact you are actually running.** The gateway ships from source and from the GHCR tag `4.1.2`; the SDK on PyPI is `4.1.2`, but the SDK on npm is still `4.0.0`. A support question about an npm-installed SDK may concern code that the current documentation does not describe. See [Release Status](../RELEASE_STATUS.md).
 
 ---
 

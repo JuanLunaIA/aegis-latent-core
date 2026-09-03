@@ -2,11 +2,11 @@ symbol	kind	authoritative_path	role	status_or_boundary
 ImmutableSourceBaseline	commit	git object fdace8844568eb788216740b2cb5daf187d99d3b	Historical source baseline with 14 anchors at 4.0.0	Immutable source evidence; not active-release, registry, or checked-out-source identity.
 PublishedGitHubRelease	release	https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v4.0.1	Published v4.0.1 GitHub Release	Lightweight tag targets 6469904380218584ae0b5221334bc9a46500f5ba; says nothing by itself about registries.
 RegistryPackageObservation	observation	PyPI and npm public metadata	aegis-latent-sdk observed at 4.0.0	Existence/version only; provenance is not attributed to failed workflows or any unverified run.
-SourceReleaseTarget	source-target	scripts/verify_release_contract.py	Checked-out source release target v4.1.1 with 14 synchronized anchors	External lifecycle requires independent read-back; source metadata is not publication evidence.
-SynchronizedVersionAnchors	contract	scripts/verify_release_contract.py	Load and compare all 14 checked-out-source version anchors	Agreement at 4.1.1 defines the source release target; a passing contract is not publication evidence.
-CorePythonDistribution	package	pyproject.toml	Python distribution identity and core anchor	Checked-out 4.1.1 metadata is a source-target fact, not PyPI publication.
-PythonSDKDistribution	package	sdk/python/pyproject.toml	Python SDK distribution identity and anchor	Source release target is 4.1.1; prior PyPI observation remains independently 4.0.0.
-TypeScriptSDKPackage	package	sdk/typescript/package.json	TypeScript SDK package identity and anchor	Source release target is 4.1.1; prior npm observation remains independently 4.0.0.
+SourceReleaseTarget	source-target	scripts/verify_release_contract.py	Checked-out source release target v4.1.2 with 14 synchronized anchors	External lifecycle requires independent read-back; source metadata is not publication evidence.
+SynchronizedVersionAnchors	contract	scripts/verify_release_contract.py	Load and compare all 14 checked-out-source version anchors	Agreement at 4.1.2 defines the source release target; a passing contract is not publication evidence.
+CorePythonDistribution	package	pyproject.toml	Python distribution identity and core anchor	Checked-out 4.1.2 metadata is a source-target fact, not PyPI publication.
+PythonSDKDistribution	package	sdk/python/pyproject.toml	Python SDK distribution identity and anchor	Source release target is 4.1.2; prior PyPI observation remains independently 4.0.0.
+TypeScriptSDKPackage	package	sdk/typescript/package.json	TypeScript SDK package identity and anchor	Source release target is 4.1.2; prior npm observation remains independently 4.0.0.
 AuditDashboardPackage	package	dashboard/package.json	Private dashboard package and anchor	Local TypeScript SDK dependency; private application package.
 RustCoreCrate	package	aegis_rust_v2/Cargo.toml	Rust crate/module identity and anchor	No v4 crates.io publication asserted.
 RustPythonDistribution	package	aegis_rust_v2/pyproject.toml	Rust Python-extension distribution and anchor	Wheel build metadata is not registry publication.

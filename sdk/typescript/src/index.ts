@@ -1,4 +1,14 @@
 // Copyright (c) 2026 Juan Luna. All rights reserved.
+export {
+  A2A_ENDPOINT,
+  A2A_MODEL,
+  A2A_RECEIPT_VERSION,
+  a2aEnvelopeBytes,
+  a2aLeafHash,
+  parseAgentReceipt,
+  verifyReceipt,
+} from "./a2a.js";
+export type { AgentReceipt } from "./a2a.js";
 export { AegisProofError } from "./errors.js";
 export {
   anthropicGatewayOptions,

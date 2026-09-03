@@ -2,7 +2,7 @@
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out Rust and Python package metadata is synchronized at `v4.1.1`
+**Source baseline:** checked-out Rust and Python package metadata is synchronized at `v4.1.2`
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` retains the historical `4.0.0` comparison anchors documented by [`evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md`](../evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md)
 **External lifecycle boundary:** source metadata and a successful local build do not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** previously published `v3.1.0` artifacts remain historical

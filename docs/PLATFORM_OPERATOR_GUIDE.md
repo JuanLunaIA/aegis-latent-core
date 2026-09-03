@@ -4,7 +4,7 @@ This guide is for SRE, platform, infrastructure, and security operations teams d
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** `v4.1.1` source; external release status requires independent readback
-**Source baseline:** `v4.1.1`; source metadata does not establish publication or target acceptance
+**Source baseline:** `v4.1.2`; source metadata does not establish publication or target acceptance
 **Retained evidence baseline:** published `v3.1.0` artifacts; retained measurements remain historical
 **Distribution verification:** resolve the signed tag, GitHub Release assets, package registries, OCI digest, and attestations independently before deployment
 **Audience:** Platform engineering, SRE, security operations

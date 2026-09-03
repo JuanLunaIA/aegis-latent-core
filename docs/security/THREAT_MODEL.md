@@ -4,7 +4,7 @@ Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 -->
 
-# Aegis Latent Core — Threat Model v4.1.1 Source Baseline
+# Aegis Latent Core — Threat Model v4.1.2 Source Baseline
 
 This threat model is for AppSec reviewers, CISOs, platform engineers and incident responders. It uses a STRIDE-oriented data-flow review to identify assets, trust boundaries, failure behavior, mitigations and residual risk for the current gateway boundary. A target deployment review remains required.
 
@@ -14,7 +14,7 @@ This threat model is for AppSec reviewers, CISOs, platform engineers and inciden
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` with `4.0.0` anchors
 **Previous public GitHub Release:** `v4.0.1` lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Observed registries:** PyPI/npm `4.0.0`, without workflow provenance attribution
-**Historical evidence baseline:** retained `v3.1.0` evidence remains historical and is not a `v4.1.1` result
+**Historical evidence baseline:** retained `v3.1.0` evidence remains historical and is not a `v4.1.2` result
 **Method:** STRIDE-oriented data-flow review with explicit residual risk
 **Scope:** Aegis gateway, signer/keyring, WAL/storage, ingress, and operator controls
 

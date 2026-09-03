@@ -104,7 +104,7 @@ jobs:
           python -m build
           twine check dist/*
           test "$(find dist -maxdepth 1 -type f | wc -l)" -eq 2
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: python-core-dist
           path: dist/
@@ -146,7 +146,7 @@ jobs:
           mkdir -p dist
           npm pack --pack-destination dist
           test "$(find dist -maxdepth 1 -type f -name '*.tgz' | wc -l)" -eq 1
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sdk-dist
           path: |
@@ -169,7 +169,7 @@ jobs:
           format: spdx-json
           syft-version: v1.51.0
           output-file: aegis-latent-core-${{ needs.validate.outputs.version }}.spdx.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: release-sbom
           path: aegis-latent-core-${{ needs.validate.outputs.version }}.spdx.json
@@ -215,7 +215,7 @@ jobs:
       - name: Verify wheel was produced
         shell: bash
         run: ls -lh aegis_rust_v2/dist/*.whl
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: rust-dist-${{ matrix.platform.target }}
           path: aegis_rust_v2/dist/
@@ -247,7 +247,7 @@ jobs:
         run: |
           python scripts/prepare_release_assets.py --input release-assets --output release
       - name: Attest build artifacts
-        uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: "release/*.whl,release/*.tar.gz,release/*.tgz,release/*.spdx.json,release/release-asset-manifest.json,release/SHA256SUMS"
       - name: Extract CHANGELOG excerpt for this release

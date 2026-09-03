@@ -97,7 +97,7 @@ Stated plainly, because a readiness document that omits these is not useful.
 | **No independent assurance** | No SOC 2, ISO 27001, penetration test, or third-party audit. Nothing to hand a security team that they did not derive themselves. |
 | **No production-scale evidence** | Benchmarks are local. No capacity, throughput, or latency claim survives contact with a target environment without your own measurement. |
 | **No cross-replica ordering** | A requirement for one global timeline cannot be met today. |
-| **Registry lag** | SDKs are published at `4.0.0` while source is `4.1.1`. Installing from a registry gets you different code from the documentation. |
+| **Registry lag** | SDKs are published at `4.0.0` while source is `4.1.2`. Installing from a registry gets you different code from the documentation. |
 | **Single maintainer** | Bus factor of one. No independent second approver on the critical path. |
 | **No SLA** | Response targets are intent, not commitment, absent an executed agreement. |
 | **Untested runbooks at scale** | Procedures are written; rehearsal is yours. |

@@ -46,6 +46,7 @@ import logging
 import os
 import sys
 import time
+import uuid
 
 try:  # POSIX advisory locking. Absent on Windows; see _lock_wal_fd.
     import fcntl
@@ -62,12 +63,18 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from aegis.core.forensic import build_merkle_leaf, build_stream_merkle_leaf, sha256_hex
+from aegis.core.forensic_bundle import canonical_jcs_bytes
 from aegis.core.hsm import HSMSigningBackend, HSMUnavailableError
-from aegis.core.mmr import MerkleMountainRange, MMRInclusionProofV1
+from aegis.core.mmr import MerkleMountainRange, MMRInclusionProofV1, MMRPeak
 
 logger = logging.getLogger(__name__)
 
 MAX_PAYLOAD_BYTES: int = 1_048_576  # 1 MiB hard cap
+
+# Schema version of the ``<wal>.mmr.state`` peak-set checkpoint. Bump only for
+# an incompatible field change: an unrecognised version is ignored and the WAL
+# is replayed, so a bump degrades performance rather than correctness.
+_MMR_STATE_VERSION: int = 1
 _DEFAULT_MAX_FORENSIC_BYTES: int = 65_536
 
 
@@ -157,6 +164,13 @@ class AuditNode:
     signature_meaning: str = ""
     # EU Annex 11 §4.8 migration traceability
     audit_trail_version: str = "1"
+    # Admission outcome. "committed" for a node recording an interaction that
+    # reached the model; "rejected" for one recording a request the gateway
+    # refused before admission (see ``commit_rejection``). Deliberately NOT a
+    # ``node_hash`` input: every node written before this field existed hashes
+    # identically with and without it, so existing chains stay verifiable and
+    # already-issued MMR proofs keep validating.
+    status: str = "committed"
     # Portable MMR inclusion snapshot. Empty on legacy WAL records.
     mmr_leaf_hash: str = ""
     mmr_leaf_index: int = -1
@@ -219,6 +233,7 @@ class AuditNode:
             "signer_name": "",
             "signature_meaning": "",
             "audit_trail_version": "1",
+            "status": "committed",
             "mmr_leaf_hash": "",
             "mmr_leaf_index": -1,
             "mmr_leaf_count": 0,
@@ -314,6 +329,20 @@ class CryptographicAuditLedger:
         ascending), keep 0o600 permissions, and are replayed in order on
         startup. Rotation NEVER drops nodes: the full append-only audit chain is
         always reconstructable across every segment.
+    mmr_fast_restore : bool
+        When True, a validated ``<persistence_path>.mmr.state`` checkpoint
+        reseats the Merkle Mountain Range from its peak set in O(log N) instead
+        of replaying every leaf, and only leaves committed after the checkpoint
+        are replayed. Default False, which preserves full replay.
+
+        The trade is startup cost against in-memory historical proofs: a
+        peak-set restore summarises the leaves below it, so their inclusion
+        proofs can no longer be derived from the live accumulator. No evidence
+        is lost — each committed node carries its own self-contained
+        ``mmr_proof`` — and the restored root is accepted only after it is
+        checked against the root the last committed node recorded. A missing,
+        stale, corrupt or disagreeing checkpoint always falls back to full
+        replay. The checkpoint is written whether or not the flag is set.
     """
 
     def __init__(
@@ -328,6 +357,7 @@ class CryptographicAuditLedger:
         hsm_backend: HSMSigningBackend | None = None,
         require_strong_signing: bool = False,
         fsync_fn: Callable[[int], None] | None = None,
+        mmr_fast_restore: bool = False,
     ) -> None:
         self.persistence_path = persistence_path
         self._signing_key = signing_key
@@ -337,6 +367,7 @@ class CryptographicAuditLedger:
         self.max_memory_nodes = max_memory_nodes
         self.max_forensic_bytes = max_forensic_bytes
         self.max_wal_bytes = max_wal_bytes
+        self._mmr_fast_restore = mmr_fast_restore
         self.chain: deque[AuditNode] = deque(maxlen=max_memory_nodes)
         self._window_anchor_hash = "0" * 64
         self._lock = Lock()
@@ -491,6 +522,129 @@ class CryptographicAuditLedger:
                 scrub_method=scrub_method,
                 signer_name=signer_name,
                 signature_meaning=signature_meaning,
+                mmr_leaf_hash=mmr_leaf_hash,
+                mmr_leaf_index=mmr_leaf_index,
+                mmr_leaf_count=mmr_leaf_count,
+                mmr_proof=mmr_proof,
+            )
+
+            try:
+                self._persist_node(node)
+            except Exception:
+                self._mmr.rollback_to(mmr_before)
+                self._fault_state = "wal_persist_failed"
+                raise
+            self._append_memory_node(node)
+            return node
+
+    def commit_rejection(
+        self,
+        *,
+        request_bytes: bytes,
+        rejection_code: int,
+        reason_category: str,
+        tenant_id: str | None = None,
+        state_id: str | None = None,
+        endpoint: str = "rejected",
+    ) -> AuditNode:
+        """Commit a signed record of a request refused before admission.
+
+        A request the gateway blocks never reaches a model, so it produces no
+        forensic interaction record — historically it left no durable trace at
+        all beyond a log line, which is not evidence: logs are mutable and
+        unchained. This commits the refusal itself to the same append-only
+        Merkle chain, so "the gateway blocked this request" becomes a claim
+        backed by a signature and an inclusion proof rather than by a log.
+
+        The request body is hashed, never stored: a blocked request is
+        frequently hostile input, and the chain must not become a repository of
+        attack payloads. The synthetic response hash binds the decision — code
+        and category — so a rejection cannot later be rewritten as a different
+        outcome without breaking the signature.
+
+        Args:
+            request_bytes: Raw request body. Hashed into the leaf, not retained.
+            rejection_code: HTTP status the gateway returned (403, 429, 413).
+            reason_category: Stable machine-readable reason, e.g. ``waf_block``.
+            tenant_id: Session/tenant identifier when one was resolved. A
+                request may be refused before authentication, so this is
+                optional and defaults to ``"unattributed"`` rather than to a
+                tenant that was never established.
+            state_id: Rejection identifier. Generated when not supplied.
+            endpoint: Endpoint the request targeted.
+
+        Returns:
+            The committed ``AuditNode``, carrying ``status="rejected"`` and its
+            portable MMR inclusion proof.
+
+        Raises:
+            ValueError: On a NULL byte in ``state_id`` or an over-cap body,
+                matching ``commit_forensic``.
+        """
+        rejection_id = state_id or f"rej-{uuid.uuid4().hex}"
+        if "\x00" in rejection_id:
+            raise ValueError("state_id containing NULL byte is rejected")
+        if len(request_bytes) > MAX_PAYLOAD_BYTES:
+            raise ValueError("request_bytes exceeds 1 MiB hard cap")
+
+        # The decision, in a form that hashes deterministically.
+        decision = f"REJECTED:{rejection_code}:{reason_category}".encode()
+        req_hash = sha256_hex(request_bytes)
+        resp_hash = sha256_hex(decision)
+
+        leaf = build_merkle_leaf(
+            state_id=rejection_id,
+            request_bytes=request_bytes,
+            response_bytes=decision,
+            model="none",
+            endpoint=endpoint,
+            max_bytes=self.max_forensic_bytes,
+        )
+
+        with self._lock:
+            prev_hash = self.chain[-1].node_hash if self.chain else "0" * 64
+            timestamp = time.time()
+            mmr_before = self._mmr.checkpoint()
+            merkle_root = self._mmr.add_leaf(leaf)
+            mmr_leaf_count = self._mmr.get_leaf_count()
+            mmr_leaf_index = mmr_leaf_count - 1
+            mmr_leaf_hash = sha256_hex(leaf)
+            mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
+
+            signed_payload = _build_signed_payload(
+                prev_hash=prev_hash,
+                merkle_root=merkle_root,
+                request_hash=req_hash,
+                response_hash=resp_hash,
+            )
+            try:
+                signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
+            except Exception:
+                self._mmr.rollback_to(mmr_before)
+                self._fault_state = "signing_failed"
+                raise
+
+            node = AuditNode(
+                state_id=rejection_id,
+                timestamp=timestamp,
+                entropy=0.0,
+                tenant_id=tenant_id or "unattributed",
+                sampling_params={
+                    "rejection_code": rejection_code,
+                    "reason_category": reason_category,
+                },
+                prev_hash=prev_hash,
+                merkle_root=merkle_root,
+                signature=signature,
+                signature_scheme=scheme,
+                public_key=pub_key_hex,
+                request_hash=req_hash,
+                response_hash=resp_hash,
+                model="none",
+                endpoint=endpoint,
+                token_trail_count=0,
+                is_fallback=is_fallback,
+                status="rejected",
                 mmr_leaf_hash=mmr_leaf_hash,
                 mmr_leaf_index=mmr_leaf_index,
                 mmr_leaf_count=mmr_leaf_count,
@@ -830,6 +984,9 @@ class CryptographicAuditLedger:
 
     def close(self) -> None:
         with self._lock:
+            # Checkpoint before releasing the handle: a clean shutdown is the
+            # case where the next start can skip the whole replay.
+            self._save_mmr_state()
             if self._wal_handle is not None:
                 try:
                     self._wal_handle.flush()
@@ -938,6 +1095,11 @@ class CryptographicAuditLedger:
         segment (0o600) and replayed on the next startup. Failures degrade
         gracefully: the ledger keeps writing to the current/active WAL.
         """
+        # Checkpoint the accumulator at the rotation boundary. The leaves it
+        # summarises are the ones about to move into the archived segment, so
+        # a restart replays only what was written after this point.
+        self._save_mmr_state()
+
         # Flush + fsync + close so the segment is fully durable before rename.
         if self._wal_handle is not None:
             try:
@@ -1045,6 +1207,197 @@ class CryptographicAuditLedger:
         if self.max_wal_bytes > 0 and self._wal_bytes >= self.max_wal_bytes:
             self._rotate_wal()
 
+    # ── MMR peak-set checkpoint ────────────────────────────────────────────
+    #
+    # The JSONL WAL is authoritative and always sufficient on its own: every
+    # committed node carries its leaf hash, and replaying them rebuilds the
+    # accumulator exactly. This file is a pure optimisation over that replay
+    # and is never trusted beyond what the WAL independently confirms — the
+    # restored root must equal the root the last committed node recorded, or
+    # the checkpoint is discarded and the full replay runs. A missing, stale,
+    # truncated, corrupt or mismatched checkpoint is therefore never an error.
+
+    def _mmr_state_path(self) -> str:
+        """Path of the peak-set checkpoint beside the active WAL.
+
+        ``persistence_path`` is annotated ``str`` but callers pass ``Path`` too,
+        and every other use here goes through ``os.path``, which accepts both.
+        ``os.fspath`` keeps that tolerance; plain concatenation would not.
+        """
+        return os.fspath(self.persistence_path) + ".mmr.state"
+
+    def _mmr_state_body(self) -> dict[str, Any]:
+        """Checksummed fields of the checkpoint. Must be called under the lock."""
+        ordered_peaks = sorted(self._mmr.peaks, key=lambda peak: peak.height, reverse=True)
+        return {
+            "version": _MMR_STATE_VERSION,
+            "leaf_count": self._mmr.get_leaf_count(),
+            "peaks": [{"height": peak.height, "hash": peak.hash} for peak in ordered_peaks],
+            "bagged_root": self._mmr.get_root_hash(),
+        }
+
+    def _save_mmr_state(self, path: str | None = None) -> bool:
+        """Atomically write the peak-set checkpoint. Must be called under the lock.
+
+        Never raises: the checkpoint is an optimisation, and a ledger that
+        could not write one is still fully correct — it simply replays on the
+        next start. Returns whether the file was written.
+        """
+        target = path or self._mmr_state_path()
+        try:
+            body = self._mmr_state_body()
+            if int(body["leaf_count"]) < 1:
+                # Nothing to summarise. Remove any earlier checkpoint rather
+                # than leaving one that outlives the leaves it described.
+                try:
+                    os.unlink(target)
+                except FileNotFoundError:
+                    pass
+                return False
+            document = {
+                **body,
+                "state_checksum": sha256_hex(canonical_jcs_bytes(body)),
+            }
+            payload = canonical_jcs_bytes(document)
+            tmp = target + ".tmp"
+            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(payload)
+                handle.flush()
+                self._fsync(handle.fileno())
+            os.replace(tmp, target)
+            # A rename is only durable once the directory entry is synced.
+            dir_fd = os.open(os.path.dirname(os.path.abspath(target)), os.O_RDONLY)
+            try:
+                self._fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+        except (OSError, ValueError, TypeError) as exc:
+            logger.warning("could not write MMR checkpoint %s: %s", target, exc)
+            return False
+        return True
+
+    def _load_mmr_state(self, path: str | None = None) -> tuple[int, list[MMRPeak]] | None:
+        """Read and validate the peak-set checkpoint, or return None.
+
+        Returns None for every failure mode — absent, unreadable, malformed,
+        wrong version, or failing its own checksum — because each has the same
+        remedy: replay the WAL.
+        """
+        target = path or self._mmr_state_path()
+        try:
+            with open(target, "rb") as handle:
+                document = json.loads(handle.read().decode("utf-8"))
+        except FileNotFoundError:
+            return None
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            logger.warning("MMR checkpoint %s unreadable (%s) — replaying WAL", target, exc)
+            return None
+
+        if not isinstance(document, dict):
+            logger.warning("MMR checkpoint %s is not an object — replaying WAL", target)
+            return None
+        recorded_checksum = document.get("state_checksum")
+        body = {key: value for key, value in document.items() if key != "state_checksum"}
+        try:
+            if body.get("version") != _MMR_STATE_VERSION:
+                logger.warning(
+                    "MMR checkpoint %s version %r unsupported — replaying WAL",
+                    target,
+                    body.get("version"),
+                )
+                return None
+            if recorded_checksum != sha256_hex(canonical_jcs_bytes(body)):
+                logger.warning("MMR checkpoint %s failed its checksum — replaying WAL", target)
+                return None
+            leaf_count = body["leaf_count"]
+            raw_peaks = body["peaks"]
+            if not isinstance(leaf_count, int) or isinstance(leaf_count, bool):
+                raise TypeError("leaf_count must be an integer")
+            if not isinstance(raw_peaks, list):
+                raise TypeError("peaks must be a list")
+            peaks = [
+                MMRPeak(height=int(entry["height"]), hash=str(entry["hash"])) for entry in raw_peaks
+            ]
+        except (KeyError, TypeError, ValueError) as exc:
+            logger.warning("MMR checkpoint %s malformed (%s) — replaying WAL", target, exc)
+            return None
+        return leaf_count, peaks
+
+    def _restore_mmr(self, portable_suffix: list[tuple[str, str, str]]) -> None:
+        """Rebuild the accumulator for the replayed leaves, fastest path first.
+
+        ``portable_suffix`` is the contiguous trailing run of committed nodes
+        that carry a portable MMR leaf, oldest first, as
+        ``(leaf_hash, recorded_root, state_id)``.
+
+        The checkpoint, when it validates, replaces the first ``leaf_count``
+        of those appends with one O(log N) restore; any leaves committed after
+        it — the ordinary case after a crash, and after a rotation — are then
+        replayed on top. The result is accepted only if the final root equals
+        the root the last committed node recorded. Anything else falls back to
+        replaying every leaf, which is the behaviour that predates this file.
+
+        **Opt-in, and off by default.** Restoring from peaks discards the
+        interior nodes of the leaves it summarises, so their inclusion proofs
+        can no longer be *derived in memory* — ``get_inclusion_proof`` raises
+        ``MMRHistoricalLeafUnavailableError`` for them. Full replay keeps that
+        capability, and ``tests/test_mmr_restart.py`` asserts it deliberately:
+        proving every historical leaf is a stronger structural check on a
+        reconstructed accumulator than root equality alone, because the right
+        peaks can be reached with the wrong interior shape.
+
+        Nothing forensic is lost either way — every committed node stores its
+        own self-contained ``mmr_proof``, and the ledger only ever asks the
+        live accumulator to prove the leaf it just appended. The trade is
+        startup cost against in-memory historical proofs, and it is the
+        operator's to make, so it is taken only when ``mmr_fast_restore=True``
+        was passed. The checkpoint file is written regardless, so enabling the
+        flag needs no migration.
+        """
+        if not portable_suffix:
+            return
+
+        expected_root = portable_suffix[-1][1]
+        checkpoint = self._load_mmr_state() if self._mmr_fast_restore else None
+        if checkpoint is not None:
+            leaf_count, peaks = checkpoint
+            if 0 < leaf_count <= len(portable_suffix):
+                try:
+                    self._mmr.restore_from_peaks(leaf_count=leaf_count, peaks=peaks)
+                    for leaf_hash, _, _ in portable_suffix[leaf_count:]:
+                        self._mmr.add_leaf_hash(leaf_hash)
+                except ValueError as exc:
+                    logger.warning("MMR checkpoint rejected (%s) — replaying WAL", exc)
+                else:
+                    if self._mmr.get_root_hash() == expected_root:
+                        logger.info(
+                            "MMR restored from checkpoint: %d peaks summarise %d leaves, "
+                            "%d replayed",
+                            len(peaks),
+                            leaf_count,
+                            len(portable_suffix) - leaf_count,
+                        )
+                        return
+                    logger.warning(
+                        "MMR checkpoint root disagrees with the WAL — replaying every leaf"
+                    )
+                # Discard whatever the rejected fast path built.
+                self._mmr = MerkleMountainRange()
+            elif leaf_count > len(portable_suffix):
+                logger.warning(
+                    "MMR checkpoint describes %d leaves but the WAL holds %d — replaying WAL",
+                    leaf_count,
+                    len(portable_suffix),
+                )
+
+        for leaf_hash, recorded_root, state_id in portable_suffix:
+            rebuilt_root = self._mmr.add_leaf_hash(leaf_hash)
+            if rebuilt_root != recorded_root:
+                logger.error("portable MMR replay root mismatch at state_id=%s", state_id)
+                self._fault_state = "mmr_replay_mismatch"
+                return
+
     def _load_from_wal(self) -> None:
         # Replay archived segments (oldest first) then the active WAL so the
         # full chain is reconstructed across any number of rotations.
@@ -1091,12 +1444,7 @@ class CryptographicAuditLedger:
                 break
 
         logger.info("Reconstructed %d nodes from WAL.", count)
-        for leaf_hash, expected_root, state_id in portable_suffix:
-            rebuilt_root = self._mmr.add_leaf_hash(leaf_hash)
-            if rebuilt_root != expected_root:
-                logger.error("portable MMR replay root mismatch at state_id=%s", state_id)
-                self._fault_state = "mmr_replay_mismatch"
-                break
+        self._restore_mmr(portable_suffix)
 
 
 # ── Compat shims kept for import compatibility ────────────────────────────────

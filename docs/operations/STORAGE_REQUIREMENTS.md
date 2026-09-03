@@ -1,7 +1,7 @@
 # Storage Requirements for the Evidence Path
 
 **Last verified:** 2026-09-01 UTC
-**Release baseline:** checked-out source baseline/release target `4.1.1` with fourteen synchronized anchors
+**Release baseline:** checked-out source baseline/release target `4.1.2` with fourteen synchronized anchors
 
 The evidence guarantee Aegis offers is *commit before response*: for a governed non-streaming call the record is written, flushed, and synchronized before the response returns, and for an admitted stream one terminal summary is committed before the terminal marker is emitted. That guarantee is only as strong as the storage underneath it. This document states what the gateway actually does, what the substrate must provide, and how to choose one.
 

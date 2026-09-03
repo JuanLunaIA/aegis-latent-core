@@ -47,6 +47,10 @@ aegis_rust_v2/target/
 *.wal
 *.wal.jsonl
 *.rwal
+# Peak-set checkpoints written beside a WAL. Regenerated from the WAL on demand
+# and never authoritative, so they are build output, not evidence.
+*.mmr.state
+*.mmr.state.tmp
 /tmp/
 
 # IDE and agent-local files

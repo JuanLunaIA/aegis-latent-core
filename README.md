@@ -10,7 +10,7 @@ Aegis sits between your application and your model provider. For every governed 
 [![Coverage](https://img.shields.io/badge/statement%20coverage-93.91%25%20(2026--08--18)-informational)](docs/benchmarks/BENCHMARK_METHOD.md)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
 
-> **Current release candidate:** `v4.1.1` source, fourteen synchronized anchors. Nothing is published for `4.1.1`. The last release built by the pipeline is `v4.0.2`; a `v4.1.0` release object exists but was created outside it and carries no assets. Registries carry `aegis-latent-sdk` at `4.0.0`. The gateway ships from source; registries carry SDKs only. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
+> **Current release:** `v4.1.1`, read back on 2026-09-03 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk` `4.1.1`, and GHCR gateway and dashboard images. **npm still carries `4.0.0`** — that publish step failed and is fixed but not yet re-dispatched. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The gateway ships from source and from GHCR; the SDK registries carry SDKs only. **The source tree is ahead at `v4.1.2`**, fourteen synchronized anchors, with nothing published for it. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
 ---
 
@@ -44,7 +44,55 @@ Aegis sits between your application and your model provider. For every governed 
 
 **Streaming.** Sanitized events are emitted incrementally through a bounded, byte-accounted queue while evidence status reads `pending-terminal`. One exact-byte terminal summary is committed, and only then is the terminal marker emitted. If that commit fails, the marker is withheld — a client that treats connection close as success will accept an unevidenced stream, so check for the marker.
 
+**Refused requests are evidence too.** When the WAF blocks or a quota is exceeded, the refusal is committed to the same signed chain before the error is returned, and the response carries `X-Aegis-Rejection-ID` and `X-Aegis-Evidence-Status: durable-rejection`. The request body is hashed, never stored. A refusal is never conditional on the commit succeeding: if evidence cannot be written the request is still refused, and the header reads `rejection-uncommitted` rather than implying a durability that was not achieved.
+
 Details: [Architecture](docs/architecture/ARCHITECTURE.md) · [Failure Semantics](docs/architecture/FAILURE_SEMANTICS.md)
+
+---
+
+## Two deployment shapes
+
+The same controls — WAF, redaction, signed Merkle ledger, portable proofs — run in either of two places. Records from both verify with the same tooling.
+
+**Gateway.** A separate process the application cannot bypass. This is the right shape when the boundary is organisational: several teams or languages, one enforcement point.
+
+```bash
+aegis     # or aegis-server
+```
+
+**Embedded.** The same controls inside a process that already holds a provider client and cannot add a network hop — a Lambda handler, a batch job:
+
+```python
+import aegis, openai
+
+client = aegis.wrap(openai.OpenAI())          # or anthropic.Anthropic(), sync or async
+reply = client.chat.completions.create(model="gpt-4o", messages=[...])
+reply._aegis_evidence.node_hash               # signed, chained, proof-carrying
+```
+
+`wrap` recognises a client by shape, so neither provider SDK is a dependency of this package. Blocked prompts raise `AegisBlockedError` and are never dispatched. Streaming is redacted within a bounded holdback, and the terminal record is committed before the final chunk is yielded.
+
+**The difference that matters for a threat model.** The gateway is a process the application cannot bypass. The embedded engine runs *inside* the application, so it constrains calls made through the client it wrapped and nothing else — code in the same process can call the provider directly, hold a second unwrapped client, or edit the WAL. It is an evidence and policy layer for cooperative code, not a containment boundary against the process it runs in. Where the application is itself the thing being constrained, use the gateway.
+
+Details: [`aegis/embedded.py`](aegis/embedded.py)
+
+---
+
+## Agent-to-agent receipts
+
+When one agent calls another's tool, a receipt lets the caller show a third party that the execution was recorded — without either side disclosing the arguments or the result, which travel only as SHA-256 digests.
+
+```python
+from aegis.core.a2a import generate_receipt, verify_receipt
+
+receipt = generate_receipt(ledger, caller_agent_id="planner", target_agent_id="research",
+                           tool_name="web.query", input_bytes=args, output_bytes=result)
+verify_receipt(receipt, trusted_root)   # also in both SDKs
+```
+
+A valid receipt establishes that the execution's canonical envelope is included under the root you supplied — and nothing else. It does not establish that the tool ran, that either agent identifier is authentic, that the caller was authorised, or that the timestamp is accurate; that is the issuer's unattested clock. The root must be obtained independently of whoever handed you the receipt.
+
+Details: [`aegis/core/a2a.py`](aegis/core/a2a.py)
 
 ---
 
@@ -117,7 +165,7 @@ pip install -e ./sdk/python
 cd sdk/typescript && npm ci && npm run build
 ```
 
-**Registry caution.** PyPI and npm carry `aegis-latent-sdk` at `4.0.0`, while this source tree is `4.1.1` — a gap of two releases. Installing from a registry gets you different code from what these documents describe.
+**Registry caution.** PyPI carries `aegis-latent-sdk` at `4.1.2`, matching this source tree. **npm still carries `4.0.0`** — installing the SDK from npm gets you different code from what these documents describe. Check which registry you are installing from.
 
 **Proof verification caution.** A proof verified against a root supplied by the same gateway that produced it establishes internal consistency only. Obtain the trusted root through an independent channel, or the verification is circular.
 
@@ -183,7 +231,7 @@ Separately, Kani 0.67.0 model-checks the native WAL's frame-bounds arithmetic ov
 | Statement coverage | 89.7169% | Candidate gate record | 2026-08-24 |
 | Python suite | 5,707 passed, 37 skipped | Candidate gate record | 2026-08-24 |
 | Python suite | 5,661 passed, 81 skipped, 0 failed | Clean-container reproduction | 2026-09-01 |
-| Python suite | 5,974 passed, 52 skipped, 0 failed | `4.1.1` source baseline | 2026-09-03 |
+| Python suite | 5,974 passed, 52 skipped, 0 failed | `4.1.2` source baseline | 2026-09-03 |
 | Rust extension | 31 tests passed; Clippy `-D warnings`; abi3 wheel built | CI | Per run |
 | Static analysis | `mypy --strict` 0 errors over 186 files; Bandit 0 findings at every severity | CI | Per run |
 | Model checking | 5 Kani harnesses verified, 0 failures, over the whole `usize` domain | CI | Per run |
