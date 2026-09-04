@@ -26,7 +26,7 @@
 | Model | Available | Notes |
 | --- | --- | --- |
 | Self-hosted from source | Yes | The supported path. See [Deployment Profiles](../operations/DEPLOYMENT_PROFILES.md). |
-| Self-hosted container | Yes | `ghcr.io/juanlunaia/aegis-latent-core:4.0.2` — the most recent published tag, digest-pinnable, cosign-signed. No `4.1.1` image is published. |
+| Self-hosted container | Yes | `ghcr.io/juanlunaia/aegis-latent-core:4.1.2` — the most recent published tag, digest-pinnable, with a cosign signature object present. Index digest `sha256:b3f6aadc…f80710`, read back 2026-09-04. |
 | Kubernetes via Helm | Yes | `StatefulSet`, per-replica WAL volumes, default-deny NetworkPolicy. |
 | Air-gapped | Yes | With documented capability loss; no external anchoring. |
 | Vendor-hosted SaaS | No | Does not exist and is not on the roadmap. |

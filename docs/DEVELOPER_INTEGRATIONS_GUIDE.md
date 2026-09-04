@@ -1,6 +1,6 @@
 # Aegis Enterprise Integrations Guide
 
-**Status:** `v4.1.1` source baseline with fourteen synchronized anchors, published and read back on 2026-09-03 — signed tag, GitHub Release asset envelope, PyPI `aegis-latent-sdk` `4.1.1`, and GHCR gateway/dashboard objects; npm still observed at `4.0.0`
+**Status:** `v4.1.2` source baseline with fourteen synchronized anchors, published and read back on 2026-09-04 — signed tag, GitHub Release asset envelope, PyPI `aegis-latent-core` and `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway/dashboard objects; npm still observed at `4.0.0`
 
 **Claim boundary:** Source support and tests do not prove target-environment availability, regulatory retention, identity-provider correctness, legal admissibility, trusted publishing, or production readiness.
 
@@ -62,7 +62,7 @@ Historically, public `v4.0.1` is a lightweight tag targeting `6469904380218584ae
 | TSA | Approved HTTPS TSA, CA/revocation/policy configuration, timestamp renewal and offline verification | External acceptance required |
 | SIEM/OTel | Endpoint authentication, egress policy, spool capacity, downstream parsing, outage and recovery drill | External acceptance required |
 | Registries | Trusted-publisher binding, environment protection, signed-tag policy, package ownership | External acceptance required |
-| OCI | Execute and verify the v4.1.1 multi-architecture gateway/dashboard build, SBOM, provenance, keyless signatures, architecture smoke tests, and rollback in target GHCR | Build, attestation, and signature readback passed; smoke/rollback acceptance required |
+| OCI | Execute and verify the v4.1.2 multi-architecture gateway/dashboard build, SBOM, provenance, keyless signatures, architecture smoke tests, and rollback in target GHCR | Build, attestation, and signature readback passed; smoke/rollback acceptance required |
 | Release | Full CI/security/formal/docs/dependency gates plus required human/domain approvals | GitHub Release and asset readback passed; package publication remains unavailable |
 
 ## 8. Falsification criteria

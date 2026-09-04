@@ -4,12 +4,12 @@
 This prospectus is for US enterprise platform, AppSec, AI engineering, compliance, legal and procurement teams evaluating Aegis. It explains the product category, evidence wedge, measured boundaries and recommended evaluation path. It is not a certification, legal opinion, production SLO, warranty or binding commercial offer.
 
 **Last verified:** 2026-08-27 UTC
-**Source baseline/release target:** `v4.1.1` with 14 synchronized anchors; source metadata does not establish external lifecycle state; verify the tag, GitHub Release, PyPI, npm, OCI digest, signature, and attestation through independent readback
+**Source baseline/release target:** `v4.1.2` with 14 synchronized anchors; source metadata does not establish external lifecycle state; the `v4.1.2` tag, GitHub Release, PyPI, npm, OCI digest and signature objects were read back on 2026-09-04 and are recorded in `docs/RELEASE_STATUS.md` §1.0; `cosign verify` and `gh attestation verify` were not run
 **Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 
 ## Baseline note
 
-The checked-out source baseline/release target is **4.1.1** with 14 synchronized anchors. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP export, and an auxiliary `RustWal` stream segment. These checked-out-source capabilities do not establish external lifecycle or production-acceptance state; verify the `v4.1.1` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback.
+The checked-out source baseline/release target is **4.1.2** with 14 synchronized anchors. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP export, and an auxiliary `RustWal` stream segment. These checked-out-source capabilities do not establish external lifecycle or production-acceptance state; verify the `v4.1.1` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback.
 
 ## Executive brief
 

@@ -10,7 +10,7 @@ Aegis sits between your application and your model provider. For every governed 
 [![Coverage](https://img.shields.io/badge/statement%20coverage-93.91%25%20(2026--08--18)-informational)](docs/benchmarks/BENCHMARK_METHOD.md)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
 
-> **Current release:** `v4.1.1`, read back on 2026-09-03 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk` `4.1.1`, and GHCR gateway and dashboard images. **npm still carries `4.0.0`** — that publish step failed and is fixed but not yet re-dispatched. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The gateway ships from source and from GHCR; the SDK registries carry SDKs only. **The source tree is ahead at `v4.1.2`**, fourteen synchronized anchors, with nothing published for it. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
+> **Current release:** `v4.1.2`, read back on 2026-09-04 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images. **`4.1.2` is the first version installable from PyPI as `aegis-latent-core`**; before it the gateway came from source or GHCR only. The npm version list skips `4.1.1`, whose publish step failed. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The two PyPI gateway artifacts are byte-different from the release assets of the same name — same content, different build host — so `SHA256SUMS` does not cover the PyPI downloads. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
 ---
 
@@ -97,6 +97,38 @@ Details: [`aegis/core/a2a.py`](aegis/core/a2a.py)
 ---
 
 ## Quickstart
+
+### Install
+
+Three channels, because they install different things:
+
+```bash
+pip install aegis-latent-core     # the engine: aegis.wrap(), plus the aegis / aegis-server CLIs
+pip install aegis-latent-sdk      # the verifier: check a proof you were handed
+npm  install aegis-latent-sdk     # the same verifier, in TypeScript
+```
+
+`aegis-latent-core` carries both deployment shapes — importing `aegis.wrap` for
+embedded use and the `aegis` / `aegis-server` console scripts for the gateway —
+so the choice between them is a deployment decision, not a different package.
+For the gateway as a container, see [Deployment Profiles](docs/operations/DEPLOYMENT_PROFILES.md):
+
+```bash
+docker pull ghcr.io/juanlunaia/aegis-latent-core:4.1.2
+```
+
+The published wheel is `py3-none-any`: **the complete feature set runs on pure
+Python**, with no compiler and no native dependency. The `aegis_rust` extension
+is an optional accelerator, is not part of this wheel, and is not on any
+registry — it is built from source or taken from the platform wheels attached to
+the [GitHub Release](https://github.com/JuanLunaIA/aegis-latent-core/releases).
+What it buys, measured rather than estimated, is in [Verified metrics](#verified-metrics)
+and [Rust build](docs/RUST_BUILD.md); evidence produced with and without it
+verifies identically, because both paths agree on the MMR root.
+
+Verify what you installed before relying on it — a version on a registry is not
+provenance. [Release Status §2](docs/RELEASE_STATUS.md) has the readback
+commands and the digests observed on 2026-09-04.
 
 ### From source
 

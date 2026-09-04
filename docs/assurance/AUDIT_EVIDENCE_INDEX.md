@@ -74,8 +74,8 @@ pytest -q
 | SBOM (SPDX) | Release assets |
 | Build provenance | `gh attestation verify <artifact> --repo JuanLunaIA/aegis-latent-core` |
 | Release artifact integrity | `sha256sum --check --strict SHA256SUMS` |
-| Signed tag | `gitsign verify --certificate-identity ... v4.0.2` — `v4.0.2` is the most recent published tag; none exists for `4.1.1` |
-| Signed images | `cosign verify ghcr.io/juanlunaia/aegis-latent-core:4.0.2 ...` — likewise the most recent published image tag |
+| Signed tag | `gitsign verify --certificate-identity ... v4.1.2` — `v4.1.2` is the most recent published tag, a signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429` read back 2026-09-04 |
+| Signed images | `cosign verify ghcr.io/juanlunaia/aegis-latent-core:4.1.2 ...` — likewise the most recent published image tag, index digest `sha256:b3f6aadc…f80710`. A signature object is present for it; `cosign verify` itself was not run |
 | Release contract | `python scripts/verify_release_contract.py --root . --tag v4.1.2` — checks the checked-out source, so the tag argument tracks the source baseline |
 
 Exact commands: [Release Status §2](../RELEASE_STATUS.md#2-readback-commands).

@@ -1,7 +1,7 @@
 # Developer Quickstart — Aegis Latent Core
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** `v4.1.1` source; external release status requires independent readback
+**Release baseline:** `v4.1.2` source, published and read back on 2026-09-04; external release status always requires independent readback, recorded in `docs/RELEASE_STATUS.md` §1.0
 **Source baseline:** `v4.1.2`; source metadata alone does not establish publication
 **Retained evidence baseline:** previously published `v3.1.0` artifacts; retained measurements remain historical
 **Distribution verification:** confirm the signed tag, release assets, registry versions, OCI digest, and attestations before using a registry install
@@ -20,6 +20,48 @@ git status --short
 ```
 
 For exact historical reproduction, check out the revision named by the relevant evidence record. A moving branch is not an immutable evidence locator.
+
+## Install from a registry
+
+To *use* Aegis rather than develop it, install the published package. `4.1.2`
+is on PyPI and was read back on 2026-09-04; see
+[Release Status §1.0](RELEASE_STATUS.md) for the digests.
+
+```bash
+pip install aegis-latent-core     # engine: aegis.wrap() plus the aegis / aegis-server CLIs
+pip install aegis-latent-sdk      # verifier only
+npm  install aegis-latent-sdk     # verifier only, TypeScript
+```
+
+One package carries both deployment shapes. Embedded, in a process that already
+holds a provider client:
+
+```python
+import aegis, openai
+
+client = aegis.wrap(openai.OpenAI())          # or anthropic.Anthropic(), sync or async
+reply = client.chat.completions.create(model="gpt-4o", messages=[...])
+reply._aegis_evidence.node_hash               # signed, chained, proof-carrying
+```
+
+Or as a separate process, using the console script the same install provides:
+
+```bash
+aegis     # or aegis-server
+```
+
+Choose deliberately. The gateway is a process the application cannot bypass;
+the embedded engine governs calls made through the client it wrapped and is
+peer-privileged with the rest of its process. The boundary is set out in
+[SECURITY](../SECURITY.md) and
+[DOC-03 §2.1](institutional/DOC-03_THREAT_MODEL.md).
+
+The wheel is `py3-none-any`: the complete feature set runs on pure Python. The
+optional `aegis_rust` accelerator is built from source — see
+[Rust build](RUST_BUILD.md) — and changes throughput, not evidence.
+
+The rest of this document covers working *on* the repository, which uses the
+clone rather than the registry package.
 
 ## Install from the clone
 

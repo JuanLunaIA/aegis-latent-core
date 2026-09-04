@@ -17,6 +17,29 @@ The authoritative implementation paths are:
 | Python integrations | `sdk/python/src/aegis_sdk/integrations/` | LangChain and LlamaIndex callback adapters |
 | Proof wire contract | `aegis-mmr-inclusion-v1` | Response headers and proof endpoint linked by `Link` |
 
+## 1.1 Installing from a registry
+
+Both SDKs are published and were read back at `4.1.2` on 2026-09-04
+([Release Status §1.0](RELEASE_STATUS.md)):
+
+```bash
+pip install aegis-latent-sdk
+npm  install aegis-latent-sdk
+```
+
+The SDKs verify proofs. They do not enforce policy, hold a signing key, or
+produce evidence, so installing one grants no gateway capability. The engine
+that produces evidence is a different package, `aegis-latent-core`, which
+carries both the gateway CLIs and the embedded `aegis.wrap()` entry point; see
+[Developer quickstart](DEVELOPER_QUICKSTART.md).
+
+The npm version history for `aegis-latent-sdk` is `4.0.0` then `4.1.2` — the
+`4.1.1` publish failed and was never rerun, so the gap is a publishing history
+rather than a yanked release.
+
+The sections below build the SDKs from this repository, which is what
+contributors and evidence runs use.
+
 ## 2. Python SDK
 
 ### 2.1 Clean-checkout development

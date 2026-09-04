@@ -52,6 +52,10 @@ try:  # POSIX advisory locking. Absent on Windows; see _lock_wal_fd.
     import fcntl
 except ImportError:  # pragma: no cover - platform dependent
     fcntl = None  # type: ignore[assignment]
+try:  # Windows byte-range locking. Absent on POSIX; see _lock_wal_fd.
+    import msvcrt as _msvcrt_module
+except ImportError:  # pragma: no cover - platform dependent
+    _msvcrt_module = None  # type: ignore[assignment]
 from collections import deque
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
@@ -68,6 +72,14 @@ from aegis.core.hsm import HSMSigningBackend, HSMUnavailableError
 from aegis.core.mmr import MerkleMountainRange, MMRInclusionProofV1, MMRPeak
 
 logger = logging.getLogger(__name__)
+
+# The Windows locking primitive, or None where the platform has none. Bound
+# here rather than at the import so the annotation can be ``Any``: typeshed
+# guards the whole ``msvcrt`` module behind ``sys.platform == "win32"``, so on
+# any other checker platform its members resolve to nothing. One untyped
+# binding is honest about that, where a per-attribute ignore would only hide
+# it — and it admits the stand-in the tests install in this name's place.
+msvcrt: Any = _msvcrt_module
 
 MAX_PAYLOAD_BYTES: int = 1_048_576  # 1 MiB hard cap
 
@@ -88,23 +100,104 @@ class WalWriterConflictError(RuntimeError):
     """
 
 
+# Platform selector for the WAL lock, kept as a module constant so the branch
+# not taken by the running interpreter is still reachable under test.
+_WINDOWS: bool = os.name == "nt"
+
+# Byte offset of the Windows lock region.
+#
+# ``msvcrt.locking`` maps to ``LockFile``, which is *mandatory*: a locked range
+# is denied to every other handle, readers included. POSIX ``flock`` is
+# advisory and denies nothing. That difference matters here because the WAL is
+# read while a writer holds it — ``_load_from_wal`` replays the whole file in
+# ``__init__`` before ``_open_wal`` ever asks for the lock, and the verifier
+# reads segments out of band. A lock placed over live bytes would therefore
+# turn "another process holds this path" into "this WAL cannot be read", on
+# Windows only, and the second writer would fail with a corruption error rather
+# than WalWriterConflictError.
+#
+# The region is placed past any WAL that can exist, where it holds no record
+# and acts purely as a mutex. Locking beyond end-of-file is well defined on
+# Windows and does not extend the file: only a write does that, and nothing
+# ever seeks here to write.
+#
+# 1 TiB is chosen to sit inside the maximum file size of every filesystem the
+# gateway is deployed on (NTFS 256 TiB, ext4 16 TiB, APFS and XFS far above
+# that) while remaining orders of magnitude beyond a rotating WAL. The offset
+# cannot simply be made enormous: a seek past the filesystem maximum fails with
+# EINVAL, and a first writer must never be refused because the sentinel could
+# not be positioned. ``_SentinelUnavailableError`` keeps those two outcomes apart.
+_WINDOWS_LOCK_OFFSET: int = 1 << 40
+
+
+class _SentinelUnavailableError(RuntimeError):
+    """The lock sentinel could not be positioned on this filesystem.
+
+    Distinct from a lock conflict: it means the guard could not be applied at
+    all, not that another writer holds the path.
+    """
+
+
+def _windows_lock_region(fd: int, mode: int) -> None:
+    """Apply ``mode`` to the one-byte sentinel region of ``fd``.
+
+    ``msvcrt.locking`` acts at the descriptor's current offset, so the offset
+    is moved to the sentinel and restored afterwards. Restoring matters even
+    though the WAL is opened ``O_APPEND`` — appends ignore the offset, but
+    leaving it past end-of-file would surprise anything that later reads it.
+
+    Raises ``_SentinelUnavailableError`` if the sentinel cannot be reached, and
+    ``OSError`` only from the lock call itself, so the caller can tell a
+    conflict from a filesystem that cannot address the offset.
+    """
+    assert msvcrt is not None  # guarded by the caller
+    try:
+        saved = os.lseek(fd, 0, os.SEEK_CUR)
+        os.lseek(fd, _WINDOWS_LOCK_OFFSET, os.SEEK_SET)
+    except OSError as exc:
+        raise _SentinelUnavailableError(str(exc)) from exc
+    try:
+        msvcrt.locking(fd, mode, 1)
+    finally:
+        os.lseek(fd, saved, os.SEEK_SET)
+
+
 def _lock_wal_fd(fd: int, path: str) -> None:
-    """Take an exclusive, non-blocking advisory lock on an open WAL fd.
+    """Take an exclusive, non-blocking lock on an open WAL fd.
+
+    POSIX uses ``fcntl.flock``; Windows uses ``msvcrt.locking`` over the
+    sentinel region described above. Both are exclusive and both fail
+    immediately rather than waiting, so a losing writer is refused instead of
+    blocking the process that started it.
 
     The lock is released automatically when the descriptor is closed or the
     process exits, so a restart re-acquires it without operator action.
 
-    On platforms without ``fcntl`` the guard cannot be enforced in-process and
-    single-writer discipline remains an operator responsibility; that case is
-    logged at warning level rather than failing open silently.
+    On a platform offering neither primitive the guard cannot be enforced
+    in-process and single-writer discipline remains an operator
+    responsibility; that case is logged at warning level rather than failing
+    open silently.
     """
+    if _WINDOWS:
+        if msvcrt is None:  # pragma: no cover - platform dependent
+            _warn_unlocked(path)
+            return
+        try:
+            _windows_lock_region(fd, msvcrt.LK_NBLCK)
+        except _SentinelUnavailableError as exc:
+            # The guard could not be applied. Refusing here would reject the
+            # first writer as though it were the second.
+            _warn_unlocked(path, detail=str(exc))
+            return
+        except OSError as exc:
+            raise WalWriterConflictError(
+                f"WAL path is already locked by another writer: {path}. "
+                "Exactly one process may append to a WAL path; concurrent "
+                "writers fork the evidence chain."
+            ) from exc
+        return
     if fcntl is None:  # pragma: no cover - platform dependent
-        logger.warning(
-            "Advisory WAL locking is unavailable on %s; single-writer "
-            "discipline for %s is operator-enforced, not process-enforced.",
-            sys.platform,
-            path,
-        )
+        _warn_unlocked(path)
         return
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -114,6 +207,40 @@ def _lock_wal_fd(fd: int, path: str) -> None:
             "Exactly one process may append to a WAL path; concurrent writers "
             "fork the evidence chain."
         ) from exc
+
+
+def _unlock_wal_fd(fd: int) -> None:
+    """Release the WAL lock held on ``fd``, best effort.
+
+    Closing the descriptor releases the lock on both platforms, so this is not
+    what prevents a stuck lock. It makes the release explicit at rotation,
+    where the process keeps running and immediately reopens the same path, and
+    it keeps Windows from holding a mandatory region a moment longer than the
+    writer that owns it. A failure here must never mask the caller's own error
+    path, so every failure is swallowed.
+    """
+    try:
+        if _WINDOWS:
+            if msvcrt is None:  # pragma: no cover - platform dependent
+                return
+            _windows_lock_region(fd, msvcrt.LK_UNLCK)
+            return
+        if fcntl is None:  # pragma: no cover - platform dependent
+            return
+        fcntl.flock(fd, fcntl.LOCK_UN)
+    except (OSError, ValueError, _SentinelUnavailableError):
+        pass
+
+
+def _warn_unlocked(path: str, detail: str = "") -> None:
+    """Record that no lock primitive could be applied to ``path``."""
+    logger.warning(
+        "WAL locking is unavailable on %s%s; single-writer discipline for %s "
+        "is operator-enforced, not process-enforced.",
+        sys.platform,
+        f" ({detail})" if detail else "",
+        path,
+    )
 
 
 # ── Rust / PQC detection ──────────────────────────────────────────────────────
@@ -993,6 +1120,7 @@ class CryptographicAuditLedger:
                     self._fsync(self._wal_handle.fileno())
                 except OSError:
                     pass
+                _unlock_wal_fd(self._wal_handle.fileno())
                 self._wal_handle.close()
                 self._wal_handle = None
 
@@ -1107,6 +1235,9 @@ class CryptographicAuditLedger:
                 self._fsync(self._wal_handle.fileno())
             except OSError:
                 pass
+            # Release before the rename: on Windows the lock is mandatory and
+            # the same process is about to reopen this path.
+            _unlock_wal_fd(self._wal_handle.fileno())
             self._wal_handle.close()
             self._wal_handle = None
 

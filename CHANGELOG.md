@@ -2,18 +2,71 @@
 
 All notable changes to **Aegis Latent Core** are documented in this file.
 
-**Last verified:** 2026-08-27 UTC
-**Release baseline:** `v4.1.2` source release target; source metadata does not establish external lifecycle state, which requires independent readback. Nothing is published for `4.1.2`.
-**Most recent published release (readback 2026-09-03):** `v4.1.1` signed annotated tag at `5a137c86ecd914842493babb7e863033498f68c9`, GitHub Release with 31 assets, PyPI `aegis-latent-sdk` `4.1.1`, GHCR gateway/dashboard images; npm still `4.0.0`
+**Last verified:** 2026-09-04 UTC
+**Release baseline:** `v4.1.2`; source metadata does not establish external lifecycle state, which requires independent readback. `4.1.2` has been read back and is published on every surface.
+**Most recent published release (readback 2026-09-04):** `v4.1.2` signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway image `sha256:b3f6aadc…f80710` and dashboard image `sha256:27e1bbc2…d92398`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
-**Source release target:** `v4.1.2` (fourteen synchronized `4.1.2` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts)
+**Source release target:** `v4.1.2` (fourteen synchronized `4.1.2` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts, recorded in `docs/RELEASE_STATUS.md` §1.0)
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Windows single-writer WAL locking.** `_lock_wal_fd` now takes the exclusive
+  lock with `msvcrt.locking` when `os.name == "nt"`, so a second
+  `CryptographicAuditLedger` on one WAL path raises `WalWriterConflictError` on
+  Windows exactly as it already did on POSIX. Previously `fcntl` was absent
+  there, the ledger logged a warning, and the WAL-02 fork the guard exists to
+  prevent could still occur. A companion `_unlock_wal_fd` releases the lock
+  explicitly at `close()` and at rotation.
+
+  The Windows lock is placed on a one-byte sentinel region at 1 TiB rather than
+  at the file head, because the two primitives differ in kind: `flock` is
+  advisory and denies nothing, while `msvcrt.locking` maps to `LockFile` and is
+  *mandatory* — a lock over live bytes would deny reads to every other handle.
+  `_load_from_wal` replays the whole file before `_open_wal` asks for the lock,
+  so head-locking would have turned "another writer holds this path" into "this
+  WAL is unreadable" on Windows alone. The offset is bounded rather than
+  arbitrary for the mirror-image reason: a seek past the filesystem maximum
+  fails with `EINVAL`, and `_SentinelUnavailableError` keeps that outcome from
+  being reported as a lock conflict, which would refuse the *first* writer.
+
+- A `windows-2022` CI job runs `tests/security/test_wal_single_writer.py`
+  against the real `msvcrt`. Without it the Windows primitive would be asserted
+  by stand-in tests and never executed. The suite's cross-process test no longer
+  skips off POSIX, and seven tests drive the Windows branch on any host through
+  the module's platform selector.
+
+### Changed
+
+- `docs/RELEASE_STATUS.md`, `docs/CLAIMS_MATRIX.md` and the documentation corpus
+  record the `4.1.2` publication read back on 2026-09-04, and the distribution
+  model that publication changed: `aegis-latent-core` is now installable from
+  PyPI, so the corpus no longer says the gateway ships from source only or that
+  the registries carry SDKs only. Those statements were accurate at `4.1.1` and
+  are retained with that scope where they describe it.
+
+  One boundary is recorded rather than smoothed over: the two PyPI
+  `aegis-latent-core` artifacts are byte-different from the release assets of
+  the same name. Entry-by-entry comparison shows identical content — same 204
+  members, sizes, CRCs and timestamps — differing only in the ZIP
+  creator-system field, which means they were built on different hosts. The
+  release `SHA256SUMS` and attestation therefore do not cover the PyPI gateway
+  downloads. Both SDK registries do match.
+
 ## [4.1.2] — 2026-09-03
+
+**Published on every surface**, read back 2026-09-04: signed annotated tag
+`v4.1.2` at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31
+assets, PyPI `aegis-latent-core` `4.1.2` (its first release), PyPI
+`aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and both GHCR images
+with cosign signature objects present. `cosign verify` and
+`gh attestation verify` were not run. See `docs/RELEASE_STATUS.md` §1.0.
 
 ### Added
 

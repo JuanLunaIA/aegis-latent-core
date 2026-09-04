@@ -12,7 +12,7 @@ This roadmap distinguishes **repository evidence** from **deployment acceptance*
 
 | Layer | Current status | Required artifact | Owner |
 |---|---|---|---|
-| Source and regression | Checked-out source metadata is synchronized at `v4.1.1`; retained `v3.1.0` release evidence remains historical. Source state does not prove any `v4.1.1` external publication, and none exists. | Test output, lint, dependency scan, SDK/dashboard builds, SBOM, source/tree identity, and external tag/release/registry/OCI readback | Release owner |
+| Source and regression | Checked-out source metadata is synchronized at `v4.1.2`; retained `v3.1.0` release evidence remains historical. Source state never proves publication on its own; the `v4.1.2` publication was established separately by readback on 2026-09-04. | Test output, lint, dependency scan, SDK/dashboard builds, SBOM, source/tree identity, and external tag/release/registry/OCI readback | Release owner |
 | Deployment controls | Configuration-dependent | Target kernel/LSM/Seccomp, ingress, storage, Redis, signer, TLS, backup, and recovery evidence | Customer platform/SRE |
 | Adversarial application testing | Local WAF corpus passed; HTTP/2 ingress corpus not executed | Pinned corpus, minimized regressions, ingress boundary, raw results | Security reviewer |
 | Key custody and rotation | File-backed keyring contract implemented; three-replica production run unverified | Secret-manager propagation, overlap, rollback, expiry, replica evidence | Security/platform owner |

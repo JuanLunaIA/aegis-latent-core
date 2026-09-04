@@ -342,6 +342,31 @@ jobs:
           files: coverage.xml
           fail_ci_if_error: false
 
+  # ── Windows single-writer WAL lock ─────────────────────────────────────────
+  # The WAL guard uses fcntl.flock on POSIX and msvcrt.locking on Windows.
+  # Every other job runs on Linux, so without this one the Windows primitive
+  # would be asserted by stand-in tests and never actually executed. Scoped to
+  # the suite that owns the invariant rather than the whole battery: the claim
+  # being backed is single-writer mutual exclusion on Windows, and a narrow job
+  # that genuinely runs beats a broad one that is disabled the first time an
+  # unrelated POSIX assumption trips it.
+  windows-wal-lock:
+    name: WAL Single-Writer (Windows)
+    runs-on: windows-2022
+    timeout-minutes: 15
+    env:
+      AEGIS_SECURITY_ENFORCEMENT_MODE: development
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install package (editable) with dev extras
+        run: pip install -e ".[dev]"
+      - name: Run the single-writer suite against msvcrt.locking
+        run: python -X faulthandler -m pytest tests/security/test_wal_single_writer.py -v
+
   # ── Market hardening harnesses ─────────────────────────────────────────────
   market-hardening:
     name: Market Hardening Gates
