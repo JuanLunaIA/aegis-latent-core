@@ -18,7 +18,7 @@ An item leaves this document only when it is implemented, tested, and carries a 
 
 ## Distribution and provenance
 
-**Registry publication automation.** The `4.1.1` dispatch published to PyPI and GHCR but failed on npm, which still carries `4.0.0`. The failure is the point: the publication workflows are dispatch-only, and the path from a signed tag to a confirmed registry object is not automated end to end and is not verified by readback as part of the release, so a partial publication reports success and is only discovered by reading the registry afterwards. Closing this means a release either publishes and confirms every surface, or fails.
+**Registry publication automation.** The `4.1.1` dispatch published to PyPI and GHCR but failed on npm; the corrected workflow then published `4.1.2` to every surface on 2026-09-03, which is what established the fix. The failure is the point: the publication workflows are dispatch-only, and the path from a signed tag to a confirmed registry object is not automated end to end and is not verified by readback as part of the release, so a partial publication reports success and is only discovered by reading the registry afterwards. Closing this means a release either publishes and confirms every surface, or fails.
 
 **Consumer-side provenance verification.** Release artifacts carry attestations and `SHA256SUMS`, and OCI images carry cosign signatures. There is no single documented command that verifies an installed SDK back to a signed tag. See [Release Status](docs/RELEASE_STATUS.md) for what verification is possible today.
 

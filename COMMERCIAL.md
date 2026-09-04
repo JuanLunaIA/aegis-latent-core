@@ -4,7 +4,7 @@ This document summarizes the open-source and commercial licensing boundary and t
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** current source/release candidate
-**Source/release candidate:** `4.1.1` with fourteen synchronized anchors; external `v4.1.1` publication is not claimed before readback
+**Source/release baseline:** `4.1.2` with fourteen synchronized anchors; the `v4.1.2` publication was read back on 2026-09-04 and is recorded in `docs/RELEASE_STATUS.md` §1.0
 **Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **License source:** [`LICENSE`](LICENSE)
 **Commercial strategy:** [`docs/COMMERCIAL_STRATEGY_US.md`](docs/COMMERCIAL_STRATEGY_US.md)
@@ -17,7 +17,7 @@ This file does not determine whether a specific use triggers AGPL obligations, w
 
 ## Product baseline for commercial review
 
-The current source and release line is **4.1.1** with fourteen synchronized anchors. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP exports, and an auxiliary `RustWal` streaming segment. External publication is claimed only from readback. On 2026-09-03 the `v4.1.1` signed tag, GitHub Release, PyPI `aegis-latent-sdk` `4.1.1`, and GHCR gateway and dashboard images were read back; **npm still carries `4.0.0`**, and no signature or attestation verification was run. The `v4.0.2` release objects, the prior public `v4.0.1` lightweight tag, and the observed `4.0.0` registry objects are historical external baselines, not provenance for this line; a commercial scope must name the exact commit or the published release it covers.
+The current source and release line is **4.1.2** with fourteen synchronized anchors. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP exports, and an auxiliary `RustWal` streaming segment. External publication is claimed only from readback. On 2026-09-03 the `v4.1.1` signed tag, GitHub Release, PyPI `aegis-latent-sdk` `4.1.1`, and GHCR gateway and dashboard images were read back; **npm still carries `4.0.0`**, and no signature or attestation verification was run. The `v4.0.2` release objects, the prior public `v4.0.1` lightweight tag, and the observed `4.0.0` registry objects are historical external baselines, not provenance for this line; a commercial scope must name the exact commit or the published release it covers.
 
 For non-streaming calls, durable evidence and MMR proof headers are available after commit. For streams, initial headers remain `pending-terminal`; the terminal record is committed before the protocol terminal marker and proof retrieval occurs after termination.
 

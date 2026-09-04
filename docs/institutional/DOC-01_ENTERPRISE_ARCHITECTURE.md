@@ -3,7 +3,7 @@
 **Document ID:** DOC-01
 **Title:** Enterprise Architecture and Mechanistic Lifecycle Specification
 **Canonical language:** US English
-**Source baseline:** checked-out source metadata is synchronized at `v4.1.1`; external tag, release, registry, OCI, deployment, and acceptance claims require independent readback
+**Source baseline:** checked-out source metadata is synchronized at `v4.1.2`; tag, release, registry and OCI state were read back on 2026-09-04 (`docs/RELEASE_STATUS.md` §1.0), while deployment and acceptance claims still require target-environment evidence
 **Historical inspection scope:** findings and evidence dated 2026-08-20 UTC remain a `v3.1.0`-era review record unless a claim is explicitly revalidated against the current source
 **Status:** Architecture review record with bounded claims
 **Normative claim control:** [`docs/CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)
@@ -43,6 +43,24 @@ Several repository narratives overstate the current mechanism and must not be ca
 ## 3. System context and deployment boundaries
 
 Aegis has two distinct production application surfaces in this repository. The **core gateway** is created by `aegis/proxy/app.py::create_app` and serves `/v1/chat/completions` and `/v1/completions` using `CryptographicAuditLedger`, a process-local JSONL WAL, and optional post-commit enrichment. The **enterprise gateway** is created by `aegis_server/main.py::create_app` and serves `/v1/enterprise/proxy/chat/completions` using a `StorageProvider` backed by SQLite, PostgreSQL, or DynamoDB. These surfaces share concepts but not one transactional implementation; assurances from one must not be transferred to the other without a named test.
+
+A third surface is **embedded**: `aegis.wrap()` in `aegis/embedded.py` runs the
+same admission, redaction, ledger and proof code inside the calling process,
+for applications that hold a provider client and cannot add a network hop. It
+is a deployment shape of the core gateway's evidence path, not a fourth
+implementation — records from it verify with the same tooling. Its trust
+boundary differs and is stated in §7 and in DOC-03 §2.1: the engine governs
+calls through the client it wrapped, and in-process code is peer-privileged
+with it.
+
+Both distributions come from one package. `pip install aegis-latent-core`
+provides `aegis.wrap` and the `aegis` / `aegis-server` console scripts; the
+published wheel is `py3-none-any`, so the complete feature set runs on pure
+Python with no compiler and no native dependency. The optional `aegis_rust`
+extension is an accelerator built from source or taken from the GitHub Release
+platform wheels; it is not on a registry and not in the PyPI wheel. Evidence
+produced with and without it verifies identically, because both paths agree on
+the MMR root — a property pinned by test rather than asserted.
 
 ```text
 UNTRUSTED / EXTERNAL                                                CUSTOMER-CONTROLLED

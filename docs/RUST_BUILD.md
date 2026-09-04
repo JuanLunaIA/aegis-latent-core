@@ -16,7 +16,33 @@ The Rust component has four different names. Keeping them distinct prevents brok
 | Python wheel distribution metadata | `aegis-rust` | `aegis_rust_v2/pyproject.toml` `[project].name` |
 | Python import module | `aegis_rust` | maturin `module-name` and PyO3 module declaration |
 
-No crates.io, PyPI, or other registry availability is inferred from the `v4.1.1` source metadata. Build from the checked-out source unless external registry readback establishes an artifact and its provenance.
+No crates.io availability is inferred from source metadata. The compiled `aegis_rust` extension is published only as the seven platform wheels attached to the GitHub Release; it is not a separate registry package. `aegis-latent-core` on PyPI is the pure-Python distribution and does not carry the compiled extension. Build from the checked-out source unless external registry readback establishes an artifact and its provenance.
+
+## What is pure Python and what the extension changes
+
+The published `aegis-latent-core` wheel is `py3-none-any`. **The complete
+feature set runs on pure Python** — WAF, redaction, the signed ledger, the MMR,
+portable proofs, embedded mode and the gateway entry points all work with no
+compiler, no toolchain and no native dependency. Nothing in this document is
+required to run Aegis.
+
+`aegis_rust` is an optional accelerator. It is not published to crates.io, PyPI
+or any other registry, and it is not inside the PyPI wheel: it is built from
+this source tree, or taken from the seven platform wheels attached to the
+GitHub Release. Building it is a deliberate act, not a missing step.
+
+What it changes, measured rather than estimated, is throughput on the hashing
+and matching hot paths — see [Verified metrics](../README.md#verified-metrics)
+for the figures and the harness that produced them, each attributed to a dated
+run rather than quoted as a headline. What it does **not** change is any
+evidence value: the Python and Rust MMR implementations agree on the root, a
+property pinned by a cross-implementation test rather than assumed, so a proof
+issued by one verifies under the other and a ledger is portable between them.
+
+Post-quantum ML-DSA-65 signing is reached through the extension. Its verify
+path has not been established as constant-time; see
+[PQC constant-time analysis](security/PQC_CONSTANT_TIME.md) for the bounded
+statement and what remains open.
 
 ## Prerequisites
 

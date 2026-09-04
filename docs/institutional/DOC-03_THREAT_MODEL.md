@@ -20,6 +20,35 @@ The in-scope production data flow is **caller → customer ingress → Aegis adm
 
 The customer owns TLS termination, trusted-proxy behavior, DNS, routing, firewall or NetworkPolicy enforcement, host and container hardening, kernel configuration, Redis, secret-manager and HSM custody, storage and backup semantics, upstream-provider behavior, operator identity, retention, incident response, and lawful processing. The model may follow hostile instructions that evade deterministic filters. A host-root actor, compromised dependency, stolen signing key, malicious upstream, or process-memory reader is outside the protection offered by local pattern matching and discretionary file permissions.
 
+### 2.1 Embedded-mode boundary
+
+`aegis.wrap()` places admission, redaction and the signed ledger inside the
+calling process rather than behind a network hop. That relocation changes the
+trust boundary and must not be modelled as though it did not.
+
+In the gateway topology the application is **outside** the boundary: it cannot
+reach the provider except through Aegis, so an untrusted or compromised
+application is still constrained. In embedded mode the application is **inside**
+it. The engine mediates calls issued through the client object it wrapped;
+everything else in that process is peer-privileged with it. In-process code can
+construct a second unwrapped client, open its own socket to the provider,
+append to or truncate the WAL, or read pre-redaction plaintext out of process
+memory. None of those is a defeat of a control; they are outside what an
+in-process library can mediate at all.
+
+What embedded mode does establish is unchanged from the gateway: a request that
+went through the wrapped client was admitted under policy, was redacted before
+dispatch, and produced a signed, chain-linked, MMR-anchored record whose proofs
+verify with the same tooling and the same portable format.
+
+The practical rule for this threat model: embedded mode is in scope against
+**accident, drift and disputed history** — an unredacted payload reaching a
+provider by mistake, a record altered after the fact, a claim about what was
+sent. It is out of scope against **an adversary already executing in the
+application process**, which is the case the gateway topology exists to cover.
+Adversary scenarios in §5.2 that assume in-process execution are unaffected by
+embedded deployment and are not mitigated by it.
+
 ## 3. Assets, actors, and trust boundaries
 
 | Element | Security relevance | Primary owner |

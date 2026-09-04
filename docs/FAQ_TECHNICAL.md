@@ -3,7 +3,7 @@
 This FAQ answers implementation and operating questions for developers and platform engineers. Each answer states the current boundary and links to the implementation or verification path. It is not a substitute for the architecture or deployment guides.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** `v4.1.1` source; external release status requires independent readback
+**Release baseline:** `v4.1.2` source, published and read back on 2026-09-04; external release status always requires independent readback, recorded in `docs/RELEASE_STATUS.md` §1.0
 **Source baseline:** `v4.1.2`; the source version does not by itself prove that the tag, packages, images, or attestations were published
 **Retained evidence baseline:** `v3.1.0`; retained measurements are historical evidence for that release only
 **Comparison anchor:** `fdace8844568eb788216740b2cb5daf187d99d3b` (the pre-v4.0.2 source snapshot; its active version anchors were `4.0.0`)
