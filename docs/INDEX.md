@@ -11,7 +11,7 @@
 | If you are | Read, in order |
 | --- | --- |
 | Evaluating the project | [README](../README.md) → [Boundaries](BOUNDARIES.md) → [Claims Matrix](CLAIMS_MATRIX.md) → [Release Status](RELEASE_STATUS.md) |
-| Building against it | [Developer Quickstart](DEVELOPER_QUICKSTART.md) → [Integrations Guide](DEVELOPER_INTEGRATIONS_GUIDE.md) → [MMR Proof v1](api/MMR_PROOF_V1.md) |
+| Building against it | [Developer Quickstart](DEVELOPER_QUICKSTART.md) → [Usage Examples](USAGE_EXAMPLES.md) → [Integrations Guide](DEVELOPER_INTEGRATIONS_GUIDE.md) → [MMR Proof v1](api/MMR_PROOF_V1.md) |
 | Reviewing its security | [Security Policy](../SECURITY.md) → [Threat Model](security/THREAT_MODEL.md) → [Security Controls](security/SECURITY_CONTROLS.md) → [Security Architecture](security/SECURITY_ARCHITECTURE.md) |
 | Deploying it | [Deployment Guide](../DEPLOYMENT_GUIDE.md) → [Deployment Profiles](operations/DEPLOYMENT_PROFILES.md) → [Storage Requirements](operations/STORAGE_REQUIREMENTS.md) → [Monitoring and Alerting](operations/MONITORING_ALERTING.md) |
 | Running procurement | [Executive Summary](corporate/EXECUTIVE_SUMMARY.md) → [Procurement Checklist](enterprise/PROCUREMENT_CHECKLIST.md) → [Vendor Security Questionnaire](enterprise/VENDOR_SECURITY_QUESTIONNAIRE.md) → [Claims Matrix](CLAIMS_MATRIX.md) |
@@ -42,6 +42,7 @@ The documents that decide what may be said, and on what evidence.
 | --- | --- |
 | [Developer Quickstart](DEVELOPER_QUICKSTART.md) | Run the gateway from source and inspect evidence. |
 | [Integrations Guide](DEVELOPER_INTEGRATIONS_GUIDE.md) | OpenAI and Anthropic paths, SDK usage, proof verification, streaming semantics. |
+| [Usage Examples](USAGE_EXAMPLES.md) | Runnable examples for every mode, with real transcripts. |
 | [SDK Guide](DEVELOPER_SDK_GUIDE.md) | Python and TypeScript SDK detail. |
 | [Repository Map](REPOSITORY_MAP.md) | Where things live. |
 | [Technical FAQ](FAQ_TECHNICAL.md) | Common technical questions. |

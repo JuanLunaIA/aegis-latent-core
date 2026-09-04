@@ -11,7 +11,8 @@ This directory distinguishes the **`4.1.2` source baseline** from historical ext
 
 | Reader | Primary document | Purpose |
 |---|---|---|
-| Developer | [`DEVELOPER_QUICKSTART.md`](DEVELOPER_QUICKSTART.md) | Install directly from the clone, run an offline first test, launch the real gateway entry point, and work on SDK or Rust sources. |
+| Developer | [`DEVELOPER_QUICKSTART.md`](DEVELOPER_QUICKSTART.md) | Install from a registry or directly from the clone, run an offline first test, launch the real gateway entry point, and work on SDK or Rust sources. |
+| Developer | [`USAGE_EXAMPLES.md`](USAGE_EXAMPLES.md) | Worked examples for embedded and gateway modes, streaming, blocked requests and proof verification, each with the output it actually produced. |
 | Platform operator | [`PLATFORM_OPERATOR_GUIDE.md`](PLATFORM_OPERATOR_GUIDE.md) | Evaluate deployment dependencies, failure semantics, evidence preservation, and target-specific acceptance work. |
 | Architecture reviewer | [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) | Review request flow, evidence boundaries, trust boundaries, and topology limits. |
 | Claim reviewer | [`CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md) | Determine permitted claim status, evidence locators, and falsification boundaries. |

@@ -130,6 +130,9 @@ Verify what you installed before relying on it — a version on a registry is no
 provenance. [Release Status §2](docs/RELEASE_STATUS.md) has the readback
 commands and the digests observed on 2026-09-04.
 
+Worked examples for every mode, with the output they actually produce, are in
+[Usage Examples](docs/USAGE_EXAMPLES.md).
+
 ### From source
 
 ```bash

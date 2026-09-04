@@ -60,6 +60,10 @@ The wheel is `py3-none-any`: the complete feature set runs on pure Python. The
 optional `aegis_rust` accelerator is built from source — see
 [Rust build](RUST_BUILD.md) — and changes throughput, not evidence.
 
+For longer worked examples with the output they actually produce — embedded
+and gateway modes, streaming, blocked requests, proof verification in Python
+and TypeScript — see [Usage Examples](USAGE_EXAMPLES.md).
+
 The rest of this document covers working *on* the repository, which uses the
 clone rather than the registry package.
 

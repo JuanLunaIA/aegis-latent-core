@@ -99,8 +99,8 @@
     {
       "category": "governed_input",
       "path": "README.md",
-      "sha256": "6d2ea2ba17459177d374e985c94eae023dfd2bbab7015cc3c8c183fbfdfe88cc",
-      "size": 20655
+      "sha256": "0acbe42aa84d82f782558eba0b5035207f1768181ef80cdc9b0bc215c1bd0f88",
+      "size": 20776
     },
     {
       "category": "governed_input",
@@ -147,14 +147,14 @@
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_QUICKSTART.md",
-      "sha256": "6db7dcb785d51ac3aaed90610dd26233b3a2d9a7b0ef6598ad01ff9cabc1804a",
-      "size": 8389
+      "sha256": "cf9762bfb6d4e540c7431035152c44c4fbe86795c3e032238a437709e066f2f8",
+      "size": 8605
     },
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_SDK_GUIDE.md",
-      "sha256": "4f822fdcf0b707e3b59d41c89f8e8d9b3cfcf3e3c7f040ec38f364d3172ed6eb",
-      "size": 17170
+      "sha256": "696ae9637bf3a13678477a0bdf4d289cb60064d20410869c15ce82f9fdd31fbf",
+      "size": 17323
     },
     {
       "category": "governed_input",

@@ -37,6 +37,9 @@ The npm version history for `aegis-latent-sdk` is `4.0.0` then `4.1.2` — the
 `4.1.1` publish failed and was never rerun, so the gap is a publishing history
 rather than a yanked release.
 
+For end-to-end transcripts that verify a real gateway response and a real A2A
+receipt with these packages, see [Usage Examples §5](USAGE_EXAMPLES.md).
+
 The sections below build the SDKs from this repository, which is what
 contributors and evidence runs use.
 
