@@ -78,7 +78,7 @@
     "@types/node": "22.20.1",
     "openai": "^6.49.0",
     "typescript": "5.7.3",
-    "vitest": "3.2.7"
+    "vitest": "4.1.11"
   },
   "peerDependencies": {
     "@anthropic-ai/sdk": ">=0.39 <1",
