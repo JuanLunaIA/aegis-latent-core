@@ -1,0 +1,222 @@
+{
+  "leaves": [
+    "record 0",
+    "record 1",
+    "record 2",
+    "record 3",
+    "record 4",
+    "record 5",
+    "record 6"
+  ],
+  "note": "Issued by aegis.core.mmr under HASH_SCHEME_V2 on 2026-09-08. Regenerate only alongside a deliberate v2 format change.",
+  "proofs": [
+    {
+      "algorithm": "sha256-binary-domain-separated",
+      "leaf_count": 7,
+      "leaf_index": 0,
+      "path": [
+        {
+          "direction": "R",
+          "sibling_hash": "C95YopPB8P1U0R1-SQDd8cpPIUzIgBhFqsbf2WE637w"
+        },
+        {
+          "direction": "R",
+          "sibling_hash": "fNb8f_-W8JUKu1c4lUvOGtS-UxL6mTRql7onluoHXFQ"
+        }
+      ],
+      "peak_index": 0,
+      "peaks": [
+        {
+          "hash": "VQcmZi2PEzD1dmUTPcWs3MBK3Q2V32plYgXiT33KphE",
+          "height": 2
+        },
+        {
+          "hash": "0hDTO2hjmXA3kPUaINAqwbmrFLkQW1pDSk5J9JNxOGM",
+          "height": 1
+        },
+        {
+          "hash": "dDMOxo77ghQfn3KW3M5XO3vuF-iZPoboIaT7hyVvgaA",
+          "height": 0
+        }
+      ],
+      "root": "7lvsY4HN0ltK_egM7ir4HK90P3UkkNrjfbXM2jz68vI",
+      "version": "aegis-mmr-inclusion-v2"
+    },
+    {
+      "algorithm": "sha256-binary-domain-separated",
+      "leaf_count": 7,
+      "leaf_index": 1,
+      "path": [
+        {
+          "direction": "L",
+          "sibling_hash": "OzZ9bbe8UXJtkYsY6aeeD85T-Gf744Zx9gnmu1nUYDU"
+        },
+        {
+          "direction": "R",
+          "sibling_hash": "fNb8f_-W8JUKu1c4lUvOGtS-UxL6mTRql7onluoHXFQ"
+        }
+      ],
+      "peak_index": 0,
+      "peaks": [
+        {
+          "hash": "VQcmZi2PEzD1dmUTPcWs3MBK3Q2V32plYgXiT33KphE",
+          "height": 2
+        },
+        {
+          "hash": "0hDTO2hjmXA3kPUaINAqwbmrFLkQW1pDSk5J9JNxOGM",
+          "height": 1
+        },
+        {
+          "hash": "dDMOxo77ghQfn3KW3M5XO3vuF-iZPoboIaT7hyVvgaA",
+          "height": 0
+        }
+      ],
+      "root": "7lvsY4HN0ltK_egM7ir4HK90P3UkkNrjfbXM2jz68vI",
+      "version": "aegis-mmr-inclusion-v2"
+    },
+    {
+      "algorithm": "sha256-binary-domain-separated",
+      "leaf_count": 7,
+      "leaf_index": 2,
+      "path": [
+        {
+          "direction": "R",
+          "sibling_hash": "zgHiTyZCGwocqrHsogbzT7tOTci5RDQ4qWNCPZqvb50"
+        },
+        {
+          "direction": "L",
+          "sibling_hash": "XDShEgWHfs8sTyjiVJXQgwGzPb-4YkGfeUb6b9-BJO8"
+        }
+      ],
+      "peak_index": 0,
+      "peaks": [
+        {
+          "hash": "VQcmZi2PEzD1dmUTPcWs3MBK3Q2V32plYgXiT33KphE",
+          "height": 2
+        },
+        {
+          "hash": "0hDTO2hjmXA3kPUaINAqwbmrFLkQW1pDSk5J9JNxOGM",
+          "height": 1
+        },
+        {
+          "hash": "dDMOxo77ghQfn3KW3M5XO3vuF-iZPoboIaT7hyVvgaA",
+          "height": 0
+        }
+      ],
+      "root": "7lvsY4HN0ltK_egM7ir4HK90P3UkkNrjfbXM2jz68vI",
+      "version": "aegis-mmr-inclusion-v2"
+    },
+    {
+      "algorithm": "sha256-binary-domain-separated",
+      "leaf_count": 7,
+      "leaf_index": 3,
+      "path": [
+        {
+          "direction": "L",
+          "sibling_hash": "eQtCVVwoF8KPO6ujvYzB2nR8wC1umQQeZPjGJ0bPBTs"
+        },
+        {
+          "direction": "L",
+          "sibling_hash": "XDShEgWHfs8sTyjiVJXQgwGzPb-4YkGfeUb6b9-BJO8"
+        }
+      ],
+      "peak_index": 0,
+      "peaks": [
+        {
+          "hash": "VQcmZi2PEzD1dmUTPcWs3MBK3Q2V32plYgXiT33KphE",
+          "height": 2
+        },
+        {
+          "hash": "0hDTO2hjmXA3kPUaINAqwbmrFLkQW1pDSk5J9JNxOGM",
+          "height": 1
+        },
+        {
+          "hash": "dDMOxo77ghQfn3KW3M5XO3vuF-iZPoboIaT7hyVvgaA",
+          "height": 0
+        }
+      ],
+      "root": "7lvsY4HN0ltK_egM7ir4HK90P3UkkNrjfbXM2jz68vI",
+      "version": "aegis-mmr-inclusion-v2"
+    },
+    {
+      "algorithm": "sha256-binary-domain-separated",
+      "leaf_count": 7,
+      "leaf_index": 4,
+      "path": [
+        {
+          "direction": "R",
+          "sibling_hash": "zjf0x9_0npxSK7Iyw5hqobQcBIMdYorzPrze6Az9Zd0"
+        }
+      ],
+      "peak_index": 1,
+      "peaks": [
+        {
+          "hash": "VQcmZi2PEzD1dmUTPcWs3MBK3Q2V32plYgXiT33KphE",
+          "height": 2
+        },
+        {
+          "hash": "0hDTO2hjmXA3kPUaINAqwbmrFLkQW1pDSk5J9JNxOGM",
+          "height": 1
+        },
+        {
+          "hash": "dDMOxo77ghQfn3KW3M5XO3vuF-iZPoboIaT7hyVvgaA",
+          "height": 0
+        }
+      ],
+      "root": "7lvsY4HN0ltK_egM7ir4HK90P3UkkNrjfbXM2jz68vI",
+      "version": "aegis-mmr-inclusion-v2"
+    },
+    {
+      "algorithm": "sha256-binary-domain-separated",
+      "leaf_count": 7,
+      "leaf_index": 5,
+      "path": [
+        {
+          "direction": "L",
+          "sibling_hash": "4_xhsimX2iSB_tWu1E_YKdvUyNH5pt75w0DiEhlhg-k"
+        }
+      ],
+      "peak_index": 1,
+      "peaks": [
+        {
+          "hash": "VQcmZi2PEzD1dmUTPcWs3MBK3Q2V32plYgXiT33KphE",
+          "height": 2
+        },
+        {
+          "hash": "0hDTO2hjmXA3kPUaINAqwbmrFLkQW1pDSk5J9JNxOGM",
+          "height": 1
+        },
+        {
+          "hash": "dDMOxo77ghQfn3KW3M5XO3vuF-iZPoboIaT7hyVvgaA",
+          "height": 0
+        }
+      ],
+      "root": "7lvsY4HN0ltK_egM7ir4HK90P3UkkNrjfbXM2jz68vI",
+      "version": "aegis-mmr-inclusion-v2"
+    },
+    {
+      "algorithm": "sha256-binary-domain-separated",
+      "leaf_count": 7,
+      "leaf_index": 6,
+      "path": [],
+      "peak_index": 2,
+      "peaks": [
+        {
+          "hash": "VQcmZi2PEzD1dmUTPcWs3MBK3Q2V32plYgXiT33KphE",
+          "height": 2
+        },
+        {
+          "hash": "0hDTO2hjmXA3kPUaINAqwbmrFLkQW1pDSk5J9JNxOGM",
+          "height": 1
+        },
+        {
+          "hash": "dDMOxo77ghQfn3KW3M5XO3vuF-iZPoboIaT7hyVvgaA",
+          "height": 0
+        }
+      ],
+      "root": "7lvsY4HN0ltK_egM7ir4HK90P3UkkNrjfbXM2jz68vI",
+      "version": "aegis-mmr-inclusion-v2"
+    }
+  ],
+  "root": "ee5bec6381cdd25b4afde80cee2af81caf743f752490dae37db5ccda3cfaf2f2"
+}
