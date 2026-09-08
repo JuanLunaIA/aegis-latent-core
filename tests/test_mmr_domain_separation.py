@@ -245,3 +245,104 @@ def test_v2_parsing_rejects_a_malformed_digest(bad_digest):
     document["root"] = bad_digest
     with pytest.raises(ValueError):
         MMRInclusionProofV1.from_dict(document)
+
+
+# ── Adversarial probes ───────────────────────────────────────────────────────
+#
+# Run as a red-team pass over the v2 construction rather than as ordinary unit
+# coverage: each case is an attack someone would actually try. None of them
+# found a weakness, which is the point of keeping them — they pin the rejection
+# so a later refactor cannot quietly relax one.
+
+
+@pytest.fixture
+def v2_tree():
+    """An 11-leaf v2 accumulator: 0b1011, so three peaks of differing height."""
+    mmr = MerkleMountainRange(hash_scheme=HASH_SCHEME_V2)
+    payloads = [f"record {index}".encode() for index in range(11)]
+    for payload in payloads:
+        mmr.add_leaf(payload)
+    return mmr, payloads, mmr.get_root_hash(), mmr.get_portable_inclusion_proof(4)
+
+
+def test_no_cross_domain_preimage_coincidence():
+    """A payload cannot be shaped into another position's hash input."""
+    left, right = v2_leaf_hash(b"x"), v2_leaf_hash(b"y")
+    assert v2_leaf_hash(left + right) != v2_node_hash(left, right)
+    assert v2_leaf_hash(left + right) != v2_bagged_root([left, right])
+    assert v2_node_hash(left, right) != v2_bagged_root([left, right])
+    # A single-peak root is a hash of that peak, never the peak itself, so a
+    # peak cannot be presented as a root.
+    assert v2_bagged_root([left]) != left
+
+
+def test_peak_bagging_is_unambiguous_without_a_length_prefix():
+    """Fixed 32-byte peaks make the concatenation injective; order still counts."""
+    a, b, c = v2_leaf_hash(b"a"), v2_leaf_hash(b"b"), v2_leaf_hash(b"c")
+    assert v2_bagged_root([a, b]) != v2_bagged_root([c])
+    assert v2_bagged_root([a, b]) != v2_bagged_root([b, a])
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("leaf_index", -1),
+        ("leaf_index", 11),
+        ("peak_index", -1),
+        ("peak_index", 99),
+        ("leaf_count", 0),
+        ("leaf_count", -8),
+    ],
+)
+def test_malformed_indices_and_counts_are_refused(v2_tree, field, value):
+    from dataclasses import replace
+
+    _, payloads, root, proof = v2_tree
+    assert not MerkleMountainRange.verify_portable_inclusion(
+        payloads[4], replace(proof, **{field: value}), root
+    )
+
+
+def test_peak_set_tampering_is_refused(v2_tree):
+    """Dropping, adding or reordering peaks each breaks the leaf_count binding."""
+    from dataclasses import replace
+
+    from aegis.core.mmr import MMRPeak
+
+    _, payloads, root, proof = v2_tree
+    for mutated in (
+        replace(proof, peaks=proof.peaks[:-1]),
+        replace(proof, peaks=proof.peaks + (MMRPeak(height=0, hash="ab" * 32),)),
+        replace(proof, peaks=tuple(reversed(proof.peaks))),
+    ):
+        assert not MerkleMountainRange.verify_portable_inclusion(payloads[4], mutated, root)
+
+
+def test_path_tampering_is_refused(v2_tree):
+    """Length, direction and token validity are each load-bearing."""
+    from dataclasses import replace
+
+    from aegis.core.mmr import MMRProofStep
+
+    _, payloads, root, proof = v2_tree
+    head = proof.path[0]
+    flipped = "L" if head.direction == "R" else "R"
+    for mutated in (
+        replace(proof, path=proof.path[:-1]),
+        replace(proof, path=proof.path + (MMRProofStep("cd" * 32, "L"),)),
+        replace(proof, path=(MMRProofStep(head.sibling_hash, flipped),) + proof.path[1:]),
+        replace(proof, path=(MMRProofStep(head.sibling_hash, "X"),) + proof.path[1:]),
+    ):
+        assert not MerkleMountainRange.verify_portable_inclusion(payloads[4], mutated, root)
+
+
+def test_root_must_match_exactly_and_case_sensitively(v2_tree):
+    from dataclasses import replace
+
+    _, payloads, root, proof = v2_tree
+    assert not MerkleMountainRange.verify_portable_inclusion(
+        payloads[4], replace(proof, root="0" * 64), root
+    )
+    # Digests are lowercase hex by contract; an uppercase root is not "the same
+    # root in another case", it is a value the verifier has no reason to accept.
+    assert not MerkleMountainRange.verify_portable_inclusion(payloads[4], proof, root.upper())
