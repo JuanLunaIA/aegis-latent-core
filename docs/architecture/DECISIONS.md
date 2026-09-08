@@ -146,6 +146,20 @@ The founding decision is [ADR-001](ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md): p
 
 ---
 
+## AD-12 — Add a domain-separated scheme rather than change the existing one
+
+**Decision.** `aegis-mmr-inclusion-v2` hashes with one-byte domain tags over raw 32-byte digests. It is added alongside `aegis-mmr-inclusion-v1`, which remains the default and is what the ledger writes. Proof `version` and `algorithm` must agree, and a mismatch is rejected rather than resolved in the caller's favour.
+
+**Rejected.** Changing v1 in place. This was the original instruction, paired with a requirement that existing proofs keep verifying; the two cannot both hold.
+
+**Why.** AD-05 noted that changing the scheme "would invalidate every existing proof", and that remains true in a sharper form than portability: the scheme determines every root a chain has already recorded. Replacing it in place would make each deployed WAL replay to a different root, and the ledger's own integrity check would then declare an untampered chain corrupt. For a system whose purpose is holding evidence, that failure is unrecoverable — the operator cannot distinguish it from real tampering. An explicitly versioned second scheme makes the transition a recorded fact instead of a silent reinterpretation of history.
+
+The weakness being addressed is real and was demonstrated before being fixed: v1 tags neither hash input, so a leaf payload equal to the concatenation of two child digests hashes to exactly the interior node over them (RFC 6962 §2.1). It is reachable through `verify_portable_inclusion`, which accepts caller-supplied leaf bytes.
+
+**Cost.** Two schemes to maintain, test and explain, in three implementations. The weakness stays reachable in the default path until v2 is wired into the ledger, which is blocked on the `aegis_rust` accumulator implementing v1 only and on there being no recorded scheme transition for an existing chain. Both are tracked as open work in [docs/ROADMAP.md](../ROADMAP.md). Documented in [MMR Proof v1](../api/MMR_PROOF_V1.md) and governed by `CLM-064`.
+
+---
+
 ## Revisiting a decision
 
 A decision is revisited when its cost becomes unacceptable or its premise changes. Record the revision here with the new reasoning and the new cost. Do not edit a past entry to match a new position — the sequence of what was decided and why is the useful part.

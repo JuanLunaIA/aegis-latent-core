@@ -3,7 +3,7 @@
 **Release baseline:** four-layer truth model
 **Format identifier:** `aegis-mmr-inclusion-v1`
 **Status:** implemented in the checked-out `v4.3.0` source baseline and covered by cross-language golden vectors
-**Last reviewed:** 2026-08-27 UTC
+**Last reviewed:** 2026-09-08 UTC
 **Source baseline:** checked-out source metadata is synchronized at `v4.3.0`, which is unpublished; the most recent published release is `v4.1.2`
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical distribution boundary:** this format was not included in the `v3.1.0` distribution
@@ -19,6 +19,39 @@ All digest strings are lowercase, 64-character hexadecimal SHA-256 values. Let `
 A raw leaf is hashed as `hex(H(leaf_bytes))`. Internal nodes are computed as `hex(H(ASCII(left_hex || right_hex)))`. Current peaks are ordered by descending mountain height. The displayed root is `hex(H(ASCII(peak_0_hex || ... || peak_n_hex)))`.
 
 The HTTP interface discloses the leaf digest, not the canonical leaf bytes. This avoids disclosing request or response preview material. SDK verifiers therefore begin from the trusted/disclosed leaf digest. Applications that possess canonical leaf bytes may hash those bytes first and use the equivalent raw-leaf verifier.
+
+## Two schemes, and a known weakness in this one
+
+Neither v1 hash input above carries a tag saying which case it is. A leaf whose payload happens to be the 128-character concatenation of two child digests therefore hashes to exactly the interior node over those children — the RFC 6962 §2.1 leaf/node type-confusion weakness. Demonstrated rather than argued, with the inputs stated so the value can be checked:
+
+```python
+left  = sha256(b"honest A").hexdigest()
+right = sha256(b"honest B").hexdigest()
+
+interior = sha256((left + right).encode("ascii")).hexdigest()
+forged   = sha256((left + right).encode("ascii")).hexdigest()   # submitted as a leaf payload
+```
+
+```
+internal node hash : b7693577df162d34662fd2f7291336021c77945194e09637067845ee21cdd86a
+forged leaf  hash  : b7693577df162d34662fd2f7291336021c77945194e09637067845ee21cdd86a
+```
+
+It is reachable through the raw-leaf verifier named in the previous paragraph: `verify_portable_inclusion` accepts caller-supplied leaf bytes, so a third party can be handed such a payload and cannot distinguish a leaf from an interior node. `tests/test_mmr_domain_separation.py::test_v1_leaf_can_impersonate_an_interior_node` pins the defect in v1 with these exact inputs, and the companion test pins its absence in v2.
+
+`aegis-mmr-inclusion-v2` (`algorithm` `sha256-binary-domain-separated`) prefixes every hash input with a one-byte domain tag and consumes raw 32-byte digests rather than their hex text:
+
+```
+leaf = SHA-256(0x00 || payload)
+node = SHA-256(0x01 || left_digest_32 || right_digest_32)
+root = SHA-256(0x02 || peak_1_32 || ... || peak_k_32)
+```
+
+On the wire, v2 digests are 43-character unpadded base64url rather than 64-character hex. Encoding is checked strictly: off-alphabet characters are rejected, and a decoded digest is re-encoded and compared, because the two spare bits in a 43-character encoding of 256 bits would otherwise let one digest be spelled several ways. The encoding carries no security property of its own — the fix is the domain tags.
+
+**v1 remains the default, and this document still describes what the ledger writes.** The scheme determines every root a chain has recorded, so switching it would make each deployed WAL replay to a different root and the ledger's own integrity check declare the chain corrupt. v2 is available to callers building their own accumulator and to verifiers checking v2 proofs; it is not wired into `CryptographicAuditLedger`. See `CLM-006` and `CLM-064` in the [Claims Matrix](../CLAIMS_MATRIX.md), and the open wiring item in [docs/ROADMAP.md](../ROADMAP.md).
+
+A verifier must reject a proof whose `version` and `algorithm` disagree, and must not resolve the mismatch in the caller's favour. The Python core, the Python SDK and the TypeScript SDK each reject a v2 proof against a v1 root and the reverse.
 
 ## JSON schema
 

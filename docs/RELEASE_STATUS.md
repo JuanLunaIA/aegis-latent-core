@@ -73,7 +73,7 @@ The consequence is bounded and specific: **the release `SHA256SUMS` and the prov
 | GitHub Release `v4.1.1` | Confirmed | Published 2026-09-03T17:37:02Z, non-draft, non-prerelease, **31 assets**, `immutable: true` |
 | Release asset integrity | **Confirmed by byte check** | `sha256sum --check --strict SHA256SUMS` → OK for all fifteen artifacts |
 | PyPI (`aegis-latent-sdk`) | **Confirmed published at 4.1.1** | Registry JSON → `info.version` `4.1.1`; releases present: `4.0.0`, `4.1.1` |
-| PyPI (gateway) | **Not published at 4.1.1** | `aegis-latent-core` → HTTP 404 when read back on 2026-09-03. The gateway first reached PyPI at `4.1.2`; see §1.0 |
+| PyPI (gateway) | **Not published at 4.1.1** | `aegis-latent-core` → HTTP 404 when read back on 2026-09-03. The gateway first reached PyPI at `4.1.2`; see §1.1 |
 | npm (`aegis-latent-sdk`) | **Not published at 4.1.1** | Registry JSON → `dist-tags.latest` `4.0.0`; the only version is `4.0.0`. The publish job failed; see below |
 | OCI image (gateway) `4.1.1` | **Confirmed** | `ghcr.io/juanlunaia/aegis-latent-core:4.1.1` → `sha256:5f2caaa60ee00dd82882bee1b4f2ee046ee2877131afed1af4e356b4bd8f5343`, an OCI image index over `linux/amd64` and `linux/arm64` plus two attestation manifests |
 | OCI image (dashboard) `4.1.1` | **Confirmed** | `ghcr.io/juanlunaia/aegis-latent-core-dashboard:4.1.1` → `sha256:0f66c9f6f8fb7ea0327b9aa2d9df26a030bd76c7d53d2a2186a46f2385489a07`, same index shape |
@@ -141,7 +141,7 @@ Retained as the record of what that version's surfaces actually carried, and sti
 | Build attestations | Confirmed in workflow; verify per artifact | `actions/attest-build-provenance` covers wheels, sdists, tgz, SBOMs, manifest and `SHA256SUMS` | §2.8 |
 | Tag signature | Confirmed, shows `bad_cert` on GitHub | Sigstore keyless; see §3 | §2.9 |
 
-**The two registry rows above describe `4.0.2` only.** Neither SDK registry received `4.0.2`; its publish jobs were skipped. That is a statement about `4.0.2`, and §1.0 supersedes it for the current version.
+**The two registry rows above describe `4.0.2` only.** Neither SDK registry received `4.0.2`; its publish jobs were skipped. That is a statement about `4.0.2`, and §1.1 supersedes it for the most recent published version.
 
 **The registry gap is closed at `4.1.2`.** `4.0.2` reached neither SDK registry, `4.1.0` produced only an empty release object, and `4.1.1` reached PyPI but not npm. At `4.1.2` every surface is published and read back: both PyPI projects, npm, both OCI images, and the GitHub Release. A consumer installing the SDK from either registry now receives `4.1.2`, and the gateway is installable from PyPI, from GHCR, or from source. The version sequence on the registries is not contiguous — npm has `4.0.0` and `4.1.2` with nothing between — which is a history of failed publishes, not of yanked releases.
 
@@ -208,7 +208,7 @@ npm view aegis-latent-sdk versions --json
 ```
 
 Observed 2026-09-04: `4.1.2`, with `['4.0.0', '4.1.2']` as the version list —
-`4.1.1` was never published here, so the sequence skips it; see §1.1. The
+`4.1.1` was never published here, so the sequence skips it; see §1.2. The
 published tarball hashes to
 `f2b3419a2a5188a63c20ff1db904572323162850787172e357d157b80c1ca5a5`, which is the
 value the release `SHA256SUMS` records for `aegis-latent-sdk-4.1.2.tgz`.
@@ -271,7 +271,7 @@ sweep over all 31 assets was **not** run for `4.1.2`. `SHA256SUMS` was fetched
 and three artifacts were downloaded and hashed individually — the npm tarball,
 the PyPI gateway wheel and the release gateway wheel. The npm tarball matched
 its `SHA256SUMS` entry exactly; the two gateway wheels did not match each other,
-for the reason set out in §1.0. The `gh attestation verify` step was not run.
+for the reason set out in §1.1. The `gh attestation verify` step was not run.
 
 The release does **not** carry detached `.sig`, `.pem`, or `.sigstore` assets, so there is no `cosign verify-blob` step for release files. Integrity comes from `SHA256SUMS` plus the sidecars, and provenance from the attestation store. `cosign verify` applies to the OCI images (§2.7), not to release blobs.
 
