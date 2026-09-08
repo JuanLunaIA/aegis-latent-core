@@ -51,16 +51,35 @@ def _v2_bagged_root(peak_hashes: list[str]) -> str:
     ).hexdigest()
 
 
+_B64U_ALPHABET = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+
+
+def _hex_to_b64u(value: str) -> str:
+    """Encode a 32-byte hex digest as unpadded base64url for the v2 wire form."""
+    return base64.urlsafe_b64encode(bytes.fromhex(value)).decode("ascii").rstrip("=")
+
+
 def _b64u_to_hex(value: str) -> str:
-    """Decode a v2 wire digest (43-char unpadded base64url) to lowercase hex."""
+    """Decode a v2 wire digest (43-char unpadded base64url) to lowercase hex.
+
+    Strict on alphabet and canonicality, matching ``aegis.core.mmr``. Without
+    the alphabet check ``urlsafe_b64decode`` would accept standard-base64
+    ``+`` and ``/`` that the TypeScript parser refuses; without the canonical
+    check the two spare bits in the 43rd character make a digest malleable, so
+    the same 32 bytes would have several accepted spellings.
+    """
     if len(value) != 43:
         raise AegisProofError("v2 proof digests must be 43-character unpadded base64url")
+    if not _B64U_ALPHABET.issuperset(value):
+        raise AegisProofError("v2 proof digests must use the base64url alphabet")
     try:
         raw = base64.urlsafe_b64decode(value + "=")
     except (ValueError, binascii.Error) as exc:
         raise AegisProofError("v2 proof digest is not valid base64url") from exc
     if len(raw) != 32:
         raise AegisProofError("v2 proof digests must decode to 32 bytes")
+    if base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=") != value:
+        raise AegisProofError("v2 proof digest is not canonically encoded")
     return raw.hex()
 
 
@@ -129,21 +148,35 @@ class InclusionProof:
                 peaks=peaks,
                 root=decode(_require_string(value, "root")),
             )
+        except AegisProofError:
+            # Already specific — a digest that is the wrong length, off-alphabet
+            # or non-canonically encoded says so. Re-wrapping would replace that
+            # with "invalid proof field types" and lose the reason.
+            raise
         except (KeyError, TypeError, ValueError) as exc:
             raise AegisProofError("invalid proof field types") from exc
 
     def to_mapping(self) -> dict[str, Any]:
+        """Serialise back to this proof's own wire form.
+
+        Digests are held internally as lowercase hex regardless of version, so
+        a v2 proof must be re-encoded to base64url on the way out. Emitting the
+        hex would produce a document that this parser, the core parser and the
+        TypeScript parser all reject — a proof that survived one round trip but
+        not two.
+        """
+        encode = _hex_to_b64u if self.version == MMR_PROOF_VERSION_V2 else (lambda digest: digest)
         return {
             "algorithm": self.algorithm,
             "leaf_count": self.leaf_count,
             "leaf_index": self.leaf_index,
             "path": [
-                {"direction": step.direction, "sibling_hash": step.sibling_hash}
+                {"direction": step.direction, "sibling_hash": encode(step.sibling_hash)}
                 for step in self.path
             ],
             "peak_index": self.peak_index,
-            "peaks": [{"hash": peak.hash, "height": peak.height} for peak in self.peaks],
-            "root": self.root,
+            "peaks": [{"hash": encode(peak.hash), "height": peak.height} for peak in self.peaks],
+            "root": encode(self.root),
             "version": self.version,
         }
 

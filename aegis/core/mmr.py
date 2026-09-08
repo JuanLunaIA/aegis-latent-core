@@ -96,6 +96,12 @@ _DOMAIN_LEAF: bytes = b"\x00"
 _DOMAIN_NODE: bytes = b"\x01"
 _DOMAIN_ROOT: bytes = b"\x02"
 
+# RFC 4648 §5 base64url alphabet, without padding. Checked explicitly because
+# ``urlsafe_b64decode`` also accepts standard-base64 ``+`` and ``/``.
+_B64U_ALPHABET: frozenset[str] = frozenset(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+)
+
 
 def _hex_to_b64u(value: str) -> str:
     """Encode a 32-byte hex digest as unpadded base64url for the v2 wire form."""
@@ -105,18 +111,36 @@ def _hex_to_b64u(value: str) -> str:
 def _b64u_to_hex(value: object) -> str:
     """Decode an unpadded base64url v2 digest back to lowercase hex.
 
-    Strict: anything that is not exactly 32 decoded bytes is rejected. A digest
-    that cannot be decoded is a malformed proof, not a proof that happens to
-    fail — saying so here keeps the failure legible.
+    Strict in three ways, each closing a distinct way a wire digest could be
+    written more than one way:
+
+    - The alphabet is base64url only. ``urlsafe_b64decode`` silently accepts
+      standard-base64 ``+`` and ``/``, which the TypeScript parser refuses, so
+      without this check the same document parses in Python and fails in
+      TypeScript.
+    - The encoding must be canonical. 43 characters carry 258 bits for a
+      256-bit digest, so the two spare bits in the final character are free:
+      ``…8`` and ``…9`` decode to identical bytes. Re-encoding and comparing
+      rejects every non-canonical spelling, leaving exactly one wire form per
+      digest.
+    - It must decode to exactly 32 bytes.
+
+    A digest that cannot be decoded is a malformed proof, not a proof that
+    happens to fail, so this raises rather than returning a value that would
+    quietly fail to verify later.
     """
     if not isinstance(value, str) or len(value) != 43:
         raise ValueError("v2 proof digests must be 43-character unpadded base64url")
+    if not _B64U_ALPHABET.issuperset(value):
+        raise ValueError("v2 proof digests must use the base64url alphabet")
     try:
         raw = base64.urlsafe_b64decode(value + "=")
     except (ValueError, binascii.Error) as exc:
         raise ValueError("v2 proof digest is not valid base64url") from exc
     if len(raw) != 32:
         raise ValueError("v2 proof digests must decode to 32 bytes")
+    if base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=") != value:
+        raise ValueError("v2 proof digest is not canonically encoded")
     return raw.hex()
 
 

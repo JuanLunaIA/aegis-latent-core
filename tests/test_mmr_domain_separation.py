@@ -346,3 +346,75 @@ def test_root_must_match_exactly_and_case_sensitively(v2_tree):
     # Digests are lowercase hex by contract; an uppercase root is not "the same
     # root in another case", it is a value the verifier has no reason to accept.
     assert not MerkleMountainRange.verify_portable_inclusion(payloads[4], proof, root.upper())
+
+
+# ── Wire-form strictness (findings from review on PR #145) ───────────────────
+
+
+def _differing_digest() -> bytes:
+    """A 32-byte digest whose standard and url-safe base64 forms differ."""
+    import base64 as _b64
+
+    for index in range(500):
+        candidate = hashlib.sha256(b"seed%d" % index).digest()
+        if _b64.b64encode(candidate).decode().rstrip("=") != _b64.urlsafe_b64encode(
+            candidate
+        ).decode().rstrip("="):
+            return candidate
+    raise AssertionError("no differing digest found")
+
+
+def test_v2_proof_survives_repeated_serialisation(v2_tree):
+    """A parsed v2 proof must re-serialise to the form it arrived in.
+
+    Emitting the internal hex would produce a document every v2 parser rejects
+    — a proof that survives one round trip but not two.
+    """
+    _, payloads, root, proof = v2_tree
+    once = proof.to_dict()
+    twice = MMRInclusionProofV1.from_dict(once).to_dict()
+    assert twice == once
+    assert len(twice["root"]) == 43
+    assert MerkleMountainRange.verify_portable_inclusion(
+        payloads[4], MMRInclusionProofV1.from_dict(twice), root
+    )
+
+
+def test_standard_base64_alphabet_is_refused(v2_tree):
+    """``urlsafe_b64decode`` accepts ``+`` and ``/``; the wire format does not.
+
+    Accepting them would make the same document parse in Python and fail in
+    TypeScript, which checks the alphabet with a regex.
+    """
+    import base64 as _b64
+
+    _, _, _, proof = v2_tree
+    document = proof.to_dict()
+    document["root"] = _b64.b64encode(_differing_digest()).decode().rstrip("=")
+    with pytest.raises(ValueError, match="base64url alphabet"):
+        MMRInclusionProofV1.from_dict(document)
+
+
+def test_non_canonical_encoding_is_refused(v2_tree):
+    """43 characters carry 258 bits for a 256-bit digest.
+
+    The two spare bits in the final character are free, so several distinct
+    strings decode to identical bytes. Without a canonicality check a v2 digest
+    would be malleable on the wire.
+    """
+    import base64 as _b64
+
+    raw = _differing_digest()
+    canonical = _b64.urlsafe_b64encode(raw).decode().rstrip("=")
+    alternative = next(
+        character
+        for character in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        if character != canonical[-1]
+        and _b64.urlsafe_b64decode(canonical[:-1] + character + "=") == raw
+    )
+
+    _, _, _, proof = v2_tree
+    document = proof.to_dict()
+    document["root"] = canonical[:-1] + alternative
+    with pytest.raises(ValueError, match="canonically encoded"):
+        MMRInclusionProofV1.from_dict(document)
