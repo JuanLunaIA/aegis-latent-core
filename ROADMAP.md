@@ -30,6 +30,8 @@ An item leaves this document only when it is implemented, tested, and carries a 
 
 What remains open is narrower than the old entry implied: continuity across *replicas* (each is an independent chain, see **Durable WAL backend options** above), and continuity of the auxiliary `RustWal` mmap segment, which is not the authoritative store.
 
+**Domain-separated MMR in the ledger.** The `aegis-mmr-inclusion-v2` scheme exists and is tested, but the ledger still writes v1, which remains the default. Two things block the switch, and neither is a small change: the `aegis_rust` accumulator implements v1 only, so an accelerated deployment running Python v2 would disagree on every root; and an existing chain cannot change scheme without a recorded transition, because a root cannot be recomputed under a new construction without rewriting the history it already committed to. Until then v2 serves callers building their own accumulator and verifiers checking v2 proofs. See `CLM-064` and [docs/ROADMAP.md](docs/ROADMAP.md).
+
 **External anchoring.** RFC 3161 timestamping and an S3 Object Lock adapter exist as configuration-dependent paths. Neither is an external immutability guarantee, and no anchoring is enabled by default.
 
 ## Platform and operations
