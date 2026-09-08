@@ -10,7 +10,9 @@ Aegis sits between your application and your model provider. For every governed 
 [![Coverage](https://img.shields.io/badge/statement%20coverage-93.91%25%20(2026--08--18)-informational)](docs/benchmarks/BENCHMARK_METHOD.md)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
 
-> **Current release:** `v4.1.2`, read back on 2026-09-04 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images. **`4.1.2` is the first version installable from PyPI as `aegis-latent-core`**; before it the gateway came from source or GHCR only. The npm version list skips `4.1.1`, whose publish step failed. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The two PyPI gateway artifacts are byte-different from the release assets of the same name — same content, different build host — so `SHA256SUMS` does not cover the PyPI downloads. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
+> **Current release candidate:** `v4.3.0`, with fourteen synchronized anchors. **Nothing is published for `4.3.0`** — no tag, release, package or image exists for it yet, so it cannot be installed from any registry. There is no `4.2.0`; the number was skipped.
+>
+> **Most recent published release:** `v4.1.2`, read back on 2026-09-04 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images. **`4.1.2` is the first version installable from PyPI as `aegis-latent-core`**; before it the gateway came from source or GHCR only. The npm version list skips `4.1.1`, whose publish step failed. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The two PyPI gateway artifacts are byte-different from the release assets of the same name — same content, different build host — so `SHA256SUMS` does not cover the PyPI downloads. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
 ---
 
@@ -267,6 +269,7 @@ Separately, Kani 0.67.0 model-checks the native WAL's frame-bounds arithmetic ov
 | Python suite | 5,707 passed, 37 skipped | Candidate gate record | 2026-08-24 |
 | Python suite | 5,661 passed, 81 skipped, 0 failed | Clean-container reproduction | 2026-09-01 |
 | Python suite | 5,974 passed, 52 skipped, 0 failed | `4.1.2` source baseline | 2026-09-03 |
+| Python suite | 6,179 passed, 52 skipped, 0 failed | `4.3.0` source baseline | 2026-09-08 |
 | Rust extension | 31 tests passed; Clippy `-D warnings`; abi3 wheel built | CI | Per run |
 | Static analysis | `mypy --strict` 0 errors over 186 files; Bandit 0 findings at every severity | CI | Per run |
 | Model checking | 5 Kani harnesses verified, 0 failures, over the whole `usize` domain | CI | Per run |

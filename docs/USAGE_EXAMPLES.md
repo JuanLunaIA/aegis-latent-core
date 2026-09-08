@@ -2,7 +2,7 @@
 
 **Last verified:** 2026-09-04 UTC
 **Release baseline:** `v4.1.2`, published and read back on 2026-09-04; external release status always requires independent readback, recorded in [Release Status §1.0](RELEASE_STATUS.md)
-**Source baseline:** `v4.1.2`; source metadata alone does not establish publication
+**Source baseline:** `v4.3.0`, unpublished; source metadata alone does not establish publication
 **Audience:** developers integrating Aegis for the first time
 **Root document:** [`README.md`](../README.md)
 

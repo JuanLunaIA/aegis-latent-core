@@ -170,7 +170,13 @@ class MTLSVerifier:
         if len(tenant_values) != 1 or not tenant_values[0].strip():
             raise MTLSVerificationError("client certificate must bind exactly one tenant SAN")
         certificate_tenant = tenant_values[0]
-        if tenant_id is not None and not hmac.compare_digest(certificate_tenant, tenant_id):
+        # Compared as UTF-8 bytes: a tenant SAN may legitimately carry non-ASCII,
+        # and ``hmac.compare_digest`` raises TypeError on non-ASCII ``str``, which
+        # would turn both a mismatch and a valid internationalized tenant into an
+        # unhandled error instead of a verification result.
+        if tenant_id is not None and not hmac.compare_digest(
+            certificate_tenant.encode("utf-8"), tenant_id.encode("utf-8")
+        ):
             raise MTLSVerificationError("client certificate SAN does not bind the expected tenant")
 
         subject = certificate.subject.get_attributes_for_oid(NameOID.COMMON_NAME)

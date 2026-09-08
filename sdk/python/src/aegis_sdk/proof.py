@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import json
 from collections.abc import Mapping
@@ -21,6 +22,65 @@ class AegisProofError(ValueError):
 class ProofStep:
     sibling_hash: str
     direction: str
+
+
+MMR_PROOF_VERSION_V1 = "aegis-mmr-inclusion-v1"
+MMR_PROOF_VERSION_V2 = "aegis-mmr-inclusion-v2"
+MMR_ALGORITHM_V1 = "sha256-asciihex"
+MMR_ALGORITHM_V2 = "sha256-binary-domain-separated"
+
+_DOMAIN_LEAF = b"\x00"
+_DOMAIN_NODE = b"\x01"
+_DOMAIN_ROOT = b"\x02"
+
+
+def _v2_leaf_hash(payload: bytes) -> str:
+    """``SHA-256(0x00 || payload)`` as lowercase hex."""
+    return hashlib.sha256(_DOMAIN_LEAF + payload).hexdigest()
+
+
+def _v2_node_hash(left: str, right: str) -> str:
+    """``SHA-256(0x01 || left || right)`` over the raw 32-byte digests."""
+    return hashlib.sha256(_DOMAIN_NODE + bytes.fromhex(left) + bytes.fromhex(right)).hexdigest()
+
+
+def _v2_bagged_root(peak_hashes: list[str]) -> str:
+    """``SHA-256(0x02 || peak_1 || ... || peak_k)`` over raw 32-byte digests."""
+    return hashlib.sha256(
+        _DOMAIN_ROOT + b"".join(bytes.fromhex(value) for value in peak_hashes)
+    ).hexdigest()
+
+
+_B64U_ALPHABET = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+
+
+def _hex_to_b64u(value: str) -> str:
+    """Encode a 32-byte hex digest as unpadded base64url for the v2 wire form."""
+    return base64.urlsafe_b64encode(bytes.fromhex(value)).decode("ascii").rstrip("=")
+
+
+def _b64u_to_hex(value: str) -> str:
+    """Decode a v2 wire digest (43-char unpadded base64url) to lowercase hex.
+
+    Strict on alphabet and canonicality, matching ``aegis.core.mmr``. Without
+    the alphabet check ``urlsafe_b64decode`` would accept standard-base64
+    ``+`` and ``/`` that the TypeScript parser refuses; without the canonical
+    check the two spare bits in the 43rd character make a digest malleable, so
+    the same 32 bytes would have several accepted spellings.
+    """
+    if len(value) != 43:
+        raise AegisProofError("v2 proof digests must be 43-character unpadded base64url")
+    if not _B64U_ALPHABET.issuperset(value):
+        raise AegisProofError("v2 proof digests must use the base64url alphabet")
+    try:
+        raw = base64.urlsafe_b64decode(value + "=")
+    except (ValueError, binascii.Error) as exc:
+        raise AegisProofError("v2 proof digest is not valid base64url") from exc
+    if len(raw) != 32:
+        raise AegisProofError("v2 proof digests must decode to 32 bytes")
+    if base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=") != value:
+        raise AegisProofError("v2 proof digest is not canonically encoded")
+    return raw.hex()
 
 
 @dataclass(frozen=True)
@@ -53,15 +113,20 @@ class InclusionProof:
             "root",
         }
         if set(value) != required:
-            raise AegisProofError("proof fields do not match aegis-mmr-inclusion-v1")
+            raise AegisProofError("proof fields do not match the aegis-mmr-inclusion schema")
         try:
             path_raw = value["path"]
             peaks_raw = value["peaks"]
             if not isinstance(path_raw, list) or not isinstance(peaks_raw, list):
                 raise TypeError("path and peaks must be arrays")
+            decode = (
+                _b64u_to_hex
+                if _require_string(value, "version") == MMR_PROOF_VERSION_V2
+                else (lambda digest: digest)
+            )
             path = tuple(
                 ProofStep(
-                    sibling_hash=_require_string(item, "sibling_hash"),
+                    sibling_hash=decode(_require_string(item, "sibling_hash")),
                     direction=_require_string(item, "direction"),
                 )
                 for item in path_raw
@@ -69,7 +134,7 @@ class InclusionProof:
             peaks = tuple(
                 Peak(
                     height=_require_int(item, "height"),
-                    hash=_require_string(item, "hash"),
+                    hash=decode(_require_string(item, "hash")),
                 )
                 for item in peaks_raw
             )
@@ -81,23 +146,37 @@ class InclusionProof:
                 peak_index=_require_int(value, "peak_index"),
                 path=path,
                 peaks=peaks,
-                root=_require_string(value, "root"),
+                root=decode(_require_string(value, "root")),
             )
+        except AegisProofError:
+            # Already specific — a digest that is the wrong length, off-alphabet
+            # or non-canonically encoded says so. Re-wrapping would replace that
+            # with "invalid proof field types" and lose the reason.
+            raise
         except (KeyError, TypeError, ValueError) as exc:
             raise AegisProofError("invalid proof field types") from exc
 
     def to_mapping(self) -> dict[str, Any]:
+        """Serialise back to this proof's own wire form.
+
+        Digests are held internally as lowercase hex regardless of version, so
+        a v2 proof must be re-encoded to base64url on the way out. Emitting the
+        hex would produce a document that this parser, the core parser and the
+        TypeScript parser all reject — a proof that survived one round trip but
+        not two.
+        """
+        encode = _hex_to_b64u if self.version == MMR_PROOF_VERSION_V2 else (lambda digest: digest)
         return {
             "algorithm": self.algorithm,
             "leaf_count": self.leaf_count,
             "leaf_index": self.leaf_index,
             "path": [
-                {"direction": step.direction, "sibling_hash": step.sibling_hash}
+                {"direction": step.direction, "sibling_hash": encode(step.sibling_hash)}
                 for step in self.path
             ],
             "peak_index": self.peak_index,
-            "peaks": [{"hash": peak.hash, "height": peak.height} for peak in self.peaks],
-            "root": self.root,
+            "peaks": [{"hash": encode(peak.hash), "height": peak.height} for peak in self.peaks],
+            "root": encode(self.root),
             "version": self.version,
         }
 
@@ -131,13 +210,26 @@ def canonical_proof_json(proof: InclusionProof) -> bytes:
 
 
 def verify_inclusion(leaf: bytes, proof: InclusionProof, trusted_root: str) -> bool:
+    """Verify a v1 or v2 inclusion proof over raw leaf bytes.
+
+    The leaf digest is computed under the scheme the *proof* declares, so a
+    proof of one version can never be replayed against the other's digest.
+    """
+    if proof.version == MMR_PROOF_VERSION_V2:
+        return verify_inclusion_hash(_v2_leaf_hash(leaf), proof, trusted_root)
     return verify_inclusion_hash(hashlib.sha256(leaf).hexdigest(), proof, trusted_root)
 
 
 def verify_inclusion_hash(leaf_hash: str, proof: InclusionProof, trusted_root: str) -> bool:
-    if proof.version != "aegis-mmr-inclusion-v1":
-        return False
-    if proof.algorithm != "sha256-asciihex":
+    if proof.version == MMR_PROOF_VERSION_V2:
+        if proof.algorithm != MMR_ALGORITHM_V2:
+            return False
+        v2 = True
+    elif proof.version == MMR_PROOF_VERSION_V1:
+        if proof.algorithm != MMR_ALGORITHM_V1:
+            return False
+        v2 = False
+    else:
         return False
     if proof.leaf_count < 1 or not 0 <= proof.leaf_index < proof.leaf_count:
         return False
@@ -174,13 +266,21 @@ def verify_inclusion_hash(leaf_hash: str, proof: InclusionProof, trusted_root: s
         expected = "R" if ((local_index >> level) & 1) == 0 else "L"
         if step.direction != expected:
             return False
-        combined = (
-            current + step.sibling_hash if step.direction == "R" else step.sibling_hash + current
+        left, right = (
+            (current, step.sibling_hash) if step.direction == "R" else (step.sibling_hash, current)
         )
-        current = hashlib.sha256(combined.encode("ascii")).hexdigest()
+        current = (
+            _v2_node_hash(left, right)
+            if v2
+            else hashlib.sha256((left + right).encode("ascii")).hexdigest()
+        )
     if current != proof.peaks[proof.peak_index].hash:
         return False
-    root = hashlib.sha256("".join(peak.hash for peak in proof.peaks).encode("ascii")).hexdigest()
+    root = (
+        _v2_bagged_root([peak.hash for peak in proof.peaks])
+        if v2
+        else hashlib.sha256("".join(peak.hash for peak in proof.peaks).encode("ascii")).hexdigest()
+    )
     return root == trusted_root
 
 

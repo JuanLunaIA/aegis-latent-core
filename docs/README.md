@@ -1,11 +1,11 @@
 # Documentation Index
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** checked-out source baseline/release target `v4.1.2` with 14 synchronized anchors, plus historical external observations
-**Source baseline:** `4.1.2` with fourteen synchronized anchors; immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
+**Release baseline:** checked-out source baseline `v4.3.0` with 14 synchronized anchors, unpublished, plus historical external observations
+**Source baseline:** `4.3.0` with fourteen synchronized anchors, unpublished; immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
 **External state:** `4.1.2` is published, read back 2026-09-04 — signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway and dashboard images. The previous published release is signed annotated `v4.0.2` at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, whose GitHub Release and GHCR readbacks passed on 2026-08-28 and whose SDK publish jobs were skipped
 
-This directory distinguishes the **`4.1.2` source baseline** from historical external observations and the independently verified release objects. `4.1.2` was published on 2026-09-03 and read back on 2026-09-04: the signed annotated tag, the GitHub Release and its 31 assets, both PyPI projects, the npm package, and both GHCR images. It is the first version at which the gateway itself is on PyPI. The npm version list skips `4.1.1`, whose publish step failed on a defect in the publish command that the `4.1.2` dispatch shows fixed. For the preceding `4.0.2` release, the signed tag, GitHub Release asset envelope, GHCR multi-architecture manifests, GitHub attestations, and keyless OCI signatures were read back successfully, while both SDK publish jobs were skipped because the trusted-publishing enablement variable was not readable. A source version, successful repository checks, or a GitHub Release does not establish package-index upload, deployment acceptance, production service level, or compliance result.
+This directory distinguishes the **`4.3.0` source baseline**, for which nothing is published, from historical external observations and the independently verified release objects. `4.1.2` was published on 2026-09-03 and read back on 2026-09-04: the signed annotated tag, the GitHub Release and its 31 assets, both PyPI projects, the npm package, and both GHCR images. It is the first version at which the gateway itself is on PyPI. The npm version list skips `4.1.1`, whose publish step failed on a defect in the publish command that the `4.1.2` dispatch shows fixed. For the preceding `4.0.2` release, the signed tag, GitHub Release asset envelope, GHCR multi-architecture manifests, GitHub attestations, and keyless OCI signatures were read back successfully, while both SDK publish jobs were skipped because the trusted-publishing enablement variable was not readable. A source version, successful repository checks, or a GitHub Release does not establish package-index upload, deployment acceptance, production service level, or compliance result.
 
 ## Start here
 
@@ -20,7 +20,7 @@ This directory distinguishes the **`4.1.2` source baseline** from historical ext
 
 ## Baseline rule
 
-Use **source baseline** for statements about code and tests in the checked-out `v4.1.2` source baseline. Use **verified external object** only for the named signed tag, GitHub Release assets, and GHCR objects recorded in the release report. Use **historical baseline** only for statements tied to named immutable revisions or artifacts. Never transfer a historical benchmark or security result to the checked-out source baseline without a rerun, and never infer PyPI/npm publication from the GitHub Release or source metadata.
+Use **source baseline** for statements about code and tests in the checked-out `v4.3.0` source baseline. Use **verified external object** only for the named signed tag, GitHub Release assets, and GHCR objects recorded in the release report. Use **historical baseline** only for statements tied to named immutable revisions or artifacts. Never transfer a historical benchmark or security result to the checked-out source baseline without a rerun, and never infer PyPI/npm publication from the GitHub Release or source metadata.
 
 ## Technical references
 

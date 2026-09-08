@@ -9,6 +9,8 @@ for efficient inclusion and consistency proofs.
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import logging
 from collections.abc import Sequence
@@ -34,6 +36,142 @@ def _is_sha256_hex(value: object) -> bool:
         and len(value) == 64
         and all(character in "0123456789abcdef" for character in value)
     )
+
+
+# ── Hash schemes ──────────────────────────────────────────────────────────────
+#
+# Two constructions exist, and which one a chain uses is recorded rather than
+# assumed.
+#
+# ``v1-asciihex`` is the original: a leaf is ``SHA-256(payload)`` and a node is
+# ``SHA-256(ascii(left_hex) || ascii(right_hex))``. Both are a bare SHA-256 over
+# bytes with no tag distinguishing the two cases, so a *leaf whose payload
+# happens to be the 128-character concatenation of two child digests hashes to
+# the same value as the internal node over those children*. A verifier handed
+# such a payload cannot tell a leaf from an interior node. That is the classic
+# second-preimage / type-confusion weakness RFC 6962 §2.1 exists to prevent, and
+# it is reachable here through ``verify_portable_inclusion``, which accepts
+# caller-supplied leaf bytes.
+#
+# ``v2-binary-domain-separated`` fixes it the standard way: every hash input is
+# prefixed with a one-byte domain tag, and interior hashing consumes the raw
+# 32-byte digests rather than their hex text.
+#
+#     leaf   = SHA-256(0x00 || payload)
+#     node   = SHA-256(0x01 || left_digest_32 || right_digest_32)
+#     root   = SHA-256(0x02 || peak_1_32 || ... || peak_k_32)
+#
+# v1 is retained, and remains the default, because the scheme decides every root
+# a chain has ever recorded. Switching an existing ledger would make its WAL
+# replay to a different root and its own integrity check declare it corrupt —
+# an unrecoverable outcome for the evidence this system exists to hold. Proofs
+# carry their scheme so a verifier never has to guess.
+#
+# Two prerequisites remain before a *ledger* may select v2, and both are
+# unmet today, which is why ``CryptographicAuditLedger`` does not expose the
+# choice:
+#
+#   1. ``aegis_rust``'s accumulator implements v1 only (``aegis_rust_v2/src/
+#      mmr.rs`` hashes ``format!("{left}{right}")``). An accelerated deployment
+#      running Python v2 against the Rust root would disagree on every root,
+#      and ``tests/test_mmr_parity.py`` exists precisely to catch that class of
+#      divergence.
+#   2. Existing chains need a migration story — a new chain, or a recorded
+#      scheme transition — since a root cannot be recomputed under a different
+#      construction without rewriting history.
+#
+# Until both land, v2 is available to callers constructing their own
+# accumulator and to verifiers checking v2 proofs, which is what makes the
+# construction reviewable before anything depends on it.
+HASH_SCHEME_V1: str = "v1-asciihex"
+HASH_SCHEME_V2: str = "v2-binary-domain-separated"
+_HASH_SCHEMES: frozenset[str] = frozenset({HASH_SCHEME_V1, HASH_SCHEME_V2})
+
+MMR_PROOF_VERSION_V1: str = "aegis-mmr-inclusion-v1"
+MMR_PROOF_VERSION_V2: str = "aegis-mmr-inclusion-v2"
+MMR_ALGORITHM_V1: str = "sha256-asciihex"
+MMR_ALGORITHM_V2: str = "sha256-binary-domain-separated"
+
+_DOMAIN_LEAF: bytes = b"\x00"
+_DOMAIN_NODE: bytes = b"\x01"
+_DOMAIN_ROOT: bytes = b"\x02"
+
+# RFC 4648 §5 base64url alphabet, without padding. Checked explicitly because
+# ``urlsafe_b64decode`` also accepts standard-base64 ``+`` and ``/``.
+_B64U_ALPHABET: frozenset[str] = frozenset(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+)
+
+
+def _hex_to_b64u(value: str) -> str:
+    """Encode a 32-byte hex digest as unpadded base64url for the v2 wire form."""
+    return base64.urlsafe_b64encode(bytes.fromhex(value)).decode("ascii").rstrip("=")
+
+
+def _b64u_to_hex(value: object) -> str:
+    """Decode an unpadded base64url v2 digest back to lowercase hex.
+
+    Strict in three ways, each closing a distinct way a wire digest could be
+    written more than one way:
+
+    - The alphabet is base64url only. ``urlsafe_b64decode`` silently accepts
+      standard-base64 ``+`` and ``/``, which the TypeScript parser refuses, so
+      without this check the same document parses in Python and fails in
+      TypeScript.
+    - The encoding must be canonical. 43 characters carry 258 bits for a
+      256-bit digest, so the two spare bits in the final character are free:
+      ``…8`` and ``…9`` decode to identical bytes. Re-encoding and comparing
+      rejects every non-canonical spelling, leaving exactly one wire form per
+      digest.
+    - It must decode to exactly 32 bytes.
+
+    A digest that cannot be decoded is a malformed proof, not a proof that
+    happens to fail, so this raises rather than returning a value that would
+    quietly fail to verify later.
+    """
+    if not isinstance(value, str) or len(value) != 43:
+        raise ValueError("v2 proof digests must be 43-character unpadded base64url")
+    if not _B64U_ALPHABET.issuperset(value):
+        raise ValueError("v2 proof digests must use the base64url alphabet")
+    try:
+        raw = base64.urlsafe_b64decode(value + "=")
+    except (ValueError, binascii.Error) as exc:
+        raise ValueError("v2 proof digest is not valid base64url") from exc
+    if len(raw) != 32:
+        raise ValueError("v2 proof digests must decode to 32 bytes")
+    if base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=") != value:
+        raise ValueError("v2 proof digest is not canonically encoded")
+    return raw.hex()
+
+
+def _identity_hex(value: object) -> str:
+    """Pass a v1 hex digest through unchanged, rejecting a non-string."""
+    if not isinstance(value, str):
+        raise ValueError("v1 proof digests must be hex strings")
+    return value
+
+
+def v2_leaf_hash(payload: bytes) -> bytes:
+    """``SHA-256(0x00 || payload)`` — the domain-separated leaf digest."""
+    return hashlib.sha256(_DOMAIN_LEAF + payload).digest()
+
+
+def v2_node_hash(left: bytes, right: bytes) -> bytes:
+    """``SHA-256(0x01 || left || right)`` over raw 32-byte digests."""
+    if len(left) != 32 or len(right) != 32:
+        raise ValueError("v2 node hashing requires two 32-byte digests")
+    return hashlib.sha256(_DOMAIN_NODE + left + right).digest()
+
+
+def v2_bagged_root(peaks: Sequence[bytes]) -> bytes:
+    """``SHA-256(0x02 || peak_1 || ... || peak_k)`` over raw 32-byte digests.
+
+    Peaks are consumed in the order given; callers bag height-descending, which
+    is the canonical order the accumulator maintains.
+    """
+    if any(len(peak) != 32 for peak in peaks):
+        raise ValueError("v2 root bagging requires 32-byte digests")
+    return hashlib.sha256(_DOMAIN_ROOT + b"".join(peaks)).digest()
 
 
 @dataclass
@@ -88,7 +226,24 @@ class MMRInclusionProofV1:
     root: str
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        """Serialise to the wire form for this proof's version.
+
+        Digests live in the dataclass as lowercase hex — the canonical internal
+        form every other component already validates and stores. Only the wire
+        encoding differs by version: v2 transmits the raw 32 bytes as unpadded
+        base64url, which is the same digest in 43 characters instead of 64. The
+        encoding carries no security property; the second-preimage fix is the
+        domain separation, not the transport.
+        """
+        document = asdict(self)
+        if self.version != MMR_PROOF_VERSION_V2:
+            return document
+        document["root"] = _hex_to_b64u(self.root)
+        for step, source in zip(document["path"], self.path, strict=True):
+            step["sibling_hash"] = _hex_to_b64u(source.sibling_hash)
+        for peak, origin in zip(document["peaks"], self.peaks, strict=True):
+            peak["hash"] = _hex_to_b64u(origin.hash)
+        return document
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> MMRInclusionProofV1:
@@ -103,9 +258,18 @@ class MMRInclusionProofV1:
             "root",
         }
         if set(value) != required:
-            raise ValueError("MMR proof fields do not match the v1 schema")
-        path = tuple(MMRProofStep(**item) for item in value["path"])
-        peaks = tuple(MMRPeak(**item) for item in value["peaks"])
+            raise ValueError("MMR proof fields do not match the proof schema")
+        # v2 transmits digests as unpadded base64url; decode back to the hex the
+        # dataclass and every downstream check use. An undecodable digest raises
+        # here rather than surviving as a value that silently fails to verify.
+        decode = _b64u_to_hex if value["version"] == MMR_PROOF_VERSION_V2 else _identity_hex
+        path = tuple(
+            MMRProofStep(sibling_hash=decode(item["sibling_hash"]), direction=item["direction"])
+            for item in value["path"]
+        )
+        peaks = tuple(
+            MMRPeak(height=item["height"], hash=decode(item["hash"])) for item in value["peaks"]
+        )
         return cls(
             version=value["version"],
             algorithm=value["algorithm"],
@@ -114,7 +278,7 @@ class MMRInclusionProofV1:
             peak_index=value["peak_index"],
             path=path,
             peaks=peaks,
-            root=value["root"],
+            root=decode(value["root"]),
         )
 
 
@@ -124,7 +288,15 @@ class MerkleMountainRange:
     Provides O(log N) inclusion proofs and O(log N) consistency proofs.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, hash_scheme: str = HASH_SCHEME_V1) -> None:
+        if hash_scheme not in _HASH_SCHEMES:
+            raise ValueError(
+                f"hash_scheme must be one of {sorted(_HASH_SCHEMES)}, got {hash_scheme!r}"
+            )
+        # Defaults to v1 deliberately: the scheme determines every root the
+        # chain records, so an existing ledger must keep the one it was built
+        # with or its own replay check will reject it. See the scheme notes.
+        self.hash_scheme = hash_scheme
         self.nodes: list[MMRNode] = []
         self.peaks: list[MMRNode] = []
         self._leaf_node_indices: list[int] = []
@@ -145,7 +317,10 @@ class MerkleMountainRange:
         """
         Appends a new leaf and performs peak merging to maintain the MMR property.
         """
-        leaf_hash = hashlib.sha256(data).hexdigest()
+        if self.hash_scheme == HASH_SCHEME_V2:
+            leaf_hash = v2_leaf_hash(data).hex()
+        else:
+            leaf_hash = hashlib.sha256(data).hexdigest()
         return self.add_leaf_hash(leaf_hash)
 
     def add_leaf_hash(self, leaf_hash: str) -> str:
@@ -164,7 +339,14 @@ class MerkleMountainRange:
             old_peak = self.peaks.pop()
 
             # Create internal node (parent of the two peaks)
-            combined_hash = hashlib.sha256((old_peak.hash + current_node.hash).encode()).hexdigest()
+            if self.hash_scheme == HASH_SCHEME_V2:
+                combined_hash = v2_node_hash(
+                    bytes.fromhex(old_peak.hash), bytes.fromhex(current_node.hash)
+                ).hex()
+            else:
+                combined_hash = hashlib.sha256(
+                    (old_peak.hash + current_node.hash).encode()
+                ).hexdigest()
             new_height = old_peak.height + 1
             new_idx = len(self.nodes)
 
@@ -318,6 +500,8 @@ class MerkleMountainRange:
 
         # Sort peaks by height descending for canonical root
         sorted_peaks = sorted(self.peaks, key=lambda p: p.height, reverse=True)
+        if self.hash_scheme == HASH_SCHEME_V2:
+            return v2_bagged_root([bytes.fromhex(p.hash) for p in sorted_peaks]).hex()
         combined = "".join([p.hash for p in sorted_peaks]).encode()
         return hashlib.sha256(combined).hexdigest()
 
@@ -375,9 +559,10 @@ class MerkleMountainRange:
             index for index, peak in enumerate(canonical_peaks) if peak.index == node.index
         )
         peaks = tuple(MMRPeak(height=peak.height, hash=peak.hash) for peak in canonical_peaks)
+        v2 = self.hash_scheme == HASH_SCHEME_V2
         return MMRInclusionProofV1(
-            version="aegis-mmr-inclusion-v1",
-            algorithm="sha256-asciihex",
+            version=MMR_PROOF_VERSION_V2 if v2 else MMR_PROOF_VERSION_V1,
+            algorithm=MMR_ALGORITHM_V2 if v2 else MMR_ALGORITHM_V1,
             leaf_index=leaf_index,
             leaf_count=self._leaf_count,
             peak_index=peak_index,
@@ -392,10 +577,16 @@ class MerkleMountainRange:
         proof: MMRInclusionProofV1,
         trusted_root: str,
     ) -> bool:
-        """Strictly verify a self-contained v1 inclusion proof."""
-        return MerkleMountainRange.verify_portable_inclusion_hash(
-            hashlib.sha256(leaf_data).hexdigest(), proof, trusted_root
-        )
+        """Strictly verify a self-contained inclusion proof, v1 or v2.
+
+        The leaf digest is computed under the scheme the *proof* declares, so a
+        v1 proof cannot be replayed against a v2 leaf digest or the reverse.
+        """
+        if proof.version == MMR_PROOF_VERSION_V2:
+            leaf_hash = v2_leaf_hash(leaf_data).hex()
+        else:
+            leaf_hash = hashlib.sha256(leaf_data).hexdigest()
+        return MerkleMountainRange.verify_portable_inclusion_hash(leaf_hash, proof, trusted_root)
 
     @staticmethod
     def verify_portable_inclusion_hash(
@@ -403,12 +594,25 @@ class MerkleMountainRange:
         proof: MMRInclusionProofV1,
         trusted_root: str,
     ) -> bool:
-        """Strictly verify a v1 proof using a non-sensitive leaf digest."""
+        """Strictly verify a proof using a non-sensitive leaf digest.
+
+        Dispatches on the version the proof carries: ``v1`` keeps the original
+        ASCII-hex construction so historical proofs continue to verify
+        unchanged, ``v2`` uses the domain-separated binary one. The version and
+        algorithm must agree — a proof claiming v2 with the v1 algorithm, or the
+        reverse, is rejected rather than resolved in the caller's favour.
+        """
         if not _is_sha256_hex(leaf_hash):
             return False
-        if proof.version != "aegis-mmr-inclusion-v1":
-            return False
-        if proof.algorithm != "sha256-asciihex":
+        if proof.version == MMR_PROOF_VERSION_V2:
+            if proof.algorithm != MMR_ALGORITHM_V2:
+                return False
+            v2 = True
+        elif proof.version == MMR_PROOF_VERSION_V1:
+            if proof.algorithm != MMR_ALGORITHM_V1:
+                return False
+            v2 = False
+        else:
             return False
         if proof.leaf_count < 1 or not (0 <= proof.leaf_index < proof.leaf_count):
             return False
@@ -444,17 +648,23 @@ class MerkleMountainRange:
             expected_direction = "R" if ((local_index >> level) & 1) == 0 else "L"
             if step.direction != expected_direction:
                 return False
-            combined = (
-                current_hash + step.sibling_hash
+            left, right = (
+                (current_hash, step.sibling_hash)
                 if step.direction == "R"
-                else step.sibling_hash + current_hash
+                else (step.sibling_hash, current_hash)
             )
-            current_hash = hashlib.sha256(combined.encode("ascii")).hexdigest()
+            if v2:
+                current_hash = v2_node_hash(bytes.fromhex(left), bytes.fromhex(right)).hex()
+            else:
+                current_hash = hashlib.sha256((left + right).encode("ascii")).hexdigest()
         if current_hash != proof.peaks[proof.peak_index].hash:
             return False
-        actual_root = hashlib.sha256(
-            "".join(peak.hash for peak in proof.peaks).encode("ascii")
-        ).hexdigest()
+        if v2:
+            actual_root = v2_bagged_root([bytes.fromhex(peak.hash) for peak in proof.peaks]).hex()
+        else:
+            actual_root = hashlib.sha256(
+                "".join(peak.hash for peak in proof.peaks).encode("ascii")
+            ).hexdigest()
         return actual_root == trusted_root
 
     def verify_inclusion(

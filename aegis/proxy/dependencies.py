@@ -59,6 +59,27 @@ def _opaque_credential_id(secret: str, domain: str, value: str) -> str:
     return f"{domain}:{digest}"
 
 
+def _same_tenant(left: str, right: str) -> bool:
+    """Compare two tenant identifiers with ``hmac.compare_digest``, total over Unicode.
+
+    ``hmac.compare_digest`` raises ``TypeError`` for ``str`` arguments holding
+    any non-ASCII character, so comparing tenant identifiers directly turns two
+    reachable cases into an unhandled 500: a client-supplied ``tenant_id`` query
+    or body value carrying non-ASCII, and a legitimate internationalized tenant
+    arriving from an OIDC claim or a certificate SAN. Encoding to UTF-8 first
+    makes the comparison defined for every input; it preserves whichever timing
+    property the primitive supplies over the byte strings and adds none of its
+    own, and length remains observable either way.
+
+    Identifiers are compared as exact UTF-8 bytes and are deliberately not
+    Unicode-normalized: normalizing would let two distinct codepoint sequences
+    resolve to one tenant, which widens access. An unnormalized mismatch denies,
+    which is the fail-closed direction.
+    """
+
+    return hmac.compare_digest(left.encode("utf-8"), right.encode("utf-8"))
+
+
 def _roles(value: object) -> frozenset[Role]:
     if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
         raise ValueError("roles must be a JSON string array")
@@ -179,7 +200,7 @@ def _mtls_principal(request: Request) -> Principal:
 
 
 def _combine(left: Principal, right: Principal, secret: str) -> Principal:
-    if not hmac.compare_digest(left.tenant_id, right.tenant_id):
+    if not _same_tenant(left.tenant_id, right.tenant_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Credential tenant mismatch"
         )
@@ -302,9 +323,7 @@ def principal_tenant(principal: Principal, requested_tenant: str | None = None) 
 
     if Role.ADMIN in principal.roles:
         return requested_tenant
-    if requested_tenant is not None and not hmac.compare_digest(
-        requested_tenant, principal.tenant_id
-    ):
+    if requested_tenant is not None and not _same_tenant(requested_tenant, principal.tenant_id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant access denied")
     return principal.tenant_id
 

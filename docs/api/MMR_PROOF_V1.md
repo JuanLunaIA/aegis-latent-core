@@ -2,9 +2,9 @@
 
 **Release baseline:** four-layer truth model
 **Format identifier:** `aegis-mmr-inclusion-v1`
-**Status:** implemented in the checked-out `v4.1.2` source baseline and covered by cross-language golden vectors
+**Status:** implemented in the checked-out `v4.3.0` source baseline and covered by cross-language golden vectors
 **Last reviewed:** 2026-08-27 UTC
-**Source baseline:** checked-out source metadata is synchronized at `v4.1.2`
+**Source baseline:** checked-out source metadata is synchronized at `v4.3.0`, which is unpublished; the most recent published release is `v4.1.2`
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical distribution boundary:** this format was not included in the `v3.1.0` distribution
 

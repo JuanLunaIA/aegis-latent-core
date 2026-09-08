@@ -57,7 +57,7 @@ No SaaS. No managed service. No vendor access to any deployment.
 | Cross-replica ordering | Does not exist. |
 | Assurance | No independent audit or penetration test. |
 | Maintainer capacity | Single maintainer; bus factor of one. |
-| Registry state | SDKs published at `4.0.0`; source baseline is `4.1.2`. |
+| Registry state | Source baseline is `4.3.0`, published nowhere. Most recent published release `4.1.2`: PyPI `aegis-latent-core` and `aegis-latent-sdk`, npm `aegis-latent-sdk`, read back 2026-09-04. |
 
 ---
 
