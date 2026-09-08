@@ -4,17 +4,17 @@ Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 -->
 
-# Aegis Latent Core — Threat Model v4.1.2 Source Baseline
+# Aegis Latent Core — Threat Model v4.3.0 Source Baseline
 
 This threat model is for AppSec reviewers, CISOs, platform engineers and incident responders. It uses a STRIDE-oriented data-flow review to identify assets, trust boundaries, failure behavior, mitigations and residual risk for the current gateway boundary. A target deployment review remains required.
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** four-layer truth model
-**Source baseline/release target:** `v4.1.2` with 14 synchronized anchors; source metadata does not establish external lifecycle state; the `v4.1.2` tag, GitHub Release, PyPI, npm, OCI digest and signature objects were read back on 2026-09-04 and are recorded in `docs/RELEASE_STATUS.md` §1.0; `cosign verify` and `gh attestation verify` were not run
+**Source baseline:** `v4.3.0` with 14 synchronized anchors, **unpublished** — source metadata does not establish external lifecycle state, and no tag, release, package or image exists for `4.3.0`. The most recent published release is `v4.1.2`, whose tag, GitHub Release, PyPI, npm, OCI digest and signature objects were read back on 2026-09-04 and are recorded in `docs/RELEASE_STATUS.md` §1.1; `cosign verify` and `gh attestation verify` were not run
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` with `4.0.0` anchors
 **Previous public GitHub Release:** `v4.0.1` lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Observed registries:** PyPI/npm `4.0.0`, without workflow provenance attribution
-**Historical evidence baseline:** retained `v3.1.0` evidence remains historical and is not a `v4.1.2` result
+**Historical evidence baseline:** retained `v3.1.0` evidence remains historical and is not a `v4.3.0` result
 **Method:** STRIDE-oriented data-flow review with explicit residual risk
 **Scope:** Aegis gateway, signer/keyring, WAL/storage, ingress, and operator controls
 

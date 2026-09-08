@@ -4,7 +4,7 @@ This document explains the Aegis request lifecycle, evidence boundary, state mac
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out source metadata is synchronized at `v4.1.2`
+**Source baseline:** checked-out source metadata is synchronized at `v4.3.0`, which is unpublished; the most recent published release is `v4.1.2`
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical; `v4.1.2` source behavior is not attributed to that distribution
 **Audience:** Engineering, security and architecture review

@@ -1,6 +1,6 @@
 # Aegis Enterprise Integrations Guide
 
-**Status:** `v4.1.2` source baseline with fourteen synchronized anchors, published and read back on 2026-09-04 — signed tag, GitHub Release asset envelope, PyPI `aegis-latent-core` and `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway/dashboard objects; npm still observed at `4.0.0`
+**Status:** `v4.3.0` source baseline with fourteen synchronized anchors, **unpublished**. The most recent published release is `v4.1.2`, read back on 2026-09-04 — signed tag, GitHub Release asset envelope, PyPI `aegis-latent-core` and `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway/dashboard objects; npm still observed at `4.0.0`
 
 **Claim boundary:** Source support and tests do not prove target-environment availability, regulatory retention, identity-provider correctness, legal admissibility, trusted publishing, or production readiness.
 

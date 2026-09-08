@@ -3,7 +3,7 @@
 **Document ID:** DOC-01
 **Title:** Enterprise Architecture and Mechanistic Lifecycle Specification
 **Canonical language:** US English
-**Source baseline:** checked-out source metadata is synchronized at `v4.1.2`; tag, release, registry and OCI state were read back on 2026-09-04 (`docs/RELEASE_STATUS.md` §1.0), while deployment and acceptance claims still require target-environment evidence
+**Source baseline:** checked-out source metadata is synchronized at `v4.3.0`, which is unpublished; the most recent published release is `v4.1.2`, whose tag, release, registry and OCI state were read back on 2026-09-04 (`docs/RELEASE_STATUS.md` §1.1), while deployment and acceptance claims still require target-environment evidence
 **Historical inspection scope:** findings and evidence dated 2026-08-20 UTC remain a `v3.1.0`-era review record unless a claim is explicitly revalidated against the current source
 **Status:** Architecture review record with bounded claims
 **Normative claim control:** [`docs/CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)

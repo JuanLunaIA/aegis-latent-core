@@ -10,7 +10,7 @@ This document defines the contribution workflow, DCO sign-off, forward-looking C
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** current source/release candidate
-**Source/release baseline:** `4.1.2` with fourteen synchronized anchors; the `v4.1.2` publication was read back on 2026-09-04 and is recorded in `docs/RELEASE_STATUS.md` §1.0
+**Source baseline:** `4.3.0` with fourteen synchronized anchors, **unpublished**; the most recent published release is `v4.1.2`, whose publication was read back on 2026-09-04 and is recorded in `docs/RELEASE_STATUS.md` §1.1
 **Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 
 Thank you for your interest in contributing. This project is maintained by its

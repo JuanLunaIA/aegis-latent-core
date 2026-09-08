@@ -4,20 +4,39 @@
 **Scope:** the version, publication, and provenance record for this repository.
 **Boundary:** this is the only document that states publication state. Every other document links here. Source metadata never establishes publication; readback does.
 
-**Last verified:** 2026-09-04 UTC (`4.1.2` external surfaces); 2026-09-03 UTC (source baseline and `4.1.1` external surfaces); 2026-09-02 UTC (`4.0.2` external surfaces)
-**Source baseline:** `4.1.2`, fourteen synchronized anchors
-**Publication state of `4.1.2`:** **published on every surface.** The signed tag, the GitHub Release and its 31 assets, PyPI `aegis-latent-core`, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk`, and both OCI images were read back on 2026-09-04. This is the first version at which the gateway itself is on PyPI; see §1.0.
-**Publication state of `4.1.1`:** **published, except npm** — superseded by `4.1.2`. Read back on 2026-09-03; see §1.1. For the superseded `4.1.0`, a lightweight tag and an empty immutable release exist — see §1.2.
+**Last verified:** 2026-09-08 UTC (`4.3.0` source baseline); 2026-09-04 UTC (`4.1.2` external surfaces); 2026-09-03 UTC (`4.1.1` external surfaces); 2026-09-02 UTC (`4.0.2` external surfaces)
+**Source baseline:** `4.3.0`, fourteen synchronized anchors
+**Publication state of `4.3.0`:** **not published.** No tag, no GitHub Release, no PyPI or npm artifact, and no OCI image exists for this version. It is source in the tree and nothing more; see §1.0. There is no `4.2.0` at any surface, and none is planned — see §1.0 on the skipped number.
+**Most recent published release:** `4.1.2`, **published on every surface.** The signed tag, the GitHub Release and its 31 assets, PyPI `aegis-latent-core`, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk`, and both OCI images were read back on 2026-09-04. This is the first version at which the gateway itself is on PyPI; see §1.1.
+**Publication state of `4.1.1`:** **published, except npm** — superseded by `4.1.2`. Read back on 2026-09-03; see §1.2. For the superseded `4.1.0`, a lightweight tag and an empty immutable release exist — see §1.3.
 
 ---
 
 ## 1. Publication state
 
-**Read this section as four separate things.** The source baseline is `4.1.2`, and every surface is published for it as of the 2026-09-04 readback. The preceding `4.1.1` reached every surface except npm and is superseded. A `v4.1.0` tag and GitHub Release also exist, but neither came from the release pipeline and the release carries no assets. The `4.0.2` rows were last read back on 2026-09-02 and **describe `4.0.2` only**.
+**Read this section as five separate things.** The source baseline is `4.3.0`, and **nothing is published for it** — the anchors moved in the tree and no external surface has been written or read back. The most recent *published* version is `4.1.2`, for which every surface was published as of the 2026-09-04 readback. The preceding `4.1.1` reached every surface except npm and is superseded. A `v4.1.0` tag and GitHub Release also exist, but neither came from the release pipeline and the release carries no assets. The `4.0.2` rows were last read back on 2026-09-02 and **describe `4.0.2` only**.
 
-Nothing in this table may be restated with the version number changed. A `4.0.2` digest is not a `4.1.1` digest, a `4.1.1` digest is not a `4.1.2` digest, and a `4.0.2` signature attests to `4.0.2` bytes.
+Nothing in this table may be restated with the version number changed. A `4.0.2` digest is not a `4.1.1` digest, a `4.1.1` digest is not a `4.1.2` digest, and a `4.0.2` signature attests to `4.0.2` bytes. In particular, **no `4.1.2` readback value may be repeated as a `4.3.0` value**: the `4.3.0` rows below are empty because nothing has been published, not because the readback is pending transcription.
 
-### 1.0 `4.1.2` — published, read back 2026-09-04
+### 1.0 `4.3.0` — source only, nothing published
+
+| Surface | State | Observed value |
+| --- | --- | --- |
+| Source baseline | Confirmed | `4.3.0`, fourteen synchronized anchors, contract `READY` |
+| GitHub tag `v4.3.0` | **Does not exist** | No tag has been created |
+| GitHub Release `v4.3.0` | **Does not exist** | No release, no assets |
+| PyPI (`aegis-latent-core`) | **Not published at 4.3.0** | Latest published remains `4.1.2` |
+| PyPI (`aegis-latent-sdk`) | **Not published at 4.3.0** | Latest published remains `4.1.2` |
+| npm (`aegis-latent-sdk`) | **Not published at 4.3.0** | Latest published remains `4.1.2` |
+| OCI image (gateway) | **Not published at 4.3.0** | Latest published remains `4.1.2` |
+| OCI image (dashboard) | **Not published at 4.3.0** | Latest published remains `4.1.2` |
+| Signature / attestation | **None** | Nothing signed; nothing to verify |
+
+`READY` on the source contract means the fourteen anchors agree and the tree is internally consistent for a release attempt. It is not a publication, an approval, or a schedule.
+
+**On the skipped `4.2.0`.** The number was not used. There is no `4.2.0` source baseline, tag, release, or artifact at any surface, and the gap is deliberate rather than a missing release: nothing was published and then withdrawn. A reader looking for `4.2.0` should expect to find nothing, and finding nothing is not evidence of a yanked version.
+
+### 1.1 `4.1.2` — published, read back 2026-09-04
 
 | Surface | State | Observed value |
 | --- | --- | --- |
@@ -45,7 +64,7 @@ Both wheels were downloaded and compared entry by entry on 2026-09-04. They carr
 
 The consequence is bounded and specific: **the release `SHA256SUMS` and the provenance attestation cover the release assets, not the PyPI gateway downloads.** A consumer verifying `pip download aegis-latent-core==4.1.2` against `SHA256SUMS` will get a mismatch, and that mismatch is expected rather than evidence of tampering. To verify what PyPI serves, compare against the digests PyPI itself publishes, which are the ones in the table above. Making the two identical requires the publish job to upload the artifact the release built instead of rebuilding it, which is a pipeline change and is not claimed here.
 
-### 1.1 `4.1.1` — published except npm, read back 2026-09-03, superseded by `4.1.2`
+### 1.2 `4.1.1` — published except npm, read back 2026-09-03, superseded by `4.1.2`
 
 | Surface | State | Observed value |
 | --- | --- | --- |
@@ -85,7 +104,7 @@ no Sigstore root, and is the same condition §3 describes for the GitHub badge.
 Trust requires `gitsign verify-tag` against the transparency log with an explicit
 certificate identity, not `git verify-tag`.
 
-### 1.2 `4.1.0` — tagged and released outside the pipeline, observed 2026-09-03
+### 1.3 `4.1.0` — tagged and released outside the pipeline, observed 2026-09-03
 
 `4.1.0` is not a usable release and is superseded by `4.1.1`. It is recorded here because the objects exist publicly and a consumer may encounter them.
 
@@ -102,7 +121,7 @@ certificate identity, not `git verify-tag`.
 
 **Do not treat `v4.1.0` as a release.** It has no verifiable artifacts, no signature and no provenance. Use `4.1.1` for a published artifact, or build `4.1.2` from source.
 
-### 1.3 Historical readback — `4.0.2`, observed 2026-09-02
+### 1.4 Historical readback — `4.0.2`, observed 2026-09-02
 
 Retained as the record of what that version's surfaces actually carried, and still the most recent release produced by the pipeline. These rows are historical and are not claims about `4.1.1` or `4.1.2`.
 
@@ -130,7 +149,7 @@ Retained as the record of what that version's surfaces actually carried, and sti
 
 Run these yourself. Do not accept this document's table as evidence of the current state — it records what was observed on the date above.
 
-These commands target `v4.1.2`, the current release. The `4.1.1` values in §1.1 and the `4.0.2` values in §1.3 came from the same commands run against those tags on 2026-09-03 and 2026-09-02; substitute the tag to reproduce them.
+These commands target `v4.1.2`, the most recent published release; nothing is published for the `4.3.0` source baseline, so there is nothing to read back for it. The `4.1.1` values in §1.2 and the `4.0.2` values in §1.4 came from the same commands run against those tags on 2026-09-03 and 2026-09-02; substitute the tag to reproduce them.
 
 ### 2.1 Source baseline
 

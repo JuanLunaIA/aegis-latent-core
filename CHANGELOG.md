@@ -2,12 +2,12 @@
 
 All notable changes to **Aegis Latent Core** are documented in this file.
 
-**Last verified:** 2026-09-04 UTC
-**Release baseline:** `v4.1.2`; source metadata does not establish external lifecycle state, which requires independent readback. `4.1.2` has been read back and is published on every surface.
+**Last verified:** 2026-09-08 UTC
+**Release baseline:** `v4.3.0`, fourteen synchronized anchors — **a candidate, not a release. Nothing is published for `4.3.0`** — no tag, GitHub Release, PyPI or npm artifact, or OCI image exists for it. Source metadata does not establish external lifecycle state, which requires independent readback. There is no `4.2.0`; the number was skipped deliberately and no artifact was ever published under it.
 **Most recent published release (readback 2026-09-04):** `v4.1.2` signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway image `sha256:b3f6aadc…f80710` and dashboard image `sha256:27e1bbc2…d92398`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
-**Source release target:** `v4.1.2` (fourteen synchronized `4.1.2` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts, recorded in `docs/RELEASE_STATUS.md` §1.0)
+**Source release target:** `v4.3.0` (fourteen synchronized `4.3.0` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts, none of which exist yet for `4.3.0` — recorded in `docs/RELEASE_STATUS.md` §1.0)
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
@@ -15,7 +15,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet. Work in the tree is recorded under `4.3.0` below.
+
+## [4.3.0] — unreleased source target
+
+**Nothing is published for `4.3.0`.** There is no tag, GitHub Release, PyPI or
+npm artifact, and no OCI image. This section records what the source tree
+contains at fourteen synchronized `4.3.0` anchors; it is not a release
+announcement, and the date of any future release is not set here. See
+`docs/RELEASE_STATUS.md` §1.0.
+
+**`4.2.0` does not exist.** The number was skipped deliberately when the source
+line moved from `4.1.2` to `4.3.0`. No `4.2.0` artifact was ever built or
+published, so its absence from any registry is expected rather than a
+withdrawal.
+
 ### Added
+
+- **Domain-separated MMR inclusion scheme, `aegis-mmr-inclusion-v2`.** Closes an
+  RFC 6962 §2.1 leaf/node type confusion in the portable proof verifier. v1
+  hashes a leaf as `SHA-256(payload)` and an interior node as
+  `SHA-256(ascii(left_hex) || ascii(right_hex))`, neither input tagged, so a
+  leaf whose payload is the 128-character concatenation of two child digests
+  hashes to exactly the interior node over them. v2 prefixes each hash input
+  with a domain tag and consumes raw 32-byte digests: leaf `SHA-256(0x00 ||
+  payload)`, node `SHA-256(0x01 || left32 || right32)`, root `SHA-256(0x02 ||
+  peaks)`.
+
+  **v1 remains the default and is unchanged.** The scheme determines every root
+  a chain has recorded, so switching it would make each deployed WAL replay to a
+  different root and the ledger's own integrity check declare it corrupt. v2 is
+  additionally not wired into `CryptographicAuditLedger`: the `aegis_rust`
+  accumulator implements v1 only, and an existing chain cannot change scheme
+  without rewriting the roots it already recorded. v2 is available to callers
+  building their own accumulator and to verifiers checking v2 proofs. See
+  `CLM-064`.
+
+  v2 proofs travel as 43-character unpadded base64url digests, applied at the
+  serialisation boundary only; digests stay lowercase hex inside the dataclass.
+  The decoder is strict about the alphabet and re-encodes to reject
+  non-canonical spellings, because the two spare bits in a 43-character encoding
+  would otherwise make one digest expressible several ways.
+
+### Fixed
+
+- **Tenant identifier comparison is now total over Unicode.**
+  `hmac.compare_digest` raises `TypeError` for `str` arguments holding any
+  non-ASCII character, and three tenant comparisons passed `str` directly.
+  A client-supplied `tenant_id` carrying non-ASCII — a query parameter on the
+  audit listing, a body field on the forensic export — surfaced an authorization
+  denial as an unhandled 500 rather than the intended
+  `403 Tenant access denied`. Separately, two credentials naming one legitimate
+  internationalized tenant failed to combine at all, so `api_key_mtls` and
+  `oidc_mtls` could not serve that tenant.
+
+  No cross-tenant read was possible in any case; the request failed closed
+  throughout. What changed is the shape of the failure and the availability of
+  internationalized tenants. Identifiers are compared as exact UTF-8 bytes and
+  deliberately not Unicode-normalized: normalizing would let two distinct
+  codepoint sequences resolve to one tenant, while an unnormalized mismatch
+  denies. See `CLM-065`.
+
+### Added — earlier in this line, after `4.1.2` shipped
 
 - **Windows single-writer WAL locking.** `_lock_wal_fd` now takes the exclusive
   lock with `msvcrt.locking` when `os.name == "nt"`, so a second
@@ -43,6 +104,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the module's platform selector.
 
 ### Changed
+
+- The two suffixed claim IDs introduced during v2 development are renumbered.
+  `verify_claims.py` matches `CLM-\d{3}` exactly, so `CLM-006b` and the tenant
+  claim were parsed by nothing and validated for nothing. They are now
+  `CLM-064` and `CLM-065`, covered by a control-register range, and the
+  register count moves 63 → 65.
 
 - `docs/RELEASE_STATUS.md`, `docs/CLAIMS_MATRIX.md` and the documentation corpus
   record the `4.1.2` publication read back on 2026-09-04, and the distribution
