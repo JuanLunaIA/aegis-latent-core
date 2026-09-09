@@ -1,0 +1,31 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+[package]
+name = "aegis-envoy-wasm"
+version = "4.3.0"
+edition = "2021"
+description = "Aegis WAF and streaming redaction as an Envoy/Istio proxy-wasm filter"
+license = "AGPL-3.0-only"
+authors = ["Juan Luna <juan.c.luna04@gmail.com>"]
+publish = false
+
+# Deliberately not a member of any workspace: this crate targets
+# wasm32-wasip1 and must not be pulled into the native `cargo test`/`clippy`
+# runs for `aegis_rust_v2`, which build for the host triple.
+[workspace]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+proxy-wasm = "0.2.5"
+log = "0.4"
+
+[profile.release]
+# A proxy filter is loaded per worker thread; size is latency at load time.
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

@@ -53,6 +53,26 @@ This profile is a **commercial hypothesis**, not evidence of market adoption. Th
 
 No package has a validated price in this document. Existing commercial materials describe pricing only as hypotheses pending buyer interviews, comparable quotes, cost-to-serve modeling, and a paid pilot. Any quote must identify its assumptions and must not convert a benchmark into a capacity or SLA promise.
 
+### 3.2a Modular packaging and the status of published list prices
+
+The packaging above is a **stage** model. [`docs/commercial/ENTERPRISE_PRICING_GUIDE.md`](../commercial/ENTERPRISE_PRICING_GUIDE.md) adds a **shape** model on top of it — four separately licensable engines plus a base subscription — and publishes list prices for them. The two do not conflict, and the distinction between them is the whole reason a reader can hold both:
+
+| | Stage (§3.2) | Shape (pricing guide) |
+|---|---|---|
+| Answers | Is this offer contractable yet? | What is being asked for it? |
+| Governed by | Executed agreements and acceptance gates | Vendor decision |
+| Evidence needed | Order, staffing, acceptance report | None — an offer is not an observation |
+
+**A published list price is an offer, not a validated price**, so the paragraph above stands unchanged: no package has a *validated* price, because validation would require executed orders and none exist. A list price may be quoted as what the vendor asks. It may not be quoted as an average selling price, an annual contract value, a win rate, or evidence of demand (`UC-028`, `UC-033`).
+
+The modular shape is licensable because `aegis/licensing/validator.py` verifies an Ed25519-signed entitlement offline, and `aegis/engines/` reads it. Three properties of that mechanism belong in a procurement answer:
+
+- **Offline.** No phone-home, no licence server, no telemetry. An air-gapped deployment verifies its own entitlement. There is nothing for a buyer's network review to allow.
+- **It does not gate the AGPLv3 build.** Enforcement is off by default and every engine is importable unlicensed. What a subscription buys is the licence grant, support and indemnification — not access to withheld code.
+- **`max_annual_mgt` is carried, not enforced.** The token records the contracted volume so the agreement can be read off it. Nothing counts or caps transactions, so Aegis must not be described as metering usage; reconciliation is commercial, against the customer's telemetry.
+
+The escrow position in [`docs/commercial/SOFTWARE_ESCROW_POLICY.md`](../commercial/SOFTWARE_ESCROW_POLICY.md) is a **template with no executed agreement, no engaged agent and no deposit**, and the Sovereign/OEM row above remains `ROADMAP` regardless of any list price published for it.
+
 ### 3.3 Commercial validation plan
 
 A disciplined commercial cycle should capture the buyer's present control gap, the cost and risk of the existing process, the evidence required by internal reviewers, the target deployment constraints, and whether a bounded pilot changes an actual approval or operating decision. Evidence of interest is not evidence of willingness to pay; a meeting, repository star, download, or unpaid technical exercise must not be reported as a customer or validated demand.

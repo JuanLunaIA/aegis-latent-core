@@ -63,6 +63,10 @@ storage-s3 = ["boto3>=1.35.0"]
 storage-all = [
     "aegis-latent-core[storage-sqlite,storage-postgres,storage-dynamodb,storage-s3]",
 ]
+# ── Enterprise connectors ────────────────────────────────────────────────────
+# The Splunk HEC and Vault Transit connectors need only httpx, which is already
+# a runtime dependency; the Parquet exporter is the one that pulls a new wheel.
+lakehouse = ["pyarrow>=16.0.0"]
 # ── Signing / secrets ────────────────────────────────────────────────────────
 vault = ["hvac>=2.1.0"]
 ldap = ["ldap3>=2.9.1"]
