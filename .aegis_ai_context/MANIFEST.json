@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "6e71cd82d5cfb84f8a66133c7f82c4bddeab4c2e9a23cd4170cfaa6656e65ee6",
-      "size": 48613
+      "sha256": "5fffbae2d1a1b09856f01bd0fcfb445f63d0bc42c994c00c1014c5c145b80581",
+      "size": 53319
     },
     {
       "category": "governed_input",
@@ -267,8 +267,8 @@
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/src/lib.rs",
-      "sha256": "34558bd2a9119bbc7fb16f42fc30141eb60fe768b2ecd2ce6bd196d405e38bac",
-      "size": 5450
+      "sha256": "f385ea30cc3477c0e2ee0960c159ab012a546d688a6432567e7b9243e76c6eb0",
+      "size": 5509
     },
     {
       "category": "governed_input",
@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "45304a4a954e5901208705a33a8647eb3f1424a28c89132607516f8044de705f",
-      "size": 29655
+      "sha256": "1502fd2cd04a56e3f2812ca46266b1b122e67d33a9d81c814bf71e19e02fb50c",
+      "size": 30349
     },
     {
       "category": "governed_input",
