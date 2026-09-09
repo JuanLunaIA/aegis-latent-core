@@ -14,6 +14,13 @@ Scope. This exercises the mechanism. It establishes nothing about key material
 surviving on the physical medium — page cache, journals, swap, snapshots,
 backups and SSD wear-levelling are all outside a Python process's control — and
 nothing legal. See the module docstring and ``CLM-068``.
+
+Calls that touch the vault are assigned before being asserted on, never
+called inside the ``assert`` itself. ``python -O`` strips assert statements
+entirely, so ``assert shredder.open(x) == y`` would not call ``open`` at all
+and the test would pass having exercised nothing — the same silent-success
+failure mode as a skipped test that reads like a pass. CodeQL flags this as
+py/side-effect-in-assert.
 """
 
 from __future__ import annotations
@@ -40,7 +47,8 @@ def shredder():
 class TestSealAndOpen:
     def test_a_sealed_payload_round_trips(self, shredder):
         sealed = shredder.seal("subject-a", b"clinical note")
-        assert shredder.open(sealed) == b"clinical note"
+        opened = shredder.open(sealed)
+        assert opened == b"clinical note"
 
     def test_the_ciphertext_does_not_contain_the_plaintext(self, shredder):
         sealed = shredder.seal("subject-a", b"SUPER-SECRET-VALUE")
@@ -63,7 +71,8 @@ class TestSealAndOpen:
         shredder.seal("subject-b", b"payload")
         shredder.erase("subject-b")
         # Erasing b must not affect a.
-        assert shredder.open(a) == b"payload"
+        opened = shredder.open(a)
+        assert opened == b"payload"
 
     def test_a_ciphertext_cannot_be_replayed_under_another_subject(self, shredder):
         sealed = shredder.seal("subject-a", b"payload")
@@ -87,9 +96,11 @@ class TestSealAndOpen:
 class TestErasure:
     def test_after_erasure_the_plaintext_is_unrecoverable(self, shredder):
         sealed = shredder.seal("subject-a", b"right to be forgotten")
-        assert shredder.open(sealed) == b"right to be forgotten"
+        opened = shredder.open(sealed)
+        assert opened == b"right to be forgotten"
 
-        assert shredder.erase("subject-a") is True
+        erased = shredder.erase("subject-a")
+        assert erased is True
 
         with pytest.raises(ShredderKeyDestroyedError):
             shredder.open(sealed)
@@ -111,17 +122,22 @@ class TestErasure:
 
     def test_erasure_is_idempotent(self, shredder):
         shredder.seal("subject-a", b"payload")
-        assert shredder.erase("subject-a") is True
-        assert shredder.erase("subject-a") is False
+        first_erase = shredder.erase("subject-a")
+        second_erase = shredder.erase("subject-a")
+        assert first_erase is True
+        assert second_erase is False
 
     def test_erasing_an_unknown_subject_is_not_an_error(self, shredder):
-        assert shredder.erase("never-existed") is False
+        erased = shredder.erase("never-existed")
+        assert erased is False
 
     def test_has_key_reports_the_vault_state(self, shredder):
         shredder.seal("subject-a", b"payload")
-        assert shredder.has_key("subject-a") is True
+        present = shredder.has_key("subject-a")
         shredder.erase("subject-a")
-        assert shredder.has_key("subject-a") is False
+        absent = shredder.has_key("subject-a")
+        assert present is True
+        assert absent is False
 
     def test_the_ciphertext_survives_erasure_untouched(self, shredder):
         """Erasure destroys the key, not the record."""
@@ -192,7 +208,8 @@ class TestTreeInvariance:
             shredder.erase(f"subject-{i}")
 
         assert mmr.get_root_hash() == root_before
-        assert all(not shredder.has_key(f"subject-{i}") for i in range(8))
+        still_present = [i for i in range(8) if shredder.has_key(f"subject-{i}")]
+        assert still_present == []
 
 
 class TestCommitment:
@@ -223,7 +240,8 @@ class TestVaultPersistence:
         with CryptoShredder(vault) as first:
             sealed = first.seal("subject-a", b"persisted")
         with CryptoShredder(vault) as second:
-            assert second.open(sealed) == b"persisted"
+            opened = second.open(sealed)
+        assert opened == b"persisted"
 
     def test_erasure_survives_reopening(self, tmp_path):
         vault = tmp_path / "shred_vault.db"
