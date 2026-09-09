@@ -1,0 +1,263 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "serialNumber": "urn:uuid:d41bf2ca-1234-4c50-afa3-d640996c3d2f",
+  "metadata": {
+    "timestamp": "2026-09-09T21:03:10.126014193Z",
+    "tools": [
+      {
+        "vendor": "CycloneDX",
+        "name": "cargo-cyclonedx",
+        "version": "0.5.9"
+      }
+    ],
+    "authors": [
+      {
+        "name": "Juan Luna",
+        "email": "juan.c.luna04@gmail.com"
+      }
+    ],
+    "component": {
+      "type": "library",
+      "bom-ref": "path+file:///home/user/aegis-latent-core/connectors/envoy-wasm#aegis-envoy-wasm@4.3.0",
+      "author": "Juan Luna <juan.c.luna04@gmail.com>",
+      "name": "aegis-envoy-wasm",
+      "version": "4.3.0",
+      "description": "Aegis WAF and streaming redaction as an Envoy/Istio proxy-wasm filter",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "AGPL-3.0-only"
+        }
+      ],
+      "purl": "pkg:cargo/aegis-envoy-wasm@4.3.0?download_url=file://.",
+      "components": [
+        {
+          "type": "library",
+          "bom-ref": "path+file:///home/user/aegis-latent-core/connectors/envoy-wasm#aegis-envoy-wasm@4.3.0 bin-target-0",
+          "name": "aegis_envoy_wasm",
+          "version": "4.3.0",
+          "purl": "pkg:cargo/aegis-envoy-wasm@4.3.0?download_url=file://.#src/lib.rs"
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "cdx:rustc:sbom:target:triple",
+        "value": "x86_64-unknown-linux-gnu"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#allocator-api2@0.2.21",
+      "author": "Zakarum <zaq.dev@icloud.com>",
+      "name": "allocator-api2",
+      "version": "0.2.21",
+      "description": "Mirror of Rust's allocator API",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/allocator-api2@0.2.21",
+      "externalReferences": [
+        {
+          "type": "documentation",
+          "url": "https://docs.rs/allocator-api2"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/zakarumych/allocator-api2"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/zakarumych/allocator-api2"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#equivalent@1.0.2",
+      "name": "equivalent",
+      "version": "1.0.2",
+      "description": "Traits for key comparison in maps.",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/equivalent@1.0.2",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/indexmap-rs/equivalent"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#foldhash@0.2.0",
+      "author": "Orson Peters <orsonpeters@gmail.com>",
+      "name": "foldhash",
+      "version": "0.2.0",
+      "description": "A fast, non-cryptographic, minimally DoS-resistant hashing algorithm.",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "Zlib"
+        }
+      ],
+      "purl": "pkg:cargo/foldhash@0.2.0",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/orlp/foldhash"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#hashbrown@0.16.1",
+      "author": "Amanieu d'Antras <amanieu@gmail.com>",
+      "name": "hashbrown",
+      "version": "0.16.1",
+      "description": "A Rust port of Google's SwissTable hash map",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/hashbrown@0.16.1",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/hashbrown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#log@0.4.34",
+      "author": "The Rust Project Developers",
+      "name": "log",
+      "version": "0.4.34",
+      "description": "A lightweight logging facade for Rust ",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/log@0.4.34",
+      "externalReferences": [
+        {
+          "type": "documentation",
+          "url": "https://docs.rs/log"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/log"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#proxy-wasm@0.2.5",
+      "author": "Piotr Sikora <piotrsikora@google.com>",
+      "name": "proxy-wasm",
+      "version": "0.2.5",
+      "description": "WebAssembly for Proxies",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "de8f6564bd52c2f4ff79fa5d1bd3bc10d8f822162af8d527e121e46703496aa0"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/proxy-wasm@0.2.5",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/proxy-wasm/proxy-wasm-rust-sdk"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "path+file:///home/user/aegis-latent-core/connectors/envoy-wasm#aegis-envoy-wasm@4.3.0",
+      "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#log@0.4.34",
+        "registry+https://github.com/rust-lang/crates.io-index#proxy-wasm@0.2.5"
+      ]
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#allocator-api2@0.2.21"
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#equivalent@1.0.2"
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#foldhash@0.2.0"
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#hashbrown@0.16.1",
+      "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#allocator-api2@0.2.21",
+        "registry+https://github.com/rust-lang/crates.io-index#equivalent@1.0.2",
+        "registry+https://github.com/rust-lang/crates.io-index#foldhash@0.2.0"
+      ]
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#log@0.4.34"
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#proxy-wasm@0.2.5",
+      "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#hashbrown@0.16.1",
+        "registry+https://github.com/rust-lang/crates.io-index#log@0.4.34"
+      ]
+    }
+  ]
+}

@@ -259,6 +259,19 @@ class MMRInclusionProofV1:
         }
         if set(value) != required:
             raise ValueError("MMR proof fields do not match the proof schema")
+        # The field *set* matching is not the field *types* matching. A proof
+        # arrives as attacker-controlled JSON, where `"leaf_count": ""` is as
+        # easy to send as a number, and the comparisons in
+        # `verify_portable_inclusion_hash` then raise TypeError instead of
+        # returning False. A verifier that throws on malformed input is a
+        # denial of service against the auditor, and an exception caught too
+        # broadly one frame up becomes an accidental "valid".
+        #
+        # `bool` is excluded explicitly because it is an `int` subclass, so
+        # `True` would otherwise pass as a leaf index of 1.
+        for field in ("leaf_index", "leaf_count", "peak_index"):
+            if not isinstance(value[field], int) or isinstance(value[field], bool):
+                raise ValueError(f"MMR proof field {field!r} must be an integer")
         # v2 transmits digests as unpadded base64url; decode back to the hex the
         # dataclass and every downstream check use. An undecodable digest raises
         # here rather than surviving as a value that silently fails to verify.
@@ -614,6 +627,15 @@ class MerkleMountainRange:
             v2 = False
         else:
             return False
+        # Defence in depth behind `from_dict`'s schema check: a proof can also
+        # be built directly or through `dataclasses.replace`, and this function
+        # is documented to return a bool for any input. Comparing an `int` with
+        # a `str` raises TypeError, so the type check has to come before the
+        # range check rather than being implied by it. `bool` is rejected for
+        # the same reason it is in `from_dict`: it is an `int` subclass.
+        for count in (proof.leaf_index, proof.leaf_count, proof.peak_index):
+            if not isinstance(count, int) or isinstance(count, bool):
+                return False
         if proof.leaf_count < 1 or not (0 <= proof.leaf_index < proof.leaf_count):
             return False
         if not _is_sha256_hex(trusted_root) or proof.root != trusted_root:

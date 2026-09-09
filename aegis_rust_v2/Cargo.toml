@@ -84,9 +84,16 @@ parking_lot = "0.12"
 pqcrypto-mldsa = "0.1"
 pqcrypto-traits = "0.3"
 
-# Legacy crypto (retained for backward compat + HMAC signing)
-sha2 = "0.10"
-hmac = "0.12"
+# Legacy crypto (retained for backward compat + HMAC signing).
+#
+# The 0.11 digest line is what drops `block-buffer 0.10.4` from the tree: the
+# 0.10 line pins it transitively through `digest 0.10`, and it is the buffer
+# sitting under every SHA-256 and HMAC call on the evidence path. SHA-256 is
+# defined by FIPS 180-4, not by a crate version, so the migration must be
+# byte-identical; the FIPS 180-4 and RFC 4231 vector tests in `src/ledger.rs`
+# and `tests/test_mmr_parity.py` are what hold that.
+sha2 = "0.11"
+hmac = "0.13"
 hex = "0.4"
 subtle = "2"
 zeroize = { version = "1", features = ["derive"] }
