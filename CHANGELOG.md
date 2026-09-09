@@ -30,7 +30,119 @@ line moved from `4.1.2` to `4.3.0`. No `4.2.0` artifact was ever built or
 published, so its absence from any registry is expected rather than a
 withdrawal.
 
+### Security
+
+- **`vitest` upgraded to 4.1.11 in `sdk/typescript`** (`GHSA-82fw-gwwq-j7x9` /
+  `CVE-2026-84373`). `@vitest/mocker` registered a redirect mock's target path
+  without checking it against the dev server's file-serving allowlist, so a
+  client that could reach Vite's unauthenticated HMR socket could read
+  arbitrary local files. Affected 2.1.0 up to 4.1.11; the SDK pinned 3.2.7. The
+  dashboard was already on 4.1.11 but its lock file carried a stale copy of the
+  SDK's metadata, so both locks were refreshed. `npm ci` reproduces both trees.
+  This was the only advisory affecting a pinned version anywhere in the
+  repository. `tests/security/test_dependency_containment.py` fails the build
+  if either project's declared version or resolved lock entries fall back
+  behind the fix.
+
+- **Quadratic ReDoS in the PHI de-identifier's `EMAIL` pattern, found and
+  fixed.** The unbounded local-part class matched separator-dense runs such as
+  `1-1-1-…` in full at every start position, then backtracked the length of the
+  run before advancing one character. Measured at 2.0 s for 16 KB and 12.29 s
+  for 40 KB — a clean 4× per doubling. Model output is attacker-influenced text
+  on the evidence path, so this was one request per stalled worker. Bounding
+  each run at the limits RFC 5321 already imposes (64 octets local part, 255
+  domain, 63 final label) makes the scan linear: the same 40 KB input now takes
+  73.8 ms, and 80 KB takes 152 ms. No deliverable address is rejected by the
+  bound, and every existing detection test passes unchanged.
+
+- **Type confusion in portable inclusion-proof verification, found by fuzzing
+  and fixed.** `MMRInclusionProofV1.from_dict` checked that the field *set*
+  matched the schema but not that the integer fields held integers, so a proof
+  carrying `"leaf_count": ""` reached the range comparison in
+  `verify_portable_inclusion_hash` and raised `TypeError` instead of returning
+  `False`. A verifier that throws on hostile input is a denial of service
+  against the auditor running it, and an exception caught too broadly one frame
+  up becomes an accidental "valid". Fixed at both layers: `from_dict` refuses a
+  non-integer `leaf_index`, `leaf_count` or `peak_index` (excluding `bool`,
+  which is an `int` subclass), and the verifier type-checks defensively so a
+  proof built directly or through `dataclasses.replace` also fails closed.
+
+- **Rust digest stack migrated to `sha2` 0.11 / `hmac` 0.13**, removing
+  `block-buffer 0.10.4` from the tree. Hash output is unchanged byte for byte,
+  asserted against published external vectors rather than against the
+  implementation's own prior output: FIPS 180-4 for SHA-256 (including the
+  56-byte case that straddles a block boundary) and RFC 4231 for HMAC-SHA-256,
+  comparing full digests rather than prefixes. The tests this replaced compared
+  a six-character prefix and compared `hmac_sign` with itself, which holds for
+  any deterministic function including a wrong one. Verified with 49 Rust
+  tests, 106 Python MMR parity tests under `AEGIS_REQUIRE_RUST=1`, and a clean
+  Miri run over the digest tests including a caught-panic case.
+
+  **No CVE was remediated by this.** The commissioning brief cited a
+  `block-buffer` advisory as the highest-priority item; OSV holds no advisory
+  for that crate at any version, so the identifier is
+  `[UNKNOWN_MISSING_PRIMARY_SOURCE]` and the upgrade is justified as
+  maintenance — the crate sat under every SHA-256 and HMAC call on the evidence
+  path, pinned transitively through `digest 0.10`.
+
 ### Added
+
+- **Deterministic dependency triage (`scripts/triage/dependency_triage.py`).**
+  Reads every dependency the repository locks across all five lock files,
+  queries OSV per pinned version, and assigns each component to exactly one of
+  six action buckets under a fixed precedence. The advisory snapshot is pinned
+  to `docs/security/advisory_snapshot.json` so classification is reproducible
+  offline and records the date the advisory set was observed. Advisories with
+  no fixed version are routed to the maintenance bucket rather than the CVE
+  bucket — they have no bump available, and filing them as CVEs makes the gate
+  unsatisfiable. `--scan-export` merges a CSV or JSON scanner export and reports
+  rows naming packages the repository does not lock rather than dropping them.
+
+- **Licence inventory (`scripts/license/license_scan.py`).** Reads declared
+  licences from installed `.dist-info` metadata, crate manifests under
+  `CARGO_HOME`, and npm lock entries, classifies each SPDX expression by its
+  most permissive satisfiable branch, and emits `docs/compliance/LICENSE_AUDIT.md`
+  and `LICENSE-THIRD-PARTY.md`. Both are scoped to components that actually
+  travel with an artifact, so the output is a function of the lock files rather
+  than of whatever happens to be installed in the generating environment.
+  Result across 380 distributed components: **0 strong copyleft, 0 unknown**,
+  15 weak copyleft (the optional per-platform `@img/sharp-libvips-*` binaries
+  reached through the dashboard's Next.js image path, plus `certifi` at
+  MPL-2.0), all now attributed with a source offer.
+
+- **Adversarial test suite (`tests/redteam/`), 146 tests.** ReDoS scaling
+  bounds against the de-identifier and the streaming frontier — asserting
+  linear scaling by feeding n and 2n rather than a wall-clock budget that turns
+  flaky on a loaded runner — and inclusion-proof forgery attempts covering leaf
+  substitution, root substitution, `peak_index` confusion both out of range and
+  in range, structural count tampering, path and direction tampering,
+  version/algorithm crossover, and malformed digests.
+
+- **Fuzzing harnesses (`tests/redteam/fuzz/`)** using `atheris`, with corpora
+  and findings under `evidence/fuzz/4.3.0/`. 100,000 executions against the
+  de-identifier (asserting it never raises and that redaction is idempotent)
+  and 200,000 against proof verification (asserting it never raises and never
+  returns `True` for an input the fuzzer built). The second campaign found the
+  type-confusion defect recorded above.
+
+- **CycloneDX 1.5 SBOMs for all five dependency trees** under
+  `evidence/sbom/4.3.0/` (521 components total). The Python SBOM is built from
+  `requirements.lock` rather than the ambient environment, so it describes what
+  a released image installs.
+
+- **`docs/security/DEPENDENCY_TRIAGE.md`**, **`DEPENDENCY_RISK_REGISTER.md`**
+  and **`BUILD_SCRIPT_ATTESTATION.md`**, the last enumerating all 52 crates
+  carrying a build script or native code, derived by reading crate source
+  rather than from name heuristics.
+
+- **`tests/security/test_yaml_safe_loading.py`** and
+  **`test_dependency_containment.py`**, holding four properties that were
+  already true and easy to lose silently: no `yaml.load` without an explicit
+  safe loader anywhere in the first-party tree, no ML inference stack in the
+  core runtime dependency graph, no script enabling Next's
+  `--experimental-https` path (which fetches an unsigned binary and
+  interpolates hostnames into `execSync`), and no build tooling declared as a
+  dashboard runtime dependency.
 
 - **Offline commercial licensing (`aegis/licensing/`).** Ed25519-signed
   entitlement tokens verified without any network call: the signature is checked
@@ -173,6 +285,45 @@ withdrawal.
   creator-system field, which means they were built on different hosts. The
   release `SHA256SUMS` and attestation therefore do not cover the PyPI gateway
   downloads. Both SDK registries do match.
+
+### Noted, not changed
+
+- **`uvloop` is not a GPL dependency and not a direct one.** The commissioning
+  brief classified `uvloop 0.22.1` as a direct GPL-2.0/3.0 dependency and a
+  release blocker. Its installed distribution declares `MIT License` with trove
+  classifiers for both MIT and Apache-2.0, and ships `LICENSE-MIT` and
+  `LICENSE-APACHE` in its `dist-info`; there is no GPL grant. It also arrives
+  transitively through `uvicorn[standard]` rather than being declared directly.
+  No change was made.
+
+- **`torch` and `transformers` are already optional extras.** The brief
+  described both as direct dependencies requiring relocation. Both are declared
+  only under the `gpu`, `hf` and `vllm` extras and neither appears in
+  `requirements.lock`. The containment they asked for is the existing state;
+  it is now enforced by test rather than left as a convention.
+
+- **The `pqcrypto-*` stack carrying ML-DSA-65 is going unmaintained**
+  (`RUSTSEC-2026-0162`, `-0163`, `-0166`, plus `RUSTSEC-2024-0436` for `paste`
+  beneath it) because upstream PQClean is being archived in or after July 2026.
+  None is an exploitable defect and none has a fixed version. Migration to the
+  pure-Rust `ml-dsa` crate is recorded as a tracked risk in
+  `docs/security/DEPENDENCY_RISK_REGISTER.md` rather than attempted here:
+  replacing a signing implementation needs its own vector-level verification
+  and its own timing assessment, and burying that in a dependency sweep would
+  be the wrong place for it.
+
+- **Version anchors were not moved to `4.2.0-SECURE`.** The brief named that as
+  the release target. `4.2.0` was skipped deliberately when the source line
+  moved from `4.1.2` to `4.3.0` and no artifact was ever published under it, so
+  adopting it now would both regress the source line and resurrect a number
+  this project has documented as absent. This work is recorded under `4.3.0`,
+  which remains unpublished.
+
+- **Offensive supply-chain remediation was not performed against upstream
+  projects.** The Next.js `mkcert.js` path was verified to match the brief's
+  description — unsigned binary download, unescaped host interpolation into
+  `execSync` — and left unpatched because it is upstream code on a path this
+  repository never takes. A test keeps it unreachable instead.
 
 ## [4.1.2] — 2026-09-03
 

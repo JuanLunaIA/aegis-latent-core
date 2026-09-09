@@ -68,3 +68,8 @@ Thumbs.db
 tools/forensic/report.json
 tools/visualizer/summary.json
 tools/visualizer/gallery/
+
+# Fuzzing corpora are regenerable inputs, not reviewable source. The findings
+# they produced live in tests/redteam/ as regression tests and in
+# evidence/fuzz/*/README.md as narrative; the raw seeds do not need to travel.
+evidence/fuzz/*/*_corpus/

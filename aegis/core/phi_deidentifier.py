@@ -58,7 +58,24 @@ _SAFE_HARBOR_PATTERNS: list[_Pattern] = [
     # ── 6. Email addresses ───────────────────────────────────────────────
     _Pattern(
         "EMAIL",
-        r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b",
+        # Every run is bounded, at the limits RFC 5321 already imposes: 64
+        # octets for the local part (§4.5.3.1.1), 255 for the domain
+        # (§4.5.3.1.2), 63 for the final label (§4.5.3.1.2). No address this
+        # rejects was ever deliverable.
+        #
+        # Unbounded, the leading class was a quadratic denial-of-service
+        # primitive. `-` and every digit are members, so a run like
+        # "1-1-1-1-..." is consumed whole at each start position, fails to find
+        # `@`, and backtracks the length of the run before the scan moves on by
+        # one character. Measured before this bound: 2.0s for 16 KB and 12.3s
+        # for 40 KB — a clean 4x per doubling. Model output is attacker-
+        # influenced text on the evidence path, so that was one request per
+        # stalled worker. Bounding the run caps the work at each start position
+        # and makes the scan linear.
+        #
+        # `tests/redteam/test_redos_bounds.py` holds this: it feeds n and 2n
+        # and fails on super-linear growth.
+        r"\b[A-Za-z0-9._%+\-]{1,64}@[A-Za-z0-9.\-]{1,255}\.[A-Za-z]{2,63}\b",
     ),
     # ── 7. Social Security Numbers ───────────────────────────────────────
     # Match all SSN-format strings (NNN-NN-NNNN) regardless of area-code

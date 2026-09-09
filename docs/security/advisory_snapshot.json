@@ -1,0 +1,47 @@
+{
+  "advisories": {
+    "RUSTSEC-2024-0436": {
+      "fixed_versions": [],
+      "informational": null,
+      "severity": [],
+      "summary": "paste - no longer maintained"
+    },
+    "RUSTSEC-2026-0162": {
+      "fixed_versions": [],
+      "informational": null,
+      "severity": [],
+      "summary": "`pqcrypto-traits` is unmaintained: upstream PQClean project being archived"
+    },
+    "RUSTSEC-2026-0163": {
+      "fixed_versions": [],
+      "informational": null,
+      "severity": [],
+      "summary": "`pqcrypto-internals` is unmaintained: upstream PQClean project being archived"
+    },
+    "RUSTSEC-2026-0166": {
+      "fixed_versions": [],
+      "informational": null,
+      "severity": [],
+      "summary": "`pqcrypto-mldsa` is unmaintained: upstream PQClean project being archived"
+    }
+  },
+  "boundary": "Absence of a finding means OSV held no advisory for that exact pinned version on the observed_at date. It is not a statement that the component is free of vulnerabilities.",
+  "components_queried": 557,
+  "findings": {
+    "crates.io|paste|1.0.15": [
+      "RUSTSEC-2024-0436"
+    ],
+    "crates.io|pqcrypto-internals|0.2.11": [
+      "RUSTSEC-2026-0163"
+    ],
+    "crates.io|pqcrypto-mldsa|0.1.2": [
+      "RUSTSEC-2026-0166"
+    ],
+    "crates.io|pqcrypto-traits|0.3.5": [
+      "RUSTSEC-2026-0162"
+    ]
+  },
+  "format": "aegis-advisory-snapshot-v2",
+  "observed_at": "2026-09-09T20:54:38+00:00",
+  "source": "https://api.osv.dev/v1/querybatch"
+}
