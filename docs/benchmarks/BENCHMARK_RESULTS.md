@@ -11,12 +11,14 @@ This document records the retained v3.1.0 market-hardening measurements. It is f
 
 | Scenario | Workload | Result | Interpretation | Status |
 |---|---|---|---|---|
-| Backpressure under injected I/O stall | 10,000 offered requests at 10,000 RPS; 2 ms injected `fsync` delay | 10,000 durable commits; 0 failures; 0 missing IDs; 0 duplicates; valid chain | Evidence integrity survived the injected seam while queueing increased latency | `PASS` for bounded gate |
-| Backpressure latency | Same run | p50 202.136 ms; p95 614.083 ms; p99 1,189.891 ms; max 3,208.869 ms | The queue is not low latency under this stall | Measured, not an SLO |
+| Backpressure under injected I/O stall — retained `v3.1.0`, raw JSON **not in this tree** | 10,000 offered requests at 10,000 RPS; 2 ms injected `fsync` delay | 10,000 durable commits; 0 failures; 0 missing IDs; 0 duplicates; valid chain | Evidence integrity survived the injected seam while queueing increased latency | `PASS` for bounded gate |
+| Backpressure latency — same retained `v3.1.0` run | Same run | p50 202.136 ms; p95 614.083 ms; p99 1,189.891 ms; max 3,208.869 ms | The queue is not low latency under this stall | Measured, not an SLO |
+| Backpressure under injected I/O stall — **in-tree reproducible baseline** | 2,500 offered requests over a 0.25 s window at 10,000 RPS offered; 2 ms injected `fsync` delay; 6.630 s to drain | 2,500 durable commits; 0 failures; 0 missing IDs; 0 duplicates; valid chain; p50 167.290 ms, p95 504.704 ms, p99 836.351 ms, max 2,290.622 ms | A different, smaller workload than the two rows above — not a correction of them | `PASS` for bounded gate |
 | WAF corpus | 15 malicious and 8 benign pinned local cases | 0 observed bypasses; 0 false positives; Wilson 95% upper bound approximately 20.39% for bypass rate | Regression signal for the pinned application-layer corpus | `PASS` for declared corpus |
-| Key rotation | 2,239 records across 3 independent local signer instances | 0 failed commits; 0 unverifiable records; both key IDs observed; keyring mode `0o600` | Local atomic replacement and overlap path behaved as intended | `PASS` for local harness |
-| ML-DSA `sign` timing | 1,000,000 interleaved samples | `p=0.8521504207157158` | No statistically significant difference detected under the named experiment | Measured; not a proof |
-| ML-DSA `verify` timing | 1,000,000 interleaved samples | `p=0.0`; mean class difference approximately 540.526 ns | The experiment detected a class-dependent timing difference at this boundary | `FAIL`; claim blocked |
+| Key rotation — retained `v3.1.0`, raw JSON **not in this tree** | 2,239 records across 3 independent local signer instances | 0 failed commits; 0 unverifiable records; both key IDs observed; keyring mode `0o600` | Local atomic replacement and overlap path behaved as intended | `PASS` for local harness |
+| Key rotation — **in-tree reproducible baseline** | 2,033 records across 3 independent local signer instances over 0.5 s | 0 failed commits; 0 unverifiable records; `key-old` 701 and `key-new` 1,332 observed; keyring mode `0o600` | A different run of the same harness, not a correction of the row above | `PASS` for local harness |
+| ML-DSA `sign` timing — retained `v3.1.0`-era, raw JSON **not in this tree** | 1,000,000 interleaved samples | `p=0.8521504207157158` | No statistically significant difference detected under the named experiment | Measured; not a proof |
+| ML-DSA `verify` timing — same retained artifact | 1,000,000 interleaved samples | `p=0.0`; mean class difference approximately 540.526 ns | The experiment detected a class-dependent timing difference at this boundary | `FAIL`; claim blocked |
 | Bounded SSE transformation | 7 rounds × 1,000 deterministic events on the recorded sandbox host | first-byte p50 2.030 ms, p95 2.295 ms; duration p50 316.892 ms; 3,155.654 events/s p50; queue high-water 664 bytes / 8 items; `tracemalloc` peak 141,338 bytes | In-process transform only; excludes network, provider and durable-WAL latency | Measured, not an SLO |
 
 ## Reproduction commands
@@ -57,6 +59,18 @@ The harness drives `BoundedStreamProxy` from a deterministic in-process async it
 The harness injects an `fsync_fn` delay at the WAL boundary. It offers requests at a configured rate and checks durable record count, request-ID uniqueness, missing IDs, duplicate IDs and chain integrity. The test observes application-level queueing and record preservation.
 
 The 10,000-record result is not equivalent to a block-device `dm-delay` experiment. It does not establish power-loss behavior, cloud-volume semantics, storage replication, accepted capacity, throughput under an upstream provider, or recovery after a real disk fault.
+
+**The raw JSON for this 10,000-request run is not committed to this tree.** The figures
+above come from the retained `v3.1.0` release evidence, so a reader cannot re-derive them
+from the repository alone. That is a limitation of this particular record, not a reason to
+restate it with another run's numbers.
+
+A second, smaller injected-`fsync` run *is* committed and reproducible:
+[`evidence/execution_2026-08-20/backpressure_stall_report.json`](../../evidence/execution_2026-08-20/backpressure_stall_report.json)
+records 2,500 offered requests over 0.25 s under the same 2 ms injected delay, with p99
+commit latency 836.35 ms. It is a different workload, not a correction of this one — see
+[Benchmark Method §7](BENCHMARK_METHOD.md) for both side by side and the rule against
+mixing their figures.
 
 ## WAF method
 

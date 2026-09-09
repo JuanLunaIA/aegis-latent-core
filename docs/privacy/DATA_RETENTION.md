@@ -74,6 +74,19 @@ Do not copy an example period from this document into a production policy withou
 
 For GDPR-oriented review, **Article 5(1)(c)** addresses data minimisation, **Article 5(1)(e)** addresses storage limitation, **Article 25** addresses data protection by design and by default, and **Article 32** addresses security of processing. These are related but non-interchangeable obligations. Hash-only evidence fields may reduce plaintext retention for a declared path; rotation guidance may support a storage-limitation process; design defaults and technical safeguards may support Articles 25 and 32. None of those implementation facts establishes anonymisation, lawful basis, a retention schedule, or GDPR compliance. [3]
 
+### Cryptographic erasure: what exists in the tree, and what it does not settle
+
+The last row of the decision table above says "key destruction if applicable". `aegis/core/crypto_shredder.py` is the in-tree mechanism that phrase points at, and its position needs stating plainly so nobody plans a retention policy around a capability the gateway does not have.
+
+It is **not wired into the ledger.** The gateway commits payload digests directly, so no deployed chain seals anything under a destructible key today. The module implements per-subject AES-256-GCM envelope encryption from the `cryptography` library, and its property is that destroying a key makes the plaintext unrecoverable **to a holder of the ciphertext** while the MMR root, the peaks and every previously issued inclusion proof stay bit-for-bit unchanged — the append-only chain is not disturbed at all.
+
+That resolves a *structural* conflict, not a legal or an operational one. Four things it does not do:
+
+- It is **not** a statement that key material is gone from the medium. Allocator copies, the SQLite journal, page cache, swap, snapshots, and SSD wear-levelling are outside a Python process's control. A destruction guarantee needs an HSM or a KMS with key deletion.
+- **Backups of the key vault defeat it.** A vault restored from backup restores the ability to decrypt everything erased since. Vault backup policy is in direct tension with the erasure it exists to perform, and that tension is the operator's to resolve explicitly.
+- The vault becomes the **only mutable component** in an otherwise append-only design, and therefore a new single point of failure in both directions: losing it destroys every subject's plaintext at once; compromising it undoes every erasure performed through it.
+- **No regulatory conclusion follows.** Whether cryptographic erasure discharges an obligation is a controller determination made with counsel. See [DOC-05 §5.8.1](../institutional/DOC-05_REGULATORY_DOSSIER.md) for the full analysis and `CLM-068` for the governed claim. Do not write "right to erasure satisfied", "data destroyed", or "sanitised" into a policy on the strength of this module.
+
 ## Privacy control mapping without legal conclusion
 
 | Topic | Technical contribution | Boundary |

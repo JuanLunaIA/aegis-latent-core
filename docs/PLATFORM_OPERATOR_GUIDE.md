@@ -92,6 +92,8 @@ Monitor free space, write latency, synchronization errors, inode exhaustion, WAL
 
 The JSONL file at `AEGIS_WAL_PATH` is the replay authority. If the native extension loads, Aegis also opens `<wal_path>.stream.rwal` as an optional 256 MiB `RustWal` segment and appends one CRC-framed copy after each committed terminal stream node. Treat that segment as auxiliary: never replace JSONL replay or recovery with it. An append failure increments `aegis_native_stream_wal_errors_total`, disables the auxiliary segment for that process and leaves the authoritative JSONL commit and client terminal marker intact; alert on any non-zero increase and rotate or repair the native segment before restarting it.
 
+A third file, `<wal_path>.mmr.state`, is a peak-set checkpoint written at mode `0600`. It is an optimisation over replay and never a substitute for it: on startup a restored accumulator is accepted **only if** its root equals the root the last committed node recorded, and every other outcome — file absent, stale, corrupt, or simply disagreeing — falls back to replaying every leaf. The fast path is off unless `mmr_fast_restore=True`, and the file is written either way, so enabling it needs no migration. Two operational consequences: **deleting the checkpoint is safe** and costs only startup time, and **it is not a backup** — back up the WAL, not this. Enabling the fast path also means inclusion proofs for the summarised leaves can no longer be derived in memory, which matters only if you query historical proofs from a live process; each committed node still carries its own self-contained `mmr_proof`. See [Failure Semantics §7.1](architecture/FAILURE_SEMANTICS.md).
+
 ## Streaming controls
 
 `BoundedStreamProxy` uses `AEGIS_STREAM_QUEUE_MAX_ITEMS` and `AEGIS_STREAM_QUEUE_MAX_BYTES` together; the latter is retained canonical SSE bytes per active queue, not a total-response limit. `AEGIS_MAX_STREAM_EVENT_BYTES` bounds both upstream and canonical events and must not exceed the queue byte budget. `AEGIS_STREAM_DEIDENTIFIER_WINDOW_CHARS` is finite logical-text holdback for cross-event PHI/PCI interception. Exceeding a byte, event or duration limit closes upstream immediately, commits exactly one terminal failure outcome and omits the success terminal marker.
@@ -152,7 +154,9 @@ python tools/benchmarks/run_key_rotation.py
 python tools/benchmarks/run_pqc_timing.py --samples 1000000
 ```
 
-The retained release evidence is local and bounded. It covers 15 malicious and 8 benign WAF cases, 10,000 offered backpressure requests, 2,239 local key-rotation records and 1,000,000 timing samples per declared ML-DSA operation. The ML-DSA verify experiment returned `p=0.0`, so no constant-time claim is approved.
+The retained `v3.1.0` release evidence is local and bounded. It covers 15 malicious and 8 benign WAF cases, 10,000 offered backpressure requests, 2,239 local key-rotation records and 1,000,000 timing samples per declared ML-DSA operation. The ML-DSA verify experiment returned `p=0.0`, so no constant-time claim is approved.
+
+Running the commands above will **not** reproduce those numbers, and that is expected rather than a fault. For backpressure and key rotation this tree carries its own smaller artifacts under `evidence/execution_2026-08-20/` — 2,500 offered requests at p99 836.35 ms, and 2,033 rotation records — which are different runs of different workloads, not corrections. The ML-DSA timing artifact has no in-tree counterpart at all. Cite the run you rely on with its request or record count and whether its raw JSON is in this tree; see [`docs/benchmarks/BENCHMARK_METHOD.md`](benchmarks/BENCHMARK_METHOD.md).
 
 ## Backup, restore and rollback
 

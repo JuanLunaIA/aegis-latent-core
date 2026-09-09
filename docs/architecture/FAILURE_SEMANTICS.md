@@ -28,6 +28,8 @@ The one deliberate exception is optional enrichment, which may be dropped withou
 | 10 | Native stream WAL append failure | Nothing | JSONL record intact; counter increments | No, by design |
 | 11 | Second writer on a WAL path | Process fails to start | Existing chain untouched | Yes |
 | 12 | WAL replay finds corruption | Startup completes; health reports `wal_corrupt`; governed requests are refused with `503` | Chain truncated at the bad line; no further nodes appended | **Yes — see §4** |
+| 13 | MMR checkpoint absent, unreadable, stale or failing its checksum | Nothing; startup is slower | Full WAL replay reconstructs the same accumulator | Yes — see §7.1 |
+| 14 | MMR checkpoint restores to a root the WAL does not attest | Nothing; startup is slower | The fast-path accumulator is discarded and every leaf replayed | Yes — see §7.1 |
 
 ---
 
@@ -104,6 +106,14 @@ Strict mode refuses to bind rather than starting degraded:
 | WAL path already locked by another writer | Refuses with `WalWriterConflictError` |
 
 A refusal to start is the system working. The correct response is to read the error and fix the configuration, not to relax the setting that produced it.
+
+### 7.1 The MMR checkpoint has no failure mode that costs correctness
+
+`<wal>.mmr.state` is an optimisation, and it is built so that every way it can go wrong costs startup time rather than integrity. Writing it never raises — a ledger that could not write one replays on the next start and is fully correct. Reading it returns nothing for *every* failure mode (absent, unreadable, not an object, wrong version, failing its own checksum, malformed peaks, or describing more leaves than the WAL holds), because all of them have the same remedy: replay.
+
+The part that makes it safe rather than merely tolerant is the acceptance test. After restoring the checkpointed prefix and replaying the leaves committed after it, the result is accepted **only if the final root equals the root the last committed node recorded in the WAL**. Any disagreement discards the fast-path accumulator entirely and replays every leaf. A tampered or stale checkpoint therefore cannot introduce a root the WAL does not already attest — it can only make startup slower.
+
+The fast path is opt-in (`mmr_fast_restore=True`) because it trades away in-memory proofs for leaves it summarises; the file is written either way, so enabling it needs no migration. See [DOC-02 §6.1](../institutional/DOC-02_CRYPTOGRAPHIC_FORENSIC_BLUEPRINT.md).
 
 ## 8. Recovery
 

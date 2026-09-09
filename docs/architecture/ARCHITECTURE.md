@@ -92,6 +92,20 @@ The replay authority is the append-only JSONL WAL under the configured storage l
 
 HMAC-SHA256 is symmetric and classical. A verifier holding the HMAC key can also generate valid MACs. It is not third-party non-repudiation and it is not a post-quantum algorithm. Native ML-DSA-65 is configuration-dependent. The retained timing artifact detected no difference for `sign` under its experiment but detected a difference for `verify`; no constant-time claim is approved.
 
+A `<wal_path>.mmr.state` peak-set checkpoint sits beside the WAL. It is an optimisation over replay, never a substitute for it: a restored accumulator is accepted only when its root equals the root the last committed node recorded, and every other outcome — absent, stale, corrupt, or disagreeing — falls back to replaying every leaf. The fast path is opt-in (`mmr_fast_restore=True`). See [Failure Semantics §7.1](FAILURE_SEMANTICS.md) and [DOC-02 §6.1](../institutional/DOC-02_CRYPTOGRAPHIC_FORENSIC_BLUEPRINT.md).
+
+## Components present but not wired into the request path
+
+Three components exist in the tree, are tested, and are reached by **no** admission, streaming, or ledger path. A reader who finds them should not infer runtime behaviour from their presence: a tested component and a running control are different claims, and this section exists so the distinction is visible from the architecture document rather than only from the claims matrix.
+
+| Component | What it is | Why it is not wired |
+|---|---|---|
+| `CausalMmr` (`aegis_rust_v2/src/crdt_mmr.rs`) | A join-semilattice over domain-separated MMRs; `join` is idempotent, commutative and associative, so replicas exchanging leaf sets converge on one root whatever order they merge in | There is no gossip transport, membership protocol, or persistence, and a merged root commits to a set of leaves rather than re-linking per-replica `prev_hash` chains. Cross-replica ordering stays open work. `CLM-066`, [DOC-01 §8.8](../institutional/DOC-01_ENTERPRISE_ARCHITECTURE.md) |
+| `GrammarFrontierAutomaton` (`aegis/core/streaming_safety_engine.py`) | A streaming redactor that runs to fixpoint before computing a withheld frontier that is a real bound, because every pattern quantifier is bounded | The streaming path uses `StreamingDeidentifier`. Its rolling digest covers the bytes *it* emits, not the bytes the gateway emits. `CLM-067`, [DOC-03 §5.4](../institutional/DOC-03_THREAT_MODEL.md) |
+| `CryptoShredder` (`aegis/core/crypto_shredder.py`) | Per-subject AES-256-GCM envelope encryption; the ledger would commit the ciphertext, so destroying a key leaves the root, peaks and prior proofs bit-for-bit unchanged | The ledger commits payload digests directly. Wiring it is a data-model change to every committed record, not a flag. `CLM-068`, [DOC-02 §6.2](../institutional/DOC-02_CRYPTOGRAPHIC_FORENSIC_BLUEPRINT.md), [DOC-05 §5.8.1](../institutional/DOC-05_REGULATORY_DOSSIER.md) |
+
+The `aegis-mmr-inclusion-v2` scheme is in the same position: implemented in the core and both SDK verifiers, not the default, and not what the ledger writes (`CLM-064`, [AD-12](DECISIONS.md)).
+
 ## Topology guidance
 
 | Topology | Ordering | Key custody | Main failure domain | Not proven |

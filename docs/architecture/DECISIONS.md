@@ -48,6 +48,8 @@ The founding decision is [ADR-001](ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md): p
 
 **Cost.** POSIX-only; on a platform without `fcntl` the discipline is operator-enforced and the ledger only warns. `flock` is advisory and per-inode, so it does not constrain a writer reaching the same bytes by another path or over a network filesystem. It prevents a second writer; it does not serialize two, so multi-worker on one WAL remains unsupported rather than newly supported.
 
+**Amended (Windows).** The POSIX-only cost above was subsequently narrowed rather than accepted: `_lock_wal_fd` now takes a `msvcrt.locking` byte-range lock on Windows. That primitive is *mandatory* rather than advisory — a locked range is denied to readers too — and the WAL is read while a writer holds it, so the lock is placed on a one-byte sentinel region at 1 TiB, past any WAL that can exist. Locking beyond end-of-file is well defined there and does not extend the file. **New cost:** a second platform-specific path to maintain, a magic offset that must stay inside the maximum file size of every deployed filesystem, and a third outcome to reason about — a sentinel that cannot be positioned degrades to the same warning as a platform with no primitive at all, because refusing there would reject the *first* writer as though it were the second. The rest of the original cost stands unchanged.
+
 ---
 
 ## AD-04 — StatefulSet with per-replica volumes
@@ -157,6 +159,42 @@ The founding decision is [ADR-001](ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md): p
 The weakness being addressed is real and was demonstrated before being fixed: v1 tags neither hash input, so a leaf payload equal to the concatenation of two child digests hashes to exactly the interior node over them (RFC 6962 §2.1). It is reachable through `verify_portable_inclusion`, which accepts caller-supplied leaf bytes.
 
 **Cost.** Two schemes to maintain, test and explain, in three implementations. The weakness stays reachable in the default path until v2 is wired into the ledger, which is blocked on the `aegis_rust` accumulator implementing v1 only and on there being no recorded scheme transition for an existing chain. Both are tracked as open work in [docs/ROADMAP.md](../ROADMAP.md). Documented in [MMR Proof v1](../api/MMR_PROOF_V1.md) and governed by `CLM-064`.
+
+---
+
+## AD-13 — Converge without a leader, and sort by a total order rather than the causal one
+
+**Decision.** `CausalMmr` (`aegis_rust_v2/src/crdt_mmr.rs`) is a join-semilattice over domain-separated MMRs. Replicas append locally with a vector clock, exchange leaf sets, and merge with a `join` that is idempotent, commutative and associative. Leaves are ordered by an explicit **total** order — scalar clock sum, then replica id, then that replica's own sequence, then the leaf digest.
+
+**Rejected.** (a) A centralized writer or a consensus round to give one order. (b) Sorting directly by the vector clock's partial order, falling back to replica id when two events are incomparable.
+
+**Why.** (a) is a real design with real operational weight — capacity, availability, failover, recovery, custody — none of which has been done, so shipping the accumulator first costs nothing and settles the algebra. (b) is the tempting implementation and it is **wrong**: the resulting comparator is not transitive, and a non-transitive comparator makes `sort_by` produce an order that depends on the input permutation. That destroys commutativity and associativity — precisely the two properties the construction exists to provide. The scalar clock sum fixes it because it *extends* causality: if `a` causally precedes `b` then `a`'s clock is componentwise ≤ `b`'s and differs somewhere, so `sum(a) < sum(b)` and causally ordered events never invert, while concurrent events are broken by keys identical on every replica.
+
+**Cost.** It is a data structure, not a topology. It is not wired into the ledger, there is no transport, membership protocol or persistence, and a merged root commits to a *set* of leaves rather than re-linking the per-replica `prev_hash` chains — so it is a long way from a governed multi-pod chain, and `docs/ROADMAP.md` still carries cross-replica ordering as open work. The total order discards information: two genuinely concurrent events are separated by a tiebreak that means nothing causally, and a reader who mistakes the sequence for a happens-before relation will be wrong. `join` reconciles replicas that disagree about ordering, not replicas that lie. And there is no latency claim here at all — none can be measured until a transport exists. Governed by `CLM-066`; boundaries in [DOC-01 §8.8](../institutional/DOC-01_ENTERPRISE_ARCHITECTURE.md).
+
+---
+
+## AD-14 — Erase the key, not the record
+
+**Decision.** `CryptoShredder` (`aegis/core/crypto_shredder.py`) seals a payload under a per-subject AES-256-GCM key from the `cryptography` library and commits `SHA-256(0x00 || nonce || ciphertext)`. Erasure destroys the key and leaves every byte of the ledger where it was.
+
+**Rejected.** (a) Deleting or rewriting the committed node. (b) A homomorphic trapdoor commitment over a pairing-friendly curve, which was the original proposal.
+
+**Why.** (a) is the thing the whole system is built to make detectable: it breaks chain linkage, invalidates the root for every subsequent record, and makes the ledger's own integrity check report an untampered chain as corrupt — indistinguishable, afterwards, from real tampering. (b) would mean hand-rolling curve arithmetic and a bespoke commitment scheme. The rule that settled it is the standing one: **no hand-rolled cryptographic primitives.** An unaudited BLS12-381 implementation would be a much larger security claim resting on a much smaller evidence base than an audited AEAD does. Envelope encryption gets the same structural result — the tree does not move, previously issued proofs still verify — out of a primitive that is already reviewed.
+
+**Cost.** The key vault becomes the only mutable component in an append-only design, and therefore a new single point of failure: lose it and every subject's plaintext is gone at once; compromise it and every erasure through it is undone. Its backup policy is in direct tension with the erasure it exists to perform. Erasure is bounded to *unrecoverable to a holder of the ciphertext* — it says nothing about key material on the physical medium, where allocator copies, the SQLite journal, page cache, swap, snapshots and SSD wear-levelling are all outside a CPython process's reach. The component is unwired, so no deployed chain behaves this way. And it settles a structural conflict, not a legal one: **no regulatory conclusion follows.** Governed by `CLM-068`; boundaries in [DOC-02 §6.2](../institutional/DOC-02_CRYPTOGRAPHIC_FORENSIC_BLUEPRINT.md) and [DOC-05 §5.8.1](../institutional/DOC-05_REGULATORY_DOSSIER.md).
+
+---
+
+## AD-15 — Bound every quantifier so the streaming holdback is a bound
+
+**Decision.** `GrammarFrontierAutomaton` (`aegis/core/streaming_safety_engine.py`) bounds every whitespace run in every pattern to `\s{1,4}`, declares a per-rule frontier at least as long as that rule's longest possible match, withholds the maximum of those frontiers, and redacts every match in the buffer **to fixpoint** before computing the frontier over what is left.
+
+**Rejected.** (a) Unbounded `\s+` between words, which reads more natural and matches more strings. (b) The obvious streaming loop: redact the first match, conclude the buffer is settled, release everything.
+
+**Why.** (a) makes the maximum match length infinite, so no fixed holdback settles a pattern and "frontier" becomes a heuristic wearing a proof's clothing. Bounding the quantifier is what turns a holdback into a bound that cannot be overrun. (b) is a **bypass**, and it was found by construction rather than in review: given `ignore all previous rules ... SSN: 123-45-6789`, the override is redacted, the frontier collapses to zero, the whole buffer is released, and the SSN leaves in the clear behind it. Redacting to fixpoint first, and only then measuring the residual text, is what closes it.
+
+**Cost.** One-directional and asserted by test rather than left implicit: an evasion that pads whitespace past the bound is **not matched**. That is the same trade the `ADDRESS` bound makes in the wired de-identifier, and it is the price of a holdback that is provably sufficient rather than probably sufficient. Holding the global maximum instead of a per-rule frontier costs a few dozen characters of latency on every stream, chosen because tracking which rule is still viable at the tail would fail open when it got it wrong. The fixpoint loop needs a round cap, because an unbounded rewrite loop in the streaming path is worse than a missed redaction. The component is unwired — the gateway still uses `StreamingDeidentifier` — and it matches four declared patterns and nothing else. Governed by `CLM-067`; boundaries in [DOC-03 §5.4](../institutional/DOC-03_THREAT_MODEL.md).
 
 ---
 

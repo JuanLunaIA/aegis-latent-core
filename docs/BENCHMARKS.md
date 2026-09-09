@@ -95,6 +95,28 @@ PYTHONPATH=. .venv/bin/python tools/benchmarks/run_pqc_timing.py \
 
 The harness measures the current Python-to-Rust boundary, including public-key/signature decoding performed by the binding. It returns `2` and writes `UNAVAILABLE` when the real backend is absent. A p-value above 0.05 is **non-detection under the experiment**, not proof of constant-time execution. The retained release measurement passed the `sign` experiment and failed the `verify` experiment.
 
+## Where a second, in-tree run exists for the same harness
+
+The whole table above is the retained `v3.1.0` record, and its raw JSON is **not committed
+to this tree**. For two of those harnesses a *different* run **is** committed here, and a
+reader who compares the two sets will otherwise conclude one of them is wrong. Neither is:
+they are different workloads, and neither supersedes the other.
+
+| Harness | Retained `v3.1.0` (above; raw JSON not in tree) | In-tree, reproducible from this repository |
+|---|---|---|
+| Backpressure under injected `fsync` | 10,000 offered requests over 32.4 s; p99 1,189.89 ms | 2,500 offered requests over a 0.25 s window; p99 836.35 ms — [`backpressure_stall_report.json`](../evidence/execution_2026-08-20/backpressure_stall_report.json) |
+| Key rotation | 2,239 records across three local signer instances | 2,033 records across three local signer instances over 0.5 s; `key-old` 701, `key-new` 1,332 — [`key_rotation_report.json`](../evidence/execution_2026-08-20/key_rotation_report.json) |
+
+Both backpressure runs used the same 2 ms *injected* delay; both rotation runs used the
+same three-instance local harness. **Do not quote one run's statistic beside another run's
+count** — that produces a figure that was never measured. Cite the run you rely on together
+with its workload and whether its artifact is in this tree. Set out in full at
+[Benchmark Method §7](benchmarks/BENCHMARK_METHOD.md).
+
+The ML-DSA timing rows have no in-tree counterpart: that artifact is retained `v3.1.0`-era
+only, and rerunning `tools/benchmarks/run_pqc_timing.py` produces a new measurement rather
+than reproducing that one.
+
 ## Evidence-path measurements on the current source baseline
 
 The table above is the retained **v3.1.0** record and is not restated here. The measurements

@@ -240,6 +240,41 @@ limit, never overflows, never treats the zero-length terminator as a frame, alwa
 cursor, and never overlaps. Scope and limits:
 [Formal Verification](../formal/FORMAL_VERIFICATION.md#kani-bit-level-model-checking).
 
+### 4.4 Restoring the accumulator: replay, or a checkpoint the WAL must ratify
+
+Crash recovery re-links the chain; the MMR accumulator behind it has to be rebuilt too. Replaying
+`N` leaves costs O(N log N) time and holds O(N) interior nodes. A peak set is the complete summary
+of those leaves for everything the accumulator does after a restart — append, compute the root, and
+prove the leaves appended *next* — so `MerkleMountainRange.restore_from_peaks` reseats an empty
+accumulator on that set directly, at O(|peaks|) = O(log N).
+
+The checkpoint is `<wal_path>.mmr.state`: canonical JCS bytes over `version`, `leaf_count`,
+descending-height `peaks` and `bagged_root`, plus a `state_checksum` over exactly those fields.
+It is written `0600` to a `.tmp`, flushed, `fsync`-ed, `os.replace`-d, and the containing directory
+is `fsync`-ed too, because a rename is durable only once its directory entry is.
+
+**The WAL ratifies it; it is never trusted on its own.** `_restore_mmr` restores the checkpointed
+prefix, replays the leaves committed after it — the ordinary case after a crash and after a
+rotation — and accepts the result **only if the final root equals the root the last committed node
+recorded**. Any disagreement discards the fast-path accumulator and replays every leaf. Reading
+returns nothing for every other failure mode (absent, unreadable, wrong version, failing its own
+checksum, malformed, or describing more leaves than the WAL holds) because all of them have the
+same remedy. Writing never raises: a ledger that could not write a checkpoint is fully correct and
+simply replays next time.
+
+**What a restore gives up is precise.** Interior nodes below `leaf_count` are gone, so
+`get_inclusion_proof` raises `MMRHistoricalLeafUnavailableError` for those leaves — it refuses
+rather than returning a partial path. Nothing forensic is lost: every committed node carries its
+own self-contained `mmr_proof`, and the ledger only ever asks the live accumulator to prove the
+leaf it just appended. Proofs *issued after* a restore are unaffected, because the portable
+verifier is structural — it derives peak heights from the set bits of `leaf_count` — and so cannot
+distinguish an appended accumulator from a restored one.
+
+Because that trade is the operator's, the fast path is opt-in (`mmr_fast_restore=True`) and the
+default still replays every leaf and keeps historical proofs. The file is written either way, so
+enabling the flag needs no migration. `tests/test_mmr_state_continuity.py` covers the tree shapes,
+the append-after-restore equivalence, every fallback path, and rotation; `CLM-063`.
+
 ---
 
 ## 5. Evidence Export & Long-Term Retention

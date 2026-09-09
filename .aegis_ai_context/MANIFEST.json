@@ -165,14 +165,14 @@
     {
       "category": "governed_input",
       "path": "docs/FAQ_TECHNICAL.md",
-      "sha256": "b81109e06fb12f834fc98058ea556f404a754d44fcf6d2ea0b67b8b96ebf9a76",
-      "size": 13268
+      "sha256": "965cdd9c7d42917cecd2ddd361193dc62ce7a65ca06d193c44ff145697d5b262",
+      "size": 16615
     },
     {
       "category": "governed_input",
       "path": "docs/PLATFORM_OPERATOR_GUIDE.md",
-      "sha256": "47ebdccd5cfa8375d3c9824e9613381788291c180e4e32024ca08d8a15f22b60",
-      "size": 15618
+      "sha256": "d402962243b0d08451cbcb449207f312eb7775515a5697914173373805ad96ee",
+      "size": 17219
     },
     {
       "category": "governed_input",

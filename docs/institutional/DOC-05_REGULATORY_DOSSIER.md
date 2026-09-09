@@ -150,11 +150,29 @@ The single most consequential boundary in this section is clock trust. An eviden
 
 **The erasure tension must be surfaced rather than finessed.** An append-only, hash-linked, signed ledger is deliberately resistant to selective modification. That property is what makes it useful as evidence, and it is in direct structural tension with the right to erasure (Art. 17) and the right to rectification (Art. 16) when a record's content falls within scope. Three facts frame the tension honestly:
 
-1. Deleting or editing a node breaks chain linkage and invalidates the MMR root for every subsequent record. There is no supported selective-redaction-with-preserved-proof operation in this repository.
+1. Deleting or editing a node breaks chain linkage and invalidates the MMR root for every subsequent record. There is no supported selective-redaction-with-preserved-proof operation in the governed evidence path. An unwired mechanism that addresses the structural half of this problem exists in the tree and is analysed at §5.8.1; it does not change this sentence, because it is not wired into the ledger.
 2. A digest of personal data is generally treated as pseudonymised rather than anonymous where re-identification remains reasonably likely — a hash of a low-entropy identifier is vulnerable to confirmation by guessing. Storing digests instead of bodies reduces exposure; it does not automatically remove the data from scope.
 3. Where an exemption is relied upon — for example a legal-obligation or establishment-of-legal-claims ground — that reliance is a controller decision documented by the controller, and it must be made **before** the ledger is used for in-scope personal data, not after an erasure request arrives.
 
 The practical consequence for architecture review: decide what may enter the governed evidence path in the first place. Retention design, minimisation at ingestion, and the lawful basis for retaining evidence are all upstream controls. No configuration of this gateway resolves an erasure obligation once an in-scope record has been committed and anchored.
+
+#### 5.8.1 Cryptographic erasure: the structural half of the problem, and the half it leaves open
+
+`[LEGAL-REVIEW-REQUIRED]` `aegis/core/crypto_shredder.py` implements envelope encryption with destructible per-subject keys (`CLM-068`; mechanism described in `DOC-02 §6.2`). It is **not wired into `CryptographicAuditLedger`**, so every statement above about the governed evidence path stands unchanged. This subsection exists so that a reviewer meeting the module does not read into it a compliance conclusion it cannot carry.
+
+**What the mechanism resolves.** The tension in point 1 above is structural: erasure and an append-only hash-linked ledger cannot both act on the same bytes. Committing to a ciphertext instead of a payload dissolves that specific conflict. Destroying the subject's AES-256-GCM key leaves the ciphertext, the WAL line, every peak, the root, and every previously issued inclusion proof **bit-for-bit unchanged** — the ledger's own integrity check still passes — while the plaintext becomes unrecoverable to a holder of the ciphertext. The technical incompatibility is real, and this addresses it.
+
+**What it does not resolve, and none of these is a coding problem.**
+
+| Open question | Why the mechanism does not answer it |
+|---|---|
+| Whether cryptographic erasure constitutes erasure under Art. 17 | A legal determination about the controller's processing, made by the controller with counsel and, where relevant, a supervisory authority. **No regulator determination on cryptographic erasure is cited in this dossier, and none is relied upon.** The mechanism cannot make this determination and this document does not make it. |
+| Whether the retained ciphertext and commitment remain personal data | Erasure by key destruction leaves data that is unreadable rather than absent. Whether that is anonymisation or a strong form of pseudonymisation depends on the re-identification analysis for the specific processing, and point 2 above applies to it directly. |
+| Whether the key is actually gone | Destroying a key in a CPython process establishes nothing about the physical medium. Allocator copies, the SQLite journal, filesystem journaling, page cache, swap, snapshots, **backups of the vault**, and SSD wear-levelling are all outside its control. A destruction guarantee requires an HSM or a KMS with key deletion, and target acceptance. |
+| Whether every copy is covered | The vault is one file on one host. Replicas, exports, forensic bundles, and downstream systems that received the plaintext are outside its reach; Art. 17(2) obligations toward other controllers are unaffected by anything in this repository. |
+| Whether the key vault itself becomes the new single point of failure | It does. The vault is the only mutable component in an otherwise append-only design: losing it destroys every subject's plaintext at once, and compromising it defeats the erasure of every subject erased through it. Its custody, backup policy (which is in direct tension with erasure), and access control are deployment-acceptance items with no in-tree answer. |
+
+**Approved and blocked wording.** Approved: *the repository contains a mechanism that makes a sealed payload's plaintext unrecoverable to a ciphertext holder while leaving the evidence tree invariant; it is not wired into the gateway.* Blocked: "GDPR right to erasure satisfied", "Art. 17 compliant", "data destroyed", "sanitised", "forgotten", or any phrasing implying that deploying Aegis discharges an erasure obligation. The controlling boundary is unchanged and is repeated deliberately: **no configuration of this gateway resolves an erasure obligation once an in-scope record has been committed and anchored.**
 
 ## 6. Material claim register
 

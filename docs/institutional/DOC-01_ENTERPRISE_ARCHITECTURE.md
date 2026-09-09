@@ -314,11 +314,15 @@ The Helm chart now expresses that topology directly. It renders a `StatefulSet` 
 
 This removes the shared-writer fault; it does not add cross-pod ordering. Each replica remains an independent chain, and a governed multi-pod evidence topology still requires an accepted design for cross-pod order, signer propagation, and recovery. The superseded default — a `Deployment` with `replicaCount: 2` and `workers: "2"` over one named `ReadWriteOnce` PVC — must not be reintroduced.
 
+§8.8 describes an in-tree accumulator that a future cross-pod design could build on. It is unwired, so it changes nothing stated above.
+
 ### 8.4 External storage and centralized writer
 
 The enterprise `StorageProvider` allows multiple application instances to persist rows in a shared backend, but shared persistence is not equivalent to shared order. The current read-latest, compute-node, write-node sequence lacks a compare-and-swap predecessor guard or centralized sequence service. PostgreSQL advisory locking, a serializable transaction with a chain-head row, DynamoDB transactional conditional update, or a dedicated writer could provide a candidate serialization mechanism; none is implemented in the audited path.
 
 A centralized writer can be an operational design for one total order, but its capacity, availability, recovery, and signer/storage custody require a separate implementation and acceptance artifact. Cross-region consensus remains **`ROADMAP`**.
+
+A centralized writer is not the only shape available in principle. §8.8 records a second one — convergence without a writer at all — and states precisely how far the in-tree code takes it, which is well short of a topology.
 
 ### 8.5 Deployment boundary matrix
 
@@ -362,6 +366,29 @@ Aegis does not implement ingress. The gateway is an ASGI application whose trans
 | Termination of long-lived SSE | Ingress read and idle timeouts can close a stream before its terminal commit. | The proxy records `client_disconnected`; the operator must align ingress timeouts with `max_duration_seconds`. |
 
 The final row is the one most often missed in deployment review: an ingress idle timeout shorter than the configured stream duration bound will systematically truncate long streams, producing a population of `client_disconnected` terminal summaries that reflect ingress policy rather than client behavior. Timeout alignment is an operator acceptance item, and the resulting outcome distribution must not be read as client-side evidence.
+
+### 8.8 Coordination-free convergence: the Causal-Merkle CRDT accumulator
+
+Every subsection above reaches the same wall from a different direction: replicas hold private chains, and making them one chain needs an agreement mechanism nobody has built here. `aegis_rust_v2/src/crdt_mmr.rs` supplies the data structure such a mechanism would need. It supplies only that. It is **not wired into `CryptographicAuditLedger`**, there is no gossip transport, no membership protocol, and no persistence for it, so **nothing in this subsection changes the topology semantics in §8.1 through §8.7** (`CLM-066`).
+
+**The structure.** `CausalMmr` is a join-semilattice over domain-separated Merkle Mountain Ranges. Each replica owns an integer id and a `VectorClock`, a per-replica counter map. `append` ticks the local counter and commits a leaf over `0x00 || replica_id || clock || payload` with the clock length-prefixed, so two leaves with different causal context cannot collide. Interior nodes carry `0x01` and the bagged root carries `0x02`, matching `aegis-mmr-inclusion-v2` (`CLM-064`). `join` takes the union of two leaf sets, merges the clocks pointwise by maximum, re-sorts, and rebuilds — producing a new accumulator without mutating either operand.
+
+**Why a total order, and not the vector clock.** Vector clocks give a *partial* order; concurrent events are incomparable, and that is the correct answer rather than a failure. The tempting implementation — compare clocks, fall back to replica id when incomparable — yields a comparator that **is not transitive**, and a non-transitive comparator makes the resulting sequence depend on the input permutation. That destroys commutativity and associativity, which are the two properties the construction exists to provide. The implementation therefore sorts by an explicit total order that *extends* causality: scalar clock sum, then replica id, then that replica's own sequence, then the leaf digest. The first key is what makes it sound. If `a` causally precedes `b` then `a`'s clock is componentwise less than or equal to `b`'s and differs somewhere, so `sum(a) < sum(b)` and causally ordered events never invert; concurrent events are separated by keys that are identical on every replica. Counters saturate rather than wrap at `u64::MAX`, because a wrapped counter would silently reorder history.
+
+**What "coordination-free" does and does not mean.** The merge itself requires no leader election, no quorum round, and no lock: any replica can join any other at any time, in any order, and arrive at the same root. That is a property of the algebra, asserted by the Rust `mod tests` and re-asserted across the PyO3 boundary in `tests/test_crdt_mmr.py` — including `test_every_merge_order_reaches_one_root`, which exhausts all six merge permutations of three replicas. It is **not** a latency result. No throughput, convergence-time, or comparative measurement against a consensus protocol exists in this repository, and none can exist until there is a transport to measure; any performance comparison with Paxos or Raft would be fabricated. Nor is convergence agreement about truth: `join` reconciles replicas that disagree about **ordering**, not replicas that **lie**. A replica contributing fabricated leaves has them merged like any other, and nothing here establishes Byzantine resistance, replica authentication, gossip liveness, partition behavior, or a bounded convergence time.
+
+**The gap between this and a governed multi-pod chain.** Convergence on an accumulator root is not the same object as the ledger's evidence semantics. The core chain's authority rests on `prev_hash` linkage between successive nodes in one process-local sequence (§4.3, §5); a merged CRDT root commits to a *set* of leaves in a deterministic order, and does not re-link the per-replica hash chains into one. Adopting it would additionally require a wire format and transport, an authenticated membership model, persistence and recovery for the merged state, a signer-propagation design, and a decision about which artifact — chain or accumulator — an auditor is asked to verify. Each is an acceptance item that does not exist today.
+
+| Property | Status | Boundary |
+|---|---|---|
+| `join` is idempotent, commutative, associative | `IMPLEMENTED` and `LOCALLY TESTED` | Asserted by test over generated replica sets, in Rust and through the binding; not a mechanized proof |
+| All merge orders reach one root | `IMPLEMENTED` and `LOCALLY TESTED` | Exhaustive over three replicas, not over arbitrary populations |
+| Leaves are domain-separated (`0x00`/`0x01`/`0x02`) | `IMPLEMENTED` | Its root cannot coincide with a `v1` ledger root over the same payload; pinned by `test_the_crdt_root_is_not_the_ledger_root` |
+| Cross-replica ordering for a running system | `ROADMAP` | Unwired; no transport, membership, or persistence. `CEG-014` is unchanged |
+| Resistance to a dishonest replica | `ROADMAP` | Out of scope by construction; `join` orders, it does not adjudicate |
+| Convergence latency or throughput | `ROADMAP` | Not measured, and not measurable until a transport exists; no comparison to a consensus protocol may be stated |
+
+Safe claim: *the repository contains a convergent accumulator whose merge is order-independent.* Prohibited claims: global ordering, multi-pod linearizability, Byzantine fault tolerance, consensus, or any statement that Aegis replicas converge in deployment.
 
 ## 9. Formal models and their limits
 

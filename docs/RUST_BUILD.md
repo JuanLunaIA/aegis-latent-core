@@ -88,6 +88,20 @@ maturin build --manifest-path aegis_rust_v2/Cargo.toml --release --features exte
 
 The wheel is written under `aegis_rust_v2/target/wheels/`. A successful local build is not registry publication, platform-wide compatibility, constant-time evidence, FIPS validation, or target-runtime acceptance.
 
+## `AEGIS_REQUIRE_RUST=1` — turning a silent skip into a failure
+
+Tests that need the compiled extension guard their import so the suite stays usable on a pure-Python checkout. That guard has a failure mode of its own: **a skip reads exactly like a pass in the pytest summary line.** The repository's `test` matrix installs the pure-Python package only, so every extension-guarded test skips there, and a binding could be broken — or absent entirely — while CI stayed green.
+
+`AEGIS_REQUIRE_RUST=1` inverts the guard. With it set, a missing extension, or an extension built without the binding under test, raises instead of skipping:
+
+```bash
+AEGIS_REQUIRE_RUST=1 python -m pytest tests/test_crdt_mmr.py -v
+```
+
+Set it wherever the extension is supposed to be present and leave it unset otherwise. In CI it belongs in the job that already built the wheel — the `rust` job installs the built wheel and runs the binding tests with the variable set, which is the only place in the workflow where the PyO3 surface is actually exercised. Setting it in a job that never builds the extension turns every guarded test into a failure, which is noise rather than signal.
+
+The variable changes no runtime behaviour: nothing in `aegis/` reads it. It is a test-environment assertion about the build, and it establishes only that the named extension imported and exposed the expected symbol — not that the native path is correct, faster, or in use at runtime.
+
 ## Python and PyO3 compatibility failures
 
 Undefined references to Python C API symbols usually mean the interpreter, headers, and link metadata do not match, or that `extension-module` was applied to a Cargo test binary. Prefer `maturin develop` for the extension and plain `cargo test --release --locked` for Rust tests. Activate the intended virtual environment before building.

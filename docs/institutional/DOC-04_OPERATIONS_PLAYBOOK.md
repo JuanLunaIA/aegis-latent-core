@@ -240,6 +240,34 @@ Two scope facts must be stated before any conclusion is drawn from a sweep. Firs
 
 Containment is complete when: quarantined copies exist with recorded digests; the boundary marker is written to the incident record; the service runs on a new segment; a post-restart `verify_integrity()` sweep returns clean for the new window; affected request identifiers are enumerated and classified evidence-incomplete; and the evidence custodian has acknowledged the record. Restoring availability alone does not close the incident.
 
+### 8.5 Single-writer refusal: `WalWriterConflictError`
+
+This is the one startup failure in the playbook whose correct response is to **leave it failing**. `CryptographicAuditLedger._open_wal` takes an exclusive, non-blocking lock on the WAL descriptor before publishing the handle, so the second and later processes pointed at one WAL path raise `WalWriterConflictError` and never append a frame. Two writers on one path produce divergent `prev_hash` relationships that the loader cannot represent as one verified chain, so the exception converts a silent evidence fork into a fail-closed startup error. It is a **correct refusal, not a fault**.
+
+#### 8.5.1 What the operator sees, and what it means
+
+| Observation | Meaning | Response |
+|---|---|---|
+| A replica exits at startup with `WAL path is already locked by another writer` | Two processes are pointed at one WAL path. The first holds it; this one refused before writing anything. | Find the second writer (§8.5.2). Do **not** remove, weaken, or retry-loop around the lock. |
+| Every replica starts cleanly, one claim per replica | The intended topology (`DOC-01 §8.3`) | None. |
+| A startup **warning** that the WAL is unlocked | The platform offers neither locking primitive, or the Windows sentinel could not be positioned. The guard is not in force. | Single-writer discipline is operator-enforced on this host; record it as a deployment-acceptance item. |
+
+The lock is released when the descriptor is closed or the process exits, so a restart re-acquires it with no operator action. That also means a crashed writer does not leave a stale lock requiring manual clearing — if the refusal persists, a live process is holding the path.
+
+#### 8.5.2 Diagnosis
+
+1. Identify the holder: `fuser -v <wal-path>` or `lsof <wal-path>` on POSIX. Expect exactly one process.
+2. If two pods share a volume, inspect the claims — `kubectl -n aegis get pvc` must show one claim per replica and no shared mount. The chart pins `aegis.workers` to `"1"` and constrains `persistence.accessMode` to `ReadWriteOnce`/`ReadWriteOncePod` for this reason; a hand-edited override is the usual cause.
+3. If a single pod fails, check for a leftover process from a previous release, a sidecar or debug shell that opened the ledger, or an ad-hoc verification tool run against the live path with a writing constructor.
+4. Record which process held the lock in the change record. A `WalWriterConflictError` is evidence that a fork was **prevented**; that fact belongs in the incident trail.
+
+#### 8.5.3 Scope limits an operator must not paper over
+
+- **It prevents a second writer; it does not serialize two.** The lock selects no predecessor and coordinates no MMR state. Multi-worker over one shared WAL remains an unsupported topology for a single ordered chain — the guard changes how it fails, not whether it works.
+- **POSIX `flock` is advisory and per-inode.** It constrains nothing that reaches the same bytes through a different path, and its semantics on a network filesystem are the filesystem's, not the gateway's. Both are target-acceptance concerns.
+- **Windows uses a mandatory byte-range lock placed past any WAL that can exist**, because `msvcrt.locking` denies a locked range to readers as well — and the WAL is read while a writer holds it. A lock over live bytes would turn "another process holds this path" into "this WAL cannot be read". A sentinel that cannot be positioned degrades to the warning above rather than refusing the first writer.
+- **Never resolve this by pointing the second process at the same path with the lock disabled.** There is no supported configuration for that, and the resulting chain cannot be verified as one sequence.
+
 ## 9. Signing-key rotation runbook
 
 ### 9.1 Scope gate
