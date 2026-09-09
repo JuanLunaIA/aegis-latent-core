@@ -19,12 +19,35 @@ ordering remains open work; see ``docs/ROADMAP.md``.
 from __future__ import annotations
 
 import itertools
+import os
 
 import pytest
 
-aegis_rust = pytest.importorskip("aegis_rust", reason="native extension not installed")
+# These tests need the compiled extension. Skipping when it is absent keeps the
+# suite usable for contributors on a pure-Python checkout — but a skip that CI
+# also honours would mean the binding is never exercised anywhere, and a silent
+# skip reads exactly like a pass in the summary line. So CI sets
+# AEGIS_REQUIRE_RUST=1 and a missing or incomplete extension becomes a failure
+# there. See the "Rust Extension" job in .github/workflows/ci.yml.
+_REQUIRED = os.environ.get("AEGIS_REQUIRE_RUST") == "1"
+
+try:
+    import aegis_rust
+except ImportError as exc:  # pragma: no cover - depends on the build environment
+    if _REQUIRED:
+        raise AssertionError(
+            "AEGIS_REQUIRE_RUST=1 but the aegis_rust extension is not importable; "
+            "the CausalMmr binding tests would have skipped silently"
+        ) from exc
+    aegis_rust = None
 
 CausalMmr = getattr(aegis_rust, "CausalMmr", None)
+
+if _REQUIRED and CausalMmr is None:  # pragma: no cover - build-shape guard
+    raise AssertionError(
+        "AEGIS_REQUIRE_RUST=1 but aegis_rust exposes no CausalMmr; the extension "
+        "was built without the binding these tests exist to cover"
+    )
 
 pytestmark = pytest.mark.skipif(
     CausalMmr is None, reason="aegis_rust built without the CausalMmr binding"

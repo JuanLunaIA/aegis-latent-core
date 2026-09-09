@@ -447,6 +447,20 @@ jobs:
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
         run: maturin build --release --features extension-module
 
+      # The `test` matrix installs the pure-Python package only, so anything
+      # guarded by `import aegis_rust` skips there — and a skip reads like a
+      # pass in the summary line. This job already has the built wheel, so it
+      # is where the binding actually gets exercised. AEGIS_REQUIRE_RUST=1
+      # turns a missing or incomplete extension into a failure rather than a
+      # silent skip.
+      - name: Run the Python binding tests against the built extension
+        env:
+          AEGIS_REQUIRE_RUST: "1"
+        run: |
+          pip install -e ".[dev]"
+          pip install --no-deps aegis_rust_v2/target/wheels/*.whl
+          python -m pytest tests/test_crdt_mmr.py -v
+
   # ── Model checking ────────────────────────────────────────────────────────
   # Bit-level proofs over the WAL's frame-bounds arithmetic. Scope and limits:
   # docs/formal/FORMAL_VERIFICATION_LIMITS.md.
