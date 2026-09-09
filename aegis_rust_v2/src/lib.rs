@@ -18,6 +18,7 @@
 #![allow(clippy::useless_conversion)]
 
 mod audit;
+mod crdt_mmr;
 mod forwarder;
 mod hasher;
 mod ledger;
@@ -109,6 +110,7 @@ fn aegis_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // ── Tier 7: BLAKE3 + ML-DSA PQC ─────────────────────────────────────
     m.add_class::<PqcKeypair>()?;
     m.add_class::<MmrAccumulator>()?;
+    m.add_class::<crdt_mmr::PyCausalMmr>()?;
     m.add_function(wrap_pyfunction!(generate_pqc_keypair, m)?)?;
     m.add_function(wrap_pyfunction!(keypair_from_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(verify_pqc_signature, m)?)?;
