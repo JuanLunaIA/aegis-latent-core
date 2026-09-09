@@ -32,6 +32,54 @@ withdrawal.
 
 ### Added
 
+- **Offline commercial licensing (`aegis/licensing/`).** Ed25519-signed
+  entitlement tokens verified without any network call: the signature is checked
+  before the payload is parsed, and expiry, module grants and field types are all
+  validated. Every failure raises a `PermissionError` subclass, so a caller
+  guarding with `PermissionError` fails closed on all of them.
+  `scripts/generate_commercial_license.py` is the vendor-side `keygen`/`issue`
+  tool. **There is no compiled-in root public key** — it must be supplied or set
+  in `AEGIS_LICENSE_ROOT_PUBKEY`, and an absent key refuses rather than
+  defaulting, because any 32-byte placeholder loads as a valid Ed25519 key and
+  would fail silently instead of loudly. A token is a bearer credential, expiry
+  is checked against the host clock, `max_annual_mgt` is carried but never
+  enforced, and there is no revocation mechanism. `CLM-069`.
+- **Four engine facades (`aegis/engines/`).** Veracity, Sanctum, Agentis and
+  Sovereign expose existing core capabilities as libraries usable without the
+  HTTP gateway. They **add no capability and relax no boundary**. Licence gating
+  is **off by default** and does not restrict the AGPLv3 build; enforcement is
+  opt-in through `AEGIS_LICENSE_ENFORCEMENT=required`, and an unrecognised value
+  raises rather than silently falling back to off. `CLM-070`.
+- **Enterprise connectors (`aegis/connectors/`).** Splunk HEC with a bounded
+  queue, bounded disk spool and oldest-first eviction; a Parquet lakehouse
+  exporter emitting the segment's own `aegis-wal-segment-manifest-v1` built by
+  the same function the archival path uses; and a HashiCorp Vault Transit signer
+  that submits digests `prehashed`. A connector cannot fail a governed request —
+  Splunk delivery problems become counters and spool files, never exceptions in
+  the caller's path. Connector output is a **derivative copy**; verification
+  stays against the WAL. `pyarrow` is the new optional `lakehouse` extra.
+  `CLM-071`.
+- **Envoy/Istio WASM filter (`connectors/envoy-wasm/`).** A `proxy-wasm` crate
+  that refuses declared critical request patterns and redacts declared identifier
+  patterns from response chunks behind a bounded holdback, running redaction to a
+  fixpoint before measuring the frontier. Builds to `wasm32-wasip1`; 7 unit
+  tests. It **commits no evidence**, so a deployment running only the filter has
+  request governance and no evidence trail. `CLM-072`.
+- **Commercial documentation** under `docs/commercial/`: pricing guide, connector
+  ecosystem guide and software-escrow policy. Published prices are **list prices
+  the vendor is asking**, not observed contract values; the SLA schedule is a
+  **template for negotiation** with no rota staffed; the escrow policy has **no
+  executed agreement, no engaged agent and no deposit**. `UC-019`, `UC-028` and
+  `UC-033` are unchanged, and `DOC-06 §3.2a` reconciles list prices with the
+  standing "no package has a validated price" position.
+
+  **Why this is recorded under `4.3.0` and not a new major version.** The work
+  was specified as a `5.1.0` modular-fabric release. Moving the version line
+  would mean bumping fourteen synchronized anchors, and nothing here is a
+  breaking change: no existing entry point, route, or FFI contract changed, and
+  every addition is opt-in. A version bump is a separate, deliberate change and
+  is not made as a side effect of adding features.
+
 - **Domain-separated MMR inclusion scheme, `aegis-mmr-inclusion-v2`.** Closes an
   RFC 6962 §2.1 leaf/node type confusion in the portable proof verifier. v1
   hashes a leaf as `SHA-256(payload)` and an interior node as
