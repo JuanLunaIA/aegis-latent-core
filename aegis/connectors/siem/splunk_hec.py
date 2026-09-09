@@ -331,6 +331,11 @@ class SplunkHECClient:
             try:
                 await self._worker
             except asyncio.CancelledError:
+                # Expected, and swallowed deliberately: we cancelled this task
+                # one line above, so the CancelledError is the task
+                # acknowledging that request rather than a failure. Letting it
+                # propagate would make an orderly shutdown look like an error
+                # to every caller of aclose().
                 pass
             self._worker = None
         await self.flush()

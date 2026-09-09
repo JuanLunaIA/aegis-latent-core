@@ -300,11 +300,8 @@ class TestLicenseGating:
     def test_engines_construct_with_no_license_configured(self, tmp_path):
         """The ordinary AGPLv3 case: unlicensed, and working."""
 
-        engine = VeracityEngine(str(tmp_path / "e.jsonl"), signing_key=SIGNING_KEY)
-        try:
+        with VeracityEngine(str(tmp_path / "e.jsonl"), signing_key=SIGNING_KEY) as engine:
             assert engine.entitlement is None
-        finally:
-            engine.close()
 
     def test_a_typo_in_the_enforcement_variable_raises(self):
         """Silently falling back to 'off' is the failure nobody would notice."""

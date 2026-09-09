@@ -61,12 +61,10 @@ class TestSigning:
         """Without this Vault would hash the digest again and sign the wrong value."""
 
         requests: list[httpx.Request] = []
-        signer = VaultTransitSigner(_config(), transport=_recording_transport(requests, _sign_ok))
-        try:
+        with VaultTransitSigner(
+            _config(), transport=_recording_transport(requests, _sign_ok)
+        ) as signer:
             signer.sign(NODE_HASH)
-        finally:
-            signer.close()
-
         import json
 
         body = json.loads(requests[0].content)
@@ -75,115 +73,88 @@ class TestSigning:
 
     def test_the_digest_is_sent_as_base64_of_raw_bytes_not_hex(self):
         requests: list[httpx.Request] = []
-        signer = VaultTransitSigner(_config(), transport=_recording_transport(requests, _sign_ok))
-        try:
+        with VaultTransitSigner(
+            _config(), transport=_recording_transport(requests, _sign_ok)
+        ) as signer:
             signer.sign(NODE_HASH)
-        finally:
-            signer.close()
-
         import json
 
         submitted = json.loads(requests[0].content)["input"]
         assert base64.b64decode(submitted) == bytes.fromhex(NODE_HASH)
 
     def test_the_signature_is_returned_verbatim(self):
-        signer = VaultTransitSigner(_config(), transport=httpx.MockTransport(_sign_ok))
-        try:
+        with VaultTransitSigner(_config(), transport=httpx.MockTransport(_sign_ok)) as signer:
             signature = signer.sign(NODE_HASH)
-        finally:
-            signer.close()
         assert signature.startswith("vault:v1:")
 
     def test_the_request_targets_the_configured_mount_and_key(self):
         requests: list[httpx.Request] = []
-        signer = VaultTransitSigner(
+        with VaultTransitSigner(
             _config(mount="transit-prod", key_name="evidence-2026"),
             transport=_recording_transport(requests, _sign_ok),
-        )
-        try:
+        ) as signer:
             signer.sign(NODE_HASH)
-        finally:
-            signer.close()
         assert requests[0].url.path == "/v1/transit-prod/sign/evidence-2026"
 
     def test_the_vault_token_travels_as_a_header_not_a_query_parameter(self):
         requests: list[httpx.Request] = []
-        signer = VaultTransitSigner(_config(), transport=_recording_transport(requests, _sign_ok))
-        try:
+        with VaultTransitSigner(
+            _config(), transport=_recording_transport(requests, _sign_ok)
+        ) as signer:
             signer.sign(NODE_HASH)
-        finally:
-            signer.close()
         assert requests[0].headers["X-Vault-Token"] == "s.supersecrettoken"
         assert "supersecrettoken" not in str(requests[0].url)
 
     def test_a_namespace_is_sent_when_configured(self):
         requests: list[httpx.Request] = []
-        signer = VaultTransitSigner(
+        with VaultTransitSigner(
             _config(namespace="team-a"), transport=_recording_transport(requests, _sign_ok)
-        )
-        try:
+        ) as signer:
             signer.sign(NODE_HASH)
-        finally:
-            signer.close()
         assert requests[0].headers["X-Vault-Namespace"] == "team-a"
 
 
 class TestVerification:
     def test_verify_returns_vaults_verdict(self):
         for valid in (True, False):
-            signer = VaultTransitSigner(
+            with VaultTransitSigner(
                 _config(),
                 transport=httpx.MockTransport(
                     lambda r, v=valid: httpx.Response(200, json={"data": {"valid": v}})
                 ),
-            )
-            try:
+            ) as signer:
                 assert signer.verify(NODE_HASH, "vault:v1:AAAA") is valid
-            finally:
-                signer.close()
 
     def test_a_missing_valid_field_is_treated_as_not_valid(self):
         """Fail closed: an unexpected shape must not read as a good signature."""
 
-        signer = VaultTransitSigner(
+        with VaultTransitSigner(
             _config(),
             transport=httpx.MockTransport(lambda r: httpx.Response(200, json={"data": {}})),
-        )
-        try:
+        ) as signer:
             assert signer.verify(NODE_HASH, "vault:v1:AAAA") is False
-        finally:
-            signer.close()
 
 
 class TestFailureModes:
     def test_a_non_hex_node_hash_is_refused(self):
-        signer = VaultTransitSigner(_config(), transport=httpx.MockTransport(_sign_ok))
-        try:
+        with VaultTransitSigner(_config(), transport=httpx.MockTransport(_sign_ok)) as signer:
             with pytest.raises(VaultTransitError, match="hex-encoded"):
                 signer.sign("not-a-hash")
-        finally:
-            signer.close()
 
     def test_a_wrong_length_digest_is_refused(self):
-        signer = VaultTransitSigner(_config(), transport=httpx.MockTransport(_sign_ok))
-        try:
+        with VaultTransitSigner(_config(), transport=httpx.MockTransport(_sign_ok)) as signer:
             with pytest.raises(VaultTransitError, match="32-byte"):
                 signer.sign("abcd")
-        finally:
-            signer.close()
 
     def test_an_http_error_raises_without_echoing_the_token(self):
-        signer = VaultTransitSigner(
+        with VaultTransitSigner(
             _config(),
             transport=httpx.MockTransport(
                 lambda r: httpx.Response(403, json={"errors": ["permission denied"]})
             ),
-        )
-        try:
+        ) as signer:
             with pytest.raises(VaultTransitError) as excinfo:
                 signer.sign(NODE_HASH)
-        finally:
-            signer.close()
         message = str(excinfo.value)
         assert "permission denied" in message
         assert "supersecrettoken" not in message
@@ -192,23 +163,17 @@ class TestFailureModes:
         def boom(request: httpx.Request) -> httpx.Response:
             raise httpx.ConnectError("unreachable", request=request)
 
-        signer = VaultTransitSigner(_config(), transport=httpx.MockTransport(boom))
-        try:
+        with VaultTransitSigner(_config(), transport=httpx.MockTransport(boom)) as signer:
             with pytest.raises(VaultTransitError, match="failed"):
                 signer.sign(NODE_HASH)
-        finally:
-            signer.close()
 
     def test_a_response_without_a_signature_is_refused(self):
-        signer = VaultTransitSigner(
+        with VaultTransitSigner(
             _config(),
             transport=httpx.MockTransport(lambda r: httpx.Response(200, json={"data": {}})),
-        )
-        try:
+        ) as signer:
             with pytest.raises(VaultTransitError, match="no signature"):
                 signer.sign(NODE_HASH)
-        finally:
-            signer.close()
 
     @pytest.mark.parametrize("field", ["url", "token", "key_name"])
     def test_empty_required_configuration_is_refused(self, field):
@@ -231,7 +196,7 @@ class TestSignatureDecoding:
 
 class TestPublicKeyFetch:
     def test_a_public_key_is_returned_for_an_asymmetric_key(self):
-        signer = VaultTransitSigner(
+        with VaultTransitSigner(
             _config(),
             transport=httpx.MockTransport(
                 lambda r: httpx.Response(
@@ -239,23 +204,17 @@ class TestPublicKeyFetch:
                     json={"data": {"keys": {"1": {"public_key": "-----BEGIN PUBLIC KEY-----"}}}},
                 )
             ),
-        )
-        try:
+        ) as signer:
             assert signer.public_key_pem().startswith("-----BEGIN PUBLIC KEY-----")
-        finally:
-            signer.close()
 
     def test_a_symmetric_key_without_a_public_half_is_refused(self):
-        signer = VaultTransitSigner(
+        with VaultTransitSigner(
             _config(),
             transport=httpx.MockTransport(
                 lambda r: httpx.Response(
                     200, json={"data": {"keys": {"1": {"creation_time": "x"}}}}
                 )
             ),
-        )
-        try:
+        ) as signer:
             with pytest.raises(VaultTransitError, match="no public key"):
                 signer.public_key_pem()
-        finally:
-            signer.close()

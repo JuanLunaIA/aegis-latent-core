@@ -40,8 +40,7 @@ def segment(tmp_path):
     """A finalized WAL segment with three committed nodes."""
 
     path = tmp_path / "wal.jsonl"
-    ledger = CryptographicAuditLedger(str(path), signing_key=SIGNING_KEY)
-    try:
+    with CryptographicAuditLedger(str(path), signing_key=SIGNING_KEY) as ledger:
         for i in range(3):
             ledger.commit_forensic(
                 state_id=f"req-{i}",
@@ -49,8 +48,6 @@ def segment(tmp_path):
                 response_bytes=f"response {i}".encode(),
                 tenant_id="acme",
             )
-    finally:
-        ledger.close()
     return path
 
 
