@@ -80,6 +80,20 @@ No constant-time claim is approved. The retained 1,000,000-sample experiment rep
 
 No. Independent replicas produce independently verifiable evidence bundles unless a centralized writer or equivalent ordering service is deployed. A three-replica local key rotation result does not prove global ordering or production failover.
 
+## There is a CRDT in the repository — doesn't that give ordering across replicas?
+
+Not for any running system. `CausalMmr` (`aegis_rust_v2/src/crdt_mmr.rs`) is a join-semilattice whose `join` is idempotent, commutative and associative, so replicas exchanging leaf sets converge on one root whatever order they merge in. It is **not wired into the ledger**, and there is no gossip transport, membership protocol, or persistence for it, so the answer above is unchanged.
+
+Two further limits are worth stating because they do not go away once a transport exists. Convergence is not agreement about truth: `join` reconciles replicas that disagree about *ordering*, not replicas that lie, and a replica contributing fabricated leaves has them merged like any other — Byzantine resistance is a separate, unaddressed problem. And a merged root commits to a *set* of leaves; it does not re-link the per-replica `prev_hash` chains into one. No convergence-latency or throughput figure exists, and none can be measured until there is something to measure, so no comparison against a consensus protocol may be quoted. `CLM-066`; [DOC-01 §8.8](institutional/DOC-01_ENTERPRISE_ARCHITECTURE.md).
+
+## Can I erase a subject's data from the ledger?
+
+Not through the gateway. The ledger commits payload digests directly, and deleting or editing a committed node breaks chain linkage and invalidates the root for every record after it — the integrity check would then report an untampered chain as corrupt.
+
+`aegis/core/crypto_shredder.py` implements the mechanism that resolves that structural conflict — per-subject AES-256-GCM envelope encryption, where the ledger would commit the ciphertext, so destroying the key leaves the root, the peaks and every previously issued proof bit-for-bit unchanged. **It is not wired in**, so no deployed chain behaves this way today.
+
+Even wired, its claim is bounded: the plaintext becomes unrecoverable *to a holder of the ciphertext*. It says nothing about key material on the physical medium, and a restored backup of the key vault undoes every erasure performed through it. Whether any of this discharges a legal obligation is a controller determination made with counsel — see [DOC-05 §5.8.1](institutional/DOC-05_REGULATORY_DOSSIER.md) and `CLM-068`. Do not describe Aegis as satisfying a right to erasure.
+
 ## How do I rotate HMAC keys without a restart?
 
 Configure the versioned keyring path and reload interval, deliver a complete validated snapshot atomically, keep an overlap verification key during the declared window, and monitor key IDs and failures. See [`docs/operations/KEY_ROTATION_RUNBOOK.md`](operations/KEY_ROTATION_RUNBOOK.md). A local keyring is not a secret manager.
@@ -94,12 +108,15 @@ Use the repository verifier and the retained export manifest for the applicable 
 
 ## What performance overhead does Aegis add?
 
-No general overhead figure is published, and none should be quoted, because overhead depends on your workload, hardware, storage device, provider latency, and configuration. Two retained measurements exist, each valid only inside its declared scope, and both are recorded in [`BENCHMARK_RESULTS.md`](benchmarks/BENCHMARK_RESULTS.md).
+No general overhead figure is published, and none should be quoted, because overhead depends on your workload, hardware, storage device, provider latency, and configuration. The retained measurements below are each valid only inside their declared scope, and all are recorded in [`BENCHMARK_RESULTS.md`](benchmarks/BENCHMARK_RESULTS.md).
 
 | Retained measurement | Scope | Result | What it does not establish |
 |---|---|---|---|
 | Bounded SSE transformation | In-process transform on a recorded sandbox host; 7 rounds × 1,000 deterministic events | First-byte p50 `2.030 ms`, p95 `2.295 ms`; `3,155.654` events/s p50; queue high-water `664` bytes / `8` items; allocation peak `141,338` bytes | Excludes network, provider, and durable-WAL latency. It opens no socket and performs no ledger commit, so it does not establish gateway capacity, end-to-end latency, or an absence of measurable cost. |
-| Backpressure under injected I/O stall | 10,000 offered requests at 10,000 RPS with a 2 ms injected `fsync` delay | 10,000 durable commits, 0 failures, 0 missing identifiers, 0 duplicates, valid chain; p50 `202.136 ms`, p95 `614.083 ms`, p99 `1,189.891 ms` | The queue is explicitly not low-latency under this stall. It is a bounded-behavior gate, not a service level objective, and does not model a real block device. |
+| Backpressure under injected I/O stall — **in-tree reproducible baseline** (2026-08-20) | 2,500 offered requests over a 0.25 s window at 10,000 RPS offered, 2 ms injected `fsync` delay; 6.63 s to drain | 2,500 durable commits, 0 failures, 0 missing identifiers, 0 duplicates, valid chain; p50 `167.290 ms`, p95 `504.704 ms`, p99 `836.351 ms`, max `2,290.622 ms` | The queue is explicitly not low-latency under this stall. It is a bounded-behavior gate, not a service level objective, and does not model a real block device. |
+| Backpressure under injected I/O stall — **retained `v3.1.0` historical observation** | 10,000 offered requests over 32.4 s, 2 ms injected `fsync` delay | 10,000 durable commits, 0 failures, 0 missing identifiers, 0 duplicates, valid chain; p50 `202.136 ms`, p95 `614.083 ms`, p99 `1,189.891 ms` | Same boundaries as the row above, plus one more: **its raw JSON is not committed to this tree**, so a reader cannot re-derive it here. It is retained rather than discarded because it is a real measurement of a different workload. |
+
+These are two different workloads, not competing figures for one test, and neither supersedes the other. Cite whichever you rely on together with its request count and its artifact status — quoting one run's latency beside the other's request count produces a number that was never measured. See [`BENCHMARK_METHOD.md`](benchmarks/BENCHMARK_METHOD.md).
 
 The structural point matters more than either number. On the non-streaming path a governed response returns only after its evidence commit, so **storage latency is request latency by design**. Choosing a slow or contended device converts directly into user-visible latency rather than into silent evidence loss. Measure on your own workload before committing to any internal target; do not promote either figure above into a capacity, availability, or service-level claim.
 

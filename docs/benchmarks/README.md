@@ -35,13 +35,15 @@ Every published number must identify the source commit, date, hardware, operatin
 
 ## Current result index
 
-| Result | Harness | Retained artifact | Boundary |
+The **Artifact** column distinguishes two things a reader must not conflate: a path that resolves in this tree, and a `v3.1.0` release artifact named for the record whose raw JSON is **not** committed here. A figure from the second kind cannot be re-derived from this repository, which is a limitation of that figure and is stated wherever it appears. Where both exist for one harness, they are different runs of different workloads — neither supersedes the other, and mixing their numbers produces a result that was never measured. See [`BENCHMARK_METHOD.md`](BENCHMARK_METHOD.md).
+
+| Result | Harness | Artifact | Boundary |
 |---|---|---|---|
-| WAF corpus | `tools/security/run_waf_corpus.py` | `waf_corpus_report_v1_candidate.json` | 15 malicious and 8 benign application-layer cases; HTTP/2 and Nuclei not executed |
-| Backpressure | `tools/benchmarks/run_backpressure_stall.py` | `backpressure_stall_10k_report.json` | 10k offered requests and 2 ms injected `fsync`; p99 1,189.89 ms; no production capacity claim |
-| Key rotation | `tools/benchmarks/run_key_rotation.py` | `key_rotation_report_v2.json` | Three independent local signer instances; no real orchestrator/secret-manager acceptance |
-| ML-DSA timing | `tools/benchmarks/run_pqc_timing.py` | `pqc_timing_report_v2.json` | 1M samples per operation; `sign` non-detection, `verify` failure; no constant-time claim |
-| Bounded SSE transformation | `benchmarks/bench_streaming_sse.py` | `evidence/commercial_phase2_streaming_benchmark.json` | Seven local rounds of 1,000 events; excludes network and WAL durability latency |
+| WAF corpus | `tools/security/run_waf_corpus.py` | **In tree:** [`evidence/execution_2026-08-20/waf_corpus_report.json`](../../evidence/execution_2026-08-20/waf_corpus_report.json) | 15 malicious and 8 benign application-layer cases; 0 bypasses, 0 false positives, Wilson 95% upper bound 20.39%; HTTP/2 and Nuclei not executed |
+| Backpressure | `tools/benchmarks/run_backpressure_stall.py` | **In tree:** [`evidence/execution_2026-08-20/backpressure_stall_report.json`](../../evidence/execution_2026-08-20/backpressure_stall_report.json) — 2,500 offered requests, p99 836.35 ms. **Retained `v3.1.0`, not in tree:** the 10k-request run, p99 1,189.89 ms | 2 ms *injected* `fsync` delay in both; no production capacity claim from either |
+| Key rotation | `tools/benchmarks/run_key_rotation.py` | **In tree:** [`evidence/execution_2026-08-20/key_rotation_report.json`](../../evidence/execution_2026-08-20/key_rotation_report.json) — 2,033 records. **Retained `v3.1.0`, not in tree:** the 2,239-record run | Three independent local signer instances; no real orchestrator/secret-manager acceptance |
+| ML-DSA timing | `tools/benchmarks/run_pqc_timing.py` | **Retained `v3.1.0`-era, not in tree.** The harness writes `evidence/pqc_timing_report.json` when rerun | 1M samples per operation; `sign` non-detection, `verify` failure; no constant-time claim |
+| Bounded SSE transformation | `benchmarks/bench_streaming_sse.py` | **In tree:** [`evidence/commercial_phase2_streaming_benchmark.json`](../../evidence/commercial_phase2_streaming_benchmark.json) | Seven local rounds of 1,000 events; excludes network and WAL durability latency |
 
 ## Reproduction commands
 

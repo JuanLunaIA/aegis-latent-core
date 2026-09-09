@@ -95,6 +95,48 @@ Read carefully:
 
 The useful conclusion is that the system fails correctly under storage pressure, not that it handles 10k RPS.
 
+### Two backpressure runs, and which one you can reproduce
+
+There are two distinct injected-`fsync` runs in this repository's history. They are
+different measurements of different workloads, not competing figures for one test, and
+neither supersedes the other:
+
+| Run | Workload | p99 commit latency | Raw artifact |
+|---|---|---|---|
+| Retained `v3.1.0` historical | 10,000 offered requests over 32.4 s, 2 ms injected `fsync` | 1,189.89 ms | **Not committed to this tree.** The figure comes from the retained v3.1.0 release evidence |
+| In-tree reproducible baseline (2026-08-20) | 2,500 offered requests over 0.25 s at 10k RPS offered, 2 ms injected `fsync` | 836.35 ms | [`evidence/execution_2026-08-20/backpressure_stall_report.json`](../../evidence/execution_2026-08-20/backpressure_stall_report.json) |
+
+**Cite whichever you rely on, with its workload and its artifact status.** Quoting one
+run's latency beside the other's request count produces a number that was never measured.
+The 2,500-request run is the one a reader can re-derive from this repository; the
+10,000-request run is a historical observation whose raw JSON is not here to check, which
+is a limitation of that figure and is stated wherever it appears.
+
+Both used a 2 ms *injected* delay. Neither is a measurement of real storage, and neither
+is accepted capacity — see the boundaries below.
+
+The full percentile set for the in-tree run, so it can be cited without opening the file:
+p50 167.290 ms, p95 504.704 ms, p99 836.351 ms, max 2,290.622 ms, over a 0.25 s offered
+window that took 6.630 s to drain, with 2,501 `fsync` calls and a maximum in-flight of
+2,407. Integrity valid, zero failures, zero missing identifiers, zero duplicates.
+
+### The same split applies to key rotation
+
+The key-rotation harness has the same shape, and the two figures circulate in the corpus
+for the same reason:
+
+| Run | Records | Raw artifact |
+|---|---|---|
+| Retained `v3.1.0` historical | 2,239 across three local signer instances | **Not committed to this tree** |
+| In-tree reproducible baseline (2026-08-20) | 2,033 over 0.5 s; `key-old` 701, `key-new` 1,332 | [`evidence/execution_2026-08-20/key_rotation_report.json`](../../evidence/execution_2026-08-20/key_rotation_report.json) |
+
+Both observed zero failed commits, zero unverifiable records, both key IDs, and keyring
+mode `0o600`. Neither establishes secret-manager propagation or orchestrator acceptance.
+
+The ML-DSA timing artifact has **no** in-tree counterpart: the retained `p=0.852` / `p=0.0`
+figures are `v3.1.0`-era, and rerunning the harness produces a new measurement rather than
+reproducing that one. Say so whenever those numbers are quoted.
+
 ## 8. Reproducing
 
 ```bash

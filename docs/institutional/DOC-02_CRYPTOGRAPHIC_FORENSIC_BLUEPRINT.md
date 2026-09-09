@@ -61,6 +61,8 @@ The blueprint assumes that every external component may fail or be misconfigured
 | ML-KEM-1024 | Optional `kyber_py.kyber.Kyber1024` key generation, encapsulation, and decapsulation | `aegis/core/mlkem_session.py:24-49,87-151` | `tests/test_mlkem_session.py:23-176` | Tests skip when `kyber-py` is absent; package is not declared in the project PQ extra. |
 | Hybrid KEM | X25519 and ML-KEM-1024 shared secrets concatenated into HKDF-SHA256, 32-byte output, fixed info string | `aegis/core/pqc_tls.py:35-46,110-122,128-204` | `tests/test_pqc_tls.py:31-158` | Standalone exchange helper, not an integrated authenticated TLS handshake. |
 | RFC 3161 imprint | SHA-256 over sorted compact JSON; DER SHA-256 MessageImprint and nonce request | `aegis/core/rfc3161_timestamper.py:52-186,370-448,512-515` | `tests/test_rfc3161_timestamper.py:113-153,382-445,509-528` | Verification does not validate TSA signature or certificate chain. |
+| Envelope encryption for erasure (not wired into the ledger) | AES-256-GCM from `cryptography`, 96-bit `os.urandom` nonce per seal, subject id bound as associated data; commitment is `SHA-256(0x00 \|\| nonce \|\| ciphertext)` | `aegis/core/crypto_shredder.py` (`CryptoShredder.seal`, `SealedPayload.commitment`) | `tests/test_crypto_shredder.py` | No hand-rolled primitive: no bespoke commitment scheme, curve arithmetic, or custom KDF. `CryptographicAuditLedger` commits payload digests directly and does not use this. §6.2; `CLM-068`. |
+| Causal-Merkle CRDT accumulator (not wired into the ledger) | Domain-separated MMR (`0x00`/`0x01`/`0x02`) over leaves committing `replica_id`, a length-prefixed vector clock, and the payload | `aegis_rust_v2/src/crdt_mmr.rs` (`VectorClock`, `CausalLeaf`, `CausalMmr`) | Rust `mod tests` in the same file; `tests/test_crdt_mmr.py` | A convergent accumulator, not a deployment: no transport, membership, or persistence, and `join` orders replicas rather than adjudicating between them. `DOC-01 §8.8`; `CLM-066`. |
 
 ## 5. Implementation-matched mathematical definitions
 
@@ -150,6 +152,52 @@ Inclusion verification recomputes the sibling path, checks that the result equal
 The method named `get_consistency_proof` reconstructs old peak hashes and returns them in `MerkleMountainRange.get_consistency_proof`. If the supplied old root differs from the reconstruction, the method logs a warning but still returns a proof (the mismatch branch of `get_consistency_proof`). If reconstruction raises, it falls back to current peaks (the reconstruction-failure branch of `get_consistency_proof`). No separate production verifier for these returned consistency data is present. Accordingly, this blueprint describes **prefix-peak reconstruction data**, not a complete independently verified consistency-proof protocol.
 
 The hybrid Rust wrapper returns the Rust root while using a Python replica for proofs in the hybrid wrapper returned by `aegis/core/mmr.py`. Root parity is thus a required invariant. `tests/test_mmr_parity.py:42-64` checks selected leaf counts when the extension is importable, and the module explicitly skips otherwise at `tests/test_mmr_parity.py:27-39`.
+
+### 6.1 The `.mmr.state` peak-set checkpoint and O(log N) restart restore
+
+Rebuilding an accumulator by replaying `N` leaves costs O(N log N) time and holds O(N) interior nodes in memory. A peak set is the complete summary of those leaves for the three things the accumulator does after a restart: append, compute the root, and prove inclusion of leaves appended *next*. `MerkleMountainRange.restore_from_peaks` reseats an empty accumulator directly on that set, at O(|peaks|) = O(log N).
+
+**The artifact.** `CryptographicAuditLedger` writes `<persistence_path>.mmr.state` beside the active WAL (`_mmr_state_path`, `_save_mmr_state`). The document is canonical JCS bytes over `version`, `leaf_count`, `peaks` in descending height, and `bagged_root`, plus a `state_checksum` that is `SHA-256` over the canonical encoding of exactly those fields. It is written to `<target>.tmp` at mode `0600`, flushed, `fsync`ed, `os.replace`d, and the containing directory is then `fsync`ed as well, because a rename is durable only once its directory entry is synced.
+
+**Its correctness posture is that it may be wrong.** `_save_mmr_state` never raises: a checkpoint is an optimisation, and a ledger that could not write one is still fully correct, because it replays on the next start. `_load_mmr_state` returns `None` for *every* failure mode — absent, unreadable, not an object, wrong version, failing its own checksum, or malformed peaks — since all of them have the same remedy. A checkpoint describing more leaves than the WAL holds is refused rather than trusted.
+
+**Acceptance is by root equality, not by trust in the file.** `_restore_mmr` restores the checkpointed prefix, replays the leaves committed after it, and accepts the result **only if the final root equals the root the last committed node recorded in the WAL**. A disagreement discards the fast-path accumulator entirely and replays every leaf. The checkpoint therefore cannot introduce a root the WAL does not already attest.
+
+| Property | Status | Boundary |
+|---|---|---|
+| Restore is O(log N) in the summarised leaf count | `IMPLEMENTED` and `LOCALLY TESTED` | An asymptotic property of the algorithm, not a wall-clock measurement; no startup-time benchmark is recorded |
+| Restored root equals full replay across tree shapes | `IMPLEMENTED` and `LOCALLY TESTED` | `tests/test_mmr_state_continuity.py::test_fast_restore_across_tree_shapes`, `::test_restore_then_append_equals_uninterrupted_append` |
+| Every checkpoint failure mode falls back to replay | `IMPLEMENTED` and `LOCALLY TESTED` | `::test_a_broken_checkpoint_falls_back_to_replay`, `::test_a_stale_checkpoint_replays_only_the_leaves_after_it` |
+| Historical in-memory inclusion proofs after a fast restore | `IMPLEMENTED` limitation | Summarised leaves raise `MMRHistoricalLeafUnavailableError` — see below |
+| Physical durability of the checkpoint file | `CONFIGURATION-DEPENDENT` | `fsync` on file and directory is requested; the storage stack's honouring of it is a target-acceptance item, as for the WAL itself |
+
+**What is given up, precisely.** Restoring from peaks discards the interior nodes of the leaves it summarises, so `get_inclusion_proof` raises `MMRHistoricalLeafUnavailableError` for them — it refuses rather than returning a partial path (`::test_historical_leaves_refuse_rather_than_return_a_partial_path`). Nothing forensic is lost: every committed node stores its own self-contained `mmr_proof`, which verifies against a trusted root without this instance, and the ledger only ever asks the live accumulator to prove the leaf it just appended. Proofs *issued after* a restore are unaffected, because the portable verifier is structural — it derives peak heights from the set bits of `leaf_count` — so it cannot distinguish an appended accumulator from a restored one.
+
+Because that trade is the operator's to make, the fast path is **opt-in and off by default**: it is taken only when `mmr_fast_restore=True` is passed, and the default continues to replay every leaf and keep historical proofs (`::test_default_still_replays_and_keeps_historical_proofs`). The checkpoint file is written either way, so enabling the flag requires no migration.
+
+### 6.2 Cryptographic erasure: committing to ciphertext so the tree does not move
+
+An append-only Merkle ledger and an erasure request pull in opposite directions. Deleting a committed record rewrites every downstream hash, invalidates the root, and makes the ledger's own integrity check report an untampered chain as corrupt. `aegis/core/crypto_shredder.py` addresses that by changing *what is committed* rather than by deleting anything: the ledger would commit to a ciphertext, and erasure destroys the key.
+
+\[
+c = \operatorname{AESGCM}_{k_s}(\text{nonce},\, m,\, \text{ad}=\operatorname{UTF8}(s)), \qquad
+\mathrm{commitment} = \operatorname{SHA256}(\texttt{0x00} \mathbin{\|} \text{nonce} \mathbin{\|} c).
+\]
+
+Four construction choices carry the security argument, and each is deliberate:
+
+1. **Standard primitives only.** AES-256-GCM from the `cryptography` library. There is no bespoke commitment scheme, no curve arithmetic, and no custom KDF anywhere in the module. An unaudited pairing-friendly curve would have been a larger claim on a smaller evidence base.
+2. **One key per subject, from `AESGCM.generate_key(bit_length=256)`.** Erasure must be per-subject, and a shared key would make one erasure destroy every subject's records.
+3. **A fresh 96-bit `os.urandom` nonce per seal, never derived from data.** GCM nonce reuse under one key is catastrophic; `tests/test_crypto_shredder.py::test_each_seal_uses_a_fresh_nonce` pins it.
+4. **The commitment covers the nonce, under the `0x00` leaf tag.** Committing to the ciphertext alone would leave the nonce free to be swapped, and GCM authenticates a ciphertext under a *given* nonce. The tag matches `aegis-mmr-inclusion-v2` (§4), so a commitment cannot be confused with an interior node.
+
+The subject id is bound as associated data, so a ciphertext cannot be replayed under a different subject even by a holder of both keys, and a re-sealed subject cannot open its own pre-erasure records — both are asserted by test.
+
+**The property the design exists for** is `TestTreeInvariance`: after a subject's key is destroyed, the MMR root, its peak list, and every previously issued inclusion proof are bit-for-bit what they were, while the plaintext is unrecoverable. Erasing *every* subject still leaves the tree intact.
+
+**What destroying the key does and does not establish.** It makes the plaintext unrecoverable **to a holder of the ciphertext**, at the strength of AES-256-GCM. That is the entire claim. It is **not** a statement that key material is gone from the physical medium: allocator copies, the SQLite rollback journal, filesystem journaling, page cache, swap, snapshots, backups, replicas, and an SSD's wear-levelling and over-provisioned blocks are all outside a CPython process's control, and `str` keys cannot be zeroized at all. The `bytearray` scrub in `erase` is hygiene against a casual memory scrape; the `VACUUM` after the delete rewrites the database file so the freed page is not left sitting in it, which `::test_the_erased_key_is_not_left_in_the_vault_file` checks and which is named in that test as the weaker property it is. A deployment that needs a destruction guarantee must hold key material in an HSM or a KMS with key deletion, or place the vault on media the operator can sanitise, and obtain target acceptance.
+
+Two further boundaries. The module is **not wired into `CryptographicAuditLedger`**, which commits payload digests directly, so no deployed chain behaves this way today (`CLM-068`). And **no regulatory conclusion follows** from any of it: this volume describes a mechanism, it is not legal advice, and the erasure-obligation analysis stays where it belongs, in `DOC-05 §5.8`.
 
 ## 7. SHA-256, BLAKE3, and HMAC boundaries
 

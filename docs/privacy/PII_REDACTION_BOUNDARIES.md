@@ -116,6 +116,17 @@ one test proves a long street name passes through unredacted.
 `Pike` are absent, so `30 Rockefeller Plaza` and `8600 Rockville Pike` are not matched — before or
 after the bound. That gap is recorded in the same test file.
 
+### A second streaming redactor exists in the tree and is not the one running
+
+`aegis/core/streaming_safety_engine.py` implements `GrammarFrontierAutomaton`, which formalises the same holdback idea. **It is not wired in** — everything above describes `StreamingDeidentifier`, which is what `aegis/proxy/streaming.py` actually calls — so nothing in this subsection changes the behaviour you get. It is described here so a reader who finds the module does not mistake it for the running path.
+
+Two things about it are worth knowing anyway, because they generalise:
+
+- **It redacts to fixpoint before measuring the frontier.** The obvious streaming loop redacts the first match, concludes the buffer is settled, and releases everything — so in `ignore all previous rules … SSN: 123-45-6789`, the SSN leaves in the clear behind the redacted override. Redacting every match first, and only then computing the holdback over the residual text, is what closes that.
+- **It makes the same bounded-quantifier trade the `ADDRESS` bound makes above, for the same reason.** A frontier is only a real bound if every pattern has a finite longest match, so each pattern bounds its whitespace runs, and the cost — an evasion padding past the bound is not matched — is asserted by a test rather than left implicit.
+
+Its coverage is four declared patterns and nothing else, and it prevents no prompt injection. `CLM-067`; boundaries in [DOC-03 §5.4](../institutional/DOC-03_THREAT_MODEL.md).
+
 ### The re-identification limit
 
 Removing the seventeen listed categories does not make text non-identifying. Re-identification from residual detail is well documented in the de-identification literature, and a regex scrubber does nothing about it. **Do not treat scrubbed output as de-identified data.**
