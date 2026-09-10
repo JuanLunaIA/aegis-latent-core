@@ -69,6 +69,10 @@ def _make_storage() -> MagicMock:
     storage.get_latest_node = AsyncMock(return_value=None)
     storage.get_node = AsyncMock(return_value=None)
     storage.write_node = AsyncMock()
+    # The analytics path appends through write_node_atomic: a bare
+    # write_node cannot prevent two concurrent tasks from linking to the
+    # same predecessor and forking the chain.
+    storage.write_node_atomic = AsyncMock()
     return storage
 
 
@@ -529,7 +533,7 @@ async def test_run_forensic_analytics_basic():
         app_state=None,
     )
 
-    storage.write_node.assert_called_once()
+    storage.write_node_atomic.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -551,7 +555,7 @@ async def test_run_forensic_analytics_empty_response():
         app_state=None,
     )
 
-    storage.write_node.assert_called_once()
+    storage.write_node_atomic.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -573,7 +577,7 @@ async def test_run_forensic_analytics_invalid_json_response():
         app_state=None,
     )
 
-    storage.write_node.assert_called_once()
+    storage.write_node_atomic.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -621,16 +625,16 @@ async def test_run_forensic_analytics_signing_failure_continues():
         app_state=None,
     )
 
-    storage.write_node.assert_called_once()
-    call_kwargs = storage.write_node.call_args[1]
+    storage.write_node_atomic.assert_called_once()
+    call_kwargs = storage.write_node_atomic.call_args[1]
     assert call_kwargs["node_data"]["is_fallback"] is True
 
 
 @pytest.mark.asyncio
 async def test_run_forensic_analytics_storage_write_failure_continues():
-    """When storage.write_node raises, analytics logs but doesn't propagate."""
+    """When the append raises, analytics logs but doesn't propagate."""
     storage = _make_storage()
-    storage.write_node = AsyncMock(side_effect=RuntimeError("disk full"))
+    storage.write_node_atomic = AsyncMock(side_effect=RuntimeError("disk full"))
     signer = _make_signer()
 
     await _run_forensic_analytics(
@@ -673,7 +677,7 @@ async def test_run_forensic_analytics_with_mmr():
     )
 
     mock_mmr.add_leaf.assert_called_once()
-    storage.write_node.assert_called_once()
+    storage.write_node_atomic.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -701,7 +705,7 @@ async def test_run_forensic_analytics_mmr_failure_falls_back():
         app_state=mock_app_state,
     )
 
-    storage.write_node.assert_called_once()
+    storage.write_node_atomic.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -741,7 +745,7 @@ async def test_run_forensic_analytics_single_logprob_deterministic():
         app_state=None,
     )
 
-    storage.write_node.assert_called_once()
+    storage.write_node_atomic.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -765,7 +769,7 @@ async def test_run_forensic_analytics_prev_hash_from_storage():
         app_state=None,
     )
 
-    call_kwargs = storage.write_node.call_args[1]
+    call_kwargs = storage.write_node_atomic.call_args[1]
     assert call_kwargs["node_data"]["prev_hash"] == prev_node_id
 
 
@@ -789,7 +793,7 @@ async def test_run_forensic_analytics_prev_hash_exception_continues():
         app_state=None,
     )
 
-    call_kwargs = storage.write_node.call_args[1]
+    call_kwargs = storage.write_node_atomic.call_args[1]
     assert call_kwargs["node_data"]["prev_hash"] == "0" * 64
 
 
@@ -1023,7 +1027,7 @@ async def test_run_forensic_analytics_logprob_extraction_exception():
         app_state=None,
     )
 
-    storage.write_node.assert_called_once()
+    storage.write_node_atomic.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -1068,4 +1072,4 @@ async def test_run_forensic_analytics_entropy_exception():
             app_state=None,
         )
 
-    storage.write_node.assert_called_once()
+    storage.write_node_atomic.assert_called_once()
