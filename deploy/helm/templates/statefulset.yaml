@@ -73,6 +73,17 @@ spec:
                   fieldPath: metadata.labels['apps.kubernetes.io/pod-index']
             - name: AEGIS_GOSSIP_INTERVAL_SECONDS
               value: {{ .Values.gossip.intervalSeconds | quote }}
+            # The inbound listener. Must equal the containerPort above and the
+            # port the peer list is written against, or every peer's exchange
+            # is refused by a replica that looks healthy from its own side.
+            - name: AEGIS_GOSSIP_BIND_PORT
+              value: {{ .Values.gossip.port | quote }}
+            # All interfaces inside the pod: peers reach this through the
+            # headless Service's per-pod DNS name, and what protects the
+            # listener is the mandatory client certificate, not the bind
+            # address. Narrow the reachable set with a NetworkPolicy.
+            - name: AEGIS_GOSSIP_BIND_HOST
+              value: "0.0.0.0"
             - name: AEGIS_GOSSIP_CERTIFICATE_AUTHORITY
               value: {{ printf "%s/ca.crt" .Values.gossip.tls.mountPath | quote }}
             - name: AEGIS_GOSSIP_CLIENT_CERTIFICATE

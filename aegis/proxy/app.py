@@ -380,6 +380,10 @@ class _AppState:
     s3_archiver: S3WormArchiver | None
     rfc3161_client: RFC3161AnchorClient | None
     archive_task: asyncio.Task[None] | None
+    # Cross-replica CRDT reconciliation. None whenever gossip is off, which is
+    # the default. It reconciles an accumulator that is separate from the audit
+    # ledger, so nothing on the evidence path reads this.
+    gossip: Any
 
     def get_analyzer(self, session_id: str) -> ResponseAnalyzer:
         return self.analyzers.get(session_id)
@@ -875,6 +879,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             evidence_dir=cfg.tsa_evidence_dir,
         )
     state.archive_task = None
+    state.gossip = None
 
     # FIX-APP-02: pre-initialise entropy guard singletons.
     # These objects are stateless across requests; constructing them once avoids
@@ -998,6 +1003,22 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         # Principal-first mTLS accepts direct TLS state or headers from an
         # explicitly allowlisted immediate proxy only.
 
+        # ── Cross-replica gossip (before seccomp, and for a reason) ─────────
+        # Starting the mesh reads three PEM files and binds a listener. Both
+        # need syscalls the filter below is about to forbid, and doing it
+        # afterwards fails looking like a TLS fault. Off by default.
+        try:
+            from aegis.consensus.runtime import start_gossip
+
+            state.gossip = await start_gossip(cfg)
+        except Exception as exc:
+            if cfg.security_enforcement_mode == "strict":
+                raise RuntimeError(f"gossip was enabled but could not start: {exc}") from exc
+            # Not silently skipped: a replica asked to join a mesh that did not
+            # join looks healthy while diverging from every peer.
+            logger.error("gossip was enabled but could not start; continuing without it: %s", exc)
+            state.gossip = None
+
         # ── Seccomp lockdown (applied LAST, after all subsystems init) ──────
         # Warm the Rust async runtime so its worker pool exists before we forbid
         # clone()/clone3(); then apply the strict syscall filter.  At this point
@@ -1025,6 +1046,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         app.state.aegis = state
         yield
 
+        if state.gossip is not None:
+            # First on the way down: a peer's round against a listener that is
+            # already gone logs a failure that reads like a fault and is only
+            # shutdown.
+            await state.gossip.aclose()
+            state.gossip = None
         for worker in state.analysis_workers:
             worker.cancel()
         if state.archive_task is not None:

@@ -50,6 +50,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -75,6 +76,7 @@ __all__ = [
     "a2a_envelope_bytes",
     "a2a_leaf_hash",
     "generate_receipt",
+    "verify_cluster_receipt",
     "verify_receipt",
 ]
 
@@ -376,3 +378,61 @@ def verify_receipt(receipt: AgentReceipt | dict[str, Any], trusted_root: str) ->
         return False
 
     return MerkleMountainRange.verify_portable_inclusion_hash(leaf_hash, proof, trusted_root)
+
+
+def verify_cluster_receipt(
+    receipt: AgentReceipt | dict[str, Any],
+    cluster_roots: Mapping[str, str],
+) -> str | None:
+    """Verify a receipt against a set of per-replica ledger roots.
+
+    A cluster does not have *a* root. Each replica keeps its own single-writer
+    WAL and its own accumulator, so a receipt issued by one replica verifies
+    under that replica's root and under no other (`CLM-012`). A holder handed a
+    receipt by "the cluster" therefore has to try each replica's root, which is
+    what this does.
+
+    Args:
+        receipt: The receipt to check.
+        cluster_roots: Replica name to that replica's **ledger** MMR root, each
+            obtained independently of whoever supplied the receipt.
+
+    Returns:
+        The name of the replica whose root the receipt verifies under, or
+        ``None`` if no supplied root verifies it. A name rather than a bool
+        because *which* replica holds the record is the operationally useful
+        answer — it is where an auditor goes for the surrounding evidence.
+
+    **The roots here are ledger roots, not gossip roots.** This is the single
+    easiest way to misuse the cluster surface, so it is stated plainly: the
+    anti-entropy mesh in ``aegis.consensus`` reconciles the ``CausalMmr``
+    *accumulator*, which is a different structure from the ledger's MMR and has
+    a different root. Passing a gossip root here cannot verify anything and
+    will simply return ``None``; it must never be read as the cluster
+    disagreeing.
+
+    **A match is one replica's word, not the cluster's.** This establishes that
+    one ledger in the supplied set recorded the envelope. It is not a quorum,
+    not agreement, and not corroboration: replicas do not attest to each
+    other's ledgers, so a receipt matching one root says exactly what
+    :func:`verify_receipt` says against that root, and nothing more.
+
+    **Independent roots remain the whole basis of trust.** Collecting the root
+    set from the same party that supplied the receipt establishes internal
+    consistency only, exactly as in :func:`verify_receipt`. Widening the search
+    across replicas does not weaken that requirement and does not substitute
+    for it.
+    """
+    if not cluster_roots:
+        logger.warning("A2A cluster receipt rejected: no roots supplied")
+        return None
+    for replica, root in cluster_roots.items():
+        if not replica:
+            # An unnamed replica would return a falsy name on success, which a
+            # caller writing `if verify_cluster_receipt(...)` would read as a
+            # failure. Refuse the entry rather than hand back that ambiguity.
+            logger.warning("A2A cluster receipt: ignoring a root with an empty replica name")
+            continue
+        if verify_receipt(receipt, root):
+            return replica
+    return None

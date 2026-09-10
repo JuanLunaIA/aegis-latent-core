@@ -279,7 +279,8 @@ impl CausalMmr {
         merged_clock.merge(&other.clock);
 
         let mut seen: BTreeSet<[u8; 32]> = BTreeSet::new();
-        let mut leaves: Vec<CausalLeaf> = Vec::with_capacity(self.leaves.len() + other.leaves.len());
+        let mut leaves: Vec<CausalLeaf> =
+            Vec::with_capacity(self.leaves.len() + other.leaves.len());
         for leaf in self.leaves.iter().chain(other.leaves.iter()) {
             if seen.insert(leaf.digest()) {
                 leaves.push(leaf.clone());
@@ -354,14 +355,20 @@ impl std::fmt::Display for StateDecodeError {
             }
             Self::BadMagic => write!(f, "not an aegis CRDT state, or a different format version"),
             Self::TooManyLeaves(n) => {
-                write!(f, "state declares {n} leaves; the ceiling is {MAX_STATE_LEAVES}")
+                write!(
+                    f,
+                    "state declares {n} leaves; the ceiling is {MAX_STATE_LEAVES}"
+                )
             }
             Self::TooManyClockEntries(n) => write!(
                 f,
                 "leaf clock declares {n} entries; the ceiling is {MAX_CLOCK_ENTRIES}"
             ),
             Self::NonCanonicalClock => {
-                write!(f, "clock entries are not in strictly ascending replica order")
+                write!(
+                    f,
+                    "clock entries are not in strictly ascending replica order"
+                )
             }
             Self::TrailingBytes(n) => write!(f, "{n} unconsumed bytes after the final leaf"),
         }
@@ -719,10 +726,7 @@ mod tests {
     fn all_replicas_converge_regardless_of_merge_order() {
         for seed in 1..30u64 {
             let rs = arbitrary_replicas(seed, 4);
-            let forward = rs
-                .iter()
-                .skip(1)
-                .fold(rs[0].clone(), |acc, r| acc.join(r));
+            let forward = rs.iter().skip(1).fold(rs[0].clone(), |acc, r| acc.join(r));
             let backward = rs
                 .iter()
                 .rev()

@@ -24,6 +24,7 @@ mod hasher;
 mod ledger;
 mod mmr;
 mod pqc;
+mod pqc_trait;
 mod rate_limit;
 mod session;
 mod waf;

@@ -515,6 +515,25 @@ class AegisSettings(BaseSettings):
             "cost of a longer interval is how stale a replica may be, not bandwidth."
         ),
     )
+    gossip_bind_host: str = Field(
+        default="0.0.0.0",  # noqa: S104
+        description=(
+            "Interface the inbound gossip listener binds. Defaults to all interfaces "
+            "because the mesh is reached by pod DNS, and the boundary that protects it "
+            "is the mandatory client certificate rather than the bind address; narrow "
+            "it further with a NetworkPolicy or by setting a specific address."
+        ),
+    )
+    gossip_bind_port: int = Field(
+        default=9443,
+        ge=1,
+        le=65_535,
+        description=(
+            "Port for the inbound gossip listener. Separate from the gateway's port on "
+            "purpose: customer traffic and replica traffic never share a listener, so "
+            "one misconfiguration cannot expose both."
+        ),
+    )
     gossip_client_certificate: str = Field(
         default="",
         description="PEM certificate this replica presents to peers, in both directions.",

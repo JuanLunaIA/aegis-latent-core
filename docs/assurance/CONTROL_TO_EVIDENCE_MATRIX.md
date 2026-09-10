@@ -38,7 +38,7 @@
 | Durable write ordering | `_persist_node` | Durable-evidence tests | Both | `fsync` success is not power-loss durability without protected storage |
 | Single-writer enforcement | `_lock_wal_fd`, `WalWriterConflictError` | `tests/security/test_wal_single_writer.py` | Both | POSIX-only; `flock` is advisory and per-inode |
 | Streaming terminal commit | `aegis/proxy/streaming.py` | `tests/test_proxy_streaming.py` | Project | A client that ignores the terminal marker accepts unevidenced streams |
-| Corruption detection | `_load_from_wal` | `tests/test_reliability.py` | Project | Commits remain permitted after `wal_corrupt`; the request path does not check fault state |
+| Corruption detection | `_load_from_wal`; `_require_intact_ledger` | `tests/test_reliability.py`; `tests/test_app_wal_corrupt.py` | Project | Replay marks `wal_corrupt`, and governed traffic is then refused with `503` at ingress before any forwarding or commit; scoped to the JSONL WAL and to faults replay actually detects (`CLM-059`) |
 | Node signing | `aegis/core/crypto_audit.py` | Crypto tests | Both | HMAC is symmetric: authenticity relative to key custody, not non-repudiation |
 | Inclusion proofs | `aegis/core/mmr.py` | `tests/test_mmr_portable.py`; both SDK verifiers | Project | Requires an independently obtained root; discloses the leaf |
 

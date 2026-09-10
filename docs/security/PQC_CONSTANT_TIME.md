@@ -51,6 +51,52 @@ Blocked without implementation review, dependency review, build reproducibility,
 
 The source-level signer correctly refuses to fabricate ML-DSA signatures when the Rust backend is unavailable. A release build was loaded and measured with 1,000,000 interleaved samples per operation. In the retained historical `v3.1.0`-era v2 artifact, `sign` produced `p = 0.8521504207157158` and met the experiment’s non-detection threshold; `verify` produced `p = 0.0` with a measured mean delta of `540.5259299977988 ns`, so the verify experiment did not meet the threshold. This result is not a constant-time proof or a diagnosis of secret leakage: the current verifier decodes public key and signature bytes on every call, and the experiment varied valid signatures over a fixed message. The release gate for any constant-time claim remains closed until the verifier boundary is reviewed and rerun under the declared protocol.
 
+## Two implementations, one result — what the verify experiment is measuring
+
+**[MEASURED]** 2026-09-10, this repository's own hardware, interleaved two-class
+timing at 40,000 (`verify`) and 20,000 (`sign`) samples, both signing arms
+hedged. Sample sizes are far below the 1,000,000 this document requires for a
+*release* claim; they are reported here to compare two implementations against
+each other, which is a different question from certifying either.
+
+| operation | `pqcrypto-mldsa` (PQClean C) | `ml-dsa` (pure Rust) |
+| --- | --- | --- |
+| verify, mean | 45,961 ns | 65,805 ns |
+| verify, class delta | −644 ns | −1,128 ns |
+| verify, p | 0.0000 | 0.0000 |
+| sign, mean | 135,443 ns | 650,361 ns |
+| sign, class delta | +256 ns | +1,152 ns |
+| sign, p | 0.8399 | 0.8828 |
+
+This corrects a conclusion previously recorded in `aegis_rust_v2/src/pqc.rs`.
+That file said closing the `verify` gap "requires a verifier that does not exit
+early — an upstream change in `pqcrypto-mldsa` or a different implementation".
+A different implementation has now been measured, and it shows the same
+`p = 0.0000` with a *larger* class delta. The proposed remedy does not work, and
+the reason it does not is worth stating rather than filing as a surprise.
+
+When two independent implementations of one specification produce the same
+result, the effect belongs to the experiment rather than to either
+implementation. The `verify` experiment's two classes are **one repeated
+signature versus 1024 varying signatures, all of them valid**, over a fixed
+message — that is, two sets of *public* inputs. And ML-DSA verification consumes
+no secret: its inputs are a public key, a public message and a public signature.
+A timing difference across public inputs discloses nothing those inputs did not
+already disclose. It is consistent with cache residency and with ML-DSA
+verification cost varying with signature contents, both properties of public
+data.
+
+Signing is the operation that touches the secret key, and signing meets the
+non-detection threshold on both backends.
+
+**What this does not license.** No constant-time claim, on either backend, for
+either operation. These are sample statistics from one shared-CPU machine at
+sample sizes below this document's own threshold; they are not an absence proof,
+and they say nothing about microarchitectural leakage, compiler behaviour, key
+generation, or the hardware of any deployment. The release gate defined above is
+unchanged and remains closed. What the measurement does establish is narrower
+and still useful: **swapping the implementation is not a route to opening it.**
+
 ## Falsification
 
 The claim is falsified within the declared envelope by a statistically significant class-dependent timing difference, a failed signature-class control, unexplained run divergence, sample imbalance, noisy or unisolated execution, missing raw samples, changed compiler/crate/build flags, or a reviewer finding that the measured function is not the deployed function.

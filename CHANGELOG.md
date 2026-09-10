@@ -15,6 +15,194 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — four documentation statements that contradicted the code or each other
+
+A conflict audit put ten alleged contradictions to the corpus. Six of them were
+already correct and are recorded here so nobody re-opens them: the wiring status
+of `GrammarFrontierAutomaton` (wired, on by default) and `CryptoShredder`
+(wired, off by default) is stated accurately in `ARCHITECTURE.md`; the two
+benchmark runs are already delineated, and no document pairs the 10,000-request
+count with the 836 ms latency; `AEGIS_MMR_HASH_SCHEME` is already documented as
+defaulting to `auto` in both places; pre-admission rejection nodes are already
+specified in `CLM-060`; "the gateway ships from source only" already appears
+nowhere except in the register of forbidden phrasings; and the fourteen version
+anchors already agree — at `4.3.0`.
+
+Four statements were genuinely wrong, two of which the audit did not name:
+
+- **npm SDK version.** `README.md` contradicted *itself*: its release banner
+  recorded the 2026-09-04 readback of npm `aegis-latent-sdk` `4.1.2`, while a
+  later section said npm "still carries `4.0.0`". Corrected there and in
+  `SUPPORT_MODEL.md` and `PROCUREMENT_CHECKLIST.md`. `BUYER_GUIDE_US.md` also
+  says `4.0.0`, and is left alone: it describes the historical `v4.0.x`
+  baseline, where that was the observation.
+- **WAL corruption semantics.** `AUDIT_ENDPOINTS.md`, `SECURITY_CONTROLS.md`
+  and `CONTROL_TO_EVIDENCE_MATRIX.md` still said commits remain permitted after
+  `wal_corrupt` and that the request path does not check the fault state.
+  `_require_intact_ledger` has refused all three governed endpoints with `503`
+  since 2026-09-03.
+- **`DOC-01` disagreed with itself.** Its Table 2 had been corrected and says so
+  explicitly; two later rows — falsification test `DOC01-FALS-007` and risk
+  `DOC01-RISK-003` — still described the superseded fail-open behaviour.
+  `DOC01-RISK-003` is now the risk that actually remains: corruption that replay
+  parses successfully raises no fault, so the ingress guard never fires.
+- **`FAQ_TECHNICAL.md` said there is no gossip transport.** There is one now,
+  and the gateway starts it. Rewritten to say what did *not* change, which is
+  the part that matters: the mesh reconciles the CRDT accumulator, not the
+  ledger.
+
+
+### Added — an ML-DSA backend seam, and a measurement that corrects two of our own conclusions
+
+`pqcrypto-mldsa`, `pqcrypto-traits` and `pqcrypto-internals` carry
+`RUSTSEC-2026-0166`, `-0162` and `-0163` because upstream PQClean was archived.
+None is a defect; all three are unmaintained-status notices with no fixed
+version. `aegis_rust_v2/src/pqc_trait.rs` makes reacting to one cheap:
+`PostQuantumSigner` states the ML-DSA-65 contract in FIPS 204 byte encodings —
+bytes rather than types, because the two candidate crates model keys with
+incompatible type systems and the wire format is both what they agree on and
+what Aegis persists. `pqc.rs` now names only the selected backend, so the PyO3
+class, its methods and the exported FFI symbols are identical either way.
+
+Both backends are optional dependencies, so the swap genuinely *removes* the C
+stack rather than shadowing it: under `--no-default-features --features
+pure-rust-pqc` the dependency tree contains `ml-dsa` and none of
+`pqcrypto-mldsa`, `pqcrypto-traits`, `pqcrypto-internals` or `paste`.
+
+It does not strand evidence, and that is measured rather than assumed. The
+`cross_backend` tests (`cargo test --features pqc-compat-tests`) assert that
+`ml-dsa` verifies a PQClean signature, that PQClean verifies an `ml-dsa`
+signature, and that `ml-dsa` derives the **same** public key from the persisted
+4032-byte expanded secret — so nodes already in a WAL stay verifiable, a
+rollback stays open, and the durable signing identity survives without
+re-keying.
+
+**The default is unchanged, and that is the measurement's verdict.** On this
+repository's hardware, both signing arms hedged: verify 45,961 → 65,805 ns
+(1.43x), sign 135,443 → 650,361 ns (**4.80x**). Signing is per-commit work on
+the evidence path, so 4.8x is a real cost to pay against an advisory that
+reports no defect. The swap is a flag an operator takes deliberately.
+
+Two things we had written down turned out to be wrong, and both are corrected
+in place rather than quietly dropped:
+
+- `pqc.rs` said closing the `verify` timing gap "requires a verifier that does
+  not exit early — an upstream change in `pqcrypto-mldsa` or a different
+  implementation". A different implementation now measures at the **same**
+  `p = 0.0000` with a **larger** class delta. The proposed remedy does not work.
+- More usefully, it explains why. When two independent implementations of one
+  specification give the same result, the effect belongs to the experiment. The
+  `verify` experiment's classes are one repeated signature versus 1024 varying
+  ones, **all valid** — two sets of *public* inputs — and **ML-DSA verification
+  consumes no secret**: public key, public message, public signature. A timing
+  difference across public inputs discloses nothing they did not already
+  disclose. Signing, which does touch the secret key, meets the non-detection
+  threshold on both backends (`p = 0.8399` and `p = 0.8828`).
+
+No constant-time claim is made or lifted for either backend; the release gate in
+`docs/security/PQC_CONSTANT_TIME.md` stands closed. Recorded as `CLM-084`, with
+the roadmap in `docs/security/DEPENDENCY_RISK_REGISTER.md`.
+
+Also fixed: `cargo fmt --check` was failing on four pre-existing diffs in
+`aegis_rust_v2/src/crdt_mmr.rs`, unrelated to this change and unrelated to any
+behaviour. Reformatted so the gate passes.
+
+
+### Added — the gateway now starts the gossip mesh, and receipts can be checked across replicas
+
+`GossipDaemon` existed and converged, but nothing started it: enabling
+`AEGIS_GOSSIP_ENABLED` configured a mesh that never ran. `aegis/consensus/runtime.py`
+closes that. The gateway's lifespan now starts both halves — the daemon that
+reaches out to peers on a timer, and an mTLS listener on its own port that lets
+peers reach in — and stops them on shutdown, daemon first so a peer's in-flight
+round does not log a failure that is only shutdown.
+
+Placed **before** the seccomp filter, deliberately: reading the three PEM files
+needs `openat` and binding the listener needs a socket the filter is about to
+forbid, so starting it afterwards fails looking like a TLS fault. Two settings
+are new, `AEGIS_GOSSIP_BIND_HOST` and `AEGIS_GOSSIP_BIND_PORT`, and the Helm
+chart now renders them so the listener, the `containerPort` and the port the
+peer list is written against cannot drift apart.
+
+Misconfiguration is loud rather than silent. Each of the three PEM settings is
+checked by name before TLS sees it, a missing native `CausalMmr` is a startup
+failure rather than a Python stand-in that would compute roots no other replica
+agrees with, and the listener is waited on via `server.started` rather than a
+connect probe — the kernel accepts into the backlog as soon as the socket is
+bound, so a probe cannot tell "serving" from "bound but never scheduled". Under
+strict enforcement a failure to start is fatal; otherwise it is an error log and
+the gateway continues without the mesh. It is never skipped quietly: a replica
+asked to join a mesh that did not join looks healthy while diverging from every
+peer.
+
+`aegis.core.a2a.verify_cluster_receipt` is the verifier-side half. A cluster has
+no single root — each replica keeps its own single-writer WAL and its own
+accumulator — so it searches a supplied set of per-replica **ledger** roots and
+returns the name of the replica whose root verifies the receipt, which is where
+an auditor goes for the surrounding evidence. Two boundaries are stated in the
+code and in `CLM-083` because both are easy to get wrong: a match is *one
+replica's word, not the cluster's* — replicas do not attest to each other's
+ledgers, so this is not a quorum and not corroboration — and the roots are
+**ledger** roots, not gossip roots, since the mesh reconciles a different
+structure whose root cannot verify a receipt at all.
+
+Recorded as `CLM-083`; `CLM-080` updated to say the mesh is started by the
+gateway rather than merely importable.
+
+
+### Changed — concurrent WAL commits now share one `fsync` (group commit)
+
+A commit did not return until its record was `fsync`ed, and that `fsync` was
+issued **inside the ledger lock**, one per record. So concurrent commits did not
+merely each pay for a device round trip — they paid for them *in series*. Under
+32 concurrent writers, measured on this repository's own filesystem, that was
+p99 55.5 ms and 1,065 commits/s.
+
+`aegis/core/group_commit.py` coalesces them. An `fsync` makes everything already
+written to the descriptor durable, not just the caller's own record, so one call
+can retire a whole burst. Records are written and ordered under the ledger lock;
+the lock is then released, and one waiter issues a single `fsync` covering every
+record written while it was in flight. Same workload after: **p99 24.8 ms,
+1,536 commits/s, and 66 `fsync` calls in place of 400** — reproducible with
+`tools/benchmarks/run_group_commit.py`.
+
+No artificial delay is used, and that is deliberate. Batching does not need a
+timer: while the syncer is inside its `fsync`, later writers pile up behind it,
+and the next syncer retires all of them. A fixed linger would tax the
+uncontended path — the common case — to help a case that already batches on its
+own, so `AEGIS_COMMIT_BATCH_TIMEOUT_MS` is only ever paid when another committer
+is already waiting. `AEGIS_COMMIT_BATCH_MAX_SIZE` bounds that wait; it cannot
+bound what an `fsync` covers, because `fsync` is not scopable to part of a file.
+
+Two properties changed and both are stated rather than glossed:
+
+- **A node enters the in-memory chain before its batch is synced.** It has to:
+  the next committer reads the tip to link against it. Nothing observes the node
+  in the meantime, because the commit call has not returned, and a crash in that
+  window loses the in-memory chain too — replay rebuilds a shorter, internally
+  consistent chain from the WAL. The previous invariant, "each node is fsynced
+  before the in-memory chain is updated", no longer holds and has been corrected
+  wherever it was written down.
+- **A batch is durable together or not at all.** A failed `fsync` raises
+  `WalDurabilityError` to *every* commit waiting on it and latches
+  `wal_persist_failed`, which `_require_intact_ledger` already reads to answer
+  503 and stop extending the chain. Individual nodes are deliberately not
+  unwound: later nodes have already linked against them, so there is no single
+  node whose removal leaves a consistent chain. The engine stays latched after
+  the disk recovers, because a descriptor that lost a write may have lost it
+  silently.
+
+WAL rotation and `close()` both `fsync` before replacing or releasing the
+descriptor, which makes pending records durable as a side effect; both now tell
+the engine so, and — where they previously swallowed the error — report a failed
+`fsync` to it instead, so waiters fail closed rather than being released against
+a write that never landed.
+
+Recorded as `CLM-082`. `CLM-059` was widened: `wal_persist_failed` is now also
+reachable from a durability failure at commit time, not only from startup
+replay.
+
+
 ### Fixed — concurrent appends forked the enterprise storage chain (P0)
 
 The analytics path read the chain tip, then built and **signed** the node — an
