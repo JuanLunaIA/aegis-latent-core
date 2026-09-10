@@ -24,6 +24,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import datetime as dt
+import ipaddress
 import socket
 import ssl
 from pathlib import Path
@@ -37,6 +38,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 pytest.importorskip("aegis_rust")
 pytest.importorskip("uvicorn")
 
+import httpx  # noqa: E402
 import uvicorn  # noqa: E402
 from cryptography import x509  # noqa: E402
 from cryptography.hazmat.primitives import hashes, serialization  # noqa: E402
@@ -47,6 +49,18 @@ from aegis.consensus.gossip import GossipDaemon, GossipPeer, GossipSettings  # n
 from aegis.consensus.transport import HttpGossipTransport, build_gossip_app  # noqa: E402
 
 pytestmark = pytest.mark.anyio
+
+# How a refused TLS handshake surfaces depends on which side gives up first and
+# on how loaded the machine is: a reset during the handshake, a read on a
+# closed socket, an SSL alert, or — on a slow runner — nothing at all until the
+# timeout. All four mean the same thing, which is that the peer never got in.
+_REFUSED = (
+    httpx.ConnectError,
+    httpx.ReadError,
+    httpx.ConnectTimeout,
+    httpx.ReadTimeout,
+    ssl.SSLError,
+)
 
 
 @pytest.fixture
@@ -99,7 +113,18 @@ def _issue_replica(
         .not_valid_before(now - dt.timedelta(minutes=5))
         .not_valid_after(now + dt.timedelta(hours=1))
         .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName("localhost")]),
+            # Both forms. The tests dial the literal 127.0.0.1 so that no name
+            # resolution is involved: a runner where "localhost" also resolves
+            # to ::1 would otherwise have httpx try the v6 address first, find
+            # nothing listening on it, and hang until the connect timeout —
+            # which reads as "the mesh did not converge" rather than as the
+            # addressing mistake it is.
+            x509.SubjectAlternativeName(
+                [
+                    x509.DNSName("localhost"),
+                    x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
+                ]
+            ),
             critical=False,
         )
         .add_extension(
@@ -223,7 +248,7 @@ async def three_replicas(tmp_path: Path) -> Iterator[list[_Replica]]:
     replicas: list[_Replica] = []
     for index, (certificate, key) in enumerate(material):
         peers = tuple(
-            GossipPeer(name=names[other], url=f"https://localhost:{ports[other]}")
+            GossipPeer(name=names[other], url=f"https://127.0.0.1:{ports[other]}")
             for other in range(3)
             if other != index
         )
@@ -321,19 +346,15 @@ class TestTheMeshRefusesStrangers:
         # The mesh's entire security boundary is "who is this": a peer supplies
         # leaves that enter every replica's accumulator. A client with no
         # certificate must not get to the handler.
-        import httpx
-
         target = three_replicas[0]
         context = ssl.create_default_context(
             cafile=target.settings.certificate_authority
         )  # trusts the CA, presents nothing
         async with httpx.AsyncClient(verify=context, timeout=5.0) as anonymous:
-            with pytest.raises((httpx.ConnectError, httpx.ReadError, ssl.SSLError)):
-                await anonymous.get(f"https://localhost:{target.port}/gossip/root")
+            with pytest.raises(_REFUSED):
+                await anonymous.get(f"https://127.0.0.1:{target.port}/gossip/root")
 
     async def test_a_certificate_from_another_ca_is_refused(self, tmp_path: Path) -> None:
-        import httpx
-
         real_dir = tmp_path / "real"
         real_dir.mkdir()
         stranger_dir = tmp_path / "stranger"
@@ -352,7 +373,7 @@ class TestTheMeshRefusesStrangers:
             context = ssl.create_default_context(cafile=str(ca_path))
             context.load_cert_chain(str(stranger_cert), str(stranger_key))
             async with httpx.AsyncClient(verify=context, timeout=5.0) as impostor:
-                with pytest.raises((httpx.ConnectError, httpx.ReadError, ssl.SSLError)):
-                    await impostor.get(f"https://localhost:{port}/gossip/root")
+                with pytest.raises(_REFUSED):
+                    await impostor.get(f"https://127.0.0.1:{port}/gossip/root")
         finally:
             await replica.shutdown()
