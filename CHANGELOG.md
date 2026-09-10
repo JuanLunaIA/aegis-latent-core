@@ -78,14 +78,41 @@ withdrawal.
   tests, 106 Python MMR parity tests under `AEGIS_REQUIRE_RUST=1`, and a clean
   Miri run over the digest tests including a caught-panic case.
 
-  **No CVE was remediated by this.** The commissioning brief cited a
-  `block-buffer` advisory as the highest-priority item; OSV holds no advisory
-  for that crate at any version, so the identifier is
-  `[UNKNOWN_MISSING_PRIMARY_SOURCE]` and the upgrade is justified as
-  maintenance — the crate sat under every SHA-256 and HMAC call on the evidence
-  path, pinned transitively through `digest 0.10`.
+  **This remediates a real advisory.** Row `0.31` of the scanner report flags
+  `block-buffer 0.10.4` at CVSS 6.3 with an **empty CVE ID field** — which is
+  why an OSV query returns nothing, and why this entry previously recorded that
+  no primary source existed. A caught panic could leave an `EagerBuffer` or
+  `ReadBuffer` cursor violating its invariant, after which `get_pos()` reaches
+  `unreachable_unchecked`; the crate sat under every SHA-256 and HMAC call on
+  the evidence path via `digest 0.10`. Upstream fixed it with a `ResetGuard`
+  whose `Drop` restores the invariant during unwind.
+
+- **Both published `block-buffer` proofs ported and run under Miri.**
+  `aegis_rust_v2/tests/block_buffer_panic_safety.rs` reproduces the advisory's
+  own two tests — a panic inside `compress`, a panic inside `gen_block` — and
+  adds a third for a panic inside `read_fn` that neither proof covers. All
+  three pass under `cargo +nightly miri test` against the `block-buffer 0.12.1`
+  this crate links, so the remediation is demonstrated rather than inferred
+  from a version number. `block-buffer` is added as a dev-dependency for this,
+  pinned to the version Cargo already resolves so the test cannot exercise a
+  second copy.
+
+  The two buffer types do not share a cursor invariant — `EagerBuffer` requires
+  `pos < block_size`, `ReadBuffer` requires `1 <= pos <= block_size` — and
+  asserting the former on the latter produces a test that fails against correct
+  behaviour. Both are asserted separately.
 
 ### Added
+
+- **Scanner report ingest (`scripts/triage/parse_socket_report.py`).**
+  Converts a Socket.dev PDF export into normalized JSON committed under
+  `evidence/dependency-scan/`, so a scan is diffable rather than a binary
+  nobody can review. It undoes the layout wrapping that splits package names
+  and paths mid-token, recognizes both the dependency-alerts and threat-feed
+  layouts, and exits non-zero on any row it cannot parse — a silent drop would
+  break the guarantee that every row is accounted for. The 2026-09-09 report's
+  **100 rows parsed with zero failures**, as did the 30 rows of the threat-feed
+  sample.
 
 - **Deterministic dependency triage (`scripts/triage/dependency_triage.py`).**
   Reads every dependency the repository locks across all five lock files,
@@ -287,6 +314,21 @@ withdrawal.
   downloads. Both SDK registries do match.
 
 ### Noted, not changed
+
+- **One of the two commissioned scan exports arrived; the other did not.** The
+  dependency alerts report (100 rows, generated 2026-09-09) is ingested in full
+  and every row appears exactly once in the triage ledger. In place of
+  `alerts.pdf` a Socket **Threat Feed sample** was supplied — an ecosystem-wide
+  sample of packages flagged across npm and PyPI, not an alert set against this
+  repository. Its 30 rows are ingested for completeness and **none of the four
+  packages it names appears in any Aegis lock file**. If `alerts.pdf` exists and
+  differs from the dependency report, its rows remain outside this review.
+
+- **The alert set does not contain the licence and ML-stack items the brief
+  described.** `uvloop`, `torch`, `transformers`, `vllm`, `next` and `sharp`
+  appear in **no row** of the report. The findings recorded for them here come
+  from reading this repository's own manifests, not from the scanner, and they
+  stand on that evidence.
 
 - **`uvloop` is not a GPL dependency and not a direct one.** The commissioning
   brief classified `uvloop 0.22.1` as a direct GPL-2.0/3.0 dependency and a

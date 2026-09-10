@@ -603,21 +603,36 @@ def load_advisories(root: Path) -> dict[str, Any]:
 # ── scanner export ingest ────────────────────────────────────────────────────
 
 
-def read_scan_export(path: Path) -> list[dict[str, str]]:
-    """Read a scanner export. CSV and JSON-array exports are both accepted."""
+def read_scan_export(path: Path) -> tuple[str, list[dict[str, str]]]:
+    """Read a scanner export. CSV and JSON exports are both accepted.
+
+    The normalized form written by ``parse_socket_report.py`` keys its rows
+    under ``rows``; a bare list and an ``alerts`` key are also accepted so an
+    export from another tool does not need converting first.
+    """
 
     text = path.read_text(encoding="utf-8")
     if path.suffix.lower() == ".json":
         payload = json.loads(text)
-        rows = payload if isinstance(payload, list) else payload.get("alerts", [])
-        return [{str(k): str(v) for k, v in row.items()} for row in rows]
-    return [dict(row) for row in csv.DictReader(text.splitlines())]
+        if isinstance(payload, list):
+            return "", [{str(k): str(v) for k, v in row.items()} for row in payload]
+        rows = payload.get("rows") or payload.get("alerts") or []
+        kind = str(payload.get("kind", ""))
+        return kind, [{str(k): str(v) for k, v in row.items()} for row in rows]
+    return "", [dict(row) for row in csv.DictReader(text.splitlines())]
 
 
 def _scan_row_name(row: dict[str, str]) -> str:
+    """The package a scan row names, with registry artifact suffixes removed.
+
+    Socket labels a PyPI source distribution ``pyyaml#tar-gz``; the same
+    package is ``pyyaml`` in the lock file, so the suffix has to come off or
+    every sdist row reports as unpaired.
+    """
+
     for key in ("package", "Package", "name", "Name", "component"):
         if row.get(key):
-            return row[key].strip()
+            return row[key].strip().split("#", 1)[0]
     return ""
 
 
@@ -628,26 +643,85 @@ def _scan_row_summary(row: dict[str, str]) -> str:
     return "unlabelled alert row"
 
 
-def merge_scan_export(
-    components: Sequence[Component], rows: Sequence[dict[str, str]]
-) -> list[dict[str, str]]:
-    """Annotate matching components; return the rows that matched nothing."""
+@dataclass(slots=True)
+class ScanRow:
+    """One scanner row and what the triage resolved it to.
 
+    Every ingested row gets one of these, matched or not, because the report
+    promises each row appears exactly once and an unpaired row that is simply
+    dropped would break that quietly.
+    """
+
+    label: str
+    ecosystem: str
+    package: str
+    version: str
+    alert_type: str
+    severity: str
+    source_kind: str = ""
+    matched: list[Component] = field(default_factory=list)
+
+    @property
+    def bucket(self) -> str:
+        """The bucket a matched row inherits, or why it matched nothing.
+
+        "Unmatched" is not one condition, and reporting it as one would hide
+        the difference between a row that never applied to this repository and
+        a row describing a dependency that has since been removed.
+        """
+
+        if self.matched:
+            return "; ".join(sorted({component.bucket for component in self.matched}))
+        if self.source_kind == "threat_feed":
+            return "NOT APPLICABLE (ecosystem-wide feed row; not a dependency here)"
+        return "UNPAIRED (build-time extra, or removed since the scan)"
+
+
+def merge_scan_export(
+    components: Sequence[Component], rows: Sequence[dict[str, str]], source_kind: str = ""
+) -> list[ScanRow]:
+    """Pair rows with locked components and return a record for every row."""
+
+    by_key: dict[tuple[str, str], list[Component]] = {}
     by_name: dict[str, list[Component]] = {}
     for component in components:
         by_name.setdefault(component.name.lower(), []).append(component)
+        by_key.setdefault((component.ecosystem, component.name.lower()), []).append(component)
         if component.ecosystem == "pypi":
-            by_name.setdefault(_normalise_pypi(component.name), []).append(component)
-    unmatched: list[dict[str, str]] = []
+            normalised = _normalise_pypi(component.name)
+            by_name.setdefault(normalised, []).append(component)
+            by_key.setdefault((component.ecosystem, normalised), []).append(component)
+
+    ledger: list[ScanRow] = []
     for row in rows:
         name = _scan_row_name(row)
-        targets = by_name.get(name.lower()) or by_name.get(_normalise_pypi(name)) if name else None
-        if not targets:
-            unmatched.append(row)
-            continue
+        ecosystem = (row.get("ecosystem") or row.get("Ecosystem") or "").strip()
+        # Prefer an ecosystem-qualified match: the same name can exist in two
+        # registries, and crediting an npm alert to a crate would be wrong.
+        targets: list[Component] = []
+        if name:
+            for key in ((ecosystem, name.lower()), (ecosystem, _normalise_pypi(name))):
+                if key in by_key:
+                    targets = by_key[key]
+                    break
+            else:
+                targets = by_name.get(name.lower()) or by_name.get(_normalise_pypi(name)) or []
+        summary = _scan_row_summary(row)
         for component in targets:
-            component.scan_rows.append(_scan_row_summary(row))
-    return unmatched
+            component.scan_rows.append(summary)
+        ledger.append(
+            ScanRow(
+                label=(row.get("row") or row.get("Row") or str(len(ledger) + 1)).strip(),
+                ecosystem=ecosystem,
+                package=name,
+                version=(row.get("version") or row.get("Version") or "").strip(),
+                alert_type=summary,
+                severity=(row.get("severity") or row.get("Severity") or "").strip(),
+                source_kind=source_kind,
+                matched=list(targets),
+            )
+        )
+    return ledger
 
 
 # ── classification ───────────────────────────────────────────────────────────
@@ -764,7 +838,7 @@ def _escape(cell: str) -> str:
 def render_report(
     components: Sequence[Component],
     snapshot: dict[str, Any],
-    unmatched_rows: Sequence[dict[str, str]],
+    ledger: Sequence[ScanRow],
     scan_source: str,
 ) -> str:
     counts = dict.fromkeys(BUCKET_ORDER, 0)
@@ -847,26 +921,55 @@ def render_report(
             )
         lines.append("")
 
-    lines.append("## Scanner rows matching no locked component")
+    lines.append("## Scanner row ledger")
     lines.append("")
-    if not unmatched_rows:
+    if not ledger:
         lines.append(
-            "None. Either no export was supplied, or every row matched a locked "
-            "component and is classified above."
-        )
-    else:
-        lines.append(
-            "These rows name packages this repository does not lock. They are listed "
-            "rather than dropped so no row is silently lost."
+            "No scanner export was supplied. Rerun with `--scan-export <file>` to "
+            "merge one; the classification above is derived from the lock files."
         )
         lines.append("")
-        lines.append("| row | reason |")
-        lines.append("| --- | --- |")
-        for row in unmatched_rows:
-            lines.append(
-                f"| {_escape(_scan_row_name(row) or '(unnamed)')} — "
-                f"{_escape(_scan_row_summary(row))} | not present in any lock file |"
+        return "\n".join(lines)
+
+    matched = [row for row in ledger if row.matched]
+    feed = [row for row in ledger if not row.matched and row.source_kind == "threat_feed"]
+    unpaired = [row for row in ledger if not row.matched and row.source_kind != "threat_feed"]
+    lines.append(f"Every one of the **{len(ledger)}** ingested rows appears below exactly once.")
+    lines.append("")
+    lines.append(
+        f"- **{len(matched)}** matched a locked component and carry that component's bucket."
+    )
+    lines.append(
+        f"- **{len(unpaired)}** name a package that is not in a runtime lock file. These "
+        "are development tooling and optional extras the scanner reaches through "
+        "`pyproject.toml`, plus any dependency removed since the scan was taken — "
+        "not silent drops."
+    )
+    lines.append(
+        f"- **{len(feed)}** come from an ecosystem-wide threat feed rather than from a scan "
+        "of this repository. A feed row is only relevant here if this repository depends "
+        "on the package it names, and none of them do."
+    )
+    lines.append("")
+    lines.append("| row | ecosystem | package | version | alert_type | severity | bucket |")
+    lines.append("| --- | --- | --- | --- | --- | --- | --- |")
+    for row in ledger:
+        lines.append(
+            "| "
+            + " | ".join(
+                _escape(cell)
+                for cell in (
+                    row.label,
+                    row.ecosystem or "—",
+                    row.package or "(unnamed)",
+                    row.version or "—",
+                    row.alert_type,
+                    row.severity or "—",
+                    row.bucket,
+                )
             )
+            + " |"
+        )
     lines.append("")
     return "\n".join(lines)
 
@@ -906,8 +1009,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument(
         "--scan-export",
-        default="",
-        help="optional scanner export (.csv or .json) to merge into the triage",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help=(
+            "scanner export (.csv or .json) to merge into the triage; repeat the "
+            "flag to ingest several reports"
+        ),
     )
     parser.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     args = parser.parse_args(argv)
@@ -927,16 +1035,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         snapshot = load_advisories(root)
 
-    unmatched: list[dict[str, str]] = []
-    scan_source = "none (no export supplied)"
-    if args.scan_export:
-        export_path = Path(args.scan_export)
+    ledger: list[ScanRow] = []
+    sources: list[str] = []
+    for export in args.scan_export:
+        export_path = Path(export)
         if not export_path.is_file():
             print(f"[BLOCKED: scan export not found: {export_path}]", file=sys.stderr)
             return 2
-        rows = read_scan_export(export_path)
-        unmatched = merge_scan_export(components, rows)
-        scan_source = f"{export_path.name} ({len(rows)} rows, {len(unmatched)} unmatched)"
+        kind, rows = read_scan_export(export_path)
+        merged = merge_scan_export(components, rows, kind)
+        ledger += merged
+        unpaired_here = sum(1 for row in merged if not row.matched)
+        sources.append(f"{export_path.name} ({len(rows)} rows, {unpaired_here} unpaired)")
+    scan_source = "; ".join(sources) if sources else "none (no export supplied)"
 
     findings: dict[str, list[str]] = snapshot.get("findings", {})
     records: dict[str, dict[str, Any]] = snapshot.get("advisories", {})
@@ -963,13 +1074,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                         }
                         for c in sorted(components, key=lambda c: (c.ecosystem, c.name, c.version))
                     ],
-                    "unmatched_scan_rows": len(unmatched),
+                    "scan_rows": len(ledger),
+                    "unpaired_scan_rows": sum(1 for r in ledger if not r.matched),
                 },
                 indent=2,
             )
         )
     else:
-        report = render_report(components, snapshot, unmatched, scan_source)
+        report = render_report(components, snapshot, ledger, scan_source)
         if args.write:
             destination = root / REPORT_PATH
             destination.parent.mkdir(parents=True, exist_ok=True)

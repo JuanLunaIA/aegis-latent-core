@@ -102,6 +102,11 @@ zeroize = { version = "1", features = ["derive"] }
 http = "1"
 
 [dev-dependencies]
+# Test-only, and deliberately the same version Cargo already resolves for the
+# digest stack, so `tests/block_buffer_panic_safety.rs` exercises the buffer
+# this crate actually links rather than a second copy. See that file for why
+# a transitive dependency is worth a direct test.
+block-buffer = "0.12"
 tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread"] }
 wiremock = "0.6"
 tempfile = "3"
