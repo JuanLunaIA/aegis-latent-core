@@ -8,7 +8,7 @@
 
 ## 1. What must be backed up
 
-Backing up the WAL alone produces an unverifiable archive. Five things travel together.
+Backing up the WAL alone produces an unverifiable archive. Five things travel together, and two more join them under configurations that are not the default.
 
 | Item | Where | Without it |
 | --- | --- | --- |
@@ -17,8 +17,12 @@ Backing up the WAL alone produces an unverifiable archive. Five things travel to
 | **Retired signing keys** | Your key archive | Records signed before a rotation become unverifiable |
 | **Trusted MMR roots** | Wherever you pinned them | Proofs verify only against a root supplied by the gateway, which is not independent |
 | **Configuration** | Your config management | You cannot reconstruct which controls were active when the records were written |
+| **PQC signing identity**, if `AEGIS_PQC_IDENTITY_PATH` is set | That path (raw ML-DSA-65 private key, mode `0600`) | Records signed under the post-quantum tier become unverifiable, exactly as a lost HMAC key would |
+| **Shredder key vault**, if `AEGIS_ENABLE_CRYPTOGRAPHIC_SHREDDING=true` | `<wal_path>.shredder.db` unless `AEGIS_SHREDDER_VAULT_PATH` says otherwise | Every sealed payload is permanently unreadable — the chain still verifies, because the vault holds no hashes, but nothing in it can be opened |
 
 **Retired keys are the item most often missed.** Rotation is routine; destroying the retired key converts every record signed under it into an unverifiable blob. Retain retired keys under the same custody as active ones, for at least as long as the records they signed.
+
+**The shredder vault is the one item whose backup policy is a decision rather than a default.** It cuts both ways and cannot be resolved technically. Backing it up protects against losing every subject's plaintext at once; restoring it from a backup taken before an erasure **restores the ability to decrypt everything erased since**, undoing that erasure. If you run with sealing enabled, write down which of the two risks you are accepting, keep vault backups on the same retention clock as your erasure obligations, and treat a restore as an event that needs re-running outstanding erasures. See [Data Retention](../privacy/DATA_RETENTION.md) and `CLM-068`; nothing here is a legal conclusion.
 
 Forensic export bundles, if produced, are sensitive evidence and belong under the same controls. See [Forensic Export](../api/FORENSIC_EXPORT.md).
 

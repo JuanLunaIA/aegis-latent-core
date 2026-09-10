@@ -67,6 +67,7 @@ import numpy as np
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
+from aegis.core.crypto_shredder import CryptoShredder, SealedPayload
 from aegis.core.forensic import build_merkle_leaf, build_stream_merkle_leaf, sha256_hex
 from aegis.core.forensic_bundle import canonical_jcs_bytes
 from aegis.core.hsm import HSMSigningBackend, HSMUnavailableError
@@ -342,6 +343,17 @@ class AuditNode:
     mmr_leaf_index: int = -1
     mmr_leaf_count: int = 0
     mmr_proof: dict[str, Any] | None = None
+    # Cryptographic-erasure envelope. Empty unless the ledger was configured
+    # with ``enable_cryptographic_shredding``. When present, ``mmr_leaf_hash``
+    # is the commitment SHA-256(0x00 || nonce || ciphertext) rather than a
+    # digest of the leaf bytes, and the leaf's content is recoverable only by a
+    # holder of the subject's key. Like ``status``, these are deliberately NOT
+    # ``node_hash`` inputs: the hash covers a fixed field list, so every node
+    # written before they existed hashes identically and already-issued proofs
+    # keep validating.
+    sealed_subject_id: str = ""
+    sealed_nonce: str = ""  # hex-encoded 96-bit GCM nonce
+    sealed_ciphertext: str = ""  # hex-encoded AES-256-GCM ciphertext
 
     def __post_init__(self) -> None:
         self.__creation_hash__: str = self.node_hash
@@ -404,6 +416,9 @@ class AuditNode:
             "mmr_leaf_index": -1,
             "mmr_leaf_count": 0,
             "mmr_proof": None,
+            "sealed_subject_id": "",
+            "sealed_nonce": "",
+            "sealed_ciphertext": "",
         }
         # Remove legacy field if present
         data.pop("payload", None)
@@ -526,6 +541,8 @@ class CryptographicAuditLedger:
         mmr_fast_restore: bool = False,
         mmr_hash_scheme: str = MMR_SCHEME_AUTO,
         pqc_identity_path: str | os.PathLike[str] | None = None,
+        enable_cryptographic_shredding: bool = False,
+        shredder_vault_path: str | os.PathLike[str] | None = None,
     ) -> None:
         if mmr_hash_scheme not in _SCHEME_PROOF_VERSIONS and mmr_hash_scheme != MMR_SCHEME_AUTO:
             raise ValueError(
@@ -556,6 +573,19 @@ class CryptographicAuditLedger:
         self._wal_bytes = 0
         self._fault_state: str = "healthy"
         self.pqc_identity_path = str(pqc_identity_path) if pqc_identity_path else ""
+        self.enable_cryptographic_shredding = enable_cryptographic_shredding
+        self._shredder: CryptoShredder | None = None
+        if enable_cryptographic_shredding:
+            # Default the vault beside the WAL: the two have the same custody
+            # requirement, and separating them by default would invite a
+            # deployment that backs up one and not the other — which either
+            # loses every plaintext or preserves keys past an erasure.
+            vault = (
+                str(shredder_vault_path)
+                if shredder_vault_path
+                else f"{persistence_path}.shredder.db"
+            )
+            self._shredder = CryptoShredder(vault)
         # Resolved lazily and cached: loading the identity touches the
         # filesystem, and a ledger that never signs should not pay for it.
         # ``False`` distinguishes "not yet looked up" from "looked up, absent".
@@ -667,10 +697,12 @@ class CryptographicAuditLedger:
             # on every commit, so a deep copy would make commit cost grow with
             # the length of the chain.
             mmr_before = self._mmr.checkpoint()
-            merkle_root = self._mmr.add_leaf(leaf)
+            # Seal before appending: with shredding on, the tree commits to
+            # the envelope's commitment, so the digest has to exist first.
+            mmr_leaf_hash, sealed = self._seal_leaf(leaf, tenant_id)
+            merkle_root = self._mmr.add_leaf_hash(mmr_leaf_hash)
             mmr_leaf_count = self._mmr.get_leaf_count()
             mmr_leaf_index = mmr_leaf_count - 1
-            mmr_leaf_hash = self._mmr.leaf_digest(leaf)
             mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
 
             # Sign over prev_hash + merkle_root + request/response hashes so the
@@ -714,6 +746,9 @@ class CryptographicAuditLedger:
                 mmr_leaf_index=mmr_leaf_index,
                 mmr_leaf_count=mmr_leaf_count,
                 mmr_proof=mmr_proof,
+                sealed_subject_id=sealed.subject_id if sealed else "",
+                sealed_nonce=sealed.nonce.hex() if sealed else "",
+                sealed_ciphertext=sealed.ciphertext.hex() if sealed else "",
             )
 
             try:
@@ -793,10 +828,16 @@ class CryptographicAuditLedger:
             prev_hash = self.chain[-1].node_hash if self.chain else "0" * 64
             timestamp = time.time()
             mmr_before = self._mmr.checkpoint()
-            merkle_root = self._mmr.add_leaf(leaf)
+            # Seal before appending: with shredding on, the tree commits to
+            # the envelope's commitment, so the digest has to exist first.
+            # Same fallback the node itself uses: a request refused before
+            # authentication has no subject to attribute erasure to, so it
+            # seals under "unattributed" rather than under a tenant that was
+            # never established.
+            mmr_leaf_hash, sealed = self._seal_leaf(leaf, tenant_id or "unattributed")
+            merkle_root = self._mmr.add_leaf_hash(mmr_leaf_hash)
             mmr_leaf_count = self._mmr.get_leaf_count()
             mmr_leaf_index = mmr_leaf_count - 1
-            mmr_leaf_hash = self._mmr.leaf_digest(leaf)
             mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
 
             signed_payload = _build_signed_payload(
@@ -837,6 +878,9 @@ class CryptographicAuditLedger:
                 mmr_leaf_index=mmr_leaf_index,
                 mmr_leaf_count=mmr_leaf_count,
                 mmr_proof=mmr_proof,
+                sealed_subject_id=sealed.subject_id if sealed else "",
+                sealed_nonce=sealed.nonce.hex() if sealed else "",
+                sealed_ciphertext=sealed.ciphertext.hex() if sealed else "",
             )
 
             try:
@@ -968,10 +1012,12 @@ class CryptographicAuditLedger:
             timestamp = time.time()
             # See commit_forensic: rollback token rather than a snapshot.
             mmr_before = self._mmr.checkpoint()
-            merkle_root = self._mmr.add_leaf(leaf)
+            # Seal before appending: with shredding on, the tree commits to
+            # the envelope's commitment, so the digest has to exist first.
+            mmr_leaf_hash, sealed = self._seal_leaf(leaf, tenant_id)
+            merkle_root = self._mmr.add_leaf_hash(mmr_leaf_hash)
             mmr_leaf_count = self._mmr.get_leaf_count()
             mmr_leaf_index = mmr_leaf_count - 1
-            mmr_leaf_hash = self._mmr.leaf_digest(leaf)
             mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
             signed_payload = _build_signed_payload(
                 prev_hash=prev_hash,
@@ -1011,6 +1057,9 @@ class CryptographicAuditLedger:
                 mmr_leaf_index=mmr_leaf_index,
                 mmr_leaf_count=mmr_leaf_count,
                 mmr_proof=mmr_proof,
+                sealed_subject_id=sealed.subject_id if sealed else "",
+                sealed_nonce=sealed.nonce.hex() if sealed else "",
+                sealed_ciphertext=sealed.ciphertext.hex() if sealed else "",
             )
             try:
                 self._persist_node(node)
@@ -1386,6 +1435,74 @@ class CryptographicAuditLedger:
             raise RuntimeError("strong signing required; no verifiable signer is available")
         sig_hex, pub_hex, scheme = _ed25519_sign(data)
         return sig_hex, pub_hex, scheme, True
+
+    def _seal_leaf(self, leaf: bytes, subject_id: str) -> tuple[str, SealedPayload | None]:
+        """Return ``(leaf_digest, sealed)`` for one commit.
+
+        With shredding off this is the accumulator's own leaf digest and no
+        envelope, which is the behaviour every existing deployment has.
+
+        With it on, the leaf — which carries the request and response previews,
+        the actual content — is encrypted under the subject's key and the MMR
+        commits to ``SHA-256(0x00 || nonce || ciphertext)`` instead. That
+        commitment is computable by anyone holding the ciphertext and **not**
+        the key, which is exactly what lets an inclusion proof keep verifying
+        after the key is destroyed: erasure removes the ability to read the
+        leaf, and moves no hash the tree is built from.
+        """
+
+        if self._shredder is None:
+            return self._mmr.leaf_digest(leaf), None
+        sealed = self._shredder.seal(subject_id, leaf)
+        return sealed.commitment_hex, sealed
+
+    def crypto_shred(self, subject_id: str) -> bool:
+        """Destroy ``subject_id``'s key. Returns whether one was present.
+
+        The ledger does not move: every root, peak, node hash and previously
+        issued inclusion proof is bit-for-bit what it was. What changes is that
+        the sealed leaves for this subject can no longer be opened.
+
+        What this establishes, and only this: the sealed leaf content is
+        unrecoverable **to a holder of the ciphertext alone**, at the strength
+        of AES-256-GCM. It is not a media-sanitisation guarantee — see the
+        :mod:`aegis.core.crypto_shredder` docstring on pages, journals, swap,
+        snapshots, backups and replicas, none of which are under this process's
+        control — and it does not erase the request and response *digests* the
+        node still carries. Those are not plaintext, but they are not nothing
+        either: a guessed plaintext can be confirmed against them, so a
+        low-entropy input is not protected by their presence being hashed.
+        Whether that satisfies a specific regulator is a legal question this
+        code does not answer.
+        """
+
+        if self._shredder is None:
+            raise RuntimeError(
+                "cryptographic shredding is not enabled on this ledger; construct it with "
+                "enable_cryptographic_shredding=True (AEGIS_ENABLE_CRYPTOGRAPHIC_SHREDDING)"
+            )
+        with self._lock:
+            return self._shredder.erase(subject_id)
+
+    def open_sealed_leaf(self, node: AuditNode) -> bytes:
+        """Decrypt the sealed leaf a node commits to.
+
+        Raises ``ShredderKeyDestroyedError`` once the subject has been shredded,
+        which is the observable difference erasure makes.
+        """
+
+        if self._shredder is None:
+            raise RuntimeError("cryptographic shredding is not enabled on this ledger")
+        if not node.sealed_ciphertext:
+            raise ValueError(f"node {node.state_id!r} carries no sealed envelope")
+        with self._lock:
+            return self._shredder.open(
+                SealedPayload(
+                    subject_id=node.sealed_subject_id,
+                    nonce=bytes.fromhex(node.sealed_nonce),
+                    ciphertext=bytes.fromhex(node.sealed_ciphertext),
+                )
+            )
 
     def _pqc_signer(self) -> PQCSigner | None:
         """The ML-DSA identity this ledger signs under, or ``None``.

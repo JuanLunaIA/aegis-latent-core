@@ -15,6 +15,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — cryptographic erasure on the ledger commit path, off by default
+
+- **`CryptographicAuditLedger` can seal what it commits.** `CryptoShredder`
+  existed and was tested but nothing called it, so the property it was written
+  for — erase a subject without moving the tree — was unavailable to any
+  deployment. With `AEGIS_ENABLE_CRYPTOGRAPHIC_SHREDDING=true` the ledger now
+  encrypts each leaf under a per-subject AES-256-GCM key and commits
+  `SHA-256(0x00 || nonce || ciphertext)` in its place; `crypto_shred(subject_id)`
+  destroys that key, and `open_sealed_leaf(node)` reads a node back while the key
+  still exists.
+
+  The mechanism is that the commitment is computable from the ciphertext alone.
+  A verifier who cannot read a leaf can still recompute what the tree committed
+  to, so **destroying the key invalidates no proof**: `tests/test_crypto_shredder_integration.py`
+  asserts on a live ledger that after erasure the inclusion proof still verifies,
+  the plaintext no longer opens, the root is unchanged, `verify_integrity()`
+  still passes, and another subject's records are still readable.
+
+  **Off by default, and not a runtime toggle.** Sealing changes what the MMR
+  commits to, so it cannot be enabled for a chain that already holds records —
+  adopting it means starting a new chain, the same rule the hash scheme follows.
+  An unchanged deployment commits payload digests exactly as before, and
+  `crypto_shred()` on such a ledger raises rather than returning a false
+  success, so a retention job cannot mistake a no-op for an erasure.
+
+  Three costs an operator owns. The WAL carries ciphertext, so its growth tracks
+  payload size. The key vault (`<wal_path>.shredder.db` by default) becomes the
+  only mutable component in an append-only design: lose it and every plaintext
+  is gone at once, restore it from a pre-erasure backup and every erasure through
+  it is undone. And a shredded node **keeps its request and response digests**,
+  so erasure removes the ability to read a payload, not the ability to confirm a
+  guess about it. `CLM-068` states what may be claimed; no regulatory conclusion
+  follows from any of it.
+
+### Changed — documentation that described three components as unwired
+
+`4.4.0` wires the grammar frontier (on by default), the v2 hash scheme (on for
+new chains) and the shredder (off by default). The claims matrix rows for the
+first two were updated when they landed, but the descriptive corpus still told
+readers that the streaming path uses `StreamingDeidentifier` alone, that v2 "is
+not the default", and that the shredder "is not wired in" — statements that were
+true when written and are now false. Corrected across `ARCHITECTURE.md`,
+`DECISIONS.md`, `PII_REDACTION_BOUNDARIES.md`, `DATA_RETENTION.md`,
+`MMR_PROOF_V1.md`, `FAQ_TECHNICAL.md`, `ROADMAP.md`, `PLATFORM_OPERATOR_GUIDE.md`,
+`BACKUP_RESTORE.md`, `DOC-02`, `DOC-03`, `DOC-05`, `CLAIM_EVIDENCE_GRAPH.md`,
+`UNSUPPORTED_CLAIMS.md` and `CLAIMS_MATRIX.md`.
+
+Wiring narrows nothing these documents bound. `UC-037` still blocks every
+erasure conclusion and gains one: "Aegis erases on request" is now also
+forbidden, because the default build does not. The blocked-wording row for
+`CLM-064`–`CLM-068` gains "the grammar frontier replaced the de-identifier" (it
+runs *after* it, and replacing it would have dropped eighteen detectors) and
+requires "for new chains" wherever v2 is called enabled.
+
 ### Fixed — three defects that each failed quietly
 
 - **Importing the proxy module took the WAL's exclusive lock (P0).**

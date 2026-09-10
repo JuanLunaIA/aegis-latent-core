@@ -116,11 +116,18 @@ one test proves a long street name passes through unredacted.
 `Pike` are absent, so `30 Rockefeller Plaza` and `8600 Rockville Pike` are not matched — before or
 after the bound. That gap is recorded in the same test file.
 
-### A second streaming redactor exists in the tree and is not the one running
+### A second streaming redactor runs after the first
 
-`aegis/core/streaming_safety_engine.py` implements `GrammarFrontierAutomaton`, which formalises the same holdback idea. **It is not wired in** — everything above describes `StreamingDeidentifier`, which is what `aegis/proxy/streaming.py` actually calls — so nothing in this subsection changes the behaviour you get. It is described here so a reader who finds the module does not mistake it for the running path.
+`aegis/core/streaming_safety_engine.py` implements `GrammarFrontierAutomaton`, which formalises the same holdback idea over four rules of its own. Since `4.4.0` it runs on the governed streaming path **in addition to** `StreamingDeidentifier`, composed by `aegis/core/stream_redactor.py` and selected by `AEGIS_STREAMING_ENGINE`, which defaults to `grammar_frontier`.
 
-Two things about it are worth knowing anyway, because they generalise:
+Everything above still describes what you get, because composition adds and removes nothing: the twenty Safe Harbor detectors run first and unchanged, and the automaton then applies `INSTR_OVERRIDE`, `SYS_LEAK` and its own `PHI_SSN`/`PCI_PAN` rules to what survives. Two of those four — instruction-override and system-prompt-disclosure matching — are genuinely new to this path; the other two overlap detectors that already ran. Setting `AEGIS_STREAMING_ENGINE=deidentifier` restores the pre-`4.4.0` output byte for byte.
+
+Two consequences to hold on to:
+
+- **The holdback grew.** The composite withholds the de-identifier's window *plus* the automaton's 28-character frontier, so the per-stream retained-byte ceiling rises accordingly (`CLM-078`). Nothing is withheld indefinitely; the frontier is still a finite bound for the reason below.
+- **Redaction off still means off.** With both the PHI and PCI detector families disabled, the frontier stage does not run either, so a deployment that switched response redaction off keeps byte-for-byte pass-through and acquires no holdback from this change.
+
+Two things about the automaton itself are worth knowing, because they generalise:
 
 - **It redacts to fixpoint before measuring the frontier.** The obvious streaming loop redacts the first match, concludes the buffer is settled, and releases everything — so in `ignore all previous rules … SSN: 123-45-6789`, the SSN leaves in the clear behind the redacted override. Redacting every match first, and only then computing the holdback over the residual text, is what closes that.
 - **It makes the same bounded-quantifier trade the `ADDRESS` bound makes above, for the same reason.** A frontier is only a real bound if every pattern has a finite longest match, so each pattern bounds its whitespace runs, and the cost — an evasion padding past the bound is not matched — is asserted by a test rather than left implicit.

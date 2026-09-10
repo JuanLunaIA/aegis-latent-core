@@ -766,6 +766,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         require_strong_signing=cfg.security_enforcement_mode == "strict",
         mmr_hash_scheme=cfg.mmr_hash_scheme,
         pqc_identity_path=cfg.pqc_identity_path,
+        enable_cryptographic_shredding=cfg.enable_cryptographic_shredding,
+        shredder_vault_path=cfg.shredder_vault_path or None,
     )
     state.native_stream_wal = None
     try:

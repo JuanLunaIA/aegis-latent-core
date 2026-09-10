@@ -420,6 +420,28 @@ class AegisSettings(BaseSettings):
             "an existing v1 chain to v2 means starting a new chain."
         ),
     )
+    enable_cryptographic_shredding: bool = Field(
+        default=False,
+        description=(
+            "Seal each committed leaf under a per-subject AES-256-GCM key so the record can "
+            "later be rendered unreadable by destroying that key, leaving every root, peak and "
+            "issued inclusion proof untouched. Off by default: it changes what the MMR commits "
+            "to, so it cannot be turned on for a chain that already has records. It also makes "
+            "the WAL carry ciphertext rather than only digests, so WAL growth tracks payload "
+            "size. Destroying a key makes the sealed leaf unrecoverable to a holder of the "
+            "ciphertext; it is not media sanitisation and does not remove the request and "
+            "response digests the node still carries."
+        ),
+    )
+    shredder_vault_path: str = Field(
+        default="",
+        description=(
+            "Where per-subject shredding keys live. Empty places the vault beside the WAL "
+            "('<wal_path>.shredder.db'), which keeps the two under one custody boundary. The "
+            "vault holds the keys that make the ledger readable: back it up with the WAL or "
+            "lose every plaintext, and sanitise it on erasure or keep them past it."
+        ),
+    )
     pqc_identity_path: str = Field(
         default="",
         description=(
