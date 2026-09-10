@@ -44,6 +44,7 @@ import hmac
 import json
 import logging
 import os
+import stat
 import sys
 import time
 import uuid
@@ -1517,9 +1518,11 @@ class CryptographicAuditLedger:
         The identity is created on first use if the configured path does not
         exist yet, and reused from then on. Creating it here rather than
         requiring a separate provisioning step is what makes the tier usable;
-        the file is written ``0600`` and holds the raw ML-DSA-65 private key,
-        so it needs the same custody as any other signing secret and must live
-        on storage the operator controls.
+        the file holds the raw ML-DSA-65 private key, so it needs the same
+        custody as any other signing secret and must live on storage the
+        operator controls. One created here is written ``0600``; one provisioned
+        elsewhere is *checked* rather than trusted, and refused if its mode lets
+        group or other read it.
         """
 
         if self._pqc_identity is not False:
@@ -1537,32 +1540,9 @@ class CryptographicAuditLedger:
 
         path = Path(self.pqc_identity_path)
         try:
-            if path.exists():
-                raw = path.read_bytes()
-                expected = PQCSigner.PUBLIC_KEY_BYTES + PQCSigner.PRIVATE_KEY_BYTES
-                if len(raw) != expected:
-                    raise ValueError(
-                        f"identity file holds {len(raw)} bytes; expected {expected} "
-                        f"({PQCSigner.PUBLIC_KEY_BYTES}-byte public + "
-                        f"{PQCSigner.PRIVATE_KEY_BYTES}-byte private key)"
-                    )
-                signer = PQCSigner.from_keys(
-                    raw[: PQCSigner.PUBLIC_KEY_BYTES], raw[PQCSigner.PUBLIC_KEY_BYTES :]
-                )
-                logger.info("Loaded persistent ML-DSA signing identity from %s", path)
-            else:
-                signer = PQCSigner(require_real=True)
-                path.parent.mkdir(parents=True, exist_ok=True)
-                # Write through a private temporary file and rename, so a
-                # concurrent reader never sees a half-written key, and create
-                # it 0600 rather than chmod-ing after the bytes are on disk.
-                descriptor = os.open(f"{path}.tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-                with os.fdopen(descriptor, "wb") as handle:
-                    handle.write(signer.public_key + signer.export_private_key())
-                    handle.flush()
-                    self._fsync(handle.fileno())
-                os.replace(f"{path}.tmp", path)
-                logger.info("Created persistent ML-DSA signing identity at %s", path)
+            signer = self._load_pqc_identity(path)
+            if signer is None:
+                signer = self._create_pqc_identity(path)
         except (PQCUnavailableError, OSError, TypeError, ValueError) as exc:
             logger.warning(
                 "ML-DSA identity at %s unusable (%s); signing falls through to the next tier",
@@ -1573,6 +1553,96 @@ class CryptographicAuditLedger:
 
         self._pqc_identity = signer
         return signer
+
+    @staticmethod
+    def _load_pqc_identity(path: Path) -> PQCSigner | None:
+        """Load the identity at ``path``, or ``None`` if there is no file there.
+
+        Refuses a file the operating system is showing to anyone but its owner.
+        The tier's whole value is that a signature attributes to a held key, and
+        a key readable by every account on the host attributes to all of them —
+        so a permissive mode is rejected rather than quietly tightened. Tightening
+        would not un-expose a key that has already been readable, and it would
+        hide the provisioning mistake that made it so. Rejection is loud and
+        leaves signing on HMAC, which is a weaker claim and a true one.
+        """
+
+        try:
+            info = path.stat()
+        except FileNotFoundError:
+            return None
+        if not stat.S_ISREG(info.st_mode):
+            raise ValueError("identity path is not a regular file")
+        if info.st_mode & 0o077:
+            raise ValueError(
+                f"identity file mode is {stat.filemode(info.st_mode)} "
+                f"({info.st_mode & 0o777:04o}); it must not be readable by group or other"
+            )
+
+        raw = path.read_bytes()
+        expected = PQCSigner.PUBLIC_KEY_BYTES + PQCSigner.PRIVATE_KEY_BYTES
+        if len(raw) != expected:
+            raise ValueError(
+                f"identity file holds {len(raw)} bytes; expected {expected} "
+                f"({PQCSigner.PUBLIC_KEY_BYTES}-byte public + "
+                f"{PQCSigner.PRIVATE_KEY_BYTES}-byte private key)"
+            )
+        signer = PQCSigner.from_keys(
+            raw[: PQCSigner.PUBLIC_KEY_BYTES], raw[PQCSigner.PUBLIC_KEY_BYTES :]
+        )
+        logger.info("Loaded persistent ML-DSA signing identity from %s", path)
+        return signer
+
+    def _create_pqc_identity(self, path: Path) -> PQCSigner:
+        """Create the identity at ``path``, or adopt the one that beat us to it.
+
+        Two processes pointed at one identity path will both find it absent and
+        both generate a keypair — ML-DSA keygen is slow enough to hold that
+        window wide open. Whoever publishes second must therefore *discard* what
+        it generated and sign under what is on disk, or its nodes carry a
+        ``pqc-ml-dsa`` public key that exists nowhere and attributes to nobody:
+        precisely the defect the persistent identity was introduced to fix.
+
+        So publication is a create-if-absent, not a replace. The bytes are
+        written to a *uniquely named* private temporary file and linked into
+        place; ``os.link`` fails rather than overwriting when the target exists,
+        which makes the winner unambiguous without a lock. A per-process
+        temporary name matters as much as the atomic publish: a shared one lets
+        a second writer truncate the file the first is still writing and then
+        consume it, leaving the first to fail on a path that has vanished.
+        """
+
+        signer = PQCSigner(require_real=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        material = signer.public_key + signer.export_private_key()
+        # Created 0600 rather than chmod-ed after the bytes are on disk, so the
+        # private key is never momentarily world-readable.
+        temporary = path.with_name(f"{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
+        try:
+            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(descriptor, "wb") as handle:
+                handle.write(material)
+                handle.flush()
+                self._fsync(handle.fileno())
+            try:
+                os.link(temporary, path)
+            except FileExistsError:
+                adopted = self._load_pqc_identity(path)
+                if adopted is None:  # pragma: no cover - the file cannot vanish here
+                    raise
+                logger.info(
+                    "Another writer created the ML-DSA identity at %s first; "
+                    "adopting it and discarding the keypair generated here",
+                    path,
+                )
+                return adopted
+            logger.info("Created persistent ML-DSA signing identity at %s", path)
+            return signer
+        finally:
+            try:
+                os.unlink(temporary)
+            except OSError:  # pragma: no cover - best-effort cleanup
+                logger.debug("Could not remove temporary identity file %s", temporary)
 
     def _persist_node(self, node: AuditNode) -> None:
         """Append node as a JSON line to the WAL. Must be called under self._lock."""

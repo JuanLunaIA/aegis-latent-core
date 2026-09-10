@@ -96,6 +96,24 @@ requires "for new chains" wherever v2 is called enabled.
   The tier now signs under a persistent identity, configured by
   `AEGIS_PQC_IDENTITY_PATH` and created on first use (written `0600`; it holds
   the raw ML-DSA-65 private key and needs the custody any signing secret does).
+
+  Two ways that identity could still stop attributing anything, both raised in
+  review and both fixed here. **An identity provisioned elsewhere is checked
+  rather than trusted**: one whose mode lets group or other read it is refused,
+  and signing falls through to HMAC rather than claiming ML-DSA under a key the
+  whole host can read. It is refused rather than silently `chmod`-ed, because
+  tightening the mode does not un-expose a key that has already been readable
+  and would hide the provisioning mistake. And **publication is now
+  create-if-absent rather than replace**: two processes pointed at one absent
+  path both find it missing and both generate a keypair — ML-DSA keygen holds
+  that window open — so the one that published second used to overwrite the
+  first's file while continuing to sign under its own discarded key. Measured
+  before the fix, six concurrent processes produced up to four distinct signing
+  keys, with every one of them signing under a key that was not the one left on
+  disk; a shared temporary filename also let one process consume another's file
+  mid-write and drop silently to HMAC. The bytes now go to a per-process
+  temporary and are linked into place, so the loser adopts the winner's identity
+  instead of orphaning its own nodes.
   **With no identity configured the tier is skipped and signing falls through to
   HMAC-SHA256**, rather than minting a key per signature. That changes the
   recorded `signature_scheme` for deployments that had the Rust extension and no

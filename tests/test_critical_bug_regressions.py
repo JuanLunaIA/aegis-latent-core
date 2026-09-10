@@ -191,6 +191,123 @@ class TestPqcIdentityIsPersistent:
         assert node.signature_scheme == "hmac-sha256"
 
 
+class TestTheIdentityIsNotTrustedBlindly:
+    """Two ways a persistent identity stops attributing anything.
+
+    Both were raised in review on the change that introduced it, and both are
+    the same failure the persistent identity exists to prevent: a node labelled
+    ``pqc-ml-dsa`` whose public key nobody holds.
+    """
+
+    @pytest.mark.parametrize("mode", [0o644, 0o640, 0o604, 0o666])
+    def test_a_group_or_world_readable_identity_is_refused(self, tmp_path: Path, mode: int) -> None:
+        # A key every account on the host can read attributes to all of them.
+        # Refusing is loud and leaves signing on HMAC; silently tightening the
+        # mode would not un-expose a key that has already been readable.
+        pytest.importorskip("aegis_rust")
+        identity = tmp_path / "loose.pqc"
+        with CryptographicAuditLedger(
+            str(tmp_path / "f.wal"), signing_key=SIGNING_KEY, pqc_identity_path=str(identity)
+        ) as ledger:
+            ledger.commit_state(state_id="seed", entropy=0.5, payload=b"x")
+
+        identity.chmod(mode)
+        with CryptographicAuditLedger(
+            str(tmp_path / "g.wal"), signing_key=SIGNING_KEY, pqc_identity_path=str(identity)
+        ) as ledger:
+            node = ledger.commit_state(state_id="req", entropy=0.5, payload=b"x")
+
+        assert node.signature_scheme == "hmac-sha256"
+        assert node.public_key == ""
+        # Refused, not repaired: the mode is the operator's to explain.
+        assert identity.stat().st_mode & 0o777 == mode
+
+    def test_a_private_identity_is_still_accepted(self, tmp_path: Path) -> None:
+        # The guard rejects a permissive mode, not every mode but 0600 — an
+        # identity provisioned read-only must still load.
+        pytest.importorskip("aegis_rust")
+        identity = tmp_path / "tight.pqc"
+        with CryptographicAuditLedger(
+            str(tmp_path / "h.wal"), signing_key=SIGNING_KEY, pqc_identity_path=str(identity)
+        ) as ledger:
+            before = ledger.commit_state(state_id="seed", entropy=0.5, payload=b"x").public_key
+
+        identity.chmod(0o400)
+        with CryptographicAuditLedger(
+            str(tmp_path / "i.wal"), signing_key=SIGNING_KEY, pqc_identity_path=str(identity)
+        ) as ledger:
+            node = ledger.commit_state(state_id="req", entropy=0.5, payload=b"x")
+
+        assert node.signature_scheme == "pqc-ml-dsa"
+        assert node.public_key == before
+
+    def test_a_directory_at_the_identity_path_is_refused(self, tmp_path: Path) -> None:
+        pytest.importorskip("aegis_rust")
+        identity = tmp_path / "not-a-file"
+        identity.mkdir()
+        with CryptographicAuditLedger(
+            str(tmp_path / "j.wal"), signing_key=SIGNING_KEY, pqc_identity_path=str(identity)
+        ) as ledger:
+            node = ledger.commit_state(state_id="req", entropy=0.5, payload=b"x")
+
+        assert node.signature_scheme == "hmac-sha256"
+
+    def test_a_writer_that_loses_the_publish_race_adopts_the_winner(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The create race, driven deterministically.
+
+        Two processes pointed at one absent identity path both find it missing
+        and both generate a keypair — ML-DSA keygen holds that window open for
+        milliseconds. The one that publishes second must sign under what is on
+        disk, not under what it generated, or its nodes carry a `pqc-ml-dsa`
+        public key that exists nowhere and attributes to nobody.
+
+        The window is entered deterministically rather than raced: a competitor's
+        identity is planted at the path *during* this ledger's keygen, which is
+        exactly the state a loser finds on return from generating. Publishing by
+        replace would overwrite the competitor and keep the locally generated
+        key — orphaning the competitor's already-signed nodes. Publishing by
+        create-if-absent cannot, so the local keypair is discarded instead.
+        """
+        pytest.importorskip("aegis_rust")
+        from aegis.core import crypto_audit as _module
+
+        identity = tmp_path / "contested.pqc"
+        competitor = _module.PQCSigner(require_real=True)
+        material = competitor.public_key + competitor.export_private_key()
+
+        class PublishesACompetitorMidKeygen(_module.PQCSigner):  # type: ignore[misc,valid-type]
+            def __init__(self, *args: object, **kwargs: object) -> None:
+                super().__init__(*args, **kwargs)  # type: ignore[arg-type]
+                if not identity.exists():
+                    identity.write_bytes(material)
+                    identity.chmod(0o600)
+
+        monkeypatch.setattr(_module, "PQCSigner", PublishesACompetitorMidKeygen)
+
+        with CryptographicAuditLedger(
+            str(tmp_path / "k.wal"), signing_key=SIGNING_KEY, pqc_identity_path=str(identity)
+        ) as ledger:
+            node = ledger.commit_state(state_id="a", entropy=0.5, payload=b"x")
+
+        assert node.signature_scheme == "pqc-ml-dsa"
+        # Signed under the published identity, not the one generated here.
+        assert node.public_key == competitor.public_key.hex()
+        # And the competitor's file was adopted, never overwritten.
+        assert identity.read_bytes() == material
+
+    def test_publishing_leaves_no_temporary_files_behind(self, tmp_path: Path) -> None:
+        pytest.importorskip("aegis_rust")
+        identity = tmp_path / "clean.pqc"
+        with CryptographicAuditLedger(
+            str(tmp_path / "m.wal"), signing_key=SIGNING_KEY, pqc_identity_path=str(identity)
+        ) as ledger:
+            ledger.commit_state(state_id="req", entropy=0.5, payload=b"x")
+
+        assert list(tmp_path.glob("*.tmp")) == []
+
+
 class TestNewChainsUseDomainSeparation:
     """P1-2: a new chain defaulted to the construction v2 exists to replace."""
 
