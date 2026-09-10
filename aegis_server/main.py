@@ -47,6 +47,7 @@ Dependencies:
 
 from __future__ import annotations
 
+import asyncio
 import datetime
 import hashlib
 import json
@@ -68,6 +69,7 @@ from aegis_server.compliance.exporter import ComplianceExporter, ExportParams
 from aegis_server.config import EnterpriseSettings, get_settings
 from aegis_server.crypto import SignerProvider, get_signer
 from aegis_server.storage import StorageProvider, get_provider
+from aegis_server.storage.base import GENESIS_PREV_HASH, ConcurrentChainMutationError
 
 logger = logging.getLogger(__name__)
 
@@ -360,6 +362,22 @@ def _require_audit_auth(
 # ---------------------------------------------------------------------------
 
 
+# Serialises the read-tip → sign → append sequence within this process.
+#
+# The sequence cannot be safe without it. A caller reads the tip to learn what
+# to link to, then builds and *signs* the node — an await that may reach an
+# HSM — and only then writes. Two background tasks therefore read the same tip
+# and both append against it, and the chain forks: measured, ten concurrent
+# appends produced ten nodes all naming one predecessor.
+#
+# This lock closes that inside one process. It does nothing across processes or
+# hosts, which is why the append itself is also compare-and-append at the
+# storage layer (`write_node_atomic`). Neither is redundant: the lock keeps the
+# in-process MMR consistent with what is written, the storage guard keeps a
+# second worker from forking the shared chain.
+_CHAIN_APPEND_LOCK: asyncio.Lock = asyncio.Lock()
+
+
 async def _run_forensic_analytics(
     *,
     request_id: str,
@@ -501,102 +519,126 @@ async def _run_forensic_analytics(
     # HIGHEST seq value (ORDER BY seq DESC LIMIT 1), not the genesis node.
     # The old list_nodes(limit=1, offset=0) used ASC order and always returned
     # the first node, breaking the linked-list structure from node #3 onwards.
-    prev_hash: str = "0" * 64
-    try:
-        latest = await storage.get_latest_node()
-        if latest:
-            prev_hash = latest.get("node_id", "0" * 64)
-    except Exception as exc:
-        logger.debug("request_id=%s: could not retrieve prev_hash: %s", request_id, exc)
-
-    # MAJOR-02 fix: use the MerkleMountainRange singleton (app.state.mmr) to
-    # compute the real merkle_root with append-only MMR semantics instead of
-    # the SHA-256 surrogate.  Falls back to the surrogate when mmr is None
-    # (e.g. lifespan not yet initialised in tests).
-    mmr = getattr(app_state, "mmr", None)
-    if mmr is not None:
+    # Everything from here to the append is one critical section: the tip we
+    # read, the MMR leaf we add, and the node we write have to describe the
+    # same moment. See _CHAIN_APPEND_LOCK.
+    async with _CHAIN_APPEND_LOCK:
+        prev_hash: str = GENESIS_PREV_HASH
         try:
-            leaf_data = (request_hash + response_hash + timestamp).encode()
-            merkle_root: str = mmr.add_leaf(leaf_data)
+            latest = await storage.get_latest_node()
+            if latest:
+                prev_hash = latest.get("node_id", GENESIS_PREV_HASH)
         except Exception as exc:
-            logger.warning(
-                "request_id=%s: MMR.add_leaf failed (%s); falling back to SHA-256 surrogate",
-                request_id,
-                exc,
-            )
+            logger.debug("request_id=%s: could not retrieve prev_hash: %s", request_id, exc)
+
+        # MAJOR-02 fix: use the MerkleMountainRange singleton (app.state.mmr) to
+        # compute the real merkle_root with append-only MMR semantics instead of
+        # the SHA-256 surrogate.  Falls back to the surrogate when mmr is None
+        # (e.g. lifespan not yet initialised in tests).
+        mmr = getattr(app_state, "mmr", None)
+        if mmr is not None:
+            try:
+                leaf_data = (request_hash + response_hash + timestamp).encode()
+                merkle_root: str = mmr.add_leaf(leaf_data)
+            except Exception as exc:
+                logger.warning(
+                    "request_id=%s: MMR.add_leaf failed (%s); falling back to SHA-256 surrogate",
+                    request_id,
+                    exc,
+                )
+                merkle_root = hashlib.sha256(
+                    (request_hash + response_hash + timestamp).encode()
+                ).hexdigest()
+        else:
             merkle_root = hashlib.sha256(
                 (request_hash + response_hash + timestamp).encode()
             ).hexdigest()
-    else:
-        merkle_root = hashlib.sha256(
-            (request_hash + response_hash + timestamp).encode()
-        ).hexdigest()
 
-    node_data: dict[str, Any] = {
-        "prev_hash": prev_hash,
-        "entropy": round(entropy, 6),
-        "model": model,
-        "endpoint": endpoint,
-        "token_trail_count": len(token_trail),
-        "is_fallback": False,
-        "logprobs_present": bool(token_trail),
-        "force_logprobs": force_logprobs,
-        "usage": response_json.get("usage", {}),
-        "upstream_status": upstream_status,
-        "evidence_authority": "durable" if require_durable else "enrichment",
-    }
+        node_data: dict[str, Any] = {
+            "prev_hash": prev_hash,
+            "entropy": round(entropy, 6),
+            "model": model,
+            "endpoint": endpoint,
+            "token_trail_count": len(token_trail),
+            "is_fallback": False,
+            "logprobs_present": bool(token_trail),
+            "force_logprobs": force_logprobs,
+            "usage": response_json.get("usage", {}),
+            "upstream_status": upstream_status,
+            "evidence_authority": "durable" if require_durable else "enrichment",
+        }
 
-    # ── 6. Sign the Merkle root ───────────────────────────────────────
-    signature: str = ""
-    try:
-        signature = await signer.sign_payload(merkle_root.encode())
-    except Exception as exc:
-        logger.error(
-            "request_id=%s: signing failed in analytics path: %s",
-            request_id,
-            exc,
-        )
-        if require_durable:
+        # ── 6. Sign the Merkle root ───────────────────────────────────────
+        signature: str = ""
+        try:
+            signature = await signer.sign_payload(merkle_root.encode())
+        except Exception as exc:
+            logger.error(
+                "request_id=%s: signing failed in analytics path: %s",
+                request_id,
+                exc,
+            )
+            if require_durable:
+                return False
+            node_data["is_fallback"] = True
+
+        # ── 7. Persist node ───────────────────────────────────────────────
+        # node_id is SHA-256(merkle_root || signature) for tamper-evidence.
+        node_id = hashlib.sha256((merkle_root + signature).encode()).hexdigest()
+        try:
+            # Compare-and-append against the tip this task actually read. The
+            # lock above already keeps other tasks in this process out; this
+            # keeps a second worker or host from forking the shared chain,
+            # which no in-process lock can do.
+            await storage.write_node_atomic(
+                node_id=node_id,
+                timestamp=timestamp,
+                node_data=node_data,
+                request_hash=request_hash,
+                response_hash=response_hash,
+                merkle_root=merkle_root,
+                signature=signature,
+                client_id=client_id,
+                expected_prev_hash=prev_hash,
+            )
+            elapsed_ms = (time.monotonic() - start_ts) * 1000
+            logger.debug(
+                "request_id=%s: analytics background task complete in %.1f ms "
+                "(node_id=%s…, entropy=%.4f, tokens=%d)",
+                request_id,
+                elapsed_ms,
+                node_id[:16],
+                entropy,
+                len(token_trail),
+            )
+        except ConcurrentChainMutationError as exc:
+            # Another writer — necessarily in another process, since the lock
+            # above covers this one — appended first. The node is not written.
+            #
+            # Deliberately not retried here. A retry would have to redo the MMR
+            # leaf, and this process's MMR is a separate accumulator from the
+            # shared chain: adding a second leaf for one request would leave
+            # the two disagreeing. Reconciling them needs the MMR and the store
+            # to commit together, which they do not, so the honest outcome is
+            # to report the append as not landed rather than to paper over it.
+            logger.error(
+                "request_id=%s: chain tip moved during append; node not written: %s",
+                request_id,
+                exc,
+            )
             return False
-        node_data["is_fallback"] = True
+        except Exception as exc:
+            logger.error(
+                "request_id=%s: storage.write_node_atomic failed in analytics path: %s",
+                request_id,
+                exc,
+            )
+            return False
+        return True
 
-    # ── 7. Persist node ───────────────────────────────────────────────
-    # node_id is SHA-256(merkle_root || signature) for tamper-evidence.
-    node_id = hashlib.sha256((merkle_root + signature).encode()).hexdigest()
-    try:
-        await storage.write_node(
-            node_id=node_id,
-            timestamp=timestamp,
-            node_data=node_data,
-            request_hash=request_hash,
-            response_hash=response_hash,
-            merkle_root=merkle_root,
-            signature=signature,
-            client_id=client_id,
-        )
-        elapsed_ms = (time.monotonic() - start_ts) * 1000
-        logger.debug(
-            "request_id=%s: analytics background task complete in %.1f ms "
-            "(node_id=%s…, entropy=%.4f, tokens=%d)",
-            request_id,
-            elapsed_ms,
-            node_id[:16],
-            entropy,
-            len(token_trail),
-        )
-    except Exception as exc:
-        logger.error(
-            "request_id=%s: storage.write_node failed in analytics path: %s",
-            request_id,
-            exc,
-        )
-        return False
-    return True
-
-
-# ---------------------------------------------------------------------------
-# Routers
-# ---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
+    # Routers
+    # ---------------------------------------------------------------------------
 
 
 def _health_router():

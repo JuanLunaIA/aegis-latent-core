@@ -21,6 +21,28 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 # ---------------------------------------------------------------------------
+# Chain linkage
+# ---------------------------------------------------------------------------
+
+GENESIS_PREV_HASH = "0" * 64
+"""The ``prev_hash`` of the first node in a chain, which links to nothing."""
+
+
+class ConcurrentChainMutationError(RuntimeError):
+    """The chain tip moved between reading it and appending to it.
+
+    Raised instead of writing, because the alternative is a **fork**: two nodes
+    naming the same predecessor. A hash chain with two successors at one point
+    has no single history to verify, and nothing downstream can tell which
+    branch is the record — so the append is refused and the caller re-reads the
+    tip and rebuilds.
+
+    This is a normal outcome under concurrency, not a corruption signal. It
+    means the guard worked.
+    """
+
+
+# ---------------------------------------------------------------------------
 # Value objects
 # ---------------------------------------------------------------------------
 
@@ -219,6 +241,49 @@ class StorageProvider(abc.ABC):
         Raises:
             RuntimeError: On unrecoverable persistence failures.
         """
+
+    async def write_node_atomic(
+        self,
+        node_id: str,
+        timestamp: str,
+        node_data: dict[str, Any],
+        request_hash: str,
+        response_hash: str,
+        merkle_root: str,
+        signature: str,
+        client_id: str,
+        expected_prev_hash: str,
+    ) -> None:
+        """Append only if the chain tip is still ``expected_prev_hash``.
+
+        `write_node` cannot be safe on its own. A caller has to read the tip to
+        know what to link to, and between that read and the write it does real
+        work — building the node, and **signing it**, which may go out to an
+        HSM. Two concurrent appenders therefore read the same tip and both
+        write against it, and the chain forks: two nodes claiming one
+        predecessor, with no way afterwards to say which is the record.
+
+        Passing the tip the caller actually read closes that window. The check
+        and the insert happen together inside the backend, so a tip that moved
+        is a refusal (`ConcurrentChainMutationError`) rather than a second
+        branch.
+
+        Backends enforce this two ways and need both. The compare-and-append
+        rejects a stale caller; a uniqueness constraint on ``prev_hash`` makes
+        the fork *unrepresentable* even if a caller bypasses the check, and
+        covers the case a compare-and-append alone misses — an empty table,
+        where there is no row to lock and two genesis writers can otherwise
+        both proceed.
+
+        Raises:
+            ConcurrentChainMutationError: The tip moved; nothing was written.
+            RuntimeError: On unrecoverable persistence failures.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement write_node_atomic. "
+            "Appending through write_node alone cannot prevent a chain fork "
+            "under concurrency."
+        )
 
     # ------------------------------------------------------------------
     # Read

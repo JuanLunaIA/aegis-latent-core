@@ -49,12 +49,26 @@ import aioboto3
 from boto3.dynamodb.conditions import Attr, Key
 from botocore.exceptions import ClientError
 
-from aegis_server.storage.base import IntegrityReport, StorageProvider
+from aegis_server.storage.base import (
+    GENESIS_PREV_HASH,
+    ConcurrentChainMutationError,
+    IntegrityReport,
+    StorageProvider,
+)
 
 logger = logging.getLogger(__name__)
 
 _PARTITION_SENTINEL = "ALL"
 _GSI_NAME = "aegis_ts_idx"
+
+# A reserved item that holds the chain tip. DynamoDB has no cross-item
+# uniqueness constraint, so the fork cannot be made unrepresentable the way
+# a unique index does it in SQL. What DynamoDB does have is a transaction
+# with per-item conditions: writing the node and advancing this one item
+# succeed or fail together, and the condition on this item is what serialises
+# appenders. Its node_id is not a valid SHA-256 digest, so it can never
+# collide with a real node.
+_TIP_ITEM_ID = "__chain_tip__"
 
 # DynamoDB attribute type codes
 _S = "S"  # String
@@ -218,6 +232,92 @@ class DynamoDBStorageProvider(StorageProvider):
                 return
             raise RuntimeError(
                 f"DynamoDBStorageProvider.write_node failed for node_id={node_id!r}: {exc}"
+            ) from exc
+
+    async def write_node_atomic(
+        self,
+        node_id: str,
+        timestamp: str,
+        node_data: dict[str, Any],
+        request_hash: str,
+        response_hash: str,
+        merkle_root: str,
+        signature: str,
+        client_id: str,
+        expected_prev_hash: str,
+    ) -> None:
+        """Append only if the tip item still names ``expected_prev_hash``.
+
+        A conditional ``PutItem`` on the node alone cannot do this. The
+        condition would be evaluated against the item being written, which does
+        not exist yet — so a test like ``attribute_not_exists(prev_hash)`` is
+        trivially true and rejects nothing. The tip has to live in its own item
+        so there is something with a current value to compare against.
+
+        ``TransactWriteItems`` then makes the two halves indivisible: the node
+        is inserted and the tip advanced together, and if another appender moved
+        the tip in between, the transaction is cancelled and neither happens.
+
+        Raises:
+            ConcurrentChainMutationError: The tip moved; nothing was written.
+            RuntimeError: On unrecoverable AWS API errors.
+        """
+        self._require_initialized()
+
+        item: dict[str, Any] = {
+            "node_id": {_S: node_id},
+            "partition_key": {_S: _PARTITION_SENTINEL},
+            "timestamp": {_S: timestamp},
+            "request_hash": {_S: request_hash},
+            "response_hash": {_S: response_hash or ""},
+            "merkle_root": {_S: merkle_root},
+            "signature": {_S: signature},
+            "client_id": {_S: client_id},
+            "node_data": {_S: json.dumps(node_data, separators=(",", ":"), default=str)},
+            "prev_hash": {_S: expected_prev_hash},
+        }
+
+        try:
+            async with self._get_client() as client:
+                await client.transact_write_items(
+                    TransactItems=[
+                        {
+                            "Put": {
+                                "TableName": self._table_name,
+                                "Item": item,
+                                "ConditionExpression": "attribute_not_exists(node_id)",
+                            }
+                        },
+                        {
+                            "Update": {
+                                "TableName": self._table_name,
+                                "Key": {"node_id": {_S: _TIP_ITEM_ID}},
+                                "UpdateExpression": "SET tip_node_id = :new",
+                                # Either the chain has no tip yet and the caller
+                                # is writing genesis, or the tip is exactly what
+                                # the caller read.
+                                "ConditionExpression": (
+                                    "(attribute_not_exists(tip_node_id) AND :expected = :genesis)"
+                                    " OR tip_node_id = :expected"
+                                ),
+                                "ExpressionAttributeValues": {
+                                    ":new": {_S: node_id},
+                                    ":expected": {_S: expected_prev_hash},
+                                    ":genesis": {_S: GENESIS_PREV_HASH},
+                                },
+                            }
+                        },
+                    ]
+                )
+        except ClientError as exc:
+            code = exc.response["Error"]["Code"]
+            if code in {"TransactionCanceledException", "ConditionalCheckFailedException"}:
+                raise ConcurrentChainMutationError(
+                    f"chain tip moved: caller linked to {expected_prev_hash[:16]}…; "
+                    "nothing was written"
+                ) from exc
+            raise RuntimeError(
+                f"DynamoDBStorageProvider.write_node_atomic failed for node_id={node_id!r}: {exc}"
             ) from exc
 
     # ------------------------------------------------------------------

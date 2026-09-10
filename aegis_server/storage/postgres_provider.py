@@ -42,7 +42,12 @@ from typing import Any
 import asyncpg
 from asyncpg import Pool
 
-from aegis_server.storage.base import IntegrityReport, StorageProvider
+from aegis_server.storage.base import (
+    GENESIS_PREV_HASH,
+    ConcurrentChainMutationError,
+    IntegrityReport,
+    StorageProvider,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +68,56 @@ CREATE TABLE IF NOT EXISTS audit_nodes (
 _DDL_UNIQUE_IDX = """
 CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_node_id
     ON audit_nodes (node_id);
+"""
+
+# The chain link, lifted out of node_data into a column PostgreSQL can
+# constrain. In a linear chain each node has exactly one successor, so no two
+# nodes share a prev_hash — and a fork is exactly two nodes that do. The unique
+# index therefore makes a fork unrepresentable rather than merely detectable,
+# with no lock, across every worker and host pointed at this database.
+#
+# It also covers what a compare-and-append cannot: on an empty table there is
+# no row for SELECT ... FOR UPDATE to lock, so two genesis writers would
+# otherwise both pass the check and both commit.
+_DDL_PREV_HASH_COLUMN = """
+ALTER TABLE audit_nodes ADD COLUMN IF NOT EXISTS prev_hash TEXT NOT NULL DEFAULT '';
+"""
+
+_DDL_BACKFILL_PREV_HASH = """
+UPDATE audit_nodes
+   SET prev_hash = COALESCE(node_data ->> 'prev_hash', '')
+ WHERE prev_hash = '';
+"""
+
+_DDL_PREV_HASH_IDX = """
+CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_prev_hash
+    ON audit_nodes (prev_hash) WHERE prev_hash <> '';
+"""
+
+_DUPLICATE_PREV_HASH_SQL = """
+SELECT prev_hash FROM audit_nodes
+WHERE prev_hash <> ''
+GROUP BY prev_hash HAVING COUNT(*) > 1
+LIMIT 1;
+"""
+
+# Compare-and-append. The insert happens only when the current tip is still the
+# one the caller linked to; RETURNING is empty otherwise, which is how the
+# caller learns the tip moved. FOR UPDATE holds the tip row for the duration of
+# the transaction so a concurrent appender blocks rather than reading a tip that
+# is about to change.
+_INSERT_ATOMIC_SQL = """
+WITH tip AS (
+    SELECT node_id FROM audit_nodes ORDER BY seq DESC LIMIT 1 FOR UPDATE
+)
+INSERT INTO audit_nodes
+    (node_id, timestamp, request_hash, response_hash,
+     merkle_root, signature, client_id, node_data, prev_hash)
+SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9
+WHERE (NOT EXISTS (SELECT 1 FROM tip) AND $9 = $10)
+   OR ((SELECT node_id FROM tip) = $9)
+ON CONFLICT (node_id) DO NOTHING
+RETURNING node_id;
 """
 
 _DDL_TIMESTAMP_IDX = """
@@ -184,6 +239,7 @@ class PostgreSQLStorageProvider(StorageProvider):
                     await conn.execute(_DDL_UNIQUE_IDX)
                     await conn.execute(_DDL_TIMESTAMP_IDX)
                     await conn.execute(_DDL_CLIENT_IDX)
+                    await self._migrate_prev_hash(conn)
         except Exception as exc:
             await self._pool.close()
             self._pool = None
@@ -211,6 +267,91 @@ class PostgreSQLStorageProvider(StorageProvider):
     # ------------------------------------------------------------------
     # Write
     # ------------------------------------------------------------------
+
+    @staticmethod
+    async def _migrate_prev_hash(conn: Any) -> None:
+        """Lift ``prev_hash`` into a column and index it uniquely.
+
+        Idempotent. Loud on exactly one case: if the unique index cannot be
+        built, two rows already name the same predecessor, so this chain has
+        **already forked**. Starting anyway would mean appending to a history
+        with two pasts, which no verifier can resolve afterwards. The error
+        names the duplicate; choosing the authoritative branch is an operator
+        decision this code has no basis to make.
+        """
+        await conn.execute(_DDL_PREV_HASH_COLUMN)
+        await conn.execute(_DDL_BACKFILL_PREV_HASH)
+        try:
+            await conn.execute(_DDL_PREV_HASH_IDX)
+        except asyncpg.UniqueViolationError as exc:
+            duplicate = await conn.fetchval(_DUPLICATE_PREV_HASH_SQL)
+            raise RuntimeError(
+                "audit chain is already forked: more than one node names "
+                f"prev_hash={duplicate!r} as its predecessor. Refusing to "
+                "initialise, because appending to a chain with two histories "
+                "produces evidence that cannot be verified. Resolve which "
+                "branch is authoritative before restarting."
+            ) from exc
+
+    async def write_node_atomic(
+        self,
+        node_id: str,
+        timestamp: str,
+        node_data: dict[str, Any],
+        request_hash: str,
+        response_hash: str,
+        merkle_root: str,
+        signature: str,
+        client_id: str,
+        expected_prev_hash: str,
+    ) -> None:
+        """Append only if the tip is still ``expected_prev_hash``.
+
+        One statement, inside one transaction: the tip is read under
+        ``FOR UPDATE`` and the insert is conditional on it, so there is no
+        window between the check and the append for another worker to slip
+        into. An empty ``RETURNING`` means the tip moved and nothing was
+        written.
+
+        Raises:
+            ConcurrentChainMutationError: The tip moved; nothing was written.
+            RuntimeError: When the pool is not initialized or on I/O failure.
+        """
+        self._require_pool()
+        node_data_json = json.dumps(node_data, separators=(",", ":"), default=str)
+
+        try:
+            async with self._pool.acquire() as conn:  # type: ignore[union-attr]
+                async with conn.transaction():
+                    written = await conn.fetchval(
+                        _INSERT_ATOMIC_SQL,
+                        node_id,
+                        timestamp,
+                        request_hash,
+                        response_hash,
+                        merkle_root,
+                        signature,
+                        client_id,
+                        node_data_json,
+                        expected_prev_hash,
+                        GENESIS_PREV_HASH,
+                    )
+        except asyncpg.UniqueViolationError as exc:
+            # The prev_hash index fired: another node already links here. Same
+            # meaning as a moved tip, caught by the backstop instead of the
+            # check — which is what covers the empty-table genesis race.
+            raise ConcurrentChainMutationError(
+                f"another node already links to {expected_prev_hash[:16]}…; nothing was written"
+            ) from exc
+        except Exception as exc:
+            raise RuntimeError(
+                f"PostgreSQLStorageProvider.write_node_atomic failed for node_id={node_id!r}: {exc}"
+            ) from exc
+
+        if written is None:
+            raise ConcurrentChainMutationError(
+                f"chain tip moved: caller linked to {expected_prev_hash[:16]}…; nothing was written"
+            )
 
     async def write_node(
         self,

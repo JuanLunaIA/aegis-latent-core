@@ -15,6 +15,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — concurrent appends forked the enterprise storage chain (P0)
+
+The analytics path read the chain tip, then built and **signed** the node — an
+await that may reach an HSM — and only then wrote. Two background tasks
+therefore read the same tip and both appended against it. Measured on SQLite
+before the fix: ten concurrent appends produced **ten nodes all naming one
+predecessor**. A hash chain with two successors at a point has no single
+history, and an integrity sweep over either branch passes, so this is not a
+corruption to be detected later; it is a state the store must not reach.
+
+Two layers, and neither is redundant:
+
+- `write_node_atomic(..., expected_prev_hash)` appends **only if the tip is
+  still what the caller read**, and raises `ConcurrentChainMutationError`
+  otherwise, writing nothing. `prev_hash` also moves out of the `node_data`
+  JSON into a column with a uniqueness constraint, which makes a fork
+  *unrepresentable* rather than merely detectable — in a linear chain no two
+  nodes share a predecessor, so the constraint is exactly the invariant. It
+  covers what a compare-and-append alone cannot: on an empty table there is no
+  row to lock, so two genesis writers would otherwise both commit.
+- A process-wide lock spans the whole read-tip → sign → append sequence, which
+  is what keeps this process's MMR consistent with what it writes. It does
+  nothing across workers or hosts; the storage guard is the only thing that
+  does.
+
+**What this does not fix.** An append refused because *another process* moved
+the tip is reported and lost, not retried. A retry would have to re-add an MMR
+leaf, and this process's MMR is a separate accumulator from the shared chain,
+so a second leaf for one request would leave the two disagreeing. Reconciling
+them needs the MMR and the store to commit together, which they do not. And a
+store that forked before the constraint existed now refuses to initialise,
+naming the duplicate — repairing it means choosing which branch is the record,
+which no rule here can decide.
+
+Only the SQLite path is verified. The PostgreSQL (`FOR UPDATE`
+compare-and-append plus a unique partial index) and DynamoDB
+(`TransactWriteItems` against a tip item) implementations are written against
+their documented primitives but were not executed: `asyncpg`, a PostgreSQL
+server and a DynamoDB endpoint are all absent here. `CLM-081` records that.
+
+
+### Fixed — a gossip round that failed said nothing about why
+
+`GossipDaemon.run_round` logged `failed (%s)` with the exception alone. Several
+of the exceptions that reach there carry no message, so an operator saw
+`round with peer replica-1 failed ()` and learned nothing — and a reproducible
+fault looked like an unexplained one. The log now carries the exception type,
+which is what actually distinguishes a refused certificate from a timeout from
+a rejected state.
+
+
 ### Added — cross-replica reconciliation, off by default
 
 - **`CausalMmr` has a transport.** The join-semilattice was implemented and

@@ -43,11 +43,17 @@ import asyncio
 import json
 import logging
 import os
+import sqlite3
 from typing import Any
 
 import aiosqlite
 
-from aegis_server.storage.base import IntegrityReport, StorageProvider
+from aegis_server.storage.base import (
+    GENESIS_PREV_HASH,
+    ConcurrentChainMutationError,
+    IntegrityReport,
+    StorageProvider,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +91,32 @@ CREATE INDEX IF NOT EXISTS idx_audit_client
     ON audit_nodes (client_id);
 """
 
+# The chain link, lifted out of the node_data JSON into a column so the
+# database itself can enforce that it is unique.
+#
+# In a linear chain every node has exactly one successor, so no two nodes ever
+# share a prev_hash — and a fork is precisely two nodes that do. A unique index
+# therefore does not *detect* forks, it makes them unrepresentable, without a
+# lock, across processes and across hosts. It also closes the one case a
+# compare-and-append misses: an empty table has no row to lock, so two genesis
+# writers can otherwise both succeed.
+_ADD_PREV_HASH_COLUMN_SQL = """
+ALTER TABLE audit_nodes ADD COLUMN prev_hash TEXT NOT NULL DEFAULT '';
+"""
+
+_BACKFILL_PREV_HASH_SQL = """
+UPDATE audit_nodes
+   SET prev_hash = COALESCE(json_extract(node_data, '$.prev_hash'), '')
+ WHERE prev_hash = '';
+"""
+
+# Partial: legacy rows whose node_data carried no prev_hash backfill to '' and
+# must not collide with each other. Real links are always 64 hex characters.
+_CREATE_PREV_HASH_INDEX_SQL = """
+CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_prev_hash
+    ON audit_nodes (prev_hash) WHERE prev_hash <> '';
+"""
+
 _WAL_PRAGMAS = [
     "PRAGMA journal_mode = WAL;",
     "PRAGMA synchronous  = NORMAL;",
@@ -99,6 +131,18 @@ INSERT OR IGNORE INTO audit_nodes
      merkle_root, signature, client_id, node_data)
 VALUES
     (?, ?, ?, ?, ?, ?, ?, ?);
+"""
+
+_INSERT_ATOMIC_SQL = """
+INSERT OR IGNORE INTO audit_nodes
+    (node_id, timestamp, request_hash, response_hash,
+     merkle_root, signature, client_id, node_data, prev_hash)
+VALUES
+    (?, ?, ?, ?, ?, ?, ?, ?, ?);
+"""
+
+_TIP_NODE_ID_SQL = """
+SELECT node_id FROM audit_nodes ORDER BY seq DESC LIMIT 1;
 """
 
 _SELECT_BY_ID_SQL = """
@@ -170,6 +214,39 @@ class SQLiteStorageProvider(StorageProvider):
     # Lifecycle
     # ------------------------------------------------------------------
 
+    @staticmethod
+    async def _migrate_prev_hash(db: aiosqlite.Connection) -> None:
+        """Lift ``prev_hash`` into a column and index it uniquely.
+
+        Idempotent, and deliberately loud on one case: if the unique index
+        cannot be built, the existing rows already contain two nodes naming the
+        same predecessor. That is a chain that has **already forked**, and
+        starting anyway would mean appending to a history with no single past.
+        The error names the duplicate so an operator can decide which branch is
+        the record; there is no correct answer this code could pick for them.
+        """
+        async with db.execute("PRAGMA table_info(audit_nodes);") as cursor:
+            columns = {row[1] for row in await cursor.fetchall()}
+        if "prev_hash" not in columns:
+            await db.execute(_ADD_PREV_HASH_COLUMN_SQL)
+        await db.execute(_BACKFILL_PREV_HASH_SQL)
+        try:
+            await db.execute(_CREATE_PREV_HASH_INDEX_SQL)
+        except sqlite3.IntegrityError as exc:
+            async with db.execute(
+                "SELECT prev_hash, COUNT(*) c FROM audit_nodes "
+                "WHERE prev_hash <> '' GROUP BY prev_hash HAVING c > 1 LIMIT 1;"
+            ) as cursor:
+                row = await cursor.fetchone()
+            duplicate = row[0] if row else "unknown"
+            raise RuntimeError(
+                "audit chain is already forked: more than one node names "
+                f"prev_hash={duplicate!r} as its predecessor. Refusing to open "
+                "the store, because appending to a chain with two histories "
+                "produces evidence that cannot be verified. Resolve which "
+                "branch is authoritative before restarting."
+            ) from exc
+
     async def initialize(self) -> None:
         """
         Open the database, apply WAL pragmas, and create the schema.
@@ -192,6 +269,7 @@ class SQLiteStorageProvider(StorageProvider):
                 await db.execute(_CREATE_UNIQUE_INDEX_SQL)
                 await db.execute(_CREATE_TIMESTAMP_INDEX_SQL)
                 await db.execute(_CREATE_CLIENT_INDEX_SQL)
+                await self._migrate_prev_hash(db)
                 await db.commit()
         except Exception as exc:
             raise RuntimeError(
@@ -295,6 +373,86 @@ class SQLiteStorageProvider(StorageProvider):
             except Exception as exc:
                 raise RuntimeError(
                     f"SQLiteStorageProvider.write_node failed for node_id={node_id!r}: {exc}"
+                ) from exc
+
+    async def write_node_atomic(
+        self,
+        node_id: str,
+        timestamp: str,
+        node_data: dict[str, Any],
+        request_hash: str,
+        response_hash: str,
+        merkle_root: str,
+        signature: str,
+        client_id: str,
+        expected_prev_hash: str,
+    ) -> None:
+        """Append only if the tip is still ``expected_prev_hash``.
+
+        ``BEGIN IMMEDIATE`` takes SQLite's write lock before the tip is read
+        and holds it through the insert, so the check and the append are one
+        indivisible step. The process-local ``_chain_lock`` is kept as well —
+        it costs nothing and keeps tasks in this process from queueing on the
+        database lock — but it is no longer what makes this correct, which
+        matters because it never protected anything across processes.
+
+        Raises:
+            ConcurrentChainMutationError: The tip moved; nothing was written.
+            RuntimeError: On database I/O failures.
+        """
+        if not self._initialized:
+            raise RuntimeError("SQLiteStorageProvider.initialize() was not called")
+
+        node_data_json = json.dumps(node_data, separators=(",", ":"), default=str)
+
+        async with self._chain_lock:
+            try:
+                async with aiosqlite.connect(self._db_path, timeout=_SQLITE_LOCK_TIMEOUT) as db:
+                    for pragma in _WAL_PRAGMAS:
+                        await db.execute(pragma)
+                    # Not BEGIN DEFERRED: a deferred transaction takes the write
+                    # lock only at the insert, leaving the read outside it and
+                    # the race exactly where it was.
+                    await db.execute("BEGIN IMMEDIATE;")
+                    try:
+                        async with db.execute(_TIP_NODE_ID_SQL) as cursor:
+                            row = await cursor.fetchone()
+                        tip = row[0] if row else GENESIS_PREV_HASH
+                        if tip != expected_prev_hash:
+                            await db.execute("ROLLBACK;")
+                            raise ConcurrentChainMutationError(
+                                f"chain tip moved: caller linked to {expected_prev_hash[:16]}… "
+                                f"but the tip is {tip[:16]}…; nothing was written"
+                            )
+                        await db.execute(
+                            _INSERT_ATOMIC_SQL,
+                            (
+                                node_id,
+                                timestamp,
+                                request_hash,
+                                response_hash,
+                                merkle_root,
+                                signature,
+                                client_id,
+                                node_data_json,
+                                expected_prev_hash,
+                            ),
+                        )
+                        await db.commit()
+                    except sqlite3.IntegrityError as exc:
+                        # The unique index on prev_hash fired: another writer
+                        # already linked to this predecessor. Same meaning as a
+                        # moved tip, reached by the backstop rather than the check.
+                        await db.execute("ROLLBACK;")
+                        raise ConcurrentChainMutationError(
+                            f"another node already links to {expected_prev_hash[:16]}…; "
+                            "nothing was written"
+                        ) from exc
+            except ConcurrentChainMutationError:
+                raise
+            except Exception as exc:
+                raise RuntimeError(
+                    f"SQLiteStorageProvider.write_node_atomic failed for node_id={node_id!r}: {exc}"
                 ) from exc
 
     # ------------------------------------------------------------------

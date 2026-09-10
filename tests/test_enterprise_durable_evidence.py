@@ -34,6 +34,9 @@ def _storage(*, write_error: Exception | None = None) -> MagicMock:
     storage.get_latest_node = AsyncMock(return_value=None)
     storage.get_node = AsyncMock(return_value=None)
     storage.write_node = AsyncMock(side_effect=write_error)
+    # Durable evidence is appended through the compare-and-append path,
+    # which is what keeps two concurrent writers from forking the chain.
+    storage.write_node_atomic = AsyncMock(side_effect=write_error)
     return storage
 
 
@@ -74,8 +77,8 @@ def test_success_response_is_returned_only_after_durable_evidence():
         )
     assert result.status_code == 200
     assert result.headers["X-Aegis-Evidence-Status"] == "durable"
-    storage.write_node.assert_awaited_once()
-    assert storage.write_node.call_args.kwargs["node_data"]["upstream_status"] == 200
+    storage.write_node_atomic.assert_awaited_once()
+    assert storage.write_node_atomic.call_args.kwargs["node_data"]["upstream_status"] == 200
 
 
 def test_upstream_non_2xx_is_durably_evidenced_before_return():
@@ -89,8 +92,8 @@ def test_upstream_non_2xx_is_durably_evidenced_before_return():
         )
     assert result.status_code == 429
     assert result.headers["X-Aegis-Evidence-Status"] == "durable"
-    storage.write_node.assert_awaited_once()
-    assert storage.write_node.call_args.kwargs["node_data"]["upstream_status"] == 429
+    storage.write_node_atomic.assert_awaited_once()
+    assert storage.write_node_atomic.call_args.kwargs["node_data"]["upstream_status"] == 429
 
 
 def test_upstream_network_error_uses_durable_error_evidence():
@@ -103,8 +106,8 @@ def test_upstream_network_error_uses_durable_error_evidence():
         )
     assert result.status_code == 502
     assert result.headers["X-Aegis-Evidence-Status"] == "durable"
-    storage.write_node.assert_awaited_once()
-    assert storage.write_node.call_args.kwargs["node_data"]["upstream_status"] == 502
+    storage.write_node_atomic.assert_awaited_once()
+    assert storage.write_node_atomic.call_args.kwargs["node_data"]["upstream_status"] == 502
 
 
 def test_storage_failure_fails_closed_and_does_not_claim_durable():

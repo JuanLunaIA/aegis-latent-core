@@ -337,10 +337,15 @@ class GossipDaemon:
             except Exception as exc:  # noqa: BLE001 - one peer must not stop the round
                 health.failed()
                 self._stats = self._stats._with(peer_failures=self._stats.peer_failures + 1)
+                # The exception *type* matters as much as its message, and
+                # several of the ones that reach here carry no message at all:
+                # "failed ()" told an operator nothing, which is how a
+                # reproducible failure looked like an unexplained one.
                 logger.warning(
-                    "gossip: round with peer %s failed (%s); backing off %d round(s)",
+                    "gossip: round with peer %s failed (%s: %s); backing off %d round(s)",
                     peer.name,
-                    exc,
+                    type(exc).__name__,
+                    exc or "no message",
                     health.skip_rounds,
                 )
 
