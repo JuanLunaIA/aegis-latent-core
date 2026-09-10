@@ -60,6 +60,39 @@ verifier is installed on every run of the SBOM job — not only at release, sinc
 a verifier that first appears at release time is one nobody has tested — and a
 version check proves the binary executes.
 
+### Fixed — a jitter gate that measured the runner, not the code
+
+Turning on `-n auto` also surfaced a second latent defect, and this one only
+parallel *execution* could expose.
+`tests/test_determinism.py::TestSpawnBackgroundDeterminism::test_spawn_background_jitter_sigma`
+asserted σ < 100µs on wall-clock dispatch jitter and failed at **σ = 189.66µs on
+Python 3.12 while 3.11 and 3.13 passed the same commit** — the signature of a
+host property, not a code property.
+
+Four sibling checks in that same file already carry
+`skipif(CI == "true")` on the identical quantity, with reasons that name this
+exact failure ("shared CI runners have unbounded scheduling variance",
+"multi-millisecond scheduling outliers (observed 90ms)"). This one had no such
+guard and passed only because a serial suite left the runner idle. It was a
+latent flake, and parallelism made it reliable rather than causing it.
+
+Fourteen runs of the dispatch loop — six idle, eight under a parallel suite —
+show why σ cannot be the instrument: the median held within ±2% (4.39–4.56µs)
+and the interquartile range stayed under 1.05µs, while **σ swung eightfold
+(1.23–9.82µs) even on the idle machine**, landing within a ninth of the single
+largest sample in every run. One preemption sets it; 189.66µs is one ~1.9ms
+preemption in 100 samples. A coefficient-of-variation bound would have flaked
+for the same reason, since CV inherits σ's outlier sensitivity.
+
+The property is now asserted twice rather than weakened. Median and IQR — both
+outlier-resistant — are bounded at 100µs and run everywhere including CI; the
+absolute σ bound keeps the IEC 62443 framing and is guarded exactly as its four
+siblings are. The robust pair is deliberately coarser and is documented as such:
+it catches a wrapper that becomes uniformly slow or broadly dispersed, not a
+small change in tail shape. Its teeth were verified by injecting a 250µs
+synchronous block into `_spawn_background`, which it caught at a median of
+375.02µs.
+
 ### Fixed — `CLM-023` contradicted `CLM-054`
 
 `CLM-023` stated the tree has "no cargo-fuzz workspace or Kani harness".
