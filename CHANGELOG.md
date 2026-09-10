@@ -15,6 +15,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — attestation backends that refuse, and a replay that cannot escape a test
+
+`aegis/core/tee_manager.py` already carried the hard part: a verifier protocol,
+an exact `AttestationPolicy`, and a fail-closed evaluator that compares nonce
+and report data with `hmac.compare_digest`. What it had no implementations of
+was the protocol itself, so a deployment had a seam and nothing to put in it.
+
+`aegis/core/tee_backends.py` adds three. `NitroBackend` and `SevSnpBackend`
+refuse in every case, and refuse in two distinguishable ways on purpose: no
+device node means the workload is not running on the platform it believes it is,
+while a present device node means the platform is right and the vendor verifier
+is the missing piece. Neither reads a COSE_Sign1 document, an SNP report, a
+certificate chain or a TCB version, because no such verifier is integrated —
+device presence is discovery evidence, which is the position
+`TEEManager.initialize_enclave` already took.
+
+`RecordedAttestationBackend` replays a captured document so the policy path can
+be exercised without hardware. It authenticates nothing: it ignores the evidence
+bytes entirely and returns a fixture.
+
+**It needs no guard rail, because the existing evaluator already defeats it.** A
+recorded document carries the nonce and issue time it was captured with, both
+frozen, while production issues a fresh random nonce per challenge and reads a
+real clock. So the replay fails `compare_digest` on the nonce and fails the
+`max_age` bound. It can satisfy policy only when the caller supplies the very
+nonce it was recorded against *and* pins the clock to the recording — which is
+to say, in a test. Two tests assert exactly that, one per rejection. The
+`bind_nonce` option deliberately defeats the freshness check, and exists only so
+that policy-field rejection (a wrong measurement, a stale TCB status) can be
+tested without the nonce check masking which field did the rejecting.
+
+Protocol conformance is checked by mypy rather than assumed, through a
+`TYPE_CHECKING` binding of each backend to `AttestationVerifier`. Signature
+drift would otherwise surface at runtime in a deployment that has the hardware,
+which is the most expensive place to find it; the check was confirmed to have
+teeth by drifting a signature and observing mypy reject it.
+
+**No attestation is performed anywhere in this tree and none is claimed.**
+Recorded as `CLM-086`, whose register entry blocks "hardware-attested",
+"confidential computing", "runs in a TEE", and the specific trap of reading a
+passing test as a verified quote.
+
 ### Added — the three verification gates that were missing, and the test-suite bug one of them exposed
 
 A release-tooling audit listed seven gates as absent from CI. Four were already
