@@ -15,6 +15,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — a security-control row that cited the wrong tracing module
+
+A verification pass over the tracing surface found that this repository has
+**two** of them, and that the control table pointed at the wrong one.
+
+`aegis/core/observability.py` holds the real OpenTelemetry integration. It is
+wired: `setup_otel()` is called from the gateway lifespan, and `record_span()
+wraps exactly two operations — `aegis.waf.check` and `aegis.forward`. It is
+optional, no-oping when the `otel` extra is absent.
+
+`aegis/telemetry/otel.py` is **not OpenTelemetry**. It imports nothing from the
+OTel SDK; it is a pure standard-library facade implementing W3C `traceparent`
+and `tracestate` parsing and injection behind an attribute allowlist. It is
+complete and tested, and **nothing in the request path uses it** — the only
+references outside its own module are its package re-export and its test.
+
+`docs/security/SECURITY_CONTROLS.md` cited that second module as the evidence
+for "OpenTelemetry tracing", and described it as having an optional dependency,
+which it does not have. Three errors in one row: wrong module, wrong technology,
+wrong dependency story. The row now cites `observability.py` and states what is
+actually wired; a second row records the W3C facade as present but unwired, so a
+reader does not mistake one for the other.
+
+Two limits are now written down rather than left to be discovered:
+
+- **Two spans are wired, and the evidence commit path carries none.** The
+  `SpanName` enum in the unwired module declares four intended spans —
+  `aegis.gateway.request`, `aegis.policy.evaluate`, `aegis.proof.verify`,
+  `aegis.siem.export` — and not one of those names is in use.
+- **There is no W3C trace-context propagation on the wired path.** No propagator
+  is registered, and no `traceparent` is extracted from an incoming request or
+  injected into an upstream one, so a caller's trace does not continue through
+  the gateway: every gateway trace is a new root. The unwired module is exactly
+  the code that would fix this, which is why leaving both in the tree without
+  saying so was the hazard.
+
+No claim changed, because no claim covered this. `README.md` already lists the
+span model under "Not built. No dates.", and `ENTERPRISE_READINESS.md` already
+says "Partial; hooks exist, a tested model does not". Both were accurate; the
+security-control row was the outlier.
+
 ### Added — attestation backends that refuse, and a replay that cannot escape a test
 
 `aegis/core/tee_manager.py` already carried the hard part: a verifier protocol,
