@@ -463,6 +463,75 @@ class AegisSettings(BaseSettings):
             "so the per-stream retained-byte ceiling rises by 4x28 bytes."
         ),
     )
+    gossip_enabled: bool = Field(
+        default=False,
+        description=(
+            "Run the cross-replica reconciliation daemon. Off by default: it opens a "
+            "second listener, requires a cluster CA and per-replica certificates, and "
+            "reconciles an accumulator that is separate from the audit ledger — so "
+            "enabling it changes nothing about what the WAL records or what a receipt "
+            "proves. It gives replicas one shared CRDT root; it is not consensus, it "
+            "does not order the ledger across replicas, and it is not Byzantine "
+            "fault tolerant."
+        ),
+    )
+    gossip_replica_id: int = Field(
+        default=0,
+        ge=0,
+        le=4_294_967_295,
+        description=(
+            "This replica's identifier in the gossip mesh. Must be unique per replica "
+            "and stable across restarts: it is the key in every vector clock, so two "
+            "replicas sharing an id are indistinguishable to the causality tracking "
+            "and a changed id abandons the entries recorded under the old one. Under "
+            "the Helm chart, derive it from the StatefulSet ordinal."
+        ),
+    )
+    gossip_self_name: str = Field(
+        default="",
+        description=(
+            "This replica's own name in the mesh, excluded from the peer list. The "
+            "peer list is rendered from the replica count and cannot know which "
+            "ordinal it is being rendered for, so a replica removes itself here. "
+            "Under the Helm chart this is the pod name."
+        ),
+    )
+    gossip_peers: str = Field(
+        default="",
+        description=(
+            "Comma-separated 'name=https://host:port' peers, excluding this replica. "
+            "Static rather than discovered: there is no membership protocol, so "
+            "adding or removing a replica is an operator action. The name must match "
+            "the peer certificate."
+        ),
+    )
+    gossip_interval_seconds: float = Field(
+        default=5.0,
+        gt=0.0,
+        le=3_600.0,
+        description=(
+            "Seconds between anti-entropy rounds. A converged cluster exchanges only "
+            "a root digest per peer per round, so this is cheap to keep short; the "
+            "cost of a longer interval is how stale a replica may be, not bandwidth."
+        ),
+    )
+    gossip_client_certificate: str = Field(
+        default="",
+        description="PEM certificate this replica presents to peers, in both directions.",
+    )
+    gossip_client_private_key: str = Field(
+        default="",
+        description="PEM private key for the gossip certificate. Give it signing-key custody.",
+    )
+    gossip_certificate_authority: str = Field(
+        default="",
+        description=(
+            "PEM CA bundle that issues replica certificates. Required whenever gossip "
+            "is enabled and there is no flag to skip verification: a peer supplies "
+            "leaves that enter this replica's accumulator, so an unauthenticated mesh "
+            "is an open input rather than a cluster."
+        ),
+    )
     max_stream_duration_seconds: float = Field(
         default=60.0,
         ge=0.1,

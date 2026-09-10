@@ -15,6 +15,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — cross-replica reconciliation, off by default
+
+- **`CausalMmr` has a transport.** The join-semilattice was implemented and
+  tested but nothing ran it: there was no way to move a replica's leaf set
+  between processes, so the convergence it promised was reachable only from a
+  single test that held both replicas in one interpreter.
+
+  `aegis/consensus/` supplies the missing half — a peer set, a schedule, and
+  anti-entropy over mutual TLS. Each round compares roots first, so a converged
+  cluster exchanges one 32-byte digest per peer per interval; only a mismatch
+  triggers a state exchange, which moves leaves in both directions at once.
+  There is no log to be at the end of and no leader to be behind: a replica
+  that misses any number of rounds catches up completely on its next
+  successful one.
+
+  The wire format is new Rust (`encode_state`/`decode_state`). Its decoder is
+  the part that faces a peer who may not be friendly, so it is canonical
+  (clock entries must ascend, or one state would have many encodings),
+  bounded (a leaf count is checked against a ceiling *and* against the bytes
+  actually present, because a trusted length prefix is an out-of-memory
+  primitive), and total — every truncation returns an error rather than
+  panicking, which matters behind a PyO3 boundary where an unwind aborts the
+  interpreter rather than raising. The sender's own replica id is deliberately
+  absent from the wire: it would break canonicality, and it would put a
+  forgeable claim of identity beside the authenticated one the certificate
+  already establishes.
+
+  **Verification is not optional and there is no flag to disable it.** A peer
+  supplies leaves that enter every replica's accumulator, so authenticating
+  peers is the entire security boundary. Convergence is asserted over three
+  replicas on real loopback TLS sockets with `CERT_REQUIRED` in both
+  directions, through a simulated partition and heal; a client presenting no
+  certificate, or one from another CA, is refused at the handshake.
+
+  **What it does not do.** It reconciles the CRDT accumulator, *not* the
+  ledger: each replica's WAL stays its own chain and nothing about a receipt,
+  root or inclusion proof changes (`CLM-012` unchanged). It is not consensus,
+  not Byzantine fault tolerance and not a total order — `join` reconciles
+  replicas that disagree about ordering, not replicas that lie, and a replica
+  contributing fabricated leaves has them merged like any other. There is no
+  membership protocol; the peer list is static configuration.
+
+  Rendered onto the existing StatefulSet rather than a DaemonSet. A DaemonSet
+  has no `volumeClaimTemplates` and so cannot give each replica its own WAL
+  claim — the single-writer property the chart is built around — while the
+  StatefulSet plus its headless Service already provides what a mesh needs and
+  a DaemonSet does not: a stable per-replica DNS name a certificate can be
+  issued for.
+
 ### Added — cryptographic erasure on the ledger commit path, off by default
 
 - **`CryptographicAuditLedger` can seal what it commits.** `CryptoShredder`

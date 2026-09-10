@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "deb3cf06a59cd704d0dbaf207b6cffe044dea7bcf334f0cface9f3a86883720c",
-      "size": 102325
+      "sha256": "d779b2cfe15ab3d06f4c74d33aaabd1eb8ac8dff66182133c1e335c71aaa4d2d",
+      "size": 105292
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "9bae67c0125a3e952071e50066ad4df3129d8b4f096c33c46a13911bb42ec049",
-      "size": 72823
+      "sha256": "1158e6024b4663cb6a9d7fe334f7a910d2ff6efb2b1a0627849c909e94784938",
+      "size": 75888
     },
     {
       "category": "governed_input",
@@ -279,8 +279,8 @@
     {
       "category": "governed_input",
       "path": "deploy/helm/values.yaml",
-      "sha256": "11b6266cb58a8860d770775ffaf6ec0e3df594857ea86850b87d8a08853e493a",
-      "size": 9375
+      "sha256": "58456d80ee1883ca885fc8292bc427ab8237781b5c358729a8ab20c21ac6727c",
+      "size": 11041
     },
     {
       "category": "governed_input",

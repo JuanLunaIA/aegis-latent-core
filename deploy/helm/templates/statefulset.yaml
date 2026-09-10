@@ -54,7 +54,55 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+            {{- if .Values.gossip.enabled }}
+            - name: gossip
+              containerPort: {{ .Values.gossip.port }}
+              protocol: TCP
+            {{- end }}
           env:
+            {{- if .Values.gossip.enabled }}
+            - name: AEGIS_GOSSIP_ENABLED
+              value: "true"
+            # The ordinal is the replica id: stable across restarts, unique per
+            # replica, and already the thing the WAL claim is keyed by. A vector
+            # clock entry belongs to an identity, so an id that moved would
+            # abandon everything recorded under the old one.
+            - name: AEGIS_GOSSIP_REPLICA_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['apps.kubernetes.io/pod-index']
+            - name: AEGIS_GOSSIP_INTERVAL_SECONDS
+              value: {{ .Values.gossip.intervalSeconds | quote }}
+            - name: AEGIS_GOSSIP_CERTIFICATE_AUTHORITY
+              value: {{ printf "%s/ca.crt" .Values.gossip.tls.mountPath | quote }}
+            - name: AEGIS_GOSSIP_CLIENT_CERTIFICATE
+              value: {{ printf "%s/tls.crt" .Values.gossip.tls.mountPath | quote }}
+            - name: AEGIS_GOSSIP_CLIENT_PRIVATE_KEY
+              value: {{ printf "%s/tls.key" .Values.gossip.tls.mountPath | quote }}
+            # This pod's own name, so it can remove itself from the list
+            # below: Helm renders one manifest for every ordinal and cannot
+            # know which one it is being rendered for.
+            - name: AEGIS_GOSSIP_SELF_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            # Every replica, through the headless Service, with this pod
+            # filtered out at startup. Rendered from replicaCount because
+            # there is no discovery: a peer missing from this list is a
+            # replica that never converges and reports nothing wrong.
+            - name: AEGIS_GOSSIP_PEERS
+              value: >-
+                {{- $full := include "aegis-latent-core.fullname" . -}}
+                {{- $svc := printf "%s-headless" $full -}}
+                {{- $port := .Values.gossip.port -}}
+                {{- $ns := .Release.Namespace -}}
+                {{- $entries := list -}}
+                {{- range $i := until (int .Values.replicaCount) -}}
+                {{- $host := printf "%s-%d.%s.%s.svc.cluster.local" $full $i $svc $ns -}}
+                {{- $entries = append $entries (printf "%s-%d=https://%s:%v" $full $i $host $port) -}}
+                {{- end -}}
+                {{ join "," $entries }}
+            {{- end }}
             - name: AEGIS_BACKEND_URL
               value: {{ .Values.aegis.backendUrl | quote }}
             - name: AEGIS_SECURITY_ENFORCEMENT_MODE
