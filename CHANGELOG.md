@@ -15,7 +15,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet. Work in the tree is recorded under `4.3.0` below.
+### Changed
+
+- **The grammar-frontier automaton now runs on the governed streaming path.**
+  It was implemented and tested at `4.3.0` but wired to nothing, so it changed
+  no runtime behaviour. It is now composed with the Safe Harbor de-identifier
+  in `aegis/core/stream_redactor.py`, selected by `AEGIS_STREAMING_ENGINE`,
+  which defaults to `grammar_frontier`.
+
+  **Composed, not substituted.** The automaton declares four rules; the Safe
+  Harbor set declares twenty. Replacing one with the other would have taken
+  `EMAIL`, `ADDRESS`, `MRN`, `URL`, `TRACK_DATA`, `CVV` and the
+  Luhn-and-brand-validated `PAN` — eighteen detectors in all — off the evidence
+  path in exchange for two new ones. Both stages run instead, de-identifier
+  first, so the path gains `INSTR_OVERRIDE` and `SYS_LEAK` matching without
+  losing anything.
+
+  **Response redaction off means off.** With both PHI and PCI detector families
+  disabled the de-identifier is a pass-through that withholds nothing, and the
+  frontier stage does not run either. Adding it there would have turned "no
+  redaction" into "some redaction plus a 28-character holdback" — changing both
+  the bytes a deployment emits and when it emits them — for an operator who
+  asked for neither.
+
+  **Two effects to know about where redaction is on.** Output bytes change for
+  streams containing instruction-override or system-prompt-disclosure phrasing:
+  that text is now replaced. And the per-stream holdback grows by the
+  28-character frontier, so `R_max` rises by 112 bytes; the composite reports
+  the summed window, so the ceiling added in `CLM-078` still covers everything
+  the stream retains. Setting `AEGIS_STREAMING_ENGINE=deidentifier` restores the
+  previous behaviour exactly.
+
+  Measured overhead is +10 to +12 µs per chunk at p50 and +3.8 to +22.7 µs at
+  p99 across five runs of `benchmarks/bench_streaming_engine.py`, against the
+  5 ms p99 budget the change was held to. The p99 figure sits at the harness's
+  noise floor — earlier runs at the same sample size measured the new stage as
+  *faster*, which it cannot be — so it is recorded as "too small for this
+  harness to separate from variance" rather than as a number. Artifacts and
+  that boundary are in `evidence/streaming-engine/4.4.0/`.
+
+## [4.3.0] — unreleased source target
 
 ## [4.3.0] — unreleased source target
 

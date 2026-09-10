@@ -16,10 +16,12 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from aegis.core.stream_bounds import UTF8_MAX_BYTES_PER_CHAR, StreamRetentionBounds
-from aegis.core.streaming_deidentifier import (
-    StreamingDeidentificationError,
-    StreamingDeidentifier,
+from aegis.core.stream_redactor import (
+    ENGINE_GRAMMAR_FRONTIER,
+    StreamRedactor,
+    build_stream_redactor,
 )
+from aegis.core.streaming_deidentifier import StreamingDeidentificationError
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +133,7 @@ class BoundedStreamProxy:
         deidentifier_window_chars: int = 128,
         enable_phi: bool = False,
         enable_pci: bool = False,
+        streaming_engine: str = ENGINE_GRAMMAR_FRONTIER,
         protocol: Literal["openai", "anthropic"] = "openai",
         terminal_predicate: Callable[[bytes, Any], bool] | None = None,
         terminal_marker: bytes = _DONE,
@@ -153,7 +156,8 @@ class BoundedStreamProxy:
         )
         self._terminal_marker = terminal_marker
         self._queue = _ByteBoundedQueue(max_items=queue_max_items, max_bytes=queue_max_bytes)
-        self._deidentifier = StreamingDeidentifier(
+        self._deidentifier: StreamRedactor = build_stream_redactor(
+            streaming_engine,
             window_chars=deidentifier_window_chars,
             enable_phi=enable_phi,
             enable_pci=enable_pci,

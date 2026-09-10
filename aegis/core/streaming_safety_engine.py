@@ -114,6 +114,20 @@ class GrammarFrontierAutomaton:
         return self._emitted_bytes
 
     @property
+    def retained_chars(self) -> int:
+        """Characters currently withheld in the holdback.
+
+        Read by the proxy's retained-byte accounting, which sums every region
+        a stream holds against the ceiling in
+        :mod:`aegis.core.stream_bounds`. Between calls to :meth:`feed` this
+        never exceeds :attr:`max_holdback`: ``feed`` releases down to the
+        frontier while the buffer is longer than the holdback, and the frontier
+        is smaller than any legal holdback.
+        """
+
+        return len(self._buffer)
+
+    @property
     def redaction_counts(self) -> dict[str, int]:
         """How many times each rule fired, for evidence rather than display."""
 

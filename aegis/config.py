@@ -407,6 +407,17 @@ class AegisSettings(BaseSettings):
         le=4_096,
         description="Finite logical-text holdback for cross-event PHI/PCI interception.",
     )
+    streaming_engine: Literal["grammar_frontier", "deidentifier"] = Field(
+        default="grammar_frontier",
+        description=(
+            "Streaming redactor for governed SSE. 'grammar_frontier' runs the Safe Harbor "
+            "de-identifier and then the grammar-frontier rules, which add instruction-override "
+            "and system-prompt-disclosure matching the de-identifier does not carry. "
+            "'deidentifier' runs the Safe Harbor set alone, as releases before 4.4.0 did. "
+            "The composite holds back the de-identifier window plus the 28-character frontier, "
+            "so the per-stream retained-byte ceiling rises by 4x28 bytes."
+        ),
+    )
     max_stream_duration_seconds: float = Field(
         default=60.0,
         ge=0.1,
