@@ -59,8 +59,9 @@ except ImportError:  # pragma: no cover - platform dependent
 from collections import deque
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from threading import Lock
-from typing import Any, TextIO
+from typing import Any, Literal, TextIO
 
 import numpy as np
 from cryptography.exceptions import InvalidSignature
@@ -78,6 +79,19 @@ from aegis.core.mmr import (
     MMRInclusionProofV1,
     MMRPeak,
 )
+from aegis.core.pqc_signer import PQCSigner, PQCUnavailableError
+from aegis.core.pqc_signer import backend_available as pqc_backend_available
+
+#: Sentinel for "decide the scheme from the chain": a new chain starts on
+#: :data:`MMR_NEW_CHAIN_DEFAULT_SCHEME`, an existing one reopens under whatever
+#: its WAL recorded. This is the default because the alternative defaults are
+#: both wrong. Defaulting to v1 leaves every new chain on the construction that
+#: admits leaf/interior type confusion; defaulting to v2 outright would refuse
+#: to open every chain already in the field, turning an upgrade into an outage.
+MMR_SCHEME_AUTO: str = "auto"
+
+#: The construction a chain created today is built on.
+MMR_NEW_CHAIN_DEFAULT_SCHEME: str = HASH_SCHEME_V2
 
 #: Which proof version each hash scheme stamps on the proofs it issues. Used to
 #: recognise, on reopening a WAL, that the chain on disk was written under a
@@ -85,6 +99,11 @@ from aegis.core.mmr import (
 _SCHEME_PROOF_VERSIONS: dict[str, str] = {
     HASH_SCHEME_V1: MMR_PROOF_VERSION_V1,
     HASH_SCHEME_V2: MMR_PROOF_VERSION_V2,
+}
+
+#: The same mapping read the other way, for adopting a chain's own scheme.
+_PROOF_VERSION_SCHEMES: dict[str, str] = {
+    version: scheme for scheme, version in _SCHEME_PROOF_VERSIONS.items()
 }
 
 logger = logging.getLogger(__name__)
@@ -505,14 +524,22 @@ class CryptographicAuditLedger:
         require_strong_signing: bool = False,
         fsync_fn: Callable[[int], None] | None = None,
         mmr_fast_restore: bool = False,
-        mmr_hash_scheme: str = HASH_SCHEME_V1,
+        mmr_hash_scheme: str = MMR_SCHEME_AUTO,
+        pqc_identity_path: str | os.PathLike[str] | None = None,
     ) -> None:
-        if mmr_hash_scheme not in _SCHEME_PROOF_VERSIONS:
+        if mmr_hash_scheme not in _SCHEME_PROOF_VERSIONS and mmr_hash_scheme != MMR_SCHEME_AUTO:
             raise ValueError(
-                f"mmr_hash_scheme must be one of {sorted(_SCHEME_PROOF_VERSIONS)}, "
-                f"got {mmr_hash_scheme!r}"
+                f"mmr_hash_scheme must be {MMR_SCHEME_AUTO!r} or one of "
+                f"{sorted(_SCHEME_PROOF_VERSIONS)}, got {mmr_hash_scheme!r}"
             )
-        self.mmr_hash_scheme = mmr_hash_scheme
+        # ``auto`` is resolved during replay, once the WAL has said which scheme
+        # it was written under. Until then the accumulator is built on the
+        # new-chain default, which is what an empty WAL will keep.
+        self._scheme_pinned = mmr_hash_scheme != MMR_SCHEME_AUTO
+        self.mmr_hash_scheme = (
+            mmr_hash_scheme if self._scheme_pinned else MMR_NEW_CHAIN_DEFAULT_SCHEME
+        )
+        mmr_hash_scheme = self.mmr_hash_scheme
         self.persistence_path = persistence_path
         self._signing_key = signing_key
         self._fsync = fsync_fn or os.fsync
@@ -528,6 +555,11 @@ class CryptographicAuditLedger:
         self._wal_handle: TextIO | None = None
         self._wal_bytes = 0
         self._fault_state: str = "healthy"
+        self.pqc_identity_path = str(pqc_identity_path) if pqc_identity_path else ""
+        # Resolved lazily and cached: loading the identity touches the
+        # filesystem, and a ledger that never signs should not pay for it.
+        # ``False`` distinguishes "not yet looked up" from "looked up, absent".
+        self._pqc_identity: PQCSigner | None | Literal[False] = False
         self._mmr = MerkleMountainRange(hash_scheme=mmr_hash_scheme)
         # Set during replay when the WAL's own proofs name a different scheme.
         self._wal_proof_version: str | None = None
@@ -1323,15 +1355,26 @@ class CryptographicAuditLedger:
             except HSMUnavailableError as exc:
                 logger.warning("HSM signing failed (%s); falling back to next tier", exc)
 
-        # ── 2. Rust PQC ML-DSA path ───────────────────────────────────────
-        if RUST_AVAILABLE:
+        # ── 2. ML-DSA path, under a *persistent* identity ──────────────────
+        #
+        # This tier used to call ``generate_pqc_keypair()`` on every commit and
+        # discard the private half immediately. Each node was therefore signed
+        # by a different, one-shot identity that nobody holds, which is not a
+        # signature in any useful sense: it attributes nothing, links nothing,
+        # and cannot be checked against a published key. It also put an ML-DSA
+        # keygen on the commit path.
+        #
+        # The tier now runs only when an operator has configured an identity to
+        # sign under. Without one there is nothing to attribute to, so it falls
+        # through to HMAC rather than minting a key per signature.
+        signer = self._pqc_signer()
+        if signer is not None:
             try:
-                keypair = aegis_rust.generate_pqc_keypair()  # type: ignore[name-defined]
-                sig_bytes = bytes(keypair.sign(data))
-                pub_bytes: bytes = bytes(keypair.public_key)
+                sig_bytes = bytes(signer.sign(data))
+                pub_bytes: bytes = signer.public_key
                 return sig_bytes.hex(), pub_bytes.hex(), "pqc-ml-dsa", False
             except Exception as exc:
-                logger.warning("aegis_rust PQC sign failed (%s); falling back", exc)
+                logger.warning("ML-DSA signing failed (%s); falling back", exc)
 
         # ── 3. HMAC-SHA256 path ───────────────────────────────────────────
         if self._signing_key:
@@ -1343,6 +1386,76 @@ class CryptographicAuditLedger:
             raise RuntimeError("strong signing required; no verifiable signer is available")
         sig_hex, pub_hex, scheme = _ed25519_sign(data)
         return sig_hex, pub_hex, scheme, True
+
+    def _pqc_signer(self) -> PQCSigner | None:
+        """The ML-DSA identity this ledger signs under, or ``None``.
+
+        ``None`` means the ML-DSA tier is skipped — no identity is configured,
+        the backend is absent, or the stored identity could not be loaded. A
+        one-shot keypair is never minted as a substitute: a signature under a
+        key that is discarded immediately attributes nothing, and emitting one
+        under the ``pqc-ml-dsa`` scheme label would misrepresent what the node
+        carries.
+
+        The identity is created on first use if the configured path does not
+        exist yet, and reused from then on. Creating it here rather than
+        requiring a separate provisioning step is what makes the tier usable;
+        the file is written ``0600`` and holds the raw ML-DSA-65 private key,
+        so it needs the same custody as any other signing secret and must live
+        on storage the operator controls.
+        """
+
+        if self._pqc_identity is not False:
+            return self._pqc_identity
+
+        self._pqc_identity = None
+        if not self.pqc_identity_path:
+            return None
+        if not pqc_backend_available():
+            logger.warning(
+                "AEGIS_PQC_IDENTITY_PATH is set but no ML-DSA backend is available; "
+                "signing falls through to the next tier"
+            )
+            return None
+
+        path = Path(self.pqc_identity_path)
+        try:
+            if path.exists():
+                raw = path.read_bytes()
+                expected = PQCSigner.PUBLIC_KEY_BYTES + PQCSigner.PRIVATE_KEY_BYTES
+                if len(raw) != expected:
+                    raise ValueError(
+                        f"identity file holds {len(raw)} bytes; expected {expected} "
+                        f"({PQCSigner.PUBLIC_KEY_BYTES}-byte public + "
+                        f"{PQCSigner.PRIVATE_KEY_BYTES}-byte private key)"
+                    )
+                signer = PQCSigner.from_keys(
+                    raw[: PQCSigner.PUBLIC_KEY_BYTES], raw[PQCSigner.PUBLIC_KEY_BYTES :]
+                )
+                logger.info("Loaded persistent ML-DSA signing identity from %s", path)
+            else:
+                signer = PQCSigner(require_real=True)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                # Write through a private temporary file and rename, so a
+                # concurrent reader never sees a half-written key, and create
+                # it 0600 rather than chmod-ing after the bytes are on disk.
+                descriptor = os.open(f"{path}.tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+                with os.fdopen(descriptor, "wb") as handle:
+                    handle.write(signer.public_key + signer.export_private_key())
+                    handle.flush()
+                    self._fsync(handle.fileno())
+                os.replace(f"{path}.tmp", path)
+                logger.info("Created persistent ML-DSA signing identity at %s", path)
+        except (PQCUnavailableError, OSError, TypeError, ValueError) as exc:
+            logger.warning(
+                "ML-DSA identity at %s unusable (%s); signing falls through to the next tier",
+                path,
+                exc,
+            )
+            return None
+
+        self._pqc_identity = signer
+        return signer
 
     def _persist_node(self, node: AuditNode) -> None:
         """Append node as a JSON line to the WAL. Must be called under self._lock."""
@@ -1544,6 +1657,25 @@ class CryptographicAuditLedger:
         # symptom. There is no in-place upgrade: a scheme change means a new
         # chain, because a root cannot be recomputed under a different
         # construction without rewriting history.
+        #
+        # Unless the caller left the scheme on ``auto``, in which case there is
+        # no misconfiguration to report: the chain names its own construction
+        # and this ledger adopts it. That is what lets the new-chain default
+        # move to v2 without refusing to open the chains already in the field.
+        if not self._scheme_pinned and self._wal_proof_version is not None:
+            adopted = _PROOF_VERSION_SCHEMES.get(self._wal_proof_version)
+            if adopted is None:
+                logger.error(
+                    "WAL records MMR proof version %s, which this build does not implement",
+                    self._wal_proof_version,
+                )
+                self._fault_state = "mmr_scheme_mismatch"
+                return
+            if adopted != self.mmr_hash_scheme:
+                logger.info("Adopting the MMR scheme this chain was written under: %s", adopted)
+                self.mmr_hash_scheme = adopted
+                self._mmr = MerkleMountainRange(hash_scheme=adopted)
+
         expected_version = _SCHEME_PROOF_VERSIONS[self.mmr_hash_scheme]
         if self._wal_proof_version is not None and self._wal_proof_version != expected_version:
             logger.error(

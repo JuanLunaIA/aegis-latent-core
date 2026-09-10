@@ -15,6 +15,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — three defects that each failed quietly
+
+- **Importing the proxy module took the WAL's exclusive lock (P0).**
+  `aegis/proxy/app.py` ended with `app = create_app()`, and constructing the app
+  opens the WAL and claims its single-writer lock. So *importing the module for
+  any reason at all* claimed it, and the documented factory `create_proxy_app()`
+  then failed with `WalWriterConflictError` against a writer that was the
+  importing process itself. Anything that imported the module without wanting a
+  running gateway paid the same price: a test collector, a CLI reading a
+  version, a worker importing one helper.
+
+  The attribute is now lazy (PEP 562 module `__getattr__`), so the app is built
+  on first *access* rather than on import. `uvicorn.run("aegis.proxy.app:app")`
+  and `from aegis.proxy.app import app` both resolve through it, so the ASGI
+  entry point is unchanged, and repeated access still returns one app.
+
+- **Every commit signed under a throwaway post-quantum key (P1).**
+  When the Rust extension was present and no HSM was configured, `_sign` called
+  `generate_pqc_keypair()` **on every commit** and discarded the private half
+  immediately. Each node was signed by a different one-shot identity that nobody
+  holds — which attributes nothing, links nothing, and cannot be checked against
+  any published key, while being recorded under the `pqc-ml-dsa` scheme label as
+  though it could. It also put an ML-DSA keygen on the commit path.
+
+  The tier now signs under a persistent identity, configured by
+  `AEGIS_PQC_IDENTITY_PATH` and created on first use (written `0600`; it holds
+  the raw ML-DSA-65 private key and needs the custody any signing secret does).
+  **With no identity configured the tier is skipped and signing falls through to
+  HMAC-SHA256**, rather than minting a key per signature. That changes the
+  recorded `signature_scheme` for deployments that had the Rust extension and no
+  HSM — from `pqc-ml-dsa` to `hmac-sha256` — which is a weaker claim and a true
+  one, where the old label was a stronger claim than the evidence supported.
+
+- **New chains defaulted to the MMR construction v2 exists to replace (P1).**
+  `mmr_hash_scheme` defaulted to `v1-asciihex`, which admits the leaf/interior
+  type confusion documented in `aegis/core/mmr.py`. The default is now `auto`:
+  a **new** chain starts on `v2-binary-domain-separated`, and an **existing**
+  chain reopens under whatever scheme its WAL recorded. Pinning a scheme
+  explicitly stays fail-closed — a WAL written under the other one is still
+  refused with `mmr_scheme_mismatch`.
+
+  `auto` rather than a plain v2 default is the point: the scheme decides every
+  root a chain has recorded, so defaulting to v2 outright would refuse to open
+  every chain already in the field, turning an upgrade into an outage.
+
+### Fixed — v2 defects the new default exposed
+
+Moving new chains to v2 surfaced four places that computed or compared digests
+under the v1 construction regardless of the proof in hand. Each was latent: v1
+was the only scheme any ledger used, so none could fire.
+
+- **`aegis/core/a2a.py`** hardcoded the v1 leaf digest, so a receipt issued by a
+  v2 ledger could not be verified at all. The digest now follows the version the
+  receipt's own proof declares, which is self-describing — a verifier reads it
+  off the receipt rather than having to know how the issuer was configured.
+- **Both SDK verifiers** (`sdk/python`, `sdk/typescript`) had the same hardcoded
+  v1 leaf digest and are fixed the same way.
+- **`verify_portable_inclusion_hash`** required the trusted root in hex, but a
+  v2 proof *transports* its root as unpadded base64url — so a caller passing the
+  root straight from the proof document it received, which is the obvious thing
+  to do, was rejected. Both encodings are now accepted and normalised; this is
+  not a relaxation, since both decode to the same 32 bytes and anything that is
+  neither still fails.
+- **The `X-Aegis-MMR-Format` response header** was the literal string
+  `aegis-mmr-inclusion-v1`. It now reports the version of the proof actually
+  served: the header tells a client which construction to verify under, so
+  advertising v1 while serving a v2 proof sent it to the wrong leaf digest.
+
+**Wire compatibility.** A receipt from a v2 chain cannot be verified by an SDK
+build that predates these fixes, including the published `4.1.2` packages. Both
+in-repo SDKs are fixed, but gateway and SDKs must move together; a v2 gateway in
+front of older clients breaks receipt verification.
+
 ### Fixed
 
 - **A ledger configured for MMR v2 would have recorded a leaf digest that

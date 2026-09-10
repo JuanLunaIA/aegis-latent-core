@@ -49,6 +49,12 @@ __all__ = [
 ]
 
 A2A_RECEIPT_VERSION = "aegis-a2a-receipt-v1"
+
+#: MMR proof versions, and the v2 leaf domain tag. Must match
+#: ``aegis/core/mmr.py``: v2 is ``SHA-256(0x00 || leaf)``, v1 is bare SHA-256.
+_PROOF_VERSION_V1 = "aegis-mmr-inclusion-v1"
+_PROOF_VERSION_V2 = "aegis-mmr-inclusion-v2"
+_DOMAIN_LEAF = b"\x00"
 A2A_MODEL = "a2a"
 A2A_ENDPOINT = "a2a.tool"
 
@@ -155,12 +161,20 @@ def a2a_envelope_bytes(receipt: AgentReceipt) -> bytes:
     return json.dumps(envelope, sort_keys=True, separators=(",", ":")).encode()
 
 
-def a2a_leaf_hash(receipt: AgentReceipt) -> str:
-    """SHA-256 of the MMR leaf the issuing ledger committed for this receipt.
+def a2a_leaf_hash(receipt: AgentReceipt, proof_version: str = _PROOF_VERSION_V1) -> str:
+    """The MMR leaf digest the issuing ledger committed for this receipt.
 
     Mirrors ``build_merkle_leaf`` for the pinned A2A coordinates. The envelope
-    is bounded well under ``_LEAF_MAX_BYTES``, so the preview is a copy of it
-    and the result does not depend on the issuer's configuration.
+    is bounded well under ``_LEAF_MAX_BYTES``, so the leaf *bytes* are a copy of
+    it and do not depend on the issuer's configuration.
+
+    The *digest* of those bytes follows the issuer's MMR scheme, which is what
+    the accumulator appended: v1 hashes the leaf bare, v2 prefixes the ``0x00``
+    domain tag (RFC 6962). The version is read off the receipt's own proof, so
+    a verifier never has to know how the issuer was configured.
+
+    Defaults to v1 for callers written before v2 existed. That default can only
+    make a v2 receipt fail to verify, never verify wrongly.
     """
     envelope = a2a_envelope_bytes(receipt)
     leaf = {
@@ -175,6 +189,8 @@ def a2a_leaf_hash(receipt: AgentReceipt) -> str:
         "endpoint": A2A_ENDPOINT,
     }
     encoded = json.dumps(leaf, sort_keys=True, separators=(",", ":")).encode()
+    if proof_version == _PROOF_VERSION_V2:
+        return hashlib.sha256(_DOMAIN_LEAF + encoded).hexdigest()
     return hashlib.sha256(encoded).hexdigest()
 
 
@@ -195,8 +211,9 @@ def verify_receipt(receipt: AgentReceipt | Mapping[str, Any], trusted_root: str)
         if parsed.mmr_root != trusted_root:
             logger.warning("A2A receipt rejected: receipt root is not the trusted root")
             return False
-        leaf_hash = a2a_leaf_hash(parsed)
         proof = InclusionProof.from_mapping(parsed.inclusion_proof)
+        # The proof names its own construction; the leaf digest follows it.
+        leaf_hash = a2a_leaf_hash(parsed, proof.version)
     except (AegisProofError, TypeError, ValueError, KeyError) as exc:
         logger.warning("A2A receipt rejected: %s", exc)
         return False

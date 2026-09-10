@@ -407,15 +407,27 @@ class AegisSettings(BaseSettings):
         le=4_096,
         description="Finite logical-text holdback for cross-event PHI/PCI interception.",
     )
-    mmr_hash_scheme: Literal["v1-asciihex", "v2-binary-domain-separated"] = Field(
-        default="v1-asciihex",
+    mmr_hash_scheme: Literal["auto", "v1-asciihex", "v2-binary-domain-separated"] = Field(
+        default="auto",
         description=(
-            "MMR hash construction for the audit ledger. 'v2-binary-domain-separated' applies "
-            "RFC 6962 domain tags, which prevents the leaf/interior-node type confusion v1 "
-            "admits. It is NOT an in-place upgrade: the scheme decides every root a chain has "
-            "recorded, so a WAL written under one scheme cannot be reopened under the other and "
-            "the ledger refuses with fault state 'mmr_scheme_mismatch'. Select v2 only for a new "
-            "chain. Default stays v1 so existing deployments are unaffected."
+            "MMR hash construction for the audit ledger. 'auto' (the default) starts a NEW "
+            "chain on 'v2-binary-domain-separated', which applies RFC 6962 domain tags and so "
+            "prevents the leaf/interior-node type confusion v1 admits, and reopens an EXISTING "
+            "chain under whichever scheme its WAL recorded. Pinning a scheme explicitly is "
+            "fail-closed: a WAL written under the other one is refused with fault state "
+            "'mmr_scheme_mismatch' rather than replayed to a different root. There is no "
+            "in-place upgrade — the scheme decides every root a chain has recorded — so moving "
+            "an existing v1 chain to v2 means starting a new chain."
+        ),
+    )
+    pqc_identity_path: str = Field(
+        default="",
+        description=(
+            "Filesystem path to the ledger's persistent ML-DSA-65 signing identity. Empty (the "
+            "default) disables the post-quantum signing tier entirely, so signing falls through "
+            "to HMAC-SHA256. When set, the identity is created on first use and reused for every "
+            "signature, which is what makes a signature attributable. The file holds the raw "
+            "private key and is written 0600; give it the custody any signing secret needs."
         ),
     )
     streaming_engine: Literal["grammar_frontier", "deidentifier"] = Field(
