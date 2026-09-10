@@ -15,10 +15,13 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from aegis.core.streaming_deidentifier import (
-    StreamingDeidentificationError,
-    StreamingDeidentifier,
+from aegis.core.stream_bounds import UTF8_MAX_BYTES_PER_CHAR, StreamRetentionBounds
+from aegis.core.stream_redactor import (
+    ENGINE_GRAMMAR_FRONTIER,
+    StreamRedactor,
+    build_stream_redactor,
 )
+from aegis.core.streaming_deidentifier import StreamingDeidentificationError
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +105,10 @@ class _ByteBoundedQueue:
     def retained_bytes(self) -> int:
         return self._bytes
 
+    @property
+    def max_bytes(self) -> int:
+        return self._max_bytes
+
 
 class BoundedStreamProxy:
     """Transform an upstream OpenAI SSE iterator under finite resource bounds.
@@ -126,6 +133,7 @@ class BoundedStreamProxy:
         deidentifier_window_chars: int = 128,
         enable_phi: bool = False,
         enable_pci: bool = False,
+        streaming_engine: str = ENGINE_GRAMMAR_FRONTIER,
         protocol: Literal["openai", "anthropic"] = "openai",
         terminal_predicate: Callable[[bytes, Any], bool] | None = None,
         terminal_marker: bytes = _DONE,
@@ -148,7 +156,8 @@ class BoundedStreamProxy:
         )
         self._terminal_marker = terminal_marker
         self._queue = _ByteBoundedQueue(max_items=queue_max_items, max_bytes=queue_max_bytes)
-        self._deidentifier = StreamingDeidentifier(
+        self._deidentifier: StreamRedactor = build_stream_redactor(
+            streaming_engine,
             window_chars=deidentifier_window_chars,
             enable_phi=enable_phi,
             enable_pci=enable_pci,
@@ -168,8 +177,41 @@ class BoundedStreamProxy:
     @property
     def retained_bytes(self) -> int:
         return (
-            self._queue.retained_bytes + self._deidentifier.retained_chars * 4 + len(self._preview)
+            self._queue.retained_bytes
+            + self._deidentifier.retained_chars * UTF8_MAX_BYTES_PER_CHAR
+            + len(self._preview)
         )
+
+    @property
+    def bounds(self) -> StreamRetentionBounds:
+        """The declared retained-byte bounds for this stream's configuration.
+
+        Reporting only. Admission is unchanged: the queue enforces ``Q``, the
+        event check enforces ``E``, the preview is truncated at ``P``, and the
+        redactor enforces ``W``. A configuration outside the ranges
+        ``specs/aegis_stream_buffer.smt2`` declares is still accepted here —
+        ``AegisSettings`` is what constrains an operator-supplied one — and
+        :attr:`StreamRetentionBounds.in_declared_domain` reports that rather
+        than raising, so this accessor cannot reject a stream the previous
+        release admitted.
+        """
+
+        return StreamRetentionBounds(
+            window_chars=self._deidentifier.window_chars,
+            queue_bytes=self._queue.max_bytes,
+            # The queue refuses any single item larger than its whole budget,
+            # so the largest event that can actually be retained is the smaller
+            # of the two. Taking the minimum is the effective bound, not a
+            # convenience to keep the constructor from rejecting the pair.
+            event_bytes=min(self._max_event_bytes, self._queue.max_bytes),
+            preview_bytes=self._preview_limit,
+        )
+
+    @property
+    def retained_bytes_ceiling(self) -> int:
+        """``R_max = 4W + Q + E + P`` in bytes for this stream."""
+
+        return self.bounds.max_retained_bytes
 
     @property
     def peak_queue_bytes(self) -> int:

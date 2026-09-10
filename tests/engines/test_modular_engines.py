@@ -178,6 +178,98 @@ class TestSanctumEngine:
         assert verdict.allowed is True
 
 
+class TestSanctumRetentionBound:
+    """Sanctum against ``R_max = 4W + Q + E + P`` from ``specs/aegis_stream_buffer.smt2``.
+
+    In-process there is no queue, no canonical SSE event and no evidence
+    preview, so the ceiling reduces to ``4W``. What these tests establish is
+    that the engine computes the ceiling from that expression and stays under
+    it while redacting — not that the Z3 run says anything about Python memory.
+    """
+
+    def test_the_ceiling_is_four_bytes_per_window_character(self):
+        engine = SanctumEngine(window_chars=256)
+        assert engine.retained_bytes_ceiling == 4 * 256
+
+    def test_the_bounds_report_themselves_outside_the_proxied_domain(self):
+        # Honest reporting: the spec's ranges assume a queue, and an in-process
+        # engine has none.
+        engine = SanctumEngine()
+        assert engine.bounds.in_declared_domain is False
+        assert engine.bounds.queue_bytes == 0
+
+    def test_an_out_of_range_window_is_refused_at_construction(self):
+        # Previously this constructed fine and failed on the first chunk, which
+        # put the failure a long way from the misconfiguration that caused it.
+        with pytest.raises(ValueError, match="window_chars must be in"):
+            SanctumEngine(window_chars=8)
+
+    def test_the_holdback_stays_under_the_ceiling_across_a_long_stream(self):
+        engine = SanctumEngine(window_chars=64)
+        ceiling = engine.retained_bytes_ceiling
+        chunks = [f"record {i} ssn 123-45-6789 and text " for i in range(2_000)]
+        # deidentify_stream checks the ceiling after every chunk and raises
+        # StreamBoundsError if it is ever exceeded, so consuming 2000 chunks
+        # without raising is the assertion. Output is longer than input here —
+        # "[REDACTED:SSN]" is wider than the identifier it replaces — so total
+        # length carries no information about retention.
+        out = "".join(engine.deidentify_stream(chunks))
+        assert "123-45-6789" not in out
+        assert out.count("[REDACTED:SSN]") == 2_000
+        assert ceiling == 4 * 64
+
+    def test_multibyte_text_stays_under_the_ceiling(self):
+        # Four bytes per character is the conservative UTF-8 cost, so a stream
+        # of four-byte code points is the worst case the term is written for.
+        engine = SanctumEngine(window_chars=64)
+        chunks = ["\U0001f600" * 40 for _ in range(50)]
+        out = "".join(engine.deidentify_stream(chunks))
+        assert out == "".join(chunks)
+
+    def test_a_widened_holdback_stops_the_stream(self, monkeypatch):
+        """The check is independent of the redactor, so it catches the redactor.
+
+        Patching ``retained_chars`` to report a holdback past the ceiling is
+        the only way to reach this branch without introducing the defect it
+        guards against: today the redactor keeps its own holdback at or below
+        ``W``, so the ceiling is never reached in normal operation.
+        """
+
+        from aegis.core import streaming_deidentifier as sd
+        from aegis.core.stream_bounds import StreamBoundsError
+
+        engine = SanctumEngine(window_chars=64)
+        monkeypatch.setattr(
+            sd.StreamingDeidentifier, "retained_chars", property(lambda self: 65), raising=True
+        )
+        with pytest.raises(StreamBoundsError, match="over its declared ceiling"):
+            list(engine.deidentify_stream(["x" * 200]))
+
+    def test_the_proxy_reports_the_same_expression(self):
+        from aegis.proxy.streaming import BoundedStreamProxy
+
+        async def _empty():
+            return
+            yield  # pragma: no cover - never reached; makes this an async generator
+
+        async def _commit(_summary):  # pragma: no cover - never invoked
+            return None
+
+        proxy = BoundedStreamProxy(
+            _empty(),
+            terminal_commit=_commit,
+            max_response_bytes=32_000,
+            max_duration_seconds=30,
+            max_event_bytes=1024,
+            queue_max_items=4,
+            queue_max_bytes=4096,
+            preview_bytes=1024,
+            deidentifier_window_chars=128,
+        )
+        assert proxy.retained_bytes_ceiling == 4 * 128 + 4096 + 1024 + 1024
+        assert proxy.retained_bytes <= proxy.retained_bytes_ceiling
+
+
 class TestAgentisEngine:
     def test_a_receipt_verifies_against_the_root_it_was_issued_under(self, tmp_path):
         engine = AgentisEngine(str(tmp_path / "agents.jsonl"), signing_key=SIGNING_KEY)

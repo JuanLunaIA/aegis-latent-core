@@ -13,6 +13,11 @@ often it runs.
     enforcement = LicenseEnforcement(token, root_public_key=vendor_key)
     enforcement.entitlement.has_module("veracity")   # -> bool
 
+The entitlement itself lives in :mod:`aegis.licensing.model`, which imports no
+cryptography and reads no environment. It is re-exported here so that every
+existing ``from aegis.licensing.validator import LicenseEntitlement`` keeps
+working.
+
 There is no default root key
 ----------------------------
 
@@ -52,13 +57,13 @@ import base64
 import binascii
 import json
 import os
-import time
 from collections.abc import Mapping
-from dataclasses import dataclass
 from typing import Any, Final
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+from aegis.licensing.model import KNOWN_MODULES, LicenseEntitlement
 
 #: Environment variable holding the vendor's Ed25519 root public key, hex-encoded.
 ROOT_PUBKEY_ENV: Final[str] = "AEGIS_LICENSE_ROOT_PUBKEY"
@@ -73,11 +78,6 @@ _SIGNATURE_BYTES: Final[int] = 64
 
 #: Ed25519 public keys are always exactly 32 bytes.
 _PUBLIC_KEY_BYTES: Final[int] = 32
-
-#: Modules a token may grant. ``omnia`` is the wildcard covering all four.
-KNOWN_MODULES: Final[frozenset[str]] = frozenset(
-    {"veracity", "sanctum", "agentis", "sovereign", "omnia"}
-)
 
 #: Upper bound on a decoded token, so a hostile string cannot force a large
 #: allocation before any check runs. Real tokens are a few hundred bytes.
@@ -98,42 +98,6 @@ class LicenseSignatureError(LicenseError):
 
 class LicenseExpiredError(LicenseError):
     """The token verified, but its expiry has passed."""
-
-
-@dataclass(frozen=True, slots=True)
-class LicenseEntitlement:
-    """What a verified token grants. Immutable; carries no key material."""
-
-    customer_id: str
-    tier: str
-    modules: frozenset[str]
-    max_annual_mgt: int
-    expires_at: int
-
-    def is_valid(self) -> bool:
-        """Whether the entitlement is currently within its term.
-
-        Compares against the host clock; see the module docstring on why a
-        rolled-back clock cannot be detected offline.
-        """
-
-        return time.time() < self.expires_at
-
-    def has_module(self, module_name: str) -> bool:
-        """Whether ``module_name`` is granted **and** the term has not lapsed.
-
-        Expiry is folded in deliberately. A caller asking "may I use this?"
-        wants one answer, and splitting the question invites a call site that
-        checks membership and forgets the term.
-        """
-
-        return self.is_valid() and (module_name in self.modules or "omnia" in self.modules)
-
-    @property
-    def seconds_remaining(self) -> int:
-        """Seconds until expiry; ``0`` once lapsed, never negative."""
-
-        return max(0, self.expires_at - int(time.time()))
 
 
 def _decode_token_bytes(token: str) -> bytes:

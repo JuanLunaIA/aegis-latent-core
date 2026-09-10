@@ -30,6 +30,13 @@ Boundaries carried over unchanged
   describe its output as de-identified data.
 - Bounded quantifiers make the holdback a real bound, and the price is
   one-directional: an evasion padding whitespace past the bound is not matched.
+- The holdback is checked against the ceiling ``specs/aegis_stream_buffer.smt2``
+  declares, ``R_max = 4W + Q + E + P``, computed by
+  :class:`aegis.core.stream_bounds.StreamRetentionBounds`. In-process there is
+  no queue, no canonical SSE event and no evidence preview, so ``Q``, ``E`` and
+  ``P`` are zero and the ceiling is ``4W``. This bounds **one engine's
+  holdback**, not process memory: nothing here limits how many engines a caller
+  runs concurrently.
 - When a candidate cannot settle inside the window the stream **fails closed**
   with ``StreamingDeidentificationError`` rather than emitting text it could
   not finish inspecting.
@@ -45,12 +52,18 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
+from aegis.core.stream_bounds import (
+    UTF8_MAX_BYTES_PER_CHAR,
+    StreamBoundsError,
+    StreamRetentionBounds,
+    require_window_in_domain,
+)
 from aegis.core.streaming_deidentifier import (
     StreamingDeidentificationError,
     StreamingDeidentifier,
 )
 from aegis.engines import require_module
-from aegis.licensing.validator import LicenseEntitlement
+from aegis.licensing.model import LicenseEntitlement
 from aegis.proxy.waf import AegisWAF
 
 _MODULE_NAME = "sanctum"
@@ -80,7 +93,8 @@ class SanctumEngine:
         entitlement: LicenseEntitlement | None = None,
     ) -> None:
         self._entitlement = require_module(_MODULE_NAME, entitlement=entitlement)
-        self._window_chars = window_chars
+        self._window_chars = require_window_in_domain(window_chars)
+        self._bounds = StreamRetentionBounds.in_process(self._window_chars)
         self._enable_phi = enable_phi
         self._enable_pci = enable_pci
         self._waf = AegisWAF(strict_mode=strict_mode, shadow_mode=shadow_mode)
@@ -89,11 +103,43 @@ class SanctumEngine:
     def entitlement(self) -> LicenseEntitlement | None:
         return self._entitlement
 
+    @property
+    def bounds(self) -> StreamRetentionBounds:
+        """The declared retained-byte bounds this engine redacts under."""
+
+        return self._bounds
+
+    @property
+    def retained_bytes_ceiling(self) -> int:
+        """``R_max`` for this engine, in bytes.
+
+        In-process there is no queue, no canonical event and no evidence
+        preview, so ``Q``, ``E`` and ``P`` are zero and the ceiling is ``4W``.
+        See :class:`aegis.core.stream_bounds.StreamRetentionBounds`.
+        """
+
+        return self._bounds.max_retained_bytes
+
     def _new_deidentifier(self) -> StreamingDeidentifier:
         return StreamingDeidentifier(
             window_chars=self._window_chars,
             enable_phi=self._enable_phi,
             enable_pci=self._enable_pci,
+        )
+
+    def _require_within_bounds(self, deidentifier: StreamingDeidentifier) -> None:
+        """Fail closed if the holdback ever exceeds the declared ceiling.
+
+        The redactor already bounds its own holdback and raises when it cannot
+        settle a candidate. This is the independent check: it reads the same
+        retention the bound is written about and compares it against ``R_max``
+        computed from the spec's expression, so a future change that widens the
+        holdback stops the stream instead of quietly invalidating the bound.
+        """
+
+        self._bounds.require_admits(
+            deidentifier.retained_chars * UTF8_MAX_BYTES_PER_CHAR,
+            what="sanctum de-identification holdback",
         )
 
     # ── streaming ───────────────────────────────────────────────────────
@@ -110,6 +156,7 @@ class SanctumEngine:
         deidentifier = self._new_deidentifier()
         for chunk in chunks:
             settled = deidentifier.feed(chunk)
+            self._require_within_bounds(deidentifier)
             if settled:
                 yield settled
         tail = deidentifier.flush()
@@ -120,7 +167,9 @@ class SanctumEngine:
         """Redact a complete string. Equivalent to feeding it as one chunk."""
 
         deidentifier = self._new_deidentifier()
-        return deidentifier.feed(raw_text) + deidentifier.flush()
+        settled = deidentifier.feed(raw_text)
+        self._require_within_bounds(deidentifier)
+        return settled + deidentifier.flush()
 
     # ── scanning ────────────────────────────────────────────────────────
 
@@ -141,4 +190,10 @@ class SanctumEngine:
         )
 
 
-__all__ = ["SanctumEngine", "ScanVerdict", "StreamingDeidentificationError"]
+__all__ = [
+    "SanctumEngine",
+    "ScanVerdict",
+    "StreamBoundsError",
+    "StreamRetentionBounds",
+    "StreamingDeidentificationError",
+]

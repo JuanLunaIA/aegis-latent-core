@@ -15,7 +15,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet. Work in the tree is recorded under `4.3.0` below.
+### Fixed
+
+- **A ledger configured for MMR v2 would have recorded a leaf digest that
+  disagreed with its own accumulator.** `crypto_audit.py` computed the digest it
+  stores on each committed node as `sha256(leaf)` in three places — the v1
+  construction, hardcoded — while the accumulator appended
+  `sha256(0x00 || leaf)` under v2. Replay rebuilt a different root from the
+  recorded digests and the integrity check reported an intact chain corrupt.
+  Nothing shipped could reach it, because until this release no ledger could
+  select v2; it would have fired the moment one did. The digest now comes from
+  `MerkleMountainRange.leaf_digest`, which applies the accumulator's own scheme.
+
+### Added
+
+- **The audit ledger can select the domain-separated MMR construction.**
+  `CryptographicAuditLedger(mmr_hash_scheme=…)` and `AEGIS_MMR_HASH_SCHEME`
+  accept `v2-binary-domain-separated`, which applies the RFC 6962 §2.1 domain
+  tags — `0x00` on leaves, `0x01` on interior nodes, `0x02` on the bagged root —
+  and hashes raw digests rather than their hex text. **The default stays v1**,
+  so no existing deployment changes.
+
+  v2 has existed in `aegis/core/mmr.py` and both SDK verifiers since `4.3.0`,
+  wired to nothing, and the module recorded two blockers. Both are now cleared.
+  `aegis_rust_v2/src/mmr.rs` implemented v1 only, so an accelerated deployment
+  running Python v2 would have disagreed with the Rust root on every leaf; it
+  now implements both under the same scheme names, and
+  `tests/test_mmr_v2_migration.py` asserts the two accumulators agree across a
+  37-leaf rollover under each. The Rust constructor still defaults to v1 and
+  refuses an unrecognised scheme name rather than falling back.
+
+  **There is no in-place migration, and there cannot be one.** The scheme
+  decides every root a chain has recorded, and a root cannot be recomputed under
+  a different construction without rewriting the history it commits to. So a
+  scheme belongs to a chain: the ledger reads the proof version its WAL recorded
+  and refuses to open it under a different one, reporting fault state
+  `mmr_scheme_mismatch` before replay rather than replaying to a different root
+  and reporting intact evidence as corrupt. Selecting v2 means starting a new
+  chain; existing v1 chains stay verifiable under v1.
+
+  What this establishes is leaf/interior-node type distinctness and nothing
+  further. The v1 weakness is that a leaf whose payload is the concatenated hex
+  of two child digests hashes identically to the node over those children — the
+  Rust and Python tests both demonstrate the collision under v1 and its absence
+  under v2. It is not a break of SHA-256, and it does not let anyone forge a
+  proof against a root they do not control.
+
+### Changed
+
+- **The grammar-frontier automaton now runs on the governed streaming path.**
+  It was implemented and tested at `4.3.0` but wired to nothing, so it changed
+  no runtime behaviour. It is now composed with the Safe Harbor de-identifier
+  in `aegis/core/stream_redactor.py`, selected by `AEGIS_STREAMING_ENGINE`,
+  which defaults to `grammar_frontier`.
+
+  **Composed, not substituted.** The automaton declares four rules; the Safe
+  Harbor set declares twenty. Replacing one with the other would have taken
+  `EMAIL`, `ADDRESS`, `MRN`, `URL`, `TRACK_DATA`, `CVV` and the
+  Luhn-and-brand-validated `PAN` — eighteen detectors in all — off the evidence
+  path in exchange for two new ones. Both stages run instead, de-identifier
+  first, so the path gains `INSTR_OVERRIDE` and `SYS_LEAK` matching without
+  losing anything.
+
+  **Response redaction off means off.** With both PHI and PCI detector families
+  disabled the de-identifier is a pass-through that withholds nothing, and the
+  frontier stage does not run either. Adding it there would have turned "no
+  redaction" into "some redaction plus a 28-character holdback" — changing both
+  the bytes a deployment emits and when it emits them — for an operator who
+  asked for neither.
+
+  **Two effects to know about where redaction is on.** Output bytes change for
+  streams containing instruction-override or system-prompt-disclosure phrasing:
+  that text is now replaced. And the per-stream holdback grows by the
+  28-character frontier, so `R_max` rises by 112 bytes; the composite reports
+  the summed window, so the ceiling added in `CLM-078` still covers everything
+  the stream retains. Setting `AEGIS_STREAMING_ENGINE=deidentifier` restores the
+  previous behaviour exactly.
+
+  Measured overhead is +10 to +12 µs per chunk at p50 and +3.8 to +22.7 µs at
+  p99 across five runs of `benchmarks/bench_streaming_engine.py`, against the
+  5 ms p99 budget the change was held to. The p99 figure sits at the harness's
+  noise floor — earlier runs at the same sample size measured the new stage as
+  *faster*, which it cannot be — so it is recorded as "too small for this
+  harness to separate from variance" rather than as a number. Artifacts and
+  that boundary are in `evidence/streaming-engine/4.4.0/`.
+
+## [4.3.0] — unreleased source target
 
 ## [4.3.0] — unreleased source target
 
@@ -78,14 +163,68 @@ withdrawal.
   tests, 106 Python MMR parity tests under `AEGIS_REQUIRE_RUST=1`, and a clean
   Miri run over the digest tests including a caught-panic case.
 
-  **No CVE was remediated by this.** The commissioning brief cited a
-  `block-buffer` advisory as the highest-priority item; OSV holds no advisory
-  for that crate at any version, so the identifier is
-  `[UNKNOWN_MISSING_PRIMARY_SOURCE]` and the upgrade is justified as
-  maintenance — the crate sat under every SHA-256 and HMAC call on the evidence
-  path, pinned transitively through `digest 0.10`.
+  **This remediates a real advisory.** Row `0.31` of the scanner report flags
+  `block-buffer 0.10.4` at CVSS 6.3 with an **empty CVE ID field** — which is
+  why an OSV query returns nothing, and why this entry previously recorded that
+  no primary source existed. A caught panic could leave an `EagerBuffer` or
+  `ReadBuffer` cursor violating its invariant, after which `get_pos()` reaches
+  `unreachable_unchecked`; the crate sat under every SHA-256 and HMAC call on
+  the evidence path via `digest 0.10`. Upstream fixed it with a `ResetGuard`
+  whose `Drop` restores the invariant during unwind.
+
+- **Both published `block-buffer` proofs ported and run under Miri.**
+  `aegis_rust_v2/tests/block_buffer_panic_safety.rs` reproduces the advisory's
+  own two tests — a panic inside `compress`, a panic inside `gen_block` — and
+  adds a third for a panic inside `read_fn` that neither proof covers. All
+  three pass under `cargo +nightly miri test` against the `block-buffer 0.12.1`
+  this crate links, so the remediation is demonstrated rather than inferred
+  from a version number. `block-buffer` is added as a dev-dependency for this,
+  pinned to the version Cargo already resolves so the test cannot exercise a
+  second copy.
+
+  The two buffer types do not share a cursor invariant — `EagerBuffer` requires
+  `pos < block_size`, `ReadBuffer` requires `1 <= pos <= block_size` — and
+  asserting the former on the latter produces a test that fails against correct
+  behaviour. Both are asserted separately.
 
 ### Added
+
+- **Public-surface compatibility suite (`tests/compat/`).** Asserts that the
+  console entry points, HTTP routes, top-level Python exports and `aegis_rust`
+  FFI names present at the published `v4.1.2` tag are still present. Every
+  expected value was read out of the tag with `git show v4.1.2:<path>` rather
+  than restated, and the assertions run one way — anything that existed then
+  must exist now, additions are fine — so a new endpoint does not train anyone
+  to edit the expectation. `v4.1.2` is the baseline because it is the most
+  recent published release: there is no `4.2.0` at any surface, so there is no
+  `4.2.0` contract to compare against. It pins names, routes and call shapes
+  only; response bodies and persisted-evidence compatibility are covered
+  elsewhere, and the SDKs version independently.
+
+- **The retained-byte ceiling is computed in code (`aegis/core/stream_bounds.py`).**
+  `R_max = 4W + Q + E + P` was declared in `specs/aegis_stream_buffer.smt2` and
+  restated in prose, but nothing computed it, so the two could drift without a
+  failure anywhere. `StreamRetentionBounds` now holds the expression and the
+  spec's declared parameter ranges in one place, and `tests/test_stream_bounds.py`
+  parses the ranges back out of the `.smt2` file rather than hardcoding both
+  sides. `BoundedStreamProxy` gained `bounds` and `retained_bytes_ceiling`
+  accessors; they are **reporting only** and change no admission decision, so
+  no stream the previous release admitted is refused now.
+
+  This does not upgrade what the Z3 run establishes. That check remains
+  arithmetic consistency over declared ranges, not a refinement proof of the
+  proxy or of process memory, and `R_max` remains a per-stream ceiling —
+  aggregate memory still scales with concurrent admitted streams.
+
+- **Scanner report ingest (`scripts/triage/parse_socket_report.py`).**
+  Converts a Socket.dev PDF export into normalized JSON committed under
+  `evidence/dependency-scan/`, so a scan is diffable rather than a binary
+  nobody can review. It undoes the layout wrapping that splits package names
+  and paths mid-token, recognizes both the dependency-alerts and threat-feed
+  layouts, and exits non-zero on any row it cannot parse — a silent drop would
+  break the guarantee that every row is accounted for. The 2026-09-09 report's
+  **100 rows parsed with zero failures**, as did the 30 rows of the threat-feed
+  sample.
 
 - **Deterministic dependency triage (`scripts/triage/dependency_triage.py`).**
   Reads every dependency the repository locks across all five lock files,
@@ -265,6 +404,33 @@ withdrawal.
 
 ### Changed
 
+- **The licence entitlement moved to `aegis/licensing/model.py`**, separate from
+  the token decoding and signature checking in `validator.py`, and
+  `is_valid` / `has_module` now accept an explicit `now` in epoch seconds.
+  Nothing moved out of reach: `LicenseEntitlement` and `KNOWN_MODULES` are
+  re-exported from `validator.py` and from the package, and both import paths
+  return the identical object. `now` defaults to the host clock, so every
+  existing zero-argument call behaves exactly as before, and `seconds_remaining`
+  stays a property — the parameterised form is the separate
+  `seconds_remaining_at(now)` rather than a signature change to public API.
+
+  Passing `now` makes the expiry boundary testable. It does not make expiry
+  trustworthy: the value still comes from the caller, and a host whose clock
+  runs backwards still extends its own licence. That boundary is unchanged.
+
+- **`SanctumEngine` validates its window at construction and checks its
+  holdback against `R_max`.** A `window_chars` outside `[64, 4096]` previously
+  constructed fine and raised on the first chunk, a long way from the
+  misconfiguration that caused it; it now raises `StreamBoundsError` — a
+  `ValueError` subclass, so existing handlers still catch it — from
+  `__init__`. While redacting, the engine compares the redactor's retained
+  holdback against the ceiling computed from the spec's expression and fails
+  closed if it is ever exceeded, which is a check independent of the redactor's
+  own bound rather than a restatement of it. In-process `Q`, `E` and `P` are
+  zero, so the ceiling is `4W`; the engine reports that this configuration sits
+  outside the spec's declared ranges rather than inventing a queue budget to
+  appear inside them.
+
 - The two suffixed claim IDs introduced during v2 development are renumbered.
   `verify_claims.py` matches `CLM-\d{3}` exactly, so `CLM-006b` and the tenant
   claim were parsed by nothing and validated for nothing. They are now
@@ -287,6 +453,21 @@ withdrawal.
   downloads. Both SDK registries do match.
 
 ### Noted, not changed
+
+- **One of the two commissioned scan exports arrived; the other did not.** The
+  dependency alerts report (100 rows, generated 2026-09-09) is ingested in full
+  and every row appears exactly once in the triage ledger. In place of
+  `alerts.pdf` a Socket **Threat Feed sample** was supplied — an ecosystem-wide
+  sample of packages flagged across npm and PyPI, not an alert set against this
+  repository. Its 30 rows are ingested for completeness and **none of the four
+  packages it names appears in any Aegis lock file**. If `alerts.pdf` exists and
+  differs from the dependency report, its rows remain outside this review.
+
+- **The alert set does not contain the licence and ML-stack items the brief
+  described.** `uvloop`, `torch`, `transformers`, `vllm`, `next` and `sharp`
+  appear in **no row** of the report. The findings recorded for them here come
+  from reading this repository's own manifests, not from the scanner, and they
+  stand on that evidence.
 
 - **`uvloop` is not a GPL dependency and not a direct one.** The commissioning
   brief classified `uvloop 0.22.1` as a direct GPL-2.0/3.0 dependency and a

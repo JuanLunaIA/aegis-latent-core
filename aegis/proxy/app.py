@@ -763,6 +763,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         max_wal_bytes=cfg.max_wal_bytes,
         hsm_backend=_hsm_backend,
         require_strong_signing=cfg.security_enforcement_mode == "strict",
+        mmr_hash_scheme=cfg.mmr_hash_scheme,
     )
     state.native_stream_wal = None
     try:
@@ -1644,6 +1645,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 deidentifier_window_chars=cfg.stream_deidentifier_window_chars,
                 enable_phi=state._phi_scrubber is not None,
                 enable_pci=state._pci_scrubber is not None,
+                streaming_engine=cfg.streaming_engine,
             )
             return StreamingResponse(
                 bounded_stream,
@@ -1899,6 +1901,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 deidentifier_window_chars=cfg.stream_deidentifier_window_chars,
                 enable_phi=state._phi_scrubber is not None,
                 enable_pci=state._pci_scrubber is not None,
+                streaming_engine=cfg.streaming_engine,
                 protocol="anthropic",
                 terminal_predicate=lambda _raw, event: (
                     isinstance(event, dict) and event.get("type") == "message_stop"

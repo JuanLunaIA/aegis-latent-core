@@ -1,0 +1,40 @@
+{
+  "added_overhead_ms": {
+    "p50": 0.011038000000000006,
+    "p95": 0.01266500000000001,
+    "p99": 0.015677999999999997,
+    "p999": 0.022259
+  },
+  "boundary": "Per-feed-call redactor latency on one host, one synthetic chunk stream. Not a throughput result, not a capacity claim, and not attributable to any deployment. The proxy's queueing, encoding, hashing and asyncio costs are excluded because they are identical under both engines.",
+  "engines": {
+    "deidentifier": {
+      "engine": "deidentifier",
+      "max_ms": 0.312585,
+      "mean_ms": 0.0973781755,
+      "p50_ms": 0.092607,
+      "p95_ms": 0.130497,
+      "p999_ms": 0.200894,
+      "p99_ms": 0.16072,
+      "samples": 20000
+    },
+    "grammar_frontier": {
+      "engine": "grammar_frontier",
+      "max_ms": 0.29681,
+      "mean_ms": 0.10790876229999999,
+      "p50_ms": 0.103645,
+      "p95_ms": 0.143162,
+      "p999_ms": 0.223153,
+      "p99_ms": 0.176398,
+      "samples": 20000
+    }
+  },
+  "generated_at": "2026-09-10T02:16:49.485777+00:00",
+  "platform": {
+    "machine": "x86_64",
+    "processor": "x86_64",
+    "python": "3.11.15",
+    "system": "Linux"
+  },
+  "warmup_samples": 2000,
+  "window_chars": 128
+}

@@ -407,6 +407,28 @@ class AegisSettings(BaseSettings):
         le=4_096,
         description="Finite logical-text holdback for cross-event PHI/PCI interception.",
     )
+    mmr_hash_scheme: Literal["v1-asciihex", "v2-binary-domain-separated"] = Field(
+        default="v1-asciihex",
+        description=(
+            "MMR hash construction for the audit ledger. 'v2-binary-domain-separated' applies "
+            "RFC 6962 domain tags, which prevents the leaf/interior-node type confusion v1 "
+            "admits. It is NOT an in-place upgrade: the scheme decides every root a chain has "
+            "recorded, so a WAL written under one scheme cannot be reopened under the other and "
+            "the ledger refuses with fault state 'mmr_scheme_mismatch'. Select v2 only for a new "
+            "chain. Default stays v1 so existing deployments are unaffected."
+        ),
+    )
+    streaming_engine: Literal["grammar_frontier", "deidentifier"] = Field(
+        default="grammar_frontier",
+        description=(
+            "Streaming redactor for governed SSE. 'grammar_frontier' runs the Safe Harbor "
+            "de-identifier and then the grammar-frontier rules, which add instruction-override "
+            "and system-prompt-disclosure matching the de-identifier does not carry. "
+            "'deidentifier' runs the Safe Harbor set alone, as releases before 4.4.0 did. "
+            "The composite holds back the de-identifier window plus the 28-character frontier, "
+            "so the per-stream retained-byte ceiling rises by 4x28 bytes."
+        ),
+    )
     max_stream_duration_seconds: float = Field(
         default=60.0,
         ge=0.1,

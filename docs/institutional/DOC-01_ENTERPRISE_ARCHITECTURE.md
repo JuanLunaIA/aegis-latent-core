@@ -203,7 +203,7 @@ retained_bytes = queue.retained_bytes
                + len(preview)
 ```
 
-The per-stream ceiling declared by `specs/aegis_stream_buffer.smt2` adds the single in-flight canonical event:
+The per-stream ceiling declared by `specs/aegis_stream_buffer.smt2` adds the single in-flight canonical event, and is computed in code by `aegis/core/stream_bounds.py`, which both the proxy (`BoundedStreamProxy.retained_bytes_ceiling`) and the in-process Sanctum facade read, so the expression exists in exactly one place:
 
 \[
 R_{\max} = 4W + Q + E + P
@@ -218,6 +218,8 @@ R_{\max} = 4W + Q + E + P
 | `P` | Response preview retained for evidence | `0 <= P <= 65536`; default `65_536` | `aegis/proxy/streaming.py:125,412-414`; `specs/aegis_stream_buffer.smt2:13` |
 
 The holdback is additionally fail-closed: `feed` raises `StreamingDeidentificationError` when pending text exceeds `2W`, and the unbounded URL, magnetic-track, email, and address grammars are rejected rather than released (`aegis/core/streaming_deidentifier.py:100-107,120-157`). The queue refuses any single item larger than its whole byte budget (`aegis/proxy/streaming.py:82-84`).
+
+The proxy accessors are **reporting only**: admission is still decided by the queue (`Q`), the event check (`E`), the preview truncation (`P`) and the redactor (`W`), and `AegisSettings` is what constrains an operator-supplied configuration to the declared ranges. `StreamRetentionBounds.in_declared_domain` reports a configuration outside those ranges rather than raising, so the accessor cannot refuse a stream the previous release admitted. `SanctumEngine` is the one caller that enforces rather than reports: it rejects an out-of-range `W` at construction and fails the stream closed if the holdback ever exceeds the ceiling. In-process there is no queue, canonical event or preview, so `Q = E = P = 0` and the ceiling is `4W`; that configuration sits **outside** the spec's declared ranges, which assume a proxied stream, and the code reports it as such.
 
 Boundary. `R_max` is a **per-admitted-stream** ceiling under the declared configuration. It is arithmetic over declared parameters, not a measurement, not an allocator or fragmentation model, and not a process-wide bound: aggregate retained memory scales with the number of concurrently admitted streams, so total footprint remains **`CONFIGURATION-DEPENDENT`** on deployment-level admission and concurrency control. The SMT file checks only this arithmetic; it does not model the Python object graph, interpreter overhead, or TLS buffers.
 

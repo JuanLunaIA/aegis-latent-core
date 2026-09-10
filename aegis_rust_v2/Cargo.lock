@@ -8,6 +8,7 @@ version = "4.3.0"
 dependencies = [
  "aho-corasick",
  "blake3",
+ "block-buffer",
  "crc32fast",
  "crossbeam-queue",
  "dashmap",
