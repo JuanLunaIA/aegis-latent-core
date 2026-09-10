@@ -15,6 +15,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — the three verification gates that were missing, and the test-suite bug one of them exposed
+
+A release-tooling audit listed seven gates as absent from CI. Four were already
+there and passing, which today's run proves: `lean` and TLA+ are installed from
+pinned revisions by the `Formal Verification (Z3, Lean, TLC)` job, `z3` comes
+from the distribution package in the same job, and `syft` backs `Generate SBOM`.
+They were missing from a *development container*, not from CI. Three were
+genuinely absent and are added here.
+
+**`pytest -n auto` — and it did not work.** Enabling xdist made the whole suite
+abort before a single test ran: `Different tests were collected between gw3 and
+gw1`. The cause is a real defect that only parallel collection exposes.
+`tests/auth/test_mtls_v4.py::test_rejects_certificate_outside_validity_window`
+is parametrized over **freshly generated X.509 certificates**, so pytest derived
+each test id from the PEM bytes — which differ in every process. Every worker
+collected a different set of ids and xdist refused to proceed. Naming the two
+cases (`not_yet_valid`, `already_expired`) fixes the ids across processes, and
+replaces a 2 KB base64 blob in the test name with the case it covers. The suite
+now runs in **47.7 s instead of 118.9 s**, which is the difference between a
+gate a contributor runs before pushing and one they skip.
+
+**Miri, on a pinned nightly, over the digest buffer.** Miri executes real Rust
+and reports undefined behaviour — invalid aliasing, uninitialised reads,
+out-of-bounds arithmetic — that compiles and passes ordinary tests. It runs
+`tests/block_buffer_panic_safety.rs`, covering the `block-buffer` cursor beneath
+every SHA-256 and HMAC call on the evidence path, where a torn cursor is a
+*wrong digest* rather than a crash.
+
+Nightly is not a preference. Miri ships only as a nightly component and
+`rustup component add miri` against stable fails outright, so the audit's
+"install `cargo miri` on the stable toolchain" has no implementation; the date
+is pinned instead so a nightly regression cannot turn the gate red by surprise.
+The scope is one target rather than `--lib`, for three measured reasons recorded
+in `docs/formal/FORMAL_VERIFICATION_LIMITS.md`: Miri cannot execute foreign
+functions and the default build links PQClean C; it does not service `mmap`, so
+the WAL is unreachable under it; and `--lib` drags tokio, reqwest and vendored
+OpenSSL through Miri's own compilation, which had not finished after fifteen
+minutes locally. Recorded as `CLM-085`.
+
+**`slsa-verifier`, installed and executed.** Generating an attestation and
+verifying one are different capabilities and only the first was present. The
+verifier is installed on every run of the SBOM job — not only at release, since
+a verifier that first appears at release time is one nobody has tested — and a
+version check proves the binary executes.
+
+### Fixed — `CLM-023` contradicted `CLM-054`
+
+`CLM-023` stated the tree has "no cargo-fuzz workspace or Kani harness".
+`CLM-054` documents the Kani harnesses, and `cargo kani` verifies five of them.
+The cargo-fuzz half was accurate and stands; the Kani half was false and is
+corrected.
+
+
 ### Fixed — four documentation statements that contradicted the code or each other
 
 A conflict audit put ten alleged contradictions to the corpus. Six of them were

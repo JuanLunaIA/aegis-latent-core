@@ -25,10 +25,45 @@ Separating the limits from the description makes it harder to cite the result wi
 | `specs/aegis_invariants.smt2` | Z3 | Invariant satisfiability |
 | `specs/aegis_stream_buffer.smt2` | Z3 | Per-stream retained-byte arithmetic |
 | `aegis_rust_v2/src/wal.rs` `mod verification` | Kani | WAL frame-bounds arithmetic |
+| `aegis_rust_v2/tests/block_buffer_panic_safety.rs` | Miri | Digest-buffer cursor validity after a panic |
 
-CI gates: `scripts/verify_formal_artifacts.sh` (Z3, Lean, TLC) and the `Kani Model Checking` job (`cargo kani`). Toolchain: Lean 4.33.0, TLA+ built from a pinned revision, Z3 from the distribution package, Kani 0.67.0.
+CI gates: `scripts/verify_formal_artifacts.sh` (Z3, Lean, TLC), the `Kani Model Checking` job (`cargo kani`) and the `Miri Undefined Behaviour` job (`cargo miri test`). Toolchain: Lean 4.33.0, TLA+ built from a pinned revision, Z3 from the distribution package, Kani 0.67.0, Miri on pinned `nightly-2026-09-09` — nightly because Miri ships only as a nightly component and `rustup component add miri` against stable fails outright, so there is no stable configuration to prefer.
 
 The Kani harnesses differ in kind from the others and the difference matters when citing them. They run against the **actual functions in `wal.rs`**, not against a separately written abstraction, so for those two functions the refinement gap described in [§ 4](#not-a-refinement-proof) does not apply. That is a narrow exemption: it covers the frame-bounds arithmetic and nothing else in the file.
+
+### Miri: a different kind of check, and a narrow one
+
+Miri is not a prover. It is an interpreter that executes real Rust and reports
+undefined behaviour along **the paths it actually runs** — out-of-bounds
+arithmetic, invalid aliasing, uninitialised reads, invalid pointer use. So it
+shares Kani's advantage of running the real code and none of its exhaustiveness:
+Kani reasons over the whole `usize` domain, whereas Miri sees exactly the inputs
+its test drives.
+
+What it covers here is one target, `tests/block_buffer_panic_safety.rs`, which
+exercises the `block-buffer` cursor under a panicking compression function. That
+buffer sits beneath every SHA-256 and HMAC call on the evidence path, where a
+torn cursor is not a crash but a *wrong digest* — the failure this repository
+can least afford to discover downstream.
+
+**Three things keep it from covering more, and all three are properties of Miri
+rather than choices:**
+
+- Miri cannot execute foreign functions, and the default build links PQClean's C
+  implementation of ML-DSA-65. The `pure-rust-pqc` feature removes that C, but
+  it does not remove the next constraint.
+- Miri does not service `mmap`, which the WAL is built on, so the WAL's own code
+  paths are unreachable under it. Their bounds arithmetic is what the Kani
+  harnesses cover instead.
+- Running `--lib` drags tokio, reqwest and vendored OpenSSL through Miri's own
+  compilation. Measured locally, that had not finished after fifteen minutes. A
+  job that times out establishes nothing, so the scope is the target Miri can
+  actually reach.
+
+A passing Miri run therefore says: *no undefined behaviour was observed on these
+paths, under this interpreter, at this pinned toolchain.* It does not say the
+crate is free of undefined behaviour, and it says nothing at all about the C
+code, the memory-mapped WAL, or any path a test does not drive.
 
 ## 3. What is established
 
