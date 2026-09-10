@@ -407,6 +407,17 @@ class AegisSettings(BaseSettings):
         le=4_096,
         description="Finite logical-text holdback for cross-event PHI/PCI interception.",
     )
+    mmr_hash_scheme: Literal["v1-asciihex", "v2-binary-domain-separated"] = Field(
+        default="v1-asciihex",
+        description=(
+            "MMR hash construction for the audit ledger. 'v2-binary-domain-separated' applies "
+            "RFC 6962 domain tags, which prevents the leaf/interior-node type confusion v1 "
+            "admits. It is NOT an in-place upgrade: the scheme decides every root a chain has "
+            "recorded, so a WAL written under one scheme cannot be reopened under the other and "
+            "the ledger refuses with fault state 'mmr_scheme_mismatch'. Select v2 only for a new "
+            "chain. Default stays v1 so existing deployments are unaffected."
+        ),
+    )
     streaming_engine: Literal["grammar_frontier", "deidentifier"] = Field(
         default="grammar_frontier",
         description=(

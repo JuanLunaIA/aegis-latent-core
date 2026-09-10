@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "c6b7b2c2015d342daf417844af55d4d82259a414e81bf5bc7b261ffaee7e7f35",
-      "size": 90276
+      "sha256": "f47f3977eefc81d267d3be0f2758fceddb1eae14259d52784cb12ca6035bb87a",
+      "size": 93041
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "32a436b77b95869c7f97937756da20b38b2ad1e10444d9658dde1e09fa9613e3",
-      "size": 70096
+      "sha256": "eb7e1e1d1e510f71e35b242fbcd457d0812db2e88a9ea434f44c088f9ce0b3c9",
+      "size": 70691
     },
     {
       "category": "governed_input",

@@ -15,6 +15,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A ledger configured for MMR v2 would have recorded a leaf digest that
+  disagreed with its own accumulator.** `crypto_audit.py` computed the digest it
+  stores on each committed node as `sha256(leaf)` in three places — the v1
+  construction, hardcoded — while the accumulator appended
+  `sha256(0x00 || leaf)` under v2. Replay rebuilt a different root from the
+  recorded digests and the integrity check reported an intact chain corrupt.
+  Nothing shipped could reach it, because until this release no ledger could
+  select v2; it would have fired the moment one did. The digest now comes from
+  `MerkleMountainRange.leaf_digest`, which applies the accumulator's own scheme.
+
+### Added
+
+- **The audit ledger can select the domain-separated MMR construction.**
+  `CryptographicAuditLedger(mmr_hash_scheme=…)` and `AEGIS_MMR_HASH_SCHEME`
+  accept `v2-binary-domain-separated`, which applies the RFC 6962 §2.1 domain
+  tags — `0x00` on leaves, `0x01` on interior nodes, `0x02` on the bagged root —
+  and hashes raw digests rather than their hex text. **The default stays v1**,
+  so no existing deployment changes.
+
+  v2 has existed in `aegis/core/mmr.py` and both SDK verifiers since `4.3.0`,
+  wired to nothing, and the module recorded two blockers. Both are now cleared.
+  `aegis_rust_v2/src/mmr.rs` implemented v1 only, so an accelerated deployment
+  running Python v2 would have disagreed with the Rust root on every leaf; it
+  now implements both under the same scheme names, and
+  `tests/test_mmr_v2_migration.py` asserts the two accumulators agree across a
+  37-leaf rollover under each. The Rust constructor still defaults to v1 and
+  refuses an unrecognised scheme name rather than falling back.
+
+  **There is no in-place migration, and there cannot be one.** The scheme
+  decides every root a chain has recorded, and a root cannot be recomputed under
+  a different construction without rewriting the history it commits to. So a
+  scheme belongs to a chain: the ledger reads the proof version its WAL recorded
+  and refuses to open it under a different one, reporting fault state
+  `mmr_scheme_mismatch` before replay rather than replaying to a different root
+  and reporting intact evidence as corrupt. Selecting v2 means starting a new
+  chain; existing v1 chains stay verifiable under v1.
+
+  What this establishes is leaf/interior-node type distinctness and nothing
+  further. The v1 weakness is that a leaf whose payload is the concatenated hex
+  of two child digests hashes identically to the node over those children — the
+  Rust and Python tests both demonstrate the collision under v1 and its absence
+  under v2. It is not a break of SHA-256, and it does not let anyone forge a
+  proof against a root they do not control.
+
 ### Changed
 
 - **The grammar-frontier automaton now runs on the governed streaming path.**

@@ -67,22 +67,29 @@ def _is_sha256_hex(value: object) -> bool:
 # an unrecoverable outcome for the evidence this system exists to hold. Proofs
 # carry their scheme so a verifier never has to guess.
 #
-# Two prerequisites remain before a *ledger* may select v2, and both are
-# unmet today, which is why ``CryptographicAuditLedger`` does not expose the
-# choice:
+# ``CryptographicAuditLedger`` now exposes the choice through
+# ``mmr_hash_scheme``, still defaulting to v1. Two prerequisites blocked that
+# and both are met:
 #
-#   1. ``aegis_rust``'s accumulator implements v1 only (``aegis_rust_v2/src/
-#      mmr.rs`` hashes ``format!("{left}{right}")``). An accelerated deployment
-#      running Python v2 against the Rust root would disagree on every root,
-#      and ``tests/test_mmr_parity.py`` exists precisely to catch that class of
-#      divergence.
-#   2. Existing chains need a migration story — a new chain, or a recorded
-#      scheme transition — since a root cannot be recomputed under a different
-#      construction without rewriting history.
+#   1. ``aegis_rust``'s accumulator implemented v1 only (it hashed
+#      ``format!("{left}{right}")``), so an accelerated deployment running
+#      Python v2 would have disagreed with the Rust root on every leaf.
+#      ``aegis_rust_v2/src/mmr.rs`` now implements both, selected by the same
+#      scheme names, and ``tests/test_mmr_v2_migration.py`` asserts the two
+#      accumulators agree across a 37-leaf rollover under each.
+#   2. Existing chains needed a migration story. There is no in-place upgrade
+#      and there cannot be one — a root cannot be recomputed under a different
+#      construction without rewriting the history it commits to. So the rule is
+#      that a scheme belongs to a chain: the ledger reads the proof version its
+#      WAL recorded and refuses to open it under a different scheme, with fault
+#      state ``mmr_scheme_mismatch``, rather than replaying to a different root
+#      and reporting intact evidence as corrupt. Selecting v2 means starting a
+#      new chain.
 #
-# Until both land, v2 is available to callers constructing their own
-# accumulator and to verifiers checking v2 proofs, which is what makes the
-# construction reviewable before anything depends on it.
+# One consequence is easy to miss and was a live defect until the ledger gained
+# the option: a leaf digest recorded outside the accumulator must come from
+# ``leaf_digest``. A hardcoded ``sha256(payload)`` is the v1 digest, and under
+# v2 it disagrees with what the accumulator appended.
 HASH_SCHEME_V1: str = "v1-asciihex"
 HASH_SCHEME_V2: str = "v2-binary-domain-separated"
 _HASH_SCHEMES: frozenset[str] = frozenset({HASH_SCHEME_V1, HASH_SCHEME_V2})
@@ -326,15 +333,26 @@ class MerkleMountainRange:
         """First logical leaf index whose in-memory inclusion proof is derivable."""
         return self._leaf_index_base
 
+    def leaf_digest(self, data: bytes) -> str:
+        """The leaf digest of ``data`` under **this accumulator's** scheme.
+
+        Callers that record a leaf digest alongside the root — the ledger
+        stores one on every committed node so a WAL can be replayed without
+        the payload — must use this rather than hashing the payload
+        themselves. A hardcoded ``sha256(payload)`` is the v1 digest, and
+        under v2 it disagrees with what the accumulator actually appended, so
+        replay rebuilds a different root and reports an intact chain corrupt.
+        """
+
+        if self.hash_scheme == HASH_SCHEME_V2:
+            return v2_leaf_hash(data).hex()
+        return hashlib.sha256(data).hexdigest()
+
     def add_leaf(self, data: bytes) -> str:
         """
         Appends a new leaf and performs peak merging to maintain the MMR property.
         """
-        if self.hash_scheme == HASH_SCHEME_V2:
-            leaf_hash = v2_leaf_hash(data).hex()
-        else:
-            leaf_hash = hashlib.sha256(data).hexdigest()
-        return self.add_leaf_hash(leaf_hash)
+        return self.add_leaf_hash(self.leaf_digest(data))
 
     def add_leaf_hash(self, leaf_hash: str) -> str:
         """Append a validated prehashed leaf for deterministic WAL replay."""

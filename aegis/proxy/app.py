@@ -763,6 +763,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         max_wal_bytes=cfg.max_wal_bytes,
         hsm_backend=_hsm_backend,
         require_strong_signing=cfg.security_enforcement_mode == "strict",
+        mmr_hash_scheme=cfg.mmr_hash_scheme,
     )
     state.native_stream_wal = None
     try:

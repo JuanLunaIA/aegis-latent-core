@@ -69,7 +69,23 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from aegis.core.forensic import build_merkle_leaf, build_stream_merkle_leaf, sha256_hex
 from aegis.core.forensic_bundle import canonical_jcs_bytes
 from aegis.core.hsm import HSMSigningBackend, HSMUnavailableError
-from aegis.core.mmr import MerkleMountainRange, MMRInclusionProofV1, MMRPeak
+from aegis.core.mmr import (
+    HASH_SCHEME_V1,
+    HASH_SCHEME_V2,
+    MMR_PROOF_VERSION_V1,
+    MMR_PROOF_VERSION_V2,
+    MerkleMountainRange,
+    MMRInclusionProofV1,
+    MMRPeak,
+)
+
+#: Which proof version each hash scheme stamps on the proofs it issues. Used to
+#: recognise, on reopening a WAL, that the chain on disk was written under a
+#: different construction from the one this ledger is configured for.
+_SCHEME_PROOF_VERSIONS: dict[str, str] = {
+    HASH_SCHEME_V1: MMR_PROOF_VERSION_V1,
+    HASH_SCHEME_V2: MMR_PROOF_VERSION_V2,
+}
 
 logger = logging.getLogger(__name__)
 
@@ -489,7 +505,14 @@ class CryptographicAuditLedger:
         require_strong_signing: bool = False,
         fsync_fn: Callable[[int], None] | None = None,
         mmr_fast_restore: bool = False,
+        mmr_hash_scheme: str = HASH_SCHEME_V1,
     ) -> None:
+        if mmr_hash_scheme not in _SCHEME_PROOF_VERSIONS:
+            raise ValueError(
+                f"mmr_hash_scheme must be one of {sorted(_SCHEME_PROOF_VERSIONS)}, "
+                f"got {mmr_hash_scheme!r}"
+            )
+        self.mmr_hash_scheme = mmr_hash_scheme
         self.persistence_path = persistence_path
         self._signing_key = signing_key
         self._fsync = fsync_fn or os.fsync
@@ -505,7 +528,9 @@ class CryptographicAuditLedger:
         self._wal_handle: TextIO | None = None
         self._wal_bytes = 0
         self._fault_state: str = "healthy"
-        self._mmr = MerkleMountainRange()
+        self._mmr = MerkleMountainRange(hash_scheme=mmr_hash_scheme)
+        # Set during replay when the WAL's own proofs name a different scheme.
+        self._wal_proof_version: str | None = None
         self._load_from_wal()
         # FIX-CAL-01: open the WAL handle eagerly after reconstruction.
         # Previously the handle was only opened in __enter__ (context-manager
@@ -613,7 +638,7 @@ class CryptographicAuditLedger:
             merkle_root = self._mmr.add_leaf(leaf)
             mmr_leaf_count = self._mmr.get_leaf_count()
             mmr_leaf_index = mmr_leaf_count - 1
-            mmr_leaf_hash = sha256_hex(leaf)
+            mmr_leaf_hash = self._mmr.leaf_digest(leaf)
             mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
 
             # Sign over prev_hash + merkle_root + request/response hashes so the
@@ -739,7 +764,7 @@ class CryptographicAuditLedger:
             merkle_root = self._mmr.add_leaf(leaf)
             mmr_leaf_count = self._mmr.get_leaf_count()
             mmr_leaf_index = mmr_leaf_count - 1
-            mmr_leaf_hash = sha256_hex(leaf)
+            mmr_leaf_hash = self._mmr.leaf_digest(leaf)
             mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
 
             signed_payload = _build_signed_payload(
@@ -914,7 +939,7 @@ class CryptographicAuditLedger:
             merkle_root = self._mmr.add_leaf(leaf)
             mmr_leaf_count = self._mmr.get_leaf_count()
             mmr_leaf_index = mmr_leaf_count - 1
-            mmr_leaf_hash = sha256_hex(leaf)
+            mmr_leaf_hash = self._mmr.leaf_digest(leaf)
             mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
             signed_payload = _build_signed_payload(
                 prev_hash=prev_hash,
@@ -1510,6 +1535,28 @@ class CryptographicAuditLedger:
         was passed. The checkpoint file is written regardless, so enabling the
         flag needs no migration.
         """
+        # A chain's hash scheme decides every root it has recorded. Reopening a
+        # v1 chain as v2 would replay every leaf to a different root, and the
+        # integrity check would report the chain corrupt — a true statement
+        # about the wrong thing, and an alarming one for evidence that is
+        # actually intact. Recognise the misconfiguration by name instead, and
+        # do it before replay so the diagnosis is the cause rather than the
+        # symptom. There is no in-place upgrade: a scheme change means a new
+        # chain, because a root cannot be recomputed under a different
+        # construction without rewriting history.
+        expected_version = _SCHEME_PROOF_VERSIONS[self.mmr_hash_scheme]
+        if self._wal_proof_version is not None and self._wal_proof_version != expected_version:
+            logger.error(
+                "WAL was written under MMR proof version %s but this ledger is configured for "
+                "%s (%s). A chain cannot change hash scheme in place; start a new chain or "
+                "reopen with the scheme it was written under.",
+                self._wal_proof_version,
+                expected_version,
+                self.mmr_hash_scheme,
+            )
+            self._fault_state = "mmr_scheme_mismatch"
+            return
+
         if not portable_suffix:
             return
 
@@ -1538,7 +1585,7 @@ class CryptographicAuditLedger:
                         "MMR checkpoint root disagrees with the WAL — replaying every leaf"
                     )
                 # Discard whatever the rejected fast path built.
-                self._mmr = MerkleMountainRange()
+                self._mmr = MerkleMountainRange(hash_scheme=self.mmr_hash_scheme)
             elif leaf_count > len(portable_suffix):
                 logger.warning(
                     "MMR checkpoint describes %d leaves but the WAL holds %d — replaying WAL",
@@ -1577,6 +1624,10 @@ class CryptographicAuditLedger:
                     try:
                         data = json.loads(raw)
                         node = AuditNode.from_dict(data)
+                        if isinstance(node.mmr_proof, dict):
+                            recorded = node.mmr_proof.get("version")
+                            if isinstance(recorded, str):
+                                self._wal_proof_version = recorded
                         if node.mmr_leaf_hash:
                             portable_suffix.append(
                                 (node.mmr_leaf_hash, node.merkle_root, node.state_id)
