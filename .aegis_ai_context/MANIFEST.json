@@ -33,8 +33,8 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/04_FORMAL_SPECIFICATIONS_MAPPING.md",
-      "sha256": "bcab10ed2927bf254e70cfbcb376d74af9010e8aa20efcdb60e3aa4ad3e3052a",
-      "size": 4757
+      "sha256": "ff7e13ce87f753fe49b3cb9fc4be0512160261115a97198c954ed40f3df8f13d",
+      "size": 5090
     },
     {
       "category": "context",
@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "b27d0cedfdc92fa64c8ed7690c45db4e8f660e1afe4cce67b4c0dc140fe3368e",
-      "size": 84454
+      "sha256": "fa655dacd35d63b4679851da6c2e88d536986d0df86cf1f1cbe56c28a91c86c3",
+      "size": 88016
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "00e64188ca0a7bbc6f98e1d975e2c2c836d6312d933c08dba2b06f7185107212",
-      "size": 64582
+      "sha256": "aea0f39c5073a5403ad81a5faf653b48ffa74589925766f36eb84137678172b2",
+      "size": 68838
     },
     {
       "category": "governed_input",

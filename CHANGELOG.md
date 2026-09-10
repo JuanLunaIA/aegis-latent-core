@@ -104,6 +104,33 @@ withdrawal.
 
 ### Added
 
+- **Public-surface compatibility suite (`tests/compat/`).** Asserts that the
+  console entry points, HTTP routes, top-level Python exports and `aegis_rust`
+  FFI names present at the published `v4.1.2` tag are still present. Every
+  expected value was read out of the tag with `git show v4.1.2:<path>` rather
+  than restated, and the assertions run one way — anything that existed then
+  must exist now, additions are fine — so a new endpoint does not train anyone
+  to edit the expectation. `v4.1.2` is the baseline because it is the most
+  recent published release: there is no `4.2.0` at any surface, so there is no
+  `4.2.0` contract to compare against. It pins names, routes and call shapes
+  only; response bodies and persisted-evidence compatibility are covered
+  elsewhere, and the SDKs version independently.
+
+- **The retained-byte ceiling is computed in code (`aegis/core/stream_bounds.py`).**
+  `R_max = 4W + Q + E + P` was declared in `specs/aegis_stream_buffer.smt2` and
+  restated in prose, but nothing computed it, so the two could drift without a
+  failure anywhere. `StreamRetentionBounds` now holds the expression and the
+  spec's declared parameter ranges in one place, and `tests/test_stream_bounds.py`
+  parses the ranges back out of the `.smt2` file rather than hardcoding both
+  sides. `BoundedStreamProxy` gained `bounds` and `retained_bytes_ceiling`
+  accessors; they are **reporting only** and change no admission decision, so
+  no stream the previous release admitted is refused now.
+
+  This does not upgrade what the Z3 run establishes. That check remains
+  arithmetic consistency over declared ranges, not a refinement proof of the
+  proxy or of process memory, and `R_max` remains a per-stream ceiling —
+  aggregate memory still scales with concurrent admitted streams.
+
 - **Scanner report ingest (`scripts/triage/parse_socket_report.py`).**
   Converts a Socket.dev PDF export into normalized JSON committed under
   `evidence/dependency-scan/`, so a scan is diffable rather than a binary
@@ -291,6 +318,33 @@ withdrawal.
   the module's platform selector.
 
 ### Changed
+
+- **The licence entitlement moved to `aegis/licensing/model.py`**, separate from
+  the token decoding and signature checking in `validator.py`, and
+  `is_valid` / `has_module` now accept an explicit `now` in epoch seconds.
+  Nothing moved out of reach: `LicenseEntitlement` and `KNOWN_MODULES` are
+  re-exported from `validator.py` and from the package, and both import paths
+  return the identical object. `now` defaults to the host clock, so every
+  existing zero-argument call behaves exactly as before, and `seconds_remaining`
+  stays a property — the parameterised form is the separate
+  `seconds_remaining_at(now)` rather than a signature change to public API.
+
+  Passing `now` makes the expiry boundary testable. It does not make expiry
+  trustworthy: the value still comes from the caller, and a host whose clock
+  runs backwards still extends its own licence. That boundary is unchanged.
+
+- **`SanctumEngine` validates its window at construction and checks its
+  holdback against `R_max`.** A `window_chars` outside `[64, 4096]` previously
+  constructed fine and raised on the first chunk, a long way from the
+  misconfiguration that caused it; it now raises `StreamBoundsError` — a
+  `ValueError` subclass, so existing handlers still catch it — from
+  `__init__`. While redacting, the engine compares the redactor's retained
+  holdback against the ceiling computed from the spec's expression and fails
+  closed if it is ever exceeded, which is a check independent of the redactor's
+  own bound rather than a restatement of it. In-process `Q`, `E` and `P` are
+  zero, so the ceiling is `4W`; the engine reports that this configuration sits
+  outside the spec's declared ranges rather than inventing a queue budget to
+  appear inside them.
 
 - The two suffixed claim IDs introduced during v2 development are renumbered.
   `verify_claims.py` matches `CLM-\d{3}` exactly, so `CLM-006b` and the tenant

@@ -7,12 +7,16 @@
 The entitlement carried by a token gates the optional engine facades in
 :mod:`aegis.engines`. Nothing in this package reaches the network, and nothing
 in it changes gateway behaviour: the AGPLv3 gateway runs unlicensed.
+
+:mod:`aegis.licensing.model` holds the entitlement data model on its own;
+:mod:`aegis.licensing.validator` holds token decoding and signature checking.
+Both are re-exported here, so importing from either module or from the package
+gives the same objects.
 """
 
+from aegis.licensing.model import KNOWN_MODULES, WILDCARD_MODULE, LicenseEntitlement
 from aegis.licensing.validator import (
-    KNOWN_MODULES,
     LicenseEnforcement,
-    LicenseEntitlement,
     LicenseError,
     LicenseExpiredError,
     LicenseMalformedError,
@@ -23,6 +27,7 @@ from aegis.licensing.validator import (
 
 __all__ = [
     "KNOWN_MODULES",
+    "WILDCARD_MODULE",
     "LicenseEnforcement",
     "LicenseEntitlement",
     "LicenseError",
