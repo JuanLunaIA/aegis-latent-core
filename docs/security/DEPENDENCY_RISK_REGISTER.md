@@ -219,17 +219,70 @@ long-horizon durability. A signing implementation that will stop receiving
 security fixes is a materially different proposition from one that will not,
 and a buyer evaluating the post-quantum claim is entitled to know that.
 
-**Disposition: TRACK A MIGRATION.** The upstream advisory names the `ml-dsa`
-crate, a pure-Rust FIPS 204 implementation, as the successor. Migrating is out
-of scope for this change: it replaces a cryptographic implementation, which
-requires its own vector-level verification against FIPS 204 and its own
-assessment of the constant-time properties `SECURITY.md` already declines to
-claim for the current backend. Doing it inside a supply-chain remediation would
-bury a crypto change in a dependency sweep.
+**Disposition: MIGRATION SHIELD BUILT; SWAP AVAILABLE, NOT TAKEN.** The upstream
+advisory names the `ml-dsa` crate, a pure-Rust FIPS 204 implementation, as the
+successor. The escape route is now in the tree and exercised, and the decision
+not to take it by default is a measured one rather than a deferral.
+
+**The seam.** `aegis_rust_v2/src/pqc_trait.rs` states the ML-DSA-65 contract as
+a `PostQuantumSigner` trait over FIPS 204 byte encodings — deliberately bytes
+and not types, because the two crates model keys with incompatible type systems
+and the wire format is both what they agree on and what Aegis persists. Two
+implementations satisfy it, `PqCleanBackend` and `MlDsaBackend`, selected by
+Cargo feature. `pqc.rs` names only the selected one, so the PyO3 class,
+its method names and the exported FFI symbols are identical either way.
+
+**The C stack is genuinely removable, not merely shadowed.** Both backends are
+optional dependencies. **[MEASURED]** `cargo tree --no-default-features
+--features pure-rust-pqc` contains `ml-dsa 0.1.1` and **none** of
+`pqcrypto-mldsa`, `pqcrypto-traits`, `pqcrypto-internals` or `paste` — so the
+swap retires all four advisories in this table rather than adding a fifth
+implementation beside them.
+
+**The swap does not strand existing evidence.** [MEASURED] and asserted
+continuously by the `cross_backend` tests, which run under
+`cargo test --features pqc-compat-tests`:
+
+| property | why it decides the migration |
+| --- | --- |
+| `ml-dsa` verifies a PQClean signature | every node already in a WAL stays verifiable |
+| PQClean verifies an `ml-dsa` signature | a rollback stays open after the swap |
+| `ml-dsa` derives the *same* public key from the persisted 4032-byte secret | the durable signing identity survives — no re-keying, no nodes stranded under a key that no longer resolves |
+
+**Why the default is unchanged.** **[MEASURED]** on this repository's hardware,
+interleaved two-class timing, both arms hedged:
+
+| operation | `pqcrypto-mldsa` (C) | `ml-dsa` (pure Rust) |
+| --- | --- | --- |
+| verify, mean | 45,961 ns | 65,805 ns (1.43x) |
+| verify, class delta / p | −644 ns, p = 0.0000 | −1,128 ns, p = 0.0000 |
+| sign, mean | 135,443 ns | 650,361 ns (4.80x) |
+| sign, class delta / p | +256 ns, p = 0.8399 | +1,152 ns, p = 0.8828 |
+
+Signing is per-commit work on the evidence path, and 4.8x on it is a real cost
+against an advisory that reports no defect. So the swap is a build flag an
+operator can take deliberately — `--no-default-features --features
+pure-rust-pqc,extension-module` — and the default stays PQClean until either
+the performance gap narrows or an actual defect appears upstream, at which
+point the migration is a flag rather than a project.
+
+**A correction this measurement forced.** `pqc.rs` previously recorded that
+closing the `verify` timing gap "requires a verifier that does not exit early —
+an upstream change in `pqcrypto-mldsa` or a different implementation". A
+different implementation has now been measured and shows the *same*
+`p = 0.0000` with a *larger* class delta, so that conclusion was wrong. Two
+independent implementations of one specification producing the same result
+points at the experiment rather than at either implementation: its two classes
+are one repeated signature versus 1024 varying ones, **all valid**, and ML-DSA
+verification consumes no secret at all — it takes a public key, a public
+message and a public signature. Signing, the operation that does touch the
+secret key, meets the non-detection threshold on both backends. None of this is
+a constant-time claim; see `PQC_CONSTANT_TIME.md`, where the block stands.
 
 Residual risk while this stands: **accepted and recorded**. The advisory does
 not report a defect in the current implementation; it reports that a future one
-would not be fixed upstream.
+would not be fixed upstream. What has changed is the cost of reacting to one:
+previously a project, now a build flag with its compatibility already proven.
 
 ## Rejected remediations
 

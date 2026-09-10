@@ -15,6 +15,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — an ML-DSA backend seam, and a measurement that corrects two of our own conclusions
+
+`pqcrypto-mldsa`, `pqcrypto-traits` and `pqcrypto-internals` carry
+`RUSTSEC-2026-0166`, `-0162` and `-0163` because upstream PQClean was archived.
+None is a defect; all three are unmaintained-status notices with no fixed
+version. `aegis_rust_v2/src/pqc_trait.rs` makes reacting to one cheap:
+`PostQuantumSigner` states the ML-DSA-65 contract in FIPS 204 byte encodings —
+bytes rather than types, because the two candidate crates model keys with
+incompatible type systems and the wire format is both what they agree on and
+what Aegis persists. `pqc.rs` now names only the selected backend, so the PyO3
+class, its methods and the exported FFI symbols are identical either way.
+
+Both backends are optional dependencies, so the swap genuinely *removes* the C
+stack rather than shadowing it: under `--no-default-features --features
+pure-rust-pqc` the dependency tree contains `ml-dsa` and none of
+`pqcrypto-mldsa`, `pqcrypto-traits`, `pqcrypto-internals` or `paste`.
+
+It does not strand evidence, and that is measured rather than assumed. The
+`cross_backend` tests (`cargo test --features pqc-compat-tests`) assert that
+`ml-dsa` verifies a PQClean signature, that PQClean verifies an `ml-dsa`
+signature, and that `ml-dsa` derives the **same** public key from the persisted
+4032-byte expanded secret — so nodes already in a WAL stay verifiable, a
+rollback stays open, and the durable signing identity survives without
+re-keying.
+
+**The default is unchanged, and that is the measurement's verdict.** On this
+repository's hardware, both signing arms hedged: verify 45,961 → 65,805 ns
+(1.43x), sign 135,443 → 650,361 ns (**4.80x**). Signing is per-commit work on
+the evidence path, so 4.8x is a real cost to pay against an advisory that
+reports no defect. The swap is a flag an operator takes deliberately.
+
+Two things we had written down turned out to be wrong, and both are corrected
+in place rather than quietly dropped:
+
+- `pqc.rs` said closing the `verify` timing gap "requires a verifier that does
+  not exit early — an upstream change in `pqcrypto-mldsa` or a different
+  implementation". A different implementation now measures at the **same**
+  `p = 0.0000` with a **larger** class delta. The proposed remedy does not work.
+- More usefully, it explains why. When two independent implementations of one
+  specification give the same result, the effect belongs to the experiment. The
+  `verify` experiment's classes are one repeated signature versus 1024 varying
+  ones, **all valid** — two sets of *public* inputs — and **ML-DSA verification
+  consumes no secret**: public key, public message, public signature. A timing
+  difference across public inputs discloses nothing they did not already
+  disclose. Signing, which does touch the secret key, meets the non-detection
+  threshold on both backends (`p = 0.8399` and `p = 0.8828`).
+
+No constant-time claim is made or lifted for either backend; the release gate in
+`docs/security/PQC_CONSTANT_TIME.md` stands closed. Recorded as `CLM-084`, with
+the roadmap in `docs/security/DEPENDENCY_RISK_REGISTER.md`.
+
+Also fixed: `cargo fmt --check` was failing on four pre-existing diffs in
+`aegis_rust_v2/src/crdt_mmr.rs`, unrelated to this change and unrelated to any
+behaviour. Reformatted so the gate passes.
+
+
 ### Added — the gateway now starts the gossip mesh, and receipts can be checked across replicas
 
 `GossipDaemon` existed and converged, but nothing started it: enabling

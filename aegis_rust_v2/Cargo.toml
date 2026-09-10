@@ -14,13 +14,29 @@ authors = ["Juan Luna <juan.c.luna04@gmail.com>"]
 # maturin enables pyo3/extension-module explicitly via `[tool.maturin] features`
 # in pyproject.toml, so it must NOT be a default feature here: a default
 # extension-module would also apply to `cargo test`, which then omits the
-# libpython link and fails with undefined Py* symbols. Keeping `default = []`
-# lets the test binary link libpython normally, while production wheels still
-# get extension-module from maturin (and the CI `--features extension-module`).
-default = []
+# libpython link and fails with undefined Py* symbols. Keeping it out of
+# `default` lets the test binary link libpython normally, while production
+# wheels still get extension-module from maturin (and the CI
+# `--features extension-module`).
+# `pqclean-pqc` is on by default so an ordinary build is unchanged. It is a
+# feature rather than a hard dependency so that `--no-default-features
+# --features pure-rust-pqc,...` genuinely *drops* the archived PQClean C code
+# and its three advisories, instead of adding a second implementation beside it.
+default = ["pqclean-pqc"]
 extension-module = ["pyo3/extension-module"]
 embedded = []  # Strip non-essential components for edge/OT deployment
+# Swap the ML-DSA-65 backend from PQClean (C, upstream archived) to the pure-Rust
+# RustCrypto `ml-dsa` crate. Off by default and that is a measured decision, not
+# caution: signing costs 4.8x more on the pure-Rust backend, and signing is
+# per-commit work on the evidence path. See `src/pqc_trait.rs` for the numbers
+# and for the byte-compatibility properties that make the swap safe at all.
+pure-rust-pqc = ["dep:ml-dsa", "dep:rand_core", "dep:getrandom"]
+pqclean-pqc = ["dep:pqcrypto-mldsa", "dep:pqcrypto-traits"]
 full = ["extension-module"]  # All features
+# Both backends compiled together. Not a deployment configuration -- it exists
+# so the cross-backend byte-compatibility tests in `src/pqc_trait.rs` can run,
+# which is the evidence that a swap does not strand existing signatures.
+pqc-compat-tests = ["pqclean-pqc", "pure-rust-pqc"]
 
 [lib]
 name = "aegis_rust"
@@ -81,8 +97,16 @@ crc32fast = "1"
 parking_lot = "0.12"
 
 # Post-quantum signing (ML-DSA-65 / FIPS 204)
-pqcrypto-mldsa = "0.1"
-pqcrypto-traits = "0.3"
+pqcrypto-mldsa = { version = "0.1", optional = true }
+pqcrypto-traits = { version = "0.3", optional = true }
+
+# Pure-Rust ML-DSA-65, behind `pure-rust-pqc`. Optional so the default build's
+# dependency surface is unchanged: this is a migration shield for the archived
+# PQClean upstream (RUSTSEC-2026-0166/-0162/-0163), not a second always-on
+# implementation of the same primitive.
+ml-dsa = { version = "0.1", optional = true }
+rand_core = { version = "0.10", optional = true }
+getrandom = { version = "0.4", optional = true }
 
 # Legacy crypto (retained for backward compat + HMAC signing).
 #
