@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "42922d2d5575c5147ce80f98b9326bc22c4c97e6468c162dd554a843f90faaeb",
-      "size": 129852
+      "sha256": "3dbbf20ff7daff33401c42dc30e3931f83ae964955100bb337fc727338f91b6e",
+      "size": 132558
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "ff1022872972c493367d7a3bd0e06efcb4eb88fe4b95654bc3511bdc578ebec0",
-      "size": 91657
+      "sha256": "06f17205a6c6d6236f9fa9f87e1b74b52cf707333ebca6cfeab957a77474a26a",
+      "size": 94128
     },
     {
       "category": "governed_input",
@@ -189,8 +189,8 @@
     {
       "category": "governed_input",
       "path": "pyproject.toml",
-      "sha256": "acde031159e6a287084bf769a94a0caa8aa12a1d6cba25f1bcb15232efac0c54",
-      "size": 10459
+      "sha256": "748bab6f0e2b3655aa68fa86b4faadf6c2cb6c9358b3d969f51a10573de237fb",
+      "size": 10501
     },
     {
       "category": "governed_input",

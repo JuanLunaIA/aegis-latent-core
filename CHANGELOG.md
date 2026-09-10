@@ -15,6 +15,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — the `pqc` extra installed the wrong library, so the feature was never on
+
+`aegis/core/mlkem_session.py` imports `kyber_py.kyber.Kyber1024` behind a
+try/except and tells the operator to `pip install kyber-py`. The `pqc` extra
+declared `oqs-python` instead — a different library that **no module in this
+tree imports**. `kyber-py` was declared nowhere: not in `pyproject.toml`, not in
+`requirements.txt`, not in the lock.
+
+So `pip install aegis-latent-core[pqc]` installed something unused and left the
+post-quantum backend switched off, and `backend_available()` returned `False` on
+a tree that had been asked for exactly that capability.
+
+The failure was silent in both directions. The import guard turned a missing
+dependency into a graceful degradation rather than an error, and **thirty-two
+tests covering those paths skipped instead of failing** — the suite stayed green
+while the cryptographic code it reports on was never executed. Installing
+`kyber-py` moves the suite from 6 748 passed / 58 skipped to 6 780 passed / 26
+skipped.
+
+`kyber-py` is now declared in the `pqc` extra, so the extra enables the feature
+it advertises, and in `dev`, so CI executes those thirty-two tests instead of
+skipping them. `tests/test_optional_backend_declarations.py` binds the extra to
+the import — it reads `pyproject.toml`, needs none of the optional packages
+installed, and fails if the two drift apart again. Its teeth were checked by
+reverting the extra and observing two tests fail.
+
+With the backend present, a real two-party exchange was driven end to end: an
+initiator and a responder independently derive the **same** 32-byte secret.
+
+Recorded as `CLM-087`, scoped deliberately to the **KEM primitive**.
+
+**It is not TLS.** There is no TLS listener, no `SSLContext`, and no cipher-suite
+or named-group negotiation in that module — it is an application-layer exchange
+between two parties that already have a channel, and the gateway's ingress TLS
+is terminated by the customer, outside this repository. The parameter set is
+**ML-KEM-1024**, not the TLS hybrid group `X25519MLKEM768`, which the module
+docstring cites only as an analogy for the composition. The post-quantum half is
+pure Python, so no constant-time, side-channel or FIPS-validation property is
+claimed. The register entry blocks each of those phrasings by name.
+
+**`oqs-python` is left in place and flagged rather than removed.** Nothing in
+this tree imports it, so it appears to be dead weight in an extra whose name
+implies it is the post-quantum backend; dropping a declared dependency changes
+what a consumer's install resolves to, which is the owner's call rather than a
+side effect of fixing a different defect.
+
 ### Fixed — a security-control row that cited the wrong tracing module
 
 A verification pass over the tracing surface found that this repository has
