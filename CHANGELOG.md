@@ -15,6 +15,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — the gateway now starts the gossip mesh, and receipts can be checked across replicas
+
+`GossipDaemon` existed and converged, but nothing started it: enabling
+`AEGIS_GOSSIP_ENABLED` configured a mesh that never ran. `aegis/consensus/runtime.py`
+closes that. The gateway's lifespan now starts both halves — the daemon that
+reaches out to peers on a timer, and an mTLS listener on its own port that lets
+peers reach in — and stops them on shutdown, daemon first so a peer's in-flight
+round does not log a failure that is only shutdown.
+
+Placed **before** the seccomp filter, deliberately: reading the three PEM files
+needs `openat` and binding the listener needs a socket the filter is about to
+forbid, so starting it afterwards fails looking like a TLS fault. Two settings
+are new, `AEGIS_GOSSIP_BIND_HOST` and `AEGIS_GOSSIP_BIND_PORT`, and the Helm
+chart now renders them so the listener, the `containerPort` and the port the
+peer list is written against cannot drift apart.
+
+Misconfiguration is loud rather than silent. Each of the three PEM settings is
+checked by name before TLS sees it, a missing native `CausalMmr` is a startup
+failure rather than a Python stand-in that would compute roots no other replica
+agrees with, and the listener is waited on via `server.started` rather than a
+connect probe — the kernel accepts into the backlog as soon as the socket is
+bound, so a probe cannot tell "serving" from "bound but never scheduled". Under
+strict enforcement a failure to start is fatal; otherwise it is an error log and
+the gateway continues without the mesh. It is never skipped quietly: a replica
+asked to join a mesh that did not join looks healthy while diverging from every
+peer.
+
+`aegis.core.a2a.verify_cluster_receipt` is the verifier-side half. A cluster has
+no single root — each replica keeps its own single-writer WAL and its own
+accumulator — so it searches a supplied set of per-replica **ledger** roots and
+returns the name of the replica whose root verifies the receipt, which is where
+an auditor goes for the surrounding evidence. Two boundaries are stated in the
+code and in `CLM-083` because both are easy to get wrong: a match is *one
+replica's word, not the cluster's* — replicas do not attest to each other's
+ledgers, so this is not a quorum and not corroboration — and the roots are
+**ledger** roots, not gossip roots, since the mesh reconciles a different
+structure whose root cannot verify a receipt at all.
+
+Recorded as `CLM-083`; `CLM-080` updated to say the mesh is started by the
+gateway rather than merely importable.
+
+
 ### Changed — concurrent WAL commits now share one `fsync` (group commit)
 
 A commit did not return until its record was `fsync`ed, and that `fsync` was

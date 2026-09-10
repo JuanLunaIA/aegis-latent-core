@@ -246,3 +246,95 @@ def test_the_python_sdk_verifies_a_server_issued_receipt(ledger: Any) -> None:
     assert sdk_a2a.verify_receipt(wire, root)
     assert not sdk_a2a.verify_receipt({**wire, "tool_name": "web.delete"}, root)
     assert not sdk_a2a.verify_receipt(wire, "b" * 64)
+
+
+# ── cluster receipts ──────────────────────────────────────────────────────────
+#
+# A cluster has no single root. Each replica keeps its own single-writer WAL and
+# its own accumulator, so a receipt verifies under exactly one replica's root.
+# `verify_cluster_receipt` searches a supplied set and says which replica holds
+# the record — the operationally useful answer, since that is where an auditor
+# goes for the surrounding evidence.
+#
+# The tests below are careful never to assert that a match means the cluster
+# agrees. It does not: replicas do not attest to each other's ledgers.
+
+
+def test_a_cluster_receipt_names_the_replica_that_holds_the_record(
+    ledger: Any, tmp_path: Path
+) -> None:
+    from aegis.core.a2a import verify_cluster_receipt
+
+    other = CryptographicAuditLedger(str(tmp_path / "other.jsonl"), signing_key=SIGNING_KEY)
+    try:
+        other.commit_forensic(state_id="elsewhere", request_bytes=b"a", response_bytes=b"b")
+        receipt = _issue(ledger)
+        roots = {
+            "replica-a": other._mmr.get_root_hash(),
+            "replica-b": ledger._mmr.get_root_hash(),
+        }
+
+        assert verify_cluster_receipt(receipt, roots) == "replica-b"
+    finally:
+        other.close()
+
+
+def test_a_receipt_no_replica_recorded_matches_nothing(ledger: Any, tmp_path: Path) -> None:
+    from aegis.core.a2a import verify_cluster_receipt
+
+    other = CryptographicAuditLedger(str(tmp_path / "stranger.jsonl"), signing_key=SIGNING_KEY)
+    try:
+        other.commit_forensic(state_id="elsewhere", request_bytes=b"a", response_bytes=b"b")
+        receipt = _issue(ledger)
+
+        assert verify_cluster_receipt(receipt, {"replica-a": other._mmr.get_root_hash()}) is None
+    finally:
+        other.close()
+
+
+def test_a_tampered_receipt_matches_no_replica(ledger: Any) -> None:
+    """The per-root binding must not weaken just because several roots are tried."""
+    from aegis.core.a2a import verify_cluster_receipt
+
+    receipt = _issue(ledger)
+    forged = {**receipt.to_dict(), "tool_name": "web.delete"}
+    root = ledger._mmr.get_root_hash()
+
+    assert verify_cluster_receipt(forged, {"replica-b": root}) is None
+
+
+def test_an_empty_root_set_is_refused_rather_than_treated_as_a_match(ledger: Any) -> None:
+    from aegis.core.a2a import verify_cluster_receipt
+
+    assert verify_cluster_receipt(_issue(ledger), {}) is None
+
+
+def test_an_unnamed_replica_is_skipped_rather_than_returned(ledger: Any) -> None:
+    """An empty name would be falsy, so a caller's `if` would read a hit as a miss.
+
+    Returning it would be worse than skipping it: the receipt verified, and the
+    caller would conclude it did not.
+    """
+    from aegis.core.a2a import verify_cluster_receipt
+
+    receipt = _issue(ledger)
+    root = ledger._mmr.get_root_hash()
+
+    assert verify_cluster_receipt(receipt, {"": root}) is None
+    assert verify_cluster_receipt(receipt, {"": root, "named": root}) == "named"
+
+
+def test_a_gossip_accumulator_root_verifies_nothing(ledger: Any) -> None:
+    """The easiest way to misuse the cluster surface, pinned as a test.
+
+    The mesh reconciles the CausalMmr accumulator, whose root is a different
+    structure from the ledger's. Passing one here cannot verify a receipt, and
+    the result must not be read as the cluster disagreeing.
+    """
+    from aegis.core.a2a import verify_cluster_receipt
+
+    causal = pytest.importorskip("aegis_rust").CausalMmr(0)
+    causal.append(b"a leaf the mesh reconciles")
+    receipt = _issue(ledger)
+
+    assert verify_cluster_receipt(receipt, {"replica-b": causal.root}) is None
