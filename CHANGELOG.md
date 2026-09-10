@@ -15,6 +15,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — the WAF verdict is now recorded where a proof can reach it
+
+Groundwork for the zero-knowledge inclusion proof, and a correction to an
+epistemic gap that existed independently of it.
+
+**The outcome was real but unrecorded.** A blocked request raises before the
+durable commit, so a committed node already *implied* the WAF had allowed it.
+An implication is not evidence: nothing in the record said so, and nothing could
+prove it. `commit_forensic` now accepts `waf_verdict`, the proxy passes `passed`
+at the durable commit, and the value lands in two places that matter — the bytes
+the MMR commits to (`build_merkle_leaf`) and the node signature
+(`_build_signed_payload`).
+
+Putting it in the **leaf** is the part that makes it provable. A signature binds
+the verdict to a node, but the tree would know nothing about it; a statement
+about the verdict can only be proved against a root if the verdict is inside the
+bytes that root commits to.
+
+**Additive, and that is asserted as bytes.** The field is omitted from the leaf
+and from the signed payload whenever it is empty, so a node without a verdict
+produces byte-identical output to everything written before the field existed.
+The test pins the legacy envelope literally rather than recomputing it, since a
+test that recomputes with the code under test follows that code wherever it
+drifts.
+
+**No SDK wire boundary.** Both SDKs reconstruct exactly one envelope — the A2A
+receipt — and the A2A path records no verdict, so those bytes are unchanged and
+every published SDK keeps verifying every A2A receipt. Forensic leaves, which
+may now carry a verdict, are not reconstructed by any SDK: inclusion is verified
+from a leaf *hash*.
+
+**Tampering fails closed in both directions, with no version flag to keep in
+step.** Verification rebuilds the payload from the node's own stored verdict, so
+blanking a recorded verdict rebuilds four fields where five were signed, and
+forging one onto a node that never had it rebuilds five where four were signed.
+Both mismatch. The vocabulary is closed and delimiter-free, which is load-bearing
+rather than tidy: the payload is `"|".join(...)`, so an unconstrained verdict
+would be a serialisation ambiguity rather than merely an unknown label.
+
+Recorded as `CLM-088`. **It records that the WAF allowed the request. It does
+not establish that the WAF is correct**, and it is not itself a proof — it is
+what makes one possible.
+
 ### Added — the evidence commit is now traced, and the `pqc` extra carries only what it uses
 
 Two owner decisions from the tracing and PQC verification passes.

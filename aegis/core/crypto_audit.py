@@ -72,7 +72,13 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from aegis.core.crypto_shredder import CryptoShredder, SealedPayload
-from aegis.core.forensic import build_merkle_leaf, build_stream_merkle_leaf, sha256_hex
+from aegis.core.forensic import (
+    WAF_VERDICT_UNRECORDED,
+    build_merkle_leaf,
+    build_stream_merkle_leaf,
+    sha256_hex,
+    validate_waf_verdict,
+)
 from aegis.core.forensic_bundle import canonical_jcs_bytes
 from aegis.core.group_commit import (
     DEFAULT_LINGER_SECONDS,
@@ -401,6 +407,18 @@ class AuditNode:
     sealed_subject_id: str = ""
     sealed_nonce: str = ""  # hex-encoded 96-bit GCM nonce
     sealed_ciphertext: str = ""  # hex-encoded AES-256-GCM ciphertext
+    # The WAF outcome recorded at admission, from the closed vocabulary in
+    # `aegis.core.forensic`. Empty on every node written before the field
+    # existed, which is "not recorded" and not a third outcome.
+    #
+    # Deliberately NOT a ``node_hash`` input, for the same reason as the fields
+    # above: that hash covers a fixed list, so leaving it alone is what lets
+    # every pre-existing node hash identically and keeps issued proofs valid.
+    # Two other structures do bind it, which is what makes it evidence rather
+    # than annotation — the node signature (`_build_signed_payload`) and the MMR
+    # leaf (`build_merkle_leaf`). The leaf is the one a zero-knowledge inclusion
+    # proof can speak about, because the tree commits to those bytes.
+    waf_verdict: str = ""
 
     def __post_init__(self) -> None:
         self.__creation_hash__: str = self.node_hash
@@ -466,6 +484,7 @@ class AuditNode:
             "sealed_subject_id": "",
             "sealed_nonce": "",
             "sealed_ciphertext": "",
+            "waf_verdict": "",
         }
         # Remove legacy field if present
         data.pop("payload", None)
@@ -484,6 +503,7 @@ def _build_signed_payload(
     merkle_root: str,
     request_hash: str,
     response_hash: str,
+    waf_verdict: str = WAF_VERDICT_UNRECORDED,
 ) -> bytes:
     """Canonical bytes covered by a node's signature.
 
@@ -497,8 +517,26 @@ def _build_signed_payload(
     ``prev_hash`` to the new predecessor's ``node_hash`` while the per-node
     signatures (over an untouched ``merkle_root``) still verified. Including
     ``prev_hash`` here makes any such edit invalidate the signature.
+
+    ``waf_verdict`` is appended **only when non-empty**, and that conditional is
+    what makes the field additive rather than breaking. Verification rebuilds
+    this payload from the node's own stored fields, so a node written before the
+    field existed carries an empty verdict, rebuilds the original four-field
+    payload, and its signature verifies exactly as it always did.
+
+    The conditional is also why tampering with the verdict cannot succeed in
+    either direction. Blanking a recorded verdict rebuilds a four-field payload
+    where a five-field one was signed; adding a verdict to a node that never had
+    one rebuilds five where four were signed. Both mismatch, so the field is
+    bound by the signature without a version flag to keep in step. Its
+    vocabulary is closed and delimiter-free (`validate_waf_verdict`), so no
+    verdict can smuggle a ``|`` and make two different field lists serialise
+    alike.
     """
-    return "|".join([prev_hash, merkle_root, request_hash, response_hash]).encode()
+    fields = [prev_hash, merkle_root, request_hash, response_hash]
+    if validate_waf_verdict(waf_verdict) != WAF_VERDICT_UNRECORDED:
+        fields.append(waf_verdict)
+    return "|".join(fields).encode()
 
 
 def _hmac_sign(signing_key: str, data: bytes) -> str:
@@ -724,6 +762,7 @@ class CryptographicAuditLedger:
         scrub_method: str = "",
         signer_name: str = "",
         signature_meaning: str = "",
+        waf_verdict: str = WAF_VERDICT_UNRECORDED,
     ) -> AuditNode:
         """Commit a full forensic record (request + response) to the chain.
 
@@ -760,6 +799,9 @@ class CryptographicAuditLedger:
         resp_hash = sha256_hex(response_bytes) if response_bytes else ""
 
         # Build canonical MMR leaf
+        # Validate before the lock: a bad verdict must be a caller error, not a
+        # half-written commit discovered while holding the ledger lock.
+        waf_verdict = validate_waf_verdict(waf_verdict)
         leaf = build_merkle_leaf(
             state_id=state_id,
             request_bytes=request_bytes,
@@ -767,6 +809,7 @@ class CryptographicAuditLedger:
             model=model,
             endpoint=endpoint,
             max_bytes=self.max_forensic_bytes,
+            waf_verdict=waf_verdict,
         )
 
         with self._lock:
@@ -792,6 +835,7 @@ class CryptographicAuditLedger:
                 merkle_root=merkle_root,
                 request_hash=req_hash,
                 response_hash=resp_hash,
+                waf_verdict=waf_verdict,
             )
             try:
                 signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
@@ -828,6 +872,7 @@ class CryptographicAuditLedger:
                 sealed_subject_id=sealed.subject_id if sealed else "",
                 sealed_nonce=sealed.nonce.hex() if sealed else "",
                 sealed_ciphertext=sealed.ciphertext.hex() if sealed else "",
+                waf_verdict=waf_verdict,
             )
 
             try:
@@ -1213,6 +1258,7 @@ class CryptographicAuditLedger:
                     merkle_root=node.merkle_root,
                     request_hash=node.request_hash,
                     response_hash=node.response_hash,
+                    waf_verdict=node.waf_verdict,
                 )
                 if not _hmac_verify(
                     self._signing_key,
@@ -1246,6 +1292,7 @@ class CryptographicAuditLedger:
             merkle_root=node.merkle_root,
             request_hash=node.request_hash,
             response_hash=node.response_hash,
+            waf_verdict=node.waf_verdict,
         )
         try:
             if node.signature_scheme == "hmac-sha256":
