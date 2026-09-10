@@ -40,6 +40,7 @@ from aegis.core import observability
 from aegis.core.circuit_breaker import CircuitOpenError
 from aegis.core.crypto_audit import AuditNode, CryptographicAuditLedger
 from aegis.core.hsm import HSMSigningBackend
+from aegis.core.mmr import MMR_PROOF_VERSION_V1
 from aegis.core.normalization import canonical_normalize
 from aegis.core.pci_detector import PCIScrubber
 from aegis.core.phi_deidentifier import PHIDeidentifier
@@ -764,6 +765,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         hsm_backend=_hsm_backend,
         require_strong_signing=cfg.security_enforcement_mode == "strict",
         mmr_hash_scheme=cfg.mmr_hash_scheme,
+        pqc_identity_path=cfg.pqc_identity_path,
+        enable_cryptographic_shredding=cfg.enable_cryptographic_shredding,
+        shredder_vault_path=cfg.shredder_vault_path or None,
     )
     state.native_stream_wal = None
     try:
@@ -1214,7 +1218,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         ).encode("utf-8")
         proof_value = base64.urlsafe_b64encode(proof_json).decode("ascii").rstrip("=")
         return {
-            "X-Aegis-MMR-Format": "aegis-mmr-inclusion-v1",
+            # Read off the proof rather than hardcoded: this header tells the
+            # client which construction to verify under, so advertising v1
+            # while serving a v2 proof would send it to the wrong leaf digest.
+            "X-Aegis-MMR-Format": str(node.mmr_proof.get("version", MMR_PROOF_VERSION_V1)),
             "X-Aegis-MMR-Leaf": node.mmr_leaf_hash,
             "X-Aegis-MMR-Leaf-Index": str(node.mmr_leaf_index),
             "X-Aegis-MMR-Leaf-Count": str(node.mmr_leaf_count),
@@ -2197,4 +2204,37 @@ def main() -> None:
     uvicorn.run("aegis.proxy.app:app", **uvicorn_kwargs)
 
 
-app = create_app()
+# ── the module-level ``app`` ────────────────────────────────────────────────
+#
+# This used to be ``app = create_app()`` at import. Constructing the app opens
+# the WAL and takes its exclusive single-writer lock, so *importing this module
+# for any reason at all* claimed the lock — and the documented factory,
+# ``create_proxy_app()``, then failed with ``WalWriterConflictError`` against a
+# writer that is the importing process itself. Anything that imports the module
+# without wanting a running gateway paid the same price: a test collector, a
+# CLI reading ``__version__``, a worker importing one helper, Sphinx.
+#
+# PEP 562 makes the attribute lazy. ``uvicorn.run("aegis.proxy.app:app")`` and
+# ``from aegis.proxy.app import app`` both resolve through ``__getattr__``, so
+# the ASGI entry point is unchanged; the app is built on first *access* rather
+# than on import, and a module that is only imported holds no lock.
+#
+# The singleton is deliberate: repeated ``app`` access returns one app, as a
+# module-level binding did. A caller wanting an independent instance calls
+# ``create_app`` or ``create_proxy_app``, which is what those exist for.
+_app_singleton: FastAPI | None = None
+
+
+def __getattr__(name: str) -> Any:
+    global _app_singleton
+    if name == "app":
+        if _app_singleton is None:
+            _app_singleton = create_app()
+        return _app_singleton
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    # ``__getattr__`` is invisible to dir() and to tab completion, so name the
+    # attribute it serves explicitly.
+    return sorted([*globals().keys(), "app"])

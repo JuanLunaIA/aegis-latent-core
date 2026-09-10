@@ -656,7 +656,23 @@ class MerkleMountainRange:
                 return False
         if proof.leaf_count < 1 or not (0 <= proof.leaf_index < proof.leaf_count):
             return False
-        if not _is_sha256_hex(trusted_root) or proof.root != trusted_root:
+        # Accept the root in either encoding. ``proof.root`` is canonical hex
+        # once ``from_dict`` has decoded it, but a v2 proof *transports* its
+        # root as unpadded base64url — so a caller who takes the trusted root
+        # straight out of the proof document it received, which is the obvious
+        # thing to do, hands us 43 characters where this expects 64. Rejecting
+        # that is an encoding accident reported as a verification failure, and
+        # under v1 the two forms coincide so nothing surfaced it.
+        #
+        # Normalising is not a relaxation: both forms decode to the same 32
+        # bytes, and anything that is neither still fails.
+        normalised_root = trusted_root
+        if not _is_sha256_hex(normalised_root):
+            try:
+                normalised_root = _b64u_to_hex(normalised_root)
+            except (ValueError, TypeError):
+                return False
+        if not _is_sha256_hex(normalised_root) or proof.root != normalised_root:
             return False
         if len(proof.peaks) != proof.leaf_count.bit_count():
             return False
@@ -705,7 +721,10 @@ class MerkleMountainRange:
             actual_root = hashlib.sha256(
                 "".join(peak.hash for peak in proof.peaks).encode("ascii")
             ).hexdigest()
-        return actual_root == trusted_root
+        # ``normalised_root``, not ``trusted_root``: the recomputed root is hex,
+        # so comparing it against a caller-supplied base64url form would fail
+        # every v2 proof at the last step.
+        return actual_root == normalised_root
 
     def verify_inclusion(
         self, leaf_data: bytes, leaf_index: int, proof: list[tuple[str, str]], root: str

@@ -88,11 +88,11 @@ Two further limits are worth stating because they do not go away once a transpor
 
 ## Can I erase a subject's data from the ledger?
 
-Not through the gateway. The ledger commits payload digests directly, and deleting or editing a committed node breaks chain linkage and invalidates the root for every record after it — the integrity check would then report an untampered chain as corrupt.
+Not by deletion, and not on a chain that is already running. Deleting or editing a committed node breaks chain linkage and invalidates the root for every record after it — the integrity check would then report an untampered chain as corrupt.
 
-`aegis/core/crypto_shredder.py` implements the mechanism that resolves that structural conflict — per-subject AES-256-GCM envelope encryption, where the ledger would commit the ciphertext, so destroying the key leaves the root, the peaks and every previously issued proof bit-for-bit unchanged. **It is not wired in**, so no deployed chain behaves this way today.
+`aegis/core/crypto_shredder.py` resolves that structural conflict: per-subject AES-256-GCM envelope encryption, where the ledger commits the ciphertext, so destroying the key leaves the root, the peaks and every previously issued proof bit-for-bit unchanged. Since `4.4.0` the ledger can use it, behind `AEGIS_ENABLE_CRYPTOGRAPHIC_SHREDDING=true`. **It is off by default**, and it is not a switch you can throw on an existing deployment: sealing changes what the MMR commits to, so turning it on means starting a new chain. A default-configured gateway commits payload digests exactly as before, and `crypto_shred()` on such a ledger refuses rather than quietly reporting success.
 
-Even wired, its claim is bounded: the plaintext becomes unrecoverable *to a holder of the ciphertext*. It says nothing about key material on the physical medium, and a restored backup of the key vault undoes every erasure performed through it. Whether any of this discharges a legal obligation is a controller determination made with counsel — see [DOC-05 §5.8.1](institutional/DOC-05_REGULATORY_DOSSIER.md) and `CLM-068`. Do not describe Aegis as satisfying a right to erasure.
+Where it is on, the claim is still bounded: the plaintext becomes unrecoverable *to a holder of the ciphertext*. It says nothing about key material on the physical medium, a restored backup of the key vault undoes every erasure performed through it, and the node keeps its request and response digests, so a guessed plaintext can still be confirmed. Whether any of this discharges a legal obligation is a controller determination made with counsel — see [DOC-05 §5.8.1](institutional/DOC-05_REGULATORY_DOSSIER.md) and `CLM-068`. Do not describe Aegis as satisfying a right to erasure.
 
 ## How do I rotate HMAC keys without a restart?
 

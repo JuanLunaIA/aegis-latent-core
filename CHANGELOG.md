@@ -15,6 +15,200 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — cross-replica reconciliation, off by default
+
+- **`CausalMmr` has a transport.** The join-semilattice was implemented and
+  tested but nothing ran it: there was no way to move a replica's leaf set
+  between processes, so the convergence it promised was reachable only from a
+  single test that held both replicas in one interpreter.
+
+  `aegis/consensus/` supplies the missing half — a peer set, a schedule, and
+  anti-entropy over mutual TLS. Each round compares roots first, so a converged
+  cluster exchanges one 32-byte digest per peer per interval; only a mismatch
+  triggers a state exchange, which moves leaves in both directions at once.
+  There is no log to be at the end of and no leader to be behind: a replica
+  that misses any number of rounds catches up completely on its next
+  successful one.
+
+  The wire format is new Rust (`encode_state`/`decode_state`). Its decoder is
+  the part that faces a peer who may not be friendly, so it is canonical
+  (clock entries must ascend, or one state would have many encodings),
+  bounded (a leaf count is checked against a ceiling *and* against the bytes
+  actually present, because a trusted length prefix is an out-of-memory
+  primitive), and total — every truncation returns an error rather than
+  panicking, which matters behind a PyO3 boundary where an unwind aborts the
+  interpreter rather than raising. The sender's own replica id is deliberately
+  absent from the wire: it would break canonicality, and it would put a
+  forgeable claim of identity beside the authenticated one the certificate
+  already establishes.
+
+  **Verification is not optional and there is no flag to disable it.** A peer
+  supplies leaves that enter every replica's accumulator, so authenticating
+  peers is the entire security boundary. Convergence is asserted over three
+  replicas on real loopback TLS sockets with `CERT_REQUIRED` in both
+  directions, through a simulated partition and heal; a client presenting no
+  certificate, or one from another CA, is refused at the handshake.
+
+  **What it does not do.** It reconciles the CRDT accumulator, *not* the
+  ledger: each replica's WAL stays its own chain and nothing about a receipt,
+  root or inclusion proof changes (`CLM-012` unchanged). It is not consensus,
+  not Byzantine fault tolerance and not a total order — `join` reconciles
+  replicas that disagree about ordering, not replicas that lie, and a replica
+  contributing fabricated leaves has them merged like any other. There is no
+  membership protocol; the peer list is static configuration.
+
+  Rendered onto the existing StatefulSet rather than a DaemonSet. A DaemonSet
+  has no `volumeClaimTemplates` and so cannot give each replica its own WAL
+  claim — the single-writer property the chart is built around — while the
+  StatefulSet plus its headless Service already provides what a mesh needs and
+  a DaemonSet does not: a stable per-replica DNS name a certificate can be
+  issued for.
+
+### Added — cryptographic erasure on the ledger commit path, off by default
+
+- **`CryptographicAuditLedger` can seal what it commits.** `CryptoShredder`
+  existed and was tested but nothing called it, so the property it was written
+  for — erase a subject without moving the tree — was unavailable to any
+  deployment. With `AEGIS_ENABLE_CRYPTOGRAPHIC_SHREDDING=true` the ledger now
+  encrypts each leaf under a per-subject AES-256-GCM key and commits
+  `SHA-256(0x00 || nonce || ciphertext)` in its place; `crypto_shred(subject_id)`
+  destroys that key, and `open_sealed_leaf(node)` reads a node back while the key
+  still exists.
+
+  The mechanism is that the commitment is computable from the ciphertext alone.
+  A verifier who cannot read a leaf can still recompute what the tree committed
+  to, so **destroying the key invalidates no proof**: `tests/test_crypto_shredder_integration.py`
+  asserts on a live ledger that after erasure the inclusion proof still verifies,
+  the plaintext no longer opens, the root is unchanged, `verify_integrity()`
+  still passes, and another subject's records are still readable.
+
+  **Off by default, and not a runtime toggle.** Sealing changes what the MMR
+  commits to, so it cannot be enabled for a chain that already holds records —
+  adopting it means starting a new chain, the same rule the hash scheme follows.
+  An unchanged deployment commits payload digests exactly as before, and
+  `crypto_shred()` on such a ledger raises rather than returning a false
+  success, so a retention job cannot mistake a no-op for an erasure.
+
+  Three costs an operator owns. The WAL carries ciphertext, so its growth tracks
+  payload size. The key vault (`<wal_path>.shredder.db` by default) becomes the
+  only mutable component in an append-only design: lose it and every plaintext
+  is gone at once, restore it from a pre-erasure backup and every erasure through
+  it is undone. And a shredded node **keeps its request and response digests**,
+  so erasure removes the ability to read a payload, not the ability to confirm a
+  guess about it. `CLM-068` states what may be claimed; no regulatory conclusion
+  follows from any of it.
+
+### Changed — documentation that described three components as unwired
+
+`4.4.0` wires the grammar frontier (on by default), the v2 hash scheme (on for
+new chains) and the shredder (off by default). The claims matrix rows for the
+first two were updated when they landed, but the descriptive corpus still told
+readers that the streaming path uses `StreamingDeidentifier` alone, that v2 "is
+not the default", and that the shredder "is not wired in" — statements that were
+true when written and are now false. Corrected across `ARCHITECTURE.md`,
+`DECISIONS.md`, `PII_REDACTION_BOUNDARIES.md`, `DATA_RETENTION.md`,
+`MMR_PROOF_V1.md`, `FAQ_TECHNICAL.md`, `ROADMAP.md`, `PLATFORM_OPERATOR_GUIDE.md`,
+`BACKUP_RESTORE.md`, `DOC-02`, `DOC-03`, `DOC-05`, `CLAIM_EVIDENCE_GRAPH.md`,
+`UNSUPPORTED_CLAIMS.md` and `CLAIMS_MATRIX.md`.
+
+Wiring narrows nothing these documents bound. `UC-037` still blocks every
+erasure conclusion and gains one: "Aegis erases on request" is now also
+forbidden, because the default build does not. The blocked-wording row for
+`CLM-064`–`CLM-068` gains "the grammar frontier replaced the de-identifier" (it
+runs *after* it, and replacing it would have dropped eighteen detectors) and
+requires "for new chains" wherever v2 is called enabled.
+
+### Fixed — three defects that each failed quietly
+
+- **Importing the proxy module took the WAL's exclusive lock (P0).**
+  `aegis/proxy/app.py` ended with `app = create_app()`, and constructing the app
+  opens the WAL and claims its single-writer lock. So *importing the module for
+  any reason at all* claimed it, and the documented factory `create_proxy_app()`
+  then failed with `WalWriterConflictError` against a writer that was the
+  importing process itself. Anything that imported the module without wanting a
+  running gateway paid the same price: a test collector, a CLI reading a
+  version, a worker importing one helper.
+
+  The attribute is now lazy (PEP 562 module `__getattr__`), so the app is built
+  on first *access* rather than on import. `uvicorn.run("aegis.proxy.app:app")`
+  and `from aegis.proxy.app import app` both resolve through it, so the ASGI
+  entry point is unchanged, and repeated access still returns one app.
+
+- **Every commit signed under a throwaway post-quantum key (P1).**
+  When the Rust extension was present and no HSM was configured, `_sign` called
+  `generate_pqc_keypair()` **on every commit** and discarded the private half
+  immediately. Each node was signed by a different one-shot identity that nobody
+  holds — which attributes nothing, links nothing, and cannot be checked against
+  any published key, while being recorded under the `pqc-ml-dsa` scheme label as
+  though it could. It also put an ML-DSA keygen on the commit path.
+
+  The tier now signs under a persistent identity, configured by
+  `AEGIS_PQC_IDENTITY_PATH` and created on first use (written `0600`; it holds
+  the raw ML-DSA-65 private key and needs the custody any signing secret does).
+
+  Two ways that identity could still stop attributing anything, both raised in
+  review and both fixed here. **An identity provisioned elsewhere is checked
+  rather than trusted**: one whose mode lets group or other read it is refused,
+  and signing falls through to HMAC rather than claiming ML-DSA under a key the
+  whole host can read. It is refused rather than silently `chmod`-ed, because
+  tightening the mode does not un-expose a key that has already been readable
+  and would hide the provisioning mistake. And **publication is now
+  create-if-absent rather than replace**: two processes pointed at one absent
+  path both find it missing and both generate a keypair — ML-DSA keygen holds
+  that window open — so the one that published second used to overwrite the
+  first's file while continuing to sign under its own discarded key. Measured
+  before the fix, six concurrent processes produced up to four distinct signing
+  keys, with every one of them signing under a key that was not the one left on
+  disk; a shared temporary filename also let one process consume another's file
+  mid-write and drop silently to HMAC. The bytes now go to a per-process
+  temporary and are linked into place, so the loser adopts the winner's identity
+  instead of orphaning its own nodes.
+  **With no identity configured the tier is skipped and signing falls through to
+  HMAC-SHA256**, rather than minting a key per signature. That changes the
+  recorded `signature_scheme` for deployments that had the Rust extension and no
+  HSM — from `pqc-ml-dsa` to `hmac-sha256` — which is a weaker claim and a true
+  one, where the old label was a stronger claim than the evidence supported.
+
+- **New chains defaulted to the MMR construction v2 exists to replace (P1).**
+  `mmr_hash_scheme` defaulted to `v1-asciihex`, which admits the leaf/interior
+  type confusion documented in `aegis/core/mmr.py`. The default is now `auto`:
+  a **new** chain starts on `v2-binary-domain-separated`, and an **existing**
+  chain reopens under whatever scheme its WAL recorded. Pinning a scheme
+  explicitly stays fail-closed — a WAL written under the other one is still
+  refused with `mmr_scheme_mismatch`.
+
+  `auto` rather than a plain v2 default is the point: the scheme decides every
+  root a chain has recorded, so defaulting to v2 outright would refuse to open
+  every chain already in the field, turning an upgrade into an outage.
+
+### Fixed — v2 defects the new default exposed
+
+Moving new chains to v2 surfaced four places that computed or compared digests
+under the v1 construction regardless of the proof in hand. Each was latent: v1
+was the only scheme any ledger used, so none could fire.
+
+- **`aegis/core/a2a.py`** hardcoded the v1 leaf digest, so a receipt issued by a
+  v2 ledger could not be verified at all. The digest now follows the version the
+  receipt's own proof declares, which is self-describing — a verifier reads it
+  off the receipt rather than having to know how the issuer was configured.
+- **Both SDK verifiers** (`sdk/python`, `sdk/typescript`) had the same hardcoded
+  v1 leaf digest and are fixed the same way.
+- **`verify_portable_inclusion_hash`** required the trusted root in hex, but a
+  v2 proof *transports* its root as unpadded base64url — so a caller passing the
+  root straight from the proof document it received, which is the obvious thing
+  to do, was rejected. Both encodings are now accepted and normalised; this is
+  not a relaxation, since both decode to the same 32 bytes and anything that is
+  neither still fails.
+- **The `X-Aegis-MMR-Format` response header** was the literal string
+  `aegis-mmr-inclusion-v1`. It now reports the version of the proof actually
+  served: the header tells a client which construction to verify under, so
+  advertising v1 while serving a v2 proof sent it to the wrong leaf digest.
+
+**Wire compatibility.** A receipt from a v2 chain cannot be verified by an SDK
+build that predates these fixes, including the published `4.1.2` packages. Both
+in-repo SDKs are fixed, but gateway and SDKs must move together; a v2 gateway in
+front of older clients breaks receipt verification.
+
 ### Fixed
 
 - **A ledger configured for MMR v2 would have recorded a leaf digest that

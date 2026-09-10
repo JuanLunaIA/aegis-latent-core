@@ -95,7 +95,14 @@ class TestCryptoAuditWithRustPqc(unittest.TestCase):
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
             path = tmp.name
         try:
-            with CryptographicAuditLedger(path, signing_key="hmac-fallback-key") as ledger:
+            # The ML-DSA tier signs under a persistent identity now, so this
+            # names one; without it the ledger correctly falls through to HMAC
+            # rather than minting a throwaway keypair for every signature.
+            with CryptographicAuditLedger(
+                path,
+                signing_key="hmac-fallback-key",
+                pqc_identity_path=path + ".pqc",
+            ) as ledger:
                 node = ledger.commit_forensic(
                     state_id="rust-pqc-test",
                     request_bytes=b'{"prompt":"x"}',

@@ -147,15 +147,22 @@ def test_sign_pqc_success_path(tmp_path):
     Act:     commit one node.
     Assert:  signature_scheme == "pqc-ml-dsa", is_fallback=False.
     """
-    mock_rust = MagicMock()
-    mock_keypair = MagicMock()
-    mock_keypair.sign.return_value = bytes(64)
-    mock_keypair.public_key = bytes(32)
-    mock_rust.generate_pqc_keypair.return_value = mock_keypair
+    # Tier 2 signs under a persistent identity rather than a keypair minted
+    # per call, so the seam to patch is the identity accessor, not the Rust
+    # keygen function that no longer sits on the signing path.
+    mock_signer = MagicMock()
+    mock_signer.sign.return_value = bytes(64)
+    mock_signer.public_key = bytes(32)
 
     with (
-        patch.object(_module, "RUST_AVAILABLE", True),
-        patch.object(_module, "aegis_rust", mock_rust, create=True),
+        # The class the test constructs, not ``_module.CryptographicAuditLedger``:
+        # a fixture in this file reloads the module, so the two names can be
+        # different class objects and patching the reloaded one does nothing.
+        patch.object(
+            CryptographicAuditLedger,
+            "_pqc_signer",
+            lambda self: mock_signer,
+        ),
     ):
         ledger = CryptographicAuditLedger(str(tmp_path / "wal.jsonl"), signing_key="")
         node = ledger.commit_forensic(state_id="pqc-ok", request_bytes=b"req")

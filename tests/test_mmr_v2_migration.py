@@ -35,7 +35,10 @@ from pathlib import Path
 
 import pytest
 
-from aegis.core.crypto_audit import CryptographicAuditLedger
+from aegis.core.crypto_audit import (
+    MMR_SCHEME_AUTO,
+    CryptographicAuditLedger,
+)
 from aegis.core.mmr import (
     HASH_SCHEME_V1,
     HASH_SCHEME_V2,
@@ -144,14 +147,16 @@ class TestLedgerSelection:
         with _ledger(tmp_path / "default.wal", HASH_SCHEME_V1) as ledger:
             assert ledger.mmr_hash_scheme == HASH_SCHEME_V1
 
-    def test_the_config_default_is_v1(self) -> None:
+    def test_the_config_default_selects_the_scheme_from_the_chain(self) -> None:
+        # 'auto', not a fixed scheme: a new chain gets v2, and a chain already
+        # in the field keeps whatever it was written under.
         from aegis.config import AegisSettings
 
         settings = AegisSettings(backend_api_key="k")
-        assert settings.mmr_hash_scheme == HASH_SCHEME_V1
+        assert settings.mmr_hash_scheme == MMR_SCHEME_AUTO
 
     def test_an_unknown_scheme_is_refused_at_construction(self, tmp_path: Path) -> None:
-        with pytest.raises(ValueError, match="mmr_hash_scheme must be one of"):
+        with pytest.raises(ValueError, match="mmr_hash_scheme must be"):
             _ledger(tmp_path / "bad.wal", "v3-imaginary")
 
     @pytest.mark.parametrize("scheme", [HASH_SCHEME_V1, HASH_SCHEME_V2])

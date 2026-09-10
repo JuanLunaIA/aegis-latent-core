@@ -54,7 +54,13 @@ from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any
 
 from aegis.core.forensic import build_merkle_leaf, sha256_hex
-from aegis.core.mmr import MerkleMountainRange, MMRInclusionProofV1
+from aegis.core.mmr import (
+    MMR_PROOF_VERSION_V1,
+    MMR_PROOF_VERSION_V2,
+    MerkleMountainRange,
+    MMRInclusionProofV1,
+    v2_leaf_hash,
+)
 
 if TYPE_CHECKING:  # pragma: no cover - import cycle guard, typing only
     from aegis.core.crypto_audit import CryptographicAuditLedger
@@ -191,13 +197,23 @@ def a2a_envelope_bytes(
     return json.dumps(envelope, sort_keys=True, separators=(",", ":")).encode()
 
 
-def a2a_leaf_hash(envelope: bytes) -> str:
-    """SHA-256 of the MMR leaf built from an A2A envelope.
+def a2a_leaf_hash(envelope: bytes, proof_version: str = MMR_PROOF_VERSION_V1) -> str:
+    """The MMR leaf digest for an A2A envelope, under ``proof_version``.
 
     The envelope is wrapped by :func:`~aegis.core.forensic.build_merkle_leaf`
     with pinned coordinates so the leaf matches what the ledger committed. The
     cap is fixed by this protocol rather than taken from the ledger, so the
-    result never depends on how the issuer was configured.
+    leaf *bytes* never depend on how the issuer was configured.
+
+    The *digest* of those bytes does depend on the issuer's MMR scheme, because
+    that is what the accumulator appended: v1 hashes the leaf bare, v2 prefixes
+    the ``0x00`` domain tag. So the version is a parameter, taken from the
+    proof the receipt carries — which is self-describing, so a verifier reads
+    it off the receipt rather than having to know how the issuer was set up.
+
+    It defaults to v1 for callers written before v2 existed. A v1 default is
+    safe in the direction that matters: it cannot make a v2 receipt verify
+    incorrectly, only fail to verify, which is the fail-closed direction.
     """
     leaf = build_merkle_leaf(
         state_id=json.loads(envelope.decode())["execution_id"],
@@ -207,6 +223,8 @@ def a2a_leaf_hash(envelope: bytes) -> str:
         endpoint=A2A_ENDPOINT,
         max_bytes=_MIN_LEDGER_FORENSIC_BYTES,
     )
+    if proof_version == MMR_PROOF_VERSION_V2:
+        return v2_leaf_hash(leaf).hex()
     return sha256_hex(leaf)
 
 
@@ -345,8 +363,10 @@ def verify_receipt(receipt: AgentReceipt | dict[str, Any], trusted_root: str) ->
             output_hash=parsed.output_hash,
             timestamp=parsed.timestamp,
         )
-        leaf_hash = a2a_leaf_hash(envelope)
         proof = MMRInclusionProofV1.from_dict(parsed.inclusion_proof)
+        # The proof names its own construction, so the leaf digest follows it
+        # rather than assuming the issuer's scheme.
+        leaf_hash = a2a_leaf_hash(envelope, proof.version)
     except (ValueError, TypeError, KeyError) as exc:
         logger.warning("A2A receipt rejected: %s", exc)
         return False

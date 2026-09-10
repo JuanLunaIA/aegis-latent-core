@@ -62,6 +62,36 @@ aegis:
   wafSessionCumulativeThreshold: "2.0"
   wafSessionCrescendoTurns: "3"
 
+# ── Cross-replica reconciliation (gossip) ─────────────────────────────────────
+# Off by default. This reconciles the Causal-Merkle CRDT accumulator, which is
+# SEPARATE from the audit ledger: enabling it changes nothing about what each
+# replica's WAL records or what a receipt proves, and it is not consensus.
+#
+# Rendered onto the StatefulSet rather than a DaemonSet, deliberately. A
+# DaemonSet has no volumeClaimTemplates, so it cannot give each replica its own
+# WAL claim — the single-writer property the whole chart is built around. The
+# StatefulSet plus the headless Service already provides exactly what a gossip
+# mesh needs and a DaemonSet does not: a stable, per-replica DNS name that a
+# certificate can be issued for and a peer list can be written against.
+#
+# Peers are static; there is no membership protocol. With replicaCount N the
+# list is every ordinal but this pod's own, which peerTemplate expands.
+gossip:
+  enabled: false
+  # Seconds between anti-entropy rounds. A converged cluster exchanges only a
+  # root digest per peer per round.
+  intervalSeconds: "5"
+  # Port for the gossip listener. Separate from the gateway's 8080 so that
+  # customer traffic and replica traffic never share a listener.
+  port: 9443
+  # Mounted PEM material. The mesh requires mutual TLS and offers no way to
+  # disable verification: a peer supplies leaves that enter every replica's
+  # accumulator, so authenticating peers IS the security boundary.
+  tls:
+    # Secret holding tls.crt, tls.key and ca.crt for this replica.
+    secretName: ""
+    mountPath: /etc/aegis/gossip
+
 # ── WAL persistence ───────────────────────────────────────────────────────────
 # Rendered as the StatefulSet's volumeClaimTemplates, so each replica gets its
 # own claim and therefore its own WAL path. ReadWriteOnce is correct and

@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "f47f3977eefc81d267d3be0f2758fceddb1eae14259d52784cb12ca6035bb87a",
-      "size": 93041
+      "sha256": "d779b2cfe15ab3d06f4c74d33aaabd1eb8ac8dff66182133c1e335c71aaa4d2d",
+      "size": 105292
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "eb7e1e1d1e510f71e35b242fbcd457d0812db2e88a9ea434f44c088f9ce0b3c9",
-      "size": 70691
+      "sha256": "1158e6024b4663cb6a9d7fe334f7a910d2ff6efb2b1a0627849c909e94784938",
+      "size": 75888
     },
     {
       "category": "governed_input",
@@ -165,14 +165,14 @@
     {
       "category": "governed_input",
       "path": "docs/FAQ_TECHNICAL.md",
-      "sha256": "965cdd9c7d42917cecd2ddd361193dc62ce7a65ca06d193c44ff145697d5b262",
-      "size": 16615
+      "sha256": "81d5ac25d3d632dd2391477265e84edaa6aab6eb79c2332b3659df495ddf9740",
+      "size": 17023
     },
     {
       "category": "governed_input",
       "path": "docs/PLATFORM_OPERATOR_GUIDE.md",
-      "sha256": "d402962243b0d08451cbcb449207f312eb7775515a5697914173373805ad96ee",
-      "size": 17219
+      "sha256": "77e2032236d9ae5fd60c538267a853c945d173285fa1530c961c43bdd7525bfa",
+      "size": 19099
     },
     {
       "category": "governed_input",
@@ -279,8 +279,8 @@
     {
       "category": "governed_input",
       "path": "deploy/helm/values.yaml",
-      "sha256": "11b6266cb58a8860d770775ffaf6ec0e3df594857ea86850b87d8a08853e493a",
-      "size": 9375
+      "sha256": "58456d80ee1883ca885fc8292bc427ab8237781b5c358729a8ab20c21ac6727c",
+      "size": 11041
     },
     {
       "category": "governed_input",

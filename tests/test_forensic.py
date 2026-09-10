@@ -11,7 +11,7 @@ import os
 import tempfile
 import unittest
 
-from aegis.core.crypto_audit import RUST_AVAILABLE, CryptographicAuditLedger
+from aegis.core.crypto_audit import CryptographicAuditLedger
 from aegis.core.forensic import build_merkle_leaf, sha256_hex
 
 _TEST_SIGNING_KEY = "unit-test-ledger-signing-key-do-not-use-in-production"
@@ -61,7 +61,10 @@ class TestForensicLedger(unittest.TestCase):
         self.assertEqual(node.response_hash, sha256_hex(resp))
         self.assertEqual(node.model, "gpt-test")
         self.assertEqual(node.token_trail_count, 1)
-        expected_scheme = "pqc-ml-dsa" if RUST_AVAILABLE else "hmac-sha256"
+        # The ML-DSA tier now needs a persistent identity to sign under; this
+        # ledger configures none, so it falls through to HMAC rather than
+        # minting a throwaway keypair per signature.
+        expected_scheme = "hmac-sha256"
         self.assertEqual(node.signature_scheme, expected_scheme)
         is_valid, err = ledger.verify_integrity()
         self.assertTrue(is_valid, msg=f"integrity failed at {err}")

@@ -44,6 +44,7 @@ import hmac
 import json
 import logging
 import os
+import stat
 import sys
 import time
 import uuid
@@ -59,13 +60,15 @@ except ImportError:  # pragma: no cover - platform dependent
 from collections import deque
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from threading import Lock
-from typing import Any, TextIO
+from typing import Any, Literal, TextIO
 
 import numpy as np
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
+from aegis.core.crypto_shredder import CryptoShredder, SealedPayload
 from aegis.core.forensic import build_merkle_leaf, build_stream_merkle_leaf, sha256_hex
 from aegis.core.forensic_bundle import canonical_jcs_bytes
 from aegis.core.hsm import HSMSigningBackend, HSMUnavailableError
@@ -78,6 +81,19 @@ from aegis.core.mmr import (
     MMRInclusionProofV1,
     MMRPeak,
 )
+from aegis.core.pqc_signer import PQCSigner, PQCUnavailableError
+from aegis.core.pqc_signer import backend_available as pqc_backend_available
+
+#: Sentinel for "decide the scheme from the chain": a new chain starts on
+#: :data:`MMR_NEW_CHAIN_DEFAULT_SCHEME`, an existing one reopens under whatever
+#: its WAL recorded. This is the default because the alternative defaults are
+#: both wrong. Defaulting to v1 leaves every new chain on the construction that
+#: admits leaf/interior type confusion; defaulting to v2 outright would refuse
+#: to open every chain already in the field, turning an upgrade into an outage.
+MMR_SCHEME_AUTO: str = "auto"
+
+#: The construction a chain created today is built on.
+MMR_NEW_CHAIN_DEFAULT_SCHEME: str = HASH_SCHEME_V2
 
 #: Which proof version each hash scheme stamps on the proofs it issues. Used to
 #: recognise, on reopening a WAL, that the chain on disk was written under a
@@ -85,6 +101,11 @@ from aegis.core.mmr import (
 _SCHEME_PROOF_VERSIONS: dict[str, str] = {
     HASH_SCHEME_V1: MMR_PROOF_VERSION_V1,
     HASH_SCHEME_V2: MMR_PROOF_VERSION_V2,
+}
+
+#: The same mapping read the other way, for adopting a chain's own scheme.
+_PROOF_VERSION_SCHEMES: dict[str, str] = {
+    version: scheme for scheme, version in _SCHEME_PROOF_VERSIONS.items()
 }
 
 logger = logging.getLogger(__name__)
@@ -323,6 +344,17 @@ class AuditNode:
     mmr_leaf_index: int = -1
     mmr_leaf_count: int = 0
     mmr_proof: dict[str, Any] | None = None
+    # Cryptographic-erasure envelope. Empty unless the ledger was configured
+    # with ``enable_cryptographic_shredding``. When present, ``mmr_leaf_hash``
+    # is the commitment SHA-256(0x00 || nonce || ciphertext) rather than a
+    # digest of the leaf bytes, and the leaf's content is recoverable only by a
+    # holder of the subject's key. Like ``status``, these are deliberately NOT
+    # ``node_hash`` inputs: the hash covers a fixed field list, so every node
+    # written before they existed hashes identically and already-issued proofs
+    # keep validating.
+    sealed_subject_id: str = ""
+    sealed_nonce: str = ""  # hex-encoded 96-bit GCM nonce
+    sealed_ciphertext: str = ""  # hex-encoded AES-256-GCM ciphertext
 
     def __post_init__(self) -> None:
         self.__creation_hash__: str = self.node_hash
@@ -385,6 +417,9 @@ class AuditNode:
             "mmr_leaf_index": -1,
             "mmr_leaf_count": 0,
             "mmr_proof": None,
+            "sealed_subject_id": "",
+            "sealed_nonce": "",
+            "sealed_ciphertext": "",
         }
         # Remove legacy field if present
         data.pop("payload", None)
@@ -505,14 +540,24 @@ class CryptographicAuditLedger:
         require_strong_signing: bool = False,
         fsync_fn: Callable[[int], None] | None = None,
         mmr_fast_restore: bool = False,
-        mmr_hash_scheme: str = HASH_SCHEME_V1,
+        mmr_hash_scheme: str = MMR_SCHEME_AUTO,
+        pqc_identity_path: str | os.PathLike[str] | None = None,
+        enable_cryptographic_shredding: bool = False,
+        shredder_vault_path: str | os.PathLike[str] | None = None,
     ) -> None:
-        if mmr_hash_scheme not in _SCHEME_PROOF_VERSIONS:
+        if mmr_hash_scheme not in _SCHEME_PROOF_VERSIONS and mmr_hash_scheme != MMR_SCHEME_AUTO:
             raise ValueError(
-                f"mmr_hash_scheme must be one of {sorted(_SCHEME_PROOF_VERSIONS)}, "
-                f"got {mmr_hash_scheme!r}"
+                f"mmr_hash_scheme must be {MMR_SCHEME_AUTO!r} or one of "
+                f"{sorted(_SCHEME_PROOF_VERSIONS)}, got {mmr_hash_scheme!r}"
             )
-        self.mmr_hash_scheme = mmr_hash_scheme
+        # ``auto`` is resolved during replay, once the WAL has said which scheme
+        # it was written under. Until then the accumulator is built on the
+        # new-chain default, which is what an empty WAL will keep.
+        self._scheme_pinned = mmr_hash_scheme != MMR_SCHEME_AUTO
+        self.mmr_hash_scheme = (
+            mmr_hash_scheme if self._scheme_pinned else MMR_NEW_CHAIN_DEFAULT_SCHEME
+        )
+        mmr_hash_scheme = self.mmr_hash_scheme
         self.persistence_path = persistence_path
         self._signing_key = signing_key
         self._fsync = fsync_fn or os.fsync
@@ -528,6 +573,24 @@ class CryptographicAuditLedger:
         self._wal_handle: TextIO | None = None
         self._wal_bytes = 0
         self._fault_state: str = "healthy"
+        self.pqc_identity_path = str(pqc_identity_path) if pqc_identity_path else ""
+        self.enable_cryptographic_shredding = enable_cryptographic_shredding
+        self._shredder: CryptoShredder | None = None
+        if enable_cryptographic_shredding:
+            # Default the vault beside the WAL: the two have the same custody
+            # requirement, and separating them by default would invite a
+            # deployment that backs up one and not the other — which either
+            # loses every plaintext or preserves keys past an erasure.
+            vault = (
+                str(shredder_vault_path)
+                if shredder_vault_path
+                else f"{persistence_path}.shredder.db"
+            )
+            self._shredder = CryptoShredder(vault)
+        # Resolved lazily and cached: loading the identity touches the
+        # filesystem, and a ledger that never signs should not pay for it.
+        # ``False`` distinguishes "not yet looked up" from "looked up, absent".
+        self._pqc_identity: PQCSigner | None | Literal[False] = False
         self._mmr = MerkleMountainRange(hash_scheme=mmr_hash_scheme)
         # Set during replay when the WAL's own proofs name a different scheme.
         self._wal_proof_version: str | None = None
@@ -635,10 +698,12 @@ class CryptographicAuditLedger:
             # on every commit, so a deep copy would make commit cost grow with
             # the length of the chain.
             mmr_before = self._mmr.checkpoint()
-            merkle_root = self._mmr.add_leaf(leaf)
+            # Seal before appending: with shredding on, the tree commits to
+            # the envelope's commitment, so the digest has to exist first.
+            mmr_leaf_hash, sealed = self._seal_leaf(leaf, tenant_id)
+            merkle_root = self._mmr.add_leaf_hash(mmr_leaf_hash)
             mmr_leaf_count = self._mmr.get_leaf_count()
             mmr_leaf_index = mmr_leaf_count - 1
-            mmr_leaf_hash = self._mmr.leaf_digest(leaf)
             mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
 
             # Sign over prev_hash + merkle_root + request/response hashes so the
@@ -682,6 +747,9 @@ class CryptographicAuditLedger:
                 mmr_leaf_index=mmr_leaf_index,
                 mmr_leaf_count=mmr_leaf_count,
                 mmr_proof=mmr_proof,
+                sealed_subject_id=sealed.subject_id if sealed else "",
+                sealed_nonce=sealed.nonce.hex() if sealed else "",
+                sealed_ciphertext=sealed.ciphertext.hex() if sealed else "",
             )
 
             try:
@@ -761,10 +829,16 @@ class CryptographicAuditLedger:
             prev_hash = self.chain[-1].node_hash if self.chain else "0" * 64
             timestamp = time.time()
             mmr_before = self._mmr.checkpoint()
-            merkle_root = self._mmr.add_leaf(leaf)
+            # Seal before appending: with shredding on, the tree commits to
+            # the envelope's commitment, so the digest has to exist first.
+            # Same fallback the node itself uses: a request refused before
+            # authentication has no subject to attribute erasure to, so it
+            # seals under "unattributed" rather than under a tenant that was
+            # never established.
+            mmr_leaf_hash, sealed = self._seal_leaf(leaf, tenant_id or "unattributed")
+            merkle_root = self._mmr.add_leaf_hash(mmr_leaf_hash)
             mmr_leaf_count = self._mmr.get_leaf_count()
             mmr_leaf_index = mmr_leaf_count - 1
-            mmr_leaf_hash = self._mmr.leaf_digest(leaf)
             mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
 
             signed_payload = _build_signed_payload(
@@ -805,6 +879,9 @@ class CryptographicAuditLedger:
                 mmr_leaf_index=mmr_leaf_index,
                 mmr_leaf_count=mmr_leaf_count,
                 mmr_proof=mmr_proof,
+                sealed_subject_id=sealed.subject_id if sealed else "",
+                sealed_nonce=sealed.nonce.hex() if sealed else "",
+                sealed_ciphertext=sealed.ciphertext.hex() if sealed else "",
             )
 
             try:
@@ -936,10 +1013,12 @@ class CryptographicAuditLedger:
             timestamp = time.time()
             # See commit_forensic: rollback token rather than a snapshot.
             mmr_before = self._mmr.checkpoint()
-            merkle_root = self._mmr.add_leaf(leaf)
+            # Seal before appending: with shredding on, the tree commits to
+            # the envelope's commitment, so the digest has to exist first.
+            mmr_leaf_hash, sealed = self._seal_leaf(leaf, tenant_id)
+            merkle_root = self._mmr.add_leaf_hash(mmr_leaf_hash)
             mmr_leaf_count = self._mmr.get_leaf_count()
             mmr_leaf_index = mmr_leaf_count - 1
-            mmr_leaf_hash = self._mmr.leaf_digest(leaf)
             mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
             signed_payload = _build_signed_payload(
                 prev_hash=prev_hash,
@@ -979,6 +1058,9 @@ class CryptographicAuditLedger:
                 mmr_leaf_index=mmr_leaf_index,
                 mmr_leaf_count=mmr_leaf_count,
                 mmr_proof=mmr_proof,
+                sealed_subject_id=sealed.subject_id if sealed else "",
+                sealed_nonce=sealed.nonce.hex() if sealed else "",
+                sealed_ciphertext=sealed.ciphertext.hex() if sealed else "",
             )
             try:
                 self._persist_node(node)
@@ -1323,15 +1405,26 @@ class CryptographicAuditLedger:
             except HSMUnavailableError as exc:
                 logger.warning("HSM signing failed (%s); falling back to next tier", exc)
 
-        # ── 2. Rust PQC ML-DSA path ───────────────────────────────────────
-        if RUST_AVAILABLE:
+        # ── 2. ML-DSA path, under a *persistent* identity ──────────────────
+        #
+        # This tier used to call ``generate_pqc_keypair()`` on every commit and
+        # discard the private half immediately. Each node was therefore signed
+        # by a different, one-shot identity that nobody holds, which is not a
+        # signature in any useful sense: it attributes nothing, links nothing,
+        # and cannot be checked against a published key. It also put an ML-DSA
+        # keygen on the commit path.
+        #
+        # The tier now runs only when an operator has configured an identity to
+        # sign under. Without one there is nothing to attribute to, so it falls
+        # through to HMAC rather than minting a key per signature.
+        signer = self._pqc_signer()
+        if signer is not None:
             try:
-                keypair = aegis_rust.generate_pqc_keypair()  # type: ignore[name-defined]
-                sig_bytes = bytes(keypair.sign(data))
-                pub_bytes: bytes = bytes(keypair.public_key)
+                sig_bytes = bytes(signer.sign(data))
+                pub_bytes: bytes = signer.public_key
                 return sig_bytes.hex(), pub_bytes.hex(), "pqc-ml-dsa", False
             except Exception as exc:
-                logger.warning("aegis_rust PQC sign failed (%s); falling back", exc)
+                logger.warning("ML-DSA signing failed (%s); falling back", exc)
 
         # ── 3. HMAC-SHA256 path ───────────────────────────────────────────
         if self._signing_key:
@@ -1343,6 +1436,213 @@ class CryptographicAuditLedger:
             raise RuntimeError("strong signing required; no verifiable signer is available")
         sig_hex, pub_hex, scheme = _ed25519_sign(data)
         return sig_hex, pub_hex, scheme, True
+
+    def _seal_leaf(self, leaf: bytes, subject_id: str) -> tuple[str, SealedPayload | None]:
+        """Return ``(leaf_digest, sealed)`` for one commit.
+
+        With shredding off this is the accumulator's own leaf digest and no
+        envelope, which is the behaviour every existing deployment has.
+
+        With it on, the leaf — which carries the request and response previews,
+        the actual content — is encrypted under the subject's key and the MMR
+        commits to ``SHA-256(0x00 || nonce || ciphertext)`` instead. That
+        commitment is computable by anyone holding the ciphertext and **not**
+        the key, which is exactly what lets an inclusion proof keep verifying
+        after the key is destroyed: erasure removes the ability to read the
+        leaf, and moves no hash the tree is built from.
+        """
+
+        if self._shredder is None:
+            return self._mmr.leaf_digest(leaf), None
+        sealed = self._shredder.seal(subject_id, leaf)
+        return sealed.commitment_hex, sealed
+
+    def crypto_shred(self, subject_id: str) -> bool:
+        """Destroy ``subject_id``'s key. Returns whether one was present.
+
+        The ledger does not move: every root, peak, node hash and previously
+        issued inclusion proof is bit-for-bit what it was. What changes is that
+        the sealed leaves for this subject can no longer be opened.
+
+        What this establishes, and only this: the sealed leaf content is
+        unrecoverable **to a holder of the ciphertext alone**, at the strength
+        of AES-256-GCM. It is not a media-sanitisation guarantee — see the
+        :mod:`aegis.core.crypto_shredder` docstring on pages, journals, swap,
+        snapshots, backups and replicas, none of which are under this process's
+        control — and it does not erase the request and response *digests* the
+        node still carries. Those are not plaintext, but they are not nothing
+        either: a guessed plaintext can be confirmed against them, so a
+        low-entropy input is not protected by their presence being hashed.
+        Whether that satisfies a specific regulator is a legal question this
+        code does not answer.
+        """
+
+        if self._shredder is None:
+            raise RuntimeError(
+                "cryptographic shredding is not enabled on this ledger; construct it with "
+                "enable_cryptographic_shredding=True (AEGIS_ENABLE_CRYPTOGRAPHIC_SHREDDING)"
+            )
+        with self._lock:
+            return self._shredder.erase(subject_id)
+
+    def open_sealed_leaf(self, node: AuditNode) -> bytes:
+        """Decrypt the sealed leaf a node commits to.
+
+        Raises ``ShredderKeyDestroyedError`` once the subject has been shredded,
+        which is the observable difference erasure makes.
+        """
+
+        if self._shredder is None:
+            raise RuntimeError("cryptographic shredding is not enabled on this ledger")
+        if not node.sealed_ciphertext:
+            raise ValueError(f"node {node.state_id!r} carries no sealed envelope")
+        with self._lock:
+            return self._shredder.open(
+                SealedPayload(
+                    subject_id=node.sealed_subject_id,
+                    nonce=bytes.fromhex(node.sealed_nonce),
+                    ciphertext=bytes.fromhex(node.sealed_ciphertext),
+                )
+            )
+
+    def _pqc_signer(self) -> PQCSigner | None:
+        """The ML-DSA identity this ledger signs under, or ``None``.
+
+        ``None`` means the ML-DSA tier is skipped — no identity is configured,
+        the backend is absent, or the stored identity could not be loaded. A
+        one-shot keypair is never minted as a substitute: a signature under a
+        key that is discarded immediately attributes nothing, and emitting one
+        under the ``pqc-ml-dsa`` scheme label would misrepresent what the node
+        carries.
+
+        The identity is created on first use if the configured path does not
+        exist yet, and reused from then on. Creating it here rather than
+        requiring a separate provisioning step is what makes the tier usable;
+        the file holds the raw ML-DSA-65 private key, so it needs the same
+        custody as any other signing secret and must live on storage the
+        operator controls. One created here is written ``0600``; one provisioned
+        elsewhere is *checked* rather than trusted, and refused if its mode lets
+        group or other read it.
+        """
+
+        if self._pqc_identity is not False:
+            return self._pqc_identity
+
+        self._pqc_identity = None
+        if not self.pqc_identity_path:
+            return None
+        if not pqc_backend_available():
+            logger.warning(
+                "AEGIS_PQC_IDENTITY_PATH is set but no ML-DSA backend is available; "
+                "signing falls through to the next tier"
+            )
+            return None
+
+        path = Path(self.pqc_identity_path)
+        try:
+            signer = self._load_pqc_identity(path)
+            if signer is None:
+                signer = self._create_pqc_identity(path)
+        except (PQCUnavailableError, OSError, TypeError, ValueError) as exc:
+            logger.warning(
+                "ML-DSA identity at %s unusable (%s); signing falls through to the next tier",
+                path,
+                exc,
+            )
+            return None
+
+        self._pqc_identity = signer
+        return signer
+
+    @staticmethod
+    def _load_pqc_identity(path: Path) -> PQCSigner | None:
+        """Load the identity at ``path``, or ``None`` if there is no file there.
+
+        Refuses a file the operating system is showing to anyone but its owner.
+        The tier's whole value is that a signature attributes to a held key, and
+        a key readable by every account on the host attributes to all of them —
+        so a permissive mode is rejected rather than quietly tightened. Tightening
+        would not un-expose a key that has already been readable, and it would
+        hide the provisioning mistake that made it so. Rejection is loud and
+        leaves signing on HMAC, which is a weaker claim and a true one.
+        """
+
+        try:
+            info = path.stat()
+        except FileNotFoundError:
+            return None
+        if not stat.S_ISREG(info.st_mode):
+            raise ValueError("identity path is not a regular file")
+        if info.st_mode & 0o077:
+            raise ValueError(
+                f"identity file mode is {stat.filemode(info.st_mode)} "
+                f"({info.st_mode & 0o777:04o}); it must not be readable by group or other"
+            )
+
+        raw = path.read_bytes()
+        expected = PQCSigner.PUBLIC_KEY_BYTES + PQCSigner.PRIVATE_KEY_BYTES
+        if len(raw) != expected:
+            raise ValueError(
+                f"identity file holds {len(raw)} bytes; expected {expected} "
+                f"({PQCSigner.PUBLIC_KEY_BYTES}-byte public + "
+                f"{PQCSigner.PRIVATE_KEY_BYTES}-byte private key)"
+            )
+        signer = PQCSigner.from_keys(
+            raw[: PQCSigner.PUBLIC_KEY_BYTES], raw[PQCSigner.PUBLIC_KEY_BYTES :]
+        )
+        logger.info("Loaded persistent ML-DSA signing identity from %s", path)
+        return signer
+
+    def _create_pqc_identity(self, path: Path) -> PQCSigner:
+        """Create the identity at ``path``, or adopt the one that beat us to it.
+
+        Two processes pointed at one identity path will both find it absent and
+        both generate a keypair — ML-DSA keygen is slow enough to hold that
+        window wide open. Whoever publishes second must therefore *discard* what
+        it generated and sign under what is on disk, or its nodes carry a
+        ``pqc-ml-dsa`` public key that exists nowhere and attributes to nobody:
+        precisely the defect the persistent identity was introduced to fix.
+
+        So publication is a create-if-absent, not a replace. The bytes are
+        written to a *uniquely named* private temporary file and linked into
+        place; ``os.link`` fails rather than overwriting when the target exists,
+        which makes the winner unambiguous without a lock. A per-process
+        temporary name matters as much as the atomic publish: a shared one lets
+        a second writer truncate the file the first is still writing and then
+        consume it, leaving the first to fail on a path that has vanished.
+        """
+
+        signer = PQCSigner(require_real=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        material = signer.public_key + signer.export_private_key()
+        # Created 0600 rather than chmod-ed after the bytes are on disk, so the
+        # private key is never momentarily world-readable.
+        temporary = path.with_name(f"{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
+        try:
+            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(descriptor, "wb") as handle:
+                handle.write(material)
+                handle.flush()
+                self._fsync(handle.fileno())
+            try:
+                os.link(temporary, path)
+            except FileExistsError:
+                adopted = self._load_pqc_identity(path)
+                if adopted is None:  # pragma: no cover - the file cannot vanish here
+                    raise
+                logger.info(
+                    "Another writer created the ML-DSA identity at %s first; "
+                    "adopting it and discarding the keypair generated here",
+                    path,
+                )
+                return adopted
+            logger.info("Created persistent ML-DSA signing identity at %s", path)
+            return signer
+        finally:
+            try:
+                os.unlink(temporary)
+            except OSError:  # pragma: no cover - best-effort cleanup
+                logger.debug("Could not remove temporary identity file %s", temporary)
 
     def _persist_node(self, node: AuditNode) -> None:
         """Append node as a JSON line to the WAL. Must be called under self._lock."""
@@ -1544,6 +1844,25 @@ class CryptographicAuditLedger:
         # symptom. There is no in-place upgrade: a scheme change means a new
         # chain, because a root cannot be recomputed under a different
         # construction without rewriting history.
+        #
+        # Unless the caller left the scheme on ``auto``, in which case there is
+        # no misconfiguration to report: the chain names its own construction
+        # and this ledger adopts it. That is what lets the new-chain default
+        # move to v2 without refusing to open the chains already in the field.
+        if not self._scheme_pinned and self._wal_proof_version is not None:
+            adopted = _PROOF_VERSION_SCHEMES.get(self._wal_proof_version)
+            if adopted is None:
+                logger.error(
+                    "WAL records MMR proof version %s, which this build does not implement",
+                    self._wal_proof_version,
+                )
+                self._fault_state = "mmr_scheme_mismatch"
+                return
+            if adopted != self.mmr_hash_scheme:
+                logger.info("Adopting the MMR scheme this chain was written under: %s", adopted)
+                self.mmr_hash_scheme = adopted
+                self._mmr = MerkleMountainRange(hash_scheme=adopted)
+
         expected_version = _SCHEME_PROOF_VERSIONS[self.mmr_hash_scheme]
         if self._wal_proof_version is not None and self._wal_proof_version != expected_version:
             logger.error(

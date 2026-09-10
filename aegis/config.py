@@ -407,15 +407,49 @@ class AegisSettings(BaseSettings):
         le=4_096,
         description="Finite logical-text holdback for cross-event PHI/PCI interception.",
     )
-    mmr_hash_scheme: Literal["v1-asciihex", "v2-binary-domain-separated"] = Field(
-        default="v1-asciihex",
+    mmr_hash_scheme: Literal["auto", "v1-asciihex", "v2-binary-domain-separated"] = Field(
+        default="auto",
         description=(
-            "MMR hash construction for the audit ledger. 'v2-binary-domain-separated' applies "
-            "RFC 6962 domain tags, which prevents the leaf/interior-node type confusion v1 "
-            "admits. It is NOT an in-place upgrade: the scheme decides every root a chain has "
-            "recorded, so a WAL written under one scheme cannot be reopened under the other and "
-            "the ledger refuses with fault state 'mmr_scheme_mismatch'. Select v2 only for a new "
-            "chain. Default stays v1 so existing deployments are unaffected."
+            "MMR hash construction for the audit ledger. 'auto' (the default) starts a NEW "
+            "chain on 'v2-binary-domain-separated', which applies RFC 6962 domain tags and so "
+            "prevents the leaf/interior-node type confusion v1 admits, and reopens an EXISTING "
+            "chain under whichever scheme its WAL recorded. Pinning a scheme explicitly is "
+            "fail-closed: a WAL written under the other one is refused with fault state "
+            "'mmr_scheme_mismatch' rather than replayed to a different root. There is no "
+            "in-place upgrade — the scheme decides every root a chain has recorded — so moving "
+            "an existing v1 chain to v2 means starting a new chain."
+        ),
+    )
+    enable_cryptographic_shredding: bool = Field(
+        default=False,
+        description=(
+            "Seal each committed leaf under a per-subject AES-256-GCM key so the record can "
+            "later be rendered unreadable by destroying that key, leaving every root, peak and "
+            "issued inclusion proof untouched. Off by default: it changes what the MMR commits "
+            "to, so it cannot be turned on for a chain that already has records. It also makes "
+            "the WAL carry ciphertext rather than only digests, so WAL growth tracks payload "
+            "size. Destroying a key makes the sealed leaf unrecoverable to a holder of the "
+            "ciphertext; it is not media sanitisation and does not remove the request and "
+            "response digests the node still carries."
+        ),
+    )
+    shredder_vault_path: str = Field(
+        default="",
+        description=(
+            "Where per-subject shredding keys live. Empty places the vault beside the WAL "
+            "('<wal_path>.shredder.db'), which keeps the two under one custody boundary. The "
+            "vault holds the keys that make the ledger readable: back it up with the WAL or "
+            "lose every plaintext, and sanitise it on erasure or keep them past it."
+        ),
+    )
+    pqc_identity_path: str = Field(
+        default="",
+        description=(
+            "Filesystem path to the ledger's persistent ML-DSA-65 signing identity. Empty (the "
+            "default) disables the post-quantum signing tier entirely, so signing falls through "
+            "to HMAC-SHA256. When set, the identity is created on first use and reused for every "
+            "signature, which is what makes a signature attributable. The file holds the raw "
+            "private key and is written 0600; give it the custody any signing secret needs."
         ),
     )
     streaming_engine: Literal["grammar_frontier", "deidentifier"] = Field(
@@ -427,6 +461,75 @@ class AegisSettings(BaseSettings):
             "'deidentifier' runs the Safe Harbor set alone, as releases before 4.4.0 did. "
             "The composite holds back the de-identifier window plus the 28-character frontier, "
             "so the per-stream retained-byte ceiling rises by 4x28 bytes."
+        ),
+    )
+    gossip_enabled: bool = Field(
+        default=False,
+        description=(
+            "Run the cross-replica reconciliation daemon. Off by default: it opens a "
+            "second listener, requires a cluster CA and per-replica certificates, and "
+            "reconciles an accumulator that is separate from the audit ledger — so "
+            "enabling it changes nothing about what the WAL records or what a receipt "
+            "proves. It gives replicas one shared CRDT root; it is not consensus, it "
+            "does not order the ledger across replicas, and it is not Byzantine "
+            "fault tolerant."
+        ),
+    )
+    gossip_replica_id: int = Field(
+        default=0,
+        ge=0,
+        le=4_294_967_295,
+        description=(
+            "This replica's identifier in the gossip mesh. Must be unique per replica "
+            "and stable across restarts: it is the key in every vector clock, so two "
+            "replicas sharing an id are indistinguishable to the causality tracking "
+            "and a changed id abandons the entries recorded under the old one. Under "
+            "the Helm chart, derive it from the StatefulSet ordinal."
+        ),
+    )
+    gossip_self_name: str = Field(
+        default="",
+        description=(
+            "This replica's own name in the mesh, excluded from the peer list. The "
+            "peer list is rendered from the replica count and cannot know which "
+            "ordinal it is being rendered for, so a replica removes itself here. "
+            "Under the Helm chart this is the pod name."
+        ),
+    )
+    gossip_peers: str = Field(
+        default="",
+        description=(
+            "Comma-separated 'name=https://host:port' peers, excluding this replica. "
+            "Static rather than discovered: there is no membership protocol, so "
+            "adding or removing a replica is an operator action. The name must match "
+            "the peer certificate."
+        ),
+    )
+    gossip_interval_seconds: float = Field(
+        default=5.0,
+        gt=0.0,
+        le=3_600.0,
+        description=(
+            "Seconds between anti-entropy rounds. A converged cluster exchanges only "
+            "a root digest per peer per round, so this is cheap to keep short; the "
+            "cost of a longer interval is how stale a replica may be, not bandwidth."
+        ),
+    )
+    gossip_client_certificate: str = Field(
+        default="",
+        description="PEM certificate this replica presents to peers, in both directions.",
+    )
+    gossip_client_private_key: str = Field(
+        default="",
+        description="PEM private key for the gossip certificate. Give it signing-key custody.",
+    )
+    gossip_certificate_authority: str = Field(
+        default="",
+        description=(
+            "PEM CA bundle that issues replica certificates. Required whenever gossip "
+            "is enabled and there is no flag to skip verification: a peer supplies "
+            "leaves that enter this replica's accumulator, so an unauthenticated mesh "
+            "is an open input rather than a cluster."
         ),
     )
     max_stream_duration_seconds: float = Field(

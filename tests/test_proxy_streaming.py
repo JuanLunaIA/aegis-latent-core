@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from aegis.core.crypto_audit import CryptographicAuditLedger
+from aegis.core.mmr import MMRInclusionProofV1
 from aegis.core.streaming_deidentifier import (
     StreamingDeidentificationError,
     StreamingDeidentifier,
@@ -574,7 +575,10 @@ def test_portable_mmr_replays_from_wal_leaf_hashes(tmp_path) -> None:
     assert third.mmr_leaf_index == 2
     assert third.mmr_leaf_count == 3
     assert third.mmr_proof is not None
-    assert third.mmr_proof["root"] == third.merkle_root
+    # The proof *transports* its root as unpadded base64url under v2, while
+    # ``merkle_root`` is canonical hex. Same 32 bytes, two encodings, so the
+    # invariant is decoded equality rather than string equality.
+    assert MMRInclusionProofV1.from_dict(third.mmr_proof).root == third.merkle_root
     replayed.close()
 
 

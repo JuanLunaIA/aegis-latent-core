@@ -20,6 +20,12 @@ import { AegisProofError } from "./errors.js";
 import { parseInclusionProof, resolveSubtleCrypto, verifyInclusionHash } from "./proof.js";
 
 export const A2A_RECEIPT_VERSION = "aegis-a2a-receipt-v1";
+
+// MMR proof versions, and the v2 leaf domain tag. Must match
+// `aegis/core/mmr.py`: v2 is SHA-256(0x00 || leaf), v1 is bare SHA-256.
+const MMR_PROOF_VERSION_V1 = "aegis-mmr-inclusion-v1";
+const MMR_PROOF_VERSION_V2 = "aegis-mmr-inclusion-v2";
+const DOMAIN_LEAF = 0x00;
 export const A2A_MODEL = "a2a";
 export const A2A_ENDPOINT = "a2a.tool";
 
@@ -131,15 +137,24 @@ export function a2aEnvelopeBytes(receipt: AgentReceipt): Uint8Array {
 }
 
 /**
- * SHA-256 of the MMR leaf the issuing ledger committed for this receipt.
+ * The MMR leaf digest the issuing ledger committed for this receipt.
  *
  * Mirrors `build_merkle_leaf` for the pinned A2A coordinates. The envelope is
- * bounded well under `LEAF_MAX_BYTES`, so the preview is a copy of it and the
- * result does not depend on the issuer's configuration.
+ * bounded well under `LEAF_MAX_BYTES`, so the leaf *bytes* are a copy of it and
+ * do not depend on the issuer's configuration.
+ *
+ * The *digest* of those bytes follows the issuer's MMR scheme, which is what
+ * the accumulator appended: v1 hashes the leaf bare, v2 prefixes the `0x00`
+ * domain tag (RFC 6962). `verifyReceipt` reads the version off the receipt's
+ * own proof, so a verifier never has to know how the issuer was configured.
+ *
+ * Defaults to v1 for callers written before v2 existed. That default can only
+ * make a v2 receipt fail to verify, never verify wrongly.
  */
 export async function a2aLeafHash(
   receipt: AgentReceipt,
   injectedSubtle?: SubtleCrypto,
+  proofVersion: string = MMR_PROOF_VERSION_V1,
 ): Promise<string> {
   const subtle = resolveSubtleCrypto(injectedSubtle);
   const envelope = a2aEnvelopeBytes(receipt);
@@ -158,7 +173,14 @@ export async function a2aLeafHash(
       `"state_id":${JSON.stringify(receipt.execution_id)}`,
     ].join(",") +
     "}";
-  return toHex(new Uint8Array(await subtle.digest("SHA-256", utf8(leaf))));
+  const leafBytes = utf8(leaf);
+  if (proofVersion === MMR_PROOF_VERSION_V2) {
+    const tagged = new Uint8Array(leafBytes.length + 1);
+    tagged[0] = DOMAIN_LEAF;
+    tagged.set(leafBytes, 1);
+    return toHex(new Uint8Array(await subtle.digest("SHA-256", tagged)));
+  }
+  return toHex(new Uint8Array(await subtle.digest("SHA-256", leafBytes)));
 }
 
 /**
@@ -178,8 +200,9 @@ export async function verifyReceipt(
     if (parsed.version !== A2A_RECEIPT_VERSION) return false;
     if (parsed.mmr_root !== trustedRoot) return false;
     const subtle = resolveSubtleCrypto(injectedSubtle);
-    const leafHash = await a2aLeafHash(parsed, subtle);
     const proof = parseInclusionProof(parsed.inclusion_proof);
+    // The proof names its own construction; the leaf digest follows it.
+    const leafHash = await a2aLeafHash(parsed, subtle, proof.version);
     return await verifyInclusionHash(leafHash, proof, trustedRoot, subtle);
   } catch {
     return false;

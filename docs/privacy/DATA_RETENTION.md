@@ -76,15 +76,18 @@ For GDPR-oriented review, **Article 5(1)(c)** addresses data minimisation, **Art
 
 ### Cryptographic erasure: what exists in the tree, and what it does not settle
 
-The last row of the decision table above says "key destruction if applicable". `aegis/core/crypto_shredder.py` is the in-tree mechanism that phrase points at, and its position needs stating plainly so nobody plans a retention policy around a capability the gateway does not have.
+The last row of the decision table above says "key destruction if applicable". `aegis/core/crypto_shredder.py` is the in-tree mechanism that phrase points at, and its position needs stating plainly so nobody plans a retention policy around a capability their deployment does not have.
 
-It is **not wired into the ledger.** The gateway commits payload digests directly, so no deployed chain seals anything under a destructible key today. The module implements per-subject AES-256-GCM envelope encryption from the `cryptography` library, and its property is that destroying a key makes the plaintext unrecoverable **to a holder of the ciphertext** while the MMR root, the peaks and every previously issued inclusion proof stay bit-for-bit unchanged — the append-only chain is not disturbed at all.
+**It is off by default, and it is a property of a chain rather than a setting.** With `AEGIS_ENABLE_CRYPTOGRAPHIC_SHREDDING` unset — every deployment that has not deliberately chosen otherwise — the gateway commits payload digests directly and nothing can be shredded: `crypto_shred()` refuses rather than reporting a no-op erasure, so a retention job cannot believe it erased something it never could. Setting it to `true` makes the ledger seal each leaf under a per-subject AES-256-GCM key and commit `SHA-256(0x00 || nonce || ciphertext)` in place of the payload digest. Because that changes what the MMR commits to, **it cannot be enabled on a chain that already holds records** — planning for it means planning a new chain, and a retention schedule that assumes otherwise will not survive contact with the ledger.
 
-That resolves a *structural* conflict, not a legal or an operational one. Four things it does not do:
+Where it is on, destroying a subject's key makes the plaintext unrecoverable **to a holder of the ciphertext** while the MMR root, the peaks and every previously issued inclusion proof stay bit-for-bit unchanged — the append-only chain is not disturbed at all. `crypto_shred(subject_id)` is idempotent, so a retention job that re-runs does not fail.
+
+That resolves a *structural* conflict, not a legal or an operational one. Five things it does not do:
 
 - It is **not** a statement that key material is gone from the medium. Allocator copies, the SQLite journal, page cache, swap, snapshots, and SSD wear-levelling are outside a Python process's control. A destruction guarantee needs an HSM or a KMS with key deletion.
 - **Backups of the key vault defeat it.** A vault restored from backup restores the ability to decrypt everything erased since. Vault backup policy is in direct tension with the erasure it exists to perform, and that tension is the operator's to resolve explicitly.
 - The vault becomes the **only mutable component** in an otherwise append-only design, and therefore a new single point of failure in both directions: losing it destroys every subject's plaintext at once; compromising it undoes every erasure performed through it.
+- **It does not remove the node's request and response digests.** Those are retained after erasure, so a party holding a candidate plaintext can still confirm it. Key destruction removes readability, not confirmability, and a low-entropy payload is confirmable by enumeration (`CLM-062`).
 - **No regulatory conclusion follows.** Whether cryptographic erasure discharges an obligation is a controller determination made with counsel. See [DOC-05 §5.8.1](../institutional/DOC-05_REGULATORY_DOSSIER.md) for the full analysis and `CLM-068` for the governed claim. Do not write "right to erasure satisfied", "data destroyed", or "sanitised" into a policy on the strength of this module.
 
 ## Privacy control mapping without legal conclusion

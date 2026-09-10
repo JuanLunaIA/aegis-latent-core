@@ -20,6 +20,7 @@ from fastapi.testclient import TestClient
 
 from aegis.config import AegisSettings
 from aegis.core.circuit_breaker import CircuitOpenError
+from aegis.core.mmr import MMRInclusionProofV1
 from aegis.proxy.app import create_app
 
 
@@ -415,8 +416,13 @@ def test_chat_returns_portable_mmr_proof_and_audit_lookup(tmp_path):
             )
 
     assert response.status_code == 200
-    assert response.headers["X-Aegis-MMR-Format"] == "aegis-mmr-inclusion-v1"
-    assert proof["root"] == response.headers["X-Aegis-MMR-Root"]
+    # The format header names the construction the proof was issued under, so a
+    # client knows which leaf digest to reproduce; a new chain is v2. The proof
+    # transports its root base64url under v2 while the header carries canonical
+    # hex, so the invariant is decoded equality.
+    assert response.headers["X-Aegis-MMR-Format"] == proof["version"]
+    assert proof["version"] == "aegis-mmr-inclusion-v2"
+    assert MMRInclusionProofV1.from_dict(proof).root == response.headers["X-Aegis-MMR-Root"]
     assert proof["leaf_index"] == 0
     assert lookup.status_code == 200
     assert lookup.json()["proof"] == proof
@@ -458,7 +464,7 @@ def test_native_anthropic_ingress_preserves_shape_tenant_and_proof(tmp_path):
     assert response.status_code == 200
     assert response.json() == native_response
     assert response.headers["X-Aegis-Session-ID"] == "session-native"
-    assert response.headers["X-Aegis-MMR-Format"] == "aegis-mmr-inclusion-v1"
+    assert response.headers["X-Aegis-MMR-Format"] == "aegis-mmr-inclusion-v2"
     assert app.state.aegis.ledger.chain[-1].tenant_id == "development"
     assert app.state.aegis.ledger.chain[-1].endpoint == "anthropic.messages"
 
