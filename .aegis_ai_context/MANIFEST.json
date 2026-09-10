@@ -249,8 +249,8 @@
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/Cargo.toml",
-      "sha256": "78d485abf97ee58dca7ff2b181bccce7abe7ce9326b20e9632c9d101c7fe4c98",
-      "size": 4921
+      "sha256": "f2bccd43e233dba9e8700091014a7d426d1c760b5da4692c7b96d42c961f478d",
+      "size": 4944
     },
     {
       "category": "governed_input",
