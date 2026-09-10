@@ -52,6 +52,27 @@ def _event(text: str) -> tuple[bytes, Any]:
     return b"data: " + json.dumps(payload).encode(), payload
 
 
+def _content_of(part: bytes) -> list[str]:
+    """The assistant content carried by one yielded SSE part.
+
+    Skips the terminal ``data: [DONE]`` marker deliberately. The proxy yields
+    that marker on every successful stream whether or not any data event
+    survived, so counting it as output makes "something was emitted" true of a
+    proxy that emitted nothing.
+    """
+
+    found: list[str] = []
+    for line in part.split(b"\n"):
+        if not line.startswith(b"data: ") or line == b"data: [DONE]":
+            continue
+        body = json.loads(line[len(b"data: ") :])
+        for choice in body.get("choices", []):
+            content = choice.get("delta", {}).get("content")
+            if isinstance(content, str):
+                found.append(content)
+    return found
+
+
 async def _drain(chunks: list[str], **kwargs: Any) -> str:
     """Run chunks through a real proxy and return the concatenated content."""
 
@@ -78,14 +99,7 @@ async def _drain(chunks: list[str], **kwargs: Any) -> str:
     )
     seen: list[str] = []
     async for part in proxy:
-        for line in part.split(b"\n"):
-            if not line.startswith(b"data: ") or line == b"data: [DONE]":
-                continue
-            body = json.loads(line[len(b"data: ") :])
-            for choice in body.get("choices", []):
-                content = choice.get("delta", {}).get("content")
-                if isinstance(content, str):
-                    seen.append(content)
+        seen.extend(_content_of(part))
     return "".join(seen)
 
 
@@ -244,8 +258,19 @@ class TestRetentionAccounting:
         assert proxy.retained_bytes_ceiling == (
             UTF8_MAX_BYTES_PER_CHAR * (128 + FRONTIER) + 16_384 + 4096 + 4096
         )
-        async for _part in proxy:
+        emitted: list[str] = []
+        async for part in proxy:
+            emitted.extend(_content_of(part))
             assert proxy.retained_bytes <= proxy.retained_bytes_ceiling
+
+        # The ceiling assertion above holds vacuously against a proxy that
+        # emits nothing, and counting yielded *bytes* does not close that: the
+        # terminal `data: [DONE]` marker is 14 bytes and is yielded on every
+        # successful stream, so a proxy that dropped every data event would
+        # still clear a byte-count check. Assert on the redacted payload.
+        redacted = "".join(emitted)
+        assert "123-45-6789" not in redacted
+        assert redacted.count("[REDACTED:SSN]") == 500
 
 
 class TestEngineSelection:

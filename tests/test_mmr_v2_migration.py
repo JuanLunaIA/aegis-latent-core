@@ -141,11 +141,8 @@ class TestRustPythonParity:
 class TestLedgerSelection:
     def test_the_default_is_v1(self, tmp_path: Path) -> None:
         # Existing deployments must be unaffected by the option existing.
-        ledger = _ledger(tmp_path / "default.wal", HASH_SCHEME_V1)
-        try:
+        with _ledger(tmp_path / "default.wal", HASH_SCHEME_V1) as ledger:
             assert ledger.mmr_hash_scheme == HASH_SCHEME_V1
-        finally:
-            ledger.close()
 
     def test_the_config_default_is_v1(self) -> None:
         from aegis.config import AegisSettings
@@ -161,14 +158,11 @@ class TestLedgerSelection:
     def test_a_chain_commits_and_verifies_under_either_scheme(
         self, tmp_path: Path, scheme: str
     ) -> None:
-        ledger = _ledger(tmp_path / f"{scheme}.wal", scheme)
-        try:
+        with _ledger(tmp_path / f"{scheme}.wal", scheme) as ledger:
             _commit(ledger, 5)
             valid, index = ledger.verify_integrity()
             assert valid is True
             assert index is None
-        finally:
-            ledger.close()
 
     @pytest.mark.parametrize(
         ("scheme", "expected_version"),
@@ -181,26 +175,20 @@ class TestLedgerSelection:
         self, tmp_path: Path, scheme: str, expected_version: str
     ) -> None:
         # A verifier never has to guess which construction to check under.
-        ledger = _ledger(tmp_path / f"{scheme}-proof.wal", scheme)
-        try:
+        with _ledger(tmp_path / f"{scheme}-proof.wal", scheme) as ledger:
             _commit(ledger, 2)
             node = ledger.chain[-1]
             assert node.mmr_proof is not None
             assert node.mmr_proof["version"] == expected_version
-        finally:
-            ledger.close()
 
     def test_the_two_schemes_produce_different_roots_for_the_same_records(
         self, tmp_path: Path
     ) -> None:
         roots = []
         for scheme in (HASH_SCHEME_V1, HASH_SCHEME_V2):
-            ledger = _ledger(tmp_path / f"roots-{scheme}.wal", scheme)
-            try:
+            with _ledger(tmp_path / f"roots-{scheme}.wal", scheme) as ledger:
                 _commit(ledger, 4)
                 roots.append(ledger.chain[-1].merkle_root)
-            finally:
-                ledger.close()
         assert roots[0] != roots[1]
 
 
@@ -215,49 +203,34 @@ class TestNoInPlaceMigration:
         self, tmp_path: Path, written: str, reopened: str
     ) -> None:
         wal = tmp_path / "chain.wal"
-        first = _ledger(wal, written)
-        try:
+        with _ledger(wal, written) as first:
             _commit(first, 3)
-        finally:
-            first.close()
 
-        second = _ledger(wal, reopened)
-        try:
+        with _ledger(wal, reopened) as second:
             # Not "wal_corrupt" and not "mmr_replay_mismatch": both would be
             # true statements about the roots and wrong about the evidence,
             # which is intact.
             assert second._fault_state == "mmr_scheme_mismatch"
-        finally:
-            second.close()
 
     @pytest.mark.parametrize("scheme", [HASH_SCHEME_V1, HASH_SCHEME_V2])
     def test_reopening_under_the_same_scheme_replays_cleanly(
         self, tmp_path: Path, scheme: str
     ) -> None:
         wal = tmp_path / "reopen.wal"
-        first = _ledger(wal, scheme)
-        try:
+        with _ledger(wal, scheme) as first:
             _commit(first, 4)
             root_before = first.chain[-1].merkle_root
-        finally:
-            first.close()
 
-        second = _ledger(wal, scheme)
-        try:
+        with _ledger(wal, scheme) as second:
             assert second._fault_state == "healthy"
             assert second.chain[-1].merkle_root == root_before
             valid, index = second.verify_integrity()
             assert valid is True
             assert index is None
-        finally:
-            second.close()
 
     def test_an_empty_wal_accepts_either_scheme(self, tmp_path: Path) -> None:
         # Nothing has been recorded, so no root is being contradicted.
         wal = tmp_path / "empty.wal"
         wal.touch()
-        ledger = _ledger(wal, HASH_SCHEME_V2)
-        try:
+        with _ledger(wal, HASH_SCHEME_V2) as ledger:
             assert ledger._fault_state == "healthy"
-        finally:
-            ledger.close()
