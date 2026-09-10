@@ -15,6 +15,93 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — the `pqc` extra installed the wrong library, so the feature was never on
+
+`aegis/core/mlkem_session.py` imports `kyber_py.kyber.Kyber1024` behind a
+try/except and tells the operator to `pip install kyber-py`. The `pqc` extra
+declared `oqs-python` instead — a different library that **no module in this
+tree imports**. `kyber-py` was declared nowhere: not in `pyproject.toml`, not in
+`requirements.txt`, not in the lock.
+
+So `pip install aegis-latent-core[pqc]` installed something unused and left the
+post-quantum backend switched off, and `backend_available()` returned `False` on
+a tree that had been asked for exactly that capability.
+
+The failure was silent in both directions. The import guard turned a missing
+dependency into a graceful degradation rather than an error, and **thirty-two
+tests covering those paths skipped instead of failing** — the suite stayed green
+while the cryptographic code it reports on was never executed. Installing
+`kyber-py` moves the suite from 6 748 passed / 58 skipped to 6 780 passed / 26
+skipped.
+
+`kyber-py` is now declared in the `pqc` extra, so the extra enables the feature
+it advertises, and in `dev`, so CI executes those thirty-two tests instead of
+skipping them. `tests/test_optional_backend_declarations.py` binds the extra to
+the import — it reads `pyproject.toml`, needs none of the optional packages
+installed, and fails if the two drift apart again. Its teeth were checked by
+reverting the extra and observing two tests fail.
+
+With the backend present, a real two-party exchange was driven end to end: an
+initiator and a responder independently derive the **same** 32-byte secret.
+
+Recorded as `CLM-087`, scoped deliberately to the **KEM primitive**.
+
+**It is not TLS.** There is no TLS listener, no `SSLContext`, and no cipher-suite
+or named-group negotiation in that module — it is an application-layer exchange
+between two parties that already have a channel, and the gateway's ingress TLS
+is terminated by the customer, outside this repository. The parameter set is
+**ML-KEM-1024**, not the TLS hybrid group `X25519MLKEM768`, which the module
+docstring cites only as an analogy for the composition. The post-quantum half is
+pure Python, so no constant-time, side-channel or FIPS-validation property is
+claimed. The register entry blocks each of those phrasings by name.
+
+**`oqs-python` is left in place and flagged rather than removed.** Nothing in
+this tree imports it, so it appears to be dead weight in an extra whose name
+implies it is the post-quantum backend; dropping a declared dependency changes
+what a consumer's install resolves to, which is the owner's call rather than a
+side effect of fixing a different defect.
+
+### Fixed — a security-control row that cited the wrong tracing module
+
+A verification pass over the tracing surface found that this repository has
+**two** of them, and that the control table pointed at the wrong one.
+
+`aegis/core/observability.py` holds the real OpenTelemetry integration. It is
+wired: `setup_otel()` is called from the gateway lifespan, and `record_span()
+wraps exactly two operations — `aegis.waf.check` and `aegis.forward`. It is
+optional, no-oping when the `otel` extra is absent.
+
+`aegis/telemetry/otel.py` is **not OpenTelemetry**. It imports nothing from the
+OTel SDK; it is a pure standard-library facade implementing W3C `traceparent`
+and `tracestate` parsing and injection behind an attribute allowlist. It is
+complete and tested, and **nothing in the request path uses it** — the only
+references outside its own module are its package re-export and its test.
+
+`docs/security/SECURITY_CONTROLS.md` cited that second module as the evidence
+for "OpenTelemetry tracing", and described it as having an optional dependency,
+which it does not have. Three errors in one row: wrong module, wrong technology,
+wrong dependency story. The row now cites `observability.py` and states what is
+actually wired; a second row records the W3C facade as present but unwired, so a
+reader does not mistake one for the other.
+
+Two limits are now written down rather than left to be discovered:
+
+- **Two spans are wired, and the evidence commit path carries none.** The
+  `SpanName` enum in the unwired module declares four intended spans —
+  `aegis.gateway.request`, `aegis.policy.evaluate`, `aegis.proof.verify`,
+  `aegis.siem.export` — and not one of those names is in use.
+- **There is no W3C trace-context propagation on the wired path.** No propagator
+  is registered, and no `traceparent` is extracted from an incoming request or
+  injected into an upstream one, so a caller's trace does not continue through
+  the gateway: every gateway trace is a new root. The unwired module is exactly
+  the code that would fix this, which is why leaving both in the tree without
+  saying so was the hazard.
+
+No claim changed, because no claim covered this. `README.md` already lists the
+span model under "Not built. No dates.", and `ENTERPRISE_READINESS.md` already
+says "Partial; hooks exist, a tested model does not". Both were accurate; the
+security-control row was the outlier.
+
 ### Added — attestation backends that refuse, and a replay that cannot escape a test
 
 `aegis/core/tee_manager.py` already carried the hard part: a verifier protocol,
@@ -46,11 +133,13 @@ to say, in a test. Two tests assert exactly that, one per rejection. The
 that policy-field rejection (a wrong measurement, a stale TCB status) can be
 tested without the nonce check masking which field did the rejecting.
 
-Protocol conformance is checked by mypy rather than assumed, through a
-`TYPE_CHECKING` binding of each backend to `AttestationVerifier`. Signature
-drift would otherwise surface at runtime in a deployment that has the hardware,
-which is the most expensive place to find it; the check was confirmed to have
-teeth by drifting a signature and observing mypy reject it.
+Protocol conformance is checked by mypy rather than assumed: each backend
+inherits `AttestationVerifier` explicitly rather than satisfying it
+structurally. `TEEManager` accepts the protocol structurally either way, but
+naming it as a base makes mypy reject a drifted `verify` signature at build
+time — otherwise the drift surfaces at runtime in a deployment that has the
+hardware, which is the most expensive place to find it. The check was confirmed
+to have teeth by drifting a signature and observing mypy reject it.
 
 **No attestation is performed anywhere in this tree and none is claimed.**
 Recorded as `CLM-086`, whose register entry blocks "hardware-attested",

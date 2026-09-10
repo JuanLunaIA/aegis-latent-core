@@ -38,7 +38,6 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import replace
-from typing import TYPE_CHECKING
 
 from aegis.core.tee_manager import (
     AttestationUnavailableError,
@@ -52,8 +51,15 @@ NITRO_DEVICE = "/dev/nsm"
 SEV_GUEST_DEVICE = "/dev/sev-guest"
 
 
-class _PlatformBackend:
-    """Shared refusal logic for a vendor adapter with no verifier integrated."""
+class _PlatformBackend(AttestationVerifier):
+    """Shared refusal logic for a vendor adapter with no verifier integrated.
+
+    ``AttestationVerifier`` is inherited explicitly rather than satisfied
+    structurally. ``TEEManager`` accepts the protocol structurally either way,
+    but naming it as a base makes mypy reject a drifted ``verify`` signature at
+    build time — otherwise the drift surfaces at runtime in a deployment that
+    has the hardware, which is the most expensive place to find it.
+    """
 
     #: Whether this backend can, even in principle, authenticate vendor evidence.
     LIVE = True
@@ -121,7 +127,7 @@ class SevSnpBackend(_PlatformBackend):
     VENDOR_REQUIREMENT = "SNP report verifier or AMD VCEK/VLEK certificate chain"
 
 
-class RecordedAttestationBackend:
+class RecordedAttestationBackend(AttestationVerifier):
     """Replay captured claims so the policy path can run without hardware.
 
     This authenticates nothing. It ignores the evidence bytes entirely and
@@ -163,25 +169,3 @@ class RecordedAttestationBackend:
         if self._bind_nonce:
             return replace(self._claims, nonce=nonce)
         return self._claims
-
-
-if TYPE_CHECKING:
-    # Protocol conformance, checked by mypy rather than assumed. `TEEManager`
-    # accepts an `AttestationVerifier` structurally, so a signature drift here
-    # would otherwise surface as a runtime failure in a deployment that has the
-    # hardware — the one place it is most expensive to find.
-    _nitro_conforms: AttestationVerifier = NitroBackend()
-    _sev_conforms: AttestationVerifier = SevSnpBackend()
-    _recorded_conforms: AttestationVerifier = RecordedAttestationBackend(
-        VerifiedAttestationClaims(
-            tee_type="",
-            enclave_id="",
-            measurement="",
-            signer_id="",
-            nonce=b"",
-            issued_at=0.0,
-            debug=False,
-            tcb_status="",
-            report_data=b"",
-        )
-    )
