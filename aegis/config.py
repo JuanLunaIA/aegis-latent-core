@@ -458,7 +458,7 @@ class AegisSettings(BaseSettings):
             "Streaming redactor for governed SSE. 'grammar_frontier' runs the Safe Harbor "
             "de-identifier and then the grammar-frontier rules, which add instruction-override "
             "and system-prompt-disclosure matching the de-identifier does not carry. "
-            "'deidentifier' runs the Safe Harbor set alone, as releases before 4.4.0 did. "
+            "'deidentifier' runs the Safe Harbor set alone, as releases before 4.3.0 did. "
             "The composite holds back the de-identifier window plus the 28-character frontier, "
             "so the per-stream retained-byte ceiling rises by 4x28 bytes."
         ),

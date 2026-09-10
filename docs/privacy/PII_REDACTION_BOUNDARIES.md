@@ -118,9 +118,9 @@ after the bound. That gap is recorded in the same test file.
 
 ### A second streaming redactor runs after the first
 
-`aegis/core/streaming_safety_engine.py` implements `GrammarFrontierAutomaton`, which formalises the same holdback idea over four rules of its own. Since `4.4.0` it runs on the governed streaming path **in addition to** `StreamingDeidentifier`, composed by `aegis/core/stream_redactor.py` and selected by `AEGIS_STREAMING_ENGINE`, which defaults to `grammar_frontier`.
+`aegis/core/streaming_safety_engine.py` implements `GrammarFrontierAutomaton`, which formalises the same holdback idea over four rules of its own. Since `4.3.0` it runs on the governed streaming path **in addition to** `StreamingDeidentifier`, composed by `aegis/core/stream_redactor.py` and selected by `AEGIS_STREAMING_ENGINE`, which defaults to `grammar_frontier`.
 
-Everything above still describes what you get, because composition adds and removes nothing: the twenty Safe Harbor detectors run first and unchanged, and the automaton then applies `INSTR_OVERRIDE`, `SYS_LEAK` and its own `PHI_SSN`/`PCI_PAN` rules to what survives. Two of those four — instruction-override and system-prompt-disclosure matching — are genuinely new to this path; the other two overlap detectors that already ran. Setting `AEGIS_STREAMING_ENGINE=deidentifier` restores the pre-`4.4.0` output byte for byte.
+Everything above still describes what you get, because composition adds and removes nothing: the twenty Safe Harbor detectors run first and unchanged, and the automaton then applies `INSTR_OVERRIDE`, `SYS_LEAK` and its own `PHI_SSN`/`PCI_PAN` rules to what survives. Two of those four — instruction-override and system-prompt-disclosure matching — are genuinely new to this path; the other two overlap detectors that already ran. Setting `AEGIS_STREAMING_ENGINE=deidentifier` restores the pre-`4.3.0` output byte for byte.
 
 Two consequences to hold on to:
 

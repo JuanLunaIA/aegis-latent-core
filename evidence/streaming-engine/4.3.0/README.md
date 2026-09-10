@@ -10,7 +10,7 @@
 One `feed(chunk)` call per sample, timed with `time.perf_counter_ns`, over the
 same 10-chunk corpus under both engines: `deidentifier` (the Safe Harbor set
 alone, which every release through `4.3.0` ran) and `grammar_frontier` (that set
-followed by the grammar-frontier rules, which `4.4.0` runs by default).
+followed by the grammar-frontier rules, which `4.3.0` runs by default).
 
 The redactor is isolated from the rest of the proxy on purpose. Queueing, JSON
 re-encoding, SHA-256 hashing and the asyncio hop are identical under both

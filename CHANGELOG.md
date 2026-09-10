@@ -425,7 +425,7 @@ a rejected state.
 
 ### Changed — documentation that described three components as unwired
 
-`4.4.0` wires the grammar frontier (on by default), the v2 hash scheme (on for
+`4.3.0` wires the grammar frontier (on by default), the v2 hash scheme (on for
 new chains) and the shredder (off by default). The claims matrix rows for the
 first two were updated when they landed, but the descriptive corpus still told
 readers that the streaming path uses `StreamingDeidentifier` alone, that v2 "is
@@ -617,9 +617,7 @@ front of older clients breaks receipt verification.
   noise floor — earlier runs at the same sample size measured the new stage as
   *faster*, which it cannot be — so it is recorded as "too small for this
   harness to separate from variance" rather than as a number. Artifacts and
-  that boundary are in `evidence/streaming-engine/4.4.0/`.
-
-## [4.3.0] — unreleased source target
+  that boundary are in `evidence/streaming-engine/4.3.0/`.
 
 ## [4.3.0] — unreleased source target
 
