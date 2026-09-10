@@ -17,6 +17,7 @@ node_modules/
 .next/
 *.tsbuildinfo
 coverage/
+coverage.json
 
 # Virtual environments and local package builds
 .venv/
