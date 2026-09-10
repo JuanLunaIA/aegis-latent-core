@@ -15,6 +15,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — four documentation statements that contradicted the code or each other
+
+A conflict audit put ten alleged contradictions to the corpus. Six of them were
+already correct and are recorded here so nobody re-opens them: the wiring status
+of `GrammarFrontierAutomaton` (wired, on by default) and `CryptoShredder`
+(wired, off by default) is stated accurately in `ARCHITECTURE.md`; the two
+benchmark runs are already delineated, and no document pairs the 10,000-request
+count with the 836 ms latency; `AEGIS_MMR_HASH_SCHEME` is already documented as
+defaulting to `auto` in both places; pre-admission rejection nodes are already
+specified in `CLM-060`; "the gateway ships from source only" already appears
+nowhere except in the register of forbidden phrasings; and the fourteen version
+anchors already agree — at `4.3.0`.
+
+Four statements were genuinely wrong, two of which the audit did not name:
+
+- **npm SDK version.** `README.md` contradicted *itself*: its release banner
+  recorded the 2026-09-04 readback of npm `aegis-latent-sdk` `4.1.2`, while a
+  later section said npm "still carries `4.0.0`". Corrected there and in
+  `SUPPORT_MODEL.md` and `PROCUREMENT_CHECKLIST.md`. `BUYER_GUIDE_US.md` also
+  says `4.0.0`, and is left alone: it describes the historical `v4.0.x`
+  baseline, where that was the observation.
+- **WAL corruption semantics.** `AUDIT_ENDPOINTS.md`, `SECURITY_CONTROLS.md`
+  and `CONTROL_TO_EVIDENCE_MATRIX.md` still said commits remain permitted after
+  `wal_corrupt` and that the request path does not check the fault state.
+  `_require_intact_ledger` has refused all three governed endpoints with `503`
+  since 2026-09-03.
+- **`DOC-01` disagreed with itself.** Its Table 2 had been corrected and says so
+  explicitly; two later rows — falsification test `DOC01-FALS-007` and risk
+  `DOC01-RISK-003` — still described the superseded fail-open behaviour.
+  `DOC01-RISK-003` is now the risk that actually remains: corruption that replay
+  parses successfully raises no fault, so the ingress guard never fires.
+- **`FAQ_TECHNICAL.md` said there is no gossip transport.** There is one now,
+  and the gateway starts it. Rewritten to say what did *not* change, which is
+  the part that matters: the mesh reconciles the CRDT accumulator, not the
+  ledger.
+
+
 ### Added — an ML-DSA backend seam, and a measurement that corrects two of our own conclusions
 
 `pqcrypto-mldsa`, `pqcrypto-traits` and `pqcrypto-internals` carry

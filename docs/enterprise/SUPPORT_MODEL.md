@@ -91,7 +91,7 @@ Stated intent: acknowledgement within seven days, assessment within fourteen. No
 
 Fixes target the versions listed in [SECURITY.md](../../SECURITY.md). Older versions receive nothing.
 
-**Check which artifact you are actually running.** The gateway ships from source and from the GHCR tag `4.1.2`; the SDK on PyPI is `4.1.2`, but the SDK on npm is still `4.0.0`. A support question about an npm-installed SDK may concern code that the current documentation does not describe. See [Release Status](../RELEASE_STATUS.md).
+**Check which artifact you are actually running.** At the most recent published release the gateway is on PyPI as `aegis-latent-core` `4.1.2` and on GHCR at tag `4.1.2`, and the SDK is `4.1.2` on **both** PyPI and npm (readback 2026-09-04). Nothing is published for the `4.3.0` source tree, so a support question raised against current documentation may concern code no released artifact contains. See [Release Status](../RELEASE_STATUS.md).
 
 ---
 

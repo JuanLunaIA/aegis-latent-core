@@ -202,7 +202,7 @@ pip install -e ./sdk/python
 cd sdk/typescript && npm ci && npm run build
 ```
 
-**Registry caution.** PyPI carries `aegis-latent-sdk` at `4.1.2`, matching this source tree. **npm still carries `4.0.0`** — installing the SDK from npm gets you different code from what these documents describe. Check which registry you are installing from.
+**Registry state.** Both registries carry `aegis-latent-sdk` at `4.1.2`, matching the most recent published release: the 2026-09-04 readback recorded in [Release Status](docs/RELEASE_STATUS.md) found PyPI `4.1.2` and npm `4.1.2`. Neither matches this **source tree**, whose anchors read `4.3.0` and for which nothing is published — so an SDK installed from either registry is `4.1.2` code, not what an unreleased `4.3.0` document describes. The npm version list skips `4.1.1`, whose publish step failed.
 
 **Proof verification caution.** A proof verified against a root supplied by the same gateway that produced it establishes internal consistency only. Obtain the trusted root through an independent channel, or the verification is circular.
 

@@ -44,7 +44,7 @@ Authorization: Bearer <audit-key>
 curl -sH "Authorization: Bearer $AUDIT_KEY" localhost:8080/v1/audit/health
 ```
 
-Reports node count and fault state. **`wal_corrupt` here means replay stopped at a malformed line during startup.** Read this carefully: subsequent commits remain permitted, and the request path does not check the fault state before committing. A degraded health response is a signal to investigate, not a guarantee that the gateway has stopped accepting work.
+Reports node count and fault state. **`wal_corrupt` here means replay stopped at a malformed line during startup.** While the fault state is anything but `healthy`, `_require_intact_ledger` refuses every governed endpoint with `503` before any forwarding or commit, so the chain is not extended on top of a prefix that could not be read back. `/health` and `/metrics` stay reachable on purpose, so a degraded response is what an operator sees *because* traffic has stopped. The guard is triggered by the ledger's own fault state, so it does not detect corruption that replay parses successfully, corruption introduced after startup, or tampering outside the WAL (`CLM-059`).
 
 ### 2.2 Integrity
 
