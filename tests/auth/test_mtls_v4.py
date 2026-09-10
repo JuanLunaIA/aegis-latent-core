@@ -133,12 +133,21 @@ def test_rejects_fingerprint_mismatch_and_non_allowlisted_fingerprint() -> None:
         )
 
 
+# `ids` is load-bearing, not cosmetic. Each parameter is a freshly generated
+# certificate, so without explicit ids pytest derives the id from the PEM bytes
+# — which differ in every process. Under `pytest -n auto` each xdist worker
+# collects its own certificates, the derived ids disagree, and the whole run
+# aborts with "Different tests were collected between gw0 and gw1" before a
+# single test executes. Naming the cases fixes the ids across processes (and
+# replaces a 2 KB base64 blob in the test name with the case it actually
+# covers).
 @pytest.mark.parametrize(
     "pem",
     [
         make_certificate(not_before=NOW + timedelta(seconds=1)),
         make_certificate(not_after=NOW),
     ],
+    ids=["not_yet_valid", "already_expired"],
 )
 def test_rejects_certificate_outside_validity_window(pem: bytes) -> None:
     with pytest.raises(MTLSVerificationError, match="not yet valid|expired"):
