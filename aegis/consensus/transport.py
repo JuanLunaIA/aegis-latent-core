@@ -40,7 +40,6 @@ from aegis.consensus.gossip import (
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from starlette.applications import Starlette
     from starlette.requests import Request
-    from starlette.responses import Response
 
 logger = logging.getLogger(__name__)
 

@@ -92,14 +92,18 @@ class CausalAccumulator(Protocol):
     """
 
     @property
-    def root(self) -> str: ...
+    def root(self) -> str:
+        """The bagged root over every leaf held, as lowercase hex."""
 
     @property
-    def leaf_count(self) -> int: ...
+    def leaf_count(self) -> int:
+        """How many leaves this replica holds."""
 
-    def encode_state(self) -> bytes: ...
+    def encode_state(self) -> bytes:
+        """This replica's leaf set in the canonical wire form."""
 
-    def merge_encoded(self, state: bytes) -> CausalAccumulator: ...
+    def merge_encoded(self, state: bytes) -> CausalAccumulator:
+        """Join a peer's encoded state, returning the merged accumulator."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -210,11 +214,14 @@ class GossipTransport(Protocol):
     touching the reconciliation.
     """
 
-    async def fetch_root(self, peer: GossipPeer) -> str: ...
+    async def fetch_root(self, peer: GossipPeer) -> str:
+        """Ask a peer for its current root, so a round can skip when equal."""
 
-    async def exchange_state(self, peer: GossipPeer, state: bytes) -> bytes: ...
+    async def exchange_state(self, peer: GossipPeer, state: bytes) -> bytes:
+        """Send this replica's state to a peer and return the peer's own."""
 
-    async def aclose(self) -> None: ...
+    async def aclose(self) -> None:
+        """Release whatever the transport holds open."""
 
 
 class GossipDaemon:
