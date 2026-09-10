@@ -86,6 +86,29 @@ def _issue_ca(directory: Path) -> tuple[Path, ec.EllipticCurvePrivateKey, x509.C
         .not_valid_before(now - dt.timedelta(minutes=5))
         .not_valid_after(now + dt.timedelta(hours=1))
         .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
+        # Python 3.13 verifies certificate chains strictly and rejects one whose
+        # links are not spelled out: a leaf must carry an Authority Key
+        # Identifier naming its issuer, and the issuer must carry the matching
+        # Subject Key Identifier. Older builds inferred the link from the names
+        # alone. Omitting these is a defect in the fixture, not a policy to
+        # relax on the client.
+        .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), critical=False)
+        # And a CA must say it is allowed to sign certificates. A strict
+        # verifier will not assume it from BasicConstraints alone.
+        .add_extension(
+            x509.KeyUsage(
+                digital_signature=False,
+                content_commitment=False,
+                key_encipherment=False,
+                data_encipherment=False,
+                key_agreement=False,
+                key_cert_sign=True,
+                crl_sign=True,
+                encipher_only=False,
+                decipher_only=False,
+            ),
+            critical=True,
+        )
         .sign(key, hashes.SHA256())
     )
     path = directory / "ca.pem"
@@ -136,6 +159,11 @@ def _issue_replica(
                     x509.ExtendedKeyUsageOID.CLIENT_AUTH,
                 ]
             ),
+            critical=False,
+        )
+        .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), critical=False)
+        .add_extension(
+            x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()),
             critical=False,
         )
         .sign(ca_key, hashes.SHA256())
