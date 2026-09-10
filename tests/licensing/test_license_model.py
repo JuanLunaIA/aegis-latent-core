@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pytest
 
-import aegis.licensing.model
+from aegis.licensing import model as license_model
 from aegis.licensing.model import KNOWN_MODULES, WILDCARD_MODULE, LicenseEntitlement
 
 EXPIRY = 1_800_000_000
@@ -155,7 +155,7 @@ class TestShape:
         and the package re-exports the verifier, which does import it.
         """
 
-        source = Path(aegis.licensing.model.__file__ or "").read_text(encoding="utf-8")
+        source = Path(license_model.__file__ or "").read_text(encoding="utf-8")
         imported: set[str] = set()
         for node in ast.walk(ast.parse(source)):
             if isinstance(node, ast.Import):

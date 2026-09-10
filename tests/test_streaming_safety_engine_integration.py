@@ -244,8 +244,13 @@ class TestRetentionAccounting:
         assert proxy.retained_bytes_ceiling == (
             UTF8_MAX_BYTES_PER_CHAR * (128 + FRONTIER) + 16_384 + 4096 + 4096
         )
-        async for _part in proxy:
+        emitted = 0
+        async for part in proxy:
+            emitted += len(part)
             assert proxy.retained_bytes <= proxy.retained_bytes_ceiling
+        # Assert the stream actually ran: a proxy that yielded nothing would
+        # satisfy the ceiling check vacuously.
+        assert emitted > 0
 
 
 class TestEngineSelection:

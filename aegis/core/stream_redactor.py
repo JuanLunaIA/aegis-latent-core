@@ -83,17 +83,22 @@ class StreamRedactor(Protocol):
     """
 
     @property
-    def retained_chars(self) -> int: ...
+    def retained_chars(self) -> int:
+        """Characters currently withheld, summed across every stage."""
 
     @property
-    def window_chars(self) -> int: ...
+    def window_chars(self) -> int:
+        """The effective ``W`` for the per-stream retained-byte ceiling."""
 
     @property
-    def stats(self) -> StreamRedactionStats: ...
+    def stats(self) -> StreamRedactionStats:
+        """Bounded, non-sensitive redaction counters."""
 
-    def feed(self, text: str) -> str: ...
+    def feed(self, text: str) -> str:
+        """Consume a chunk and return the text that has settled."""
 
-    def flush(self) -> str: ...
+    def flush(self) -> str:
+        """Release the holdback at normal stream termination."""
 
 
 class CompositeStreamRedactor:

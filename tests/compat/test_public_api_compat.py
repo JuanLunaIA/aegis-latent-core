@@ -49,10 +49,10 @@ py/side-effect-in-assert).
 from __future__ import annotations
 
 import importlib
+import importlib.metadata
 import inspect
 import os
 import tempfile
-from importlib import metadata
 from typing import Any
 
 import pytest
@@ -193,7 +193,7 @@ class TestConsoleEntryPoints:
     def test_both_scripts_are_installed_and_unchanged(self) -> None:
         installed = {
             entry.name: entry.value
-            for entry in metadata.entry_points(group="console_scripts")
+            for entry in importlib.metadata.entry_points(group="console_scripts")
             if entry.name in V412_CONSOLE_SCRIPTS
         }
         assert installed == V412_CONSOLE_SCRIPTS
