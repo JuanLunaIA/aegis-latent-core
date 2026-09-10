@@ -15,6 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — a gossip round that failed said nothing about why
+
+`GossipDaemon.run_round` logged `failed (%s)` with the exception alone. Several
+of the exceptions that reach there carry no message, so an operator saw
+`round with peer replica-1 failed ()` and learned nothing — and a reproducible
+fault looked like an unexplained one. The log now carries the exception type,
+which is what actually distinguishes a refused certificate from a timeout from
+a rejected state.
+
+
 ### Added — cross-replica reconciliation, off by default
 
 - **`CausalMmr` has a transport.** The join-semilattice was implemented and

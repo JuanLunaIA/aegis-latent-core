@@ -27,13 +27,14 @@ import datetime as dt
 import ipaddress
 import socket
 import ssl
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from collections.abc import Iterator
+    from collections.abc import AsyncIterator
 
 pytest.importorskip("aegis_rust")
 pytest.importorskip("uvicorn")
@@ -50,15 +51,16 @@ from aegis.consensus.transport import HttpGossipTransport, build_gossip_app  # n
 
 pytestmark = pytest.mark.anyio
 
-# How a refused TLS handshake surfaces depends on which side gives up first and
-# on how loaded the machine is: a reset during the handshake, a read on a
-# closed socket, an SSL alert, or — on a slow runner — nothing at all until the
-# timeout. All four mean the same thing, which is that the peer never got in.
+# How a refused TLS handshake surfaces depends on which side gives up first:
+# a reset during the handshake, a read on a closed socket, or an SSL alert.
+#
+# A *timeout* is deliberately not in this tuple. A server that is listening but
+# not serving refuses everyone by timing out, so accepting a timeout here would
+# let a broken harness masquerade as a working access control — which is
+# exactly what happened before `_require_serving` existed.
 _REFUSED = (
     httpx.ConnectError,
     httpx.ReadError,
-    httpx.ConnectTimeout,
-    httpx.ReadTimeout,
     ssl.SSLError,
 )
 
@@ -238,8 +240,23 @@ async def _converge(replicas: list[_Replica], rounds: int = 40) -> bool:
     return False
 
 
-@pytest.fixture
-async def three_replicas(tmp_path: Path) -> Iterator[list[_Replica]]:
+@asynccontextmanager
+async def three_replicas(tmp_path: Path) -> AsyncIterator[list[_Replica]]:
+    """Three replicas, started inside the caller's event loop.
+
+    A context manager rather than an async fixture, and that is the whole
+    point. On some pytest/anyio combinations an async fixture runs in a
+    *different* event loop from the test that consumes it. A uvicorn server
+    started in the fixture's loop then never gets scheduled once the test's
+    loop takes over: the kernel still completes the TCP handshake into the
+    listen backlog, so a socket connect succeeds and everything looks alive,
+    while no TLS handshake ever happens and every request dies on the connect
+    timeout. That reads as "the mesh did not converge" and is really "the
+    servers were never running".
+
+    Entering the context manager from inside the test binds setup, the servers
+    and teardown to one loop by construction.
+    """
     ca_path, ca_key, ca_certificate = _issue_ca(tmp_path)
     ports = [_free_port() for _ in range(3)]
     names = ["replica-0", "replica-1", "replica-2"]
@@ -257,102 +274,140 @@ async def three_replicas(tmp_path: Path) -> Iterator[list[_Replica]]:
     for replica in replicas:
         await replica.serve()
     try:
+        await _require_serving(replicas)
         yield replicas
     finally:
         for replica in replicas:
             await replica.shutdown()
 
 
-class TestThreeReplicasConverge:
-    async def test_independent_appends_reach_one_root(self, three_replicas: list[_Replica]) -> None:
-        # Each replica writes only its own records, as replicas actually do:
-        # there is no shared writer and no leader.
-        for index, replica in enumerate(three_replicas):
-            for sequence in range(3):
-                replica.append(f"replica-{index}-record-{sequence}".encode())
+async def _require_serving(replicas: list[_Replica]) -> None:
+    """Fail loudly if the servers are listening but not actually serving.
 
-        assert len({replica.root for replica in three_replicas}) == 3
-
-        converged = await _converge(three_replicas)
-
-        assert converged is True
-        assert {replica.leaf_count for replica in three_replicas} == {9}
-
-    async def test_a_partition_heals(self, three_replicas: list[_Replica]) -> None:
-        first, second, isolated = three_replicas
-
-        # Partition: the third replica stops answering. From the others' point
-        # of view that is exactly what a network partition looks like.
-        isolated.server.should_exit = True
-        await asyncio.sleep(0.2)
-
-        first.append(b"written-during-partition-a")
-        second.append(b"written-during-partition-b")
-        isolated.append(b"written-in-isolation")
-
-        # The reachable majority converges without the isolated replica, and
-        # does not block waiting for it — no quorum, no leader election.
-        for _ in range(20):
-            await first.daemon.run_round()
-            await second.daemon.run_round()
-        assert first.root == second.root
-        assert first.leaf_count == 2
-        assert isolated.leaf_count == 1
-        assert isolated.root != first.root
-
-        # Heal: bring it back and let anti-entropy do its job. There is no
-        # catch-up log to replay — one successful round transfers everything.
-        restored = _Replica(
-            isolated.replica_id,
-            isolated.port,
-            Path(isolated.settings.client_certificate),
-            Path(isolated.settings.client_private_key),
-            Path(isolated.settings.certificate_authority),
-            isolated.settings.peers,
-        )
-        for payload in (b"written-in-isolation",):
-            restored.append(payload)
-        await restored.serve()
+    Without this, a harness fault is indistinguishable from a convergence
+    failure — and worse, the tests that assert a stranger is *refused* pass
+    for the wrong reason, because a dead server refuses everyone.
+    """
+    for replica in replicas:
+        peer = replica.settings.peers[0]
         try:
-            healed = await _converge([first, second, restored])
-            assert healed is True
-            assert first.leaf_count == 3
-            assert restored.leaf_count == 3
-        finally:
-            await restored.shutdown()
+            root = await replica.daemon._transport.fetch_root(peer)  # noqa: SLF001
+        except Exception as exc:  # noqa: BLE001 - any failure here is fatal
+            raise AssertionError(
+                f"replica {replica.replica_id} could not reach {peer.name}: "
+                f"{type(exc).__name__}: {exc!r}. The servers are not serving; "
+                "this is a harness fault, not a convergence result."
+            ) from exc
+        if len(root) != 64:
+            raise AssertionError(f"peer {peer.name} returned a non-root: {root!r}")
+
+
+class TestThreeReplicasConverge:
+    async def test_independent_appends_reach_one_root(self, tmp_path: Path) -> None:
+        async with three_replicas(tmp_path) as replicas:
+            # Each replica writes only its own records, as replicas actually
+            # do: there is no shared writer and no leader.
+            for index, replica in enumerate(replicas):
+                for sequence in range(3):
+                    replica.append(f"replica-{index}-record-{sequence}".encode())
+
+            assert len({replica.root for replica in replicas}) == 3
+
+            converged = await _converge(replicas)
+
+            assert converged is True
+            assert {replica.leaf_count for replica in replicas} == {9}
+
+    async def test_a_partition_heals(self, tmp_path: Path) -> None:
+        async with three_replicas(tmp_path) as replicas:
+            first, second, isolated = replicas
+
+            # Partition: the third replica stops answering. From the others'
+            # point of view that is exactly what a partition looks like.
+            isolated.server.should_exit = True
+            await asyncio.sleep(0.2)
+
+            first.append(b"written-during-partition-a")
+            second.append(b"written-during-partition-b")
+            isolated.append(b"written-in-isolation")
+
+            # The reachable pair converges without the isolated replica and
+            # does not block waiting for it — no quorum, no leader election.
+            for _ in range(20):
+                await first.daemon.run_round()
+                await second.daemon.run_round()
+            assert first.root == second.root
+            assert first.leaf_count == 2
+            assert isolated.leaf_count == 1
+            assert isolated.root != first.root
+
+            # Heal: bring it back and let anti-entropy do its job. There is no
+            # catch-up log to replay — one successful round transfers all of it.
+            restored = _Replica(
+                isolated.replica_id,
+                isolated.port,
+                Path(isolated.settings.client_certificate),
+                Path(isolated.settings.client_private_key),
+                Path(isolated.settings.certificate_authority),
+                isolated.settings.peers,
+            )
+            restored.append(b"written-in-isolation")
+            await restored.serve()
+            try:
+                healed = await _converge([first, second, restored])
+                assert healed is True
+                assert first.leaf_count == 3
+                assert restored.leaf_count == 3
+            finally:
+                await restored.shutdown()
 
     async def test_convergence_is_reached_whatever_order_rounds_run_in(
-        self, three_replicas: list[_Replica]
+        self, tmp_path: Path
     ) -> None:
         # The algebra promises order-independence; the transport must not
         # reintroduce an ordering dependence on top of it.
-        for index, replica in enumerate(three_replicas):
-            replica.append(f"payload-{index}".encode())
+        async with three_replicas(tmp_path) as replicas:
+            for index, replica in enumerate(replicas):
+                replica.append(f"payload-{index}".encode())
 
-        for replica in reversed(three_replicas):
-            await replica.daemon.run_round()
-        for replica in three_replicas:
-            await replica.daemon.run_round()
-        converged = await _converge(three_replicas)
+            for replica in reversed(replicas):
+                await replica.daemon.run_round()
+            for replica in replicas:
+                await replica.daemon.run_round()
+            converged = await _converge(replicas)
 
-        assert converged is True
-        assert {replica.leaf_count for replica in three_replicas} == {3}
+            assert converged is True
+            assert {replica.leaf_count for replica in replicas} == {3}
 
 
 class TestTheMeshRefusesStrangers:
-    async def test_a_peer_without_a_certificate_is_refused(
-        self, three_replicas: list[_Replica]
-    ) -> None:
+    """Refusal tests, each with a positive control.
+
+    A server that is listening but not serving refuses everyone, so "the
+    stranger was refused" means nothing on its own. Every test here first
+    proves that a *legitimate* client succeeds against the same server, so the
+    refusal that follows is attributable to the credential rather than to a
+    dead listener.
+    """
+
+    async def test_a_peer_without_a_certificate_is_refused(self, tmp_path: Path) -> None:
         # The mesh's entire security boundary is "who is this": a peer supplies
-        # leaves that enter every replica's accumulator. A client with no
-        # certificate must not get to the handler.
-        target = three_replicas[0]
-        context = ssl.create_default_context(
-            cafile=target.settings.certificate_authority
-        )  # trusts the CA, presents nothing
-        async with httpx.AsyncClient(verify=context, timeout=5.0) as anonymous:
-            with pytest.raises(_REFUSED):
-                await anonymous.get(f"https://127.0.0.1:{target.port}/gossip/root")
+        # leaves that enter every replica's accumulator.
+        async with three_replicas(tmp_path) as replicas:
+            target = replicas[0]
+
+            # Positive control: a peer holding a valid certificate gets in.
+            admitted = await replicas[1].daemon._transport.fetch_root(  # noqa: SLF001
+                replicas[1].settings.peers[0]
+            )
+            assert len(admitted) == 64
+
+            context = ssl.create_default_context(
+                cafile=target.settings.certificate_authority
+            )  # trusts the CA, presents nothing
+            async with httpx.AsyncClient(verify=context, timeout=5.0) as anonymous:
+                with pytest.raises(_REFUSED):
+                    await anonymous.get(f"https://127.0.0.1:{target.port}/gossip/root")
 
     async def test_a_certificate_from_another_ca_is_refused(self, tmp_path: Path) -> None:
         real_dir = tmp_path / "real"
@@ -370,6 +425,13 @@ class TestTheMeshRefusesStrangers:
         replica = _Replica(1, port, certificate, key, ca_path, ())
         await replica.serve()
         try:
+            # Positive control: the replica's own certificate is admitted.
+            trusted = ssl.create_default_context(cafile=str(ca_path))
+            trusted.load_cert_chain(str(certificate), str(key))
+            async with httpx.AsyncClient(verify=trusted, timeout=5.0) as legitimate:
+                response = await legitimate.get(f"https://127.0.0.1:{port}/gossip/root")
+                assert response.status_code == 200
+
             context = ssl.create_default_context(cafile=str(ca_path))
             context.load_cert_chain(str(stranger_cert), str(stranger_key))
             async with httpx.AsyncClient(verify=context, timeout=5.0) as impostor:
