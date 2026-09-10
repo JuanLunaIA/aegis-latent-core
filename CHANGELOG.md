@@ -46,11 +46,13 @@ to say, in a test. Two tests assert exactly that, one per rejection. The
 that policy-field rejection (a wrong measurement, a stale TCB status) can be
 tested without the nonce check masking which field did the rejecting.
 
-Protocol conformance is checked by mypy rather than assumed, through a
-`TYPE_CHECKING` binding of each backend to `AttestationVerifier`. Signature
-drift would otherwise surface at runtime in a deployment that has the hardware,
-which is the most expensive place to find it; the check was confirmed to have
-teeth by drifting a signature and observing mypy reject it.
+Protocol conformance is checked by mypy rather than assumed: each backend
+inherits `AttestationVerifier` explicitly rather than satisfying it
+structurally. `TEEManager` accepts the protocol structurally either way, but
+naming it as a base makes mypy reject a drifted `verify` signature at build
+time — otherwise the drift surfaces at runtime in a deployment that has the
+hardware, which is the most expensive place to find it. The check was confirmed
+to have teeth by drifting a signature and observing mypy reject it.
 
 **No attestation is performed anywhere in this tree and none is claimed.**
 Recorded as `CLM-086`, whose register entry blocks "hardware-attested",
