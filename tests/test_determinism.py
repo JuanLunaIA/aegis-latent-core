@@ -231,10 +231,12 @@ async def _measure_spawn_background_jitter(n: int) -> list[float]:
     with patch("aegis.core.observability.SCHEDULING_JITTER") as mock_hist:
         mock_hist.observe = lambda v: observed.append(v)
         # Sequential dispatch: one task at a time, matching the production
-        # pattern (one background commit per request).
+        # pattern (one background commit per request). Awaited inline rather
+        # than through a named task: the wait is the point, and binding it
+        # first leaves `await task` — a statement CodeQL reads as having no
+        # effect, since it does not model await as a side effect.
         for _ in range(n):
-            task = _spawn_background(_noop())
-            await task
+            await _spawn_background(_noop())
 
     return observed
 
