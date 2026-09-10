@@ -188,15 +188,25 @@ def main() -> int:
             "fsync_calls_before": before["fsync_calls"],
             "fsync_calls_after": after["fsync_calls"],
         },
+        # Each entry is parenthesised rather than relying on implicit
+        # concatenation. Inside a list the two are visually identical, so a
+        # dropped comma silently merges two limitations into one and quietly
+        # deletes a caveat from the report — which CodeQL flags, correctly.
         "limitations": [
-            "fsync cost is a property of the device and filesystem under the run, "
-            "not of this code; the same A/B on different storage will differ, and a "
-            "slower device makes the coalescing win larger, not smaller.",
-            "Concurrency here comes from a thread pool in one process. It stands in "
-            "for the proxy's asyncio.to_thread commit path but is not that path.",
-            "This is a throughput and latency measurement. It is not a durability "
-            "proof; the durability properties are asserted in "
-            "tests/test_coalesced_commit.py.",
+            (
+                "fsync cost is a property of the device and filesystem under the run, "
+                "not of this code; the same A/B on different storage will differ, and a "
+                "slower device makes the coalescing win larger, not smaller."
+            ),
+            (
+                "Concurrency here comes from a thread pool in one process. It stands in "
+                "for the proxy's asyncio.to_thread commit path but is not that path."
+            ),
+            (
+                "This is a throughput and latency measurement. It is not a durability "
+                "proof; the durability properties are asserted in "
+                "tests/test_coalesced_commit.py."
+            ),
             "No capacity, SLA or production-readiness claim is made or implied.",
         ],
     }

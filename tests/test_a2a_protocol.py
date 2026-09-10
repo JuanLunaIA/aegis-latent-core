@@ -265,8 +265,7 @@ def test_a_cluster_receipt_names_the_replica_that_holds_the_record(
 ) -> None:
     from aegis.core.a2a import verify_cluster_receipt
 
-    other = CryptographicAuditLedger(str(tmp_path / "other.jsonl"), signing_key=SIGNING_KEY)
-    try:
+    with CryptographicAuditLedger(str(tmp_path / "other.jsonl"), signing_key=SIGNING_KEY) as other:
         other.commit_forensic(state_id="elsewhere", request_bytes=b"a", response_bytes=b"b")
         receipt = _issue(ledger)
         roots = {
@@ -275,21 +274,18 @@ def test_a_cluster_receipt_names_the_replica_that_holds_the_record(
         }
 
         assert verify_cluster_receipt(receipt, roots) == "replica-b"
-    finally:
-        other.close()
 
 
 def test_a_receipt_no_replica_recorded_matches_nothing(ledger: Any, tmp_path: Path) -> None:
     from aegis.core.a2a import verify_cluster_receipt
 
-    other = CryptographicAuditLedger(str(tmp_path / "stranger.jsonl"), signing_key=SIGNING_KEY)
-    try:
+    with CryptographicAuditLedger(
+        str(tmp_path / "stranger.jsonl"), signing_key=SIGNING_KEY
+    ) as other:
         other.commit_forensic(state_id="elsewhere", request_bytes=b"a", response_bytes=b"b")
         receipt = _issue(ledger)
 
         assert verify_cluster_receipt(receipt, {"replica-a": other._mmr.get_root_hash()}) is None
-    finally:
-        other.close()
 
 
 def test_a_tampered_receipt_matches_no_replica(ledger: Any) -> None:

@@ -102,8 +102,7 @@ class TestConcurrentCommitsAreDurable:
     def test_a_hundred_concurrent_commits_all_land_exactly_once(self, tmp_path: Path) -> None:
         """The order's headline case, driven for real against a slow disk."""
         disk = _SlowDisk()
-        ledger = _ledger(tmp_path, disk)
-        try:
+        with _ledger(tmp_path, disk) as ledger:
             with ThreadPoolExecutor(max_workers=32) as pool:
                 returned = sorted(pool.map(lambda i: _commit(ledger, i), range(WRITERS)))
 
@@ -117,8 +116,6 @@ class TestConcurrentCommitsAreDurable:
             assert intact is True
             assert broken_at is None
             assert len(ledger.chain) == WRITERS
-        finally:
-            ledger.close()
 
     def test_the_fsync_count_is_far_below_the_commit_count(self, tmp_path: Path) -> None:
         """Without coalescing this is 100 fsyncs; the whole point is that it is not.
@@ -128,8 +125,7 @@ class TestConcurrentCommitsAreDurable:
         achieves N'.
         """
         disk = _SlowDisk()
-        ledger = _ledger(tmp_path, disk)
-        try:
+        with _ledger(tmp_path, disk) as ledger:
             with ThreadPoolExecutor(max_workers=32) as pool:
                 list(pool.map(lambda i: _commit(ledger, i), range(WRITERS)))
             stats = ledger.group_commit_stats
@@ -141,8 +137,6 @@ class TestConcurrentCommitsAreDurable:
             # far better than 2:1, but scheduling on a loaded CI box is not
             # something a correctness test should depend on.
             assert stats.records_per_fsync > 2.0
-        finally:
-            ledger.close()
 
     def test_a_lone_committer_is_not_delayed_waiting_for_company(self, tmp_path: Path) -> None:
         """The linger must not tax the uncontended path.
@@ -152,8 +146,7 @@ class TestConcurrentCommitsAreDurable:
         2 ms linger would cost at least 20 ms of pure waiting; this asserts they
         do not.
         """
-        ledger = _ledger(tmp_path, lambda fd: None, commit_batch_timeout_ms=50.0)
-        try:
+        with _ledger(tmp_path, lambda fd: None, commit_batch_timeout_ms=50.0) as ledger:
             started = time.perf_counter()
             for index in range(10):
                 _commit(ledger, index)
@@ -165,8 +158,6 @@ class TestConcurrentCommitsAreDurable:
                 f"10 solo commits took {elapsed:.3f}s with a 50 ms linger; "
                 "the linger is being paid when nobody else is waiting"
             )
-        finally:
-            ledger.close()
 
     def test_commits_keep_working_across_a_wal_rotation(self, tmp_path: Path) -> None:
         """Rotation fsyncs and replaces the descriptor a syncer may be inside.
@@ -176,8 +167,7 @@ class TestConcurrentCommitsAreDurable:
         repeatedly during the run.
         """
         disk = _SlowDisk(delay=0.005)
-        ledger = _ledger(tmp_path, disk, max_wal_bytes=4096)
-        try:
+        with _ledger(tmp_path, disk, max_wal_bytes=4096) as ledger:
             with ThreadPoolExecutor(max_workers=16) as pool:
                 returned = sorted(pool.map(lambda i: _commit(ledger, i), range(WRITERS)))
             intact, _ = ledger.verify_integrity()
@@ -186,16 +176,13 @@ class TestConcurrentCommitsAreDurable:
             assert returned == sorted(f"req-{i:04d}" for i in range(WRITERS))
             assert intact is True
             assert segments, "the threshold was too high to exercise rotation"
-        finally:
-            ledger.close()
 
 
 class TestABatchFailsClosedTogether:
     def test_no_commit_returns_once_the_disk_stops_accepting_writes(self, tmp_path: Path) -> None:
         """Fail-closed is the point: a failed fsync must not yield a receipt."""
         disk = _FailingDisk()
-        ledger = _ledger(tmp_path, disk)
-        try:
+        with _ledger(tmp_path, disk) as ledger:
             _commit(ledger, 0)  # healthy, proves the harness works
             disk.armed.set()
 
@@ -209,8 +196,6 @@ class TestABatchFailsClosedTogether:
 
             assert all(o == "failed" for o in outcomes), outcomes
             assert ledger._fault_state == "wal_persist_failed"
-        finally:
-            ledger.close()
 
     def test_the_ledger_refuses_further_commits_after_a_durability_failure(
         self, tmp_path: Path
@@ -221,8 +206,7 @@ class TestABatchFailsClosedTogether:
         see, so the engine latches and every later commit is refused too.
         """
         disk = _FailingDisk()
-        ledger = _ledger(tmp_path, disk)
-        try:
+        with _ledger(tmp_path, disk) as ledger:
             _commit(ledger, 0)
             disk.armed.set()
             with pytest.raises(WalDurabilityError):
@@ -232,8 +216,6 @@ class TestABatchFailsClosedTogether:
             disk.armed.clear()
             with pytest.raises(WalDurabilityError):
                 _commit(ledger, 2)
-        finally:
-            ledger.close()
 
     def test_a_failed_commit_is_reported_as_a_failure_not_a_missing_node(
         self, tmp_path: Path
@@ -245,13 +227,10 @@ class TestABatchFailsClosedTogether:
         behind it.
         """
         disk = _FailingDisk()
-        ledger = _ledger(tmp_path, disk)
-        try:
+        with _ledger(tmp_path, disk) as ledger:
             disk.armed.set()
             with pytest.raises(WalDurabilityError):
                 _commit(ledger, 0)
-        finally:
-            ledger.close()
 
 
 def _outcome(ledger: CryptographicAuditLedger, index: int) -> str:
