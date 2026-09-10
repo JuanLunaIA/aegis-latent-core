@@ -7,7 +7,10 @@ Architecture:
     and a computed node_hash linking the chain.
   - Signing: HMAC-SHA256 when signing_key is provided; no legal conclusion is implied.
     PQC-ML-DSA via aegis_rust extension when available.
-  - WAL: line-delimited JSON; crash-consistent via fsync after each write.
+  - WAL: line-delimited JSON. A commit does not return until its record is
+    fsynced, but the fsync is coalesced across concurrent commits by
+    ``aegis.core.group_commit`` — durability per record, one device round trip
+    per batch.
   - Memory: collections.deque(maxlen=N) — O(1) eviction, no pop(0) overhead.
 
 FIX-CAL-01: WAL file handle lifecycle.
@@ -71,6 +74,13 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from aegis.core.crypto_shredder import CryptoShredder, SealedPayload
 from aegis.core.forensic import build_merkle_leaf, build_stream_merkle_leaf, sha256_hex
 from aegis.core.forensic_bundle import canonical_jcs_bytes
+from aegis.core.group_commit import (
+    DEFAULT_LINGER_SECONDS,
+    DEFAULT_MAX_BATCH,
+    CoalescedCommitEngine,
+    GroupCommitStats,
+    WalDurabilityError,
+)
 from aegis.core.hsm import HSMSigningBackend, HSMUnavailableError
 from aegis.core.mmr import (
     HASH_SCHEME_V1,
@@ -125,6 +135,42 @@ MAX_PAYLOAD_BYTES: int = 1_048_576  # 1 MiB hard cap
 # is replayed, so a bump degrades performance rather than correctness.
 _MMR_STATE_VERSION: int = 1
 _DEFAULT_MAX_FORENSIC_BYTES: int = 65_536
+
+
+def _resolve_commit_batch_max_size(explicit: int | None) -> int:
+    """Queue depth at which the group-commit syncer stops waiting for company.
+
+    An explicit argument wins; otherwise ``AEGIS_COMMIT_BATCH_MAX_SIZE``, then
+    the module default. An unparseable or out-of-range environment value falls
+    back to the default rather than raising: a malformed tuning knob must not
+    stop the ledger from opening, because refusing to record evidence is a worse
+    outcome than recording it with default batching.
+    """
+    if explicit is not None:
+        return explicit
+    raw = os.environ.get("AEGIS_COMMIT_BATCH_MAX_SIZE", "")
+    try:
+        value = int(raw)
+    except ValueError:
+        return DEFAULT_MAX_BATCH
+    return value if value >= 1 else DEFAULT_MAX_BATCH
+
+
+def _resolve_commit_batch_linger(explicit_ms: float | None) -> float:
+    """Longest the syncer may wait for company, in seconds.
+
+    Configured in milliseconds (``AEGIS_COMMIT_BATCH_TIMEOUT_MS``) because that
+    is the scale an operator thinks in; stored in seconds because that is what
+    ``threading.Condition.wait`` takes. Same fallback rule as above.
+    """
+    if explicit_ms is not None:
+        return max(0.0, explicit_ms) / 1000.0
+    raw = os.environ.get("AEGIS_COMMIT_BATCH_TIMEOUT_MS", "")
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_LINGER_SECONDS
+    return max(0.0, value) / 1000.0 if value >= 0.0 else DEFAULT_LINGER_SECONDS
 
 
 class WalWriterConflictError(RuntimeError):
@@ -488,8 +534,28 @@ class CryptographicAuditLedger:
     Append-only Merkle chain of forensic LLM interaction records.
 
     Thread-safety: all mutations are guarded by a reentrant Lock.
-    WAL: each node is fsync'd before the in-memory chain is updated, ensuring
-    no committed node is lost across crashes.
+
+    WAL durability
+    --------------
+    A commit does not return until its record is on stable storage, but the
+    ``fsync`` is shared: concurrent commits are coalesced into one device round
+    trip by ``aegis.core.group_commit``. Two consequences are worth stating
+    exactly, because they differ from the older per-record ``fsync``.
+
+    A node enters the in-memory chain once its bytes are written and ordered,
+    which is *before* its batch is synced — necessary, because the next
+    committer has to be able to read the tip to link against it while this one
+    is still waiting. Nothing observes that node in the meantime: the commit
+    call has not returned. If the process dies in that window the in-memory
+    chain dies with it, and replay rebuilds a shorter, internally consistent
+    chain from the WAL.
+
+    A batch is durable together or not at all. A failed ``fsync`` fails every
+    commit waiting on it and latches ``wal_persist_failed``, which
+    ``_require_intact_ledger`` in the proxy reads to answer 503 and stop
+    extending the chain. Individual nodes are deliberately *not* unwound: later
+    nodes have already linked against them, so there is no single node whose
+    removal leaves a consistent chain.
 
     Parameters
     ----------
@@ -544,6 +610,8 @@ class CryptographicAuditLedger:
         pqc_identity_path: str | os.PathLike[str] | None = None,
         enable_cryptographic_shredding: bool = False,
         shredder_vault_path: str | os.PathLike[str] | None = None,
+        commit_batch_max_size: int | None = None,
+        commit_batch_timeout_ms: float | None = None,
     ) -> None:
         if mmr_hash_scheme not in _SCHEME_PROOF_VERSIONS and mmr_hash_scheme != MMR_SCHEME_AUTO:
             raise ValueError(
@@ -570,9 +638,19 @@ class CryptographicAuditLedger:
         self.chain: deque[AuditNode] = deque(maxlen=max_memory_nodes)
         self._window_anchor_hash = "0" * 64
         self._lock = Lock()
+        # Guards *which descriptor is current*, not the ledger state. The
+        # group-commit syncer runs with `_lock` released — that is the whole
+        # point — so it needs something to hold the WAL handle still against a
+        # concurrent rotation. Lock order is always `_lock` then `_sync_lock`;
+        # the syncer takes only `_sync_lock`, so there is no cycle.
+        self._sync_lock = Lock()
         self._wal_handle: TextIO | None = None
         self._wal_bytes = 0
         self._fault_state: str = "healthy"
+        self._commit_engine = CoalescedCommitEngine(
+            max_batch=_resolve_commit_batch_max_size(commit_batch_max_size),
+            linger_seconds=_resolve_commit_batch_linger(commit_batch_timeout_ms),
+        )
         self.pqc_identity_path = str(pqc_identity_path) if pqc_identity_path else ""
         self.enable_cryptographic_shredding = enable_cryptographic_shredding
         self._shredder: CryptoShredder | None = None
@@ -753,13 +831,19 @@ class CryptographicAuditLedger:
             )
 
             try:
-                self._persist_node(node)
+                ticket = self._persist_node(node)
             except Exception:
                 self._mmr.rollback_to(mmr_before)
                 self._fault_state = "wal_persist_failed"
                 raise
             self._append_memory_node(node)
-            return node
+        # Outside the lock on purpose. Waiting for the fsync here is what lets
+        # the next committer write while this one is still waiting, so a burst
+        # of concurrent commits costs one device round trip rather than one
+        # each. The node is not returned — not reported committed — until its
+        # record is on stable storage.
+        self._await_durable(ticket)
+        return node
 
     def commit_rejection(
         self,
@@ -885,13 +969,19 @@ class CryptographicAuditLedger:
             )
 
             try:
-                self._persist_node(node)
+                ticket = self._persist_node(node)
             except Exception:
                 self._mmr.rollback_to(mmr_before)
                 self._fault_state = "wal_persist_failed"
                 raise
             self._append_memory_node(node)
-            return node
+        # Outside the lock on purpose. Waiting for the fsync here is what lets
+        # the next committer write while this one is still waiting, so a burst
+        # of concurrent commits costs one device round trip rather than one
+        # each. The node is not returned — not reported committed — until its
+        # record is on stable storage.
+        self._await_durable(ticket)
+        return node
 
     def commit_state(
         self,
@@ -1063,13 +1153,19 @@ class CryptographicAuditLedger:
                 sealed_ciphertext=sealed.ciphertext.hex() if sealed else "",
             )
             try:
-                self._persist_node(node)
+                ticket = self._persist_node(node)
             except Exception:
                 self._mmr.rollback_to(mmr_before)
                 self._fault_state = "wal_persist_failed"
                 raise
             self._append_memory_node(node)
-            return node
+        # Outside the lock on purpose. Waiting for the fsync here is what lets
+        # the next committer write while this one is still waiting, so a burst
+        # of concurrent commits costs one device round trip rather than one
+        # each. The node is not returned — not reported committed — until its
+        # record is on stable storage.
+        self._await_durable(ticket)
+        return node
 
     def verify_integrity(self) -> tuple[bool, int | None]:
         """O(N) full-chain integrity sweep.
@@ -1225,19 +1321,24 @@ class CryptographicAuditLedger:
             # Checkpoint before releasing the handle: a clean shutdown is the
             # case where the next start can skip the whole replay.
             self._save_mmr_state()
-            if self._wal_handle is not None:
-                try:
-                    self._wal_handle.flush()
-                    self._fsync(self._wal_handle.fileno())
-                except OSError:
-                    # Swallowed deliberately: close() must release the handle
-                    # even when the final flush fails. Raising here would leak
-                    # the descriptor and the lock with it. Records already
-                    # fsynced at commit time are durable either way.
-                    pass
-                _unlock_wal_fd(self._wal_handle.fileno())
-                self._wal_handle.close()
-                self._wal_handle = None
+            with self._sync_lock:
+                if self._wal_handle is not None:
+                    try:
+                        self._wal_handle.flush()
+                        self._fsync(self._wal_handle.fileno())
+                    except OSError as exc:
+                        # Still swallowed for the caller: close() must release
+                        # the handle even when the final flush fails, or it
+                        # leaks the descriptor and the WAL lock with it. But the
+                        # group-commit engine is told, so any commit still
+                        # waiting on this fsync fails closed instead of being
+                        # released against a write that never landed.
+                        self._commit_engine.fail(exc)
+                    else:
+                        self._commit_engine.note_external_sync()
+                    _unlock_wal_fd(self._wal_handle.fileno())
+                    self._wal_handle.close()
+                    self._wal_handle = None
 
     # ── Context manager ────────────────────────────────────────────────────
 
@@ -1341,7 +1442,16 @@ class CryptographicAuditLedger:
         drops nodes — every committed record is preserved in an archived
         segment (0o600) and replayed on the next startup. Failures degrade
         gracefully: the ledger keeps writing to the current/active WAL.
+
+        Takes ``_sync_lock`` for its whole body, because it is the one thing
+        that replaces the descriptor a group-commit syncer may be inside an
+        ``fsync`` on.
         """
+        with self._sync_lock:
+            self._rotate_wal_locked()
+
+    def _rotate_wal_locked(self) -> None:
+        """Body of :meth:`_rotate_wal`, with ``_sync_lock`` already held."""
         # Checkpoint the accumulator at the rotation boundary. The leaves it
         # summarises are the ones about to move into the archived segment, so
         # a restart replays only what was written after this point.
@@ -1352,11 +1462,23 @@ class CryptographicAuditLedger:
             try:
                 self._wal_handle.flush()
                 self._fsync(self._wal_handle.fileno())
-            except OSError:
-                # Swallowed deliberately: rotation must still close and rename
-                # the segment when the final flush fails. Abandoning rotation
-                # here would leave the active WAL growing past its threshold.
-                pass
+            except OSError as exc:
+                # Rotation itself still proceeds — abandoning it would leave the
+                # active WAL growing past its threshold — but the failure is NOT
+                # swallowed any more. This fsync is what would have made every
+                # pending group-commit ticket durable, so if it failed those
+                # records are not on the disk and their commits must not be
+                # allowed to report success.
+                self._commit_engine.fail(exc)
+                logger.error(
+                    "WAL rotation could not fsync the outgoing segment (%s); "
+                    "pending commits will fail closed",
+                    exc,
+                )
+            else:
+                # The outgoing segment is on stable storage, and with it every
+                # record written to this descriptor. Waiters can go.
+                self._commit_engine.note_external_sync()
             # Release before the rename: on Windows the lock is mandatory and
             # the same process is about to reopen this path.
             _unlock_wal_fd(self._wal_handle.fileno())
@@ -1644,14 +1766,29 @@ class CryptographicAuditLedger:
             except OSError:  # pragma: no cover - best-effort cleanup
                 logger.debug("Could not remove temporary identity file %s", temporary)
 
-    def _persist_node(self, node: AuditNode) -> None:
-        """Append node as a JSON line to the WAL. Must be called under self._lock."""
+    def _persist_node(self, node: AuditNode) -> int | None:
+        """Append node as a JSON line to the WAL. Must be called under self._lock.
+
+        Writes and flushes, but does **not** ``fsync``. The record is in the
+        operating system's hands and correctly ordered against every other
+        record, and is not yet on stable storage — so this returns a
+        group-commit ticket, and the caller must pass it to
+        :meth:`_await_durable` *after releasing the lock* before reporting the
+        node as committed. Splitting it that way is the whole point: it lets one
+        ``fsync`` retire every record written while it was in flight, instead of
+        charging each request a separate device round trip inside the lock.
+
+        Returns:
+            A ticket for :meth:`_await_durable`, or ``None`` when the record was
+            already made durable inline (the handle-less fallback path below).
+        """
         line = json.dumps(node.to_dict(), separators=(",", ":")) + "\n"
         nbytes = len(line.encode("utf-8"))
+        ticket: int | None = None
         if self._wal_handle is not None:
             self._wal_handle.write(line)
             self._wal_handle.flush()
-            self._fsync(self._wal_handle.fileno())
+            ticket = self._commit_engine.enqueue()
             self._wal_bytes += nbytes
         else:
             # Safety fallback: _open_wal() failed at init time.
@@ -1679,11 +1816,62 @@ class CryptographicAuditLedger:
             except OSError:
                 self._wal_bytes += nbytes
 
-        # Rotate AFTER the node is durably written: the just-written record is
-        # safely inside the segment that gets archived, so no node is ever in
-        # flight during the rename.
+        # Rotate AFTER the node's bytes are in the file: the just-written record
+        # is safely inside the segment that gets archived, so no node is ever in
+        # flight during the rename. Rotation flushes and fsyncs the outgoing
+        # segment before closing it, which is what makes every pending ticket
+        # durable — `_rotate_wal` tells the engine so, and the ticket returned
+        # here then resolves without a second sync.
         if self.max_wal_bytes > 0 and self._wal_bytes >= self.max_wal_bytes:
             self._rotate_wal()
+        return ticket
+
+    def _sync_wal(self) -> None:
+        """Force the WAL to stable storage. The group-commit engine's syncer.
+
+        Runs with the ledger lock released, so it takes ``_sync_lock`` to stop
+        a rotation from closing the descriptor mid-``fsync``.
+
+        No flush here: writers flush under the ledger lock, so by the time a
+        ticket exists its bytes are already with the kernel. ``fsync`` on the
+        descriptor then covers every record written to it, which is exactly the
+        property the batching rests on.
+        """
+        with self._sync_lock:
+            handle = self._wal_handle
+            if handle is None or handle.closed:
+                # The only thing that replaces the handle is rotation, and it
+                # flushes and fsyncs the outgoing segment first. Anything this
+                # batch wrote is therefore already durable in that segment;
+                # there is nothing left here to force.
+                return
+            self._fsync(handle.fileno())
+
+    def _await_durable(self, ticket: int | None) -> None:
+        """Block until a ticketed record is on stable storage.
+
+        Must be called with the ledger lock **released**.
+
+        A failure here poisons the ledger rather than unwinding one node. The
+        batch that failed may hold records from several concurrent commits, and
+        later nodes have already linked against this one, so there is no single
+        node to roll back to a consistent state. Latching
+        ``wal_persist_failed`` is what the proxy's ``_require_intact_ledger``
+        already reads to answer 503 and stop extending the chain.
+        """
+        if ticket is None:
+            return
+        try:
+            self._commit_engine.await_durable(ticket, self._sync_wal)
+        except WalDurabilityError:
+            with self._lock:
+                self._fault_state = "wal_persist_failed"
+            raise
+
+    @property
+    def group_commit_stats(self) -> GroupCommitStats:
+        """How well concurrent commits are coalescing onto single ``fsync``s."""
+        return self._commit_engine.stats
 
     # ── MMR peak-set checkpoint ────────────────────────────────────────────
     #

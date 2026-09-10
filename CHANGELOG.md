@@ -15,6 +15,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — concurrent WAL commits now share one `fsync` (group commit)
+
+A commit did not return until its record was `fsync`ed, and that `fsync` was
+issued **inside the ledger lock**, one per record. So concurrent commits did not
+merely each pay for a device round trip — they paid for them *in series*. Under
+32 concurrent writers, measured on this repository's own filesystem, that was
+p99 55.5 ms and 1,065 commits/s.
+
+`aegis/core/group_commit.py` coalesces them. An `fsync` makes everything already
+written to the descriptor durable, not just the caller's own record, so one call
+can retire a whole burst. Records are written and ordered under the ledger lock;
+the lock is then released, and one waiter issues a single `fsync` covering every
+record written while it was in flight. Same workload after: **p99 24.8 ms,
+1,536 commits/s, and 66 `fsync` calls in place of 400** — reproducible with
+`tools/benchmarks/run_group_commit.py`.
+
+No artificial delay is used, and that is deliberate. Batching does not need a
+timer: while the syncer is inside its `fsync`, later writers pile up behind it,
+and the next syncer retires all of them. A fixed linger would tax the
+uncontended path — the common case — to help a case that already batches on its
+own, so `AEGIS_COMMIT_BATCH_TIMEOUT_MS` is only ever paid when another committer
+is already waiting. `AEGIS_COMMIT_BATCH_MAX_SIZE` bounds that wait; it cannot
+bound what an `fsync` covers, because `fsync` is not scopable to part of a file.
+
+Two properties changed and both are stated rather than glossed:
+
+- **A node enters the in-memory chain before its batch is synced.** It has to:
+  the next committer reads the tip to link against it. Nothing observes the node
+  in the meantime, because the commit call has not returned, and a crash in that
+  window loses the in-memory chain too — replay rebuilds a shorter, internally
+  consistent chain from the WAL. The previous invariant, "each node is fsynced
+  before the in-memory chain is updated", no longer holds and has been corrected
+  wherever it was written down.
+- **A batch is durable together or not at all.** A failed `fsync` raises
+  `WalDurabilityError` to *every* commit waiting on it and latches
+  `wal_persist_failed`, which `_require_intact_ledger` already reads to answer
+  503 and stop extending the chain. Individual nodes are deliberately not
+  unwound: later nodes have already linked against them, so there is no single
+  node whose removal leaves a consistent chain. The engine stays latched after
+  the disk recovers, because a descriptor that lost a write may have lost it
+  silently.
+
+WAL rotation and `close()` both `fsync` before replacing or releasing the
+descriptor, which makes pending records durable as a side effect; both now tell
+the engine so, and — where they previously swallowed the error — report a failed
+`fsync` to it instead, so waiters fail closed rather than being released against
+a write that never landed.
+
+Recorded as `CLM-082`. `CLM-059` was widened: `wal_persist_failed` is now also
+reachable from a durability failure at commit time, not only from startup
+replay.
+
+
 ### Fixed — concurrent appends forked the enterprise storage chain (P0)
 
 The analytics path read the chain tip, then built and **signed** the node — an
