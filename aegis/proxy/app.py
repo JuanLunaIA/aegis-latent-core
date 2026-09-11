@@ -39,6 +39,7 @@ from aegis.config import AegisSettings, get_settings
 from aegis.core import observability
 from aegis.core.circuit_breaker import CircuitOpenError
 from aegis.core.crypto_audit import AuditNode, CryptographicAuditLedger
+from aegis.core.forensic import WAF_VERDICT_PASSED
 from aegis.core.hsm import HSMSigningBackend
 from aegis.core.mmr import MMR_PROOF_VERSION_V1
 from aegis.core.normalization import canonical_normalize
@@ -1203,6 +1204,13 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     scrub_method=scrub_method,
                     signer_name="",
                     signature_meaning="request-response-evidence",
+                    # Reaching this line means the WAF allowed the request: the
+                    # check above raises HTTPException when it does not, so a
+                    # blocked request never arrives at a durable commit. The
+                    # verdict was previously implicit in that control flow and
+                    # therefore unprovable; recording it puts the outcome inside
+                    # the bytes the MMR commits to, where a proof can reach it.
+                    waf_verdict=WAF_VERDICT_PASSED,
                 )
                 # Content-free by policy: no payload, tenant or subject value
                 # ever becomes a span attribute, exactly as for metric labels.

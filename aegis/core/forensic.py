@@ -24,6 +24,32 @@ class TokenTrailEntry:
         return asdict(self)
 
 
+# ── WAF verdict vocabulary ────────────────────────────────────────────────────
+#
+# A closed set, and closed for two reasons. The obvious one is that a verdict is
+# machine-readable and an open string would let callers invent values nothing
+# downstream understands. The load-bearing one is that this value is the first
+# free-form field to enter the signed payload, which is joined with "|": an
+# unconstrained verdict could carry a delimiter and make two different field
+# lists serialise identically. Every member below is delimiter-free, and
+# `validate_waf_verdict` refuses anything that is not a member, so the ambiguity
+# cannot be constructed rather than merely being unlikely.
+WAF_VERDICT_PASSED = "passed"
+WAF_VERDICT_BLOCKED = "blocked"
+#: Empty means "no verdict recorded", which is what every node written before
+#: this field existed carries. It is not a third outcome.
+WAF_VERDICT_UNRECORDED = ""
+
+_WAF_VERDICTS = frozenset({WAF_VERDICT_PASSED, WAF_VERDICT_BLOCKED, WAF_VERDICT_UNRECORDED})
+
+
+def validate_waf_verdict(verdict: str) -> str:
+    """Return *verdict* if it is a member of the closed vocabulary, else raise."""
+    if not isinstance(verdict, str) or verdict not in _WAF_VERDICTS:
+        raise ValueError(f"waf_verdict must be one of {sorted(_WAF_VERDICTS)!r}, got {verdict!r}")
+    return verdict
+
+
 def sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -56,11 +82,34 @@ def build_merkle_leaf(
     model: str,
     endpoint: str,
     max_bytes: int,
+    waf_verdict: str = WAF_VERDICT_UNRECORDED,
 ) -> bytes:
-    """Canonical bytes hashed into the MMR (full forensic envelope)."""
+    """Canonical bytes hashed into the MMR (full forensic envelope).
+
+    ``waf_verdict`` is **omitted entirely when empty**, which is what keeps this
+    change backward compatible. These bytes are a wire contract: both SDKs
+    reconstruct this exact JSON field by field to verify a receipt
+    (``sdk/python/src/aegis_sdk/a2a.py``, ``sdk/typescript/src/a2a.ts``), so an
+    unconditional key would change every leaf and strand every already-issued
+    receipt against every published SDK. Omitting it leaves a verdict-free
+    envelope byte-identical to what this function has always produced, and
+    confines any wire boundary to receipts that actually carry a verdict.
+
+    Today that boundary is empty. The only envelope either SDK reconstructs is
+    the A2A receipt, and ``aegis.core.a2a`` records no verdict, so those bytes
+    are unchanged and every published SDK keeps verifying every A2A receipt.
+    Forensic leaves, which may carry one, are never reconstructed by an SDK —
+    inclusion is verified from a leaf *hash*.
+
+    Adding the verdict here rather than only to the node signature is what makes
+    it provable. The MMR commits to *these* bytes, so a statement about the
+    verdict can be proved against a root only if the verdict is inside them; a
+    signature binds the verdict to the node, but the tree would know nothing
+    about it.
+    """
     req_capped = cap_bytes(request_bytes, max_bytes)
     resp_capped = cap_bytes(response_bytes or b"", max_bytes)
-    envelope = {
+    envelope: dict[str, Any] = {
         "state_id": state_id,
         "request_hash": sha256_hex(request_bytes),
         "response_hash": sha256_hex(response_bytes) if response_bytes else "",
@@ -71,6 +120,8 @@ def build_merkle_leaf(
         "model": model,
         "endpoint": endpoint,
     }
+    if validate_waf_verdict(waf_verdict) != WAF_VERDICT_UNRECORDED:
+        envelope["waf_verdict"] = waf_verdict
     return json.dumps(envelope, sort_keys=True, separators=(",", ":")).encode()
 
 
