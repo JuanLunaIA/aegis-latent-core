@@ -28,6 +28,7 @@ import os
 
 import pytest
 
+import aegis.crypto as aegis_crypto
 from aegis.core.forensic import (
     WAF_VERDICT_BLOCKED,
     WAF_VERDICT_PASSED,
@@ -201,8 +202,6 @@ class TestTheFacadeExportsTheRealSurfaceSeparately:
     """`aegis.crypto` carries a stub and a real construction; they must not blur."""
 
     def test_the_real_functions_are_exported(self) -> None:
-        import aegis.crypto as crypto
-
         for name in (
             "generate_zk_proof",
             "verify_zk_proof",
@@ -211,22 +210,19 @@ class TestTheFacadeExportsTheRealSurfaceSeparately:
             "split_passed_leaf",
             "ZKNativeUnavailableError",
         ):
-            assert name in crypto.__all__, f"{name} missing from the facade"
-            assert hasattr(crypto, name)
+            assert name in aegis_crypto.__all__, f"{name} missing from the facade"
+            assert hasattr(aegis_crypto, name)
 
     def test_the_stub_is_still_exported_and_still_a_stub(self) -> None:
         """`CLM-019` says the stub surface is a stub. That must stay true."""
-        import aegis.crypto as crypto
         from aegis.core.zk_proof import HAS_ZK_NATIVE
 
         assert HAS_ZK_NATIVE is False
-        assert "ZKProver" in crypto.__all__
+        assert "ZKProver" in aegis_crypto.__all__
 
     def test_capability_discovery_never_raises(self) -> None:
         """A caller must be able to branch without handling an exception."""
-        import aegis.crypto as crypto
-
-        assert isinstance(crypto.has_zk_native(), bool)
+        assert isinstance(aegis_crypto.has_zk_native(), bool)
 
     def test_the_facade_imports_without_the_extension(self) -> None:
         """Importing must not require `aegis_rust`, or a pure-Python checkout breaks."""
@@ -240,23 +236,19 @@ class TestTheFacadeExportsTheRealSurfaceSeparately:
 
 class TestSplittingALeafIsGuarded:
     def test_a_passed_leaf_splits_to_the_prefix_the_circuit_expects(self) -> None:
-        from aegis.crypto import split_passed_leaf
-
         leaf = build_merkle_leaf(**_LEAF, waf_verdict=WAF_VERDICT_PASSED)
-        assert split_passed_leaf(leaf) + PASSED_SUFFIX == leaf
+        assert aegis_crypto.split_passed_leaf(leaf) + PASSED_SUFFIX == leaf
 
     @pytest.mark.parametrize("verdict", [WAF_VERDICT_BLOCKED, None], ids=["blocked", "unrecorded"])
     def test_any_other_leaf_is_refused_here_rather_than_in_the_circuit(
         self, verdict: str | None
     ) -> None:
         """Slicing by hand would surface seconds later as an unsatisfiable circuit."""
-        from aegis.crypto import split_passed_leaf
-
         kwargs = dict(_LEAF)
         if verdict is not None:
             kwargs["waf_verdict"] = verdict
         with pytest.raises(ValueError, match="does not record a passed"):
-            split_passed_leaf(build_merkle_leaf(**kwargs))
+            aegis_crypto.split_passed_leaf(build_merkle_leaf(**kwargs))
 
     def test_the_suffix_is_derived_from_the_vocabulary_not_retyped(self) -> None:
         """So a change to the verdict spelling cannot leave the constant behind."""
