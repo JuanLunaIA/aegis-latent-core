@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "3dbbf20ff7daff33401c42dc30e3931f83ae964955100bb337fc727338f91b6e",
-      "size": 132558
+      "sha256": "8e31093e6152b6f0b960319be731a5df8df6976cc28c3e7a6717dfc816af334a",
+      "size": 134396
     },
     {
       "category": "governed_input",
@@ -189,8 +189,8 @@
     {
       "category": "governed_input",
       "path": "pyproject.toml",
-      "sha256": "748bab6f0e2b3655aa68fa86b4faadf6c2cb6c9358b3d969f51a10573de237fb",
-      "size": 10501
+      "sha256": "fcec07a3bad4488b2b7de8bafedadd333cff53c381175a6a47212a9e9a1e8c8b",
+      "size": 10793
     },
     {
       "category": "governed_input",
@@ -249,8 +249,8 @@
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/Cargo.toml",
-      "sha256": "578084763a9c7016e1f74d28c0b46b46a5ed8a35d5dac4d92e5aa872e61acd8d",
-      "size": 6857
+      "sha256": "292162331d34f00b0166c6c1abeb60eaa6d2ddd21806298e7d3aef36b50bf2a9",
+      "size": 8170
     },
     {
       "category": "governed_input",
@@ -261,8 +261,8 @@
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/Cargo.lock",
-      "sha256": "98b8ede7873c4cd159ee85d7cfb97822c39038e4905b5f6fd9d4f958a6fad554",
-      "size": 63207
+      "sha256": "0cf42b7baf65d60126b1cf2d4e7cb6e83e20c8e16e6fc78583f82024050d81aa",
+      "size": 80168
     },
     {
       "category": "governed_input",

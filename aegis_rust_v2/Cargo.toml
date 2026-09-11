@@ -37,6 +37,12 @@ full = ["extension-module"]  # All features
 # so the cross-backend byte-compatibility tests in `src/pqc_trait.rs` can run,
 # which is the evidence that a swap does not strand existing signatures.
 pqc-compat-tests = ["pqclean-pqc", "pure-rust-pqc"]
+# Zero-knowledge inclusion proofs over Spartan. Off by default: it adds 117
+# crates, and a capability most deployments never enable must not widen the
+# default build's dependency surface. Transparent setup — there is no ceremony
+# whose compromise would allow forged proofs, which is why this proving system
+# was chosen over a Groth16-style one.
+zk-spartan = ["dep:spartan2", "dep:bellpepper-core"]
 
 [lib]
 name = "aegis_rust"
@@ -107,6 +113,21 @@ pqcrypto-traits = { version = "0.3", optional = true }
 ml-dsa = { version = "0.1", optional = true }
 rand_core = { version = "0.10", optional = true }
 getrandom = { version = "0.4", optional = true }
+
+# Zero-knowledge inclusion proofs, behind `zk-spartan`. Optional for the same
+# reason the pure-Rust ML-DSA backend is: enabling it adds 117 crates to the
+# graph, and the default build's dependency surface — and the `cargo audit`
+# posture that goes with it — must not change for a capability most deployments
+# never turn on.
+#
+# `spartan2` rather than `spartan`: the two are different crates. `spartan2` is
+# the bellpepper-based successor, and it is the one that exposes an R1CS circuit
+# through `bellpepper_core::ConstraintSystem`. It also separates `spartan`
+# (documented in its own source as "Spartan **without** zero-knowledge") from
+# `spartan_zk`; only the latter is used here, because a succinct proof that is
+# not zero-knowledge would not support the claim this circuit exists to make.
+spartan2 = { version = "0.9", optional = true }
+bellpepper-core = { version = "0.4", optional = true }
 
 # Legacy crypto (retained for backward compat + HMAC signing).
 #

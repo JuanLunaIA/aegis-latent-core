@@ -86,7 +86,12 @@ otel = [
     "opentelemetry-exporter-otlp-proto-grpc>=1.24.0",
 ]
 # ── Post-quantum cryptography ─────────────────────────────────────────────────
-pqc = ["kyber-py>=1.2.0", "oqs-python>=0.10.0"]
+# `oqs-python` was declared here and imported by nothing in this tree, so the
+# extra installed an unused liboqs binding while leaving the backend the code
+# actually imports undeclared. Removed rather than kept: an unimported
+# dependency in a security-relevant extra is supply-chain surface for no
+# capability.
+pqc = ["kyber-py>=1.2.0"]
 # ── Rate limiter ─────────────────────────────────────────────────────────────
 ratelimit = ["cachetools>=5.3.0"]
 # ── Development ──────────────────────────────────────────────────────────────

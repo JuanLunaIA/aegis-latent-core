@@ -15,6 +15,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — the evidence commit is now traced, and the `pqc` extra carries only what it uses
+
+Two owner decisions from the tracing and PQC verification passes.
+
+**`aegis.wal.commit`.** The span fabric had `aegis.waf.check` and
+`aegis.forward` wired and nothing at all on the durable commit. For an evidence
+product that was the wrong operation to leave dark: it is the one the gateway
+exists to perform, and the one whose latency an operator most needs attributed.
+The span wraps the whole durability gate, `fsync` included. It is entered on the
+event loop while the work runs on a worker thread, which is deliberate — it
+measures the caller's wait, which is the latency a durability gate actually
+imposes.
+
+Attributes stay content-free, the same rule metric labels follow: no payload, no
+tenant, no subject value. A span is as exportable as a metric. `tests/
+test_wal_commit_span.py` drives a real governed request through the ASGI app
+with a stubbed upstream and asserts the span by **observing** it rather than by
+reading the source; one test asserts the content-free property directly. Teeth
+checked by deleting the span — five of eight tests fail, and restoring returns
+to green.
+
+The unwired W3C facade in `aegis/telemetry/otel.py` stays unwired and is now
+marked `[ROADMAP]` for propagation in `docs/security/SECURITY_CONTROLS.md`.
+Every gateway trace is still a new root; nothing here changes that, and the
+control row says so rather than leaving a reader to find out.
+
+**`oqs-python` removed from the `pqc` extra.** Nothing in this tree imports it.
+It was declared alongside the library the code does import, so the extra
+installed an unused liboqs binding; with `kyber-py` now declared, keeping it
+would leave supply-chain surface in a security-relevant extra for no capability.
+The `pqc` extra installs `kyber-py` only.
+
 ### Fixed — the `pqc` extra installed the wrong library, so the feature was never on
 
 `aegis/core/mlkem_session.py` imports `kyber_py.kyber.Kyber1024` behind a

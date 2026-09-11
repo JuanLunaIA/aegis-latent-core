@@ -1176,24 +1176,38 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         try:
             # The ledger remains synchronous by design; to_thread preserves
             # event-loop availability while this durability gate is awaited.
-            node = await asyncio.to_thread(
-                state.ledger.commit_forensic,
-                state_id=rid,
-                request_bytes=raw_body,
-                response_bytes=response_bytes,
-                entropy=0.0,
-                tenant_id=audit_sid,
-                model=model,
-                endpoint=endpoint,
-                sampling_params={
-                    "evidence_status": "durable",
-                    "response_complete": response_complete,
-                },
-                phi_scrubbed=phi_scrubbed,
-                scrub_method=scrub_method,
-                signer_name="",
-                signature_meaning="request-response-evidence",
-            )
+            #
+            # The span covers the whole gate, fsync included. This is the
+            # authoritative evidence commit, and it was the one operation on
+            # this path a trace did not show: `aegis.waf.check` and
+            # `aegis.forward` were instrumented while the commit that makes the
+            # evidence durable — the thing the product exists to do — was not.
+            # Entering the span on the event loop and doing the work on a worker
+            # thread is deliberate: it measures the caller's wait, which is the
+            # latency a durability gate actually imposes.
+            with observability.record_span("aegis.wal.commit", endpoint=endpoint) as span:
+                node = await asyncio.to_thread(
+                    state.ledger.commit_forensic,
+                    state_id=rid,
+                    request_bytes=raw_body,
+                    response_bytes=response_bytes,
+                    entropy=0.0,
+                    tenant_id=audit_sid,
+                    model=model,
+                    endpoint=endpoint,
+                    sampling_params={
+                        "evidence_status": "durable",
+                        "response_complete": response_complete,
+                    },
+                    phi_scrubbed=phi_scrubbed,
+                    scrub_method=scrub_method,
+                    signer_name="",
+                    signature_meaning="request-response-evidence",
+                )
+                # Content-free by policy: no payload, tenant or subject value
+                # ever becomes a span attribute, exactly as for metric labels.
+                if span:
+                    span.set_attribute("aegis.wal.durable", "true")
             commit_elapsed = time.perf_counter() - commit_start
             observability.AUDIT_COMMIT_DURATION.observe(commit_elapsed)
             observability.AUDIT_CHAIN_NODES.set(len(state.ledger.chain))
