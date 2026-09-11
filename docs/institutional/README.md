@@ -23,6 +23,13 @@ This directory is the canonical institutional review suite for the checked-out `
 | DOC-04 | [Operational Engineering Playbook and High-Availability Runbooks](DOC-04_OPERATIONS_PLAYBOOK.md) | SRE, incident command, release engineering | SRE, release, security, evidence custody |
 | DOC-05 | [Institutional Regulatory Compliance and Statutory Audit Dossier](DOC-05_REGULATORY_DOSSIER.md) | Compliance, audit, quality, counsel | Qualified counsel, assessor, quality unit, privacy/security officers |
 | DOC-06 | [Commercial Strategy, C-Suite Buyer Dossier, and Procurement Package](DOC-06_COMMERCIAL_PROCUREMENT.md) | Executives, procurement, product, finance | Executive commercial owner, finance, security, counsel |
+| DOC-08 | [Zero-Knowledge Inclusion Proof: Construction and Epistemic Boundary](DOC-08_ZERO_KNOWLEDGE_INCLUSION.md) | Cryptography, security architecture, evidence engineering | Release owner, qualified cryptographic reviewer |
+
+`DOC-07` is reserved for the TEE attestation volume and **does not exist**. The
+gap is deliberate and is not a withdrawn document: `CLM-086` records that nothing
+in this tree performs attestation, so there is no construction to write up. The
+identifier is held rather than reused so a later volume can take it without
+renumbering.
 
 Supporting controls are [Claim-Evidence Graph](CLAIM_EVIDENCE_GRAPH.md), [Unsupported Claims and Contradictions](UNSUPPORTED_CLAIMS.md), and [Document Control](DOCUMENT_CONTROL.md).
 

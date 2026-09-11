@@ -441,6 +441,23 @@ jobs:
         env:
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
         run: cargo test --release
+      # `cargo test --release` above builds default features, and `zk-spartan` is
+      # deliberately not one of them — so without this step the circuit's tests
+      # would exist and never run. Kept as a separate step rather than folded
+      # into the line above so a failure names the zero-knowledge circuit
+      # directly, and so the default-feature test run stays the fast signal.
+      - name: Cargo test (zero-knowledge circuit)
+        working-directory: aegis_rust_v2
+        env:
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+        # Both targets named explicitly. A bare `zk_mmr` filter looks like it
+        # covers this and does not: cargo matches test *names*, so it selects the
+        # 16 `zk_mmr::tests::*` unit tests and silently skips all seven
+        # end-to-end ones, whose names carry no such prefix. `zk_mmr_cost` is a
+        # measurement harness and stays `#[ignore]`d.
+        run: |
+          cargo test --release --features zk-spartan --lib zk_mmr
+          cargo test --release --features zk-spartan --test zk_mmr_end_to_end
       - name: Clippy (all targets and features)
         working-directory: aegis_rust_v2
         env:
@@ -464,7 +481,30 @@ jobs:
         run: |
           pip install -e ".[dev]"
           pip install --no-deps aegis_rust_v2/target/wheels/*.whl
-          python -m pytest tests/test_crdt_mmr.py -v
+          python -m pytest tests/test_crdt_mmr.py tests/test_zk_native_surface.py -v
+
+      # The zero-knowledge binding has two behaviours and a single wheel can
+      # only show one of them. The default wheel above proves the refusal path:
+      # `has_zk_native()` is False and every entry point raises with the build
+      # flag named. It cannot prove the working path, and those tests skip
+      # against it — which is the silent pass this repository does not accept.
+      # So the feature-enabled wheel is built and the same file is run again,
+      # where the skips invert and the proving tests actually execute.
+      #
+      # A second wheel rather than replacing the first: the default build is
+      # what ships, and its refusal behaviour is the one most users will meet.
+      - name: Build and test the zero-knowledge wheel
+        working-directory: ${{ github.workspace }}
+        env:
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+          AEGIS_REQUIRE_RUST: "1"
+        run: |
+          cd aegis_rust_v2
+          maturin build --release --features extension-module,zk-spartan --out target/wheels-zk
+          cd "$GITHUB_WORKSPACE"
+          pip install --force-reinstall --no-deps aegis_rust_v2/target/wheels-zk/*.whl
+          python -c "import aegis_rust; assert aegis_rust.has_zk_native(), 'wheel built without zk-spartan'"
+          python -m pytest tests/test_zk_native_surface.py -v
 
   # ── Model checking ────────────────────────────────────────────────────────
   # Bit-level proofs over the WAL's frame-bounds arithmetic. Scope and limits:
