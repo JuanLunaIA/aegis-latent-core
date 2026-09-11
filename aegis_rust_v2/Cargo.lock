@@ -24,12 +24,15 @@ name = "aegis_rust"
 version = "4.3.0"
 dependencies = [
  "aho-corasick",
+ "bellpepper",
  "bellpepper-core",
+ "bincode",
  "blake3",
  "block-buffer 0.12.1",
  "crc32fast",
  "crossbeam-queue",
  "dashmap",
+ "ff",
  "getrandom 0.4.3",
  "hex",
  "hmac",

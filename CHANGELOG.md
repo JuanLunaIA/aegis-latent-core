@@ -15,6 +15,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a zero-knowledge inclusion proof, and what it cannot say
+
+`aegis_rust_v2/src/zk_mmr.rs` implements an R1CS circuit over Spartan proving
+that a leaf whose canonical bytes end with `,"waf_verdict":"passed"}` is
+included under a public MMR root — without disclosing the leaf. Behind the
+default-off `zk-spartan` feature, so **no published wheel contains it** and no
+request path calls it.
+
+[DOC-08](docs/institutional/DOC-08_ZERO_KNOWLEDGE_INCLUSION.md) is the normative
+boundary and `CLM-089` the controlled claim. The short form: the proof attests
+that **the ledger contains a record asserting a WAF pass**. It does not
+re-execute the WAF, does not attest the WAF is correct, and says nothing about
+prompt safety, model behavior, or the upstream provider.
+
+**The verdict is a circuit constant, not a checked field.** The hashed preimage
+is `0x00 ‖ prefix ‖ ,"waf_verdict":"passed"}` with the suffix compiled in, so a
+leaf recording `blocked` — or recording nothing — has no satisfying witness at
+all rather than being checked and rejected. SHA-256 rather than a SNARK-friendly
+hash, because the circuit has to be about the MMR that exists.
+
+Verification takes a root **and** a verifier key, both of which must be obtained
+independently of whoever supplied the proof. Key derivation is deterministic in
+the public shape, which is what makes refusing a prover-supplied key practical;
+a second independent `setup` verifying the first's proof is asserted by test.
+
+**Three things measurement changed.**
+
+- `spartan2`'s prover is **not a satisfiability oracle**: given an unsatisfiable
+  witness it returns `Ok` with an inert proof rather than an error. Soundness
+  holds — the object verifies against neither the honest root nor any other —
+  but a caller would have shipped worthless bytes. `prove` now verifies its own
+  output before returning, which is why it takes the verifier key.
+- The circuit compares the walk against **every** peak rather than an indexed
+  one, at roughly 511 constraints each, so the peak index never enters the
+  public shape.
+- **Leaf length decides feasibility.** At the default `max_forensic_bytes` of
+  65 536 a real leaf needs on the order of 10⁸ constraints and is not provable
+  at any practical cost. The construction is usable only where that cap is small
+  or zero, and nothing yet warns when a configuration puts proofs out of reach.
+
+The proof shape — leaf length, path depth, peak count — is **public**, so a
+verifier learns roughly how large the request and the ledger are. Leaf contents,
+leaf position and every other leaf stay undisclosed. No cost figure is claimed:
+`aegis_rust_v2/tests/zk_mmr_cost.rs` prints a curve on demand, but an
+`#[ignore]`d harness on one host is not a reproducible artifact.
+
+`aegis.crypto` now re-exports `generate_zk_proof`, `verify_zk_proof`,
+`zk_verifier_key`, `has_zk_native` and `split_passed_leaf` through
+`aegis/core/zk_native.py`, which imports the extension lazily so a pure-Python
+checkout still imports the package and refuses rather than simulating wherever a
+proof cannot be produced.
+
+`aegis/core/zk_proof.py` is untouched and remains the non-real stub `CLM-019`
+describes. The facade deliberately carries both surfaces and they must not be
+blurred: `ZKProver`/`ZKVerifier` are the stubs, these functions are the circuit.
+This is a separate surface, not a promotion of that one.
+
+### Changed — the zero-knowledge tests now run in CI
+
+`cargo test --release` builds default features, so the circuit's tests would
+have existed without ever executing. Two steps were added rather than one
+widened: the circuit's own tests run with `--features zk-spartan`, and a second
+feature-enabled wheel is built so the Python proving tests execute somewhere
+instead of skipping. A bare `zk_mmr` filter looked sufficient and was not — cargo
+matches test names, so it selected the 16 unit tests and silently skipped all
+seven end-to-end ones.
+
+### Fixed — two wrong numbers in the `zk-spartan` dependency comments
+
+The feature adds **66** crates, not the 117 the manifest claimed nor the 5 stated
+when it landed; `cargo tree --edges normal` resolves 160 by default and 226 with
+it. Enabling it also **reintroduces `block-buffer 0.10.4`**, the crate the
+`sha2 = "0.11"` migration removed — `spartan2` pins the `digest 0.10` line
+through `halo2curves`, `sha2 0.10` and `sha3 0.10`. The removal claim beside
+`sha2` is now scoped to the default build, where it is true.
+
+
 ### Added — the WAF verdict is now recorded where a proof can reach it
 
 Groundwork for the zero-knowledge inclusion proof, and a correction to an

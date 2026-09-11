@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "912ca92dea76b07f28e59fbde28a0a38b171a62d66e4624008c66cecad0a4828",
-      "size": 136830
+      "sha256": "5ee31a32d1a621a99efc39ad1b7f0cf743aeb792bdbe0a766feb07e7d1ec298f",
+      "size": 141305
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "14c85569fcf957a1306fc36f896645e04fe42abb1ec7e7d02613a3da1c5e2441",
-      "size": 96351
+      "sha256": "8f0497d3e8ba19920043e01c43741e738ebae0d597cce7dbb917e362c29bb297",
+      "size": 99707
     },
     {
       "category": "governed_input",
@@ -249,8 +249,8 @@
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/Cargo.toml",
-      "sha256": "194a1d13e390a9052689ec64bf66b5d2e8cb658f94db2e41e48c4aaaaa3e0c95",
-      "size": 9131
+      "sha256": "eb5a5e657785d46f995eac8d345a95fc95b9b42f2580da06728280f8cc4717c8",
+      "size": 10253
     },
     {
       "category": "governed_input",
@@ -261,14 +261,14 @@
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/Cargo.lock",
-      "sha256": "0cf42b7baf65d60126b1cf2d4e7cb6e83e20c8e16e6fc78583f82024050d81aa",
-      "size": 80168
+      "sha256": "2730137a2ba072bf78c82a0916aad5fa4b136983c71c43d4309980a74574bd18",
+      "size": 80202
     },
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/src/lib.rs",
-      "sha256": "218b87d848654bf089199b8e342a2a9a2e5f5c85dffae279c017f05ce75ffd40",
-      "size": 5524
+      "sha256": "45c20515beed852cb36ed0f1db6c93ffe7786044f5e1ebbfbe85c9ec08587b51",
+      "size": 6589
     },
     {
       "category": "governed_input",
@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "50726b6f105b5c2d9719c6d7c4aace051b52f2e2e7e60da2f336c4ec7db4334b",
-      "size": 33842
+      "sha256": "f47bef3d5edebf5cdd36f9f029c79f853bf7c2290d27aa922bb5435bea890b05",
+      "size": 36285
     },
     {
       "category": "governed_input",

@@ -51,7 +51,7 @@ pqc-compat-tests = ["pqclean-pqc", "pure-rust-pqc"]
 # and NOT for a `zk-spartan` build; an operator enabling this feature is choosing
 # to take that crate back. It is stated here rather than discovered from a lock
 # diff, and the Miri PoCs under `CLM-085` remain the record of what is at stake.
-zk-spartan = ["dep:spartan2", "dep:bellpepper-core"]
+zk-spartan = ["dep:spartan2", "dep:bellpepper-core", "dep:bellpepper", "dep:ff", "dep:bincode"]
 
 [lib]
 name = "aegis_rust"
@@ -138,6 +138,23 @@ getrandom = { version = "0.4", optional = true }
 # not zero-knowledge would not support the claim this circuit exists to make.
 spartan2 = { version = "0.9", optional = true }
 bellpepper-core = { version = "0.4", optional = true }
+# The gadget library on top of `bellpepper-core`, for its SHA-256 circuit.
+# `bellpepper-core` supplies only the `ConstraintSystem` traits; the gadgets
+# live here. It costs nothing extra to take: its three dependencies
+# (`bellpepper-core`, `byteorder`, `ff`) are already in the `zk-spartan` graph
+# via `spartan2`, so the 66-crate figure above is unchanged by it.
+#
+# SHA-256 rather than a SNARK-friendly hash: the circuit has to agree with the
+# MMR that already exists, and that MMR is SHA-256 (`aegis/core/mmr.py`,
+# `src/mmr.rs`). Choosing Poseidon here would mean a proof about a different
+# tree than the one the gateway commits to.
+bellpepper = { version = "0.4", optional = true }
+# Field arithmetic for packing the root digest into public inputs, and the proof
+# wire format. Both are already in the `zk-spartan` graph via `spartan2`, so
+# declaring them directly costs 0 additional crates — verified with
+# `cargo tree --edges normal --features zk-spartan` before and after.
+ff = { version = "0.13", optional = true }
+bincode = { version = "1.3", optional = true }
 
 # Legacy crypto (retained for backward compat + HMAC signing).
 #

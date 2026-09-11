@@ -29,6 +29,15 @@ mod rate_limit;
 mod session;
 mod waf;
 mod wal;
+/// Python surface for the zero-knowledge proof. Always compiled, so the
+/// functions exist and refuse with the build flag named rather than being
+/// absent and reading as a packaging fault.
+mod zk_bindings;
+/// Zero-knowledge inclusion proofs. Behind `zk-spartan`, which is off by
+/// default — see the feature's comment in `Cargo.toml` for what enabling it
+/// costs.
+#[cfg(feature = "zk-spartan")]
+pub mod zk_mmr;
 
 use audit::AuditRingBuffer;
 use forwarder::{warmup_runtime, RustForwarder};
@@ -115,6 +124,16 @@ fn aegis_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(generate_pqc_keypair, m)?)?;
     m.add_function(wrap_pyfunction!(keypair_from_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(verify_pqc_signature, m)?)?;
+
+    // ── Tier 8: zero-knowledge inclusion proof ───────────────────────────
+    //
+    // Registered in every build. Without `zk-spartan` each of these raises and
+    // names the flag; `has_zk_native()` is how a caller finds out without
+    // provoking one. Nothing here simulates a proof.
+    m.add_function(wrap_pyfunction!(zk_bindings::has_zk_native, m)?)?;
+    m.add_function(wrap_pyfunction!(zk_bindings::zk_verifier_key, m)?)?;
+    m.add_function(wrap_pyfunction!(zk_bindings::generate_zk_proof, m)?)?;
+    m.add_function(wrap_pyfunction!(zk_bindings::verify_zk_proof, m)?)?;
 
     // Legacy SHA-256 / HMAC (backward compat)
     m.add_function(wrap_pyfunction!(hash_sha256, m)?)?;
