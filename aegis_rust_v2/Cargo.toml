@@ -37,11 +37,20 @@ full = ["extension-module"]  # All features
 # so the cross-backend byte-compatibility tests in `src/pqc_trait.rs` can run,
 # which is the evidence that a swap does not strand existing signatures.
 pqc-compat-tests = ["pqclean-pqc", "pure-rust-pqc"]
-# Zero-knowledge inclusion proofs over Spartan. Off by default: it adds 117
-# crates, and a capability most deployments never enable must not widen the
-# default build's dependency surface. Transparent setup — there is no ceremony
-# whose compromise would allow forged proofs, which is why this proving system
-# was chosen over a Groth16-style one.
+# Zero-knowledge inclusion proofs over Spartan. Off by default: it adds 66
+# crates to the normal dependency graph (160 -> 226, measured with
+# `cargo tree --edges normal`), and a capability most deployments never enable
+# must not widen the default build's dependency surface. Transparent setup —
+# there is no ceremony whose compromise would allow forged proofs, which is why
+# this proving system was chosen over a Groth16-style one.
+#
+# Enabling it also REINTRODUCES `block-buffer 0.10.4`, which the `sha2 = "0.11"`
+# migration below deliberately removed. `spartan2` pins the `digest 0.10` line
+# (through `halo2curves`, `sha2 0.10` and `sha3 0.10`), and that line carries the
+# 0.10.4 buffer. The removal recorded below therefore holds for the default build
+# and NOT for a `zk-spartan` build; an operator enabling this feature is choosing
+# to take that crate back. It is stated here rather than discovered from a lock
+# diff, and the Miri PoCs under `CLM-085` remain the record of what is at stake.
 zk-spartan = ["dep:spartan2", "dep:bellpepper-core"]
 
 [lib]
@@ -115,10 +124,11 @@ rand_core = { version = "0.10", optional = true }
 getrandom = { version = "0.4", optional = true }
 
 # Zero-knowledge inclusion proofs, behind `zk-spartan`. Optional for the same
-# reason the pure-Rust ML-DSA backend is: enabling it adds 117 crates to the
+# reason the pure-Rust ML-DSA backend is: enabling it adds 66 crates to the
 # graph, and the default build's dependency surface — and the `cargo audit`
 # posture that goes with it — must not change for a capability most deployments
-# never turn on.
+# never turn on. See the `zk-spartan` feature above for the measurement and for
+# the `block-buffer 0.10.4` reintroduction that comes with it.
 #
 # `spartan2` rather than `spartan`: the two are different crates. `spartan2` is
 # the bellpepper-based successor, and it is the one that exposes an R1CS circuit
@@ -131,9 +141,12 @@ bellpepper-core = { version = "0.4", optional = true }
 
 # Legacy crypto (retained for backward compat + HMAC signing).
 #
-# The 0.11 digest line is what drops `block-buffer 0.10.4` from the tree: the
-# 0.10 line pins it transitively through `digest 0.10`, and it is the buffer
-# sitting under every SHA-256 and HMAC call on the evidence path. SHA-256 is
+# The 0.11 digest line is what drops `block-buffer 0.10.4` from the default
+# tree: the 0.10 line pins it transitively through `digest 0.10`, and it is the
+# buffer sitting under every SHA-256 and HMAC call on the evidence path. The
+# removal is scoped to the default build — the optional `zk-spartan` feature
+# brings `digest 0.10` back through `spartan2`, as the feature's own comment
+# records. SHA-256 is
 # defined by FIPS 180-4, not by a crate version, so the migration must be
 # byte-identical; the FIPS 180-4 and RFC 4231 vector tests in `src/ledger.rs`
 # and `tests/test_mmr_parity.py` are what hold that.
