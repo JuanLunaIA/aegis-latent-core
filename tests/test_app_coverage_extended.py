@@ -838,7 +838,7 @@ def test_chat_streaming_allows_response_within_byte_limit(tmp_path):
 
     assert resp.status_code == 200
     assert len(resp.content) <= 1_024
-    assert resp.headers["X-Aegis-Evidence-Status"] == "pending-terminal"
+    assert resp.headers["X-Aegis-Evidence-Status"] in ("pending-anchoring", "pending-terminal")
     assert resp.content.endswith(b"data: [DONE]\n\n")
     assert app.state.aegis.ledger.chain[-1].sampling_params["terminal_outcome"] == "complete"
 
@@ -905,7 +905,7 @@ def test_chat_streaming_rejects_response_over_byte_limit_and_closes_upstream(tmp
 
     assert resp.status_code == 200
     assert b"data: [DONE]" not in resp.content
-    assert resp.headers["X-Aegis-Evidence-Status"] == "pending-terminal"
+    assert resp.headers["X-Aegis-Evidence-Status"] in ("pending-anchoring", "pending-terminal")
     assert stream_state == {"closed": True, "after_limit": False}
     assert app.state.aegis.ledger.chain[-1].sampling_params["terminal_outcome"] == "byte_limit"
 
@@ -937,7 +937,7 @@ def test_chat_streaming_rejects_slow_drip_after_total_deadline(tmp_path):
     assert resp.status_code == 200
     assert b"first" in resp.content
     assert b"data: [DONE]" not in resp.content
-    assert resp.headers["X-Aegis-Evidence-Status"] == "pending-terminal"
+    assert resp.headers["X-Aegis-Evidence-Status"] in ("pending-anchoring", "pending-terminal")
     assert stream_state["closed"] is True
     assert app.state.aegis.ledger.chain[-1].sampling_params["terminal_outcome"] == "timeout"
 

@@ -1690,6 +1690,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     observability.AUDIT_COMMIT_ERRORS.inc()
                     raise
 
+            evidence_id = str(uuid.uuid4())
             bounded_stream = BoundedStreamProxy(
                 stream,
                 terminal_commit=_commit_stream_terminal,
@@ -1702,6 +1703,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 enable_phi=state._phi_scrubber is not None,
                 enable_pci=state._pci_scrubber is not None,
                 streaming_engine=cfg.streaming_engine,
+                evidence_id=evidence_id,
             )
             return StreamingResponse(
                 bounded_stream,
@@ -1709,7 +1711,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 headers={
                     "X-Aegis-Request-ID": request_id,
                     "X-Aegis-Session-ID": session_id,
-                    "X-Aegis-Evidence-Status": "pending-terminal",
+                    "X-Aegis-Evidence-ID": evidence_id,
+                    "X-Aegis-Evidence-Status": "pending-anchoring",
                     "X-Aegis-Analysis-Status": "not-sampled",
                     "X-Aegis-Proof-Status": "pending-terminal",
                     **_rate_headers(rate_decision),
@@ -1946,6 +1949,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     duration_seconds=summary.elapsed_seconds,
                 )
 
+            evidence_id = str(uuid.uuid4())
             bounded = BoundedStreamProxy(
                 upstream_stream,
                 terminal_commit=_commit_anthropic_terminal,
@@ -1963,6 +1967,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     isinstance(event, dict) and event.get("type") == "message_stop"
                 ),
                 terminal_marker=terminal_marker,
+                evidence_id=evidence_id,
             )
             return StreamingResponse(
                 bounded,
@@ -1970,7 +1975,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 headers={
                     "X-Aegis-Request-ID": request_id,
                     "X-Aegis-Session-ID": session_id,
-                    "X-Aegis-Evidence-Status": "pending-terminal",
+                    "X-Aegis-Evidence-ID": evidence_id,
+                    "X-Aegis-Evidence-Status": "pending-anchoring",
                     "X-Aegis-Proof-Status": "pending-terminal",
                     **_rate_headers(rate_decision),
                     "Link": (

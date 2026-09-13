@@ -48,7 +48,11 @@ class ProofSystem(str, Enum):  # noqa: UP042 — roadmap API requires str+Enum s
 # ── Exceptions ────────────────────────────────────────────────────────────────
 
 
-class ZKProofUnavailableError(Exception):
+class ZKUnavailableError(Exception):
+    """Raised when native ZK proof bindings are unavailable."""
+
+
+class ZKProofUnavailableError(ZKUnavailableError):
     """Raised when the full ZK proof library (bellman/halo2) is not available."""
 
 
