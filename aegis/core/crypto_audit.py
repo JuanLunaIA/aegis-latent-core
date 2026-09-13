@@ -678,7 +678,11 @@ class CryptographicAuditLedger:
         self._total_evicted_count: int = 0
         self._lock = Lock()
         self.pqc_identity_path = str(pqc_identity_path) if pqc_identity_path else ""
-        if self._signing_key and not (self._hsm_backend and self._hsm_backend.available) and not self.pqc_identity_path:
+        if (
+            self._signing_key
+            and not (self._hsm_backend and self._hsm_backend.available)
+            and not self.pqc_identity_path
+        ):
             logger.warning("SYMMETRIC_AUTHENTICATED mode active with HMAC - Zero Non-Repudiation")
         # Guards *which descriptor is current*, not the ledger state. The
         # group-commit syncer runs with `_lock` released — that is the whole
@@ -738,7 +742,11 @@ class CryptographicAuditLedger:
     def legal_admissibility(self) -> str:
         # Backward compatibility property returning signature_assurance or legacy string.
         assurance = self.signature_assurance
-        if assurance in {"ASYMMETRIC_HARDWARE_ATTESTED", "ASYMMETRIC_SOFTWARE", "SYMMETRIC_AUTHENTICATED"}:
+        if assurance in {
+            "ASYMMETRIC_HARDWARE_ATTESTED",
+            "ASYMMETRIC_SOFTWARE",
+            "SYMMETRIC_AUTHENTICATED",
+        }:
             return "High"
         if assurance == "COMPROMISED_EPHEMERAL":
             return "Compromised"
