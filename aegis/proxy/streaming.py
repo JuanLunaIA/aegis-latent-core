@@ -11,6 +11,7 @@ import hashlib
 import json
 import logging
 import time
+import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -144,7 +145,7 @@ class BoundedStreamProxy:
             raise ValueError("stream byte limits must be positive")
         if max_duration_seconds <= 0:
             raise ValueError("max_duration_seconds must be positive")
-        self.evidence_id = evidence_id or str(asyncio.get_event_loop().time())
+        self.evidence_id = evidence_id or str(uuid.uuid4())
         self._upstream = upstream
         self._terminal_commit = terminal_commit
         self._max_response_bytes = max_response_bytes
