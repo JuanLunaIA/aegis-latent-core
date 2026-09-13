@@ -49,9 +49,11 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
+from aegis.core.homoglyph_normalizer import HomoglyphNormalizer
 from aegis.core.rust_integration import new_rust_waf, rust_waf_scan_messages
 
 logger = logging.getLogger(__name__)
+_HOMOGLYPH_NORMALIZER = HomoglyphNormalizer()
 
 
 @dataclass
@@ -320,7 +322,11 @@ class AegisWAF:
         )
         for ch in _ZW_CHARS:
             text = text.replace(ch, "")
-        return unicodedata.normalize("NFKC", text)
+        nfkc_text = unicodedata.normalize("NFKC", text)
+        homoglyph_clean = _HOMOGLYPH_NORMALIZER.normalize(nfkc_text)
+        # Inter-character whitespace collapsing (\b(\w)\s+(\w)\b -> $1$2)
+        collapsed = re.sub(r"\b(\w)\s+(\w)\b", r"\1\2", homoglyph_clean)
+        return collapsed
 
     def _scan_content(self, data: Any) -> list[str]:
         matches: list[str] = []

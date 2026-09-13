@@ -675,7 +675,11 @@ class CryptographicAuditLedger:
         self._mmr_fast_restore = mmr_fast_restore
         self.chain: deque[AuditNode] = deque(maxlen=max_memory_nodes)
         self._window_anchor_hash = "0" * 64
+        self._total_evicted_count: int = 0
         self._lock = Lock()
+        self.pqc_identity_path = str(pqc_identity_path) if pqc_identity_path else ""
+        if self._signing_key and not (self._hsm_backend and self._hsm_backend.available) and not self.pqc_identity_path:
+            logger.warning("SYMMETRIC_AUTHENTICATED mode active with HMAC - Zero Non-Repudiation")
         # Guards *which descriptor is current*, not the ledger state. The
         # group-commit syncer runs with `_lock` released — that is the whole
         # point — so it needs something to hold the WAL handle still against a
@@ -689,7 +693,6 @@ class CryptographicAuditLedger:
             max_batch=_resolve_commit_batch_max_size(commit_batch_max_size),
             linger_seconds=_resolve_commit_batch_linger(commit_batch_timeout_ms),
         )
-        self.pqc_identity_path = str(pqc_identity_path) if pqc_identity_path else ""
         self.enable_cryptographic_shredding = enable_cryptographic_shredding
         self._shredder: CryptoShredder | None = None
         if enable_cryptographic_shredding:
@@ -720,10 +723,24 @@ class CryptographicAuditLedger:
     # ── Public properties ──────────────────────────────────────────────────
 
     @property
-    def legal_admissibility(self) -> str:
-        if self._signing_key:
-            return "High"
+    def signature_assurance(self) -> str:
         if any(n.is_fallback for n in self.chain):
+            return "COMPROMISED_EPHEMERAL"
+        if self._hsm_backend and self._hsm_backend.available:
+            return "ASYMMETRIC_HARDWARE_ATTESTED"
+        if self._pqc_identity or (RUST_AVAILABLE and self.pqc_identity_path):
+            return "ASYMMETRIC_SOFTWARE"
+        if self._signing_key:
+            return "SYMMETRIC_AUTHENTICATED"
+        return "UNSIGNED"
+
+    @property
+    def legal_admissibility(self) -> str:
+        # Backward compatibility property returning signature_assurance or legacy string.
+        assurance = self.signature_assurance
+        if assurance in {"ASYMMETRIC_HARDWARE_ATTESTED", "ASYMMETRIC_SOFTWARE", "SYMMETRIC_AUTHENTICATED"}:
+            return "High"
+        if assurance == "COMPROMISED_EPHEMERAL":
             return "Compromised"
         return "High"
 
@@ -738,9 +755,15 @@ class CryptographicAuditLedger:
         """Hash immediately preceding the first retained in-memory node."""
         return self._window_anchor_hash
 
+    @property
+    def total_evicted_count(self) -> int:
+        """Total number of nodes evicted from the in-memory window."""
+        return self._total_evicted_count
+
     def _append_memory_node(self, node: AuditNode) -> None:
         if self.chain.maxlen is not None and len(self.chain) == self.chain.maxlen:
             self._window_anchor_hash = self.chain[0].node_hash
+            self._total_evicted_count += 1
         self.chain.append(node)
 
     # ── Core API ───────────────────────────────────────────────────────────

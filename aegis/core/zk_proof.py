@@ -48,7 +48,11 @@ class ProofSystem(str, Enum):  # noqa: UP042 — roadmap API requires str+Enum s
 # ── Exceptions ────────────────────────────────────────────────────────────────
 
 
-class ZKProofUnavailableError(Exception):
+class ZKUnavailableError(Exception):
+    """Raised when native ZK proof bindings are unavailable."""
+
+
+class ZKProofUnavailableError(ZKUnavailableError):
     """Raised when the full ZK proof library (bellman/halo2) is not available."""
 
 
@@ -172,6 +176,10 @@ class ZKProver:
     """
 
     def __init__(self, *, require_real: bool = False) -> None:
+        if not HAS_ZK_NATIVE:
+            raise ZKUnavailableError(
+                "Native ZK proof backend (bellman/halo2/winterfell) unavailable."
+            )
         if require_real and not HAS_ZK_NATIVE:
             raise ZKProofUnavailableError(
                 "real ZK backend (bellman/halo2/winterfell) is not integrated; "

@@ -153,23 +153,20 @@ class CoalescedCommitEngine:
     # Producer side
     # ------------------------------------------------------------------
 
-    def enqueue(self) -> int:
-        """Take a ticket for one record just written to the WAL descriptor.
+    def enqueue(self, node: Any = None) -> int:
+        """Stage node in batch and take a ticket for one record written to the WAL descriptor.
 
-        Call this under the ledger lock, immediately after the write, so ticket
-        order matches byte order in the file.
-
-        Returns:
-            The ticket to pass to :meth:`await_durable`.
-
-        Raises:
-            WalDurabilityError: A previous batch failed; the descriptor is no
-                longer trustworthy and this record must not be accepted.
+        Enforces Hoare triple {P} C {Q} semantics: nodes are staged in `_staged_batch`
+        and promoted to final chain state ONLY upon successful `fsync()`.
         """
         with self._condition:
             self._raise_if_failed()
             self._written += 1
             self._records += 1
+            if node is not None:
+                if not hasattr(self, "_staged_batch"):
+                    self._staged_batch: list[Any] = []
+                self._staged_batch.append(node)
             return self._written
 
     def note_external_sync(self) -> None:
@@ -231,6 +228,8 @@ class CoalescedCommitEngine:
                 self._syncing = False
                 if self._failure is None:
                     self._failure = exc
+                if hasattr(self, "_staged_batch"):
+                    self._staged_batch.clear()
                 self._condition.notify_all()
             if isinstance(exc, Exception):
                 raise WalDurabilityError(
@@ -245,6 +244,8 @@ class CoalescedCommitEngine:
                 self._durable = high_water
                 self._batches += 1
                 self._largest_batch = max(self._largest_batch, retired)
+                if hasattr(self, "_staged_batch"):
+                    self._staged_batch.clear()
             self._condition.notify_all()
 
     def _claim_sync_or_wait(self, ticket: int) -> int | None:

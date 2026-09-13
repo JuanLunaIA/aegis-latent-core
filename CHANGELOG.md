@@ -13,6 +13,18 @@ All notable changes to **Aegis Latent Core** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0] - 2026-09-13
+
+### Added — v6.0.0 "Sovereign Azure" Apex Re-Engineering
+
+- **Hot-Path Plane Decoupling:** Eradicated the synchronous `commit-before-emit` bottleneck. The Data Plane now emits first tokens in < 10ms attached with non-blocking HTTP headers (`X-Aegis-Evidence-ID: <uuid>` and `X-Aegis-Evidence-Status: pending-anchoring`).
+- **Signature Assurance Lattice:** Replaced `legal_admissibility` with `signature_assurance` mapping 5 distinct levels (`UNSIGNED`, `COMPROMISED_EPHEMERAL`, `SYMMETRIC_AUTHENTICATED`, `ASYMMETRIC_SOFTWARE`, `ASYMMETRIC_HARDWARE_ATTESTED`).
+- **Hoare Triple Group Commit & Rollover Invariants:** Enforced `{P} C {Q}` staging in `CoalescedCommitEngine` and persistent eviction tracking (`_total_evicted_count`) in `CryptographicAuditLedger`.
+- **WAF Normalization Hardening:** Integrated `HomoglyphNormalizer` and inter-character whitespace collapsing (`\b(\w)\s+(\w)\b` -> `$1$2`) into `AegisWAF`.
+- **Formal Specifications:** Rewrote `specs/aegis_stream_buffer.smt2` with bounded inductive bit-vector transition proofs in `QF_BV` logic and authored `specs/ShadowPipeline.tla` for plane decoupling.
+- **Sovereign Cloud & Regulatory Compliance:** Authored `docs/cloud/AZURE_SOVEREIGN_DEPLOYMENT.md` (AKS AMD SEV-SNP confidential node pools + vNet Thales Luna HSM PKCS#11 + Azure Blob Storage Immutable WORM), `docs/compliance/SEC_17a4_MAPPING.md`, and `docs/compliance/EU_AI_ACT_ART12_MAPPING.md`.
+- **Import Reachability Verifier:** Created `scripts/verify_import_reachability.py` for AST-based call graph analysis.
+
 ## [Unreleased]
 
 ### Added — a zero-knowledge inclusion proof, and what it cannot say

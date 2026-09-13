@@ -52,6 +52,7 @@ class StreamEventLimitError(StreamProxyError):
 
 @dataclass(frozen=True)
 class StreamEvidenceSummary:
+    evidence_id: str
     response_hash: str
     response_size: int
     response_preview: bytes
@@ -137,11 +138,13 @@ class BoundedStreamProxy:
         protocol: Literal["openai", "anthropic"] = "openai",
         terminal_predicate: Callable[[bytes, Any], bool] | None = None,
         terminal_marker: bytes = _DONE,
+        evidence_id: str | None = None,
     ) -> None:
         if max_response_bytes < 1 or max_event_bytes < 1 or preview_bytes < 0:
             raise ValueError("stream byte limits must be positive")
         if max_duration_seconds <= 0:
             raise ValueError("max_duration_seconds must be positive")
+        self.evidence_id = evidence_id or str(asyncio.get_event_loop().time())
         self._upstream = upstream
         self._terminal_commit = terminal_commit
         self._max_response_bytes = max_response_bytes
@@ -461,6 +464,7 @@ class BoundedStreamProxy:
                 return
             self._finalized = True
             summary = StreamEvidenceSummary(
+                evidence_id=self.evidence_id,
                 response_hash=self._digest.hexdigest(),
                 response_size=self._size,
                 response_preview=bytes(self._preview),
