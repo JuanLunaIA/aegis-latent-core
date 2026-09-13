@@ -176,10 +176,6 @@ class ZKProver:
     """
 
     def __init__(self, *, require_real: bool = False) -> None:
-        if not HAS_ZK_NATIVE:
-            raise ZKUnavailableError(
-                "Native ZK proof backend (bellman/halo2/winterfell) unavailable."
-            )
         if require_real and not HAS_ZK_NATIVE:
             raise ZKProofUnavailableError(
                 "real ZK backend (bellman/halo2/winterfell) is not integrated; "
