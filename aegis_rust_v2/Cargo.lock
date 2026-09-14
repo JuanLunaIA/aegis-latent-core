@@ -26,7 +26,7 @@ dependencies = [
  "aho-corasick",
  "bellpepper",
  "bellpepper-core",
- "bincode",
+ "bincode 3.0.0",
  "blake3",
  "block-buffer 0.12.1",
  "crc32fast",
@@ -154,6 +154,12 @@ checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
 dependencies = [
  "serde",
 ]
+
+[[package]]
+name = "bincode"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd6a120d2e16b3e1b4a24bd70f23b12d3e16b81f113364a26935f8db7245452d"
 
 [[package]]
 name = "bitflags"
@@ -2312,7 +2318,7 @@ checksum = "dc56b9c073d61f984aed92dc637f0a2fb3931dcdc2c91bc75ad38beca7b330b3"
 dependencies = [
  "bellpepper",
  "bellpepper-core",
- "bincode",
+ "bincode 1.3.3",
  "bitvec",
  "byteorder",
  "digest 0.10.7",
