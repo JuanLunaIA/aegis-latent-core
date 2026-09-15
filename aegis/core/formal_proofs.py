@@ -1,7 +1,17 @@
 """
-aegis.core.formal_proofs — Formal Specifications and Verification.
-Documents the mathematical proofs of correctness for core security primitives.
-Target: Formal Verification via Coq/Lean.
+aegis.core.formal_proofs — Empirical checks for statements proved elsewhere.
+
+This module does not itself contain or produce a formal proof: it runs the
+stated properties against real implementation functions (``canonical_normalize``,
+a caller-supplied sign/verify pair) on concrete inputs and reports pass/fail,
+the same epistemic weight as a unit test. The corresponding proofs — where
+one actually exists — are the mechanically checked artifacts under ``specs/``:
+a Lean 4 theorem (``specs/AegisVerification.lean``), a Z3 SMT2 formula
+(``specs/aegis_invariants.smt2``), and TLA+/TLC models. There is no Coq
+toolchain or ``.v`` file anywhere in this repository; see
+``docs/formal/FORMAL_VERIFICATION.md`` for the bounds and scope those
+artifacts actually establish, and do not describe them as validated by this
+module or this module's checks as formal proofs in their own right.
 """
 
 # Copyright (c) 2026 Juan Luna. All rights reserved.
@@ -19,13 +29,16 @@ logger = logging.getLogger(__name__)
 
 class FormalVerificationSuite:
     """
-    Implements the verification of formal properties for Aegis primitives.
-    While the full proofs reside in .v (Coq) files, this suite validates
-    the properties empirically against the implementation.
+    Empirically checks a handful of properties that also appear, proved, in
+    ``specs/`` (Lean 4, Z3, TLA+ — see the module docstring). Each ``verify_*``
+    method here runs the property against concrete inputs and real
+    implementation functions and returns a bool; it is a runtime check, not a
+    proof, and passing it does not extend or substitute for the coverage of
+    the artifacts under ``specs/``.
     """
 
     def __init__(self) -> None:
-        logger.info("FormalVerificationSuite initialized. Target: Mathematical Certainty.")
+        logger.info("FormalVerificationSuite initialized.")
 
     def verify_normalization_idempotency(self, test_cases: list[str]) -> bool:
         """
@@ -93,8 +106,11 @@ class FormalVerificationSuite:
         return True
 
 
-# --- FORMAL SPECIFICATIONS (COQ-STYLE) ---
-# These are the axioms used in the formal proof files (.v)
+# --- Reference specifications, in proof-assistant-style axiom notation ---
+# Documentation only: illustrates the properties the methods above check
+# empirically. Not read by, or generated from, any Coq/Lean source — there
+# is no .v file in this repository, and the actual mechanically checked
+# proof of the signing/durability property is specs/AegisVerification.lean.
 FORMAL_SPECS = {
     "normalization": {
         "Axiom_1": "forall s: string, normalize s = normalize (normalize s)",

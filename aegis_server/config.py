@@ -56,6 +56,17 @@ class EnterpriseSettings(BaseSettings):
         default="",
         description="Comma-separated allowed CORS origins. Empty = no CORS.",
     )
+    trusted_proxy_cidrs: str = Field(
+        default="127.0.0.1,::1",
+        description=(
+            "Comma-separated IPs/CIDRs uvicorn trusts to set X-Forwarded-For / "
+            "X-Forwarded-Proto (passed through as forwarded_allow_ips). Name the "
+            "reverse proxy's real address here rather than accepting a wildcard: "
+            "trusting '*' lets any direct client spoof its own source IP and "
+            "scheme, which downstream IP allowlisting and HTTPS-required checks "
+            "rely on. '*' is rejected at startup in strict mode."
+        ),
+    )
 
     # ------------------------------------------------------------------
     # Authentication
@@ -282,6 +293,13 @@ class EnterpriseSettings(BaseSettings):
         """Fail before serving when enterprise evidence controls are incomplete."""
         if self.security_enforcement_mode != "strict":
             return
+        if "*" in self.get_trusted_proxy_cidrs():
+            raise ValueError(
+                "strict runtime cannot trust '*' in AEGIS_TRUSTED_PROXY_CIDRS: "
+                "that lets any direct client spoof X-Forwarded-For/-Proto and "
+                "impersonate a trusted reverse proxy. Name the proxy's real "
+                "address or CIDR instead."
+            )
         if self.auth_disabled:
             raise ValueError("strict runtime cannot disable authentication")
         if not self.require_durable_evidence:
@@ -296,6 +314,15 @@ class EnterpriseSettings(BaseSettings):
                 raise ValueError("strict runtime requires an HMAC key with at least 32 bytes")
         if self.signer_provider == "vault" and not self.vault_url:
             raise ValueError("strict runtime requires Vault signer URL")
+
+    def get_trusted_proxy_cidrs(self) -> tuple[str, ...]:
+        """Parsed AEGIS_TRUSTED_PROXY_CIDRS, passed through to uvicorn as
+        ``forwarded_allow_ips``. May legitimately contain a literal ``"*"``
+        if an operator set one; ``validate_runtime_invariants`` is what
+        refuses that in strict mode, not this parse."""
+        return tuple(
+            value.strip() for value in self.trusted_proxy_cidrs.split(",") if value.strip()
+        )
 
     def get_api_keys(self) -> set[str]:
         """Return the set of valid proxy API keys (stripped, non-empty)."""

@@ -184,7 +184,7 @@ def _build_aegis_app(backend_port: int) -> FastAPI:
             "AEGIS_WAL_PATH": str(wal_path),
             "AEGIS_API_KEYS": _PROXY_KEY,
             "AEGIS_AUDIT_API_KEYS": _AUDIT_KEY,
-            # Dedicated HMAC key → legal_admissibility = "High".
+            # Dedicated HMAC key → signature_assurance = "SYMMETRIC_AUTHENTICATED".
             "AEGIS_SIGNING_KEY": secrets.token_hex(32),
             "AEGIS_DEBUG_MODE": "false",
             "AEGIS_FORCE_LOGPROBS": "true",

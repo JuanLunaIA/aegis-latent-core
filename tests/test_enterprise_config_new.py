@@ -252,3 +252,60 @@ def test_legacy_unmapped_api_key_principals_require_explicit_opt_in():
     )
 
     assert settings.allow_legacy_unmapped_api_key_principals is True
+
+
+# ── trusted_proxy_cidrs / forwarded_allow_ips ──────────────────────────────────
+
+
+def test_default_trusted_proxy_cidrs_is_not_a_wildcard():
+    s = _settings()
+    assert s.trusted_proxy_cidrs == "127.0.0.1,::1"
+    assert "*" not in s.get_trusted_proxy_cidrs()
+
+
+def test_get_trusted_proxy_cidrs_parses_csv():
+    s = _settings(trusted_proxy_cidrs="10.0.0.0/8, 192.168.1.1")
+    assert s.get_trusted_proxy_cidrs() == ("10.0.0.0/8", "192.168.1.1")
+
+
+def test_get_trusted_proxy_cidrs_empty_returns_empty_tuple():
+    s = _settings(trusted_proxy_cidrs="")
+    assert s.get_trusted_proxy_cidrs() == ()
+
+
+def test_strict_runtime_rejects_wildcard_trusted_proxy_cidrs():
+    s = _settings(
+        security_enforcement_mode="strict",
+        trusted_proxy_cidrs="*",
+        hmac_signing_key="a" * 32,
+    )
+    with pytest.raises(ValueError, match="AEGIS_TRUSTED_PROXY_CIDRS"):
+        s.validate_runtime_invariants()
+
+
+def test_strict_runtime_rejects_wildcard_mixed_with_real_cidrs():
+    """A wildcard anywhere in the list defeats the whole allowlist."""
+    s = _settings(
+        security_enforcement_mode="strict",
+        trusted_proxy_cidrs="10.0.0.0/8,*",
+        hmac_signing_key="a" * 32,
+    )
+    with pytest.raises(ValueError, match="AEGIS_TRUSTED_PROXY_CIDRS"):
+        s.validate_runtime_invariants()
+
+
+def test_strict_runtime_accepts_default_trusted_proxy_cidrs():
+    s = _settings(
+        security_enforcement_mode="strict",
+        hmac_signing_key="a" * 32,
+    )
+    s.validate_runtime_invariants()  # must not raise
+
+
+def test_development_runtime_permits_wildcard_trusted_proxy_cidrs():
+    """The refusal is a strict-mode gate, not a parse-time rejection."""
+    s = _settings(
+        security_enforcement_mode="development",
+        trusted_proxy_cidrs="*",
+    )
+    s.validate_runtime_invariants()  # must not raise

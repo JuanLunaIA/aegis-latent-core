@@ -63,9 +63,10 @@ except ImportError:  # pragma: no cover - platform dependent
 from collections import deque
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
+from enum import StrEnum
 from pathlib import Path
 from threading import Lock
-from typing import Any, Literal, TextIO
+from typing import Any, Final, Literal, TextIO
 
 import numpy as np
 from cryptography.exceptions import InvalidSignature
@@ -354,6 +355,100 @@ except ImportError:
 # ── AuditNode ─────────────────────────────────────────────────────────────────
 
 
+class SignatureAssurance(StrEnum):
+    """How strongly a signed node's signature can be trusted, weakest first.
+
+    Ranked to match ``CryptographicAuditLedger._sign``'s own tier priority
+    (HSM > persistent PQC identity > HMAC > ephemeral Ed25519), so the
+    ordering here is read off the signer's own tier selection rather than
+    invented separately from it.
+
+    UNSIGNED
+        No recognised scheme. Unreachable via ``_sign`` — every commit path
+        either signs under a known tier or raises before a node exists — so
+        this is a defensive floor for corrupt or newer-than-this-build WAL
+        data, not a state a live commit can produce.
+    COMPROMISED_EPHEMERAL
+        ``ed25519-fallback``: a fresh keypair minted per node and never
+        persisted. Verifiable within the process that signed it, not across
+        a restart, and not attributable to any held identity.
+    SYMMETRIC_AUTHENTICATED
+        ``hmac-sha256``: verifiable by anyone holding the shared signing
+        key. Requires that key to stay in process memory.
+    ASYMMETRIC_SOFTWARE
+        ``pqc-ml-dsa``: a persistent post-quantum identity, verifiable
+        against a published public key, but the private key lives in
+        process memory rather than a hardware boundary.
+    ASYMMETRIC_HARDWARE_ATTESTED
+        ``pkcs11-rsa-pss-sha256`` / ``pkcs11-ecdsa-sha256``: signed by an
+        HSM-resident key that never leaves the token boundary.
+    """
+
+    UNSIGNED = "UNSIGNED"
+    COMPROMISED_EPHEMERAL = "COMPROMISED_EPHEMERAL"
+    SYMMETRIC_AUTHENTICATED = "SYMMETRIC_AUTHENTICATED"
+    ASYMMETRIC_SOFTWARE = "ASYMMETRIC_SOFTWARE"
+    ASYMMETRIC_HARDWARE_ATTESTED = "ASYMMETRIC_HARDWARE_ATTESTED"
+
+
+#: Rank for min()-style comparison. Higher is stronger.
+_ASSURANCE_RANK: Final[dict[SignatureAssurance, int]] = {
+    SignatureAssurance.UNSIGNED: 0,
+    SignatureAssurance.COMPROMISED_EPHEMERAL: 1,
+    SignatureAssurance.SYMMETRIC_AUTHENTICATED: 2,
+    SignatureAssurance.ASYMMETRIC_SOFTWARE: 3,
+    SignatureAssurance.ASYMMETRIC_HARDWARE_ATTESTED: 4,
+}
+
+#: Maps each ``AuditNode.signature_scheme`` value this codebase actually
+#: produces (see ``CryptographicAuditLedger._sign`` and
+#: ``HSMSigningBackend.sign``) to the tier that produced it.
+_SCHEME_ASSURANCE: Final[dict[str, SignatureAssurance]] = {
+    "ed25519-fallback": SignatureAssurance.COMPROMISED_EPHEMERAL,
+    "hmac-sha256": SignatureAssurance.SYMMETRIC_AUTHENTICATED,
+    "pqc-ml-dsa": SignatureAssurance.ASYMMETRIC_SOFTWARE,
+    "pkcs11-rsa-pss-sha256": SignatureAssurance.ASYMMETRIC_HARDWARE_ATTESTED,
+    "pkcs11-ecdsa-sha256": SignatureAssurance.ASYMMETRIC_HARDWARE_ATTESTED,
+}
+
+
+def node_signature_assurance(node: AuditNode) -> SignatureAssurance:
+    """The assurance tier ``node`` was actually signed under.
+
+    Reads ``node.signature_scheme`` — recorded at commit time by whichever
+    tier ``_sign`` used for that node — rather than the ledger's current
+    configuration. A node keeps the assurance it was actually signed with
+    even after the ledger is reconfigured with a stronger signer, which is
+    the property CLM-defect-P3-1 was filed against: the old
+    ``legal_admissibility`` read current config instead of chain history,
+    so a chain written entirely under ``ed25519-fallback`` (no key
+    configured yet) silently became "High" the moment an operator added a
+    signing key and restarted — the fallback-signed history never
+    re-examined. An unrecognised scheme maps to ``UNSIGNED`` rather than
+    raising, so a reader auditing unfamiliar WAL data gets the floor
+    assurance instead of a crash.
+    """
+
+    return _SCHEME_ASSURANCE.get(node.signature_scheme, SignatureAssurance.UNSIGNED)
+
+
+def chain_signature_assurance(nodes: list[AuditNode]) -> SignatureAssurance | None:
+    """Weakest-link assurance over ``nodes``, or ``None`` if ``nodes`` is empty.
+
+    Shared by :attr:`CryptographicAuditLedger.signature_assurance` and
+    ``aegis.core.iso27037_evidence.build_evidence_package``, which both need
+    the same chain-history reduction but take their own chain snapshot under
+    the ledger's lock (this function does not lock).
+    """
+
+    if not nodes:
+        return None
+    return min(
+        (node_signature_assurance(node) for node in nodes),
+        key=lambda tier: _ASSURANCE_RANK[tier],
+    )
+
+
 @dataclass
 class AuditNode:
     """Immutable forensic record committed to the Merkle chain.
@@ -374,7 +469,9 @@ class AuditNode:
     prev_hash: str
     merkle_root: str
     signature: str  # hex-encoded
-    signature_scheme: str  # "hmac-sha256" | "pqc-ml-dsa" | "ed25519-fallback"
+    # One of the keys in _SCHEME_ASSURANCE: "hmac-sha256" | "pqc-ml-dsa" |
+    # "ed25519-fallback" | "pkcs11-rsa-pss-sha256" | "pkcs11-ecdsa-sha256".
+    signature_scheme: str
     public_key: str  # hex-encoded; empty string when HMAC scheme
     request_hash: str  # sha256(request_bytes)
     response_hash: str  # sha256(response_bytes) or ""
@@ -631,9 +728,11 @@ class CryptographicAuditLedger:
     persistence_path : str
         Path to the WAL file (line-delimited JSON).
     signing_key : str
-        HMAC-SHA256 signing key.  If non-empty, ``legal_admissibility`` is "High".
-        If empty and RUST_AVAILABLE is False, the fallback ephemeral Ed25519 is
-        used and admissibility drops to "Compromised".
+        HMAC-SHA256 signing key, used when no HSM or PQC identity is
+        configured. If empty and no stronger tier is available, the
+        fallback ephemeral Ed25519 tier is used and ``signature_assurance``
+        reflects that per node actually signed under it, not from this
+        parameter alone (see ``signature_assurance``).
     max_memory_nodes : int
         Sliding-window deque size. Oldest nodes are evicted when the cap is hit.
     max_forensic_bytes : int
@@ -750,13 +849,51 @@ class CryptographicAuditLedger:
 
     # ── Public properties ──────────────────────────────────────────────────
 
-    @property
-    def legal_admissibility(self) -> str:
+    def _configured_signing_ceiling(self) -> SignatureAssurance:
+        """The tier a commit right now would sign under, without signing anything.
+
+        Mirrors ``_sign``'s own tier checks (HSM availability, a configured
+        PQC identity, a configured HMAC key) in the same priority order, but
+        reads configuration only. Used solely by :attr:`signature_assurance`
+        for a chain with no nodes yet: there is no signing history to
+        report, so the honest statement is "here is what the next commit
+        would use", not a claim about history that does not exist.
+        """
+
+        if self._hsm_backend and self._hsm_backend.available:
+            return SignatureAssurance.ASYMMETRIC_HARDWARE_ATTESTED
+        if self._pqc_signer() is not None:
+            return SignatureAssurance.ASYMMETRIC_SOFTWARE
         if self._signing_key:
-            return "High"
-        if any(n.is_fallback for n in self.chain):
-            return "Compromised"
-        return "High"
+            return SignatureAssurance.SYMMETRIC_AUTHENTICATED
+        return SignatureAssurance.COMPROMISED_EPHEMERAL
+
+    @property
+    def signature_assurance(self) -> SignatureAssurance:
+        """The weakest assurance tier actually used across the whole chain.
+
+        Computed per node from ``AuditNode.signature_scheme`` — what each
+        node was actually signed with — never from the ledger's current
+        signing configuration. That distinction is the point: this replaces
+        the former ``legal_admissibility`` property, which read
+        ``self._signing_key`` (fixed at construction) instead of the chain,
+        so a chain replayed from a WAL written entirely under
+        ``ed25519-fallback`` (no key configured at the time) silently
+        reported "High" the moment a later process configured a key and
+        restarted — the fallback-signed history was never re-examined.
+
+        Weakest-link over the chain on purpose: one fallback-signed node
+        means the chain as a whole cannot be presented as fully
+        attributable, no matter how every other node was signed or how the
+        ledger is configured now.
+
+        An empty chain has no signing history to report, so this falls back
+        to :meth:`_configured_signing_ceiling`.
+        """
+
+        with self._lock:
+            chain_snapshot = list(self.chain)
+        return chain_signature_assurance(chain_snapshot) or self._configured_signing_ceiling()
 
     @property
     def archived_segments(self) -> list[str]:
