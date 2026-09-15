@@ -80,20 +80,24 @@ construction — see [THREAT_MODEL](../security/THREAT_MODEL.md)).
 
 `CryptographicAuditLedger` selects a signer in this order (first available wins):
 
-| Priority | Scheme | Enabled by | Quantum-resistant | Admissibility |
+| Priority | Scheme | Enabled by | Quantum-resistant | Assurance tier (`signature_assurance`) |
 |---|---|---|---|---|
-| 1 | **HSM / PKCS#11** (RSA-PSS, ECDSA-SHA256) | `HSMSigningBackend` injected | depends on HSM | High |
-| 2 | **ML-DSA-65** (FIPS 204) | Rust extension present | **Yes** | High |
-| 3 | **HMAC-SHA256** | `AEGIS_SIGNING_KEY` set | No | High |
-| 4 | **Ed25519** (ephemeral) | nothing configured | No | **Compromised** |
+| 1 | **HSM / PKCS#11** (RSA-PSS, ECDSA-SHA256) | `HSMSigningBackend` injected | depends on HSM | `ASYMMETRIC_HARDWARE_ATTESTED` |
+| 2 | **ML-DSA-65** (FIPS 204) | Rust extension present *and* a persistent PQC identity configured | **Yes** | `ASYMMETRIC_SOFTWARE` |
+| 3 | **HMAC-SHA256** | `AEGIS_SIGNING_KEY` set | No | `SYMMETRIC_AUTHENTICATED` |
+| 4 | **Ed25519** (ephemeral) | nothing configured | No | `COMPROMISED_EPHEMERAL` |
 
 The signature covers `prev_hash ‖ merkle_root ‖ request_hash ‖ response_hash`, and is
 verified with `hmac.compare_digest()` (constant-time) on the HMAC path.
 
-> **Production invariant:** `AEGIS_SIGNING_KEY` must be set. Without it the chain
-> falls back to ephemeral Ed25519 whose per-node keypair is discarded — signatures
-> become non-verifiable across restarts and `legal_admissibility` is reported as
-> `Compromised`. The signing key is held **separately** from `AEGIS_API_KEYS`.
+> **Production invariant:** `AEGIS_SIGNING_KEY` must be set (or a PQC identity or HSM
+> configured). Without any of them the chain falls back to ephemeral Ed25519 whose
+> per-node keypair is discarded — signatures become non-verifiable across restarts.
+> `signature_assurance` is computed per node from what actually signed it, not from
+> current configuration, so nodes written this way keep reporting
+> `COMPROMISED_EPHEMERAL` even after a stronger signer is configured later; the
+> weakest-signed node governs the whole chain's reported assurance. The signing key
+> is held **separately** from `AEGIS_API_KEYS`.
 
 ### 2.3 `verify_integrity()`
 

@@ -15,6 +15,126 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — `aegis/core/formal_proofs.py` claimed proofs in `.v` (Coq) files that do not exist
+
+The module docstring said proofs were the "Target: Formal Verification via
+Coq/Lean"; the class docstring said "the full proofs reside in .v (Coq)
+files"; a module-level comment called a Python dict of axiom strings
+"FORMAL SPECIFICATIONS (COQ-STYLE)... used in the formal proof files (.v)".
+There is no Coq toolchain and no `.v` file anywhere in this repository —
+`find . -iname "*.v"` returns nothing. The real, mechanically checked
+formal artifacts are under `specs/`: a Lean 4 theorem
+(`specs/AegisVerification.lean`), a Z3 SMT2 formula
+(`specs/aegis_invariants.smt2`), and TLA+/TLC models, all documented with
+their actual bounds in `docs/formal/FORMAL_VERIFICATION.md`.
+
+`FormalVerificationSuite` itself is an empirical checker — it runs a stated
+property against real implementation functions on concrete inputs and
+returns a bool, the same epistemic weight as a unit test — not a proof
+engine, and never was; the `"Target: Mathematical Certainty"` startup log
+line overstated that too. All three false/overstated claims are corrected
+to describe what this module actually does and where the real proofs
+actually live. Behavior is unchanged; `aegis/core/formal_proofs.py` is not
+imported anywhere in this repository, so this is a documentation-only fix.
+
+### Fixed — the enterprise server trusted every direct client's forwarded headers
+
+`aegis_server/main.py`'s `main()` passed `forwarded_allow_ips="*"` to uvicorn
+unconditionally. With `proxy_headers=True`, that told uvicorn to trust
+`X-Forwarded-For`/`X-Forwarded-Proto` from **any** peer that could reach the
+listener, not just a real reverse proxy — letting any direct client spoof
+its own source IP (defeating IP-based allowlisting downstream) or claim
+`X-Forwarded-Proto: https` over a connection that was never TLS.
+
+`EnterpriseSettings` gains `trusted_proxy_cidrs` (env
+`AEGIS_TRUSTED_PROXY_CIDRS`, default `127.0.0.1,::1`); `main()` now passes
+`get_trusted_proxy_cidrs()` instead of the hardcoded wildcard.
+`validate_runtime_invariants()` refuses startup in strict mode if `"*"`
+appears anywhere in the resolved list — and because that check runs from
+the ASGI lifespan rather than from `main()` itself, it also covers
+`uvicorn aegis_server.main:app` launched directly, which is how
+`deploy/docker/docker-compose.enterprise.yml` actually starts the service.
+That compose file was never exposed to the hardcoded default in source: its
+command line passes no `--forwarded-allow-ips` flag, so it already ran
+under uvicorn's own conservative `127.0.0.1` CLI default. The defect was
+live, reachable code nonetheless — `python -m aegis_server.main`, or the
+module's own `if __name__ == "__main__"` block — that this repository's one
+sample deployment simply didn't exercise.
+
+`main()`'s docstring also claimed it was "registered as
+`aegis-enterprise-server` in pyproject.toml." It isn't: `[project.scripts]`
+registers only `aegis` and `aegis-server`, both mapped to
+`aegis.proxy.app:main`. Corrected alongside the fix rather than left to
+mislead the next reader about how this code is actually invoked.
+
+`CLM-092` and `DOC03-C022` are the controlled claims.
+
+### Fixed — the homoglyph normalizer existed and was never wired into the WAF
+
+`aegis/core/homoglyph_normalizer.py` mapped Cyrillic/Greek/letterlike/fullwidth
+confusables to ASCII, had its own passing unit tests, and was imported by
+nothing in `aegis/`. Meanwhile the WAF's own comment claimed NFKC — which
+`AegisWAF._normalize_text` does apply — "collapses Unicode lookalike
+characters (full-width letters, homoglyphs)". That's true for full-width
+letters and false for homoglyphs: Cyrillic `а` (U+0430) and Greek `η`
+(U+03B7) are canonically distinct from Latin `a`/`n`, not compatibility
+variants, so NFKC leaves them untouched. A payload spelling "ignore previous
+instructions" with Cyrillic or Greek lookalikes had no literal ASCII
+substring for any Layer-1 critical pattern to match, and reached Layer 2
+unmodified either way.
+
+`_normalize_text` now runs `HomoglyphNormalizer` after zero-width stripping
+and NFKC, so Layer 1 sees the ASCII form. **Layer 2 is untouched by this
+fix** — `LLMGuardLocal.analyze_input` scans text `AegisWAF._extract_text`
+extracts directly, bypassing `_normalize_text` (and therefore NFKC too)
+entirely; that gap predates this change and remains open. The stale WAF
+comment is corrected alongside the fix. `CLM-091` and `DOC03-C004`
+(promoted from `ROADMAP` to `IMPLEMENTED`, Layer-1-scoped) are the
+controlled claims; `tests/test_waf_hardening.py` carries the Cyrillic and
+Greek regression tests.
+
+### Fixed — `legal_admissibility` read current config instead of chain history; replaced with `signature_assurance`
+
+**The defect:** `CryptographicAuditLedger.legal_admissibility` returned
+`"High"` whenever a signing key was configured *at read time*, without ever
+consulting the chain it was describing. `_signing_key` is fixed once at
+construction, but `_load_from_wal()` replays history written under a
+*prior* process's configuration — so a WAL written entirely under the
+ephemeral `ed25519-fallback` tier (no key configured on day one) silently
+reported `"High"` the instant a later process reopened it with a key. The
+fallback-signed history was never re-examined; the property only asked
+"is a key configured now," never "what actually signed these nodes."
+
+**The fix:** `signature_assurance` (new) computes a per-node tier from
+`AuditNode.signature_scheme` — what each node was actually signed with —
+and reduces the whole chain to its weakest tier. Five tiers, ranked to
+match `_sign()`'s own priority order: `UNSIGNED` (defensive floor for
+unrecognized/corrupt data, unreachable via a live commit), `COMPROMISED_EPHEMERAL`
+(`ed25519-fallback`), `SYMMETRIC_AUTHENTICATED` (`hmac-sha256`),
+`ASYMMETRIC_SOFTWARE` (`pqc-ml-dsa`), and `ASYMMETRIC_HARDWARE_ATTESTED`
+(the two `pkcs11-*` HSM schemes — previously unhandled by this property
+at all). Weakest-link on purpose: one fallback-signed node keeps the whole
+chain's reported assurance at `COMPROMISED_EPHEMERAL`, regardless of how
+every other node was signed or how the ledger is configured now. An empty
+chain has no signing history to report, so it falls back to the tier the
+next commit would actually use under current configuration, rather than a
+claim about history that doesn't exist yet.
+
+**Breaking change to the public JSON API.** `/audit/health` and
+`/audit/integrity` now return `signature_assurance` in place of
+`legal_admissibility`; `aegis/proxy/schemas.py` and
+`dashboard/src/lib/contracts.ts` were updated to match. This does **not**
+touch `aegis.core.iso27037_evidence.EvidencePackage.legal_admissibility` —
+a separate field with its own `Admissible`/`Conditional`/`Compromised`
+vocabulary and operator-override path, which keeps its name and now
+derives its unreviewed default from the corrected chain scan instead of
+the old config check — nor `ForensicPDFReportBuilder`'s caller-supplied
+`legal_admissibility` parameter, which was never derived from the ledger.
+
+`CLM-090` is the controlled claim. This tier classifies which signing
+mechanism produced a signature; it is not a legal conclusion, and nothing
+here is legal advice.
+
 ### Added — `shredding_version`, and a corrected claim about enabling shredding on an existing chain
 
 The last genuinely missing piece of A3. `sealed_ciphertext` already told a

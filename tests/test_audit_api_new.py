@@ -44,7 +44,7 @@ def _make_node(
 def _make_ledger(nodes=None, integrity=(True, None)):
     ledger = MagicMock()
     ledger.chain = nodes or []
-    ledger.legal_admissibility = "ADMITTED"
+    ledger.signature_assurance = "ASYMMETRIC_HARDWARE_ATTESTED"
     ledger._fault_state = None
     ledger.verify_integrity = MagicMock(return_value=integrity)
     return ledger

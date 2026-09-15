@@ -131,7 +131,7 @@ def build_audit_router(
         return {
             "status": "ok" if fault_state == "healthy" else "degraded",
             "node_count": sum(_visible(node, principal) for node in ledger.chain),
-            "legal_admissibility": ledger.legal_admissibility,
+            "signature_assurance": ledger.signature_assurance,
             "fault_state": fault_state,
             "scope": "retained-memory-window",
             "window_anchor_hash": window_anchor,
@@ -152,7 +152,7 @@ def build_audit_router(
             error_index=err_idx,
             node_count=len(ledger.chain),
             tail_hash=tail,
-            legal_admissibility=ledger.legal_admissibility,
+            signature_assurance=ledger.signature_assurance,
             scope="retained-memory-window",
             window_anchor_hash=window_anchor,
             full_history_retained=window_anchor == "0" * 64,

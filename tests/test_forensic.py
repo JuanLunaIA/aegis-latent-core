@@ -11,7 +11,7 @@ import os
 import tempfile
 import unittest
 
-from aegis.core.crypto_audit import CryptographicAuditLedger
+from aegis.core.crypto_audit import CryptographicAuditLedger, SignatureAssurance
 from aegis.core.forensic import build_merkle_leaf, sha256_hex
 
 _TEST_SIGNING_KEY = "unit-test-ledger-signing-key-do-not-use-in-production"
@@ -85,9 +85,9 @@ class TestForensicLedger(unittest.TestCase):
         self.assertFalse(is_valid)
         self.assertEqual(index, 0)
 
-    def test_legal_admissibility_high_with_signing_key(self) -> None:
+    def test_signature_assurance_symmetric_authenticated_with_signing_key(self) -> None:
         ledger = self._ledger()
-        self.assertEqual(ledger.legal_admissibility, "High")
+        self.assertEqual(ledger.signature_assurance, SignatureAssurance.SYMMETRIC_AUTHENTICATED)
         ledger.commit_forensic(
             state_id="x",
             request_bytes=b"a",
@@ -97,7 +97,7 @@ class TestForensicLedger(unittest.TestCase):
             model="m",
             endpoint="chat.completions",
         )
-        self.assertEqual(ledger.legal_admissibility, "High")
+        self.assertEqual(ledger.signature_assurance, SignatureAssurance.SYMMETRIC_AUTHENTICATED)
 
     def test_merkle_leaf_deterministic(self) -> None:
         leaf_a = build_merkle_leaf(

@@ -49,9 +49,18 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
+from aegis.core.homoglyph_normalizer import HomoglyphNormalizer
 from aegis.core.rust_integration import new_rust_waf, rust_waf_scan_messages
 
 logger = logging.getLogger(__name__)
+
+# NFKC only collapses Unicode *compatibility* variants (full-width letters,
+# fraction ligatures, circled letters) — it leaves Cyrillic/Greek/letterlike
+# homoglyphs untouched, because those are canonically distinct codepoints,
+# not compatibility-equivalent to the Latin letters they merely resemble.
+# NFKC is applied first in ``_normalize_text``, so this instance does not
+# repeat it.
+_HOMOGLYPH_NORMALIZER = HomoglyphNormalizer(apply_nfkc=False)
 
 
 @dataclass
@@ -89,10 +98,13 @@ class AegisWAF:
         # These patterns cover direct prompt-injection primitives; there is no
         # legitimate use case for "system override" or "DAN mode" in production.
         #
-        # Bypass hardening: all text is NFKC-normalized before pattern matching
-        # (see _normalize_text). This collapses Unicode lookalike characters
-        # (full-width letters, homoglyphs) to their ASCII equivalents so patterns
-        # cannot be evaded by substituting Unicode variants.
+        # Bypass hardening: all text is normalized before pattern matching (see
+        # _normalize_text). NFKC collapses compatibility variants (full-width
+        # letters, fraction ligatures); a homoglyph table then maps visually
+        # identical Cyrillic/Greek/letterlike characters — which NFKC does
+        # *not* touch, since they are not compatibility-equivalent to Latin —
+        # to their ASCII equivalents, so patterns cannot be evaded by
+        # substituting Unicode lookalikes.
         #
         # Patterns use flexible spacing/word-boundaries to catch common evasions:
         # - Inserted words: "ignore ALL previous instructions"
@@ -296,12 +308,18 @@ class AegisWAF:
 
     @staticmethod
     def _normalize_text(text: str) -> str:
-        """NFKC-normalize and strip zero-width characters before pattern matching.
+        """Strip zero-width characters, NFKC-normalize, then map homoglyphs.
 
         NFKC collapses compatibility variants (full-width letters, fraction
         ligatures, circled letters) to their canonical ASCII forms. Without
         this, a payload with `ｉｇｎｏｒｅ ｐｒｅｖｉｏｕｓ ｉｎｓｔｒｕｃｔｉｏｎｓ`
         (U+FF49 etc.) would bypass all string-literal patterns.
+
+        NFKC does **not** touch Cyrillic/Greek/letterlike homoglyphs (e.g.
+        Cyrillic `а` U+0430, which looks identical to Latin `a`): those are
+        canonically distinct codepoints, not compatibility variants of the
+        Latin letters they resemble. `HomoglyphNormalizer` maps them to ASCII
+        afterward, closing that gap.
 
         Zero-width joiners / non-joiners and soft-hyphens are stripped first
         because NFKC preserves them and they fragment word matches.
@@ -320,7 +338,8 @@ class AegisWAF:
         )
         for ch in _ZW_CHARS:
             text = text.replace(ch, "")
-        return unicodedata.normalize("NFKC", text)
+        text = unicodedata.normalize("NFKC", text)
+        return _HOMOGLYPH_NORMALIZER.normalize(text)
 
     def _scan_content(self, data: Any) -> list[str]:
         matches: list[str] = []

@@ -61,6 +61,8 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
+from aegis.core.crypto_audit import SignatureAssurance, chain_signature_assurance
+
 if TYPE_CHECKING:
     from aegis.core.crypto_audit import CryptographicAuditLedger
 
@@ -392,7 +394,17 @@ def build_evidence_package(
     # Snapshot ledger under its own lock
     with ledger._lock:
         chain_snapshot = list(ledger.chain)
-        legal_admissibility = ledger.legal_admissibility
+        assurance = chain_signature_assurance(chain_snapshot) or ledger._configured_signing_ceiling()
+
+    # Preserves this package's pre-existing two-value vocabulary
+    # ("High"/"Compromised", distinct from the LegalAdmissibility enum
+    # below). Anything weaker than a persistent, verifiable identity —
+    # including the defensive UNSIGNED floor — reads as Compromised.
+    legal_admissibility = (
+        "Compromised"
+        if assurance in (SignatureAssurance.UNSIGNED, SignatureAssurance.COMPROMISED_EPHEMERAL)
+        else "High"
+    )
 
     # Apply per-bundle override when provided.
     if legal_admissibility_override is not None:

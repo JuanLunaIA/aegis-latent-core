@@ -1047,10 +1047,25 @@ app = create_app()
 
 def main() -> None:
     """
-    CLI entry point registered as ``aegis-enterprise-server`` in pyproject.toml.
+    CLI entry point for the enterprise server: ``python -m aegis_server.main``.
+
+    Not currently registered as a ``[project.scripts]`` console command in
+    pyproject.toml — only ``aegis`` and ``aegis-server`` are, and both map to
+    ``aegis.proxy.app:main``. The reference Docker Compose deployment
+    (``deploy/docker/docker-compose.enterprise.yml``) instead invokes
+    ``uvicorn aegis_server.main:app`` directly and does not go through this
+    function at all.
 
     Reads host/port/workers/log_level from ``EnterpriseSettings`` (environment
-    variables) so the Docker CMD is simply ``["aegis-enterprise-server"]``.
+    variables).
+
+    ``forwarded_allow_ips`` comes from ``AEGIS_TRUSTED_PROXY_CIDRS`` (default
+    ``127.0.0.1,::1``) rather than a wildcard: uvicorn uses it to decide which
+    peers may set X-Forwarded-For/-Proto, and trusting every direct client
+    lets any of them spoof their own source IP and scheme. A literal ``"*"``
+    here is refused at startup in strict mode by
+    ``EnterpriseSettings.validate_runtime_invariants`` (invoked from the
+    ASGI lifespan, so this also covers the Compose deployment path above).
     """
     import uvicorn
 
@@ -1063,7 +1078,7 @@ def main() -> None:
         log_level=settings.log_level.lower(),
         access_log=True,
         proxy_headers=True,
-        forwarded_allow_ips="*",
+        forwarded_allow_ips=",".join(settings.get_trusted_proxy_cidrs()),
     )
 
 

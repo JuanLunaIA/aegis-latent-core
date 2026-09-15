@@ -5,14 +5,14 @@ const hash = z.string().regex(/^[0-9a-f]{64}$/);
 export const serviceHealthSchema = z.object({status: z.string()}).passthrough();
 export const auditHealthSchema = z.object({
   status: z.string(), node_count: z.number().int().nonnegative(),
-  legal_admissibility: z.string(), fault_state: z.string(),
+  signature_assurance: z.string(), fault_state: z.string(),
   scope: z.string().optional(), window_anchor_hash: z.string().optional(),
   full_history_retained: z.boolean().optional(),
 });
 export const integritySchema = z.object({
   valid: z.boolean(), error_index: z.number().int().nullable(),
   node_count: z.number().int().nonnegative(), tail_hash: z.string(),
-  legal_admissibility: z.string(), scope: z.string().default("retained-memory-window"),
+  signature_assurance: z.string(), scope: z.string().default("retained-memory-window"),
   window_anchor_hash: z.string().default(""), full_history_retained: z.boolean().default(false),
 });
 export const auditNodeSchema = z.object({

@@ -16,7 +16,7 @@ import unittest
 import numpy as np
 import pytest
 
-from aegis.core.crypto_audit import AuditNode, CryptographicAuditLedger
+from aegis.core.crypto_audit import AuditNode, CryptographicAuditLedger, SignatureAssurance
 from aegis.core.math_utils import KahanSummation, normalize_logits, verify_distribution
 from aegis.core.moe_monitor import MoERoutingMonitor
 from aegis.core.telemetry import KLResult, LogitEntropyMonitor
@@ -385,17 +385,21 @@ class TestCryptographicAuditLedger(unittest.TestCase):
         self.assertTrue(len(node.signature) > 0)
         self.assertTrue(len(node.public_key) > 0)
 
-    def test_legal_admissibility_without_persistence(self) -> None:
+    def test_signature_assurance_without_persistence(self) -> None:
         ledger = self.create_ledger(self.temp_path)
-        # If no nodes committed, it should be High (empty is valid)
-        self.assertEqual(ledger.legal_admissibility, "High")
+        # No nodes committed and no signing key configured: no history to
+        # report, so this reports the tier the next commit would actually
+        # use — COMPROMISED_EPHEMERAL, since nothing stronger is configured.
+        self.assertEqual(ledger.signature_assurance, SignatureAssurance.COMPROMISED_EPHEMERAL)
 
-    def test_legal_admissibility_with_persistence(self) -> None:
+    def test_signature_assurance_with_persistence(self) -> None:
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as f:
             path = f.name
         try:
             with CryptographicAuditLedger(persistence_path=path) as ledger:
-                self.assertEqual(ledger.legal_admissibility, "High")
+                self.assertEqual(
+                    ledger.signature_assurance, SignatureAssurance.COMPROMISED_EPHEMERAL
+                )
         finally:
             os.unlink(path)
 

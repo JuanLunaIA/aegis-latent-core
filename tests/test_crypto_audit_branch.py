@@ -18,6 +18,7 @@ import aegis.core.crypto_audit as _module
 from aegis.core.crypto_audit import (
     CryptographicAuditLedger,
     PQCSignatureAnchor,
+    SignatureAssurance,
     _build_signed_payload,
     _hmac_sign,
     _hmac_verify,
@@ -45,36 +46,56 @@ def test_rust_available_true_branch(tmp_path):
         assert _module.RUST_AVAILABLE == orig
 
 
-# ── legal_admissibility — Compromised branch (line ~273) ─────────────────────
+# ── signature_assurance — chain-history-based lattice (line ~273) ────────────
 
 
-def test_legal_admissibility_compromised_when_fallback_node(tmp_path):
+def test_signature_assurance_compromised_ephemeral_when_fallback_node(tmp_path):
     """
     Arrange: ledger with no signing key and no Rust → Ed25519 fallback used.
     Act:     commit one record.
-    Assert:  is_fallback=True → legal_admissibility == "Compromised".
+    Assert:  is_fallback=True → signature_assurance == COMPROMISED_EPHEMERAL.
     """
     with patch("aegis.core.crypto_audit.RUST_AVAILABLE", False):
         ledger = CryptographicAuditLedger(str(tmp_path / "wal.jsonl"), signing_key="")
         node = ledger.commit_forensic(state_id="x1", request_bytes=b"payload")
         assert node.is_fallback is True
-        assert ledger.legal_admissibility == "Compromised"
+        assert ledger.signature_assurance == SignatureAssurance.COMPROMISED_EPHEMERAL
         ledger.close()
 
 
-def test_legal_admissibility_high_with_signing_key(tmp_path):
-    """High admissibility when signing_key is set — covers the first return branch."""
+def test_signature_assurance_symmetric_authenticated_with_signing_key(tmp_path):
+    """A committed HMAC-signed node reports SYMMETRIC_AUTHENTICATED."""
     ledger = CryptographicAuditLedger(str(tmp_path / "wal.jsonl"), signing_key="secret")
-    assert ledger.legal_admissibility == "High"
+    ledger.commit_forensic(state_id="x1", request_bytes=b"payload")
+    assert ledger.signature_assurance == SignatureAssurance.SYMMETRIC_AUTHENTICATED
     ledger.close()
 
 
-def test_legal_admissibility_high_no_key_no_fallback_nodes(tmp_path):
-    """High admissibility when no key, empty chain (no fallback nodes)."""
+def test_signature_assurance_reflects_configured_ceiling_on_empty_chain(tmp_path):
+    """An empty chain has no signing history to report, so this falls back to
+    the tier the next commit would use under the current configuration —
+    COMPROMISED_EPHEMERAL when no key, PQC identity, or HSM is configured."""
     ledger = CryptographicAuditLedger(str(tmp_path / "wal.jsonl"), signing_key="")
-    # Chain is empty → the `any(n.is_fallback …)` check is False → "High"
-    assert ledger.legal_admissibility == "High"
+    assert ledger.signature_assurance == SignatureAssurance.COMPROMISED_EPHEMERAL
     ledger.close()
+
+
+def test_signature_assurance_does_not_launder_historical_fallback_nodes(tmp_path):
+    """The defect this lattice replaces: the former ``legal_admissibility``
+    read ``self._signing_key`` (current config), not chain history, so a WAL
+    written entirely under ed25519-fallback reported "High" the instant a
+    later process reopened it with a signing key. signature_assurance must
+    stay COMPROMISED_EPHEMERAL, because the historical node was never
+    re-signed under the new key."""
+    wal_path = str(tmp_path / "wal.jsonl")
+    with patch("aegis.core.crypto_audit.RUST_AVAILABLE", False):
+        first = CryptographicAuditLedger(wal_path, signing_key="")
+        first.commit_forensic(state_id="x1", request_bytes=b"payload")
+        first.close()
+
+    reopened = CryptographicAuditLedger(wal_path, signing_key="a-new-key")
+    assert reopened.signature_assurance == SignatureAssurance.COMPROMISED_EPHEMERAL
+    reopened.close()
 
 
 # ── close() — OSError in flush/fsync suppressed (lines ~458-459) ─────────────

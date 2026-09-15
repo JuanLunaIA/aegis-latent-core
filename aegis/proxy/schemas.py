@@ -191,7 +191,7 @@ class AuditSessionOut(BaseModel):
     session_id: str
     node_count: int
     tail_hash: str
-    legal_admissibility: str
+    signature_assurance: str
     integrity_valid: bool
 
 
@@ -200,7 +200,7 @@ class IntegrityReport(BaseModel):
     error_index: int | None
     node_count: int
     tail_hash: str
-    legal_admissibility: str
+    signature_assurance: str
     scope: str = "retained-memory-window"
     window_anchor_hash: str = ""
     full_history_retained: bool = False
