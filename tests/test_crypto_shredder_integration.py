@@ -223,3 +223,113 @@ class TestDisabledByDefault:
             valid, index = reopened.verify_integrity()
             assert valid is True
             assert index is None
+
+
+class TestShreddingVersion:
+    """Which construction produced a record's commitment.
+
+    `sealed_ciphertext` already tells a reader *that* a node is sealed; this
+    field says *how*. Its whole reason to exist is a migration one -- see
+    `aegis.core.crypto_shredder`'s comment beside `SHRED_SCHEME_V1` -- so what
+    these tests pin down is that the label always tracks the envelope it
+    describes, never the other way around.
+    """
+
+    def test_an_unsealed_node_carries_the_empty_scheme(self, tmp_path: Path) -> None:
+        with CryptographicAuditLedger(
+            str(tmp_path / "plain.wal"), signing_key=SIGNING_KEY
+        ) as ledger:
+            node = ledger.commit_forensic(state_id="r", request_bytes=SECRET, tenant_id="s")
+
+        from aegis.core.crypto_shredder import SHRED_SCHEME_UNSEALED
+
+        assert node.shredding_version == SHRED_SCHEME_UNSEALED
+        assert node.sealed_ciphertext == ""
+
+    def test_a_sealed_node_names_the_construction_that_sealed_it(self, tmp_path: Path) -> None:
+        with _sealing_ledger(tmp_path) as ledger:
+            node = ledger.commit_forensic(state_id="r", request_bytes=SECRET, tenant_id="s")
+
+        from aegis.core.crypto_shredder import SHRED_SCHEME_V1
+
+        assert node.shredding_version == SHRED_SCHEME_V1
+        assert node.sealed_ciphertext != ""
+
+    def test_enabling_shredding_on_an_existing_plain_chain_is_supported_not_refused(
+        self, tmp_path: Path
+    ) -> None:
+        """The question the field exists to let a reader answer for themselves.
+
+        Toggling the flag on does not retroactively seal history -- there is
+        no re-sealing pass -- and it is not refused either: new writes are
+        sealed going forward, on the same WAL, in the same verified chain.
+        `shredding_version` is what lets a reader tell the two node kinds
+        apart without inferring it from whether `sealed_ciphertext` is empty
+        for a reason they have to reconstruct themselves.
+        """
+        wal = tmp_path / "mixed.wal"
+        with CryptographicAuditLedger(str(wal), signing_key=SIGNING_KEY) as first:
+            first.commit_forensic(state_id="before", request_bytes=SECRET, tenant_id="s")
+
+        with CryptographicAuditLedger(
+            str(wal), signing_key=SIGNING_KEY, enable_cryptographic_shredding=True
+        ) as second:
+            second.commit_forensic(state_id="after", request_bytes=SECRET, tenant_id="s")
+
+            versions = [node.shredding_version for node in second.chain]
+            from aegis.core.crypto_shredder import SHRED_SCHEME_UNSEALED, SHRED_SCHEME_V1
+
+            assert versions == [SHRED_SCHEME_UNSEALED, SHRED_SCHEME_V1]
+            assert second.chain[0].sealed_ciphertext == ""
+            assert second.chain[1].sealed_ciphertext != ""
+
+            valid, broken_at = second.verify_integrity()
+            assert valid is True
+            assert broken_at is None
+
+    def test_a_never_sealed_legacy_line_loads_with_the_unsealed_default(
+        self, tmp_path: Path
+    ) -> None:
+        """The ordinary case: no field, no ciphertext, genuinely never sealed."""
+        import json
+
+        from aegis.core.crypto_audit import AuditNode
+        from aegis.core.crypto_shredder import SHRED_SCHEME_UNSEALED
+
+        with CryptographicAuditLedger(
+            str(tmp_path / "plain.wal"), signing_key=SIGNING_KEY
+        ) as ledger:
+            node = ledger.commit_forensic(state_id="r", request_bytes=SECRET, tenant_id="s")
+        record = node.to_dict()
+        del record["shredding_version"]
+
+        reloaded = AuditNode.from_dict(json.loads(json.dumps(record)))
+        assert reloaded.shredding_version == SHRED_SCHEME_UNSEALED
+
+    def test_a_legacy_sealed_line_without_the_field_infers_v1_from_the_ciphertext(
+        self, tmp_path: Path
+    ) -> None:
+        """The case a flat default would get wrong.
+
+        `sealed_subject_id`/`sealed_nonce`/`sealed_ciphertext` predate
+        `shredding_version`: a node the shredder sealed before this field
+        existed has real ciphertext and no version key. Defaulting that to the
+        *unsealed* marker would misreport a genuinely sealed record. Since
+        SHRED_SCHEME_V1 is the only construction that has ever produced
+        ciphertext here, a non-empty `sealed_ciphertext` with no version key
+        can only mean that one -- see `from_dict`'s conditional default.
+        """
+        import json
+
+        from aegis.core.crypto_audit import AuditNode
+        from aegis.core.crypto_shredder import SHRED_SCHEME_V1
+
+        with _sealing_ledger(tmp_path, "source") as ledger:
+            node = ledger.commit_forensic(state_id="r", request_bytes=SECRET, tenant_id="s")
+        record = node.to_dict()
+        assert record["sealed_ciphertext"] != ""  # sanity: this one really was sealed
+        del record["shredding_version"]  # simulate the pre-existing-field WAL shape
+
+        reloaded = AuditNode.from_dict(json.loads(json.dumps(record)))
+        assert reloaded.shredding_version == SHRED_SCHEME_V1
+        assert reloaded.node_hash == node.node_hash  # unbound: reload must not move it

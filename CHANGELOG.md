@@ -15,6 +15,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `shredding_version`, and a corrected claim about enabling shredding on an existing chain
+
+The last genuinely missing piece of A3. `sealed_ciphertext` already told a
+reader *that* a node was sealed; nothing said *how*. `AuditNode` gains
+`shredding_version`: empty for a node written with shredding off or before
+the field existed, `v1-aesgcm256-sha256` for one `CryptoShredder` sealed.
+Unbound, like the rest of that field group — `mmr_leaf_hash` is itself not a
+`node_hash` input, so binding the label while leaving what it labels unbound
+would buy nothing.
+
+`from_dict`'s default is conditional rather than flat: a node the shredder
+sealed *before* this field existed has real `sealed_ciphertext` and no
+`shredding_version` key, and `v1-aesgcm256-sha256` is the only construction
+that has ever produced ciphertext here, so a non-empty `sealed_ciphertext`
+with no version key can only mean that one. A flat `""` default would have
+reported a genuinely sealed legacy record as unsealed.
+
+**`docs/CLAIMS_MATRIX.md` (`CLM-068`) previously stated shredding "cannot be
+enabled on an existing chain" and that doing so "means starting a new
+chain." Measuring the actual behavior — not assuming it — found the
+opposite: `_seal_leaf` has always branched on the shredder's presence at
+each commit, so re-opening an existing WAL with the flag newly on seals
+every write from that point forward and leaves history untouched. The
+resulting mixed chain — some leaves are payload digests, some are sealed —
+verifies, because neither form was ever a `node_hash` input.
+`shredding_version` is what now lets a reader tell them apart without
+inferring it from whether `sealed_ciphertext` happens to be empty. Corrected
+in `CLM-068` and its register row rather than left standing.
+
 ### Added — a zero-knowledge inclusion proof, and what it cannot say
 
 `aegis_rust_v2/src/zk_mmr.rs` implements an R1CS circuit over Spartan proving
