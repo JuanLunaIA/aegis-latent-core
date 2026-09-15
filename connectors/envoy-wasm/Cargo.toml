@@ -3,7 +3,7 @@
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 [package]
 name = "aegis-envoy-wasm"
-version = "4.3.0"
+version = "5.0.0"
 edition = "2021"
 description = "Aegis WAF and streaming redaction as an Envoy/Istio proxy-wasm filter"
 license = "AGPL-3.0-only"

@@ -3,7 +3,7 @@
 **Review date:** 2026-08-22 UTC
 **Amended:** 2026-09-10 UTC — `UC-037` rewritten because the shredder it blocks overclaims for is now wired as an opt-in that is off by default; wiring narrows nothing the row blocks and adds one blocked phrasing. Previously amended 2026-09-09 UTC, when `UC-037` and `UC-038` were added for three then-unwired mechanisms in the `4.3.0` source baseline and `UC-005` was annotated. No existing disposition changed at either amendment.
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out source metadata is synchronized at `v4.3.0`, which is unpublished; the most recent published release is `v4.1.2`
+**Source baseline:** checked-out source metadata is synchronized at `v5.0.0`, which is unpublished; the most recent published release is `v4.1.2`
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** published `v3.1.0` artifacts and retained measurements remain historical; post-v3.1.0 capabilities are not attributed to that distribution
 **Disposition:** Claims below are blocked, downgraded, or require qualified review.
