@@ -289,6 +289,8 @@ class CryptoShredder:
 
 __all__ = [
     "CryptoShredder",
+    "SHRED_SCHEME_UNSEALED",
+    "SHRED_SCHEME_V1",
     "SealedPayload",
     "ShredderError",
     "ShredderIntegrityError",
