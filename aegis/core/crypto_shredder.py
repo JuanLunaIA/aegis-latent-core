@@ -12,7 +12,7 @@ record. The ciphertext, the WAL line, every peak and the root stay exactly as
 they were, so previously issued inclusion proofs keep verifying.
 
     seal(subject, plaintext) -> SealedPayload      # key minted, kept in a vault
-    commitment = SHA-256(0x00 || ciphertext)       # this is what the MMR commits
+    commitment = SHA-256(0x00 || nonce || ciphertext)   # what the MMR commits
     erase(subject)                                 # key destroyed; ciphertext kept
     open(sealed) -> ShredderKeyDestroyedError      # plaintext unrecoverable
 
@@ -66,6 +66,36 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 #: tag so a commitment cannot be confused with an interior node.
 _DOMAIN_COMMITMENT: Final[bytes] = b"\x00"
 
+# ── Sealing scheme identifiers ────────────────────────────────────────────────
+#
+# The name records which construction produced a record's commitment, and it
+# exists for the reason the MMR's `HASH_SCHEME_V1`/`HASH_SCHEME_V2` pair does:
+# an unlabelled hash construction is a migration trap. A verifier recomputing
+# `SHA-256(0x00 || nonce || ciphertext)` against a record sealed under some
+# later scheme would not get a mismatch it could attribute — it would get a
+# mismatch indistinguishable from tampering.
+#
+# This is forward-compatibility, not a present ambiguity: a record already
+# discloses *that* it is sealed by carrying `sealed_ciphertext`. What it could
+# not say until now is *how*.
+#
+# Deliberately no validator alongside these, unlike `aegis.core.forensic`'s
+# `validate_waf_verdict`. That function guards a real boundary: `waf_verdict`
+# is a public `commit_forensic` keyword argument, so a caller can hand it
+# anything. `shredding_version` has no such entry point — every write site
+# derives it from `SealedPayload.scheme` or the constant below, never from
+# caller input — so a validator here would guard a boundary that does not
+# exist. `status`, `mmr_leaf_hash` and the other unbound fields on `AuditNode`
+# are unvalidated for the identical reason. Add one if a second scheme ever
+# makes `scheme` a real choice rather than a hardcoded return.
+SHRED_SCHEME_V1: Final[str] = "v1-aesgcm256-sha256"
+#: No envelope: the record's `mmr_leaf_hash` is a digest of the leaf bytes
+#: themselves. This is what every node written with shredding off carries, and
+#: what every node written before this field existed carries. It is the absence
+#: of sealing, not a sealing scheme.
+SHRED_SCHEME_UNSEALED: Final[str] = ""
+
+
 _NONCE_BYTES: Final[int] = 12  # 96-bit, the GCM-recommended size
 
 _SCHEMA: Final[str] = """
@@ -115,6 +145,17 @@ class SealedPayload:
     @property
     def commitment_hex(self) -> str:
         return self.commitment.hex()
+
+    @property
+    def scheme(self) -> str:
+        """The construction that produced :attr:`commitment`.
+
+        Read from the payload rather than assumed by the caller, so a record
+        and the scheme recorded beside it cannot drift apart at the one place
+        they are written together.
+        """
+
+        return SHRED_SCHEME_V1
 
 
 class CryptoShredder:

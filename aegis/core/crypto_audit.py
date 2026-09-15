@@ -71,7 +71,12 @@ import numpy as np
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from aegis.core.crypto_shredder import CryptoShredder, SealedPayload
+from aegis.core.crypto_shredder import (
+    SHRED_SCHEME_UNSEALED,
+    SHRED_SCHEME_V1,
+    CryptoShredder,
+    SealedPayload,
+)
 from aegis.core.forensic import (
     WAF_VERDICT_UNRECORDED,
     build_merkle_leaf,
@@ -407,6 +412,23 @@ class AuditNode:
     sealed_subject_id: str = ""
     sealed_nonce: str = ""  # hex-encoded 96-bit GCM nonce
     sealed_ciphertext: str = ""  # hex-encoded AES-256-GCM ciphertext
+    # Which construction produced this record's commitment. Empty means the
+    # record was not sealed, so ``mmr_leaf_hash`` is a digest of the leaf bytes.
+    #
+    # The presence of ``sealed_ciphertext`` above already tells a reader *that*
+    # a record is sealed; this says *how*. That is the gap it closes, and it is
+    # a forward-compatibility one rather than a present ambiguity: a verifier
+    # recomputing `SHA-256(0x00 || nonce || ciphertext)` against a record sealed
+    # under some later construction would see a mismatch it could not attribute,
+    # indistinguishable from tampering. The MMR carries `hash_scheme` for
+    # exactly this reason (`aegis/core/mmr.py`); the envelope had no equivalent.
+    #
+    # Unbound, like the rest of this group and like ``status``. That is coherent
+    # rather than convenient: ``mmr_leaf_hash`` is itself not a ``node_hash``
+    # input, so binding the label while leaving the thing it labels unbound
+    # would buy nothing. The MMR snapshot's authority is the accumulator root,
+    # not the node signature.
+    shredding_version: str = ""
     # The WAF outcome recorded at admission, from the closed vocabulary in
     # `aegis.core.forensic`. Empty on every node written before the field
     # existed, which is "not recorded" and not a third outcome.
@@ -484,6 +506,15 @@ class AuditNode:
             "sealed_subject_id": "",
             "sealed_nonce": "",
             "sealed_ciphertext": "",
+            # A flat "" default would be wrong for a node written by the
+            # shredder *before* this field existed: it has a real
+            # ``sealed_ciphertext`` and no ``shredding_version`` key, and a flat
+            # default would report it as unsealed — misrepresenting a genuinely
+            # sealed record as one whose ``mmr_leaf_hash`` is a plain leaf
+            # digest. SHRED_SCHEME_V1 is the only construction that has ever
+            # produced ciphertext in this codebase, so a non-empty
+            # ``sealed_ciphertext`` with no version key can only mean that one.
+            "shredding_version": (SHRED_SCHEME_V1 if data.get("sealed_ciphertext") else ""),
             "waf_verdict": "",
         }
         # Remove legacy field if present
@@ -872,6 +903,7 @@ class CryptographicAuditLedger:
                 sealed_subject_id=sealed.subject_id if sealed else "",
                 sealed_nonce=sealed.nonce.hex() if sealed else "",
                 sealed_ciphertext=sealed.ciphertext.hex() if sealed else "",
+                shredding_version=sealed.scheme if sealed else SHRED_SCHEME_UNSEALED,
                 waf_verdict=waf_verdict,
             )
 
@@ -1011,6 +1043,7 @@ class CryptographicAuditLedger:
                 sealed_subject_id=sealed.subject_id if sealed else "",
                 sealed_nonce=sealed.nonce.hex() if sealed else "",
                 sealed_ciphertext=sealed.ciphertext.hex() if sealed else "",
+                shredding_version=sealed.scheme if sealed else SHRED_SCHEME_UNSEALED,
             )
 
             try:
@@ -1196,6 +1229,7 @@ class CryptographicAuditLedger:
                 sealed_subject_id=sealed.subject_id if sealed else "",
                 sealed_nonce=sealed.nonce.hex() if sealed else "",
                 sealed_ciphertext=sealed.ciphertext.hex() if sealed else "",
+                shredding_version=sealed.scheme if sealed else SHRED_SCHEME_UNSEALED,
             )
             try:
                 ticket = self._persist_node(node)
