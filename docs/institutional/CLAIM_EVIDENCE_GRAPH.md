@@ -3,7 +3,7 @@
 **Graph version:** 1.1
 **Source cutoff:** 2026-09-15 UTC (`CEG-009` restated because homoglyph normalization now reaches WAF Layer 1 under `AegisWAF._normalize_text`, cutoff 2026-09-15; `CEG-025`, `CEG-028` and `CEG-029` restated because the v2 hash scheme, the grammar frontier and the shredder now reach the request path under stated conditions, cutoff 2026-09-10; `CEG-026`, `CEG-027` and `CEG-001`–`CEG-024` unchanged, cutoffs 2026-09-09 and 2026-08-27)
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out source metadata is synchronized at `v4.3.0`, which is unpublished; the most recent published release is `v4.1.2`
+**Source baseline:** checked-out source metadata is synchronized at `v5.0.0`, which is unpublished; the most recent published release is `v4.1.2`
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** published `v3.1.0` artifacts and retained measurements remain historical; post-v3.1.0 capabilities are not attributed to that distribution
 **Normative status authority:** `docs/CLAIMS_MATRIX.md`

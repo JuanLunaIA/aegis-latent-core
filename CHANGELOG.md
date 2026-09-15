@@ -2,18 +2,35 @@
 
 All notable changes to **Aegis Latent Core** are documented in this file.
 
-**Last verified:** 2026-09-08 UTC
-**Release baseline:** `v4.3.0`, fourteen synchronized anchors — **a candidate, not a release. Nothing is published for `4.3.0`** — no tag, GitHub Release, PyPI or npm artifact, or OCI image exists for it. Source metadata does not establish external lifecycle state, which requires independent readback. There is no `4.2.0`; the number was skipped deliberately and no artifact was ever published under it.
+**Last verified:** 2026-09-15 UTC
+**Release baseline:** `v5.0.0`, fourteen synchronized anchors — **a candidate, not a release. Nothing is published for `5.0.0`** — no tag, GitHub Release, PyPI or npm artifact, or OCI image exists for it. Source metadata does not establish external lifecycle state, which requires independent readback. There is no `4.2.0` or `4.4.0`; both numbers were skipped deliberately and no artifact was ever published under either.
 **Most recent published release (readback 2026-09-04):** `v4.1.2` signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway image `sha256:b3f6aadc…f80710` and dashboard image `sha256:27e1bbc2…d92398`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
-**Source release target:** `v4.3.0` (fourteen synchronized `4.3.0` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts, none of which exist yet for `4.3.0` — recorded in `docs/RELEASE_STATUS.md` §1.0)
+**Source release target:** `v5.0.0` (fourteen synchronized `5.0.0` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts, none of which exist yet for `5.0.0` — recorded in `docs/RELEASE_STATUS.md` §1.0)
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [5.0.0] — unreleased source target
+
+**Nothing is published for `5.0.0`.** There is no tag, GitHub Release, PyPI or
+npm artifact, and no OCI image. This section records what the source tree
+contains at fourteen synchronized `5.0.0` anchors; it is not a release
+announcement, and the date of any future release is not set here. See
+`docs/RELEASE_STATUS.md` §1.0.
+
+**`4.4.0` does not exist.** The number was skipped deliberately when the
+source line moved from `4.3.0` to `5.0.0`. The jump reflects a breaking
+change to the public JSON API — `signature_assurance` (`CLM-090`) replaces
+`legal_admissibility` on `/audit/health` and `/audit/integrity` — not a
+version-numbering oversight. No `4.4.0` artifact was ever built or
+published, so its absence from any registry is expected rather than a
+withdrawal. (`4.2.0` was likewise skipped, deliberately, at the prior
+`4.1.2` → `4.3.0` move.)
 
 ### Fixed — `aegis/core/formal_proofs.py` claimed proofs in `.v` (Coq) files that do not exist
 

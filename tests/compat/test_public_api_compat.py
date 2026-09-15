@@ -18,7 +18,7 @@ published release — with ``git show v4.1.2:<path>``, not restated from memory.
 That tag is the baseline because it is the last surface that reached a
 registry: there is no ``4.2.0`` at any surface, the number having been skipped
 deliberately, so no ``4.2.0`` contract exists to compare against. The tree these
-tests run in is ``4.3.0``, which is unpublished.
+tests run in is ``5.0.0``, which is unpublished.
 
 Direction matters
 -----------------

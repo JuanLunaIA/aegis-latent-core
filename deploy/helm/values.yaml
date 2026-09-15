@@ -13,7 +13,7 @@ serviceAccount:
 image:
   repository: ghcr.io/juanlunaia/aegis-latent-core
   pullPolicy: IfNotPresent
-  tag: "v4.3.0"
+  tag: "v5.0.0"
 
 imagePullSecrets: []
 nameOverride: ""
