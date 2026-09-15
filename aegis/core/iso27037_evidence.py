@@ -394,7 +394,9 @@ def build_evidence_package(
     # Snapshot ledger under its own lock
     with ledger._lock:
         chain_snapshot = list(ledger.chain)
-        assurance = chain_signature_assurance(chain_snapshot) or ledger._configured_signing_ceiling()
+        assurance = (
+            chain_signature_assurance(chain_snapshot) or ledger._configured_signing_ceiling()
+        )
 
     # Preserves this package's pre-existing two-value vocabulary
     # ("High"/"Compromised", distinct from the LegalAdmissibility enum
