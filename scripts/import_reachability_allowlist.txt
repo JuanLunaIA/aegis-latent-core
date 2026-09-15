@@ -1,0 +1,97 @@
+# Modules not reachable from any of this repository's documented entrypoints
+# (aegis, aegis.proxy.app, aegis_server.main, aegis.engines, aegis.crypto,
+# aegis.forensics), as measured by scripts/verify_import_reachability.py on
+# 2026-09-15.
+#
+# This is a disclosure, not a classification. Each name below has one
+# property verified: no static import edge from those entrypoints reaches
+# it. This audit does NOT further adjudicate whether a given module is a
+# direct-import utility documented only in its own docstring or a doc
+# outside this repository's grep reach, a detector or compliance module
+# built but not yet wired into a request path, or inert code that should be
+# deleted. Treat entries here as a worklist, not a verdict.
+#
+# One line per dotted module name. Blank lines and #-comments are ignored.
+# Removing a line means the module must actually be reachable from a real
+# entrypoint (rerun the script to confirm), or deleted from the tree, or
+# genuinely a new public entrypoint surface added to ENTRYPOINT_MODULES in
+# verify_import_reachability.py — not silently dropped.
+
+aegis.auth.abac
+aegis.auth.ldap_auth
+aegis.auth.rbac
+aegis.auth.scim
+aegis.connectors
+aegis.connectors.lakehouse
+aegis.connectors.lakehouse.parquet_exporter
+aegis.connectors.siem
+aegis.connectors.siem.splunk_hec
+aegis.connectors.vault
+aegis.connectors.vault.transit_signer
+aegis.core.adversarial_suffix_detector
+aegis.core.ae_keyword_detector
+aegis.core.archival_bundle
+aegis.core.artifact_signing
+aegis.core.atlas_tactic_mapper
+aegis.core.audit_node_encryptor
+aegis.core.cac_piv
+aegis.core.cds_guard
+aegis.core.cgroups_quota
+aegis.core.classified_marker_detector
+aegis.core.clinical_claim_detector
+aegis.core.clock_integrity
+aegis.core.cnsa_negotiation
+aegis.core.conversation_graph
+aegis.core.cpu_affinity
+aegis.core.crdt_ordering
+aegis.core.cross_session_correlator
+aegis.core.custody_transfer
+aegis.core.decode_pipeline
+aegis.core.dfir_export
+aegis.core.dosage_hallucination
+aegis.core.dp_analytics
+aegis.core.export_audit_log
+aegis.core.forensic_pdf_report
+aegis.core.gossip_wal_sync
+aegis.core.gxp_qualification
+aegis.core.hardware_token
+aegis.core.hl7_fhir_phi_detector
+aegis.core.icd_snomed_detector
+aegis.core.intermittent_connectivity
+aegis.core.ioc_correlator
+aegis.core.iso27037_evidence
+aegis.core.manyshot_detector
+aegis.core.market_abuse_detector
+aegis.core.mifid_record_keeper
+aegis.core.model_decision_explainer
+aegis.core.model_risk_governance
+aegis.core.moe_monitor
+aegis.core.offline_license
+aegis.core.operator_seal
+aegis.core.ot_protocol_scanner
+aegis.core.phi_encryption
+aegis.core.pii_confidence
+aegis.core.pinned_ca_bundle
+aegis.core.process_hardening
+aegis.core.raft_consensus
+aegis.core.rag_injection_scanner
+aegis.core.readonly_rootfs
+aegis.core.rt_scheduler
+aegis.core.safe_serialization
+aegis.core.semantic_sim_clustering
+aegis.core.slo_alerting
+aegis.core.split_brain
+aegis.core.stix_taxii_ingestor
+aegis.core.tee_backends
+aegis.core.tee_manager
+aegis.core.ti_sharing
+aegis.core.timing_defense
+aegis.core.token_split_detector
+aegis.core.waf_fuzzing
+aegis.core.wal_backup
+aegis.core.witness_cosign
+aegis.core.worm_ledger
+aegis.core.yara_engine
+integrations
+integrations.huggingface_plugin
+integrations.vllm_plugin

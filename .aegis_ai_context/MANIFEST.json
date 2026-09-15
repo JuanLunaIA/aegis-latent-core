@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "37a536828595d2783ef3411e2ba79ba672447f33a5d5c903f1d7ef80c8683764",
-      "size": 151312
+      "sha256": "4f83e5f5c59d247a106f8e7328e1164a2e84fcad9560956a557c70c2ae63fcf5",
+      "size": 154556
     },
     {
       "category": "governed_input",
@@ -189,8 +189,8 @@
     {
       "category": "governed_input",
       "path": "pyproject.toml",
-      "sha256": "84e63afc2a83d97a9a28c6addd192bead10dde6a3811953de9d78a58b4b5fd8b",
-      "size": 10793
+      "sha256": "2a0041ae206c147618af91cea9156e7e57582f7ec9bb40aa11d6ae3db5784013",
+      "size": 11049
     },
     {
       "category": "governed_input",
@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "f47bef3d5edebf5cdd36f9f029c79f853bf7c2290d27aa922bb5435bea890b05",
-      "size": 36285
+      "sha256": "777d5fa1eef62d178aada3ccaded9983bfd7071184900d9a503737fe1ca2b0ea",
+      "size": 36419
     },
     {
       "category": "governed_input",

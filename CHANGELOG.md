@@ -1068,6 +1068,60 @@ front of older clients breaks receipt verification.
   harness to separate from variance" rather than as a number. Artifacts and
   that boundary are in `evidence/streaming-engine/4.3.0/`.
 
+### Added — `scripts/verify_import_reachability.py`, a CI-gated import-reachability audit
+
+Walks the real static import graph, by AST, from this repository's actual
+entrypoints (`aegis`, `aegis.proxy.app`, `aegis_server.main`, `aegis.engines`,
+`aegis.crypto`, `aegis.forensics`) and checks that every `.py` module under
+`aegis/`, `aegis_server/` and `integrations/` is either reached or explicitly
+declared — in `pyproject.toml`'s `[tool.coverage.run]` omit list, or the new
+`scripts/import_reachability_allowlist.txt`. Wired as a step in the
+`Market Hardening Gates` CI job.
+
+The first real run found the coverage-omit "roadmap" list itself had drifted:
+six modules it still called roadmap (`adversarial_filter`, `blockchain_anchor`,
+`entropy_analysis`, `sandbox_l1`, `taint_analysis`, `xdp_dynamic_segmentation`)
+are now reachable from real entrypoints, and a seventh entry (`sandbox_l2.py`)
+no longer exists. All seven are corrected in `pyproject.toml`. Separately, 78
+modules were found reachable from nothing this audit's entrypoint set covers;
+they are recorded, not individually adjudicated, in the new allowlist file —
+see its header for what that distinction means and does not mean.
+
+### Added — `docs/PLATFORM_COMPATIBILITY.md`
+
+A SUPPORTED/PARTIAL/UNTESTED/UNSUPPORTED matrix across OS, architecture,
+Python version, cloud target, storage backend and deployment mode, each cell
+backed by a named CI job, test, or an explicit absence of one. Notable
+findings from building it: the arm64 container image is cross-built via QEMU
+but never executed in CI; the `storage-s3` pyproject extra declares `boto3`
+with no corresponding chain-storage provider module; and multi-pod
+deployments give each replica an independent single-writer ledger rather than
+one globally ordered one (`UC-005`).
+
+### Added — `docs/RELEASE_EPISTEMIC_STATEMENT.md`
+
+An index — not a new ledger — of what this release's evidence establishes,
+organized as verified / not-verified-and-why / not-verifiable-in-this-
+environment / requires-external-validation, each row linking to the document
+that actually carries the evidence (`CLAIMS_MATRIX.md`,
+`institutional/UNSUPPORTED_CLAIMS.md`, `PLATFORM_COMPATIBILITY.md`,
+`RELEASE_STATUS.md`, `enterprise/ENTERPRISE_READINESS.md`). Section 3 is the
+one genuinely new artifact: a single list of tools, services, and hardware
+confirmed absent from this session's environment (`moto`, a live PostgreSQL
+server, a live DynamoDB endpoint, `cosign`, `gh attestation verify`, `helm`,
+a live Kubernetes cluster, macOS/arm64 hardware, a FIPS lab, an independent
+circuit auditor), so their absence is not mistaken for a negative finding.
+
+### Fixed — two stale claims in `docs/enterprise/ENTERPRISE_READINESS.md`
+
+Both predated this session's `4.3.0` → `5.0.0` version convergence and the
+`4.1.1` → `4.1.2` publication that preceded it. "SDKs are published at
+`4.0.0` while source is `4.1.2`" was wrong on both numbers: every registry
+surface is published through `4.1.2`, and source has moved to the unpublished
+`5.0.0`. Corrected to name the real current gap — a registry install today
+gets `4.1.2`'s pre-rename `legal_admissibility` field, not `5.0.0`'s breaking
+`signature_assurance` rename (`CLM-090`).
+
 ## [4.3.0] — unreleased source target
 
 **Nothing is published for `4.3.0`.** There is no tag, GitHub Release, PyPI or

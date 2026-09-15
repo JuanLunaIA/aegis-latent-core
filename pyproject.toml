@@ -202,11 +202,16 @@ source_pkgs = ["aegis"]
 relative_files = true
 omit = [
     "tests/*",
-    # Roadmap / platform-specific modules (not required for proxy runtime)
-    "aegis/core/adversarial_filter.py",
+    # Roadmap / platform-specific modules (not required for proxy runtime).
+    # This list is cross-checked by scripts/verify_import_reachability.py
+    # against the real entrypoint import graph: an entry that has become
+    # reachable is a drift finding, not a silent pass. Six entries below were
+    # removed by that audit on 2026-09-15 because they are now reachable in
+    # the live proxy/engine paths: adversarial_filter, blockchain_anchor,
+    # entropy_analysis, sandbox_l1, taint_analysis, xdp_dynamic_segmentation.
+    # sandbox_l2.py, also removed, no longer exists in the tree.
     "aegis/core/anchoring.py",
     "aegis/core/audit_node_pb2.py",
-    "aegis/core/blockchain_anchor.py",
     "aegis/core/boot_attestation.py",
     "aegis/core/boot_guard.py",
     "aegis/core/build_hardener.py",
@@ -230,8 +235,6 @@ omit = [
     "aegis/core/red_team_framework.py",
     "aegis/core/root_ca_gateway.py",
     "aegis/core/sandbox.py",
-    "aegis/core/sandbox_l1.py",
-    "aegis/core/sandbox_l2.py",
     "aegis/core/secure_runtime.py",
     "aegis/core/semantic_defense.py",
     "aegis/core/state_snapshotter.py",
@@ -240,9 +243,6 @@ omit = [
     "aegis/core/transport_hardener.py",
     "aegis/core/tsa_provider.py",
     "aegis/core/worm_storage.py",
-    "aegis/core/xdp_dynamic_segmentation.py",
-    "aegis/core/entropy_analysis.py",
-    "aegis/core/taint_analysis.py",
     "aegis/proxy/mtls.py",
 ]
 
