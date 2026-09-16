@@ -48,9 +48,45 @@ spec:
         - { objectName: AEGIS_AUTH_IDENTITY_HMAC_KEY, key: AEGIS_AUTH_IDENTITY_HMAC_KEY }
         - { objectName: AEGIS_API_KEY_PRINCIPALS_JSON, key: AEGIS_API_KEY_PRINCIPALS_JSON }
 ---
+# Separate class: the driver creates a synced Secret once and does not add keys to an
+# existing one (no rotation enabled), so the Redis password gets its own Secret.
+# Rotation: set a new aegis-redis-password, delete Secret aegis-redis-auth, restart
+# deploy/aegis-redis and sts/aegis.
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: aegis-redis-kv
+  namespace: aegis
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    clientID: "__UAMI_CLIENT_ID__"
+    tenantId: "__TENANT_ID__"
+    keyvaultName: aegis-vault-prod
+    objects: |
+      array:
+        - |
+          objectName: aegis-redis-password
+          objectType: secret
+          objectAlias: REDIS_PASSWORD
+  secretObjects:
+    - secretName: aegis-redis-auth
+      type: Opaque
+      data:
+        - { objectName: REDIS_PASSWORD, key: REDIS_PASSWORD }
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aegis-redis
+  namespace: aegis
+  annotations:
+    azure.workload.identity/client-id: "__UAMI_CLIENT_ID__"
+automountServiceAccountToken: false
+---
 # Rate-limit state only (ephemeral by design: no persistence, no AOF).
-# ponytail: single unauthenticated replica isolated by NetworkPolicy; add requirepass
-# from Key Vault and a replica set when rate-limit state must survive a pod loss.
+# ponytail: single replica; add a replica set when rate-limit state must survive a pod loss.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -65,6 +101,7 @@ spec:
     metadata:
       labels: { app.kubernetes.io/name: aegis-redis }
     spec:
+      serviceAccountName: aegis-redis
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
@@ -75,7 +112,12 @@ spec:
         - name: redis
           # redis:7.4.2-alpine, multi-arch index digest resolved 2026-09-16
           image: docker.io/library/redis@sha256:02419de7eddf55aa5bcf49efb74e88fa8d931b4d77c07eff8a6b2144472b6952
-          args: ["--save", "", "--appendonly", "no", "--protected-mode", "no", "--maxmemory", "200mb", "--maxmemory-policy", "allkeys-lru"]
+          # Redis overwrites its process title, so the expanded password does not stay in /proc/*/cmdline.
+          args: ["--save", "", "--appendonly", "no", "--protected-mode", "no", "--maxmemory", "200mb", "--maxmemory-policy", "allkeys-lru", "--requirepass", "$(REDIS_PASSWORD)"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: aegis-redis-auth, key: REDIS_PASSWORD }
           ports: [{ containerPort: 6379, name: redis }]
           securityContext:
             allowPrivilegeEscalation: false
@@ -87,8 +129,16 @@ spec:
           readinessProbe:
             tcpSocket: { port: 6379 }
             periodSeconds: 5
-          volumeMounts: [{ name: data, mountPath: /data }]
-      volumes: [{ name: data, emptyDir: {} }]
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: kv-redis, mountPath: /mnt/secrets-redis, readOnly: true }
+      volumes:
+        - { name: data, emptyDir: {} }
+        - name: kv-redis
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes: { secretProviderClass: aegis-redis-kv }
 ---
 apiVersion: v1
 kind: Service

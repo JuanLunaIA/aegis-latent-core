@@ -69,7 +69,17 @@ if ! az identity federated-credential show -g "$RG" --identity-name "$UAMI" -n a
     --audiences api://AzureADTokenExchange -o none
 fi
 
-log "5/8 principal mapping into Key Vault (copied from aegis-api, digest only)"
+if ! az identity federated-credential show -g "$RG" --identity-name "$UAMI" -n aks-aegis-redis-sa -o none 2>/dev/null; then
+  az identity federated-credential create -g "$RG" --identity-name "$UAMI" -n aks-aegis-redis-sa \
+    --issuer "$ISSUER" --subject "system:serviceaccount:$NS:aegis-redis" \
+    --audiences api://AzureADTokenExchange -o none
+fi
+
+log "5/8 secrets into Key Vault (values never printed)"
+if ! az keyvault secret show --vault-name "$KV" -n aegis-redis-password --query id -o none 2>/dev/null; then
+  # hex: URL-safe inside redis://:<password>@host
+  az keyvault secret set --vault-name "$KV" -n aegis-redis-password --value "$(openssl rand -hex 32)" -o none
+fi
 if ! az keyvault secret show --vault-name "$KV" -n aegis-api-key-principals-json --query id -o none 2>/dev/null; then
   P=$(az containerapp show -g "$RG" -n aegis-api \
     --query "properties.template.containers[0].env[?name=='AEGIS_API_KEY_PRINCIPALS_JSON'].value | [0]" -o tsv)

@@ -37,6 +37,9 @@ aegis:
   # supplied and accepted by the target deployment before governed traffic.
   rateLimitBackend: "redis"
   redisUrl: "redis://redis:6379"
+  # Optional {name, key} of a Secret holding the Redis password, exposed as
+  # REDIS_PASSWORD; reference it in redisUrl as redis://:$(REDIS_PASSWORD)@host:6379/0
+  redisPasswordSecret: {}
   # Caller-supplied Secret containing AEGIS_BACKEND_API_KEY and AEGIS_API_KEYS.
   # Create with: kubectl create secret generic aegis-keys \
   #   --from-literal=AEGIS_BACKEND_API_KEY=sk-... \

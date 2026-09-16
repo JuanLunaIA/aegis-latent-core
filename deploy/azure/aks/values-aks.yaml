@@ -18,7 +18,8 @@ serviceAccount:
 
 aegis:
   existingSecret: aegis-keys   # synced from Key Vault by SecretProviderClass aegis-kv
-  redisUrl: "redis://aegis-redis:6379"
+  redisUrl: "redis://:$(REDIS_PASSWORD)@aegis-redis:6379/0"
+  redisPasswordSecret: { name: aegis-redis-auth, key: REDIS_PASSWORD }
 
 containerSecurityContext:
   allowPrivilegeEscalation: false
@@ -44,9 +45,19 @@ extraVolumes:
       readOnly: true
       volumeAttributes:
         secretProviderClass: aegis-kv
+  # Mounting keeps the synced Secret aegis-redis-auth alive while aegis pods run.
+  - name: kv-redis
+    csi:
+      driver: secrets-store.csi.k8s.io
+      readOnly: true
+      volumeAttributes:
+        secretProviderClass: aegis-redis-kv
 extraVolumeMounts:
   - name: kv-secrets
     mountPath: /mnt/secrets-store
+    readOnly: true
+  - name: kv-redis
+    mountPath: /mnt/secrets-redis
     readOnly: true
 
 networkPolicy:

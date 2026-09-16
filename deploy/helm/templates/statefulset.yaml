@@ -141,6 +141,15 @@ spec:
               value: {{ .Values.aegis.analysisTimeoutSeconds | quote }}
             - name: AEGIS_RATE_LIMIT_BACKEND
               value: {{ .Values.aegis.rateLimitBackend | quote }}
+            {{- with .Values.aegis.redisPasswordSecret }}
+            # Unprefixed so it cannot collide with an AegisSettings field; must precede
+            # AEGIS_REDIS_URL, which references it as $(REDIS_PASSWORD).
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .name }}
+                  key: {{ .key }}
+            {{- end }}
             - name: AEGIS_REDIS_URL
               value: {{ .Values.aegis.redisUrl | quote }}
             - name: AEGIS_FORCE_LOGPROBS
