@@ -14,6 +14,9 @@ NS=aegis
 SA=aegis                       # = fullnameOverride in values-aks.yaml
 NODE_SIZE=${NODE_SIZE:-Standard_D2s_v5}
 NODE_COUNT=${NODE_COUNT:-2}    # chart spreads 2 replicas across zones and hosts
+# Subscriptions without availability-zone access reject --zones (AvailabilityZoneNotSupported).
+# Unset = regional nodes; zone spread then collapses to one domain, host spread still applies.
+read -r -a ZONE_ARGS <<< "${ZONES:+--zones $ZONES}"
 HERE=deploy/azure/aks
 
 log() { printf '[%s] %s\n' "$(date -u +%FT%TZ)" "$*"; }
@@ -40,7 +43,7 @@ fi
 log "3/8 AKS cluster"
 if ! az aks show -g "$RG" -n "$AKS" -o none 2>/dev/null; then
   az aks create -g "$RG" -n "$AKS" -l "$LOC" --tier free \
-    --node-count "$NODE_COUNT" --node-vm-size "$NODE_SIZE" --zones 1 2 --os-sku Ubuntu \
+    --node-count "$NODE_COUNT" --node-vm-size "$NODE_SIZE" "${ZONE_ARGS[@]}" --os-sku Ubuntu \
     --network-plugin azure --network-plugin-mode overlay --network-dataplane cilium \
     --enable-oidc-issuer --enable-workload-identity \
     --enable-addons azure-keyvault-secrets-provider \
@@ -78,7 +81,10 @@ log "7/8 helm release"
 VALUES=$(mktemp)
 trap 'rm -f "$VALUES"' EXIT
 sed -e "s|__UAMI_CLIENT_ID__|$CLIENT_ID|g" -e "s|__IMAGE_TAG__|$TAG|g" "$HERE/values-aks.yaml" > "$VALUES"
-helm upgrade --install aegis deploy/helm -n "$NS" -f "$VALUES" --wait --timeout 10m
+# Without zones, a zone-keyed DoNotSchedule constraint can leave pods Pending if nodes lack the label.
+SPREAD=()
+[ -n "${ZONES:-}" ] || SPREAD=(--set-json 'topologySpreadConstraints=[{"maxSkew":1,"topologyKey":"kubernetes.io/hostname","whenUnsatisfiable":"DoNotSchedule"}]')
+helm upgrade --install aegis deploy/helm -n "$NS" -f "$VALUES" "${SPREAD[@]}" --wait --timeout 10m
 
 log "8/8 smoke test"
 kubectl -n "$NS" get pods -o wide
