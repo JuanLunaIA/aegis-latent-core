@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 # Provision AKS for aegis-latent-core and install the chart in strict mode.
 # Run from the repo root in Azure Cloud Shell with these commits checked out.
 # Idempotent where Azure allows it; never prints secret values.

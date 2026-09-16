@@ -279,14 +279,14 @@
     {
       "category": "governed_input",
       "path": "deploy/helm/values.yaml",
-      "sha256": "cb66308e19eb45b864f71a3a726d0e0a6a95cf4642be13fed8403d306aa68993",
-      "size": 11041
+      "sha256": "0b3fe19d6afd5cd8393ddad0b8ad2c40fd70fac3ddb59952a00c4cbc9932e1bf",
+      "size": 11220
     },
     {
       "category": "governed_input",
       "path": "deploy/docker/Dockerfile",
-      "sha256": "59b9ceac11cb05541039a1604bcf9205fd0fac61f11a955bb57d21cd35facdf5",
-      "size": 4032
+      "sha256": "35965a4318d802411f9cff5121d0246e91b26d07a1ced5c5533ce3c310412bb6",
+      "size": 4056
     },
     {
       "category": "governed_input",
