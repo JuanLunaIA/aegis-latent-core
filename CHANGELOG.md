@@ -1072,6 +1072,33 @@ front of older clients breaks receipt verification.
   harness to separate from variance" rather than as a number. Artifacts and
   that boundary are in `evidence/streaming-engine/4.3.0/`.
 
+### Added — `docs/UPGRADING.md`, the missing `4.1.2` → `5.0.0` migration guide
+
+`5.0.0` is a major version because it breaks the public JSON API, and until now
+nothing told a consumer on `4.1.2` how to move. The guide covers the seven
+changes that can break a working deployment or integration, ordered by how
+quietly they break it.
+
+Two are the ones that bite silently. The `legal_admissibility` →
+`signature_assurance` rename (`CLM-090`) removes the old field outright with no
+alias, and the guide states plainly that a retained `"High"` from a `4.x`
+deployment is **not** evidence the chain was signed well — the old property
+returned `"High"` whenever a key was configured at read time, before it ever
+examined chain history — so `== "High"` must not be migrated to "anything but
+`Compromised`", because `SYMMETRIC_AUTHENTICATED` would have reported `"High"`
+before and is materially weaker. The `forwarded_allow_ips` change (`CLM-092`)
+breaks any deployment whose proxy reaches the gateway from a non-loopback
+address, and the symptom — client IPs collapsing to the proxy's address, taking
+IP allowlisting, rate limiting and audit attribution with them — looks like a
+configuration problem rather than an upgrade consequence.
+
+The rest: the MMR v2 default and its SDK wire boundary, the stricter WAF
+normalization changing block decisions on previously-passing traffic, the `pqc`
+extra now installing a library the code actually imports, the two additive node
+fields, and the corrected shredding-on-an-existing-chain behaviour. Rollback is
+covered too, including the asymmetry that a chain started on v2 cannot be read
+by a `4.1.2` gateway.
+
 ### Security — rustls bumped to 0.23.45, clearing `RUSTSEC-2026-0285`
 
 `RUSTSEC-2026-0285` — "TLS 1.3 handshake messages incorrectly accepted across
