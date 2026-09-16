@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Provision AKS for aegis-latent-core and install the chart in strict mode.
-# Run from the repo root in Azure Cloud Shell, after this commit is pushed to main.
+# Run from the repo root in Azure Cloud Shell with these commits checked out.
 # Idempotent where Azure allows it; never prints secret values.
 set -euo pipefail
 
@@ -29,12 +29,12 @@ for p in Microsoft.Compute Microsoft.Network Microsoft.ContainerService; do
   [ "$(az provider show -n "$p" --query registrationState -o tsv)" = Registered ] || { echo "ABORT: $p not Registered"; exit 1; }
 done
 
-log "2/8 image build from origin/main (ACR Tasks)"
-TAG="sha-$(git ls-remote https://github.com/JuanLunaIA/aegis-latent-core.git refs/heads/main | cut -c1-12)"
-[ "$TAG" != "sha-" ] || { echo "ABORT: cannot resolve origin/main"; exit 1; }
+log "2/8 image build from this checkout (ACR Tasks; no push to GitHub needed)"
+# The tag names the exact commit, so a dirty tree would publish unreviewed code under it.
+[ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "ABORT: uncommitted changes"; exit 1; }
+TAG="sha-$(git rev-parse --short=12 HEAD)"
 if ! az acr repository show-tags -n "$ACR" --repository aegis-latent-core -o tsv 2>/dev/null | grep -qx "$TAG"; then
-  az acr build -r "$ACR" -t "aegis-latent-core:$TAG" -f deploy/docker/Dockerfile \
-    "https://github.com/JuanLunaIA/aegis-latent-core.git#main" -o none
+  az acr build -r "$ACR" -t "aegis-latent-core:$TAG" -f deploy/docker/Dockerfile . -o none
 fi
 
 log "3/8 AKS cluster"
