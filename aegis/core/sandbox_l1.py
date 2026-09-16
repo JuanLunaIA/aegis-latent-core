@@ -31,13 +31,34 @@ from typing import cast
 logger = logging.getLogger(__name__)
 
 # libseccomp action constants (from seccomp.h)
-_SCMP_ACT_KILL = 0x00000000  # kill the calling thread
+_SCMP_ACT_KILL = 0x00000000  # kill the calling thread only
+_SCMP_ACT_KILL_PROCESS = 0x80000000  # kill the whole process (SIGSYS), libseccomp >= 2.4
 _SCMP_ACT_ERRNO_EPERM = 0x00050001  # SCMP_ACT_ERRNO(1 == EPERM)
+_SCMP_ACT_ERRNO_ENOSYS = 0x00050026  # SCMP_ACT_ERRNO(38 == ENOSYS)
 _SCMP_ACT_ALLOW = 0x7FFF0000
+_SCMP_CMP_MASKED_EQ = 7  # enum scmp_compare
+_CLONE_THREAD = 0x00010000
 
-# Public aliases for callers that want the KILL action
+_ACTION_NAMES = {
+    _SCMP_ACT_KILL: "kill the calling thread",
+    _SCMP_ACT_KILL_PROCESS: "kill the process",
+    _SCMP_ACT_ERRNO_EPERM: "return EPERM",
+}
+
+# Public aliases for callers that want the KILL actions
 SCMP_ACT_KILL = _SCMP_ACT_KILL
+SCMP_ACT_KILL_PROCESS = _SCMP_ACT_KILL_PROCESS
 SCMP_ACT_ALLOW = _SCMP_ACT_ALLOW
+
+
+class _ScmpArgCmp(ctypes.Structure):
+    _fields_ = [
+        ("arg", ctypes.c_uint),
+        ("op", ctypes.c_int),
+        ("datum_a", ctypes.c_uint64),
+        ("datum_b", ctypes.c_uint64),
+    ]
+
 
 # Minimal syscall allowlist for the aegis proxy process.
 # Resolved at runtime via seccomp_syscall_resolve_name so syscall
@@ -129,6 +150,14 @@ def _load_libseccomp() -> ctypes.CDLL | None:
         ctypes.c_int,
         ctypes.c_uint,
     ]
+    lib.seccomp_rule_add_array.restype = ctypes.c_int
+    lib.seccomp_rule_add_array.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_uint32,
+        ctypes.c_int,
+        ctypes.c_uint,
+        ctypes.POINTER(_ScmpArgCmp),
+    ]
     lib.seccomp_syscall_resolve_name.restype = ctypes.c_int
     lib.seccomp_syscall_resolve_name.argtypes = [ctypes.c_char_p]
     return lib
@@ -152,11 +181,20 @@ class SeccompSandbox:
         self,
         allowed_syscalls: tuple[str, ...] | None = None,
         default_action: int = _SCMP_ACT_ERRNO_EPERM,
+        thread_clone_only: bool = False,
     ) -> None:
         self._allowed_syscalls: tuple[str, ...] = (
             allowed_syscalls if allowed_syscalls is not None else _ALLOWED_SYSCALLS
         )
         self._default_action = default_action
+        # Threads yes, processes no: clone() is allowed only with CLONE_THREAD, and
+        # clone3() (whose flags live behind a pointer BPF cannot read) gets ENOSYS so
+        # glibc's pthread_create falls back to clone().
+        self._thread_clone_only = thread_clone_only
+        if thread_clone_only:
+            self._allowed_syscalls = tuple(
+                n for n in self._allowed_syscalls if n not in ("clone", "clone3")
+            )
         lib = _load_libseccomp()
         if lib is None:
             logger.error(
@@ -197,7 +235,26 @@ class SeccompSandbox:
                 len(missing),
                 missing,
             )
+        if self._thread_clone_only and not self._add_thread_clone_rules(ctx):
+            lib.seccomp_release(ctx)
+            return None
         return cast("int | None", ctx)
+
+    def _add_thread_clone_rules(self, ctx: int) -> bool:
+        assert self._lib is not None
+        lib = self._lib
+        clone_nr = lib.seccomp_syscall_resolve_name(b"clone")
+        if clone_nr >= 0:
+            # ponytail: flags are clone() arg 0 on x86-64/arm64; s390 swaps args 0/1.
+            cmp = _ScmpArgCmp(0, _SCMP_CMP_MASKED_EQ, _CLONE_THREAD, _CLONE_THREAD)
+            if lib.seccomp_rule_add_array(ctx, _SCMP_ACT_ALLOW, clone_nr, 1, ctypes.byref(cmp)):
+                logger.error("SeccompSandbox: conditional clone(CLONE_THREAD) rule failed")
+                return False
+        clone3_nr = lib.seccomp_syscall_resolve_name(b"clone3")
+        if clone3_nr >= 0 and lib.seccomp_rule_add(ctx, _SCMP_ACT_ERRNO_ENOSYS, clone3_nr, 0):
+            logger.error("SeccompSandbox: clone3 ENOSYS rule failed")
+            return False
+        return True
 
     def apply_filter(self) -> bool:
         """Build and load the seccomp-BPF filter into the kernel.
@@ -222,8 +279,10 @@ class SeccompSandbox:
                 return False
             logger.info(
                 "SeccompSandbox: seccomp-BPF filter loaded. "
-                "%d syscalls allowed; unknown syscalls return EPERM.",
-                len(_ALLOWED_SYSCALLS),
+                "%d syscalls allowed%s; any other syscall: %s.",
+                len(self._allowed_syscalls),
+                " (+clone for threads only)" if self._thread_clone_only else "",
+                _ACTION_NAMES.get(self._default_action, hex(self._default_action)),
             )
             return True
         finally:

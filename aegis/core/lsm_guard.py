@@ -27,6 +27,10 @@ logger = logging.getLogger(__name__)
 _APPARMOR_PROFILES = "/sys/kernel/security/apparmor/profiles"
 _SELINUX_ENFORCE = "/sys/fs/selinux/enforce"
 _PROC_SELF_ATTR = "/proc/self/attr/current"
+# Per-LSM interface (Linux >= 5.8); authoritative when LSMs are stacked.
+_PROC_SELF_ATTR_APPARMOR = "/proc/self/attr/apparmor/current"
+# AppArmor task label: "<profile> (<mode>)". SELinux contexts never match this shape.
+_APPARMOR_LABEL_MODES = {"enforce": "enforcing", "complain": "permissive", "kill": "enforcing"}
 
 # ── Enumerations ──────────────────────────────────────────────────────────────
 
@@ -87,6 +91,20 @@ class LSMGuard:
                 active=False,
                 mode="disabled",
                 profile=None,
+                context=None,
+            )
+
+        # Process label first: it describes THIS task's confinement and is readable
+        # inside unprivileged containers, where securityfs (/sys/kernel/security)
+        # is not mounted and the host-level probe below always misses.
+        confined = LSMGuard.get_apparmor_process_confinement()
+        if confined is not None:
+            profile, mode = confined
+            return LSMStatus(
+                lsm_type=LSMType.APPARMOR,
+                active=True,
+                mode=mode,
+                profile=profile,
                 context=None,
             )
 
@@ -214,6 +232,28 @@ class LSMGuard:
             return None
 
     @staticmethod
+    def get_apparmor_process_confinement() -> tuple[str, str] | None:
+        """
+        Return ``(profile, mode)`` when the current task carries a confining
+        AppArmor label, else ``None`` (absent, unreadable, unconfined, or not
+        an AppArmor label). ``mode`` is ``"enforcing"`` or ``"permissive"``.
+        """
+        for path in (_PROC_SELF_ATTR_APPARMOR, _PROC_SELF_ATTR):
+            try:
+                with open(path, "rb") as fh:
+                    label = fh.read().rstrip(b"\x00\n").decode(errors="replace").strip()
+            except OSError:
+                continue
+            profile, sep, suffix = label.rpartition(" (")
+            if not sep or not suffix.endswith(")"):
+                continue
+            mode = _APPARMOR_LABEL_MODES.get(suffix[:-1])
+            if mode is None or not profile or profile == "unconfined":
+                continue
+            return profile, mode
+        return None
+
+    @staticmethod
     def get_selinux_context() -> str | None:
         """
         Read the SELinux context of the current process from
@@ -308,7 +348,10 @@ class LSMGuard:
             return False
 
     def _check_apparmor(self) -> bool:
-        """Return ``True`` when the AppArmor profiles sysfs directory is present."""
+        """Return ``True`` when this task is AppArmor-enforced or AppArmor sysfs is present."""
+        confined = LSMGuard.get_apparmor_process_confinement()
+        if confined is not None and confined[1] == "enforcing":
+            return True
         try:
             return os.path.exists(_APPARMOR_PROFILES)
         except OSError:

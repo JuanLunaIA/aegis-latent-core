@@ -15,7 +15,8 @@ from dataclasses import dataclass
 logger = logging.getLogger(__name__)
 
 # Constants re-exported for callers that import them from this module.
-SCMP_ACT_KILL = 0x00000000
+SCMP_ACT_KILL = 0x00000000  # kills only the calling thread: a miss hangs the process silently
+SCMP_ACT_KILL_PROCESS = 0x80000000  # a miss exits with SIGSYS, visibly and restartably
 SCMP_ACT_ALLOW = 0x7FFF0000
 PR_SET_NO_NEW_PRIVS = 38
 
@@ -81,9 +82,8 @@ class SeccompGuard:
             "select",
             "getpeername",
             # ── Async Rust forwarder (Tokio runtime) steady-state syscalls ──
-            # Thread creation (clone/clone3) is deliberately NOT allowed: the
-            # Tokio worker pool is warmed before this filter is installed (see
-            # app.py lifespan + forwarder::warmup_runtime), and the async
+            # The Tokio worker pool is warmed before this filter is installed
+            # (see app.py lifespan + forwarder::warmup_runtime), and the async
             # hickory DNS resolver removes the per-request blocking-pool spawn.
             # These cover the request hot path only — socket option tuning,
             # non-blocking fd flags, TLS entropy, the epoll/eventfd reactor,
@@ -105,6 +105,33 @@ class SeccompGuard:
             "sigaltstack",  # Rust thread signal-stack setup
             "clock_nanosleep",  # Tokio timer driver
             "restart_syscall",  # kernel-resumed syscalls after signal
+            # ── Observed after lockdown (strace -f of startup, /health, /ready,
+            # authenticated completions, WAF block, 401, SIGTERM; uvicorn 0.46 +
+            # uvloop 0.22). Missing any one of these killed the event-loop thread.
+            "epoll_pwait",  # libuv / uvloop event loop (glibc epoll_wait on arm64)
+            "epoll_pwait2",  # newer libuv poll path
+            "ioctl",  # FIONBIO on accepted sockets (asyncio setblocking)
+            "newfstatat",  # glibc stat()/fstat() on 64-bit
+            "statx",  # glibc stat path on newer builds
+            "openat",  # WAL segment and config reads
+            "lseek",  # WAL append positioning
+            "fsync",  # durable evidence commit
+            "fdatasync",  # durable evidence commit (data-only variant)
+            "flock",  # WAL single-writer advisory lock
+            "rename",  # WAL segment finalization
+            "renameat",  # rename() on archs without the legacy syscall
+            "renameat2",  # rename() on glibc builds that use it
+            "getdents64",  # WAL directory scan
+            "getcwd",  # import system resolving a "" sys.path entry for lazy imports
+            "unlink",  # WAL MMR state removal on shutdown
+            "unlinkat",  # unlink() on archs without the legacy syscall
+            "writev",  # uvloop/libuv scatter-gather response writes
+            "shutdown",  # HTTP connection close
+            "tgkill",  # thread-directed signal during shutdown
+            "exit",  # a single thread ending (exit_group ends the process)
+            # clone is added separately and only with CLONE_THREAD: the ASGI
+            # threadpool (sync endpoints, to_thread) spawns threads per request;
+            # process creation stays impossible.
         },
         forbidden_syscalls={
             "execve",
@@ -175,7 +202,8 @@ class SeccompGuard:
 
             sb = SeccompSandbox(
                 allowed_syscalls=tuple(self.profile.allowed_syscalls),
-                default_action=SCMP_ACT_KILL,
+                default_action=SCMP_ACT_KILL_PROCESS,
+                thread_clone_only=True,
             )
             if not sb.enabled:
                 logger.error("libseccomp not available. Entering degraded mode.")

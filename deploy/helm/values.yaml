@@ -37,6 +37,9 @@ aegis:
   # supplied and accepted by the target deployment before governed traffic.
   rateLimitBackend: "redis"
   redisUrl: "redis://redis:6379"
+  # Optional {name, key} of a Secret holding the Redis password, exposed as
+  # REDIS_PASSWORD; reference it in redisUrl as redis://:$(REDIS_PASSWORD)@host:6379/0
+  redisPasswordSecret: {}
   # Caller-supplied Secret containing AEGIS_BACKEND_API_KEY and AEGIS_API_KEYS.
   # Create with: kubectl create secret generic aegis-keys \
   #   --from-literal=AEGIS_BACKEND_API_KEY=sk-... \
@@ -111,22 +114,9 @@ service:
   annotations: {}
 
 # ── Ingress ───────────────────────────────────────────────────────────────────
-ingress:
-  enabled: false
-  className: "nginx"
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
-    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
-  hosts:
-    - host: aegis.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - secretName: aegis-tls
-      hosts:
-        - aegis.example.com
+# No Ingress template is shipped: expose the Service through the cluster's own
+# Gateway API or ingress controller and set networkPolicy.ingressFrom to its pods
+# (deploy/azure/aks/gateway.yaml is a worked example).
 
 # ── Resources ─────────────────────────────────────────────────────────────────
 resources:
@@ -193,6 +183,11 @@ topologySpreadConstraints:
   - maxSkew: 1
     topologyKey: kubernetes.io/hostname
     whenUnsatisfiable: DoNotSchedule
+
+# Extra pod volumes/mounts, e.g. a Secrets Store CSI volume that syncs
+# the aegis.existingSecret Kubernetes Secret from a cloud key vault.
+extraVolumes: []
+extraVolumeMounts: []
 
 nodeSelector: {}
 tolerations: []

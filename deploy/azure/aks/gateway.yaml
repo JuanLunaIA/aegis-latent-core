@@ -1,0 +1,131 @@
+# Public HTTPS entry for the aegis release: Envoy Gateway (Gateway API) + cert-manager
+# (Let's Encrypt HTTP-01) on the Azure-provided DNS label of the gateway's public IP.
+# Requires Envoy Gateway v1.9.x and cert-manager >= 1.15 with config.gatewayAPI.enabled
+# (bootstrap.sh installs both). Only the inference endpoints and /health are routed;
+# /v1/audit and /v1/attestation stay cluster-internal.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: aegis-proxy
+  namespace: aegis
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        # Local: client source IPs survive to Envoy logs; Azure probes the node health port.
+        externalTrafficPolicy: Local
+        annotations:
+          service.beta.kubernetes.io/azure-dns-label-name: aegis-latent
+      envoyDeployment:
+        replicas: 2
+        pod:
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: DoNotSchedule
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: envoy
+                  app.kubernetes.io/component: proxy
+        container:
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: aegis-gw
+  namespace: aegis
+  annotations:
+    cert-manager.io/issuer: letsencrypt
+spec:
+  gatewayClassName: eg
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: aegis-proxy
+  listeners:
+    # Port 80 exists for ACME HTTP-01 and the redirect to HTTPS only.
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: aegis-latent.chilecentral.cloudapp.azure.com
+      allowedRoutes: { namespaces: { from: Same } }
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: aegis-latent.chilecentral.cloudapp.azure.com
+      allowedRoutes: { namespaces: { from: Same } }
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: aegis-tls
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt
+  namespace: aegis
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-account
+    solvers:
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - { kind: Gateway, name: aegis-gw, namespace: aegis, sectionName: http }
+---
+# Plain HTTP -> HTTPS. The solver's exact /.well-known/acme-challenge/<token> route is
+# more specific than this "/" prefix, so HTTP-01 still reaches the solver pod.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: aegis-http-redirect
+  namespace: aegis
+spec:
+  parentRefs:
+    - { kind: Gateway, name: aegis-gw, sectionName: http }
+  hostnames: [aegis-latent.chilecentral.cloudapp.azure.com]
+  rules:
+    - matches: [{ path: { type: PathPrefix, value: / } }]
+      filters:
+        - type: RequestRedirect
+          requestRedirect: { scheme: https, statusCode: 301 }
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: aegis-https
+  namespace: aegis
+spec:
+  parentRefs:
+    - { kind: Gateway, name: aegis-gw, sectionName: https }
+  hostnames: [aegis-latent.chilecentral.cloudapp.azure.com]
+  rules:
+    - matches:
+        - { path: { type: Exact, value: /v1/chat/completions }, method: POST }
+        - { path: { type: Exact, value: /v1/messages }, method: POST }
+        - { path: { type: Exact, value: /v1/completions }, method: POST }
+        - { path: { type: Exact, value: /health }, method: GET }
+      # Envoy's default 15s route timeout would cut long LLM generations.
+      timeouts: { request: 300s }
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: max-age=31536000 }
+      backendRefs:
+        - { name: aegis, port: 80 }
