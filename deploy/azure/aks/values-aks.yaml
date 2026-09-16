@@ -62,9 +62,16 @@ extraVolumeMounts:
 
 networkPolicy:
   enabled: true
-  # Empty = no inbound traffic. Smoke test uses kubectl port-forward; public
-  # ingress is a separate, explicit step (domain + TLS).
-  ingressFrom: []
+  # Only the Envoy Gateway proxies (gateway.yaml) may reach the pods; the
+  # kubectl port-forward smoke test enters from the node and is not affected.
+  ingressFrom:
+    - namespaceSelector:
+        matchLabels: { kubernetes.io/metadata.name: envoy-gateway-system }
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: envoy
+          app.kubernetes.io/component: proxy
+          app.kubernetes.io/managed-by: envoy-gateway
   egressTo:
     - to:
         - podSelector:

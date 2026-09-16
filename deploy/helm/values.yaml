@@ -114,22 +114,9 @@ service:
   annotations: {}
 
 # ── Ingress ───────────────────────────────────────────────────────────────────
-ingress:
-  enabled: false
-  className: "nginx"
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
-    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
-  hosts:
-    - host: aegis.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - secretName: aegis-tls
-      hosts:
-        - aegis.example.com
+# No Ingress template is shipped: expose the Service through the cluster's own
+# Gateway API or ingress controller and set networkPolicy.ingressFrom to its pods
+# (deploy/azure/aks/gateway.yaml is a worked example).
 
 # ── Resources ─────────────────────────────────────────────────────────────────
 resources:

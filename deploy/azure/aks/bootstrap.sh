@@ -20,6 +20,10 @@ SA=aegis                       # = fullnameOverride in values-aks.yaml
 # with 32 GiB P4 OS disks is ~3.1 USD/day and keeps one replica per zone.
 NODE_SIZE=${NODE_SIZE:-Standard_B2als_v2}
 OS_DISK_GB=${OS_DISK_GB:-32}
+EG_VERSION=${EG_VERSION:-v1.9.1}     # Envoy Gateway 1.9: Kubernetes 1.33-1.36, EOL 2027-02-14
+CM_VERSION=${CM_VERSION:-v1.21.2}    # cert-manager (Gateway API support needs >= 1.15)
+PUBLIC_LABEL=${PUBLIC_LABEL:-aegis-latent}
+PUBLIC_HOST="$PUBLIC_LABEL.$LOC.cloudapp.azure.com"
 NODE_COUNT=${NODE_COUNT:-2}    # chart spreads 2 replicas across zones and hosts
 # Set ZONES="" for regions/SKUs without zone access (AvailabilityZoneNotSupported).
 ZONES=${ZONES-1 2}
@@ -29,7 +33,7 @@ HERE=deploy/azure/aks
 log() { printf '[%s] %s\n' "$(date -u +%FT%TZ)" "$*"; }
 [ -f "$HERE/values-aks.yaml" ] || { echo "run from the aegis-latent-core repo root"; exit 1; }
 
-log "1/8 resource providers"
+log "1/10 resource providers"
 for p in Microsoft.Compute Microsoft.Network Microsoft.ContainerService; do
   az provider register -n "$p" -o none
   for _ in $(seq 60); do
@@ -39,7 +43,7 @@ for p in Microsoft.Compute Microsoft.Network Microsoft.ContainerService; do
   [ "$(az provider show -n "$p" --query registrationState -o tsv)" = Registered ] || { echo "ABORT: $p not Registered"; exit 1; }
 done
 
-log "2/8 image build from this checkout (ACR Tasks; no push to GitHub needed)"
+log "2/10 image build from this checkout (ACR Tasks; no push to GitHub needed)"
 # The tag names the exact commit, so a dirty tree would publish unreviewed code under it.
 [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "ABORT: uncommitted changes"; exit 1; }
 TAG="sha-$(git rev-parse --short=12 HEAD)"
@@ -47,7 +51,7 @@ if ! az acr repository show-tags -n "$ACR" --repository aegis-latent-core -o tsv
   az acr build -r "$ACR" -t "aegis-latent-core:$TAG" -f deploy/docker/Dockerfile . -o none
 fi
 
-log "3/8 AKS cluster"
+log "3/10 AKS cluster"
 if ! az aks show -g "$RG" -n "$AKS" -o none 2>/dev/null; then
   az aks create -g "$RG" -n "$AKS" -l "$LOC" --tier free \
     --node-count "$NODE_COUNT" --node-vm-size "$NODE_SIZE" --node-osdisk-size "$OS_DISK_GB" "${ZONE_ARGS[@]}" --os-sku Ubuntu \
@@ -59,7 +63,7 @@ if ! az aks show -g "$RG" -n "$AKS" -o none 2>/dev/null; then
     --no-ssh-key -o none
 fi
 
-log "4/8 workload identity federation for $NS/$SA"
+log "4/10 workload identity federation for $NS/$SA"
 ISSUER=$(az aks show -g "$RG" -n "$AKS" --query oidcIssuerProfile.issuerUrl -o tsv)
 CLIENT_ID=$(az identity show -g "$RG" -n "$UAMI" --query clientId -o tsv)
 TENANT_ID=$(az account show --query tenantId -o tsv)
@@ -75,7 +79,7 @@ if ! az identity federated-credential show -g "$RG" --identity-name "$UAMI" -n a
     --audiences api://AzureADTokenExchange -o none
 fi
 
-log "5/8 secrets into Key Vault (values never printed)"
+log "5/10 secrets into Key Vault (values never printed)"
 if ! az keyvault secret show --vault-name "$KV" -n aegis-redis-password --query id -o none 2>/dev/null; then
   # hex: URL-safe inside redis://:<password>@host
   az keyvault secret set --vault-name "$KV" -n aegis-redis-password --value "$(openssl rand -hex 32)" -o none
@@ -88,13 +92,13 @@ if ! az keyvault secret show --vault-name "$KV" -n aegis-api-key-principals-json
   unset P
 fi
 
-log "6/8 cluster resources"
+log "6/10 cluster resources"
 az aks get-credentials -g "$RG" -n "$AKS" --overwrite-existing -o none
 sed -e "s|__UAMI_CLIENT_ID__|$CLIENT_ID|g" -e "s|__TENANT_ID__|$TENANT_ID|g" \
   "$HERE/cluster-resources.yaml" | kubectl apply -f -
 kubectl -n "$NS" rollout status deploy/aegis-redis --timeout=180s
 
-log "7/8 helm release"
+log "7/10 helm release"
 VALUES=$(mktemp)
 trap 'rm -f "$VALUES"' EXIT
 sed -e "s|__UAMI_CLIENT_ID__|$CLIENT_ID|g" -e "s|__IMAGE_TAG__|$TAG|g" "$HERE/values-aks.yaml" > "$VALUES"
@@ -136,7 +140,30 @@ done
 [ -z "$(terminating)" ] || { echo "ABORT: pods stuck terminating; kubectl -n $NS describe pod"; exit 1; }
 helm upgrade --install aegis deploy/helm -n "$NS" -f "$VALUES" "${SPREAD[@]}" --wait --timeout 10m
 
-log "8/8 smoke test"
+log "8/10 Envoy Gateway $EG_VERSION and cert-manager $CM_VERSION"
+helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm --version "$EG_VERSION" \
+  -n envoy-gateway-system --create-namespace --wait --timeout 10m
+helm upgrade --install cert-manager oci://quay.io/jetstack/charts/cert-manager --version "$CM_VERSION" \
+  -n cert-manager --create-namespace --set crds.enabled=true \
+  --set config.apiVersion=controller.config.cert-manager.io/v1alpha1 \
+  --set config.kind=ControllerConfiguration --set config.gatewayAPI.enabled=true \
+  --wait --timeout 10m
+
+log "9/10 public gateway https://$PUBLIC_HOST"
+# The DNS label is global per region: fail early if another tenant holds it.
+SUB=$(az account show --query id -o tsv)
+FREE=$(az rest --method get --url "https://management.azure.com/subscriptions/$SUB/providers/Microsoft.Network/locations/$LOC/CheckDnsNameAvailability?domainNameLabel=$PUBLIC_LABEL&api-version=2023-09-01" --query available -o tsv)
+MINE=$(az network public-ip list -g "$(az aks show -g "$RG" -n "$AKS" --query nodeResourceGroup -o tsv)" \
+  --query "[?dnsSettings.domainNameLabel=='$PUBLIC_LABEL'] | length(@)" -o tsv)
+[ "$FREE" = true ] || [ "$MINE" != 0 ] || { echo "ABORT: DNS label $PUBLIC_LABEL is taken in $LOC"; exit 1; }
+sed -e "s|aegis-latent\.chilecentral\.cloudapp\.azure\.com|$PUBLIC_HOST|g" -e "s|azure-dns-label-name: aegis-latent|azure-dns-label-name: $PUBLIC_LABEL|" \
+  "$HERE/gateway.yaml" | kubectl apply -f -
+# cert-manager creates the Certificate from the Gateway annotation asynchronously.
+for _ in $(seq 30); do kubectl -n "$NS" get certificate aegis-tls -o name >/dev/null 2>&1 && break; sleep 5; done
+kubectl -n "$NS" wait certificate/aegis-tls --for=condition=Ready --timeout=15m \
+  || { kubectl -n "$NS" get gateway,certificate,challenge; exit 1; }
+
+log "10/10 smoke tests"
 kubectl -n "$NS" get pods -o wide
 kubectl -n "$NS" port-forward svc/aegis 18080:80 >/dev/null 2>&1 &
 PF=$!
@@ -148,4 +175,11 @@ if [ "$CODE" != 200 ]; then
   echo "SMOKE_FAILED: kubectl -n $NS logs sts/aegis --tail=60"
   exit 1
 fi
-log "DONE_AKS image=$TAG"
+PUB=""
+for _ in $(seq 30); do
+  PUB=$(curl -s -o /dev/null -w '%{http_code}' -m 10 "https://$PUBLIC_HOST/health" || true)
+  [ "$PUB" = 200 ] && break; sleep 10
+done
+log "GET https://$PUBLIC_HOST/health -> $PUB"
+[ "$PUB" = 200 ] || { echo "PUBLIC_SMOKE_FAILED: kubectl -n $NS describe gateway aegis-gw; kubectl -n $NS get certificate,challenge"; exit 1; }
+log "DONE_AKS image=$TAG url=https://$PUBLIC_HOST"
