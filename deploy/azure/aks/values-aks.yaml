@@ -1,0 +1,72 @@
+# AKS overlay for deploy/helm. Install with release name "aegis" in namespace "aegis".
+# Placeholders __UAMI_CLIENT_ID__ and __IMAGE_TAG__ are substituted by bootstrap.sh.
+fullnameOverride: aegis
+replicaCount: 2
+
+image:
+  repository: aegiscoreacr.azurecr.io/aegis-latent-core
+  tag: "__IMAGE_TAG__"
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  # Workload identity: the Secrets Store CSI driver exchanges this SA's token
+  # for aegis-uami, which holds "Key Vault Secrets User" on aegis-vault-prod.
+  annotations:
+    azure.workload.identity/client-id: "__UAMI_CLIENT_ID__"
+  automountServiceAccountToken: false
+
+aegis:
+  existingSecret: aegis-keys   # synced from Key Vault by SecretProviderClass aegis-kv
+  redisUrl: "redis://aegis-redis:6379"
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+  # Containerd default profile, enforced on Ubuntu nodes. Visible to the
+  # process as "cri-containerd.apparmor.d (enforce)" and accepted by the
+  # task-label LSM check. The repo's deploy/apparmor profile is not used yet:
+  # it grants /var/lib/aegis, while the chart writes the WAL to /data.
+  appArmorProfile:
+    type: RuntimeDefault
+
+persistence:
+  enabled: true
+  storageClass: managed-csi
+  size: 20Gi
+
+extraVolumes:
+  - name: kv-secrets
+    csi:
+      driver: secrets-store.csi.k8s.io
+      readOnly: true
+      volumeAttributes:
+        secretProviderClass: aegis-kv
+extraVolumeMounts:
+  - name: kv-secrets
+    mountPath: /mnt/secrets-store
+    readOnly: true
+
+networkPolicy:
+  enabled: true
+  # Empty = no inbound traffic. Smoke test uses kubectl port-forward; public
+  # ingress is a separate, explicit step (domain + TLS).
+  ingressFrom: []
+  egressTo:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: aegis-redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # LLM backend over HTTPS. NetworkPolicy cannot match FQDNs; private ranges excluded.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16"]
+      ports:
+        - protocol: TCP
+          port: 443

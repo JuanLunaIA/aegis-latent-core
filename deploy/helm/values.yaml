@@ -194,6 +194,11 @@ topologySpreadConstraints:
     topologyKey: kubernetes.io/hostname
     whenUnsatisfiable: DoNotSchedule
 
+# Extra pod volumes/mounts, e.g. a Secrets Store CSI volume that syncs
+# the aegis.existingSecret Kubernetes Secret from a cloud key vault.
+extraVolumes: []
+extraVolumeMounts: []
+
 nodeSelector: {}
 tolerations: []
 affinity: {}

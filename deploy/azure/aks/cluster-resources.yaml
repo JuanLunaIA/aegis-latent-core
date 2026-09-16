@@ -1,0 +1,116 @@
+# Namespace, Key Vault sync, and in-cluster Redis for the aegis release.
+# Placeholders __UAMI_CLIENT_ID__ and __TENANT_ID__ are substituted by bootstrap.sh.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aegis
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: aegis-kv
+  namespace: aegis
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    clientID: "__UAMI_CLIENT_ID__"
+    tenantId: "__TENANT_ID__"
+    keyvaultName: aegis-vault-prod
+    objects: |
+      array:
+        - |
+          objectName: aegis-proxy-api-key
+          objectType: secret
+          objectAlias: AEGIS_API_KEYS
+        - |
+          objectName: aegis-audit-signing-key
+          objectType: secret
+          objectAlias: AEGIS_SIGNING_KEY
+        - |
+          objectName: aegis-auth-identity-hmac-key
+          objectType: secret
+          objectAlias: AEGIS_AUTH_IDENTITY_HMAC_KEY
+        - |
+          objectName: aegis-api-key-principals-json
+          objectType: secret
+          objectAlias: AEGIS_API_KEY_PRINCIPALS_JSON
+  # The Kubernetes Secret exists only while a pod mounts this class.
+  secretObjects:
+    - secretName: aegis-keys
+      type: Opaque
+      data:
+        - { objectName: AEGIS_API_KEYS, key: AEGIS_API_KEYS }
+        - { objectName: AEGIS_SIGNING_KEY, key: AEGIS_SIGNING_KEY }
+        - { objectName: AEGIS_AUTH_IDENTITY_HMAC_KEY, key: AEGIS_AUTH_IDENTITY_HMAC_KEY }
+        - { objectName: AEGIS_API_KEY_PRINCIPALS_JSON, key: AEGIS_API_KEY_PRINCIPALS_JSON }
+---
+# Rate-limit state only (ephemeral by design: no persistence, no AOF).
+# ponytail: single unauthenticated replica isolated by NetworkPolicy; add requirepass
+# from Key Vault and a replica set when rate-limit state must survive a pod loss.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aegis-redis
+  namespace: aegis
+  labels: { app.kubernetes.io/name: aegis-redis }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: aegis-redis }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: aegis-redis }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: redis
+          # redis:7.4.2-alpine, multi-arch index digest resolved 2026-09-16
+          image: docker.io/library/redis@sha256:02419de7eddf55aa5bcf49efb74e88fa8d931b4d77c07eff8a6b2144472b6952
+          args: ["--save", "", "--appendonly", "no", "--protected-mode", "no", "--maxmemory", "200mb", "--maxmemory-policy", "allkeys-lru"]
+          ports: [{ containerPort: 6379, name: redis }]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+          readinessProbe:
+            tcpSocket: { port: 6379 }
+            periodSeconds: 5
+          volumeMounts: [{ name: data, mountPath: /data }]
+      volumes: [{ name: data, emptyDir: {} }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aegis-redis
+  namespace: aegis
+spec:
+  selector: { app.kubernetes.io/name: aegis-redis }
+  ports: [{ port: 6379, targetPort: 6379, name: redis }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: aegis-redis
+  namespace: aegis
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: aegis-redis }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: aegis-latent-core, app.kubernetes.io/instance: aegis }
+      ports: [{ protocol: TCP, port: 6379 }]
+  egress: []

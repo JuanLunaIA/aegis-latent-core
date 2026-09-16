@@ -186,6 +186,20 @@ spec:
                   name: {{ .Values.aegis.existingSecret }}
                   key: {{ .Values.aegis.signingKeySecretKey }}
                   optional: true
+            # Strict API-key mode refuses to start without both of these
+            # (AegisSettings.validate_runtime_invariants).
+            - name: AEGIS_AUTH_IDENTITY_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aegis.existingSecret }}
+                  key: AEGIS_AUTH_IDENTITY_HMAC_KEY
+                  optional: true
+            - name: AEGIS_API_KEY_PRINCIPALS_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aegis.existingSecret }}
+                  key: AEGIS_API_KEY_PRINCIPALS_JSON
+                  optional: true
             {{- end }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
@@ -198,6 +212,9 @@ spec:
               mountPath: {{ .Values.persistence.mountPath }}
             - name: tmp
               mountPath: /tmp
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
       volumes:
         {{- if not .Values.persistence.enabled }}
         # Evidence is lost on pod restart. Evaluation only — a governed
@@ -207,6 +224,9 @@ spec:
         {{- end }}
         - name: tmp
           emptyDir: {}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- if .Values.topologySpreadConstraints }}
       topologySpreadConstraints:
         {{- range .Values.topologySpreadConstraints }}
