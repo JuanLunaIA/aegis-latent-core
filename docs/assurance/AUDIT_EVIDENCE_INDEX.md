@@ -121,7 +121,8 @@ Absence of findings is not absence of vulnerabilities.
 | Python suite | 5,661 passed, 81 skipped, 0 failed | `evidence/cold_start_reproduction_audit_2026-09-01.md` | 2026-09-01 |
 | Rust extension | 29 tests passed; Clippy `-D warnings`; abi3 wheel built | CI | Per run |
 | WAF corpus | Zero observed bypasses, zero false positives | `waf_corpus_report_v1_candidate.json` | Per corpus |
-| Backpressure | 2,500 offered, 2,500 durable, p99 commit 836.35 ms under 2 ms injected `fsync` delay | `evidence/execution_2026-08-20/backpressure_stall_report.json` | 2026-08-20 |
+| Backpressure | 2,500 offered, 2,500 durable, p99 commit 51.87 ms under 2 ms injected `fsync` delay, 200 `fsync` calls | `evidence/execution_2026-09-16/`, `evidence/backpressure_group_commit_remeasurement_2026-09-16.md` | 2026-09-16 |
+| Backpressure (superseded, pre-group-commit) | Same parameters at `20fa011`: 2,500 durable, p99 commit 836.35 ms, 2,501 `fsync` calls | `evidence/execution_2026-08-20/backpressure_stall_report.json` | 2026-08-20 |
 
 **Two coverage figures appear because two runs measured differently on different dates.** Both are recorded rather than one being selected. Cite the artifact and the date, never a bare percentage. Suite counts move as tests are added; the current count is whatever `pytest -q` reports on the commit you are evaluating.
 

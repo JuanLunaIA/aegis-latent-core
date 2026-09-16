@@ -85,40 +85,61 @@ An end-to-end governed call includes request parsing, admission checks, WAF eval
 
 ## 7. The injected-`fsync` harness
 
-The backpressure measurement uses a local seam that injects a delay into `fsync`. Recorded result: under a 2 ms injected delay and 10k RPS offered load for 0.25 seconds, 2,500 offered requests produced 2,500 durable records with zero failures, zero missing or duplicate IDs, and valid chain integrity. Observed p99 commit latency was 836.3514210795984 ms.
+The backpressure measurement uses a local seam that injects a delay into `fsync`. Current
+recorded result, at source `88e01f0` on 2026-09-16: under a 2 ms injected delay and 10k RPS
+offered load for 0.25 seconds, 2,500 offered requests produced 2,500 durable records with zero
+failures, zero missing or duplicate IDs, and valid chain integrity. Observed p99 commit latency
+was 51.87478800007739 ms across 200 `fsync` calls.
 
 Read carefully:
 
 - **Offered load is not accepted capacity.** 10k RPS was offered for a quarter second. That is 2,500 requests, not sustained throughput.
 - **An injected delay is not real storage.** It models one failure mode.
-- **The p99 is the point.** Under storage pressure, commit latency rose to hundreds of milliseconds while remaining correct. Correctness held; latency did not.
+- **The latency is queueing, not per-request overhead.** 2,500 commits are offered inside a 0.25 s window against 64 worker threads and take ~1.5 s to drain. Re-running the same harness with `--fsync-delay-ms 0` moves p50 by about a millisecond, which is what tells you the injected disk delay is not the dominant term at this offered rate.
 
 The useful conclusion is that the system fails correctly under storage pressure, not that it handles 10k RPS.
 
-### Two backpressure runs, and which one you can reproduce
+### Three backpressure runs, and which one you can reproduce
 
-There are two distinct injected-`fsync` runs in this repository's history. They are
-different measurements of different workloads, not competing figures for one test, and
-neither supersedes the other:
+There are three distinct injected-`fsync` runs in this repository's history. They are
+different measurements taken at different source commits, and each remains correct for what
+it measured:
 
 | Run | Workload | p99 commit latency | Raw artifact |
 |---|---|---|---|
 | Retained `v3.1.0` historical | 10,000 offered requests over 32.4 s, 2 ms injected `fsync` | 1,189.89 ms | **Not committed to this tree.** The figure comes from the retained v3.1.0 release evidence |
-| In-tree reproducible baseline (2026-08-20) | 2,500 offered requests over 0.25 s at 10k RPS offered, 2 ms injected `fsync` | 836.35 ms | [`evidence/execution_2026-08-20/backpressure_stall_report.json`](../../evidence/execution_2026-08-20/backpressure_stall_report.json) |
+| Pre-group-commit baseline (2026-08-20, `20fa011`) | 2,500 offered requests over 0.25 s at 10k RPS offered, 2 ms injected `fsync` | 836.35 ms | [`evidence/execution_2026-08-20/backpressure_stall_report.json`](../../evidence/execution_2026-08-20/backpressure_stall_report.json) |
+| **Current in-tree baseline (2026-09-16, `88e01f0`)** | Identical parameters | **51.87 ms** (three runs: 52.317 / 51.875 / 47.531 ms) | [`evidence/execution_2026-09-16/`](../../evidence/execution_2026-09-16/), recorded in [`backpressure_group_commit_remeasurement_2026-09-16.md`](../../evidence/backpressure_group_commit_remeasurement_2026-09-16.md) |
 
-**Cite whichever you rely on, with its workload and its artifact status.** Quoting one
-run's latency beside the other's request count produces a number that was never measured.
-The 2,500-request run is the one a reader can re-derive from this repository; the
-10,000-request run is a historical observation whose raw JSON is not here to check, which
-is a limitation of that figure and is stated wherever it appears.
+**Cite the 2026-09-16 run for current source behaviour.** The 2026-08-20 figure predates the
+coalesced group-commit engine (`aegis/core/group_commit.py`, `CLM-082`, first in tree
+2026-09-10), so it measures a ledger that fsynced once per committed node: 2,501 `fsync` calls
+for 2,500 records, against 200 now. That structural difference — not the millisecond delta, which
+was measured on a different host — is what makes the older number the wrong one to quote for the
+current tree. It is not withdrawn; it is superseded for current-state citation only.
 
-Both used a 2 ms *injected* delay. Neither is a measurement of real storage, and neither
-is accepted capacity — see the boundaries below.
+Quoting one run's latency beside another's request count produces a number that was never
+measured. The 10,000-request run is a historical observation whose raw JSON is not here to check,
+which is a limitation of that figure and is stated wherever it appears.
 
-The full percentile set for the in-tree run, so it can be cited without opening the file:
-p50 167.290 ms, p95 504.704 ms, p99 836.351 ms, max 2,290.622 ms, over a 0.25 s offered
-window that took 6.630 s to drain, with 2,501 `fsync` calls and a maximum in-flight of
-2,407. Integrity valid, zero failures, zero missing identifiers, zero duplicates.
+All three used a 2 ms *injected* delay. None is a measurement of real storage, and none is
+accepted capacity — see the boundaries below.
+
+The full percentile set for the current in-tree run (run 2 of three), so it can be cited without
+opening the file: p50 33.545 ms, p95 41.176 ms, p99 51.875 ms, max 59.726 ms, over a 0.25 s
+offered window that took 1.573 s to drain, with 200 `fsync` calls and a maximum in-flight of
+2,071. Integrity valid, zero failures, zero missing identifiers, zero duplicates.
+
+The corresponding set for the superseded 2026-08-20 run, retained because it is still cited as a
+historical observation: p50 167.290 ms, p95 504.704 ms, p99 836.351 ms, max 2,290.622 ms, over
+the same offered window, taking 6.630 s to drain, with 2,501 `fsync` calls and a maximum
+in-flight of 2,407.
+
+For the single-threaded, uncontended per-commit cost — the figure to reach for when someone asks
+"how much latency does Aegis add?" — cite
+[`evidence/evidence_path_measurements_2026-09-03.md`](../../evidence/evidence_path_measurements_2026-09-03.md)
+§2 instead: `commit_forensic` with a real `fsync` per node measured 808.565 µs/op. None of the
+backpressure runs is that number.
 
 ### The same split applies to key rotation
 

@@ -32,6 +32,73 @@ published, so its absence from any registry is expected rather than a
 withdrawal. (`4.2.0` was likewise skipped, deliberately, at the prior
 `4.1.2` → `4.3.0` move.)
 
+### Fixed — the corpus cited a backpressure figure measured before group commit existed
+
+Nine documents, `CLM-034` among them, quoted `p99 836.35 ms` from
+`evidence/execution_2026-08-20/backpressure_stall_report.json` as the in-tree
+baseline. That report was produced at `20fa011`. The coalesced group-commit
+engine (`aegis/core/group_commit.py`, `CLM-082`) first entered the tree on
+2026-09-10 in `b791638`, so the retained figure measures a ledger that fsynced
+once per committed node — behaviour the tree no longer has.
+
+The harness was re-executed three times at `88e01f0` with the same parameters
+(0.25 s offered window, 10,000 offered RPS, 2.0 ms injected `fsync` delay, 64
+workers). Recorded in
+`evidence/backpressure_group_commit_remeasurement_2026-09-16.md` with raw
+reports in `evidence/execution_2026-09-16/`:
+
+| | 2026-08-20 (`20fa011`) | 2026-09-16 (`88e01f0`) |
+|---|---|---|
+| p50 | 167.290 ms | 33.545 ms |
+| p95 | 504.704 ms | 41.176 ms |
+| p99 | 836.351 ms | 51.875 ms |
+| max | 2,290.622 ms | 59.726 ms |
+| `fsync` calls | 2,501 | 200 |
+| Drain time | 6.630 s | 1.573 s |
+
+Both runs: 2,500 offered, 2,500 durable, 0 failures, 0 missing identifiers, 0
+duplicates, chain integrity valid.
+
+**The older number is not withdrawn and not wrong** — it is a correct
+observation of the tree it measured, and it stays in the corpus labelled as
+superseded for current-state citation only. **The two runs are on different
+hosts**, so the millisecond delta is not a controlled speedup measurement and
+must not be quoted as one; the `fsync`-call count is the host-independent part,
+and 200 calls for 2,500 records is the coalescing `CLM-082` describes.
+
+Three boundaries are now stated wherever the figure appears, because the old
+citation invited all three misreadings: this is **queueing latency under
+deliberate oversubscription, not per-request overhead** (re-running at
+`--fsync-delay-ms 0` moves p50 by about a millisecond, which is what shows the
+injected disk delay is not the dominant term); it is an **in-process commit
+measurement, not end-to-end API latency**; and the per-commit figure someone
+actually wants when asking what Aegis costs is
+`evidence/evidence_path_measurements_2026-09-03.md` §2 — `commit_forensic` with
+a real `fsync` per node at **808.565 µs/op** — which none of the backpressure
+runs is.
+
+Updated: `docs/CLAIMS_MATRIX.md` (`CLM-034`), `docs/benchmarks/BENCHMARK_METHOD.md`,
+`docs/benchmarks/BENCHMARK_RESULTS.md`, `docs/benchmarks/README.md`,
+`docs/BENCHMARKS.md`, `docs/FAQ_TECHNICAL.md`,
+`docs/compliance/COMPLIANCE_MAPPING.md`,
+`docs/assurance/AUDIT_EVIDENCE_INDEX.md`, `evidence/INDEX.md`.
+
+### Fixed — three documents said "twenty Safe Harbor detectors"; `_SAFE_HARBOR_PATTERNS` holds seventeen
+
+`docs/CLAIMS_MATRIX.md`, `docs/privacy/PII_REDACTION_BOUNDARIES.md` and
+`docs/architecture/ARCHITECTURE.md` had settled on "twenty" while
+`docs/compliance/HIPAA_TECHNICAL_INPUTS.md` (which enumerates the labels),
+`docs/corporate/CORPORATE_FAQ.md`, `docs/privacy/DATA_PROCESSING_CHECKLIST.md`
+and the code itself said seventeen. `PII_REDACTION_BOUNDARIES.md` contradicted
+itself sixteen lines apart.
+
+Corrected to seventeen, and `tests/test_safe_harbor_detector_count.py` now pins
+both the count and the label set to `_SAFE_HARBOR_PATTERNS`, failing with a
+message that names every document carrying the number. This asserts a count,
+not a coverage property: seventeen pattern categories are not the eighteen
+identifiers of 45 CFR 164.514(b)(2), and `CLM-016`/`CLM-057` remain the
+boundary.
+
 ### Fixed — `aegis/core/formal_proofs.py` claimed proofs in `.v` (Coq) files that do not exist
 
 The module docstring said proofs were the "Target: Formal Verification via

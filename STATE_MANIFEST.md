@@ -38,7 +38,7 @@ non-durable artifact of an already-merged PR.
 
 | Suite | Command | Result |
 |---|---|---|
-| Python | `python -m pytest -n auto -q` | **6877 passed, 26 skipped, 0 failed** |
+| Python | `python -m pytest -n auto -q` | **6879 passed, 26 skipped, 0 failed** (6877 at the time of the §1 baseline commit; the two additions are `tests/test_safe_harbor_detector_count.py`) |
 | Rust | `cargo test --locked --offline` | **70 passed, 0 failed** (67 lib + 3 integration; three harnesses report 0 tests because `zk-spartan` is default-off) |
 
 The Python count includes the nine tests added in this pass (three for the
@@ -55,6 +55,17 @@ pre-change count on this commit was 6868.
 | Links and anchors | `bash scripts/verify_links.sh --root .` | **PASS** — 1141 resolved |
 | Import reachability | `python scripts/verify_import_reachability.py --root .` | **PASS** — 222 modules discovered, 110 reached, 34 declared roadmap, 78 allowlisted, 0 undeclared orphans |
 | Release contract | `python scripts/verify_release_contract.py --root . --tag v5.0.0` | **READY** (a source-consistency check; it does **not** assert the tag exists, and no `v5.0.0` tag exists) |
+
+**One benchmark was re-executed rather than carried forward.** The backpressure
+harness (`tools/benchmarks/run_backpressure_stall.py`) was run three times at
+`88e01f0` with the parameters the retained 2026-08-20 report used. p99 commit latency
+came back at 52.317 / 51.875 / 47.531 ms across 198–207 `fsync` calls per 2,500
+records, against 836.351 ms and 2,501 `fsync` calls in the retained report. The
+retained report is at `20fa011`, which predates the group-commit engine (`CLM-082`,
+in tree from 2026-09-10), so it measured a ledger that fsynced once per node. Full
+record, including why the millisecond delta is not a controlled speedup measurement
+and why this latency is queueing rather than per-request overhead, in
+[`evidence/backpressure_group_commit_remeasurement_2026-09-16.md`](evidence/backpressure_group_commit_remeasurement_2026-09-16.md).
 
 ## 5. Static analysis
 
