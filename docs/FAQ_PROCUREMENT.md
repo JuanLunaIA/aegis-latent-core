@@ -66,7 +66,7 @@ The release includes source, tests, claims matrix, dependency and supply-chain a
 
 Procurement can use them as evaluation inputs, not universal promises. The backpressure artifact preserved 10,000 durable records under an injected seam but recorded p99 commit latency of 1,189.89 ms. The WAF corpus is small. The key-rotation run is local. The timing experiment is not a proof of constant-time behavior.
 
-## What v4.1.2 source integration and evidence artifacts are available?
+## What source integration and evidence artifacts are available?
 
 The checked-out `v5.0.0` source supports native Anthropic `POST /v1/messages` in addition to the OpenAI-compatible ingress. The Python SDK is drop-in through official-client subclasses. TypeScript uses provider-native wrappers and options, with the official provider packages as peer dependencies; it does not replace their models or normalize their payloads. Non-streaming responses can return durable status and `X-Aegis-MMR-*` proof headers. Streaming responses begin `pending-terminal`, commit one terminal summary before the protocol terminal marker, and expose post-terminal proof retrieval.
 

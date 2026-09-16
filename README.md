@@ -2,13 +2,23 @@
 
 **AI Governance and Cryptographic Evidence Gateway**
 
-Aegis sits between your application and your model provider. For every governed call it applies policy, forwards the request, and commits a signed, hash-linked evidence record **before the response reaches your caller** — together with a portable inclusion proof a third party can verify without trusting the gateway that produced it. It is self-hosted: you hold your evidence, your keys, and your data.
+**Your AI decisions are logged to a database your administrators can edit.** When someone asks what the model was told six months ago, you answer from records the interested party could have changed.
+
+Aegis sits between your application and your model provider. For every governed call it commits a signed, hash-linked evidence record **before the response reaches your caller**, and issues a portable proof that a third party verifies **without trusting the gateway, us, or you**. Self-hosted: you hold the evidence, the keys and the data.
 
 [![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
 [![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
-[![Formal verification](https://img.shields.io/badge/formal-Z3%20%7C%20Lean%204%20%7C%20TLA%2B%20%7C%20Kani-informational)](docs/formal/FORMAL_VERIFICATION.md)
-[![Coverage](https://img.shields.io/badge/statement%20coverage-93.91%25%20(2026--08--18)-informational)](docs/benchmarks/BENCHMARK_METHOD.md)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
+
+**6,936 tests passing, 26 skipped** on the `5.0.0` source line — [check it yourself](#verified-metrics) with `pytest -n auto -q`, which is the only kind of badge worth having.
+
+## Why this matters, in three lines
+
+1. **A record the interested party could have altered is not evidence** — it only reads as evidence until someone with a reason to doubt it asks one question.
+2. **You already owe someone a record you can stand behind** — EU AI Act Art. 12, HIPAA audit controls, SEC 17a-4's audit-trail alternative, MiFID II. Those are your obligations; this software is an input to them, never a discharge of them.
+3. **The fix has to be checkable by someone who distrusts you**, or it is the same problem wearing better clothes.
+
+> **→ [Prove it yourself](docs/PROVE_IT.md)** — twelve lines of Python, no call to our servers, three cases of which two must fail.
 
 > **Current release:** `v5.0.0`, with fourteen synchronized anchors, published 2026-09-16. The signed tag, the GitHub Release and its 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk` and both GHCR images were read back; see [Release Status](docs/RELEASE_STATUS.md) §1.0. **The gateway distribution `aegis-latent-core` was not published at `5.0.0`** — `pip install aegis-latent-core` still gets `4.1.2`. There is no `4.2.0`; the number was skipped.
 >
@@ -49,6 +59,35 @@ Aegis sits between your application and your model provider. For every governed 
 **Refused requests are evidence too.** When the WAF blocks or a quota is exceeded, the refusal is committed to the same signed chain before the error is returned, and the response carries `X-Aegis-Rejection-ID` and `X-Aegis-Evidence-Status: durable-rejection`. The request body is hashed, never stored. A refusal is never conditional on the commit succeeding: if evidence cannot be written the request is still refused, and the header reads `rejection-uncommitted` rather than implying a durability that was not achieved.
 
 Details: [Architecture](docs/architecture/ARCHITECTURE.md) · [Failure Semantics](docs/architecture/FAILURE_SEMANTICS.md)
+
+---
+
+## Prove it yourself
+
+Every vendor in this category says their logs are secure. The question that separates them is whether **someone who distrusts you can check a record without your cooperation**.
+
+```python
+pip install aegis-latent-sdk
+
+from aegis_sdk.proof import InclusionProof, verify_inclusion_hash
+
+proof = InclusionProof.from_mapping(record["mmr_proof"])
+verify_inclusion_hash(record["mmr_leaf_hash"], proof, trusted_root)
+```
+
+Three cases, and two of them must fail:
+
+| Case | Result |
+| --- | --- |
+| Genuine record against the root it belongs to | `INCLUDED` |
+| **One altered byte in the record**, same proof and root | `NOT INCLUDED` |
+| **Genuine record against a root you did not obtain independently** | `NOT INCLUDED` |
+
+The verifier is 313 lines of pure Python, exists in TypeScript with the same semantics, and makes no network call. The third case is the one to understand first: **a root supplied by the same gateway that produced the proof establishes internal consistency and nothing more** (`CLM-044`). Getting the root by a path the discloser does not control is your design problem, and no software solves it for you.
+
+A passing verification establishes inclusion under the root you supplied — not that the response was correct, not who produced the record, and not that nothing was omitted.
+
+Full worked transcript with the failing cases: **[docs/PROVE_IT.md](docs/PROVE_IT.md)**
 
 ---
 
@@ -116,7 +155,7 @@ so the choice between them is a deployment decision, not a different package.
 For the gateway as a container, see [Deployment Profiles](docs/operations/DEPLOYMENT_PROFILES.md):
 
 ```bash
-docker pull ghcr.io/juanlunaia/aegis-latent-core:4.1.2
+docker pull ghcr.io/juanlunaia/aegis-latent-core:5.0.0
 ```
 
 The published wheel is `py3-none-any`: **the complete feature set runs on pure
@@ -270,13 +309,15 @@ Separately, Kani 0.67.0 model-checks the native WAL's frame-bounds arithmetic ov
 | Python suite | 5,661 passed, 81 skipped, 0 failed | Clean-container reproduction | 2026-09-01 |
 | Python suite | 5,974 passed, 52 skipped, 0 failed | `4.1.2` source baseline | 2026-09-03 |
 | Python suite | 6,179 passed, 52 skipped, 0 failed | `4.3.0` source baseline | 2026-09-08 |
+| Python suite | **6,936 passed, 26 skipped, 0 failed** | `5.0.0` source baseline | 2026-09-16 |
 | Rust extension | 31 tests passed; Clippy `-D warnings`; abi3 wheel built | CI | Per run |
-| Static analysis | `mypy --strict` 0 errors over 186 files; Bandit 0 findings at every severity | CI | Per run |
+| Static analysis | `mypy --strict` 0 errors over 206 files; Bandit 0 findings at every severity | CI | Per run |
 | Model checking | 5 Kani harnesses verified, 0 failures, over the whole `usize` domain | CI | Per run |
 | Per-commit cost vs chain length | At 2,000 prior leaves: 30,153.9 → 361.7 µs/commit. Normalised, the prior curve rises `1.00× → 17.65×` with chain length; the current one is flat within noise | [`commit_scaling_measurement`](evidence/commit_scaling_measurement_2026-09-03.md) | 2026-09-03 |
 | MMR append, Rust vs Python | At 100,000 leaves: 775.76k vs 156.90k leaves/s (4.94×) | [`evidence_path_measurements`](evidence/evidence_path_measurements_2026-09-03.md) | 2026-09-03 |
 | WAF corpus | Zero observed bypasses, zero false positives over 15 malicious and 8 benign cases | Corpus report | Per corpus |
-| Backpressure | 2,500 offered → 2,500 durable, zero missing or duplicate IDs, p99 commit 836.35 ms under 2 ms injected `fsync` delay | Stall report | 2026-08-20 |
+| Backpressure (**current**) | 2,500 offered → 2,500 durable, zero missing or duplicate IDs; p50 33.545 ms, p99 51.875 ms, 200 `fsync` calls under 2 ms injected delay | [`backpressure_group_commit_remeasurement`](evidence/backpressure_group_commit_remeasurement_2026-09-16.md) | 2026-09-16 |
+| Backpressure (superseded) | Same harness before coalesced group commit: p99 836.35 ms, 2,501 `fsync` calls | Stall report | 2026-08-20 |
 
 Two coverage figures appear because two runs measured differently on different dates; both are recorded rather than one being selected. Suite counts move as tests are added — run `pytest -q` on the commit you are evaluating.
 
@@ -301,6 +342,31 @@ Not built. No dates.
 - An enterprise assurance evidence pack
 
 [ROADMAP.md](ROADMAP.md)
+
+---
+
+## Commercial status
+
+| | |
+| --- | --- |
+| **Core** | **Free**, AGPLv3, complete. Every engine is importable and fully functional; licence enforcement is off by default. No feature is withheld by a runtime check |
+| **Commercial licence** | `[FRAMEWORK-ONLY]` — intended to supersede AGPLv3 §13 for a covered deployment. **The template has not been drafted** (`CR-04`, `NOT STARTED`). A buyer asking to see it today will find there is nothing to send |
+| **Pricing** | `[HYPOTHESIS-UNVALIDATED]` — published so a conversation starts from a number, not validated by any executed contract. [Pricing Guide](docs/commercial/ENTERPRISE_PRICING_GUIDE.md) |
+| **Support** | Community best-effort, no SLA. Commercial terms per agreement (`[FRAMEWORK-ONLY]`) |
+| **Certification** | `[NOT-CERTIFIED]` — no SOC 2, ISO 27001, HIPAA attestation or FedRAMP, and none in progress |
+
+## The objections, answered before you ask
+
+| Objection | The short answer |
+| --- | --- |
+| **"One maintainer — bus factor one."** | True, and every audit flags it `CRITICAL`. What mitigates it today: the source is AGPLv3 and complete, the build is reproducible, and you can pin and vendor. What does not: having the source is not having a maintainer. Escrow (`CR-03`) and a second engineer (`CR-06`) are both `NOT STARTED` |
+| **"No SOC 2, no penetration test."** | Correct, and neither is in progress. If that is a hard procurement gate we fail it today. What exists instead: complete source, a claims register with locators, 42 published non-claims, SBOMs, signed tags and images |
+| **"Why not build it ourselves?"** | You could. The parts that take time are not the obvious ones — commit ordering on the streaming path, a failed `fsync` failing the request, rollback that stays O(1) as the chain grows, a proof format stable across a hash-scheme change. Read the 3,348 lines in `aegis/core/crypto_audit.py` and `aegis/core/mmr.py` and decide. **No replacement-cost figure is offered** — `UC-032` blocks it, and any number would be invented |
+| **"Our legal team refuses AGPL."** | Reasonable. The commercial licence is the intended resolution and **its text does not yet exist** (`CR-04`). Whether your deployment triggers §13 is your counsel's determination; nothing here is legal advice |
+| **"How do we know you didn't forge the evidence?"** | The best question asked. With the default HMAC chain, any key holder can forge — it authenticates the key, not a party (`UC-041`). What the proof still gives you is that a discloser cannot alter a record and have it verify against a root you hold. For attribution, configure the HSM or PQC path |
+| **"You have no customers."** | Correct. None to cite, and none will be invented (`CR-05`) |
+
+Longer answers, with timelines: [Objection Handling](docs/commercial/SALES_KIT/OBJECTION_HANDLING.md) · [Commercial Readiness](docs/commercial/COMMERCIAL_READINESS.md)
 
 ---
 

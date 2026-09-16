@@ -37,15 +37,17 @@ The sales motion is **local evaluation → evidence replay → controlled pilot 
 
 ## Packaging hypothesis
 
-| Package | Buyer | Included | Price hypothesis to validate | Hard boundary |
-|---|---|---|---|---|
-| Community / OSS | Developers and evaluators | AGPL self-hosting, source, tests, public docs and issue tracking | Free | No support, SLA, private onboarding or procurement commitment |
-| Team / Pilot | Platform team validating one workload | Time-boxed pilot, bounded architecture review, evidence replay, test plan and limited implementation support | `$10k–$30k` fixed pilot for a defined 4–8 week scope | No production SLO, certification or unlimited engineering promise |
-| Production | One enterprise deployment | Commercial self-hosted terms, release updates, deployment guidance, evidence package and named support window | `$40k–$100k` annual minimum hypothesis | Requires written support capacity and exclusions; not per-token pricing |
-| Enterprise | Multiple environments or regulated procurement | Security review support, architecture assistance, negotiated response targets, private deployment guidance and procurement artifacts | `$100k–$250k+` annual hypothesis | No 24/7 or sovereign claim without staffing, contract and tested operating model |
-| Sovereign / OEM | Air-gapped, embedded, redistribution or escrow | Dedicated contract, redistribution rights, escrow/assurance terms and specialized support | Custom only | Not a current default offer; requires legal, support and assurance capacity |
+> **Figures live in one place.** This table previously carried its own price bands, which disagreed with [`docs/commercial/ENTERPRISE_PRICING_GUIDE.md`](commercial/ENTERPRISE_PRICING_GUIDE.md) in both the numbers and in what the numbers were claimed to be. **The pricing guide is now the single source of truth** and no figure is restated here. The shapes below are the packaging hypothesis; the amounts are in the guide, labelled `[HYPOTHESIS-UNVALIDATED]`, with the five gates that would close before any of them is firm.
 
-The ranges are **internal hypotheses only**. They are not public list prices, observed ACV, vertical ACV, replacement-cost evidence, or a company/IP valuation. They require buyer interviews, normalized comparable quotes, support-cost modeling and paid-pilot evidence. The underlying primary-source review is [`evidence/documentation_audit_2026-08-22/PRICING_BENCHMARK.md`](../evidence/documentation_audit_2026-08-22/PRICING_BENCHMARK.md); it finds that the public comparables do not support deriving an Aegis list price, observed ACV, or valuation.
+| Package | Buyer | Included | Hard boundary |
+|---|---|---|---|
+| Community / OSS | Developers and evaluators | AGPL self-hosting, source, tests, public docs and issue tracking | No support, SLA, private onboarding or procurement commitment |
+| Team / Pilot | Platform team validating one workload | Time-boxed pilot, bounded architecture review, evidence replay, test plan and limited implementation support | No production SLO, certification or unlimited engineering promise |
+| Production | One enterprise deployment | Commercial self-hosted terms, release updates, deployment guidance, evidence package and named support window | Requires written support capacity and exclusions; not per-token pricing |
+| Enterprise | Multiple environments or regulated procurement | Security review support, architecture assistance, negotiated response targets, private deployment guidance and procurement artifacts | No round-the-clock or sovereign claim without staffing, contract and tested operating model |
+| Sovereign / OEM | Air-gapped, embedded, redistribution or escrow | Dedicated contract, redistribution rights, escrow/assurance terms and specialized support | Not a current default offer; requires legal, support and assurance capacity |
+
+The amounts in the pricing guide are **unvalidated hypotheses**. They are not public list prices, observed ACV, vertical ACV, replacement-cost evidence, or a company/IP valuation. They require buyer interviews, normalized comparable quotes, support-cost modeling and paid-pilot evidence. The underlying primary-source review is [`evidence/documentation_audit_2026-08-22/PRICING_BENCHMARK.md`](../evidence/documentation_audit_2026-08-22/PRICING_BENCHMARK.md); it finds that the public comparables do not support deriving an Aegis list price, observed ACV, or valuation.
 
 ## Cost-to-serve model
 

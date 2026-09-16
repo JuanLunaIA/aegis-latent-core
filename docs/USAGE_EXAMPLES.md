@@ -33,7 +33,7 @@ disable controls that make records meaningful in production; see
 | --- | --- | --- |
 | Govern calls your code makes | `pip install aegis-latent-core` | `aegis.wrap()` — in-process WAF, redaction, signed ledger |
 | Run a gateway other services call | `pip install aegis-latent-core` | the `aegis` / `aegis-server` console scripts |
-| Run the gateway as a container | `docker pull ghcr.io/juanlunaia/aegis-latent-core:4.1.2` | the same gateway, packaged |
+| Run the gateway as a container | `docker pull ghcr.io/juanlunaia/aegis-latent-core:5.0.0` | the same gateway, packaged. GHCR is the current gateway channel — PyPI `aegis-latent-core` still resolves to `4.1.2` |
 | Check a proof someone handed you | `pip install aegis-latent-sdk` | verifiers only — no key, no enforcement |
 | Check a proof from TypeScript | `npm install aegis-latent-sdk` | the same verifiers, Web Crypto |
 

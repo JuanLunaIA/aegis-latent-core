@@ -8,14 +8,20 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 ## AI Governance and Evidence Gateway
 
 **Audiencia:** equipos de plataforma, AppSec, AI engineering, compliance, legal y procurement
-**Estado:** candidato de código/release y prospecto de producto; no se afirma publicación externa y no es certificación, dictamen legal, SLO ni oferta comercial vinculante.
-**Last verified:** 2026-08-27 UTC
-**Candidato de código/release:** `4.1.2` con 14 anclas sincronizadas; no se afirma publicación externa de `v4.1.2` antes de una lectura posterior exitosa
-**Línea base externa histórica:** tag ligero `v4.0.1` en `6469904380218584ae0b5221334bc9a46500f5ba` con workflows fallidos; PyPI/npm observados en `4.0.0` sin procedencia atribuida
+**Estado:** prospecto de producto. No es certificación, dictamen legal, SLO ni oferta comercial vinculante.
+**Last verified:** 2026-09-16 UTC
+**Línea base de código:** `5.0.0` con catorce anclas sincronizadas, **publicada el 2026-09-16 en todas las superficies excepto PyPI `aegis-latent-core`**
+**Línea base externa histórica:** tag anotado firmado `v4.0.2` en `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`; antes, tag ligero `v4.0.1` en `6469904380218584ae0b5221334bc9a46500f5ba` con workflows fallidos
+
+> **Paridad con la versión en inglés.** Este documento debe coincidir con [`docs/PROSPECTUS.md`](PROSPECTUS.md) en toda afirmación de hecho. Donde difiera, la versión en inglés gobierna y la discrepancia es un defecto a corregir, no una variante local.
 
 ## Baselines
 
-El candidato actual de código/release es **4.1.2** y contiene 14 anclas sincronizadas. Streaming SSE acotado con evidencia `pending-terminal`, Anthropic nativo `POST /v1/messages`, SDKs Python y TypeScript, proofs MMR portables, dashboard forense, export ZIP JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` y el segmento auxiliar `RustWal` son capacidades del código candidato. No constituyen un tag o GitHub Release externo `v4.1.2`, publicación en PyPI/npm/OCI ni aceptación de release para producción; se requiere una lectura posterior exitosa.
+La línea de código actual es **5.0.0** con catorce anclas sincronizadas. Incluye streaming SSE acotado con evidencia `pending-terminal`, Anthropic nativo `POST /v1/messages`, SDKs Python y TypeScript, proofs MMR portables, dashboard forense, export ZIP JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` y el segmento auxiliar `RustWal`.
+
+**La publicación se afirma únicamente a partir de lectura posterior (readback), nunca a partir de metadatos de versión.** El 2026-09-16 se leyeron: el tag anotado firmado `v5.0.0`, el GitHub Release con 31 assets cargados, PyPI `aegis-latent-sdk` `5.0.0`, npm `aegis-latent-sdk` `5.0.0`, y ambas imágenes GHCR con objetos de firma cosign presentes. **No se ejecutaron `cosign verify` ni `gh attestation verify`**, y que un objeto de firma resuelva no es verificación: establece que se subió un objeto, no que valide ni quién lo firmó.
+
+**Una brecha, declarada y no suavizada:** la distribución del gateway, PyPI `aegis-latent-core`, **no se publicó en `5.0.0`** y sigue resolviendo a `4.1.2`. Ningún workflow publica esa distribución, de modo que esperar no lo resuelve. Un `pip install aegis-latent-core` obtiene código `4.1.2`; para el gateway en `5.0.0` use los assets del GitHub Release o `ghcr.io/juanlunaia/aegis-latent-core:5.0.0`. Véase [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0.
 
 ## Resumen ejecutivo
 
@@ -27,7 +33,7 @@ El producto central es un **límite de evidencia**. No convierte automáticament
 
 | Capacidad | Resultado | Límite |
 |---|---|---|
-| Ingress de proveedores y SDKs | Superficie compatible con OpenAI y, en el código v4 integrado, Anthropic `POST /v1/messages`; Python es drop-in mediante subclases oficiales y TypeScript usa wrappers provider-native con SDKs oficiales como peer dependencies. | Parámetros, streaming y errores de cada proveedor requieren pruebas propias; estas adiciones no se atribuyen a v3.1.0. |
+| Ingress de proveedores y SDKs | Superficie compatible con OpenAI y, en el código v4 integrado, Anthropic `POST /v1/messages`; Python es drop-in mediante subclases oficiales y TypeScript usa wrappers provider-native con SDKs oficiales como peer dependencies. | Parámetros, streaming y errores de cada proveedor requieren pruebas propias. |
 | Evidencia durable firmada | Hash, firma, WAL, flush y `fsync` antes del camino de éxito gobernado. | Storage, backups, host e inmutabilidad externa dependen del despliegue. |
 | Evidencia de errores | Registra errores upstream, circuit-open y fallos de red cuando el boundary sigue disponible. | Un fallo de storage después de admission es incidente fail-closed, no éxito. |
 | WAF y policy | Normalización, patrones críticos, guardas estructurales y análisis local. | Es boundary de aplicación; HTTP/2 en ingress es separado. |
@@ -39,7 +45,11 @@ El producto central es un **límite de evidencia**. No convierte automáticament
 
 El código v4 integrado conserva además un benchmark SSE in-process acotado de 7 rondas × 1.000 eventos deterministas. Excluye red, proveedor y latencia de WAL durable; no demuestra capacidad ni SLO. El segmento nativo `RustWal` es auxiliar y el ledger JSONL conserva la autoridad de replay.
 
-El release v3.1.0 conserva un harness local con 10.000 requests ofrecidos a 10k RPS y 2 ms de `fsync` inyectado: observó 10.000 commits durables, cero fallos, cero IDs faltantes, cero duplicados e integridad válida; el p99 de commit fue 1.189,89 ms. Es un fault injection acotado, no capacidad aceptada de producción ni un SLO.
+El harness local ofrece 10k RPS durante 0,25 s con 2 ms de `fsync` inyectado. La medición vigente (2026-09-16, tras el motor de commit agrupado) observó **2.500 requests ofrecidos → 2.500 commits durables**, cero fallos, cero IDs faltantes ni duplicados e integridad válida, con p50 33,545 ms, p99 51,875 ms y 200 llamadas a `fsync`. La corrida anterior del mismo harness, previa al commit agrupado, registró p99 836,35 ms y 2.501 llamadas a `fsync`.
+
+**Dos advertencias que no deben omitirse.** Las dos corridas se ejecutaron en hosts distintos, de modo que la diferencia en milisegundos no es un aumento de velocidad controlado; lo que es independiente del host es el recuento de `fsync`. Y la latencia mide encolamiento bajo sobresuscripción deliberada, no sobrecarga por request: el costo real por commit medido con un `fsync` real por nodo es de 808,565 µs/op. Es fault injection acotado, no capacidad aceptada de producción ni un SLO (`UC-017`).
+
+**Corrección registrada:** una versión anterior de este documento afirmaba «10.000 commits durables» y «p99 1.189,89 ms». Ambas cifras son falsas y están formalmente retractadas en `UC-018`; el artefacto retenido siempre contuvo 2.500 registros.
 
 El corpus WAF local contiene 15 casos maliciosos y 8 benignos. El resultado observado fue cero bypasses y cero falsos positivos para ese corpus. El intervalo estadístico sigue siendo amplio porque la muestra es pequeña. HTTP/2 fragmentation y `nuclei-templates/waf-bypass` no están ejecutados en ese resultado.
 
