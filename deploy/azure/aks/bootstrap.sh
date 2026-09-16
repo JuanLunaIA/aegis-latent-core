@@ -7,7 +7,7 @@ set -euo pipefail
 RG=aegis-core-rg
 # Location/SKU validated 2026-09-16 against this subscription: Standard_D2s_v5 is
 # NotAvailableForSubscription in eastus (location and zones) but unrestricted in
-# chilecentral with zones 1-3. ACR and Key Vault stay in eastus; cross-region is supported.
+# chilecentral with zones 1-3 (Standard_B2als_v2 must be re-checked with az vm list-skus). ACR and Key Vault stay in eastus; cross-region is supported.
 LOC=${LOC:-chilecentral}
 AKS=aegis-aks
 ACR=aegiscoreacr
@@ -15,7 +15,11 @@ KV=aegis-vault-prod
 UAMI=aegis-uami
 NS=aegis
 SA=aegis                       # = fullnameOverride in values-aks.yaml
-NODE_SIZE=${NODE_SIZE:-Standard_D2s_v5}
+# Budget: 2x D2s_v5 + P10 OS disks ran ~8.3 USD/day (retail, chilecentral, 2026-09-16),
+# burning a 200 USD credit in ~24 days. 2x B2als_v2 (2 vCPU/4 GiB, AKS system-pool minimum)
+# with 32 GiB P4 OS disks is ~3.1 USD/day and keeps one replica per zone.
+NODE_SIZE=${NODE_SIZE:-Standard_B2als_v2}
+OS_DISK_GB=${OS_DISK_GB:-32}
 NODE_COUNT=${NODE_COUNT:-2}    # chart spreads 2 replicas across zones and hosts
 # Set ZONES="" for regions/SKUs without zone access (AvailabilityZoneNotSupported).
 ZONES=${ZONES-1 2}
@@ -46,7 +50,7 @@ fi
 log "3/8 AKS cluster"
 if ! az aks show -g "$RG" -n "$AKS" -o none 2>/dev/null; then
   az aks create -g "$RG" -n "$AKS" -l "$LOC" --tier free \
-    --node-count "$NODE_COUNT" --node-vm-size "$NODE_SIZE" "${ZONE_ARGS[@]}" --os-sku Ubuntu \
+    --node-count "$NODE_COUNT" --node-vm-size "$NODE_SIZE" --node-osdisk-size "$OS_DISK_GB" "${ZONE_ARGS[@]}" --os-sku Ubuntu \
     --network-plugin azure --network-plugin-mode overlay --network-dataplane cilium \
     --enable-oidc-issuer --enable-workload-identity \
     --enable-addons azure-keyvault-secrets-provider \
