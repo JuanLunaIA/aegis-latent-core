@@ -3,8 +3,8 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/README.md",
-      "sha256": "5356aac2211c349cf02c109b53b8342dc41861148544cc9cde171084bef4eeb1",
-      "size": 5430
+      "sha256": "0711d1bfdebdb7f3b52e990da318cce7b767fe5ad1799b824f9c7528705f39dd",
+      "size": 5479
     },
     {
       "category": "context",
@@ -21,8 +21,8 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/02_OPERATIONAL_INVARIANTS_MATRIX.md",
-      "sha256": "04a09e3fc8bbaacb7f2684a57dfa96d396dcb7476c7078e0693b71e53df11dbc",
-      "size": 7600
+      "sha256": "10b2a84396403c959a475a38efcf1878683cc818a55ba5edd7621e68c48224f6",
+      "size": 7659
     },
     {
       "category": "context",
@@ -33,8 +33,8 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/04_FORMAL_SPECIFICATIONS_MAPPING.md",
-      "sha256": "6053811810287a4c34b9c00bd3ce09fcc90ee2b4a15526099deca76448f9d277",
-      "size": 5090
+      "sha256": "a511adee858dab03579f96c1977c2ce243593085515c632a94d6d0cba555e021",
+      "size": 5149
     },
     {
       "category": "context",
@@ -63,8 +63,8 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/09_COMMAND_AND_CI_MATRIX.md",
-      "sha256": "21fb36dc183f391f280ca6b9c8f3a3c01b9a1cdf4fe69ca68aab6c20e14090f8",
-      "size": 6346
+      "sha256": "63ff6465ed1abbe3f78aef6c47a29243c661bf30f902dd457e7e60829b1a8700",
+      "size": 6405
     },
     {
       "category": "context",
@@ -75,8 +75,8 @@
     {
       "category": "governed_input",
       "path": "AGENTS.md",
-      "sha256": "52137043ed4ab96c0070231b3573c00efa6f62f7b9114ea94ebdb29d2045adfb",
-      "size": 5601
+      "sha256": "19aacc7bca37664794cad0c6ba7294b89bfa6d6c0c3269d7992d0eeb6d201021",
+      "size": 6185
     },
     {
       "category": "governed_input",
@@ -93,38 +93,38 @@
     {
       "category": "governed_input",
       "path": ".github/copilot-instructions.md",
-      "sha256": "be09855da159f6cf1a1adf0d3cb74dc65cb6110eb3434c5d97b488253a9270cd",
-      "size": 2326
+      "sha256": "bc1e71379a2e26a67740955b1a03c360852c37d873a16db0c0d9dbce8313abb3",
+      "size": 2902
     },
     {
       "category": "governed_input",
       "path": "README.md",
-      "sha256": "964f6f350fd2909e8891596fc67ee540d9858e6d2fae8f325d7b6d7d21ad8516",
-      "size": 21393
+      "sha256": "7c0c7f6a96233fa47a26308a9086f227340f57749741a02b33c13ae59b9bf140",
+      "size": 21736
     },
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "6fe70b452ca94079321d3fbd88ebedbec8568986ec8f391884b225bb49b839e7",
-      "size": 166061
+      "sha256": "a6fb49565fb9c53e85db52ba00812a7fe73e6a0621e5cdf05f552354096d85fe",
+      "size": 166242
     },
     {
       "category": "governed_input",
       "path": "SECURITY.md",
-      "sha256": "6c900dbf4420be07ce5d380fe7b508a665ac4c0859006f3913726bd9263e4900",
-      "size": 12304
+      "sha256": "46c1549cd1deff2d966e2fe6cc07983fd59c4f6f7011c6f057fe645f9c531128",
+      "size": 12514
     },
     {
       "category": "governed_input",
       "path": "DEPLOYMENT_GUIDE.md",
-      "sha256": "54957985d1699266c32b5f9f1e1910116db1a11858b2bbc5fad7e0374b545ddf",
-      "size": 15191
+      "sha256": "162e1f37a3604a7e93a68ce22ecdacfea96a435e86af5a7d5b73e71447a4774e",
+      "size": 15253
     },
     {
       "category": "governed_input",
       "path": "CONTRIBUTING.md",
-      "sha256": "7c535f91b613712625843afa825bc0107e7d7b644d5544c3076a427e9090dfaf",
-      "size": 12084
+      "sha256": "a6a307be60371ff007a9ce34c0685b90c17d54cfc9c1d1c26d18b91e9478e50d",
+      "size": 12201
     },
     {
       "category": "governed_input",
@@ -135,20 +135,20 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "21239fa5c94c1c240e3aab291c794185a96c1dda005f17c36d953c1011a98623",
-      "size": 112210
+      "sha256": "ca4c8c542cc123d17904f8b28ddb9d161b3a08755f86229c85d20f19768b1ab1",
+      "size": 112318
     },
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_INTEGRATIONS_GUIDE.md",
-      "sha256": "1ad58723bebb06b27952b812efd98cae97c63c5e38f710e897787550a87bc426",
-      "size": 10558
+      "sha256": "267f40cfee7e1281279c3964c92c661ae94c2b3047d04d47dc476b3dbe357ad3",
+      "size": 10653
     },
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_QUICKSTART.md",
-      "sha256": "454558d6e7e2d724fcd75239f562547386f858b8e57813a4889e96c3210f1de4",
-      "size": 8670
+      "sha256": "096356a9de42f879da7400f83f7085987bfe3a4381c02ce7bbb868e94d659852",
+      "size": 8870
     },
     {
       "category": "governed_input",
@@ -159,26 +159,26 @@
     {
       "category": "governed_input",
       "path": "docs/FAQ_SECURITY.md",
-      "sha256": "881e6d75d22fc5552ab2f896226b0b1594a11e9030f98a3e07311f4f595f6cb7",
-      "size": 7528
+      "sha256": "ee54925b91e8c65fa66f3287272ff6575b581d9830fe972a3df84c43ce645ef2",
+      "size": 7728
     },
     {
       "category": "governed_input",
       "path": "docs/FAQ_TECHNICAL.md",
-      "sha256": "15490c97768ac84e7d5666c35b8aa0f08be2400284c9e7c08af60f6427b213cd",
-      "size": 18897
+      "sha256": "dded872cd7e14d1af809009b82fb2ce50e8aef31284c618e7f86c775548fb9ea",
+      "size": 19037
     },
     {
       "category": "governed_input",
       "path": "docs/PLATFORM_OPERATOR_GUIDE.md",
-      "sha256": "12eccbff02ebb72fd5bf79b1472785f5b2434098e8985dd13b28f28c83191d6b",
-      "size": 19432
+      "sha256": "5300f8f80734c932021d413d6bf7446f6bcc6170142f1934d922ef6cacdc038e",
+      "size": 19632
     },
     {
       "category": "governed_input",
       "path": "docs/REPOSITORY_MAP.md",
-      "sha256": "d3f9fa1ac55aa7ec28fb32b7e18c2d26c0adf725ba96773f4296cc0e343c268b",
-      "size": 5860
+      "sha256": "96a0973103fa3695f8a7136e47c57843edbff69a89ecee8a219932b4e5de21e7",
+      "size": 5931
     },
     {
       "category": "governed_input",

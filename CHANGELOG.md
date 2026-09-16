@@ -3,7 +3,7 @@
 All notable changes to **Aegis Latent Core** are documented in this file.
 
 **Last verified:** 2026-09-15 UTC
-**Release baseline:** `v5.0.0`, fourteen synchronized anchors — **a candidate, not a release. Nothing is published for `5.0.0`** — no tag, GitHub Release, PyPI or npm artifact, or OCI image exists for it. Source metadata does not establish external lifecycle state, which requires independent readback. There is no `4.2.0` or `4.4.0`; both numbers were skipped deliberately and no artifact was ever published under either.
+**Release baseline:** `v5.0.0`, fourteen synchronized anchors, **published 2026-09-16 on every surface except PyPI `aegis-latent-core`** — signed tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk`, and both GHCR images were read back; the gateway distribution on PyPI remains `4.1.2`. Source metadata does not establish external lifecycle state, which requires independent readback; see `docs/RELEASE_STATUS.md` §1.0 for what was and was not verified. There is no `4.2.0` or `4.4.0`; both numbers were skipped deliberately and no artifact was ever published under either.
 **Most recent published release (readback 2026-09-04):** `v4.1.2` signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway image `sha256:b3f6aadc…f80710` and dashboard image `sha256:27e1bbc2…d92398`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)

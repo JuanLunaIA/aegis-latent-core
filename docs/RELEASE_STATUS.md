@@ -4,33 +4,40 @@
 **Scope:** the version, publication, and provenance record for this repository.
 **Boundary:** this is the only document that states publication state. Every other document links here. Source metadata never establishes publication; readback does.
 
-**Last verified:** 2026-09-15 UTC (`5.0.0` source baseline); 2026-09-04 UTC (`4.1.2` external surfaces); 2026-09-03 UTC (`4.1.1` external surfaces); 2026-09-02 UTC (`4.0.2` external surfaces)
+**Last verified:** 2026-09-16 UTC (`5.0.0` external surfaces); 2026-09-04 UTC (`4.1.2` external surfaces); 2026-09-03 UTC (`4.1.1` external surfaces); 2026-09-02 UTC (`4.0.2` external surfaces)
 **Source baseline:** `5.0.0`, fourteen synchronized anchors
-**Publication state of `5.0.0`:** **not published.** No tag, no GitHub Release, no PyPI or npm artifact, and no OCI image exists for this version. It is source in the tree and nothing more; see §1.0. There is no `4.2.0` or `4.4.0` at any surface, and neither is planned — see §1.0 on the skipped numbers.
-**Most recent published release:** `4.1.2`, **published on every surface.** The signed tag, the GitHub Release and its 31 assets, PyPI `aegis-latent-core`, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk`, and both OCI images were read back on 2026-09-04. This is the first version at which the gateway itself is on PyPI; see §1.1.
+**Publication state of `5.0.0`:** **published on every surface except PyPI `aegis-latent-core`.** Read back 2026-09-16: signed tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk`, and both OCI images with cosign signature objects present. **The gateway distribution `aegis-latent-core` was not published at `5.0.0`** and its latest on PyPI remains `4.1.2` — a regression against `4.1.2`, and one no workflow in this repository closes; see §1.0. There is no `4.2.0` or `4.4.0` at any surface, and neither is planned — see §1.0 on the skipped numbers.
+**Most recent fully published release:** `4.1.2`, **published on every surface.** The signed tag, the GitHub Release and its 31 assets, PyPI `aegis-latent-core`, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk`, and both OCI images were read back on 2026-09-04. This is the first version at which the gateway itself is on PyPI, and as of the `5.0.0` readback it is still the **only** one; see §1.1.
 **Publication state of `4.1.1`:** **published, except npm** — superseded by `4.1.2`. Read back on 2026-09-03; see §1.2. For the superseded `4.1.0`, a lightweight tag and an empty immutable release exist — see §1.3.
 
 ---
 
 ## 1. Publication state
 
-**Read this section as five separate things.** The source baseline is `5.0.0`, and **nothing is published for it** — the anchors moved in the tree and no external surface has been written or read back. The most recent *published* version is `4.1.2`, for which every surface was published as of the 2026-09-04 readback. The preceding `4.1.1` reached every surface except npm and is superseded. A `v4.1.0` tag and GitHub Release also exist, but neither came from the release pipeline and the release carries no assets. The `4.0.2` rows were last read back on 2026-09-02 and **describe `4.0.2` only**.
+**Read this section as five separate things.** The source baseline is `5.0.0`, and it is **published on every surface except PyPI `aegis-latent-core`** as of the 2026-09-16 readback. `4.1.2` remains the most recent version published on *every* surface, read back 2026-09-04. The preceding `4.1.1` reached every surface except npm and is superseded. A `v4.1.0` tag and GitHub Release also exist, but neither came from the release pipeline and the release carries no assets. The `4.0.2` rows were last read back on 2026-09-02 and **describe `4.0.2` only**.
 
-Nothing in this table may be restated with the version number changed. A `4.0.2` digest is not a `4.1.1` digest, a `4.1.1` digest is not a `4.1.2` digest, and a `4.0.2` signature attests to `4.0.2` bytes. In particular, **no `4.1.2` readback value may be repeated as a `5.0.0` value**: the `5.0.0` rows below are empty because nothing has been published, not because the readback is pending transcription.
+Nothing in this table may be restated with the version number changed. A `4.0.2` digest is not a `4.1.1` digest, a `4.1.1` digest is not a `4.1.2` digest, and a `4.1.2` digest is not a `5.0.0` digest. Each row below records what was read back for the version in its own heading and nothing else.
 
-### 1.0 `5.0.0` — source only, nothing published
+### 1.0 `5.0.0` — published except the gateway on PyPI, read back 2026-09-16
 
 | Surface | State | Observed value |
 | --- | --- | --- |
 | Source baseline | Confirmed | `5.0.0`, fourteen synchronized anchors, contract `READY` |
-| GitHub tag `v5.0.0` | **Does not exist** | No tag has been created |
-| GitHub Release `v5.0.0` | **Does not exist** | No release, no assets |
-| PyPI (`aegis-latent-core`) | **Not published at 5.0.0** | Latest published remains `4.1.2` |
-| PyPI (`aegis-latent-sdk`) | **Not published at 5.0.0** | Latest published remains `4.1.2` |
-| npm (`aegis-latent-sdk`) | **Not published at 5.0.0** | Latest published remains `4.1.2` |
-| OCI image (gateway) | **Not published at 5.0.0** | Latest published remains `4.1.2` |
-| OCI image (dashboard) | **Not published at 5.0.0** | Latest published remains `4.1.2` |
-| Signature / attestation | **None** | Nothing signed; nothing to verify |
+| GitHub tag `v5.0.0` | Confirmed, signed annotated | Tag object `c34d41280ec4a5acb38aa74220eac8f20a9d0aab` targeting commit `b2e4335409377442e9dde70ea579c3df08a0c1be`; created by `create_release_tag.yml` under Sigstore keyless signing |
+| GitHub Release `v5.0.0` | Confirmed | Created 2026-09-16T01:33:26Z, published 2026-09-16T01:39:24Z, non-draft, non-prerelease, **31 assets** all in state `uploaded`, target `main` |
+| PyPI (`aegis-latent-core`) | **Not published at 5.0.0** | Registry JSON → `info.version` `4.1.2`; no `5.0.0` key under `releases`. See the note below — this is not a pending upload |
+| PyPI (`aegis-latent-sdk`) | **Confirmed published at 5.0.0** | Registry JSON → `info.version` `5.0.0`; `5.0.0` present under `releases` |
+| npm (`aegis-latent-sdk`) | **Confirmed published at 5.0.0** | Registry JSON → `dist-tags.latest` `5.0.0`; tarball `https://registry.npmjs.org/aegis-latent-sdk/-/aegis-latent-sdk-5.0.0.tgz`; `dist.attestations` present |
+| OCI image (gateway) `5.0.0` | **Confirmed** | `ghcr.io/juanlunaia/aegis-latent-core:5.0.0` → `sha256:81d106c9d8d2fea0dedb29259532b9743f196168b7c762363e2dd83c9a33c15a`, an OCI image index |
+| OCI image (dashboard) `5.0.0` | **Confirmed** | `ghcr.io/juanlunaia/aegis-latent-core-dashboard:5.0.0` → `sha256:ec73cba5858585eca554f5ef28658a641c59bf02968ad87f8df6a4edb9860ee5`, same index shape |
+| Image signatures | **Confirmed present** | A cosign signature object resolves for each index digest — `sha256-81d106c9….sig` and `sha256-ec73cba5….sig` both return HTTP 200 |
+| Build attestations | Emitted by the workflow; **not independently verified** | `cosign`, `gh`, `syft` and `slsa-verifier` are absent from the readback environment (`command -v` returns nothing for each), so `cosign verify` and `gh attestation verify` were **NOT_EXECUTED** |
+
+**Presence of a signature object is not verification.** Each `.sig` tag resolving establishes that an object was pushed at that digest. It does not establish that the signature validates, who signed it, or against which identity — that needs `cosign verify` with an explicit certificate identity and OIDC issuer, which was not run here. The same caveat stands for `4.1.2` in §1.1.
+
+**The full `SHA256SUMS` sweep was not run for `5.0.0`.** The release carries `SHA256SUMS` and a `release-asset-manifest.json`, and the 31 assets all report state `uploaded`; no asset was downloaded and re-hashed against them in this readback.
+
+**Why `aegis-latent-core` is absent from PyPI at `5.0.0`, and why waiting will not change it.** `publish_pypi.yml` builds and publishes `sdk/python` only — it checks out `sdk/python/pyproject.toml`, validates the tag against the **SDK** version, builds two distributions from that directory, and uploads them to the `aegis-latent-sdk` project. Nothing in `.github/workflows/` builds or uploads the root `pyproject.toml` distribution. The gateway's presence on PyPI at `4.1.2` therefore did not come from this pipeline, which is consistent with the byte difference recorded in §1.1 (identical content, different build host). Closing the gap needs either an out-of-band upload of the `5.0.0` gateway distributions or a workflow that publishes them; until one happens, `pip install aegis-latent-core` resolves to `4.1.2` while every other surface is at `5.0.0`.
 
 `READY` on the source contract means the fourteen anchors agree and the tree is internally consistent for a release attempt. It is not a publication, an approval, or a schedule.
 

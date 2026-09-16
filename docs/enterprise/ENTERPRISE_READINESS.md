@@ -79,7 +79,7 @@ Runbooks are written from the source's actual behaviour, not invented. They have
 | --- | --- |
 | OpenAI-compatible gateway | Implemented |
 | Anthropic path | Implemented, bounded by SDK test coverage |
-| Python SDK | Implemented; the registry carries the most recently published version (`4.1.2`), not the unpublished `5.0.0` source baseline — see [Release Status](../RELEASE_STATUS.md) |
+| Python SDK | Implemented; PyPI `aegis-latent-sdk` carries `5.0.0` as of the 2026-09-16 readback — see [Release Status](../RELEASE_STATUS.md) §1.0 |
 | TypeScript SDK | Implemented; same registry caveat |
 | Proof verification in both SDKs | Implemented |
 | Forensic dashboard | Implemented; browser-facing authentication is yours |
@@ -97,7 +97,7 @@ Stated plainly, because a readiness document that omits these is not useful.
 | **No independent assurance** | No SOC 2, ISO 27001, penetration test, or third-party audit. Nothing to hand a security team that they did not derive themselves. |
 | **No production-scale evidence** | Benchmarks are local. No capacity, throughput, or latency claim survives contact with a target environment without your own measurement. |
 | **No cross-replica ordering** | A requirement for one global timeline cannot be met today. |
-| **Registry lag** | Every registry surface (PyPI, npm, GHCR) is published through `4.1.2`; nothing is published for the `5.0.0` source baseline (see [Release Status](../RELEASE_STATUS.md) §1.0). Installing from a registry today gets you `4.1.2` behavior — in particular the pre-rename `legal_admissibility` API field, not `5.0.0`'s breaking `signature_assurance` rename (`CLM-090`) — not what this checked-out source tree documents. |
+| **Registry lag, gateway only** | PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk` and both GHCR images are at `5.0.0` (readback 2026-09-16). **PyPI `aegis-latent-core` is not** — it remains `4.1.2`, so `pip install aegis-latent-core` gets `4.1.2` behavior, in particular the pre-rename `legal_admissibility` API field rather than `5.0.0`'s breaking `signature_assurance` rename (`CLM-090`). Take the gateway from the GitHub Release assets or GHCR until that distribution is published; see [Release Status](../RELEASE_STATUS.md) §1.0. |
 | **Single maintainer** | Bus factor of one. No independent second approver on the critical path. |
 | **No SLA** | Response targets are intent, not commitment, absent an executed agreement. |
 | **Untested runbooks at scale** | Procedures are written; rehearsal is yours. |

@@ -1,7 +1,7 @@
 # Product and Evidence Boundaries
 
 **Last verified:** 2026-09-01 UTC
-**Release baseline:** checked-out source baseline `5.0.0` with fourteen synchronized anchors, unpublished
+**Release baseline:** checked-out source baseline `v5.0.0` with fourteen synchronized anchors, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)
 
 This document consolidates the boundary statements that apply across Aegis. It exists so that `README.md` and the developer guides can describe mechanisms plainly and link here once, instead of repeating a disclaimer beside every sentence.
 

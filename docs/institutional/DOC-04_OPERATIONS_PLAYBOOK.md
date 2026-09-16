@@ -2,7 +2,7 @@
 
 **Document ID:** `DOC-04`
 **Title:** Operational Engineering Playbook and High-Availability Runbooks
-**Source baseline:** checked-out source metadata is synchronized at `v5.0.0`, which is unpublished; the most recent published release is `v4.1.2`, whose tag, release, registry and OCI state were read back on 2026-09-04 (`docs/RELEASE_STATUS.md` §1.1), while deployment and acceptance claims still require target-environment evidence
+**Source baseline:** checked-out source metadata is synchronized at `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` remains the most recent version published on every surface, whose tag, release, registry and OCI state were read back on 2026-09-04 (`docs/RELEASE_STATUS.md` §1.1), while deployment and acceptance claims still require target-environment evidence
 **Historical evidence scope:** operational findings and retained evidence through 2026-08-20 UTC remain `v3.1.0`-era records unless explicitly revalidated against the current source
 **Canonical language:** US English
 **Primary owners:** Platform/SRE owner and release owner

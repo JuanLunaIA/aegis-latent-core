@@ -3,8 +3,8 @@
 This FAQ is for application-security reviewers, cryptography reviewers, CISOs and security procurement teams. It states the implemented mechanism, the evidence path and the residual risk for common security questions. It does not replace the threat model, security policy, independent assessment or customer controls.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** `v5.0.0` source, **not published**; the most recent published release is `v4.1.2`, read back on 2026-09-04. External release status always requires independent readback, recorded in `docs/RELEASE_STATUS.md` §1.1
-**Source baseline:** `v5.0.0`, unpublished; source metadata is not publication, deployment-acceptance, or certification evidence
+**Release baseline:** `v5.0.0`, **published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)**; `v4.1.2` remains the most recent version published on every surface, read back 2026-09-04. External release status always requires independent readback, recorded in `docs/RELEASE_STATUS.md` §1.1
+**Source baseline:** `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); source metadata is not publication, deployment-acceptance, or certification evidence
 **Retained evidence baseline:** `v3.1.0`; retained measurements remain historical and are not v4.1.2 measurements
 **Audience:** AppSec, cryptography, security architecture and procurement
 **Primary security document:** [`SECURITY.md`](../SECURITY.md)
