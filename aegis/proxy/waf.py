@@ -62,6 +62,34 @@ logger = logging.getLogger(__name__)
 # repeat it.
 _HOMOGLYPH_NORMALIZER = HomoglyphNormalizer(apply_nfkc=False)
 
+# A run of single characters each followed by the *same* separator, four
+# characters or longer: "i g n o r e", "i.g.n.o.r.e", "i-g-n-o-r-e". The
+# trailing \w and the {2,} bound together set that four-character floor.
+#
+# The separator is back-referenced rather than re-matched from the class, so a
+# space cannot bridge two dot-separated runs: "i.g.n.o.r.e p.r.e.v..." would
+# otherwise collapse to one token and stop matching a pattern that expects
+# whitespace between the words.
+_SPACED_RUN = re.compile(r"\b\w(?P<sep>[ .\-_])(?:\w(?P=sep)){2,}\w\b")
+_SPACING_SEPARATORS = re.compile(r"[ .\-_]")
+
+# Leet substitutions seen in the demonstrated bypasses. Deliberately narrow:
+# each entry is a glyph chosen because it *looks like* the letter, so folding
+# it back cannot silently rewrite an unrelated token into a keyword.
+_LEET_TABLE = str.maketrans(
+    {
+        "0": "o",
+        "1": "i",
+        "3": "e",
+        "4": "a",
+        "5": "s",
+        "7": "t",
+        "@": "a",
+        "$": "s",
+        "!": "i",
+    }
+)
+
 
 @dataclass
 class WAFResult:
@@ -341,12 +369,52 @@ class AegisWAF:
         text = unicodedata.normalize("NFKC", text)
         return _HOMOGLYPH_NORMALIZER.normalize(text)
 
+    @staticmethod
+    def _collapse_letter_spacing(text: str) -> str:
+        """Join runs of single characters each separated by one separator.
+
+        ``i g n o r e   p r e v i o u s`` defeats every string-literal pattern
+        while reading identically to a human. The run must be at least four
+        characters long, so ordinary prose ("a b" in a list, initials) is left
+        alone; this is a matching-only variant, so the cost of over-collapsing
+        is a false positive rather than altered evidence.
+        """
+        return _SPACED_RUN.sub(lambda m: _SPACING_SEPARATORS.sub("", m.group(0)), text)
+
+    @staticmethod
+    def _fold_leetspeak(text: str) -> str:
+        """Fold common leet substitutions back to the letters they stand in for.
+
+        Digits carry meaning elsewhere, which is why this produces a separate
+        scan variant instead of replacing the canonical normalization: a
+        pattern that legitimately contains a digit still sees the unfolded
+        text.
+        """
+        return text.translate(_LEET_TABLE)
+
+    @classmethod
+    def _scan_variants(cls, text: str) -> tuple[str, ...]:
+        """The canonical normalization plus each de-obfuscated form of it.
+
+        Variants are additive — every pattern is still tested against the
+        canonical form — so a variant can only add a detection, never mask one.
+        """
+        normalized = cls._normalize_text(text)
+        collapsed = cls._collapse_letter_spacing(normalized)
+        variants = {
+            normalized,
+            collapsed,
+            cls._fold_leetspeak(normalized),
+            cls._fold_leetspeak(collapsed),
+        }
+        return (normalized, *sorted(variants - {normalized}))
+
     def _scan_content(self, data: Any) -> list[str]:
         matches: list[str] = []
         if isinstance(data, str):
-            normalized = self._normalize_text(data)
+            variants = self._scan_variants(data)
             for pat in self._critical_patterns:
-                if pat.search(normalized):
+                if any(pat.search(variant) for variant in variants):
                     matches.append(pat.pattern[:40])
         elif isinstance(data, dict):
             for v in data.values():

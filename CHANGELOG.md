@@ -856,9 +856,13 @@ a rejected state.
   the plaintext no longer opens, the root is unchanged, `verify_integrity()`
   still passes, and another subject's records are still readable.
 
-  **Off by default, and not a runtime toggle.** Sealing changes what the MMR
-  commits to, so it cannot be enabled for a chain that already holds records —
-  adopting it means starting a new chain, the same rule the hash scheme follows.
+  **Off by default.** Sealing is a per-commit decision rather than a per-chain
+  one — `_seal_leaf` branches on whether the shredder is configured at the
+  moment each leaf is built — so the flag *can* be enabled for a chain that
+  already holds records: commits from that point forward are sealed, earlier
+  leaves stay exactly as written, and the resulting mixed chain still passes
+  `verify_integrity()`. What has no migration path is the reverse; nothing
+  seals leaves already committed as plain digests.
   An unchanged deployment commits payload digests exactly as before, and
   `crypto_shred()` on such a ledger raises rather than returning a false
   success, so a retention job cannot mistake a no-op for an erasure.
@@ -1067,6 +1071,85 @@ front of older clients breaks receipt verification.
   *faster*, which it cannot be — so it is recorded as "too small for this
   harness to separate from variance" rather than as a number. Artifacts and
   that boundary are in `evidence/streaming-engine/4.3.0/`.
+
+### Fixed — ten documents asserted that cryptographic shredding could not be enabled on an existing chain
+
+`CLM-068` was corrected on 2026-09-15, after measuring the real behaviour, to
+record that enabling `AEGIS_ENABLE_CRYPTOGRAPHIC_SHREDDING` on a chain that
+already holds records **is** supported: `_seal_leaf` branches per commit, not
+per chain, so an existing WAL re-opened with the flag on seals everything from
+that point forward, leaves earlier leaves exactly as written, and the resulting
+mixed chain still passes `verify_integrity()`. Ten locations across nine files
+still asserted the opposite — that sealing "changes what the MMR commits to" so
+adoption "means starting a new chain": `docs/FAQ_TECHNICAL.md`,
+`docs/institutional/CLAIM_EVIDENCE_GRAPH.md` (`CEG-029`, including a
+falsification trigger that would have fired on correct behaviour),
+`docs/institutional/DOC-02_CRYPTOGRAPHIC_FORENSIC_BLUEPRINT.md` (two places),
+`docs/institutional/DOC-05_REGULATORY_DOSSIER.md`,
+`docs/institutional/UNSUPPORTED_CLAIMS.md` (`UC-037`),
+`docs/privacy/DATA_RETENTION.md`, `docs/architecture/DECISIONS.md`,
+`docs/architecture/ARCHITECTURE.md`, `docs/PLATFORM_OPERATOR_GUIDE.md`, and this
+changelog's own `[5.0.0]` entry. All ten now match `CLM-068`, which
+`AGENTS.md` makes the controlling register.
+
+Several of them reached the false claim by analogy to `AD-12`'s rule that the
+**MMR hash scheme** belongs to a chain. That rule is real and is untouched; the
+analogy was what was wrong. The genuine asymmetry — stated in each corrected
+passage — is the reverse direction: nothing retroactively seals leaves already
+committed as plain digests, so enabling the flag does not make existing history
+shreddable.
+
+### Added — symmetric-signing warning at ledger construction
+
+An HMAC-only ledger now says so when it is built: *"Symmetric signing provides
+no non-repudiation; any key holder can forge."* `CLM-090`'s five-tier lattice
+already reported `SYMMETRIC_AUTHENTICATED` for such a chain, but only to a
+caller who went looking for it. The check reads configuration only — an HMAC key
+present, no available HSM backend, no configured PQC identity path — rather than
+calling `_configured_signing_ceiling()`, because that would resolve the PQC
+identity eagerly and defeat the deliberate laziness of `_pqc_identity`.
+
+### Added — letter-spacing and leetspeak de-obfuscation in the WAF
+
+`CLM-091` wired homoglyph mapping into `AegisWAF._normalize_text`, which closes
+the Cyrillic/Greek class of bypass. It does not touch two other classes where
+every character is already the ASCII one it appears to be: single-character
+spacing (`i g n o r e`, `i.g.n.o.r.e`) and digit-for-letter substitution
+(`1gn0r3`). `_scan_content` now tests each critical pattern against a **variant
+set** — the canonical normalization plus a spacing-collapsed form, a
+leet-folded form, and both together — instead of a single string.
+
+Variants are additive and the canonical form is always first in the set, so a
+variant can add a detection and can never mask one. The collapse requires at
+least four characters separated by a **consistent** separator, which keeps
+ordinary prose (`a b`, `I am a user`) intact and stops a space from bridging two
+dot-separated runs into a single token. Folding stays out of `_normalize_text`
+itself so that patterns which legitimately contain digits still see unfolded
+text.
+
+### Added — four boundaries the unsupported-claims register did not carry
+
+`docs/institutional/UNSUPPORTED_CLAIMS.md` gains `UC-039` (a ZK inclusion proof
+shows a recorded verdict, not WAF correctness or semantic safety), `UC-040`
+(TEE attestation is unimplemented here, and an enclave's property is memory
+against the host — not protection from an upstream model provider or from a
+key-holding operator), `UC-041` (HMAC authenticates the key, not a party, so no
+non-repudiation follows), and `UC-042` (the WAF is finite pattern detection that
+reduces exposure to known encodings; it is not an injection boundary, and each
+normalization added above can be defeated by an attacker who reads the table).
+
+Each of the four was already bounded correctly in `docs/CLAIMS_MATRIX.md` and in
+the relevant institutional volume. What was missing was the row in the register
+that carries *blocked phrasing*, which is what keeps the limit from being
+re-stated loosely elsewhere; each new row therefore lists the wording it blocks.
+
+### Added — `STATE_MANIFEST.md`
+
+The Phase 0 baseline the audit directive asks for, and the one deliverable of it
+never produced across #177, #178 and #179: measured repository state, version
+anchors, test counts, verifier results, static-analysis results, supply-chain
+tool availability, and environment versions — each with the command that
+produced it, and an explicit blocking reason wherever a command could not run.
 
 ### Added — `scripts/verify_import_reachability.py`, a CI-gated import-reachability audit
 

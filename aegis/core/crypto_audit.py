@@ -837,6 +837,22 @@ class CryptographicAuditLedger:
         # filesystem, and a ledger that never signs should not pay for it.
         # ``False`` distinguishes "not yet looked up" from "looked up, absent".
         self._pqc_identity: PQCSigner | None | Literal[False] = False
+        # Read configuration only, never `_configured_signing_ceiling()`: that
+        # calls `_pqc_signer()`, which would force the identity load the line
+        # above exists to defer.
+        if (
+            self._signing_key
+            and not (self._hsm_backend and self._hsm_backend.available)
+            and not self.pqc_identity_path
+        ):
+            logger.warning(
+                "Ledger is configured for symmetric signing only (hmac-sha256): "
+                "Symmetric signing provides no non-repudiation; any key holder "
+                "can forge. Commits will report signature_assurance=%s. "
+                "Configure an HSM backend or a PQC identity path for an "
+                "asymmetric tier.",
+                SignatureAssurance.SYMMETRIC_AUTHENTICATED.value,
+            )
         self._mmr = MerkleMountainRange(hash_scheme=mmr_hash_scheme)
         # Set during replay when the WAL's own proofs name a different scheme.
         self._wal_proof_version: str | None = None

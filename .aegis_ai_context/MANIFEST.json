@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "4f83e5f5c59d247a106f8e7328e1164a2e84fcad9560956a557c70c2ae63fcf5",
-      "size": 154556
+      "sha256": "5a9db6da0d7f0c63183f473683d959e4b66505b233a1d57d3cf9236b29beb78c",
+      "size": 159682
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "3e696c0383993b77dd9c99d34ea0bee07a670b6d50406efd1a3a9e53f6efc8dd",
-      "size": 109744
+      "sha256": "420591c41a0fb5c6c899882ce6fb06034bde82f7204caac3334bf2f81d8af2fb",
+      "size": 111356
     },
     {
       "category": "governed_input",
@@ -165,14 +165,14 @@
     {
       "category": "governed_input",
       "path": "docs/FAQ_TECHNICAL.md",
-      "sha256": "ca4cbf0926759a2de63499f866b1e36bf30cefec5d18027b7b3169b727942bd8",
-      "size": 17390
+      "sha256": "e2cf69863669e0356be5f2c6ecc79f3aa5e2754ce452a0af4de2c58af153fc74",
+      "size": 17944
     },
     {
       "category": "governed_input",
       "path": "docs/PLATFORM_OPERATOR_GUIDE.md",
-      "sha256": "c375d38ee6e430cf55de78329bb0a8f76f67a18e8847478289b79e708c1cb3c4",
-      "size": 19099
+      "sha256": "12eccbff02ebb72fd5bf79b1472785f5b2434098e8985dd13b28f28c83191d6b",
+      "size": 19432
     },
     {
       "category": "governed_input",
