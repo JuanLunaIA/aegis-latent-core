@@ -104,7 +104,7 @@ they are different workloads, and neither supersedes the other.
 
 | Harness | Retained `v3.1.0` (above; raw JSON not in tree) | In-tree, reproducible from this repository |
 |---|---|---|
-| Backpressure under injected `fsync` | 10,000 offered requests over 32.4 s; p99 1,189.89 ms | 2,500 offered requests over a 0.25 s window; p99 836.35 ms — [`backpressure_stall_report.json`](../evidence/execution_2026-08-20/backpressure_stall_report.json) |
+| Backpressure under injected `fsync` | 10,000 offered requests over 32.4 s; p99 1,189.89 ms | **Current (2026-09-16, `88e01f0`):** 2,500 offered requests over a 0.25 s window; p99 51.87 ms — [`execution_2026-09-16/`](../evidence/execution_2026-09-16/). **Superseded (2026-08-20, `20fa011`, before group commit):** same parameters; p99 836.35 ms — [`backpressure_stall_report.json`](../evidence/execution_2026-08-20/backpressure_stall_report.json) |
 | Key rotation | 2,239 records across three local signer instances | 2,033 records across three local signer instances over 0.5 s; `key-old` 701, `key-new` 1,332 — [`key_rotation_report.json`](../evidence/execution_2026-08-20/key_rotation_report.json) |
 
 Both backpressure runs used the same 2 ms *injected* delay; both rotation runs used the

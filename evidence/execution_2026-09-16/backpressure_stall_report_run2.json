@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "wal_sha256": "cd78723572cabadf4305eb06b7b46b36073ef17c5b9a93d574d052cfcb4d36b4"
+  },
+  "commit_sha": "88e01f0234a58d5720d5b8faad4e8b51ee2dd7ae",
+  "environment": {
+    "machine": "x86_64",
+    "platform": "Linux-6.18.44-fc-v33-x86_64-with-glibc2.39",
+    "python": "3.11.15"
+  },
+  "failures": [],
+  "gate": {
+    "passed": true,
+    "semantics": "hot-path blocked on durable WAL commit under injected fsync stall; no silent evidence drop",
+    "success_rate_claim": "NOT_CLAIMED; offered load is not accepted capacity"
+  },
+  "generated_at_utc": "2026-09-16T00:56:19Z",
+  "observed": {
+    "accepted_and_durable": 2500,
+    "commit_latency_ms": {
+      "max": 59.72586999996565,
+      "p50": 33.54549699997733,
+      "p95": 41.17596500009313,
+      "p99": 51.87478800007739
+    },
+    "duplicate_evidence_ids": 0,
+    "elapsed_total_s": 1.5730899760001193,
+    "failures": 0,
+    "fsync_calls": 200,
+    "integrity_valid": true,
+    "ledger_chain_count": 2500,
+    "max_inflight": 2071,
+    "missing_evidence_ids": 0
+  },
+  "repository": "JuanLunaIA/aegis-latent-core",
+  "schema": "aegis-backpressure-report-v1",
+  "workload": {
+    "duration_s": 0.25,
+    "fsync_delay_ms": 2.0,
+    "max_workers": 64,
+    "offered_requests": 2500,
+    "offered_rps": 10000,
+    "wal_path": "/home/user/aegis-latent-core/evidence/execution_2026-09-16/backpressure_stall_report_run2.wal.jsonl"
+  }
+}

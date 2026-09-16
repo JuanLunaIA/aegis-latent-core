@@ -38,7 +38,7 @@ non-durable artifact of an already-merged PR.
 
 | Suite | Command | Result |
 |---|---|---|
-| Python | `python -m pytest -n auto -q` | **6877 passed, 26 skipped, 0 failed** |
+| Python | `python -m pytest -n auto -q` | **6879 passed, 26 skipped, 0 failed** (6877 at the time of the §1 baseline commit; the two additions are `tests/test_safe_harbor_detector_count.py`) |
 | Rust | `cargo test --locked --offline` | **70 passed, 0 failed** (67 lib + 3 integration; three harnesses report 0 tests because `zk-spartan` is default-off) |
 
 The Python count includes the nine tests added in this pass (three for the
@@ -55,6 +55,17 @@ pre-change count on this commit was 6868.
 | Links and anchors | `bash scripts/verify_links.sh --root .` | **PASS** — 1141 resolved |
 | Import reachability | `python scripts/verify_import_reachability.py --root .` | **PASS** — 222 modules discovered, 110 reached, 34 declared roadmap, 78 allowlisted, 0 undeclared orphans |
 | Release contract | `python scripts/verify_release_contract.py --root . --tag v5.0.0` | **READY** (a source-consistency check; it does **not** assert the tag exists, and no `v5.0.0` tag exists) |
+
+**One benchmark was re-executed rather than carried forward.** The backpressure
+harness (`tools/benchmarks/run_backpressure_stall.py`) was run three times at
+`88e01f0` with the parameters the retained 2026-08-20 report used. p99 commit latency
+came back at 52.317 / 51.875 / 47.531 ms across 198–207 `fsync` calls per 2,500
+records, against 836.351 ms and 2,501 `fsync` calls in the retained report. The
+retained report is at `20fa011`, which predates the group-commit engine (`CLM-082`,
+in tree from 2026-09-10), so it measured a ledger that fsynced once per node. Full
+record, including why the millisecond delta is not a controlled speedup measurement
+and why this latency is queueing rather than per-request overhead, in
+[`evidence/backpressure_group_commit_remeasurement_2026-09-16.md`](evidence/backpressure_group_commit_remeasurement_2026-09-16.md).
 
 ## 5. Static analysis
 
@@ -76,8 +87,8 @@ pre-change count on this commit was 6868.
 | `pip-audit` (2.10.1) | Findings in `pip` 24.0 and `setuptools` 79.0.1 only. Neither appears in `requirements.lock`: they are this virtualenv's own build tooling, not shipped dependencies. **No finding against any Aegis runtime dependency.** |
 | `npm audit --omit=dev` (npm 10.9.7), `sdk/typescript` | **0 vulnerabilities** |
 | `npm audit --omit=dev`, `dashboard` | **0 vulnerabilities** |
-| `cargo audit` | **NOT_EXECUTED** — `cargo audit` reports `no such command`; the `cargo-audit` binary is not installed here. CI runs this check and it is currently red on `RUSTSEC-2026-0285` (rustls 0.23.41), which also reproduces on `main` and is unrelated to any diff in this line of work. |
-| Sonatype lookup for `pkg:cargo/rustls@0.23.41` | `NO_DATA_FOR_VERSION`, zero recommended upgrade targets returned, and no direct or transitive vulnerability recorded in that dataset (Developer Trust Score 99, security sub-score 100). **This neither confirms nor supplies a fix version for `RUSTSEC-2026-0285`**, so no fixed version is asserted here. |
+| `cargo audit` (0.22.2, installed during this pass) | **EXECUTED, 0 vulnerabilities**, 2 allowed warnings (`bincode` 1.3.3 unmaintained `RUSTSEC-2025-0141`; `chacha20` 0.10.1 yanked) — run with CI's exact `--ignore` set, exit code 0. Previously exit 1 with "1 vulnerability found!". The advisory was `RUSTSEC-2026-0285` — "TLS 1.3 handshake messages incorrectly accepted across encryption level boundaries", severity 5.3 (medium), disclosed 2026-09-14, against rustls 0.23.41, with `Solution: Upgrade to >=0.23.45`. That text came from the failing CI job's own output (run `35039478528`, job `104615912714`), which is the authoritative source; `cargo update -p rustls --precise 0.23.45` moved the transitive pin to 0.23.45 (and `rustls-webpki` 0.103.13 → 0.103.15), an 8-line lockfile diff. rustls is transitive here, reached through `hyper-rustls` 0.27.9 and `tokio-rustls` 0.26.4. |
+| Sonatype lookup for `pkg:cargo/rustls@0.23.41` | `NO_DATA_FOR_VERSION`, zero recommended upgrade targets, no vulnerability recorded in that dataset (Developer Trust Score 99, security sub-score 100). **Recorded because it was wrong in a useful way**: the advisory is real and was disclosed 2026-09-14, so this dataset was simply behind. A single supply-chain source returning "no data" is not evidence of no vulnerability, and was not treated as such. |
 | `syft`, `cosign`, `slsa-verifier`, `helm`, `gh`, `trivy`, `grype` | **NOT_EXECUTED** — none is installed in this environment (`command -v` returns nothing for each). |
 
 ## 7. Environment

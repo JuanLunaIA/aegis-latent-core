@@ -32,6 +32,73 @@ published, so its absence from any registry is expected rather than a
 withdrawal. (`4.2.0` was likewise skipped, deliberately, at the prior
 `4.1.2` → `4.3.0` move.)
 
+### Fixed — the corpus cited a backpressure figure measured before group commit existed
+
+Nine documents, `CLM-034` among them, quoted `p99 836.35 ms` from
+`evidence/execution_2026-08-20/backpressure_stall_report.json` as the in-tree
+baseline. That report was produced at `20fa011`. The coalesced group-commit
+engine (`aegis/core/group_commit.py`, `CLM-082`) first entered the tree on
+2026-09-10 in `b791638`, so the retained figure measures a ledger that fsynced
+once per committed node — behaviour the tree no longer has.
+
+The harness was re-executed three times at `88e01f0` with the same parameters
+(0.25 s offered window, 10,000 offered RPS, 2.0 ms injected `fsync` delay, 64
+workers). Recorded in
+`evidence/backpressure_group_commit_remeasurement_2026-09-16.md` with raw
+reports in `evidence/execution_2026-09-16/`:
+
+| | 2026-08-20 (`20fa011`) | 2026-09-16 (`88e01f0`) |
+|---|---|---|
+| p50 | 167.290 ms | 33.545 ms |
+| p95 | 504.704 ms | 41.176 ms |
+| p99 | 836.351 ms | 51.875 ms |
+| max | 2,290.622 ms | 59.726 ms |
+| `fsync` calls | 2,501 | 200 |
+| Drain time | 6.630 s | 1.573 s |
+
+Both runs: 2,500 offered, 2,500 durable, 0 failures, 0 missing identifiers, 0
+duplicates, chain integrity valid.
+
+**The older number is not withdrawn and not wrong** — it is a correct
+observation of the tree it measured, and it stays in the corpus labelled as
+superseded for current-state citation only. **The two runs are on different
+hosts**, so the millisecond delta is not a controlled speedup measurement and
+must not be quoted as one; the `fsync`-call count is the host-independent part,
+and 200 calls for 2,500 records is the coalescing `CLM-082` describes.
+
+Three boundaries are now stated wherever the figure appears, because the old
+citation invited all three misreadings: this is **queueing latency under
+deliberate oversubscription, not per-request overhead** (re-running at
+`--fsync-delay-ms 0` moves p50 by about a millisecond, which is what shows the
+injected disk delay is not the dominant term); it is an **in-process commit
+measurement, not end-to-end API latency**; and the per-commit figure someone
+actually wants when asking what Aegis costs is
+`evidence/evidence_path_measurements_2026-09-03.md` §2 — `commit_forensic` with
+a real `fsync` per node at **808.565 µs/op** — which none of the backpressure
+runs is.
+
+Updated: `docs/CLAIMS_MATRIX.md` (`CLM-034`), `docs/benchmarks/BENCHMARK_METHOD.md`,
+`docs/benchmarks/BENCHMARK_RESULTS.md`, `docs/benchmarks/README.md`,
+`docs/BENCHMARKS.md`, `docs/FAQ_TECHNICAL.md`,
+`docs/compliance/COMPLIANCE_MAPPING.md`,
+`docs/assurance/AUDIT_EVIDENCE_INDEX.md`, `evidence/INDEX.md`.
+
+### Fixed — three documents said "twenty Safe Harbor detectors"; `_SAFE_HARBOR_PATTERNS` holds seventeen
+
+`docs/CLAIMS_MATRIX.md`, `docs/privacy/PII_REDACTION_BOUNDARIES.md` and
+`docs/architecture/ARCHITECTURE.md` had settled on "twenty" while
+`docs/compliance/HIPAA_TECHNICAL_INPUTS.md` (which enumerates the labels),
+`docs/corporate/CORPORATE_FAQ.md`, `docs/privacy/DATA_PROCESSING_CHECKLIST.md`
+and the code itself said seventeen. `PII_REDACTION_BOUNDARIES.md` contradicted
+itself sixteen lines apart.
+
+Corrected to seventeen, and `tests/test_safe_harbor_detector_count.py` now pins
+both the count and the label set to `_SAFE_HARBOR_PATTERNS`, failing with a
+message that names every document carrying the number. This asserts a count,
+not a coverage property: seventeen pattern categories are not the eighteen
+identifiers of 45 CFR 164.514(b)(2), and `CLM-016`/`CLM-057` remain the
+boundary.
+
 ### Fixed — `aegis/core/formal_proofs.py` claimed proofs in `.v` (Coq) files that do not exist
 
 The module docstring said proofs were the "Target: Formal Verification via
@@ -1071,6 +1138,54 @@ front of older clients breaks receipt verification.
   *faster*, which it cannot be — so it is recorded as "too small for this
   harness to separate from variance" rather than as a number. Artifacts and
   that boundary are in `evidence/streaming-engine/4.3.0/`.
+
+### Added — `docs/UPGRADING.md`, the missing `4.1.2` → `5.0.0` migration guide
+
+`5.0.0` is a major version because it breaks the public JSON API, and until now
+nothing told a consumer on `4.1.2` how to move. The guide covers the seven
+changes that can break a working deployment or integration, ordered by how
+quietly they break it.
+
+Two are the ones that bite silently. The `legal_admissibility` →
+`signature_assurance` rename (`CLM-090`) removes the old field outright with no
+alias, and the guide states plainly that a retained `"High"` from a `4.x`
+deployment is **not** evidence the chain was signed well — the old property
+returned `"High"` whenever a key was configured at read time, before it ever
+examined chain history — so `== "High"` must not be migrated to "anything but
+`Compromised`", because `SYMMETRIC_AUTHENTICATED` would have reported `"High"`
+before and is materially weaker. The `forwarded_allow_ips` change (`CLM-092`)
+breaks any deployment whose proxy reaches the gateway from a non-loopback
+address, and the symptom — client IPs collapsing to the proxy's address, taking
+IP allowlisting, rate limiting and audit attribution with them — looks like a
+configuration problem rather than an upgrade consequence.
+
+The rest: the MMR v2 default and its SDK wire boundary, the stricter WAF
+normalization changing block decisions on previously-passing traffic, the `pqc`
+extra now installing a library the code actually imports, the two additive node
+fields, and the corrected shredding-on-an-existing-chain behaviour. Rollback is
+covered too, including the asymmetry that a chain started on v2 cannot be read
+by a `4.1.2` gateway.
+
+### Security — rustls bumped to 0.23.45, clearing `RUSTSEC-2026-0285`
+
+`RUSTSEC-2026-0285` — "TLS 1.3 handshake messages incorrectly accepted across
+encryption level boundaries", severity 5.3 (medium), disclosed 2026-09-14 —
+affects rustls 0.23.41, which this tree pinned transitively through
+`hyper-rustls` 0.27.9 and `tokio-rustls` 0.26.4. The advisory's own remedy is
+`Upgrade to >=0.23.45`.
+
+`cargo update -p rustls --precise 0.23.45` moves rustls to 0.23.45 and
+`rustls-webpki` to 0.103.15: an eight-line lockfile diff touching those two
+crates and nothing else. `cargo build --release`, `cargo test --locked` (70
+passed) and `cargo clippy --locked --all-targets --all-features -- -D warnings`
+are all clean on the result.
+
+The advisory had been red on CI across four PRs and was stood down on each time
+as unrelated to the diff, which it was. What it was not is unreal: a Sonatype
+lookup for `pkg:cargo/rustls@0.23.41` returned `NO_DATA_FOR_VERSION` with a
+security sub-score of 100, and taking that as the answer would have been the
+wrong call. The fixed version came from the failing CI job's own output, which
+prints the advisory's `Solution:` line verbatim.
 
 ### Fixed — ten documents asserted that cryptographic shredding could not be enabled on an existing chain
 
