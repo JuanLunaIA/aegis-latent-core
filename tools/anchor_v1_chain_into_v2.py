@@ -52,9 +52,8 @@ def _read_terminal_node(wal_path: Path) -> dict[str, Any]:
     if not wal_path.is_file():
         raise SystemExit(f"error: no WAL at {wal_path}")
     terminal: dict[str, Any] | None = None
-    line_number = 0
     with wal_path.open("r", encoding="utf-8") as handle:
-        for line_number, line in enumerate(handle, start=1):  # noqa: B007
+        for line_number, line in enumerate(handle, start=1):
             stripped = line.strip()
             if not stripped:
                 continue
@@ -122,10 +121,14 @@ def build_anchor(
         "boundaries": [
             "The v1 chain is not modified, migrated, or recomputed by this statement.",
             "v1 inclusion proofs remain verifiable under v1 and only under v1.",
-            "A v1 proof still requires the exact leaf payload; v1 lacks domain "
-            "separation, so a crafted leaf can collide with an interior node.",
-            "This statement is only as trustworthy as the key that signs it; "
-            "unsigned, it is an assertion by whoever produced the file.",
+            (
+                "A v1 proof still requires the exact leaf payload; v1 lacks domain "
+                "separation, so a crafted leaf can collide with an interior node."
+            ),
+            (
+                "This statement is only as trustworthy as the key that signs it; "
+                "unsigned, it is an assertion by whoever produced the file."
+            ),
             "No time, custody, or external anchoring is established here.",
         ],
     }
