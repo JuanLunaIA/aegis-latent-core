@@ -37,7 +37,45 @@ This is why the evidence claim is scoped as "the process requested synchronizati
 | XFS | Suitable with default settings; `nobarrier` must not be used | Disabling barriers removes the ordering that makes `fsync` meaningful |
 | ZFS | Well suited. A separate intent-log device (SLOG) with power-loss protection absorbs synchronous writes. Keep `sync=standard` | `sync=disabled` makes `fsync` a no-op and silently voids the commit-before-response property. Never set it on an evidence volume |
 | Btrfs | Usable, but validate the specific kernel and profile before adopting it for evidence | Historic issues have been profile-specific; test rather than assume |
-| Network filesystems | NFS and SMB are not recommended for the authoritative log | `fsync` semantics depend on server and mount options, and a client-side cache can acknowledge writes the server has not committed |
+| Network filesystems | NFS, SMB and EFS are not recommended for the authoritative log | `fsync` semantics depend on server and mount options, and a client-side cache can acknowledge writes the server has not committed. **They also break the single-writer lock** — see below |
+
+### NFS/EFS also breaks the writer lock, not just `fsync`
+
+`fsync` semantics are the reason usually given, and they are sufficient on their
+own. There is a second, independent failure that bites in Kubernetes and looks
+like an application bug rather than a storage one.
+
+The ledger takes an exclusive lock on the WAL to enforce single-writer
+discipline (`CLM-011`): `fcntl.flock` on POSIX, a 1 TiB sentinel-offset
+`msvcrt.locking` on Windows. Over NFSv4 or EFS, `flock` is not a local kernel
+operation — it is brokered by the server's lock manager (`rpc.statd` / `lockd`
+on classic NFS, the equivalent state machine on EFS).
+
+That indirection has a consequence:
+
+**A pod killed ungracefully does not release its lock.** `SIGKILL`, an
+OOM kill, or a node loss gives the process no chance to unlock, and the server
+holds the lock until its own reclaim timeout expires — commonly 45–90 seconds,
+and longer if the server believes the client is still alive. The replacement
+pod starts, fails to acquire the lock, and exits with
+`WalWriterConflictError`. Kubernetes restarts it, it fails again, and the
+deployment settles into `CrashLoopBackOff` that resolves itself minutes later
+with no operator action — which is exactly the shape that gets misfiled as a
+race in the gateway.
+
+This is fail-closed and correct: two writers on one WAL would fork the chain,
+which is worse than a delayed restart. But it is worth recognising on sight.
+
+**Recommendation.** Put the authoritative WAL on local block storage — NVMe
+instance storage, or an EBS `gp3` / Azure Premium SSD volume attached to one
+node. In Kubernetes that means a `ReadWriteOnce` volume and a
+`StatefulSet`, not a `ReadWriteMany` share. Use network storage for archived
+segments and exports, where neither `fsync` ordering nor the writer lock is in
+play.
+
+If you must run the active WAL on NFS or EFS, size the pod's
+`terminationGracePeriodSeconds` above your server's lock-reclaim timeout so
+ordinary rollouts release cleanly, and expect the crash path to stall anyway.
 
 ## Cloud block storage
 

@@ -208,8 +208,37 @@ def _sha256(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _verify_script(expected: Mapping[str, str]) -> bytes:
+def _verify_script(expected: Mapping[str, str], *, signed: bool) -> bytes:
     checks = "\n".join(f"check '{name}' '{digest}'" for name, digest in sorted(expected.items()))
+    # The signature block is emitted only when a manifest signature exists, so an
+    # unsigned bundle keeps exactly its previous output and never prints a
+    # reassuring line it cannot back.
+    signature_block = (
+        """
+# ── Manifest signature ────────────────────────────────────────────────────
+# The digests above are only as trustworthy as this script, and this script
+# travels inside the archive it checks. Anyone who can rewrite a record can
+# rewrite the digest next to it and this line with it. The signature below is
+# what breaks that circularity -- but ONLY against a public key you already
+# had. A key read out of this same archive proves nothing, so there is no
+# embedded copy to accidentally trust.
+if [ -n "${AEGIS_BUNDLE_PUBKEY:-}" ]; then
+  if openssl pkeyutl -verify -pubin -inkey "$AEGIS_BUNDLE_PUBKEY" \\
+       -rawin -in manifest.json -sigfile manifest.json.sig >/dev/null 2>&1; then
+    echo "OK   manifest.json signature verifies against $AEGIS_BUNDLE_PUBKEY"
+  else
+    echo "INVALID SIGNATURE: MANIFEST TAMPERED (or wrong key)" >&2
+    exit 1
+  fi
+else
+  echo "SKIP manifest.json signature: set AEGIS_BUNDLE_PUBKEY to the operator's" >&2
+  echo "     Ed25519 public key, obtained OUT OF BAND, to authenticate this bundle." >&2
+  echo "     Without it the checks above detect corruption, not tampering." >&2
+fi
+"""
+        if signed
+        else ""
+    )
     script = f"""#!/bin/sh
 set -eu
 check() {{
@@ -223,8 +252,9 @@ check() {{
   echo "OK   $file $actual"
 }}
 {checks}
+{signature_block}
 echo "Embedded file-byte SHA-256 values match this unauthenticated script."
-echo "This does not authenticate the script or archive and does not verify canonical encodings, signatures, MMR proofs, or a trusted root."
+echo "This does not authenticate the script or archive and does not verify canonical encodings, MMR proofs, or a trusted root."
 """
     return script.encode("utf-8")
 
@@ -238,8 +268,23 @@ def build_forensic_bundle(
     scope_start: datetime | None = None,
     scope_end: datetime | None = None,
     max_bundle_bytes: int = _MAX_BUNDLE_BYTES,
+    manifest_signing_key: bytes | None = None,
 ) -> bytes:
-    """Build a bounded, self-verifying ZIP from retained audit nodes."""
+    """Build a bounded, self-verifying ZIP from retained audit nodes.
+
+    Args:
+        manifest_signing_key: Raw 32-byte Ed25519 private key. When supplied,
+            ``manifest.json`` is signed and ``manifest.json.sig`` is added, and
+            ``VERIFY.sh`` grows a signature step. **Off by default** and
+            therefore `OPT-IN`: it needs an operator-provisioned key whose
+            public half recipients already hold, and inventing one here would
+            produce a signature that authenticates nothing.
+
+            The public key is deliberately **not** written into the archive.
+            A verifier that reads the key from the same ZIP it is checking has
+            verified only that the archive is internally consistent, which the
+            digests already showed.
+    """
     if not operator.strip() or len(operator) > 200:
         raise ForensicBundleError("operator must contain 1-200 characters")
     if not acquisition_reason.strip() or len(acquisition_reason) > 500:
@@ -336,7 +381,30 @@ def build_forensic_bundle(
     payload_seal = _sha256(_jcs_bytes(manifest_payload))
     manifest = _jcs_bytes({**manifest_payload, "manifest_payload_sha256": payload_seal})
     evidence_files["manifest.json"] = manifest
-    verify = _verify_script({name: _sha256(payload) for name, payload in evidence_files.items()})
+
+    if manifest_signing_key is not None:
+        try:
+            from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+                Ed25519PrivateKey,
+            )
+        except ImportError as exc:  # pragma: no cover - cryptography is a hard dep
+            raise ForensicBundleError(
+                "manifest signing requires the 'cryptography' package"
+            ) from exc
+        if len(manifest_signing_key) != 32:
+            raise ForensicBundleError(
+                f"Ed25519 private key must be 32 bytes, got {len(manifest_signing_key)}"
+            )
+        signer = Ed25519PrivateKey.from_private_bytes(manifest_signing_key)
+        # Sign the exact manifest bytes that go into the ZIP, not a re-encoding
+        # of the same data: a signature over a second serialization would verify
+        # against bytes no recipient ever sees.
+        evidence_files["manifest.json.sig"] = signer.sign(manifest)
+
+    verify = _verify_script(
+        {name: _sha256(payload) for name, payload in evidence_files.items()},
+        signed=manifest_signing_key is not None,
+    )
 
     archive = io.BytesIO()
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as bundle:

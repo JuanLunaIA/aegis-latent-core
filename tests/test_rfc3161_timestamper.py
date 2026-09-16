@@ -459,12 +459,38 @@ class TestVerify:
             result = t.stamp(pkg)
         return result.package_dict
 
-    def test_valid_stamped_package(self):
+    def test_a_stub_token_is_now_rejected_not_accepted(self):
+        """This assertion was inverted, and the inversion was the defect.
+
+        It previously read ``valid is True``. The token it verifies comes from
+        ``_dummy_token_bytes()`` -- a hand-built DER SEQUENCE with no TSA, no
+        certificate and no signature anywhere in it. Accepting it was not a
+        test passing; it was the weak check being pinned in place, since
+        ``verify`` looked only at the imprint and the outermost tag.
+
+        Real CMS verification now runs, so the stub is refused. Tokens that
+        genuinely verify are covered in
+        ``tests/test_rfc3161_cms_verification.py``, which builds signed ones
+        against a throwaway CA.
+        """
         t = self._timestamper()
         stamped = self._stamped_pkg()
         verify_result = t.verify(stamped)
-        assert verify_result.valid is True
-        assert verify_result.error == ""
+        assert verify_result.valid is False
+        assert "ContentInfo" in verify_result.error
+
+    def test_the_imprint_check_still_runs_before_the_signature_check(self):
+        """Order matters for the error an operator sees first.
+
+        A tampered package should be reported as tampered, not as a malformed
+        token, because those point at different problems.
+        """
+        t = self._timestamper()
+        stamped = self._stamped_pkg()
+        stamped["package_id"] = "pkg-tampered"
+        result = t.verify(stamped)
+        assert result.valid is False
+        assert "Message imprint mismatch" in result.error
 
     def test_missing_token_field(self):
         t = self._timestamper()
