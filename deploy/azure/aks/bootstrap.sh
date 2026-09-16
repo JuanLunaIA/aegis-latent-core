@@ -87,6 +87,13 @@ sed -e "s|__UAMI_CLIENT_ID__|$CLIENT_ID|g" -e "s|__IMAGE_TAG__|$TAG|g" "$HERE/va
 # Without zones, a zone-keyed DoNotSchedule constraint can leave pods Pending if nodes lack the label.
 SPREAD=()
 [ -n "$ZONES" ] || SPREAD=(--set-json 'topologySpreadConstraints=[{"maxSkew":1,"topologyKey":"kubernetes.io/hostname","whenUnsatisfiable":"DoNotSchedule"}]')
+# An interrupted first install leaves the release locked in pending-install with
+# nothing ever deployed; only that state is cleared (PVCs are not Helm-owned and stay).
+if helm -n "$NS" status aegis -o json 2>/dev/null | grep -q '"status":"pending-install"' \
+   && [ "$(helm -n "$NS" history aegis -o json | grep -c '"status":"deployed"')" = 0 ]; then
+  log "clearing interrupted first install"
+  helm -n "$NS" uninstall aegis --wait
+fi
 helm upgrade --install aegis deploy/helm -n "$NS" -f "$VALUES" "${SPREAD[@]}" --wait --timeout 10m
 
 log "8/8 smoke test"

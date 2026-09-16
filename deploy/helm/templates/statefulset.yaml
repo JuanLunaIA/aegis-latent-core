@@ -38,6 +38,11 @@ spec:
     spec:
       serviceAccountName: {{ include "aegis-latent-core.serviceAccountName" . }}
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      # Service links inject <SERVICE>_PORT=tcp://ip:port for every Service in the
+      # namespace. A Service named "aegis" (or "aegis-*") therefore sets AEGIS_PORT,
+      # which AegisSettings (env_prefix AEGIS_) parses as the integer `port` and
+      # crashes on. Configuration reaches the pod only through explicit env.
+      enableServiceLinks: false
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
