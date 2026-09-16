@@ -38,6 +38,11 @@ spec:
     spec:
       serviceAccountName: {{ include "aegis-latent-core.serviceAccountName" . }}
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      # Service links inject <SERVICE>_PORT=tcp://ip:port for every Service in the
+      # namespace. A Service named "aegis" (or "aegis-*") therefore sets AEGIS_PORT,
+      # which AegisSettings (env_prefix AEGIS_) parses as the integer `port` and
+      # crashes on. Configuration reaches the pod only through explicit env.
+      enableServiceLinks: false
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -136,6 +141,15 @@ spec:
               value: {{ .Values.aegis.analysisTimeoutSeconds | quote }}
             - name: AEGIS_RATE_LIMIT_BACKEND
               value: {{ .Values.aegis.rateLimitBackend | quote }}
+            {{- with .Values.aegis.redisPasswordSecret }}
+            # Unprefixed so it cannot collide with an AegisSettings field; must precede
+            # AEGIS_REDIS_URL, which references it as $(REDIS_PASSWORD).
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .name }}
+                  key: {{ .key }}
+            {{- end }}
             - name: AEGIS_REDIS_URL
               value: {{ .Values.aegis.redisUrl | quote }}
             - name: AEGIS_FORCE_LOGPROBS
@@ -186,6 +200,20 @@ spec:
                   name: {{ .Values.aegis.existingSecret }}
                   key: {{ .Values.aegis.signingKeySecretKey }}
                   optional: true
+            # Strict API-key mode refuses to start without both of these
+            # (AegisSettings.validate_runtime_invariants).
+            - name: AEGIS_AUTH_IDENTITY_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aegis.existingSecret }}
+                  key: AEGIS_AUTH_IDENTITY_HMAC_KEY
+                  optional: true
+            - name: AEGIS_API_KEY_PRINCIPALS_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aegis.existingSecret }}
+                  key: AEGIS_API_KEY_PRINCIPALS_JSON
+                  optional: true
             {{- end }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
@@ -198,6 +226,9 @@ spec:
               mountPath: {{ .Values.persistence.mountPath }}
             - name: tmp
               mountPath: /tmp
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
       volumes:
         {{- if not .Values.persistence.enabled }}
         # Evidence is lost on pod restart. Evaluation only — a governed
@@ -207,6 +238,9 @@ spec:
         {{- end }}
         - name: tmp
           emptyDir: {}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- if .Values.topologySpreadConstraints }}
       topologySpreadConstraints:
         {{- range .Values.topologySpreadConstraints }}

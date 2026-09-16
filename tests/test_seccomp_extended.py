@@ -190,7 +190,12 @@ def test_apply_filter_non_sandbox_filter_load_fails():
 
 
 def test_apply_filter_passes_kill_action_to_sandbox():
-    """SeccompGuard must request SCMP_ACT_KILL (0x0) as the default action."""
+    """SeccompGuard must kill the whole process on a filtered syscall.
+
+    SCMP_ACT_KILL (0x0) kills only the calling thread: with Tokio threads still
+    alive the gateway hung with no bound socket and no error. KILL_PROCESS
+    exits with SIGSYS so the orchestrator restarts it and the cause is visible.
+    """
     guard = SeccompGuard.__new__(SeccompGuard)
     guard._is_sandbox = False
     guard._is_enforced = False
@@ -219,7 +224,8 @@ def test_apply_filter_passes_kill_action_to_sandbox():
     ):
         guard.apply_filter()
 
-    assert constructor_kwargs.get("default_action") == 0x00000000  # SCMP_ACT_KILL
+    assert constructor_kwargs.get("default_action") == 0x80000000  # SCMP_ACT_KILL_PROCESS
+    assert constructor_kwargs.get("thread_clone_only") is True
 
 
 # ── apply_filter — non-sandbox, syscall list passed to SeccompSandbox ─────────
