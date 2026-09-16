@@ -11,6 +11,7 @@ side-effects (OS errors, unavailable extension) are patched.
 from __future__ import annotations
 
 import importlib
+import logging
 import os
 from unittest.mock import MagicMock, patch
 
@@ -68,6 +69,39 @@ def test_signature_assurance_symmetric_authenticated_with_signing_key(tmp_path):
     ledger = CryptographicAuditLedger(str(tmp_path / "wal.jsonl"), signing_key="secret")
     ledger.commit_forensic(state_id="x1", request_bytes=b"payload")
     assert ledger.signature_assurance == SignatureAssurance.SYMMETRIC_AUTHENTICATED
+    ledger.close()
+
+
+def test_hmac_only_configuration_warns_about_no_non_repudiation(tmp_path, caplog):
+    """An HMAC-only ledger must say so at construction, not only through the
+    assurance tier a caller has to go looking for."""
+    with caplog.at_level(logging.WARNING, logger="aegis.core.crypto_audit"):
+        ledger = CryptographicAuditLedger(str(tmp_path / "wal.jsonl"), signing_key="secret")
+    assert "no non-repudiation" in caplog.text
+    assert "any key holder can forge" in caplog.text.lower()
+    assert SignatureAssurance.SYMMETRIC_AUTHENTICATED.value in caplog.text
+    ledger.close()
+
+
+def test_no_symmetric_warning_without_a_signing_key(tmp_path, caplog):
+    """The warning is about symmetric signing specifically; an unsigned ledger
+    has a different (lower) problem and must not raise this one."""
+    with caplog.at_level(logging.WARNING, logger="aegis.core.crypto_audit"):
+        ledger = CryptographicAuditLedger(str(tmp_path / "wal.jsonl"), signing_key="")
+    assert "non-repudiation" not in caplog.text
+    ledger.close()
+
+
+def test_no_symmetric_warning_when_a_pqc_identity_is_configured(tmp_path, caplog):
+    """A configured PQC identity outranks the HMAC key in `_sign`'s tier order,
+    so the symmetric-only warning would be false."""
+    with caplog.at_level(logging.WARNING, logger="aegis.core.crypto_audit"):
+        ledger = CryptographicAuditLedger(
+            str(tmp_path / "wal.jsonl"),
+            signing_key="secret",
+            pqc_identity_path=str(tmp_path / "identity.key"),
+        )
+    assert "non-repudiation" not in caplog.text
     ledger.close()
 
 
