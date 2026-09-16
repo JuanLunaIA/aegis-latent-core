@@ -1072,6 +1072,27 @@ front of older clients breaks receipt verification.
   harness to separate from variance" rather than as a number. Artifacts and
   that boundary are in `evidence/streaming-engine/4.3.0/`.
 
+### Security — rustls bumped to 0.23.45, clearing `RUSTSEC-2026-0285`
+
+`RUSTSEC-2026-0285` — "TLS 1.3 handshake messages incorrectly accepted across
+encryption level boundaries", severity 5.3 (medium), disclosed 2026-09-14 —
+affects rustls 0.23.41, which this tree pinned transitively through
+`hyper-rustls` 0.27.9 and `tokio-rustls` 0.26.4. The advisory's own remedy is
+`Upgrade to >=0.23.45`.
+
+`cargo update -p rustls --precise 0.23.45` moves rustls to 0.23.45 and
+`rustls-webpki` to 0.103.15: an eight-line lockfile diff touching those two
+crates and nothing else. `cargo build --release`, `cargo test --locked` (70
+passed) and `cargo clippy --locked --all-targets --all-features -- -D warnings`
+are all clean on the result.
+
+The advisory had been red on CI across four PRs and was stood down on each time
+as unrelated to the diff, which it was. What it was not is unreal: a Sonatype
+lookup for `pkg:cargo/rustls@0.23.41` returned `NO_DATA_FOR_VERSION` with a
+security sub-score of 100, and taking that as the answer would have been the
+wrong call. The fixed version came from the failing CI job's own output, which
+prints the advisory's `Solution:` line verbatim.
+
 ### Fixed — ten documents asserted that cryptographic shredding could not be enabled on an existing chain
 
 `CLM-068` was corrected on 2026-09-15, after measuring the real behaviour, to
