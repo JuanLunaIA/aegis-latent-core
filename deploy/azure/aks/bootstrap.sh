@@ -94,6 +94,17 @@ if helm -n "$NS" status aegis -o json 2>/dev/null | grep -q '"status":"pending-i
   log "clearing interrupted first install"
   helm -n "$NS" uninstall aegis --wait
 fi
+# A StatefulSet never adopts a same-named pod still owned by a deleted predecessor,
+# and it is not re-queued when that pod finally goes: install only once none is terminating.
+terminating() {
+  kubectl -n "$NS" get pods -l app.kubernetes.io/instance=aegis \
+    -o jsonpath='{range .items[?(@.metadata.deletionTimestamp)]}{.metadata.name}{" "}{end}'
+}
+for _ in $(seq 60); do
+  [ -z "$(terminating)" ] && break
+  log "waiting for terminating pods: $(terminating)"; sleep 10
+done
+[ -z "$(terminating)" ] || { echo "ABORT: pods stuck terminating; kubectl -n $NS describe pod"; exit 1; }
 helm upgrade --install aegis deploy/helm -n "$NS" -f "$VALUES" "${SPREAD[@]}" --wait --timeout 10m
 
 log "8/8 smoke test"
