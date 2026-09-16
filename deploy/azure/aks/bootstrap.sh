@@ -5,7 +5,10 @@
 set -euo pipefail
 
 RG=aegis-core-rg
-LOC=eastus
+# Location/SKU validated 2026-09-16 against this subscription: Standard_D2s_v5 is
+# NotAvailableForSubscription in eastus (location and zones) but unrestricted in
+# chilecentral with zones 1-3. ACR and Key Vault stay in eastus; cross-region is supported.
+LOC=${LOC:-chilecentral}
 AKS=aegis-aks
 ACR=aegiscoreacr
 KV=aegis-vault-prod
@@ -14,8 +17,8 @@ NS=aegis
 SA=aegis                       # = fullnameOverride in values-aks.yaml
 NODE_SIZE=${NODE_SIZE:-Standard_D2s_v5}
 NODE_COUNT=${NODE_COUNT:-2}    # chart spreads 2 replicas across zones and hosts
-# Subscriptions without availability-zone access reject --zones (AvailabilityZoneNotSupported).
-# Unset = regional nodes; zone spread then collapses to one domain, host spread still applies.
+# Set ZONES="" for regions/SKUs without zone access (AvailabilityZoneNotSupported).
+ZONES=${ZONES-1 2}
 read -r -a ZONE_ARGS <<< "${ZONES:+--zones $ZONES}"
 HERE=deploy/azure/aks
 
@@ -83,7 +86,7 @@ trap 'rm -f "$VALUES"' EXIT
 sed -e "s|__UAMI_CLIENT_ID__|$CLIENT_ID|g" -e "s|__IMAGE_TAG__|$TAG|g" "$HERE/values-aks.yaml" > "$VALUES"
 # Without zones, a zone-keyed DoNotSchedule constraint can leave pods Pending if nodes lack the label.
 SPREAD=()
-[ -n "${ZONES:-}" ] || SPREAD=(--set-json 'topologySpreadConstraints=[{"maxSkew":1,"topologyKey":"kubernetes.io/hostname","whenUnsatisfiable":"DoNotSchedule"}]')
+[ -n "$ZONES" ] || SPREAD=(--set-json 'topologySpreadConstraints=[{"maxSkew":1,"topologyKey":"kubernetes.io/hostname","whenUnsatisfiable":"DoNotSchedule"}]')
 helm upgrade --install aegis deploy/helm -n "$NS" -f "$VALUES" "${SPREAD[@]}" --wait --timeout 10m
 
 log "8/8 smoke test"
