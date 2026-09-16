@@ -87,6 +87,21 @@ sed -e "s|__UAMI_CLIENT_ID__|$CLIENT_ID|g" -e "s|__IMAGE_TAG__|$TAG|g" "$HERE/va
 # Without zones, a zone-keyed DoNotSchedule constraint can leave pods Pending if nodes lack the label.
 SPREAD=()
 [ -n "$ZONES" ] || SPREAD=(--set-json 'topologySpreadConstraints=[{"maxSkew":1,"topologyKey":"kubernetes.io/hostname","whenUnsatisfiable":"DoNotSchedule"}]')
+# An interrupted upgrade (Cloud Shell sessions drop) leaves the newest revision in
+# pending-upgrade/pending-rollback and locks the release. A lock older than the 10m
+# helm timeout cannot belong to a live operation, so that revision record is dropped;
+# helm then upgrades from the previous (failed or deployed) revision.
+kubectl -n "$NS" get secrets -l owner=helm,name=aegis \
+  -o jsonpath='{range .items[*]}{.metadata.name} {.metadata.labels.status} {.metadata.creationTimestamp}{"\n"}{end}' |
+while read -r s st ts; do
+  case "$st" in pending-upgrade|pending-rollback) ;; *) continue ;; esac
+  if [ $(( $(date -u +%s) - $(date -u -d "$ts" +%s) )) -gt 900 ]; then
+    log "dropping stale helm lock $s ($st since $ts)"
+    kubectl -n "$NS" delete secret "$s"
+  else
+    echo "ABORT: helm release $st since $ts may still be running; retry in 15m"; exit 1
+  fi
+done
 # An interrupted first install leaves the release locked in pending-install with
 # nothing ever deployed; only that state is cleared (PVCs are not Helm-owned and stay).
 if helm -n "$NS" status aegis -o json 2>/dev/null | grep -q '"status":"pending-install"' \
