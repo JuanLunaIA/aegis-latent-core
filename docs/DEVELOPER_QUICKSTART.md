@@ -1,8 +1,8 @@
 # Developer Quickstart — Aegis Latent Core
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** `v5.0.0` source, **not published**; the most recent published release is `v4.1.2`, read back on 2026-09-04. External release status always requires independent readback, recorded in `docs/RELEASE_STATUS.md` §1.1
-**Source baseline:** `v5.0.0`, unpublished; source metadata alone does not establish publication
+**Release baseline:** `v5.0.0`, **published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)**; `v4.1.2` remains the most recent version published on every surface, read back 2026-09-04. External release status always requires independent readback, recorded in `docs/RELEASE_STATUS.md` §1.1
+**Source baseline:** `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); source metadata alone does not establish publication
 **Retained evidence baseline:** previously published `v3.1.0` artifacts; retained measurements remain historical
 **Distribution verification:** confirm the signed tag, release assets, registry versions, OCI digest, and attestations before using a registry install
 

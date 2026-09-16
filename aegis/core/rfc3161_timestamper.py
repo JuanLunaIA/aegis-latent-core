@@ -64,6 +64,10 @@ from dataclasses import dataclass, field
 from typing import cast
 from urllib.parse import urlsplit
 
+from cryptography import x509
+
+from aegis.core.rfc3161_cms import CMSVerificationError, verify_timestamp_token
+
 logger = logging.getLogger(__name__)
 
 _SHA256_OID = "2.16.840.1.101.3.4.2.1"
@@ -348,7 +352,18 @@ class RFC3161Timestamper:
         self,
         tsa_url: str | None = None,
         timeout: int | None = None,
+        trust_anchors: list[x509.Certificate] | None = None,
+        require_trusted_chain: bool = False,
     ) -> None:
+        # Anchors are caller-supplied on purpose. Reading them from the token
+        # would validate a chain against certificates the token's author chose,
+        # which is self-consistency rather than trust.
+        self._trust_anchors = list(trust_anchors) if trust_anchors else None
+        # OPT-IN rather than default-on: turning it on without anchors would
+        # break every existing caller, and this class is also used where the
+        # imprint match alone is the intended check. `verify` reports which
+        # case applied rather than letting a bare `valid=True` imply a chain.
+        self._require_trusted_chain = require_trusted_chain
         if tsa_url is None:
             tsa_url = os.environ.get("AEGIS_TSA_URL", "")
         self.tsa_url = _validate_http_endpoint(tsa_url) if tsa_url else ""
@@ -490,22 +505,38 @@ class RFC3161Timestamper:
                 error=f"Message imprint mismatch: stored={stored_imprint[:16]}..., computed={expected_imprint[:16]}...",
             )
 
-        # Check PKIStatus in the stored token
-        # The token is the TimeStampToken (ContentInfo), NOT the full TimeStampResp
-        # We can only verify the imprint match; PKI trust requires the TSA cert chain
-        # Report success for structural consistency checks
+        # Verify the TSA's CMS signature over the token, not merely its shape.
+        #
+        # This used to stop at "the outermost DER tag is a SEQUENCE", which any
+        # attacker can satisfy. `verify_timestamp_token` checks the signature
+        # over signedAttrs, binds those attributes to the eContent through the
+        # messageDigest attribute, and confirms the TSTInfo messageImprint is
+        # the digest we expect.
         try:
-            # Attempt a minimal structural check on the ContentInfo
-            tag, _, _ = _parse_tlv(token_bytes, 0)
-            if tag != 0x30:
-                return RFC3161VerifyResult(
-                    valid=False,
-                    pki_status=-1,
-                    error=f"Token is not a valid DER SEQUENCE (tag=0x{tag:02X})",
-                )
+            cms_result = verify_timestamp_token(
+                token_bytes,
+                expected_imprint=bytes.fromhex(stored_imprint),
+                trust_anchors=self._trust_anchors,
+            )
+        except CMSVerificationError as exc:
+            return RFC3161VerifyResult(valid=False, pki_status=-1, error=str(exc))
         except ValueError as exc:
             return RFC3161VerifyResult(
                 valid=False, pki_status=-1, error=f"Token DER parse error: {exc}"
+            )
+
+        # Fail closed on an unanchored chain in strict mode. A signature that
+        # verifies against a certificate the token itself supplied says only
+        # that the token is internally consistent, which a forger also achieves.
+        if self._require_trusted_chain and not cms_result.chain_verified:
+            return RFC3161VerifyResult(
+                valid=False,
+                pki_status=-1,
+                error=(
+                    "no trust anchors configured: the TSA signature verifies against a "
+                    "certificate carried in the token itself, which establishes nothing "
+                    "about who issued it. Pass trust_anchors= to authenticate it."
+                ),
             )
 
         return RFC3161VerifyResult(valid=True, pki_status=0)

@@ -3,7 +3,7 @@
 All notable changes to **Aegis Latent Core** are documented in this file.
 
 **Last verified:** 2026-09-15 UTC
-**Release baseline:** `v5.0.0`, fourteen synchronized anchors — **a candidate, not a release. Nothing is published for `5.0.0`** — no tag, GitHub Release, PyPI or npm artifact, or OCI image exists for it. Source metadata does not establish external lifecycle state, which requires independent readback. There is no `4.2.0` or `4.4.0`; both numbers were skipped deliberately and no artifact was ever published under either.
+**Release baseline:** `v5.0.0`, fourteen synchronized anchors, **published 2026-09-16 on every surface except PyPI `aegis-latent-core`** — signed tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk`, and both GHCR images were read back; the gateway distribution on PyPI remains `4.1.2`. Source metadata does not establish external lifecycle state, which requires independent readback; see `docs/RELEASE_STATUS.md` §1.0 for what was and was not verified. There is no `4.2.0` or `4.4.0`; both numbers were skipped deliberately and no artifact was ever published under either.
 **Most recent published release (readback 2026-09-04):** `v4.1.2` signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway image `sha256:b3f6aadc…f80710` and dashboard image `sha256:27e1bbc2…d92398`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
@@ -31,6 +31,98 @@ version-numbering oversight. No `4.4.0` artifact was ever built or
 published, so its absence from any registry is expected rather than a
 withdrawal. (`4.2.0` was likewise skipped, deliberately, at the prior
 `4.1.2` → `4.3.0` move.)
+
+### Fixed — four findings three independent audits agreed on
+
+An adversarial pre-mortem checked fifteen predicted findings against source
+before any of them were worked. Five were already fixed, two are architectural
+and documented rather than repaired, three need a human, and one — "99 orphan
+modules" — was 78. Four were real, open, and fixable in code. These are those
+four.
+
+**Layer-2 WAF normalization (`CLM-093`).** Layer 1 folded Cyrillic/Greek
+confusables to ASCII before matching; Layer 2 (`LLMGuardLocal.analyze_input`)
+received `_extract_text` output and scored it raw. A payload matching a
+*Layer-2* pattern, written in confusables, passed both. `CLM-091` recorded this
+as its own boundary; it is now closed. `AegisWAF._guard_variants` feeds Layer 2
+the raw text **first**, then each normalized variant, so the change can add a
+detection and never mask one — Layer 2 runs its own decoder over the bytes as
+given, and NFKC is lossy. Proven with `acting as an unrestricted`, a Layer-2
+pattern with no Layer-1 counterpart: raw → not detected, normalized → detected.
+
+**Stream admission control (`CLM-094`).** Per-stream memory was bounded
+(`R_max` ≈ 1.18 MiB); the number of concurrent streams was not, so aggregate
+retained bytes scaled with connection count. `StreamAdmissionGate` caps them at
+`AEGIS_MAX_CONCURRENT_STREAMS` (default 256) and refuses with 429 rather than
+queueing — waiting for a slot would trade a memory bound for a latency bound.
+The slot is tied to the stream generator's lifetime, not the handler's: a
+handler `finally` would free it before a byte was sent. Client disconnect is the
+case that matters and the one covered.
+
+**Signed forensic bundle manifest (`CLM-095`).** `VERIFY.sh` compared files
+against digests embedded in `VERIFY.sh`, both inside the same unsigned ZIP.
+Opt-in Ed25519 signing over the exact `manifest.json` bytes breaks that circle.
+**The public key is not shipped in the archive**, and that absence is the point:
+a key read from the ZIP being checked would relocate the circularity rather than
+remove it. Without `AEGIS_BUNDLE_PUBKEY` the script says outright that it
+detects corruption, not tampering.
+
+**RFC 3161 CMS verification (`CLM-096`).** `verify` accepted any token whose
+outermost DER tag was a SEQUENCE — a token with no TSA, certificate or
+signature anywhere in it passed, and the module's own comment admitted it.
+`aegis/core/rfc3161_cms.py` now checks the signature over the re-encoded
+`signedAttrs`, the `messageDigest` binding to the `TSTInfo`, the
+`messageImprint` against the expected digest, and a validity-window path to
+caller-supplied anchors. **No revocation checking**, because it needs network
+access a forensic verifier often lacks; `revocation_checked` is always `False`
+so the gap cannot read as done.
+
+One pre-existing assertion was **inverted rather than deleted**:
+`test_valid_stamped_package` asserted `valid is True` for a stub token, which
+pinned the weak check in place. It now asserts rejection, under a name that says
+why.
+
+### Changed — three prescribed fixes were redesigned rather than applied
+
+The directive carried its own `PD-X1`: halt and redesign a fix that introduces a
+regression or contradiction. Four did, and the reasoning is recorded here
+because "we did not do this" is worth more than a silent omission.
+
+- **`timestamp: float` → `int` microseconds was not applied.** Floats never
+  reach a JCS float serializer: `_jcs_bytes` *rejects* them, and the MMR leaf
+  formats the timestamp as `f"{…:.9f}"`, which is deterministic cross-language.
+  The change would alter every leaf hash, root, signature and issued proof for
+  zero determinism gain, and contradict `UPGRADING.md` §6's byte-identity
+  promise for a release that is now published.
+- **The group-commit staging buffer was not built.** The append happens under
+  the lock so the next committer can read the tip hash; staging serialises that
+  and costs the coalescing. The real invariant — no caller is ever told a record
+  is durable when it is not, and the fault latches — is now pinned by
+  `TestWhatAFsyncFailureLeavesBehind`. That work also established, and now
+  documents, that rejected records *are* present in the WAL file: the bytes are
+  written before the `fsync` that failed.
+- **"v1 → v2 migration" was replaced by cross-signed anchoring.** A root is its
+  construction, so recomputing v1 leaves under v2 yields a root no verifier ever
+  witnessed and breaks every issued proof. `tools/anchor_v1_chain_into_v2.py`
+  records where the v1 chain ended instead, and leaves it byte-for-byte intact.
+- **No valuation guide was written.** A sweep found **zero** valuation claims in
+  the corpus; the figures in circulation came from the external audits. Adding a
+  dollar range would have injected the unevidenced claims the task was meant to
+  remove.
+
+### Added — NFS/EFS lock guidance, and the commercial readiness register
+
+`docs/operations/STORAGE_REQUIREMENTS.md` already warned against network
+filesystems on `fsync` grounds. It now also documents the independent
+`flock`/`lockd` failure: an ungracefully killed pod cannot release its WAL lock,
+the server holds it through its reclaim timeout, and the replacement pod sits in
+`CrashLoopBackOff` that resolves itself minutes later — a storage property
+routinely misfiled as a gateway race.
+
+`docs/commercial/COMMERCIAL_READINESS.md` records the six actions no agent can
+perform — pen test, SOC 2, escrow, commercial licence, design partners, second
+maintainer — each marked `NOT STARTED`, with the acceptance test for the second
+maintainer being a security fix shipped end to end *without the founder*.
 
 ### Fixed — the corpus cited a backpressure figure measured before group commit existed
 

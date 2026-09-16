@@ -4,7 +4,7 @@ This document explains which **implemented technical behaviors** may contribute 
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out source metadata is synchronized at `v5.0.0`, which is unpublished; the most recent published release is `v4.1.2`
+**Source baseline:** checked-out source metadata is synchronized at `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core`; `v4.1.2` remains the most recent version published on every surface
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, compliance result, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical
 **Owner:** Release owner and qualified customer reviewer

@@ -10,7 +10,7 @@ Aegis sits between your application and your model provider. For every governed 
 [![Coverage](https://img.shields.io/badge/statement%20coverage-93.91%25%20(2026--08--18)-informational)](docs/benchmarks/BENCHMARK_METHOD.md)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
 
-> **Current release candidate:** `v5.0.0`, with fourteen synchronized anchors. **Nothing is published for `5.0.0`** — no tag, release, package or image exists for it yet, so it cannot be installed from any registry. There is no `4.2.0`; the number was skipped.
+> **Current release:** `v5.0.0`, with fourteen synchronized anchors, published 2026-09-16. The signed tag, the GitHub Release and its 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk` and both GHCR images were read back; see [Release Status](docs/RELEASE_STATUS.md) §1.0. **The gateway distribution `aegis-latent-core` was not published at `5.0.0`** — `pip install aegis-latent-core` still gets `4.1.2`. There is no `4.2.0`; the number was skipped.
 >
 > **Most recent published release:** `v4.1.2`, read back on 2026-09-04 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images. **`4.1.2` is the first version installable from PyPI as `aegis-latent-core`**; before it the gateway came from source or GHCR only. The npm version list skips `4.1.1`, whose publish step failed. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The two PyPI gateway artifacts are byte-different from the release assets of the same name — same content, different build host — so `SHA256SUMS` does not cover the PyPI downloads. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
@@ -202,7 +202,7 @@ pip install -e ./sdk/python
 cd sdk/typescript && npm ci && npm run build
 ```
 
-**Registry state.** Both registries carry `aegis-latent-sdk` at `4.1.2`, matching the most recent published release: the 2026-09-04 readback recorded in [Release Status](docs/RELEASE_STATUS.md) found PyPI `4.1.2` and npm `4.1.2`. Neither matches this **source tree**, whose anchors read `5.0.0` and for which nothing is published — so an SDK installed from either registry is `4.1.2` code, not what an unreleased `5.0.0` document describes. The npm version list skips `4.1.1`, whose publish step failed.
+**Registry state.** Both registries carry `aegis-latent-sdk` at `5.0.0`, matching this source tree: the 2026-09-16 readback recorded in [Release Status](docs/RELEASE_STATUS.md) §1.0 found PyPI `aegis-latent-sdk` `5.0.0` and npm `aegis-latent-sdk` `5.0.0`. **The gateway distribution is the exception:** PyPI `aegis-latent-core` was not published at `5.0.0` and still resolves to `4.1.2`, so `pip install aegis-latent-core` gets `4.1.2` code — not what this tree documents. Take the gateway from the GitHub Release assets or GHCR (`ghcr.io/juanlunaia/aegis-latent-core:5.0.0`) instead. The npm version list skips `4.1.1`, whose publish step failed.
 
 **Proof verification caution.** A proof verified against a root supplied by the same gateway that produced it establishes internal consistency only. Obtain the trusted root through an independent channel, or the verification is circular.
 

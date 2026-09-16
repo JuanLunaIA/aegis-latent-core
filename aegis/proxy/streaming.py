@@ -11,7 +11,7 @@ import hashlib
 import json
 import logging
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -108,6 +108,98 @@ class _ByteBoundedQueue:
     @property
     def max_bytes(self) -> int:
         return self._max_bytes
+
+
+class StreamAdmissionFullError(Exception):
+    """No stream slot was free. The caller must refuse admission, not queue."""
+
+
+class StreamAdmissionGate:
+    """Counts concurrent governed streams in this process and caps them.
+
+    Every individual stream is already bounded — ``R_max = 4W + Q + E + P``,
+    about 1.18 MiB by default. What was never bounded is how many of them run
+    at once, so aggregate retained bytes scaled with connection count and a
+    slow consumer could hold a slot open indefinitely. This is the missing
+    multiplicand.
+
+    **Not a rate limiter.** It counts what is *in flight*, so a slot is held
+    for the life of the stream and returned when iteration ends — including
+    when the client disconnects mid-stream, which is the case a request-rate
+    limiter never sees.
+
+    **One process.** Each worker has its own gate, so a deployment with N
+    replicas admits up to N x ``limit``. A cluster-wide ceiling would need
+    shared state this deliberately does not take: the failure it prevents is
+    local memory exhaustion, which is a local property.
+
+    No lock is taken. Admission runs on the event loop thread with no ``await``
+    between the test and the increment, so the check-then-act is atomic with
+    respect to other coroutines; releases from the same loop are likewise
+    serialized. A thread-safe variant would need one, and would buy nothing
+    here.
+    """
+
+    __slots__ = ("_active", "_limit", "_rejected")
+
+    def __init__(self, limit: int) -> None:
+        if limit < 0:
+            raise ValueError(f"max_concurrent_streams must be >= 0, got {limit}")
+        self._limit = limit
+        self._active = 0
+        self._rejected = 0
+
+    def acquire(self) -> None:
+        """Take a slot, or raise :class:`StreamAdmissionFullError`.
+
+        Fail-closed by construction: there is no blocking variant. Waiting for
+        a slot would hold the connection open and convert a memory bound into a
+        latency bound, which is the failure this exists to prevent.
+        """
+        if self._limit and self._active >= self._limit:
+            self._rejected += 1
+            raise StreamAdmissionFullError(
+                f"{self._active} concurrent streams already admitted (limit {self._limit})"
+            )
+        self._active += 1
+
+    def release(self) -> None:
+        """Return a slot. Idempotent below zero: never goes negative."""
+        if self._active > 0:
+            self._active -= 1
+
+    @property
+    def active(self) -> int:
+        return self._active
+
+    @property
+    def limit(self) -> int:
+        return self._limit
+
+    @property
+    def rejected(self) -> int:
+        """Total admissions refused since construction."""
+        return self._rejected
+
+
+async def guarded_stream(
+    stream: AsyncIterable[bytes], gate: StreamAdmissionGate
+) -> AsyncIterator[bytes]:
+    """Yield from *stream*, returning the gate slot exactly once when it ends.
+
+    The slot cannot be released in the request handler: the handler returns a
+    ``StreamingResponse`` and the body is iterated afterwards, so a ``finally``
+    there would free the slot before a single byte was sent. Tying it to this
+    generator's own ``finally`` covers normal completion, an exception, and the
+    ``GeneratorExit``/``CancelledError`` raised when a client disconnects —
+    which is the case that matters, since an abandoned stream is exactly what
+    would otherwise leak a slot forever.
+    """
+    try:
+        async for chunk in stream:
+            yield chunk
+    finally:
+        gate.release()
 
 
 class BoundedStreamProxy:

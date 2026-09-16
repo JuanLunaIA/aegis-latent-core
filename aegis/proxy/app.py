@@ -63,7 +63,13 @@ from aegis.proxy.rate_limiter import (
     TokenReservation,
 )
 from aegis.proxy.schemas import AlertOut
-from aegis.proxy.streaming import BoundedStreamProxy, StreamEvidenceSummary
+from aegis.proxy.streaming import (
+    BoundedStreamProxy,
+    StreamAdmissionFullError,
+    StreamAdmissionGate,
+    StreamEvidenceSummary,
+    guarded_stream,
+)
 from aegis.proxy.waf import AegisWAF
 from aegis.storage.s3_worm import Boto3S3WormProvider, ObjectLockMode, S3WormArchiver
 from aegis.storage.segment_manifest import archive_finalized_segment
@@ -375,6 +381,9 @@ class _AppState:
     waf_session_tracker: WAFSessionTracker
     # Optional best-effort copy of terminal streaming frames. JSONL is authoritative.
     native_stream_wal: Any
+    # Caps concurrent governed SSE streams in this process. Per-stream memory is
+    # already bounded; this bounds how many of those bounds are live at once.
+    stream_gate: StreamAdmissionGate
     oidc_manager: OIDCManager | None
     enterprise_mtls_verifier: MTLSVerifier | None
     siem_exporter: SIEMExporter | None
@@ -722,6 +731,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     state.proxy_auth = ProxyKeyAuth(cfg)
     state.audit_auth = AuditKeyAuth(cfg)
     state.waf = AegisWAF(strict_mode=cfg.waf_strict_mode)
+    state.stream_gate = StreamAdmissionGate(cfg.max_concurrent_streams)
     state.waf_session_tracker = WAFSessionTracker(
         max_sessions=4_096,
         window=cfg.waf_session_window,
@@ -1703,8 +1713,29 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 enable_pci=state._pci_scrubber is not None,
                 streaming_engine=cfg.streaming_engine,
             )
+            # Admission is taken here, immediately before ownership passes to
+            # `guarded_stream`, so no statement can raise between the acquire and
+            # the release path. The upstream call has still not happened:
+            # `stream_sse` / `stream_native_anthropic` are async generator
+            # functions, so calling them above built a generator and ran none of
+            # its body. The request is issued on first iteration, inside the
+            # guard.
+            try:
+                state.stream_gate.acquire()
+            except StreamAdmissionFullError as exc:
+                # Refuse before the upstream call, not after buffers exist: the
+                # point of the ceiling is that the memory is never allocated.
+                logger.warning("request_id=%s: stream admission refused: %s", request_id, exc)
+                raise HTTPException(
+                    status_code=429,
+                    detail=(
+                        "Too many concurrent streams on this gateway instance. "
+                        "Retry, or raise AEGIS_MAX_CONCURRENT_STREAMS if the host "
+                        "has memory for it."
+                    ),
+                ) from exc
             return StreamingResponse(
-                bounded_stream,
+                guarded_stream(bounded_stream, state.stream_gate),
                 media_type="text/event-stream",
                 headers={
                     "X-Aegis-Request-ID": request_id,
@@ -1964,8 +1995,29 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 ),
                 terminal_marker=terminal_marker,
             )
+            # Admission is taken here, immediately before ownership passes to
+            # `guarded_stream`, so no statement can raise between the acquire and
+            # the release path. The upstream call has still not happened:
+            # `stream_sse` / `stream_native_anthropic` are async generator
+            # functions, so calling them above built a generator and ran none of
+            # its body. The request is issued on first iteration, inside the
+            # guard.
+            try:
+                state.stream_gate.acquire()
+            except StreamAdmissionFullError as exc:
+                # Refuse before the upstream call, not after buffers exist: the
+                # point of the ceiling is that the memory is never allocated.
+                logger.warning("request_id=%s: stream admission refused: %s", request_id, exc)
+                raise HTTPException(
+                    status_code=429,
+                    detail=(
+                        "Too many concurrent streams on this gateway instance. "
+                        "Retry, or raise AEGIS_MAX_CONCURRENT_STREAMS if the host "
+                        "has memory for it."
+                    ),
+                ) from exc
             return StreamingResponse(
-                bounded,
+                guarded_stream(bounded, state.stream_gate),
                 media_type="text/event-stream",
                 headers={
                     "X-Aegis-Request-ID": request_id,

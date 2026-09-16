@@ -94,6 +94,15 @@ class LSMGuard:
                 context=None,
             )
 
+        # Declared because the two branches below bind `profile` from different
+        # sources: the process label (always a `str`) and
+        # `get_apparmor_profile_name()` (`str | None`). Without this, the name is
+        # narrowed to `str` by the first binding and the second is a type error,
+        # even though `LSMStatus.profile` accepts `str | None`. Annotation only --
+        # no runtime effect.
+        profile: str | None
+        mode: str
+
         # Process label first: it describes THIS task's confinement and is readable
         # inside unprivileged containers, where securityfs (/sys/kernel/security)
         # is not mounted and the host-level probe below always misses.

@@ -302,3 +302,89 @@ class TestTheEngineInIsolation:
             CoalescedCommitEngine(max_batch=0)
         with pytest.raises(ValueError, match="linger_seconds"):
             CoalescedCommitEngine(linger_seconds=-1.0)
+
+
+class TestWhatAFsyncFailureLeavesBehind:
+    """The invariant a staging buffer was proposed to provide, asserted directly.
+
+    An audit suggested promoting nodes from a staging buffer only after `fsync`
+    returns, so `self.chain` never holds an unpersisted node. That would undo
+    the pipelining this engine exists for: the append happens under the lock
+    precisely so the *next* committer can read the tip hash and compute its own,
+    and serialising that costs the coalescing (`CLM-082`).
+
+    The property that actually matters is not "the deque is pristine" — it is
+    that **no caller is ever told a record is durable when it is not**, and that
+    the ledger stops extending the chain afterwards. Both are pinned here, so a
+    future refactor cannot quietly trade them away.
+    """
+
+    def test_a_failed_batch_returns_no_node_to_any_caller(self, tmp_path: Path) -> None:
+        disk = _FailingDisk()
+        with _ledger(tmp_path, disk) as ledger:
+            _commit(ledger, 0)  # one good commit establishes a baseline
+            disk.armed.set()
+
+            outcomes = []
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                futures = [pool.submit(_outcome, ledger, i) for i in range(1, 9)]
+                outcomes = [future.result() for future in futures]
+
+            assert set(outcomes) == {"failed"}, (
+                f"every commit in a failed batch must raise, got {sorted(set(outcomes))}"
+            )
+
+    def test_the_fault_is_latched_not_transient(self, tmp_path: Path) -> None:
+        """Recovery must require operator action, not just a working disk.
+
+        If the ledger resumed the moment `fsync` succeeded again, it would
+        extend a chain whose in-memory tail is not on disk — the fork the
+        audit was reaching for. Latching is what prevents that.
+        """
+        disk = _FailingDisk()
+        with _ledger(tmp_path, disk) as ledger:
+            _commit(ledger, 0)
+            disk.armed.set()
+            with pytest.raises(WalDurabilityError):
+                _commit(ledger, 1)
+
+            disk.armed.clear()  # the disk is healthy again
+            assert _outcome(ledger, 2) == "failed", (
+                "a healed disk must not silently un-poison the ledger"
+            )
+
+    def test_the_wal_never_gains_a_record_the_caller_was_denied(self, tmp_path: Path) -> None:
+        """Whatever the deque holds, disk must not claim a rejected commit.
+
+        This is the direction that would actually mislead an auditor: a record
+        on disk that no client was ever told about is far worse than a node in
+        RAM that no client was told about.
+        """
+        disk = _FailingDisk()
+        wal = tmp_path / "audit.jsonl"
+        with _ledger(tmp_path, disk) as ledger:
+            _commit(ledger, 0)
+            disk.armed.set()
+            with pytest.raises(WalDurabilityError):
+                _commit(ledger, 99)
+            # Still inside the ledger's lifetime: a later commit must also fail.
+            assert _outcome(ledger, 100) == "failed"
+
+        written = _wal_state_ids(wal)
+        assert "req-0000" in written, "the acknowledged commit must be on disk"
+
+        # The rejected records ARE in the file, and that is correct rather than
+        # a leak: the record is `write()`n and only then `fsync()`ed, and it was
+        # the sync that failed. The bytes reached the file; nothing established
+        # that they reached stable media, which is the whole distinction the
+        # `WalDurabilityError` carries.
+        assert "req-0099" in written
+        assert "req-0100" in written
+
+        # So the asymmetry to hold on to is the direction of the error. On
+        # replay these records are read back as committed while their callers
+        # were told the commit failed -- evidence exists for a request the
+        # client saw fail. That is the safe direction. The reverse, a caller
+        # told "durable" with no record behind it, is what `_await_durable`
+        # raising before returning the node prevents, and what the sibling
+        # tests in this class pin.

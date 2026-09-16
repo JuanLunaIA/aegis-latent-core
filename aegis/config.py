@@ -452,6 +452,20 @@ class AegisSettings(BaseSettings):
             "private key and is written 0600; give it the custody any signing secret needs."
         ),
     )
+    max_concurrent_streams: int = Field(
+        default=256,
+        ge=0,
+        description=(
+            "Admission ceiling for concurrent governed SSE streams in this process. "
+            "Per-stream memory is bounded (R_max), but until this existed the number of "
+            "streams was not, so aggregate retained bytes scaled with however many "
+            "connections an adversary opened. Over the ceiling, admission is refused with "
+            "HTTP 429 before the upstream call rather than after buffers are allocated. "
+            "0 disables the ceiling and restores the previous unbounded behaviour. "
+            "This counts streams in ONE process: it is not a cluster-wide limit, and "
+            "N replicas admit up to N x this value."
+        ),
+    )
     streaming_engine: Literal["grammar_frontier", "deidentifier"] = Field(
         default="grammar_frontier",
         description=(

@@ -268,16 +268,30 @@ class AegisWAF:
             text = self._extract_text(body)
             if text:
                 try:
-                    guard_result = self._guard.analyze_input(text)
-                    if guard_result.is_malicious:
-                        return WAFResult(
-                            allowed=False,
-                            reason=(
-                                f"Layer-2 adversarial signal: {guard_result.threat_type} "
-                                f"(confidence={guard_result.confidence:.2f})"
-                            ),
-                            score=guard_result.confidence,
-                        )
+                    # Layer 2 used to see only the raw extraction, so Cyrillic
+                    # `іgnоrе` reached the scorer un-mapped while Layer 1 had
+                    # already folded it to ASCII — the asymmetry `CLM-091`
+                    # recorded as its own boundary. It now scans the same
+                    # variant set Layer 1 does.
+                    #
+                    # Raw stays first and is always scanned: `analyze_input`
+                    # runs its own `_decode_obfuscation` over the bytes as
+                    # given, and NFKC is lossy, so a normalized form could in
+                    # principle lose a signal the raw form carries. Scanning
+                    # both keeps this additive — it can add a detection and
+                    # never mask one, which is the same property the Layer-1
+                    # variants are built on.
+                    for variant in self._guard_variants(text):
+                        guard_result = self._guard.analyze_input(variant)
+                        if guard_result.is_malicious:
+                            return WAFResult(
+                                allowed=False,
+                                reason=(
+                                    f"Layer-2 adversarial signal: {guard_result.threat_type} "
+                                    f"(confidence={guard_result.confidence:.2f})"
+                                ),
+                                score=guard_result.confidence,
+                            )
                 except Exception as exc:
                     # Fail-open: a WAF evaluation error must not block a legitimate request,
                     # but it is a security-relevant event that must be visible in production.
@@ -391,6 +405,22 @@ class AegisWAF:
         text.
         """
         return text.translate(_LEET_TABLE)
+
+    @classmethod
+    def _guard_variants(cls, text: str) -> tuple[str, ...]:
+        """Raw text first, then every de-obfuscated form of it, deduplicated.
+
+        Layer 2 differs from Layer 1 in one way that matters: its scorer
+        (:meth:`~aegis.core.adversarial_filter.LLMGuardLocal.analyze_input`)
+        already lowercases and runs its own obfuscation decoder over whatever
+        it is handed. Normalizing *instead of* passing the raw text would
+        therefore replace one decoder's input with another's output. Passing
+        both, raw first, only widens what is scanned.
+        """
+        seen: dict[str, None] = {text: None}
+        for variant in cls._scan_variants(text):
+            seen.setdefault(variant, None)
+        return tuple(seen)
 
     @classmethod
     def _scan_variants(cls, text: str) -> tuple[str, ...]:

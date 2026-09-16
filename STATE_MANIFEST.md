@@ -2,7 +2,7 @@
 
 **Measured:** 2026-09-16 UTC
 **Baseline commit:** `46654e9b6794d83fe7f420f483f31250b58205a5` (`origin/main`, PR #179 merged)
-**Source baseline:** `5.0.0`, fourteen synchronized anchors, **unpublished on every surface**
+**Source baseline:** `5.0.0`, fourteen synchronized anchors, **published 2026-09-16 on every surface except PyPI `aegis-latent-core`** (see `docs/RELEASE_STATUS.md` §1.0). This manifest predates that publication and records source-state gates only.
 
 Every value below was produced by running the command shown, in this
 environment, on the commit above. Nothing here is carried forward from an
@@ -54,7 +54,7 @@ pre-change count on this commit was 6868.
 | Corpus structure | `python scripts/verify_docs.py --root .` | **PASS** — 0 findings |
 | Links and anchors | `bash scripts/verify_links.sh --root .` | **PASS** — 1141 resolved |
 | Import reachability | `python scripts/verify_import_reachability.py --root .` | **PASS** — 222 modules discovered, 110 reached, 34 declared roadmap, 78 allowlisted, 0 undeclared orphans |
-| Release contract | `python scripts/verify_release_contract.py --root . --tag v5.0.0` | **READY** (a source-consistency check; it does **not** assert the tag exists, and no `v5.0.0` tag exists) |
+| Release contract | `python scripts/verify_release_contract.py --root . --tag v5.0.0` | **READY** (a source-consistency check; it does **not** assert the tag exists. At the time of this run no `v5.0.0` tag existed; one was created later the same day — see `docs/RELEASE_STATUS.md` §1.0) |
 
 **One benchmark was re-executed rather than carried forward.** The backpressure
 harness (`tools/benchmarks/run_backpressure_stall.py`) was run three times at

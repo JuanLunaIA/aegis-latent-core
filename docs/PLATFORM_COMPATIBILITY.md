@@ -1,7 +1,7 @@
 # Platform Compatibility Matrix
 
 **Review date:** 2026-09-15 UTC
-**Source baseline:** checked-out source metadata is synchronized at `5.0.0`, which is unpublished; the most recent published release is `v4.1.2`
+**Source baseline:** checked-out source metadata is synchronized at `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` remains the most recent version published on every surface
 **Scope:** what this repository's own CI, tests, and shipped build artifacts actually exercise, as read back from `.github/workflows/*.yml`, `pyproject.toml`, `deploy/docker/Dockerfile`, and the relevant test modules on 2026-09-15. Nothing here is inferred from a platform's general POSIX/OCI compatibility.
 
 Every cell below is one of:
