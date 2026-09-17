@@ -9,6 +9,8 @@ import hashlib
 import json
 import logging
 import math
+import os
+import shutil
 import time
 import uuid
 from collections import OrderedDict
@@ -380,6 +382,10 @@ class _AppState:
     _pci_scrubber: PCIScrubber | None
     # Multi-turn behavioral WAF session tracker (Domain 5.1).
     waf_session_tracker: WAFSessionTracker
+    # Cached free-bytes reading for the WAL volume preflight. Refreshed on a
+    # short TTL because `disk_usage` is a statvfs and this runs per request.
+    _wal_space_free: int | None = None
+    _wal_space_checked_at: float = 0.0
     # Scans retrieved content -- tool results, RAG context -- for embedded
     # injection. None when rag_injection_scanning is off. Covers the indirect
     # case the WAF structurally cannot: a clean user turn carrying a poisoned
@@ -414,6 +420,67 @@ def _extract_payload_text(body: dict[str, Any]) -> str:
         prompt = body["prompt"]
         return " ".join(prompt) if isinstance(prompt, list) else str(prompt)
     return ""
+
+
+_WAL_SPACE_TTL_SECONDS = 5.0
+
+
+def _require_wal_headroom(state: _AppState) -> None:
+    """Refuse at ingress when the WAL volume is below the configured floor.
+
+    Disabled unless ``AEGIS_WAL_MIN_FREE_BYTES`` is set, and off by default.
+
+    **This is not the thing that makes a full disk safe.** A commit onto a full
+    volume already fails closed: the write or the ``fsync`` raises, the ledger
+    latches ``wal_persist_failed``, and ``_require_intact_ledger`` answers 503
+    from then on. Measured, not assumed -- see
+    ``evidence/registry/reg-049_probe.txt``, which injects ``ENOSPC`` at both
+    points and finds a raise and a latched fault, no deadlock, at either.
+
+    What this adds is *when*. Without it the first failure is discovered after
+    the provider has been called and billed, and the caller pays for a request
+    whose evidence could never be written. With it that request is refused
+    before dispatch.
+
+    The result is cached for a few seconds because ``disk_usage`` is a
+    ``statvfs`` and this runs on every governed request. A stale reading is
+    acceptable precisely because this is an early warning rather than the
+    guarantee: the commit path remains the thing that cannot be fooled.
+    """
+    floor = getattr(state.settings, "wal_min_free_bytes", 0)
+    if not floor:
+        return
+    now = time.monotonic()
+    cached = getattr(state, "_wal_space_checked_at", 0.0)
+    if now - cached < _WAL_SPACE_TTL_SECONDS:
+        free = getattr(state, "_wal_space_free", None)
+    else:
+        try:
+            free = shutil.disk_usage(
+                os.path.dirname(os.path.abspath(state.ledger.persistence_path))
+            ).free
+        except OSError:
+            # An unreadable volume is not evidence of a full one, and refusing
+            # traffic on a failed stat would invent an outage. The commit path
+            # still decides.
+            return
+        state._wal_space_free = free
+        state._wal_space_checked_at = now
+    if free is None or free >= floor:
+        return
+    observability.AUDIT_COMMIT_ERRORS.inc()
+    logger.error(
+        "governed request rejected: WAL volume has %d bytes free, below the %d floor",
+        free,
+        floor,
+    )
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=(
+            f"Evidence storage below the configured floor ({free} bytes free, "
+            f"{floor} required). Refusing before dispatch rather than after."
+        ),
+    )
 
 
 async def _guard_retrieved_content(
@@ -1321,6 +1388,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         ``/metrics`` stay reachable on purpose so an operator can still see the
         fault and the depth of the surviving chain.
         """
+        _require_wal_headroom(state)
         fault = getattr(state.ledger, "_fault_state", "healthy")
         if fault == "healthy":
             return

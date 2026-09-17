@@ -39,6 +39,7 @@ Five terminal states. `SEED` is **not** terminal — it means the row has been r
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-010 FIXED** — retrieved-content injection scanning wired at admission (`CLM-097`). A probe run while writing the test found the first payload was caught by the WAF anyway, so the test proved nothing; it was re-based on a payload the WAF allows and the scanner catches. |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-012 FIXED** — keyed payload digests under shredding (`CLM-098`). Judged **not** an invariant relaxation under `PD-R5`: no fail-closed path becomes fail-open and `verify_integrity` is unaffected, so no owner decision was required. `UC-037` corrected: it stated the weakness as a standing limitation. |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-017 FIXED** — `tools/wal_repair.py` (`CLM-099`). The tool is mostly refusals: a mid-file bad line is declined rather than truncated, because doing otherwise would discard every valid record after it. |
+| 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-049 FIXED — premise corrected.** The seeded "disk-full deadlock" is not reproducible: `ENOSPC` injected at both real failure points raises and latches `wal_persist_failed`, no deadlock (`reg-049_probe.txt`). Built the real residual instead — an ingress preflight (`CLM-100`) that refuses before the upstream provider is billed, default off. Full re-anchor of W1's prior `FIXED` rows: fresh `pytest` run via the repo's own `.venv` (the bare `pytest` binary is not the venv's and fails all collection with `ModuleNotFoundError: No module named 'aegis'` — an environment artifact, not a regression) shows 6,966 passed / 26 skipped, exactly 30 more than the last recorded 6,936, matching REG-010 (10) + REG-012 (7) + REG-017 (8) + REG-049 (5). |
 
 **Current seal state: NOT SEALED** — rows remain in `SEED`. See §6.
 
@@ -98,7 +99,7 @@ Scans 3, 6, 7, 8, 9 were **not executed this session** and are recorded as outst
 | REG-046 | `[CLM-068][PR:164]` | CODE | P1 | `CryptoShredder` wiring + `shredding_version` | **VERIFIED** | 5 refs in `aegis/core/crypto_audit.py`; opt-in behind `AEGIS_ENABLE_CRYPTOGRAPHIC_SHREDDING`, off by default (`UC-037`) |
 | REG-047 | `[CLM-011]` | CODE | P2 | Windows lock degrade on FAT32/network | `SEED` | |
 | REG-048 | `[AEG1:1.3]` | DOC | P2 | NFS/EFS stale `flock` | **VERIFIED** | Already documented in `docs/operations/STORAGE_REQUIREMENTS.md` per PR #183 |
-| REG-049 | `[BLIND-10]` | CODE | P1 | Disk-full deadlock | `SEED` | |
+| REG-049 | `[BLIND-10]` | CODE | P1 | Disk-full deadlock | **FIXED — premise corrected** | **Seed premise falsified:** injecting `ENOSPC` at both real failure points (buffered WAL write, `fsync`) produces a raise and a latched `wal_persist_failed` in each case, ledger still responsive afterward, no deadlock — `evidence/registry/reg-049_probe.txt`. Real residual: the failure surfaces only at commit time, after the upstream provider was already called and billed. Fix: `_require_wal_headroom` (`aegis/proxy/app.py`), an ingress preflight gated by `AEGIS_WAL_MIN_FREE_BYTES` (default `0` = off — a false refusal on a nearly-full but working volume is a worse outage than the late detection it replaces), 5s TTL-cached `disk_usage` read, refuses 503 before the forwarder is awaited. A failed `disk_usage` does not refuse (`CLM-100`). Test `tests/test_wal_headroom_preflight.py` (5). Before: 5 failed (`reg-049_before.txt`). After: 5 passed (`reg-049_after.txt`). Full suite 6,966 passed / 26 skipped |
 | REG-050 | `[STRAT:1.3]` | CODE | P2 | SSE slow-drip FD exhaustion | `SEED` | Partially mitigated by REG-004's admission gate; FD budget metric not present |
 
 ### 4.2 Wave 2 — supply chain / release / ops
@@ -163,11 +164,11 @@ Their status is tracked in [Commercial Readiness](commercial/COMMERCIAL_READINES
 
 | Wave | Total | FIXED | VERIFIED | DOCUMENTED | BLOCKED | WONT-FIX | open (`SEED`) |
 |---|---|---|---|---|---|---|---|
-| W1 | 30 | 3 | 12 | 1 | 0 | 0 | **14** |
+| W1 | 30 | 4 | 12 | 1 | 0 | 0 | **13** |
 | W2 | 23 | 0 | 2 | 0 | 0 | 0 | **21** |
 | W3 | 9 | 0 | 2 | 2 | 0 | 0 | **5** |
 | `[DISC]` | 3 | 0 | 0 | 1 | 0 | 0 | **2** |
-| **Total** | **65** | **3** | **16** | **4** | **0** | **0** | **42** |
+| **Total** | **65** | **4** | **16** | **4** | **0** | **0** | **41** |
 
 Human class (9) is excluded from the burn-down by design.
 

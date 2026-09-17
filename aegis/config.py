@@ -681,6 +681,22 @@ class AegisSettings(BaseSettings):
         default=True,
         description="Reject payloads that match known prompt-injection patterns.",
     )
+    wal_min_free_bytes: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Refuse governed traffic at ingress when the WAL volume has less than this "
+            "many bytes free. 0 (the default) disables the check. "
+            "This is an EARLY-REFUSAL optimisation, not a missing safety net: a commit "
+            "onto a full volume already fails closed -- the write or the fsync raises, "
+            "`wal_persist_failed` latches, and governed endpoints answer 503. What the "
+            "preflight adds is refusing BEFORE the upstream provider is called and billed, "
+            "and an unambiguous operator signal. "
+            "It defaults off because a false refusal on a nearly-full but working volume "
+            "is a total outage, which is a worse failure than the one it prevents; an "
+            "operator who knows their headroom sets it deliberately."
+        ),
+    )
     rag_injection_scanning: bool = Field(
         default=True,
         description=(

@@ -1,0 +1,16 @@
+REG-049 premise probe — 2026-09-17, commit c5b4311
+Seed claimed: 'Disk-full deadlock -> ingress preflight space check before ledger lock; 503 without deadlock'
+
+ENOSPC injected at the two real failure points:
+
+  write  -> OSError: [Errno 28] No space left on device | fault=wal_persist_failed
+            ledger still responsive afterwards: True
+  fsync  -> WalDurabilityError: WAL fsync failed; the records in this batch are not durable
+
+CONCLUSION: no deadlock. Both paths raise, latch wal_persist_failed, and leave the
+ledger responsive. _require_intact_ledger then answers 503 for governed traffic.
+The seed premise is NOT reproducible on this tree.
+
+Real residual, lower severity than seeded: the failure is detected only at commit
+time, which is AFTER the upstream provider has been called and billed. A preflight
+check refuses earlier and gives the operator an unambiguous signal.
