@@ -1,0 +1,125 @@
+REG-015 — DOCUMENTED: "ZK preview cap blowup" does not reproduce as a code
+defect. What is real is (a) CLM-089's already-documented proving-cost
+economics, now cross-referenced from a second angle — the cap is not
+configurable through the gateway at all — and (b) an unbounded
+verifier-key-derivation input, neither of which was written down anywhere
+before this session.
+
+Investigation delegated to a zk-proof-reviewer subagent (read-only), key
+citations independently re-verified below before any doc edit was made.
+
+=== No blowup/crash/DoS found ===
+
+Read `aegis_rust_v2/src/zk_mmr.rs` (shape/witness cross-checks, native
+root, 128-bit field-element packing with an `Fr::CAPACITY` assert) and
+`zk_bindings.rs` (`zk_verifier_key`, `generate_zk_proof`, default-build
+refusal). No unbounded growth, no missing size check on the data path, no
+integer overflow, no panic, no silent truncation. Previews are bounded at
+every producer (`aegis/core/forensic.py`'s `cap_bytes`,
+`aegis/proxy/streaming.py`'s stream preview cap). Re-ran the Python-side
+tests directly:
+
+$ .venv/bin/python -m pytest tests/ -k "zk or zero_knowledge" -q
+59 passed, 5 skipped, 6945 deselected in 3.06s
+
+The subagent additionally ran (not independently re-verified here, given
+build time; trusted based on the extensive citation accuracy confirmed
+below):
+- `cargo test --manifest-path aegis_rust_v2/Cargo.toml zk` (default
+  build): 0 tests — feature compiled out, matching the documented
+  default-off `zk-spartan` posture.
+- `cargo test --release --features zk-spartan --lib zk_mmr`: 16 passed.
+- `--test zk_mmr_end_to_end`: 7 passed, including a real proof round-trip
+  against the true root and refusal of tampered statements.
+
+=== What is real: CLM-089's economics, reproduced independently ===
+
+Default `max_forensic_bytes = 65_536` -> leaf 262,495 bytes, hex-encoded
+prefix 262,471 bytes, ~4,102 SHA-256 blocks, ~1.1x10^8 constraints,
+matching CLM-089's "on the order of 10^8." This is a real, already-
+documented economic ceiling (not provable at any practical cost), not a
+crash or blowup. Nothing here changes CLM-089; its wording is accurate.
+
+=== What was genuinely undocumented, verified against source ===
+
+1. **`max_forensic_bytes` is not reachable from gateway configuration.**
+
+$ grep -n "max_forensic_bytes" aegis/config.py
+(no matches)
+
+$ sed -n '957,968p' aegis/proxy/app.py
+    state.ledger = CryptographicAuditLedger(
+        persistence_path=str(cfg.wal_path),
+        signing_key=_signing_key,
+        max_memory_nodes=cfg.max_memory_nodes,
+        max_wal_bytes=cfg.max_wal_bytes,
+        hsm_backend=_hsm_backend,
+        require_strong_signing=cfg.security_enforcement_mode == "strict",
+        mmr_hash_scheme=cfg.mmr_hash_scheme,
+        pqc_identity_path=cfg.pqc_identity_path,
+        enable_cryptographic_shredding=cfg.enable_cryptographic_shredding,
+        shredder_vault_path=cfg.shredder_vault_path or None,
+    )
+
+Confirmed: `max_forensic_bytes` is genuinely absent from this call, so
+every gateway-run process uses `_DEFAULT_MAX_FORENSIC_BYTES` (65,536)
+regardless of operator configuration. `docs/institutional/
+DOC-08_ZERO_KNOWLEDGE_INCLUSION.md` §6.3 already said "an operator who
+wants zero-knowledge inclusion proofs must decide to shrink or drop
+forensic previews" — accurate for an in-process library caller, but
+misleading for a gateway operator, who has no lever to pull at all. This
+is the genuine documentation gap: not that the cost exists (already
+documented) but that it cannot be configured away through the shipped
+gateway.
+
+2. **`zk_verifier_key` bounds nothing.**
+
+$ sed -n '72,93p' aegis_rust_v2/src/zk_bindings.rs
+    pub fn zk_verifier_key(
+        py: Python<'_>,
+        prefix_len: usize,
+        path_depth: usize,
+        peak_count: usize,
+    ) -> PyResult<Py<PyBytes>> {
+        ...
+        let shape = zk_mmr::ProofShape { prefix_len, path_depth, peak_count };
+        let (_, verifier_key) = zk_mmr::setup(shape).map_err(zk_error)?;
+        ...
+
+Confirmed: three raw `usize` parameters, no upper bound, no cross-check
+against any real leaf or ledger size before `setup()` allocates. `DOC-08`
+§6.5 already establishes that a verifier must derive their own key rather
+than trust one from the prover, but did not previously say that
+derivation itself is unbounded and costs memory in proportion to whatever
+shape is requested.
+
+=== Fix applied (documentation only) ===
+
+`docs/institutional/DOC-08_ZERO_KNOWLEDGE_INCLUSION.md` — two additions:
+- §6.3: one paragraph stating the cap is unreachable from gateway
+  configuration, naming both missing call sites.
+- §6.5: one paragraph stating the verifier-side bounding obligation on
+  `prefix_len`/`path_depth`/`peak_count`.
+
+`docs/BOUNDARIES.md` — new Evidence boundaries row, "Zero-knowledge
+inclusion proof feasibility," summarizing both points with the measured
+per-host timing figures already established by CLM-089's own evidence
+(not re-measured here).
+
+No change to `CLM-089` — its wording is conditional and already accurate;
+it does not claim gateway configurability anywhere.
+
+No code change: hard-capping `prefix_len` at the FFI boundary is a new
+mandatory check on a public API with an arbitrary threshold and no live
+caller (nothing on the gateway request path calls any of this — the
+capability is compiled out of every default build), which is an owner
+decision about where to draw that line, not the smallest authorized
+change for a single registry row.
+
+=== Gates ===
+
+python tools/docs/verify_documentation.py --root . --strict: PASS
+python scripts/verify_docs.py --root .: PASS
+python scripts/verify_claims.py: PASS
+bash scripts/verify_links.sh --root .: PASS
+git diff --check: clean
