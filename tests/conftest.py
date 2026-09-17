@@ -44,37 +44,59 @@ class _StubClientError(Exception):
         super().__init__(msg)
 
 
+def _real_or_stub(module_name: str) -> None:
+    """Prefer a genuine install over the stub; only fall back on ImportError.
+
+    Checking ``sys.modules`` alone cannot distinguish "really absent" from
+    "installed but nothing has imported it yet" — conftest.py runs before any
+    test module gets the chance to. A REG-011-style real-server integration
+    test needs the actual package, so attempt the import first and stub only
+    when it genuinely is not installed.
+    """
+    if module_name in sys.modules:
+        return
+    try:
+        __import__(module_name)
+    except ImportError:
+        sys.modules[module_name] = MagicMock()
+
+
 def _install_optional_backend_stubs() -> None:
     """Install ``sys.modules`` stubs for optional backends if not already present.
 
     Idempotent: only stubs modules that are absent, so a real installation (if
     ever present) is never shadowed once imported.
     """
-    if "aioboto3" not in sys.modules:
-        sys.modules["aioboto3"] = MagicMock()
-    if "boto3" not in sys.modules:
-        sys.modules["boto3"] = MagicMock()
-    if "boto3.dynamodb" not in sys.modules:
-        sys.modules["boto3.dynamodb"] = MagicMock()
+    _real_or_stub("aioboto3")
+    _real_or_stub("boto3")
+    _real_or_stub("boto3.dynamodb")
     if "boto3.dynamodb.conditions" not in sys.modules:
-        _cond = MagicMock()
-        _cond.Key = MagicMock(return_value=MagicMock())
-        _cond.Attr = MagicMock(return_value=MagicMock())
-        sys.modules["boto3.dynamodb.conditions"] = _cond
+        try:
+            __import__("boto3.dynamodb.conditions")
+        except ImportError:
+            _cond = MagicMock()
+            _cond.Key = MagicMock(return_value=MagicMock())
+            _cond.Attr = MagicMock(return_value=MagicMock())
+            sys.modules["boto3.dynamodb.conditions"] = _cond
     if "botocore" not in sys.modules:
-        sys.modules["botocore"] = MagicMock()
+        try:
+            __import__("botocore")
+        except ImportError:
+            sys.modules["botocore"] = MagicMock()
     if "botocore.exceptions" not in sys.modules:
-        _bexc = MagicMock()
-        _bexc.ClientError = _StubClientError
-        sys.modules["botocore.exceptions"] = _bexc
+        try:
+            __import__("botocore.exceptions")
+        except ImportError:
+            _bexc = MagicMock()
+            _bexc.ClientError = _StubClientError
+            sys.modules["botocore.exceptions"] = _bexc
     else:
         # Module already present (e.g. a bare MagicMock from another import):
         # ensure ClientError is a real, raisable exception class.
         _existing = sys.modules["botocore.exceptions"]
         if not isinstance(getattr(_existing, "ClientError", None), type):
             _existing.ClientError = _StubClientError
-    if "asyncpg" not in sys.modules:
-        sys.modules["asyncpg"] = MagicMock()
+    _real_or_stub("asyncpg")
 
 
 _install_optional_backend_stubs()

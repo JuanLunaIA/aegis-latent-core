@@ -1,0 +1,40 @@
+REG-011 — after: real race tests against a live postgres:16-alpine container (port 55432) and a live amazon/dynamodb-local container (port 58000)
+
+=== PostgreSQL: tests/test_postgres_concurrent_append_race.py -v ===
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-9.1.1, pluggy-1.6.0
+rootdir: /home/user/aegis-latent-core
+configfile: pyproject.toml
+plugins: pytest_httpserver-1.1.5, xdist-3.8.0, hypothesis-6.167.1, anyio-4.14.2, asyncio-1.4.0, cov-7.1.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests/test_postgres_concurrent_append_race.py ...                        [100%]
+
+============================== 3 passed in 1.40s ===============================
+
+=== DynamoDB: tests/test_dynamodb_concurrent_append_race.py -v ===
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-9.1.1, pluggy-1.6.0
+rootdir: /home/user/aegis-latent-core
+configfile: pyproject.toml
+plugins: pytest_httpserver-1.1.5, xdist-3.8.0, hypothesis-6.167.1, anyio-4.14.2, asyncio-1.4.0, cov-7.1.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests/test_dynamodb_concurrent_append_race.py ...                        [100%]
+
+============================== 3 passed in 3.06s ===============================
+
+=== repeated 3x for stability (no flake observed) ===
+......                                                                   [100%]
+6 passed in 4.17s
+......                                                                   [100%]
+6 passed in 4.19s
+......                                                                   [100%]
+6 passed in 4.17s
+
+=== mocked suites re-run clean after the conftest.py real-import fix and the 7 call-site update in test_dynamodb_provider_new.py ===
+........................................................................ [ 85%]
+.........................                                                [100%]
+169 passed in 2.30s

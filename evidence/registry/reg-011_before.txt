@@ -1,0 +1,8 @@
+REG-011 — before (no integration coverage existed; premise: race guard was written but never executed against a real server)
+The mocked suite already passed (proves nothing about real server behaviour):
+.....................................................................    [100%]
+69 passed in 0.52s
+
+Real integration tests did not exist prior to this commit. git status of the new files:
+?? tests/test_dynamodb_concurrent_append_race.py
+?? tests/test_postgres_concurrent_append_race.py
