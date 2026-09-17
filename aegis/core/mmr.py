@@ -61,15 +61,15 @@ def _is_sha256_hex(value: object) -> bool:
 #     node   = SHA-256(0x01 || left_digest_32 || right_digest_32)
 #     root   = SHA-256(0x02 || peak_1_32 || ... || peak_k_32)
 #
-# v1 is retained, and remains the default, because the scheme decides every root
-# a chain has ever recorded. Switching an existing ledger would make its WAL
-# replay to a different root and its own integrity check declare it corrupt —
-# an unrecoverable outcome for the evidence this system exists to hold. Proofs
+# v1 is retained because the scheme decides every root a chain has ever
+# recorded. Switching an existing ledger would make its WAL replay to a
+# different root and its own integrity check declare it corrupt — an
+# unrecoverable outcome for the evidence this system exists to hold. Proofs
 # carry their scheme so a verifier never has to guess.
 #
-# ``CryptographicAuditLedger`` now exposes the choice through
-# ``mmr_hash_scheme``, still defaulting to v1. Two prerequisites blocked that
-# and both are met:
+# ``CryptographicAuditLedger`` exposes the choice through ``mmr_hash_scheme``.
+# The two prerequisites that once blocked defaulting new chains to v2 are both
+# met, and ``auto`` (the config default) now acts on that:
 #
 #   1. ``aegis_rust``'s accumulator implemented v1 only (it hashed
 #      ``format!("{left}{right}")``), so an accelerated deployment running
@@ -80,11 +80,14 @@ def _is_sha256_hex(value: object) -> bool:
 #   2. Existing chains needed a migration story. There is no in-place upgrade
 #      and there cannot be one — a root cannot be recomputed under a different
 #      construction without rewriting the history it commits to. So the rule is
-#      that a scheme belongs to a chain: the ledger reads the proof version its
-#      WAL recorded and refuses to open it under a different scheme, with fault
-#      state ``mmr_scheme_mismatch``, rather than replaying to a different root
-#      and reporting intact evidence as corrupt. Selecting v2 means starting a
-#      new chain.
+#      that a scheme belongs to a chain: ``auto`` starts a *new* chain on v2
+#      and reopens an *existing* chain under whichever scheme its WAL
+#      recorded, and the ledger refuses to open a chain under a different
+#      scheme than that, with fault state ``mmr_scheme_mismatch``, rather than
+#      replaying to a different root and reporting intact evidence as
+#      corrupt. A v1 chain in the field therefore stays v1 — there is no
+#      in-place upgrade — and only a chain that has never been opened starts
+#      on v2.
 #
 # One consequence is easy to miss and was a live defect until the ledger gained
 # the option: a leaf digest recorded outside the accumulator must come from

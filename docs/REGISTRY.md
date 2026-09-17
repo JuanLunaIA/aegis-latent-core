@@ -54,6 +54,7 @@ Five terminal states. `SEED` is **not** terminal — it means the row has been r
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-047 VERIFIED.** The Windows `msvcrt.locking` sentinel sits at a 1 TiB offset unreachable on FAT32 (4 GiB max) or a restricted network filesystem; `_windows_lock_region` catches the resulting `OSError` as a distinct `_SentinelUnavailableError`, and `_lock_wal_fd` degrades to `_warn_unlocked()` (operator-enforced, logged) instead of crashing or falsely refusing the first writer. Re-ran `tests/security/test_wal_single_writer.py` directly: 13 passed, including `test_windows_unreachable_sentinel_admits_the_first_writer`, which simulates exactly this degradation — also exercised on real Windows via CI's `windows-wal-lock` job, not only simulated here. `CLM-011` already discloses this precisely and matches the code exactly. No code change. `evidence/registry/reg-047_verify.txt` |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-050 FIXED — closes Wave 1's last non-DECIDE row.** `StreamAdmissionGate` (`CLM-094`) already bounded concurrent streams and therefore worst-case FD usage; the row's real gap — "FD budget metric not present" — is now closed with `aegis_stream_admission_active`/`_rejected_total` gauges (`CLM-102`), bound via `Gauge.set_function` at gate construction rather than pushed at acquire/release, preserving `streaming.py`'s deliberate lack of an `observability` import (confirmed every other stream metric is set from `app.py`, never `streaming.py`, before choosing this design). Test `tests/security/test_stream_admission_metric.py` (5 tests). Verified against both environment states: 3 passed/1 skipped without the optional `metrics` extra (this repo's baseline — `prometheus-client` is not in `requirements.lock`), 5/5 passed with it temporarily installed to exercise the real registry, then uninstalled again; full suite re-confirmed clean at baseline (`6,976 passed, 33 skipped`). Two alert rules added to `MONITORING_ALERTING.md`. `evidence/registry/reg-050_fixed.txt` |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-015 DOCUMENTED — Wave 1 has exactly one `SEED` row left (REG-023, `DECIDE`).** Delegated to a `zk-proof-reviewer` subagent; key citations independently re-verified. No blowup, crash, or DoS found — the ZK circuit is compiled out of every default build and nothing on the gateway request path reaches it (`pytest -k "zk or zero_knowledge"` re-run: 59 passed, 5 skipped). What is real, and was genuinely undocumented: `max_forensic_bytes` is unreachable from gateway configuration at all (`aegis/proxy/app.py:957-968` confirmed to omit it, `aegis/config.py` confirmed to define no setting for it), so `DOC-08` §6.3's existing "an operator must decide to shrink previews" language was true only for an in-process caller, never a gateway operator; and `zk_verifier_key`'s three `usize` shape parameters (confirmed unbounded by reading `zk_bindings.rs`) mean a verifier deriving their own key must bound it themselves. Added both to `DOC-08_ZERO_KNOWLEDGE_INCLUSION.md` (§6.3, §6.5) and a new `BOUNDARIES.md` row. `CLM-089`'s existing economics figure needed no correction. No code change. `evidence/registry/reg-015_verify.txt` |
+| 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-054 FIXED — first Wave 2 closure this session.** `aegis/core/mmr.py`'s module comment said `mmr_hash_scheme` was "still defaulting to v1"; confirmed against source (`aegis/config.py:410-421`, `aegis/core/crypto_audit.py:792-794`) that a prior session's P1-2 work already changed `auto` to start new chains on v2, and this comment was simply never updated to match. Rewrote the block to state current behavior accurately. Doc-only, no behavior change. `pytest tests/test_mmr_v2_migration.py tests/ -k "mmr" -q` → 378 passed. `evidence/registry/reg-054_fixed.txt` |
 
 **Current seal state: NOT SEALED** — rows remain in `SEED`. See §6.
 
@@ -137,7 +138,7 @@ Scans 3, 6, 7, 8, 9 were **not executed this session** and are recorded as outst
 | REG-041 | `[CLM-040]` | CODE | P1 | ML-DSA verify timing `p=0.0` | `SEED` | |
 | REG-051 | `[AEG2:13.2]` | CODE | P1 | Missing harnesses | `SEED` | Homoglyph parity harness now exists (REG-001); postgres-race and OOM-saturation do not |
 | REG-053 | `[P2-7]` | CODE | P3 | Coverage badge stale | **VERIFIED** | Badge removed from `README.md` in PR #184 |
-| REG-054 | `[P2-2]` | DOC | P3 | `mmr.py:71` stale docstring | `SEED` | |
+| REG-054 | `[P2-2]` | DOC | P3 | `mmr.py:71` stale docstring | **FIXED** | The comment said `mmr_hash_scheme` was "still defaulting to v1" — true when written, false since a prior session's P1-2 work changed `auto` to start new chains on v2 (confirmed against source: `aegis/config.py:410-421`, `aegis/core/crypto_audit.py:792-794`). Rewrote the module-level comment block in `aegis/core/mmr.py` to state the actual current behavior (`auto` starts a new chain on v2, reopens an existing chain under whichever scheme its WAL recorded). Doc-only, no behavior change. `.venv/bin/python -m pytest tests/test_mmr_v2_migration.py tests/ -k "mmr" -q` → 378 passed. `evidence/registry/reg-054_fixed.txt` |
 | REG-055 | `[P2-4]` | CODE | P3 | Dual `httpx`+`requests`, numpy `isfinite` | `SEED` | |
 | REG-056 | `[P2-5]` | CODE | P3 | Checked-in protobuf codegen | `SEED` | |
 | REG-058 | `[P3-1]` | CODE | P3 | Samples/HTML + snapshots in repo | `SEED` | |
@@ -179,10 +180,10 @@ Their status is tracked in [Commercial Readiness](commercial/COMMERCIAL_READINES
 | Wave | Total | FIXED | VERIFIED | DOCUMENTED | BLOCKED | WONT-FIX | open (`SEED`) |
 |---|---|---|---|---|---|---|---|
 | W1 | 30 | 6 | 18 | 5 | 0 | 0 | **1** |
-| W2 | 23 | 0 | 4 | 0 | 0 | 0 | **19** |
+| W2 | 23 | 1 | 4 | 0 | 0 | 0 | **18** |
 | W3 | 9 | 0 | 2 | 2 | 0 | 0 | **5** |
 | `[DISC]` | 3 | 0 | 0 | 1 | 0 | 0 | **2** |
-| **Total** | **65** | **6** | **24** | **8** | **0** | **0** | **27** |
+| **Total** | **65** | **7** | **24** | **8** | **0** | **0** | **26** |
 
 Human class (9) is excluded from the burn-down by design.
 
@@ -194,7 +195,7 @@ Recorded because a registry that omits its own coverage gaps asserts a completen
 
 **Autodiscovery scans not run:** 3 (`UNSUPPORTED_CLAIMS`/`ROADMAP` open-item extraction), 6 (CI logs, last 30 runs, for flaky/skipped suites), 7 (`evidence/` `NOT_EXECUTED` and `BLOCKED` sections), 8 (full battery failure/skip triage — the suite is green at 6,936 passed / 26 skipped, but the **26 skips were not individually triaged**), 9 (doc-gate findings — all four gates pass, so there are no findings to convert).
 
-**27 rows remain `SEED`**, including genuinely confirmed P0 work: REG-023 (pre-forward ePHI), REG-027 (gateway not on PyPI), REG-028 (release readback automation), and REG-042 (multi-pod total order, FATAL). Wave 1 has exactly one `SEED` row left: **REG-023**, explicitly `DECIDE` — it touches the "redaction protects the record, not your provider" boundary and needs an owner decision before it can be worked, not further autodiscovery.
+**26 rows remain `SEED`**, including genuinely confirmed P0 work: REG-023 (pre-forward ePHI), REG-027 (gateway not on PyPI), REG-028 (release readback automation), and REG-042 (multi-pod total order, FATAL). Wave 1 has exactly one `SEED` row left: **REG-023**, explicitly `DECIDE` — it touches the "redaction protects the record, not your provider" boundary and needs an owner decision before it can be worked, not further autodiscovery.
 
 **Per `PD-R2` and the `R4` gate, this registry is `NOT SEALED`.** No closure attestation is emitted, and none should be written until the `SEED` count reaches zero.
 
