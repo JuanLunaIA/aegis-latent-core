@@ -316,7 +316,7 @@ async def test_sse_commit_on_client_disconnect(tmp_wal):
 
     app = create_app(_settings(tmp_wal))
 
-    async def fake_stream(_path, _body):
+    async def fake_stream(_path, _body, extra_headers=None):
         # Emit many chunks with yield points so the consumer can disconnect
         # before the stream is exhausted.
         for _ in range(200):

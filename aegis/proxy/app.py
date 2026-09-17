@@ -10,6 +10,7 @@ import json
 import logging
 import math
 import os
+import secrets
 import shutil
 import time
 import uuid
@@ -77,6 +78,7 @@ from aegis.proxy.waf import AegisWAF
 from aegis.storage.s3_worm import Boto3S3WormProvider, ObjectLockMode, S3WormArchiver
 from aegis.storage.segment_manifest import archive_finalized_segment
 from aegis.telemetry.events import EventKind, EventOutcome, SecurityEvent, Severity
+from aegis.telemetry.otel import TraceContext, inject_trace_context, parse_trace_context
 from aegis.telemetry.siem import HTTPSIEMSink, SIEMExporter, SIEMFormat
 
 logger = logging.getLogger(__name__)
@@ -420,6 +422,44 @@ def _extract_payload_text(body: dict[str, Any]) -> str:
         prompt = body["prompt"]
         return " ".join(prompt) if isinstance(prompt, list) else str(prompt)
     return ""
+
+
+def _outbound_trace_headers(request: Request) -> dict[str, str]:
+    """Propagate the inbound W3C ``traceparent`` onto the outbound provider call.
+
+    REG-013: the gap was that a caller's ``traceparent`` was accepted on the
+    way in and simply discarded -- the upstream provider call never carried
+    any trace context, so a distributed trace could not be stitched across
+    Aegis's hop even when both sides otherwise supported it.
+
+    Per the W3C Trace Context spec, a hop that does not create its own
+    exported span still mints a fresh ``span-id`` when it forwards -- it does
+    not resend the inbound `span-id` unchanged, which would make Aegis and
+    its caller indistinguishable to anything reconstructing the trace. This
+    mirrors the derivation ``TraceProvider.span()`` already uses for a real
+    span: same ``trace_id`` as the parent, a new random ``span_id``, and the
+    parent's own sampled flag. A missing or malformed inbound header gets a
+    freshly synthesized trace context instead of silently forwarding nothing,
+    so the outbound call always carries a valid ``traceparent``.
+
+    This is header propagation only -- see ``CLM-101``. It does not create,
+    record, or export any Aegis-owned span (``TraceProvider`` has no wired
+    exporter on this path), and it establishes no timing, sampling-decision,
+    or backend-visibility guarantee beyond the header itself being correct.
+    """
+    try:
+        parent = parse_trace_context(request.headers)
+    except ValueError:
+        parent = None
+    context = TraceContext(
+        trace_id=parent.trace_id if parent is not None else secrets.token_hex(16),
+        span_id=secrets.token_hex(8),
+        sampled=parent.sampled if parent is not None else True,
+        tracestate=parent.tracestate if parent is not None else None,
+    )
+    headers: dict[str, str] = {}
+    inject_trace_context(context, headers)
+    return headers
 
 
 _WAL_SPACE_TTL_SECONDS = 5.0
@@ -1781,7 +1821,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             body["top_logprobs"] = cfg.top_logprobs
 
         if body.get("stream", False):
-            stream = state.forwarder.stream_sse("/v1/chat/completions", body)
+            stream = state.forwarder.stream_sse(
+                "/v1/chat/completions", body, extra_headers=_outbound_trace_headers(request)
+            )
 
             async def _commit_stream_terminal(summary: StreamEvidenceSummary) -> None:
                 audit_sid = (
@@ -1896,7 +1938,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             with observability.record_span(
                 "aegis.forward", provider=cfg.provider, endpoint="chat.completions"
             ):
-                upstream = await state.forwarder.forward_json("/v1/chat/completions", body)
+                upstream = await state.forwarder.forward_json(
+                    "/v1/chat/completions", body, extra_headers=_outbound_trace_headers(request)
+                )
         except CircuitOpenError:
             observability.FORWARD_ERRORS.labels(stage="circuit_open").inc()
             await reservation.refund(0)
@@ -2075,7 +2119,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
 
         if body.get("stream") is True:
-            upstream_stream = state.forwarder.stream_native_anthropic(body)
+            upstream_stream = state.forwarder.stream_native_anthropic(
+                body, extra_headers=_outbound_trace_headers(request)
+            )
             terminal_marker = b'event: message_stop\ndata: {"type":"message_stop"}\n\n'
 
             async def _commit_anthropic_terminal(summary: StreamEvidenceSummary) -> None:
@@ -2179,7 +2225,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
 
         try:
-            upstream = await state.forwarder.forward_native_anthropic(body)
+            upstream = await state.forwarder.forward_native_anthropic(
+                body, extra_headers=_outbound_trace_headers(request)
+            )
         except CircuitOpenError:
             await reservation.refund(0)
             return await _durable_error_response(
@@ -2337,7 +2385,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         completions_start = time.perf_counter()
         try:
-            upstream = await state.forwarder.forward_json("/v1/completions", body)
+            upstream = await state.forwarder.forward_json(
+                "/v1/completions", body, extra_headers=_outbound_trace_headers(request)
+            )
         except CircuitOpenError:
             observability.FORWARD_ERRORS.labels(stage="circuit_open").inc()
             await reservation.refund(0)

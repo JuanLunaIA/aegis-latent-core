@@ -1,0 +1,16 @@
+
+==================================== ERRORS ====================================
+_______________ ERROR collecting tests/test_trace_propagation.py _______________
+ImportError while importing test module '/home/user/aegis-latent-core/tests/test_trace_propagation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_trace_propagation.py:53: in <module>
+    from aegis.proxy.app import _outbound_trace_headers, create_app
+E   ImportError: cannot import name '_outbound_trace_headers' from 'aegis.proxy.app' (/home/user/aegis-latent-core/aegis/proxy/app.py)
+=========================== short test summary info ============================
+ERROR tests/test_trace_propagation.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.77s
