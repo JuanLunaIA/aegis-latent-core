@@ -34,6 +34,8 @@ What remains open is narrower than the old entry implied: continuity across *rep
 
 **External anchoring.** RFC 3161 timestamping and an S3 Object Lock adapter exist as configuration-dependent paths. Neither is an external immutability guarantee, and no anchoring is enabled by default.
 
+**Ledger compaction and cold tiering.** The WAL grows without bound and there is no mechanism to compact old segments or move them to a cheaper storage tier; operators must provision disk for the full retention window today. A compaction scheme has to preserve hash-chain and MMR-inclusion-proof reachability for every leaf it touches, which is a design problem, not a small change.
+
 ## Platform and operations
 
 **OCI images and attestation coverage.** Images are published and signed. Reproducible-build verification, a documented consumer verification path, and multi-architecture coverage beyond the current set remain open.

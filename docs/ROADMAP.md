@@ -144,6 +144,7 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 
 ## P2 performance and operations
 
+- [ ] Ledger compaction and cold tiering. The JSONL WAL has no mechanism to compact old segments or move them to a cheaper storage tier — `docs/operations/STORAGE_REQUIREMENTS.md` only advises provisioning enough headroom for the retention window. Any compaction scheme must preserve hash-chain and MMR-inclusion-proof reachability for every leaf it moves or rewrites, which is nontrivial design work, not a bounded bug fix. `REG-019`.
 - [ ] Measure end-to-end proxy latency with a real or explicitly bounded upstream, including evidence durability, streaming, WAF, rate limiting, and provider failure paths.
 - [ ] Measure multi-worker or multi-process topology with the actual container/seccomp policy; document worker count, GIL/event-loop boundary, storage, and rejected traffic.
 - [d] The Phase 2 SSE queue is explicitly byte/event bounded and instrumented; continue bounding and testing every other cache and queue, including aggregate concurrency, eviction, age, saturation, and memory pressure.
