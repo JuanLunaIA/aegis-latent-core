@@ -19,7 +19,7 @@ The one deliberate exception is optional enrichment, which may be dropped withou
 | 1 | Admission rejected (auth, scope, bounds, WAF, rate limit) | `401` / `403` / `413` / `429` | A rejection record; **no governed evidence record** | Yes |
 | 2 | Upstream failure | `502` / `504`, or a terminal error response | Durable record of the governed outcome | Yes |
 | 3 | WAL append failure | `503`; the response is not returned | No record for this call | Yes |
-| 4 | `fsync` failure | `503` | No durable record; see §3 | Yes |
+| 4 | `fsync` failure | `503` | Not durable, but the bytes are already in the WAL and replay reads them back as committed; see §3 | Yes |
 | 5 | Terminal commit failure mid-stream | Stream ends **without** the terminal marker | No terminal record | Yes |
 | 6 | Proof retrieval failure | `404` or `503` from the proof endpoint | The record is unaffected | Yes |
 | 7 | Rate-limit backend unavailable | `503` | No governed record | Yes |
@@ -47,7 +47,9 @@ The circuit breaker may open under sustained failure, at which point requests ar
 
 ## 3. Storage failure
 
-`_persist_node` writes under a lock in the order: build node → sign → write → `flush` → `fsync`. A failure at any step aborts the commit, and an aborted commit aborts the response.
+`_persist_node` builds, signs, writes, and flushes a record under the ledger lock, then takes a group-commit ticket (`CLM-082`). The `fsync` itself is issued by `_await_durable` with the lock **released**, and covers every record written while it was in flight — one sync can retire several concurrent commits instead of charging each a separate device round trip inside the lock. A commit does not return until its own record is confirmed by a completed `fsync`; a failure there aborts the commit and the response, and fails every other commit waiting on the same batch together (`_await_durable` latches `wal_persist_failed`).
+
+That ordering has a residue worth naming precisely: the refused batch's bytes were already written and flushed to the WAL file *before* the `fsync` that failed them. They are not durable — the write never reached stable storage — but they are still in the file, and replay on restart reads them back as ordinary committed records (`tests/test_coalesced_commit.py`). This is the safe direction: evidence exists for a call whose caller was told it failed, never the reverse (a caller told "durable" with nothing behind it — `_await_durable` raises before returning the node in that case).
 
 **`fsync` returning successfully is not power-loss durability.** It means the filesystem reported the write reached stable storage. A device with a volatile write cache that acknowledges early can lose an `fsync`-ed record on power loss. The gateway cannot detect this. Power-loss protection is a storage procurement decision; see [Storage Requirements](../operations/STORAGE_REQUIREMENTS.md).
 
