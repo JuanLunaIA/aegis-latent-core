@@ -1,0 +1,58 @@
+REG-019 — DOCUMENTED: ledger compaction + cold tiering does not exist;
+recorded as roadmap rather than fabricated or left silently absent.
+
+=== Search for an existing mechanism ===
+
+$ grep -rli "compaction\|cold.tier\|cold storage" aegis/
+aegis/proxy/app.py               (unrelated: WAF pattern name)
+aegis/config.py                  (unrelated: config field name substring)
+aegis/connectors/lakehouse/parquet_exporter.py   (unrelated: PyArrow engine compaction, not WAL)
+aegis/storage/s3_worm.py         (unrelated match)
+aegis/core/mifid_record_keeper.py (unrelated match)
+aegis/core/archival_bundle.py    (unrelated: this is algorithm-agile long-term
+                                   hash/signature migration for sealed bundles,
+                                   not WAL segment compaction or storage tiering)
+
+No module implements compacting the JSONL WAL (removing/merging old segments
+while preserving hash-chain and MMR-proof reachability) or moving older
+records to a cheaper storage tier.
+
+=== Confirmed the gap is not already claimed elsewhere ===
+
+$ grep -n -i "compaction\|cold.tier\|tiering" docs/CLAIMS_MATRIX.md
+139: CLM-071 mentions "compaction" only for PyArrow/Parquet engine-side
+     encoding in the lakehouse *connector* (a derivative copy, explicitly
+     stated as never the evidence authority) — unrelated to the primary WAL.
+
+$ grep -n -i "compaction\|cold.tier\|tiering" ROADMAP.md docs/ROADMAP.md
+(no matches before this session's edit)
+
+docs/architecture/DEEP_DIVE.md §5 "Evidence Export & Long-Term Retention"
+lists archival_bundle.py's algorithm-agility mechanism but nothing about
+segment compaction or tiering.
+
+docs/operations/STORAGE_REQUIREMENTS.md's only relevant guidance: "Provision
+so the segment cannot reach capacity during a retention window" — i.e. the
+operational answer today is "give it enough disk," which is honest but
+means the absence of compaction is a real operational cost, not a defect
+that silently misleads (the storage doc already tells operators to plan for
+unbounded growth).
+
+=== Disposition ===
+
+This is a genuine absent capability, not a bug and not a false claim to
+retract. Building it (compacting a hash-chained, MMR-proof-backed WAL
+without breaking inclusion-proof reachability for archived leaves, plus a
+cold-tier storage adapter) is substantial design work — not a bounded fix
+AGENTS.md rule 2's "smallest authorized change" would license unilaterally.
+
+Recorded as `[ ]` open work in `docs/ROADMAP.md`'s "P2 performance and
+operations" section (matching REG-019's own P2 severity) and as a new
+paragraph in the summary `ROADMAP.md`'s "Evidence and storage" section,
+alongside the existing "Durable WAL backend options" entry it's adjacent to
+in scope. Both entries state the MMR-proof-reachability constraint any
+future implementation must satisfy, so this isn't a bare "not done" note.
+
+No code change. Closed DOCUMENTED rather than WONT-FIX: this is plausible
+future work with no stated reason to reject it, not a deliberately declined
+feature.

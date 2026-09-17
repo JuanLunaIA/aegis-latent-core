@@ -1,0 +1,100 @@
+REG-016 — DOCUMENTED: the group-commit memory-ordering inversion is
+deliberate, already partially documented in CLM-082, and its one genuinely
+undocumented residual (refused-commit bytes surviving in the WAL and
+replaying as committed) is now written into BOUNDARIES.md and
+FAILURE_SEMANTICS.md. No correctness gap; the safe direction of the
+asymmetry is what's preserved.
+
+Investigation delegated to a wal-durability-engineer subagent (read-only),
+findings independently verified below before any doc edit was made.
+
+=== The mechanism, confirmed from source ===
+
+$ sed -n '2019,2032p' aegis/core/crypto_audit.py
+    def _persist_node(self, node: AuditNode) -> int | None:
+        """... Writes and flushes, but does **not** ``fsync``. The record is in
+        the operating system's hands and correctly ordered against every other
+        record, and is not yet on stable storage — so this returns a
+        group-commit ticket, and the caller must pass it to
+        :meth:`_await_durable` *after releasing the lock* ..."""
+
+$ sed -n '2100,2115p' aegis/core/crypto_audit.py
+    def _await_durable(self, ticket: int | None) -> None:
+        """Block until a ticketed record is on stable storage.
+        Must be called with the ledger lock **released**. ..."""
+        ...
+        except WalDurabilityError:
+            with self._lock:
+                self._fault_state = "wal_persist_failed"
+            raise
+
+Confirms: a node's bytes are written+flushed under the lock and the node
+enters the in-memory chain before its batch's fsync runs (lock released).
+This is "memory inversion" relative to the old per-record scheme, where
+fsync happened before the node was linkable.
+
+=== Where the decision was made and pinned (git history) ===
+
+The seed's "PR #180" label is wrong. `git log --oneline --all -- \
+aegis/core/group_commit.py` shows one authoring commit, `b791638` (#157);
+the decision to NOT build a staging buffer is pinned in `bca3372` (#183,
+"Record the read-back v5.0.0 publication state, and close four audit
+findings"), confirmed by:
+
+$ git show -s --format=%B bca3372 | grep -n "Group-commit staging buffer"
+98:- Group-commit staging buffer NOT built: it serialises the append the
+   coalescing
+100:  rejected records ARE in the WAL -- written before the fsync that failed.
+
+(`f1dca32`, #180, touches shredding/WAF/Phase-0 docs — no WAL code.)
+Corrected the stale `[PR:180]` tag on REG-004 too while here: `git log
+--oneline --all -- tests/test_stream_admission_gate.py` shows that file
+also introduced by `bca3372` (#183), not `f1dca32` (#180) — both REG-004
+and REG-016 had inherited the same wrong PR label.
+
+=== What was already documented vs. genuinely missing ===
+
+Already documented (so the seed's premise partially overstated the gap):
+`docs/CLAIMS_MATRIX.md` `CLM-082` already states the in-memory-chain-before-
+fsync ordering, the collective/terminal failure semantics, and that "the
+older claim that each node is fsynced before the chain is updated no longer
+holds." Pinned by `tests/test_coalesced_commit.py` (15 passed:
+`.venv/bin/python -m pytest -q tests/test_coalesced_commit.py`).
+
+Genuinely missing, and the real gap this row closes: CLM-082 covers the
+*crash-during-the-window* case (a crash loses the in-memory chain, replay
+rebuilds a shorter consistent one) but not the *fsync-failure-without-a-
+crash* case — where the refused batch's bytes are already on the WAL file
+and replay reads them back as ordinary committed records, exactly matching
+the caller having been told `503`/failed. This existed only in
+`tests/test_coalesced_commit.py` (asserted, not narrated) and
+`CHANGELOG.md`, and two governing docs described the pre-CLM-082 ordering
+without updating: `docs/architecture/FAILURE_SEMANTICS.md` row 4 said "No
+durable record" (true for the fsync itself, misleading about the WAL file
+contents) and its §3 described the old build→sign→write→flush→fsync order
+entirely under the lock, which CLM-082 replaced.
+
+=== Fix applied ===
+
+1. `docs/architecture/FAILURE_SEMANTICS.md` — row 4's evidence cell and §3
+   rewritten to describe the actual group-commit ordering and name the
+   refused-bytes-survive-in-WAL residue explicitly, citing CLM-082 and
+   tests/test_coalesced_commit.py.
+2. `docs/BOUNDARIES.md` — new Evidence boundaries row, "Refused commit on
+   group-commit fsync failure," stating what a `503` caller can rely on
+   (no unconfirmed node links against it) and what it leaves open (the
+   refused bytes still replay as committed).
+3. `docs/REGISTRY.md` REG-004's `[PR:180]` corrected to `[PR:183]`.
+
+No code change: no caller is ever told "durable" without a completed
+covering fsync, no invariant is relaxed, and the residue direction is the
+one the design deliberately prefers (per PR #183's own stated reasoning) —
+this closes a documentation gap, not a correctness one.
+
+=== Gates ===
+
+python tools/docs/verify_documentation.py --root . --strict: PASS
+python scripts/verify_docs.py --root .: PASS
+python scripts/verify_claims.py: PASS
+bash scripts/verify_links.sh --root .: PASS
+git diff --check: clean

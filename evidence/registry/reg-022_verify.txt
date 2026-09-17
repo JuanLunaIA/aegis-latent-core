@@ -1,0 +1,77 @@
+REG-022 — VERIFIED: the shredder-vault-backup/hardware-retention hazard is
+real and unfixable in Python, and it is already disclosed accurately and
+specifically in six places, including the controlling claims register.
+
+=== Mechanism ===
+
+Subject keys (256-bit AES-GCM) live in exactly one place: a local SQLite
+table `subject_keys(subject_id TEXT PRIMARY KEY, key BLOB)` in a file at
+`<wal_path>.shredder.db` (or `:memory:`), mode 0600
+(`aegis/core/crypto_shredder.py`). `erase()` does three things: best-effort
+in-process `bytearray` zeroing, `DELETE FROM subject_keys`, then `VACUUM` +
+commit. There is no external vault/HSM/KMS delete call, because there is no
+external write of the key either — confirmed by grep, `subject_keys`
+appears in no other module.
+
+Checked the adjacent custody modules to rule out a missed destroy-call
+(option "FIXED" in the seed's framing): `aegis/core/secrets.py`'s
+`VaultManager` is dynamic-credential *retrieval* (no delete/destroy method,
+never touched by the shredder — its own docstring's "vault" is the local
+SQLite file, an unrelated name collision with HashiCorp Vault);
+`aegis/core/hsm.py` is a PKCS#11 signing backend; `tpm.py` is measured-boot
+attestation; `hardware_token.py` is session-token binding. None stores
+subject keys, so there is no existing destruction API being skipped.
+
+=== Confirmed disclosure already exists, precisely, in six places ===
+
+1. `aegis/core/crypto_shredder.py:28-50` (module docstring) — names
+   allocator copies, SQLite rollback journal/WAL, filesystem journaling,
+   page cache, swap, snapshots, backups, replicas, and SSD
+   wear-levelling/over-provisioning explicitly; states the bytearray scrub
+   is hygiene not sanitisation; directs operators to an HSM/KMS with key
+   deletion plus deployment acceptance.
+2. `aegis/core/crypto_audit.py:1839-1849` (`crypto_shred` docstring).
+3. `aegis/config.py:436-444` (field description).
+4. `docs/CLAIMS_MATRIX.md`, `CLM-068` — same hazard list plus "restore it
+   from backup and every erasure through it is undone".
+5. `docs/institutional/UNSUPPORTED_CLAIMS.md`, `UC-037` — vault backups,
+   replicas, prior exports, Art. 17(2); `LEGAL-REVIEW-REQUIRED`.
+6. `docs/operations/BACKUP_RESTORE.md:21,25` and
+   `docs/privacy/DATA_RETENTION.md:87-89` — the restore-undoes-erasure
+   tension named explicitly as an operator decision, not a technical one.
+
+`docs/BOUNDARIES.md` carries no shredder row, but that document
+consolidates default-surface boundaries and shredding is off by default
+(`AEGIS_ENABLE_CRYPTOGRAPHIC_SHREDDING=true` required) — not a material gap
+given the six citations above.
+
+=== Real residual (stated honestly, not papered over) ===
+
+`VACUUM` rewrites the SQLite file and unlinks the old one; the freed blocks
+that held the key are not overwritten. `tests/test_crypto_shredder.py`
+verifies the key bytes are absent from the *resulting* file — a
+filesystem-level check, not a media-level one. This is exactly the class of
+hazard the docstring's hedge already covers in substance ("SSD's
+wear-levelling ... where an overwrite does not touch the cell that held the
+old value"); it was not separately measured here and no additional claim is
+made about it.
+
+=== A separate, now-fixed stale claim found while investigating ===
+
+`docs/privacy/DATA_RETENTION.md` line ~90 read: "It does not remove the
+node's request and response digests. Those are retained after erasure, so
+a party holding a candidate plaintext can still confirm it." — accurate
+before `REG-012`/`CLM-098`, false after: those digests are now
+`HMAC-SHA256` under a salt derived from the subject key, so destroying the
+key also destroys confirmability. Corrected in the same commit as this
+REG-022 closure, matching the wording `UC-037` already uses for this exact
+correction.
+
+=== Disposition ===
+
+Closed VERIFIED: the hazard is real, unfixable by this codebase alone (an
+HSM/KMS is the actual remedy and is explicitly named as such), and was
+already disclosed accurately before this session touched it. No code
+change. The one stale sentence found in passing was corrected as a small,
+directly-related fix, not scope creep — it was found while verifying this
+exact row's disclosure surface.

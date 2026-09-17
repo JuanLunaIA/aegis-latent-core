@@ -65,6 +65,8 @@ Names as implemented. Do not alert on a metric not in this table; it does not ex
 | `aegis_stream_duration_seconds` | Histogram | Admitted stream lifetime |
 | `aegis_stream_tokens_total` | Counter | Tokens emitted |
 | `aegis_stream_redactions_total` | Counter | Redactions applied in stream |
+| `aegis_stream_admission_active` | Gauge | Concurrent streams admitted right now, out of `AEGIS_MAX_CONCURRENT_STREAMS` on this process. Sustained proximity to the limit is the FD/memory-exhaustion warning signal a slow-drip client produces (`REG-050`); this process-local gauge is what closes that gap — a per-replica ceiling, not a cluster-wide one, matching `StreamAdmissionGate`'s own scope. |
+| `aegis_stream_admission_rejected_total` | Gauge | Cumulative streaming requests refused since process start because the ceiling was already reached. A Gauge, not a Counter, mirroring `aegis_audit_chain_nodes_total`'s convention: it reads a count the gate already tracks rather than being independently incremented at the reject site. |
 | `aegis_analysis_queue_rejections_total` | Counter | Enrichment rejected by the bounded queue |
 | `aegis_analysis_errors_total` | Counter | Analysis worker errors |
 | `aegis_background_scheduling_jitter_seconds` | Histogram | Delay between enqueue and execution |
@@ -166,6 +168,21 @@ An evidence-commit failure is more urgent than a latency regression. A slow gate
   labels: {severity: info}
   annotations:
     summary: "Enrichment rejected; governed calls unaffected"
+
+- alert: AegisStreamAdmissionNearCeiling
+  expr: aegis_stream_admission_active / on() vector(<AEGIS_MAX_CONCURRENT_STREAMS>) > 0.9
+  for: 5m
+  labels: {severity: warning}
+  annotations:
+    summary: "Concurrent streams sustained above 90% of AEGIS_MAX_CONCURRENT_STREAMS"
+    description: "New streaming requests are close to being refused (429) on this replica. Substitute the configured AEGIS_MAX_CONCURRENT_STREAMS value for the placeholder before deploying this rule — the gauge does not expose the ceiling itself."
+
+- alert: AegisStreamAdmissionRejecting
+  expr: increase(aegis_stream_admission_rejected_total[5m]) > 0
+  for: 0m
+  labels: {severity: info}
+  annotations:
+    summary: "Streaming requests refused; the concurrent-stream ceiling was reached at least once"
 ```
 
 The chart can render burn-rate SLO rules; see `deploy/helm/templates/prometheusrule.yaml`, disabled by default. Those require the Prometheus Operator and an approved SLO definition, and an SLO you have not agreed is not an SLO.

@@ -1,0 +1,44 @@
+REG-060 — FIXED: `.aegis_ai_context/` had a thorough purpose statement
+inside its own README, but nothing in the repository's main entry points
+(README.md, CONTRIBUTING.md, docs/REPOSITORY_MAP.md) signposted what the
+directory is or pointed a human reader to that explanation.
+
+=== Confirmed the gap, not assumed it ===
+
+$ grep -n "aegis_ai_context" README.md CONTRIBUTING.md docs/REPOSITORY_MAP.md
+(no matches — confirmed before writing anything)
+
+$ head -4 .aegis_ai_context/README.md
+# Aegis AI Context Router
+
+This directory is an **advisory, progressively disclosed repository-navigation
+aid**. Begin here, open only the layer needed for the task, and verify every
+material statement against the named source and tests. ...
+
+The internal explanation was already thorough and correctly scoped
+(explicitly disclaims being "concealed directives, authorization, private
+reasoning, proof, certification, or release evidence"). The gap was
+discoverability: a contributor reading the repository's own map document
+would never learn this directory exists or what it is for unless they
+happened to open it directly.
+
+=== Fix ===
+
+Added a new "AI context and navigation aids" section to
+`docs/REPOSITORY_MAP.md`, between "Tests and verification" and "Evidence
+and historical results," with a two-row table covering `.aegis_ai_context/`
+and `llms.txt` (the other navigation aid AGENTS.md names as a fallback:
+"use `llms.txt` as the compact navigation aid when that index is
+unavailable"). Both rows state the same non-authoritative boundary the
+existing internal documents already carry, rather than introducing new
+language — this is a signpost, not a new claim.
+
+Doc-only change; no code, manifest, or claims-register content touched.
+
+=== Gates ===
+
+python tools/docs/verify_documentation.py --root . --strict: PASS
+python scripts/verify_docs.py --root .: PASS
+python scripts/verify_claims.py: PASS
+bash scripts/verify_links.sh --root .: PASS
+git diff --check: clean

@@ -1,0 +1,56 @@
+REG-054 — FIXED: aegis/core/mmr.py's module-level comment corrected to
+match the actual default set by a prior session's REG P1-2 work.
+
+=== The stale claim ===
+
+Before (aegis/core/mmr.py, lines ~70-71):
+    # ``CryptographicAuditLedger`` now exposes the choice through
+    # ``mmr_hash_scheme``, still defaulting to v1. Two prerequisites blocked that
+    # and both are met:
+
+This was accurate when written (both prerequisites for switching the
+default were met, but the switch had not yet happened). A later session's
+work (task history: "P1-2: default new chains to MMR v2, adopt the WAL's
+scheme for existing ones") changed the actual default, but this comment
+was never updated to reflect it — leaving stale in-code documentation
+directly contradicting the current behavior.
+
+=== Confirmed the actual current default (source, not memory) ===
+
+$ sed -n '410,421p' aegis/config.py
+    mmr_hash_scheme: Literal["auto", "v1-asciihex", "v2-binary-domain-separated"] = Field(
+        default="auto",
+        description=(
+            "MMR hash construction for the audit ledger. 'auto' (the default) starts a NEW "
+            "chain on 'v2-binary-domain-separated', which applies RFC 6962 domain tags and so "
+            "prevents the leaf/interior-node type confusion v1 admits, and reopens an EXISTING "
+            "chain under whichever scheme its WAL recorded. ..."
+        ),
+    )
+
+Confirmed: `auto` (the config default) starts NEW chains on v2, not v1.
+`aegis/core/crypto_audit.py:792-794` implements this:
+`self.mmr_hash_scheme = (mmr_hash_scheme if self._scheme_pinned else
+MMR_NEW_CHAIN_DEFAULT_SCHEME)`.
+
+=== Fix ===
+
+Rewrote the comment block (aegis/core/mmr.py, module-level, the "Hash
+schemes" section) to state the actual current behavior: `auto` starts a
+new chain on v2 and reopens an existing chain under whichever scheme its
+WAL recorded, so a v1 chain in the field stays v1 (no in-place upgrade)
+and only a never-opened chain starts on v2. Also removed "and remains the
+default" from the preceding sentence about v1 being retained, since v1
+remains the scheme for *existing* chains but is no longer *the* default
+for new ones — that distinction is exactly what was previously blurred.
+
+Doc-only change to a code comment; no behavior touched.
+
+=== Tests ===
+
+$ .venv/bin/python -m pytest tests/test_mmr_v2_migration.py tests/ -k "mmr" -q
+378 passed, 6631 deselected in 6.03s
+
+No test asserts on the comment text itself (confirmed no grep hits for the
+old wording anywhere in docs/ either — REG-054's own registry row was the
+only citation of the stale line).

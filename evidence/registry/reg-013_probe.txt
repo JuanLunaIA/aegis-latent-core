@@ -1,0 +1,12 @@
+Confirmed: commit 9e90d99 (pre-REG-013) never references _outbound_trace_headers.
+  FOUND: 'stream_sse("/v1/chat/completions"' called with no extra_headers -> True
+  FOUND: 'forward_json("/v1/chat/completions"' called with no extra_headers -> True
+  FOUND: 'forward_json("/v1/completions"' called with no extra_headers -> True
+  FOUND: 'stream_native_anthropic(body)' called with no extra_headers -> True
+  FOUND: 'forward_native_anthropic(body)' called with no extra_headers -> True
+
+CONCLUSION: on commit 9e90d99, every forwarder call site omits extra_headers entirely.
+aegis/telemetry/otel.py's parse_trace_context/inject_trace_context existed, fully
+tested (tests/telemetry/test_otel_siem.py), and had zero callers outside that test file.
+A caller-supplied traceparent header was parsed nowhere on the request path and never
+reached the upstream provider call in any form.

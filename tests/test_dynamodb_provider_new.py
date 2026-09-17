@@ -13,15 +13,48 @@ import pytest
 # ── Optional-backend stubs (aioboto3/boto3/botocore) are installed globally by
 # tests/conftest.py before any test module is collected, which guarantees
 # botocore.exceptions.ClientError is a real exception class shared across every
-# test module regardless of collection order. Reuse that exact class as
+# test module regardless of collection order — a genuine install (see
+# REG-011's real-server integration tests) is preferred over the stub, so
+# _ClientError may be either the stub or the real botocore class depending on
+# what conftest.py found on the path. Reuse whichever one is bound as
 # _ClientError so the provider's `except ClientError` matches what these tests
 # raise — defining a separate local class here would reintroduce an
-# order-dependent identity mismatch.
+# order-dependent identity mismatch — and build instances only through
+# _client_error() below, which constructs correctly for either shape.
 from botocore.exceptions import ClientError as _ClientError  # noqa: E402
 
 from aegis_server.storage.dynamodb_provider import DynamoDBStorageProvider  # noqa: E402
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
+
+def _client_error(code: str = "TestError", msg: str = "test") -> _ClientError:
+    """Build a ``ClientError`` correctly whether ``_ClientError`` is the stub
+    or the real ``botocore`` class.
+
+    ``tests/conftest.py`` prefers a genuine ``botocore`` install over the stub
+    when one is present (needed for REG-011's real-server integration tests),
+    so which class this module binds is no longer guaranteed to be the
+    kwargs-only stub. The real constructor is
+    ``ClientError(error_response, operation_name)``; the stub takes
+    ``code=``/``msg=`` keywords. Try the real shape first and fall back so
+    this file's assertions on ``exc.response["Error"]["Code"]`` hold either
+    way, independent of collection order and of whether ``botocore`` happens
+    to be installed in the environment running these tests.
+    """
+    error_response = {"Error": {"Code": code, "Message": msg}}
+    try:
+        exc = _ClientError(error_response, "TestOperation")
+    except TypeError:
+        return _ClientError(code=code, msg=msg)
+    # The stub's constructor is ``(code=, msg=)`` with no keyword-only markers,
+    # so it also accepts two positional arguments without raising — it just
+    # silently misbinds them (code=<error_response dict>, msg="TestOperation").
+    # A non-raising call is therefore not proof the real botocore shape was
+    # used; confirm the code actually round-tripped before trusting `exc`.
+    if exc.response.get("Error", {}).get("Code") != code:
+        return _ClientError(code=code, msg=msg)
+    return exc
 
 
 def _make_provider(table="aegis_audit", region="us-east-1") -> DynamoDBStorageProvider:
@@ -129,7 +162,7 @@ async def test_initialize_creates_table():
 async def test_initialize_table_already_exists():
     p = _make_provider()
     client_ctx, mock_client = _make_client_ctx()
-    mock_client.create_table.side_effect = _ClientError(code="ResourceInUseException")
+    mock_client.create_table.side_effect = _client_error(code="ResourceInUseException")
 
     with patch.object(p, "_get_client", return_value=client_ctx):
         await p.initialize()  # should not raise
@@ -141,7 +174,7 @@ async def test_initialize_table_already_exists():
 async def test_initialize_other_client_error_raises():
     p = _make_provider()
     client_ctx, mock_client = _make_client_ctx()
-    mock_client.create_table.side_effect = _ClientError(code="AccessDeniedException")
+    mock_client.create_table.side_effect = _client_error(code="AccessDeniedException")
 
     with patch.object(p, "_get_client", return_value=client_ctx):
         with pytest.raises(RuntimeError, match="initialize failed"):
@@ -212,7 +245,7 @@ async def test_write_node_success():
 async def test_write_node_conditional_check_is_noop():
     p = _make_initialized_provider()
     table = _make_table_mock()
-    table.put_item = AsyncMock(side_effect=_ClientError(code="ConditionalCheckFailedException"))
+    table.put_item = AsyncMock(side_effect=_client_error(code="ConditionalCheckFailedException"))
     resource_ctx = _make_resource_ctx(table)
 
     with patch.object(p, "_get_resource", return_value=resource_ctx):
@@ -233,7 +266,7 @@ async def test_write_node_conditional_check_is_noop():
 async def test_write_node_other_client_error_raises():
     p = _make_initialized_provider()
     table = _make_table_mock()
-    table.put_item = AsyncMock(side_effect=_ClientError(code="ProvisionedThroughputExceeded"))
+    table.put_item = AsyncMock(side_effect=_client_error(code="ProvisionedThroughputExceeded"))
     resource_ctx = _make_resource_ctx(table)
 
     with patch.object(p, "_get_resource", return_value=resource_ctx):
@@ -348,7 +381,7 @@ async def test_get_node_found():
 async def test_get_node_client_error_raises():
     p = _make_initialized_provider()
     table = _make_table_mock()
-    table.get_item = AsyncMock(side_effect=_ClientError())
+    table.get_item = AsyncMock(side_effect=_client_error())
     resource_ctx = _make_resource_ctx(table)
 
     with patch.object(p, "_get_resource", return_value=resource_ctx):
@@ -404,7 +437,7 @@ async def test_list_nodes_with_tenant_filter():
 async def test_list_nodes_client_error_raises():
     p = _make_initialized_provider()
     table = _make_table_mock()
-    table.query = AsyncMock(side_effect=_ClientError())
+    table.query = AsyncMock(side_effect=_client_error())
     resource_ctx = _make_resource_ctx(table)
 
     with patch.object(p, "_get_resource", return_value=resource_ctx):
@@ -491,7 +524,7 @@ async def test_check_integrity_broken_chain():
 async def test_check_integrity_client_error_raises():
     p = _make_initialized_provider()
     table = _make_table_mock()
-    table.query = AsyncMock(side_effect=_ClientError())
+    table.query = AsyncMock(side_effect=_client_error())
     resource_ctx = _make_resource_ctx(table)
 
     with patch.object(p, "_get_resource", return_value=resource_ctx):

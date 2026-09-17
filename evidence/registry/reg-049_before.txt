@@ -1,0 +1,7 @@
+REG-049 — before (preflight absent)
+FAILED tests/test_wal_headroom_preflight.py::test_below_the_floor_traffic_is_refused
+FAILED tests/test_wal_headroom_preflight.py::test_the_refused_request_never_reaches_the_provider
+FAILED tests/test_wal_headroom_preflight.py::test_above_the_floor_nothing_changes
+FAILED tests/test_wal_headroom_preflight.py::test_the_check_is_off_unless_configured
+FAILED tests/test_wal_headroom_preflight.py::test_a_failed_stat_does_not_invent_an_outage
+5 failed in 1.47s

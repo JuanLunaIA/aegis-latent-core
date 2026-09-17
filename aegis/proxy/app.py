@@ -9,6 +9,9 @@ import hashlib
 import json
 import logging
 import math
+import os
+import secrets
+import shutil
 import time
 import uuid
 from collections import OrderedDict
@@ -75,6 +78,7 @@ from aegis.proxy.waf import AegisWAF
 from aegis.storage.s3_worm import Boto3S3WormProvider, ObjectLockMode, S3WormArchiver
 from aegis.storage.segment_manifest import archive_finalized_segment
 from aegis.telemetry.events import EventKind, EventOutcome, SecurityEvent, Severity
+from aegis.telemetry.otel import TraceContext, inject_trace_context, parse_trace_context
 from aegis.telemetry.siem import HTTPSIEMSink, SIEMExporter, SIEMFormat
 
 logger = logging.getLogger(__name__)
@@ -380,6 +384,10 @@ class _AppState:
     _pci_scrubber: PCIScrubber | None
     # Multi-turn behavioral WAF session tracker (Domain 5.1).
     waf_session_tracker: WAFSessionTracker
+    # Cached free-bytes reading for the WAL volume preflight. Refreshed on a
+    # short TTL because `disk_usage` is a statvfs and this runs per request.
+    _wal_space_free: int | None = None
+    _wal_space_checked_at: float = 0.0
     # Scans retrieved content -- tool results, RAG context -- for embedded
     # injection. None when rag_injection_scanning is off. Covers the indirect
     # case the WAF structurally cannot: a clean user turn carrying a poisoned
@@ -414,6 +422,105 @@ def _extract_payload_text(body: dict[str, Any]) -> str:
         prompt = body["prompt"]
         return " ".join(prompt) if isinstance(prompt, list) else str(prompt)
     return ""
+
+
+def _outbound_trace_headers(request: Request) -> dict[str, str]:
+    """Propagate the inbound W3C ``traceparent`` onto the outbound provider call.
+
+    REG-013: the gap was that a caller's ``traceparent`` was accepted on the
+    way in and simply discarded -- the upstream provider call never carried
+    any trace context, so a distributed trace could not be stitched across
+    Aegis's hop even when both sides otherwise supported it.
+
+    Per the W3C Trace Context spec, a hop that does not create its own
+    exported span still mints a fresh ``span-id`` when it forwards -- it does
+    not resend the inbound `span-id` unchanged, which would make Aegis and
+    its caller indistinguishable to anything reconstructing the trace. This
+    mirrors the derivation ``TraceProvider.span()`` already uses for a real
+    span: same ``trace_id`` as the parent, a new random ``span_id``, and the
+    parent's own sampled flag. A missing or malformed inbound header gets a
+    freshly synthesized trace context instead of silently forwarding nothing,
+    so the outbound call always carries a valid ``traceparent``.
+
+    This is header propagation only -- see ``CLM-101``. It does not create,
+    record, or export any Aegis-owned span (``TraceProvider`` has no wired
+    exporter on this path), and it establishes no timing, sampling-decision,
+    or backend-visibility guarantee beyond the header itself being correct.
+    """
+    try:
+        parent = parse_trace_context(request.headers)
+    except ValueError:
+        parent = None
+    context = TraceContext(
+        trace_id=parent.trace_id if parent is not None else secrets.token_hex(16),
+        span_id=secrets.token_hex(8),
+        sampled=parent.sampled if parent is not None else True,
+        tracestate=parent.tracestate if parent is not None else None,
+    )
+    headers: dict[str, str] = {}
+    inject_trace_context(context, headers)
+    return headers
+
+
+_WAL_SPACE_TTL_SECONDS = 5.0
+
+
+def _require_wal_headroom(state: _AppState) -> None:
+    """Refuse at ingress when the WAL volume is below the configured floor.
+
+    Disabled unless ``AEGIS_WAL_MIN_FREE_BYTES`` is set, and off by default.
+
+    **This is not the thing that makes a full disk safe.** A commit onto a full
+    volume already fails closed: the write or the ``fsync`` raises, the ledger
+    latches ``wal_persist_failed``, and ``_require_intact_ledger`` answers 503
+    from then on. Measured, not assumed -- see
+    ``evidence/registry/reg-049_probe.txt``, which injects ``ENOSPC`` at both
+    points and finds a raise and a latched fault, no deadlock, at either.
+
+    What this adds is *when*. Without it the first failure is discovered after
+    the provider has been called and billed, and the caller pays for a request
+    whose evidence could never be written. With it that request is refused
+    before dispatch.
+
+    The result is cached for a few seconds because ``disk_usage`` is a
+    ``statvfs`` and this runs on every governed request. A stale reading is
+    acceptable precisely because this is an early warning rather than the
+    guarantee: the commit path remains the thing that cannot be fooled.
+    """
+    floor = getattr(state.settings, "wal_min_free_bytes", 0)
+    if not floor:
+        return
+    now = time.monotonic()
+    cached = getattr(state, "_wal_space_checked_at", 0.0)
+    if now - cached < _WAL_SPACE_TTL_SECONDS:
+        free = getattr(state, "_wal_space_free", None)
+    else:
+        try:
+            free = shutil.disk_usage(
+                os.path.dirname(os.path.abspath(state.ledger.persistence_path))
+            ).free
+        except OSError:
+            # An unreadable volume is not evidence of a full one, and refusing
+            # traffic on a failed stat would invent an outage. The commit path
+            # still decides.
+            return
+        state._wal_space_free = free
+        state._wal_space_checked_at = now
+    if free is None or free >= floor:
+        return
+    observability.AUDIT_COMMIT_ERRORS.inc()
+    logger.error(
+        "governed request rejected: WAL volume has %d bytes free, below the %d floor",
+        free,
+        floor,
+    )
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=(
+            f"Evidence storage below the configured floor ({free} bytes free, "
+            f"{floor} required). Refusing before dispatch rather than after."
+        ),
+    )
 
 
 async def _guard_retrieved_content(
@@ -798,6 +905,15 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         else None
     )
     state.stream_gate = StreamAdmissionGate(cfg.max_concurrent_streams)
+    # set_function, not set(): the gate is mutated from guarded_stream's
+    # finally (aegis/proxy/streaming.py), which deliberately does not import
+    # observability, so there is no push site on release. Reading the gate's
+    # own counters lazily at scrape time reflects live state without adding
+    # that cross-module dependency. Called unconditionally, like every other
+    # metric write in this module — the no-op stub accepts the same call
+    # when prometheus_client is not installed.
+    observability.STREAM_ADMISSION_ACTIVE.set_function(lambda: state.stream_gate.active)
+    observability.STREAM_ADMISSION_REJECTED.set_function(lambda: state.stream_gate.rejected)
     state.waf_session_tracker = WAFSessionTracker(
         max_sessions=4_096,
         window=cfg.waf_session_window,
@@ -1321,6 +1437,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         ``/metrics`` stay reachable on purpose so an operator can still see the
         fault and the depth of the surviving chain.
         """
+        _require_wal_headroom(state)
         fault = getattr(state.ledger, "_fault_state", "healthy")
         if fault == "healthy":
             return
@@ -1713,7 +1830,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             body["top_logprobs"] = cfg.top_logprobs
 
         if body.get("stream", False):
-            stream = state.forwarder.stream_sse("/v1/chat/completions", body)
+            stream = state.forwarder.stream_sse(
+                "/v1/chat/completions", body, extra_headers=_outbound_trace_headers(request)
+            )
 
             async def _commit_stream_terminal(summary: StreamEvidenceSummary) -> None:
                 audit_sid = (
@@ -1828,7 +1947,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             with observability.record_span(
                 "aegis.forward", provider=cfg.provider, endpoint="chat.completions"
             ):
-                upstream = await state.forwarder.forward_json("/v1/chat/completions", body)
+                upstream = await state.forwarder.forward_json(
+                    "/v1/chat/completions", body, extra_headers=_outbound_trace_headers(request)
+                )
         except CircuitOpenError:
             observability.FORWARD_ERRORS.labels(stage="circuit_open").inc()
             await reservation.refund(0)
@@ -2007,7 +2128,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
 
         if body.get("stream") is True:
-            upstream_stream = state.forwarder.stream_native_anthropic(body)
+            upstream_stream = state.forwarder.stream_native_anthropic(
+                body, extra_headers=_outbound_trace_headers(request)
+            )
             terminal_marker = b'event: message_stop\ndata: {"type":"message_stop"}\n\n'
 
             async def _commit_anthropic_terminal(summary: StreamEvidenceSummary) -> None:
@@ -2111,7 +2234,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
 
         try:
-            upstream = await state.forwarder.forward_native_anthropic(body)
+            upstream = await state.forwarder.forward_native_anthropic(
+                body, extra_headers=_outbound_trace_headers(request)
+            )
         except CircuitOpenError:
             await reservation.refund(0)
             return await _durable_error_response(
@@ -2269,7 +2394,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         completions_start = time.perf_counter()
         try:
-            upstream = await state.forwarder.forward_json("/v1/completions", body)
+            upstream = await state.forwarder.forward_json(
+                "/v1/completions", body, extra_headers=_outbound_trace_headers(request)
+            )
         except CircuitOpenError:
             observability.FORWARD_ERRORS.labels(stage="circuit_open").inc()
             await reservation.refund(0)

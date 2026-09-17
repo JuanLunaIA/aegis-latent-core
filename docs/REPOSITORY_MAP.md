@@ -47,6 +47,13 @@ Read the root [`README.md`](../README.md) first. Paths below describe the checke
 | `tools/docs/verify_documentation.py` | Required-document, relative-link, table, metadata, and claim-boundary verifier |
 | `scripts/verify_release_contract.py` | Source/version contract; passing it is not publication evidence |
 
+## AI context and navigation aids
+
+| Path | Role | Boundary |
+|---|---|---|
+| `.aegis_ai_context/` | Advisory, progressively-disclosed repository-navigation index for coding agents — start at [`.aegis_ai_context/README.md`](../.aegis_ai_context/README.md) | Not authoritative and not a hidden instruction channel: it contains reproducible navigation aids and stop conditions, never concealed directives, private reasoning, or release evidence. Every material claim must still be verified against the named source and tests. Regenerate with `python scripts/generate_ai_context_manifest.py`, verify with `python scripts/verify_ai_context_manifest.py`. |
+| `llms.txt` | Compact top-level navigation aid, used when `.aegis_ai_context/` is unavailable to a given tool | Same non-authoritative boundary as `.aegis_ai_context/` — a concise pointer to the real sources, not a substitute for reading them. |
+
 ## Evidence and historical results
 
 [`evidence/INDEX.md`](../evidence/INDEX.md) is the evidence entry point. The 2026-08-20 through 2026-08-22 benchmark, security, GitHub-status, remediation, and documentation-audit collections are preserved as historical v3.1.0-era observations. The 2026-08-24 candidate/no-go records are superseded for current source-state identification by the 2026-08-25 post-merge audit, while retaining their historical results and decision context.

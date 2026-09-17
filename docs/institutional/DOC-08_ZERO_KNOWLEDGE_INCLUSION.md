@@ -141,6 +141,12 @@ and that trades away the preview evidence those bytes exist to carry. Nothing in
 the gateway currently makes that trade automatically, and nothing warns when a
 configuration puts proofs out of reach.
 
+That cap is not reachable from gateway configuration: `aegis/proxy/app.py`
+constructs the ledger without `max_forensic_bytes` and `aegis/config.py` defines
+no setting or environment variable for it, so the trade described above is
+available only to an in-process caller that constructs `CryptographicAuditLedger`
+itself, not to an operator running the gateway as deployed.
+
 ### 6.4 The proving system does not refuse an unsatisfiable witness
 
 Measured, and material to any integration: given a witness that does not satisfy
@@ -167,6 +173,12 @@ Derivation is not free. For the shapes measured, the verifier key is tens of
 megabytes and takes seconds to build, against a proof of roughly 84–110 KB. The
 asymmetry is the Hyrax commitment's, not this circuit's, and it means a verifier
 pays a per-shape cost that a proof-size figure does not reveal.
+
+Because the shape is the prover's declaration rather than a measurement, a
+verifier must bound `prefix_len`, `path_depth` and `peak_count` against the leaf
+and ledger sizes they expect before calling `zk_verifier_key`; nothing in the
+binding caps them, and derivation for an absurd shape costs memory in
+proportion to it.
 
 ### 6.6 Status, restated
 
