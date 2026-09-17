@@ -250,9 +250,13 @@ class TestShreddingVersion:
         with _sealing_ledger(tmp_path) as ledger:
             node = ledger.commit_forensic(state_id="r", request_bytes=SECRET, tenant_id="s")
 
-        from aegis.core.crypto_shredder import SHRED_SCHEME_V1
+        from aegis.core.crypto_shredder import SHRED_SCHEME_V2
 
-        assert node.shredding_version == SHRED_SCHEME_V1
+        # v2 since REG-012. The envelope is byte-identical to v1; the label
+        # moved because a v2 ledger also keys its request/response digests to
+        # the same destructible key, and a reader must not assume a v2 node
+        # carries v1's confirmable plain digests.
+        assert node.shredding_version == SHRED_SCHEME_V2
         assert node.sealed_ciphertext != ""
 
     def test_enabling_shredding_on_an_existing_plain_chain_is_supported_not_refused(
@@ -277,9 +281,9 @@ class TestShreddingVersion:
             second.commit_forensic(state_id="after", request_bytes=SECRET, tenant_id="s")
 
             versions = [node.shredding_version for node in second.chain]
-            from aegis.core.crypto_shredder import SHRED_SCHEME_UNSEALED, SHRED_SCHEME_V1
+            from aegis.core.crypto_shredder import SHRED_SCHEME_UNSEALED, SHRED_SCHEME_V2
 
-            assert versions == [SHRED_SCHEME_UNSEALED, SHRED_SCHEME_V1]
+            assert versions == [SHRED_SCHEME_UNSEALED, SHRED_SCHEME_V2]
             assert second.chain[0].sealed_ciphertext == ""
             assert second.chain[1].sealed_ciphertext != ""
 

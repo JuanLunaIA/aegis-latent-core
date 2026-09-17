@@ -45,6 +45,7 @@ from aegis.core.mmr import MMR_PROOF_VERSION_V1
 from aegis.core.normalization import canonical_normalize
 from aegis.core.pci_detector import PCIScrubber
 from aegis.core.phi_deidentifier import PHIDeidentifier
+from aegis.core.rag_injection_scanner import RAGInjectionScanner
 from aegis.core.ratelimiter import RateLimitBackendUnavailable as LegacyRateLimitBackendUnavailable
 from aegis.core.secrets import VaultManager
 from aegis.core.session_manager import SessionLifecycleManager
@@ -379,6 +380,11 @@ class _AppState:
     _pci_scrubber: PCIScrubber | None
     # Multi-turn behavioral WAF session tracker (Domain 5.1).
     waf_session_tracker: WAFSessionTracker
+    # Scans retrieved content -- tool results, RAG context -- for embedded
+    # injection. None when rag_injection_scanning is off. Covers the indirect
+    # case the WAF structurally cannot: a clean user turn carrying a poisoned
+    # tool result the application fetched on the model's behalf.
+    rag_scanner: RAGInjectionScanner | None
     # Optional best-effort copy of terminal streaming frames. JSONL is authoritative.
     native_stream_wal: Any
     # Caps concurrent governed SSE streams in this process. Per-stream memory is
@@ -408,6 +414,61 @@ def _extract_payload_text(body: dict[str, Any]) -> str:
         prompt = body["prompt"]
         return " ".join(prompt) if isinstance(prompt, list) else str(prompt)
     return ""
+
+
+async def _guard_retrieved_content(
+    state: _AppState,
+    body: dict[str, Any],
+    *,
+    tenant_id: str | None,
+    endpoint: str,
+) -> None:
+    """Refuse a request whose *retrieved* content carries an injection payload.
+
+    The WAF inspects what the caller sent. This inspects what the application
+    fetched on the model's behalf -- tool results, function results, RAG context
+    blocks -- which is a surface the WAF structurally cannot cover: in an
+    indirect injection the user turn is clean and the payload rides in on data
+    the caller never typed.
+
+    Mechanism, and why it sits exactly here: the scan runs after the WAF and
+    **before the forwarder is called**, so a poisoned context is never
+    dispatched upstream and never billed. The refusal is committed to the same
+    signed chain as any other rejection (``CLM-060``) before the error returns.
+
+    This is detection over a finite pattern set, not a boundary. Passing it
+    establishes that no declared pattern matched -- nothing about whether the
+    retrieved content is safe (``UC-042`` applies to this layer exactly as it
+    does to the WAF). Raising ``rag_injection_block_threshold`` admits more;
+    ``rag_injection_scanning=False`` removes the detection entirely and weakens
+    no evidence or durability property.
+    """
+    scanner = getattr(state, "rag_scanner", None)
+    if scanner is None:
+        return
+    messages = body.get("messages")
+    if not isinstance(messages, list):
+        return
+    for result in scanner.scan_messages(messages):
+        if result.clean:
+            continue
+        observability.WAF_BLOCKS.labels(layer="rag_injection").inc()
+        evidence = await _commit_rejection_evidence(
+            state,
+            rejection_code=403,
+            reason_category="rag_injection_block",
+            request_bytes=_rejection_evidence_bytes(body),
+            tenant_id=tenant_id,
+            endpoint=endpoint,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Prompt injection detected in retrieved context "
+                f"({result.source_id}): {result.reason}"
+            ),
+            headers=evidence,
+        )
 
 
 def _rejection_evidence_bytes(body: dict[str, Any]) -> bytes:
@@ -731,6 +792,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     state.proxy_auth = ProxyKeyAuth(cfg)
     state.audit_auth = AuditKeyAuth(cfg)
     state.waf = AegisWAF(strict_mode=cfg.waf_strict_mode)
+    state.rag_scanner = (
+        RAGInjectionScanner(block_threshold=cfg.rag_injection_block_threshold)
+        if cfg.rag_injection_scanning
+        else None
+    )
     state.stream_gate = StreamAdmissionGate(cfg.max_concurrent_streams)
     state.waf_session_tracker = WAFSessionTracker(
         max_sessions=4_096,
@@ -1576,6 +1642,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 headers=evidence,
             )
 
+        # REG-010: retrieved content is scanned after the WAF and before the
+        # forwarder, so a poisoned tool result is never dispatched upstream.
+        await _guard_retrieved_content(
+            state, body, tenant_id=principal.tenant_id, endpoint=request.url.path
+        )
+
         # FIX-APP-02: pass state instead of cfg so the function uses the cached singletons.
         _apply_request_entropy_guard(request, body, state)
 
@@ -1903,6 +1975,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 detail=f"Payload rejected by WAF: {waf_result.reason}",
                 headers=evidence,
             )
+
+        # REG-010: retrieved content is scanned after the WAF and before the
+        # forwarder, so a poisoned tool result is never dispatched upstream.
+        await _guard_retrieved_content(
+            state, body, tenant_id=principal.tenant_id, endpoint=request.url.path
+        )
         _apply_request_entropy_guard(request, body, state)
         body, request_scrubbed, scrub_method = _scrub_anthropic_payload(body, state)
 
@@ -2143,6 +2221,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 detail=f"WAF rejected: {waf_result.reason}",
                 headers=evidence,
             )
+
+        # REG-010: retrieved content is scanned after the WAF and before the
+        # forwarder, so a poisoned tool result is never dispatched upstream.
+        await _guard_retrieved_content(
+            state, body, tenant_id=principal.tenant_id, endpoint=request.url.path
+        )
 
         _apply_request_entropy_guard(request, body, state)
 

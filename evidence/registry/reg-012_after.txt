@@ -1,0 +1,8 @@
+REG-012 — fixed source
+
+stored request_hash : ccbb0dcce5e7058e47eda020eb40342c...
+sha256(guess)       : 6160d4d9f315d8e8d1ac6bef5658fe87...
+GUESS CONFIRMED AGAINST ERASED RECORD: False
+
+.......                                                                  [100%]
+7 passed in 0.38s
