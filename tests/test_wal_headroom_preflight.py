@@ -156,9 +156,7 @@ def test_a_failed_stat_does_not_invent_an_outage(tmp_path: Any) -> None:
     with patch("aegis.proxy.app.LLMForwarder", return_value=forwarder):
         app = create_app(_settings(tmp_path, wal_min_free_bytes=10_000_000))
         with TestClient(app) as client:
-            with patch(
-                "aegis.proxy.app.shutil.disk_usage", side_effect=OSError("stat failed")
-            ):
+            with patch("aegis.proxy.app.shutil.disk_usage", side_effect=OSError("stat failed")):
                 response = client.post("/v1/chat/completions", headers=_AUTH, json=_PAYLOAD)
     assert response.status_code == 200
     forwarder.forward_json.assert_awaited()

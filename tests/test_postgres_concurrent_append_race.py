@@ -120,7 +120,9 @@ async def test_concurrent_genesis_writers_produce_exactly_one_winner(provider: A
     winners = [r for r in results if isinstance(r, str)]
     losers = [r for r in results if isinstance(r, ConcurrentChainMutationError)]
     other_errors = [
-        r for r in results if isinstance(r, Exception) and not isinstance(r, ConcurrentChainMutationError)
+        r
+        for r in results
+        if isinstance(r, Exception) and not isinstance(r, ConcurrentChainMutationError)
     ]
 
     assert other_errors == [], f"unexpected exception types: {other_errors!r}"
@@ -181,9 +183,7 @@ async def test_the_guard_holds_on_a_grown_chain_not_only_at_genesis(provider: An
     conn = await asyncpg.connect(dsn=_DSN)
     try:
         row_count = await conn.fetchval("SELECT COUNT(*) FROM audit_nodes")
-        prev_hash_count = await conn.fetchval(
-            "SELECT COUNT(DISTINCT prev_hash) FROM audit_nodes"
-        )
+        prev_hash_count = await conn.fetchval("SELECT COUNT(DISTINCT prev_hash) FROM audit_nodes")
     finally:
         await conn.close()
     assert row_count == 3, "three rounds, one committed winner each"

@@ -99,9 +99,7 @@ def _fresh_timestamp() -> str:
     return f"{datetime.now(UTC).isoformat()}-{_timestamp_counter:012d}"
 
 
-async def _write(
-    provider: DynamoDBStorageProvider, *, label: str, expected_prev_hash: str
-) -> str:
+async def _write(provider: DynamoDBStorageProvider, *, label: str, expected_prev_hash: str) -> str:
     """Write one node with a genuinely fresh timestamp.
 
     ``get_latest_node`` orders the GSI by ``timestamp`` alone
@@ -133,9 +131,7 @@ async def provider() -> Any:
     if not reachable:
         pytest.skip(f"no reachable DynamoDB Local at {_ENDPOINT!r} ({reason})")
     table_name = f"aegis-reg011-{uuid.uuid4().hex[:12]}"
-    p = DynamoDBStorageProvider(
-        table_name=table_name, region="us-east-1", endpoint_url=_ENDPOINT
-    )
+    p = DynamoDBStorageProvider(table_name=table_name, region="us-east-1", endpoint_url=_ENDPOINT)
     await p.initialize()
     yield p
     session = aioboto3.Session()
