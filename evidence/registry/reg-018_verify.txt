@@ -1,0 +1,95 @@
+REG-018 — VERIFIED: cancellation on client disconnect during streaming is
+correctly handled and tested at the boundary that matters. No leak/orphan
+defect found; two honest, low-severity residuals recorded rather than
+manufactured into a fix.
+
+Investigation delegated to a streaming-safety-reviewer subagent (read-only),
+core claims independently re-verified below before closing.
+
+=== Mechanism, confirmed from source ===
+
+$ sed -n '319,357p' aegis/proxy/streaming.py
+    async def _iterate(self) -> AsyncIterator[bytes]:
+        ...
+        except asyncio.CancelledError:
+            await self._cancel_producer()
+            try:
+                await asyncio.shield(
+                    self._finalize("client_disconnected", final_marker_included=False)
+                )
+            except Exception:
+                logger.exception("client-disconnect terminal commit failed")
+            raise
+        ...
+        finally:
+            await self.aclose()
+
+$ sed -n '567,571p' aegis/proxy/streaming.py
+    async def _cancel_producer(self) -> None:
+        if self._producer is not None and not self._producer.done():
+            self._producer.cancel()
+            await asyncio.gather(self._producer, return_exceptions=True)
+
+`BoundedStreamProxy._iterate` catches the consumer task's `CancelledError`,
+cancels and *awaits* the producer task (not fire-and-forget), and commits
+terminal evidence under `asyncio.shield` so a second cancellation can't cut
+off the commit itself. `_produce` iterates the upstream async generator
+returned by `LLMForwarder.stream_sse`/`stream_native_anthropic`
+(`aegis/proxy/forwarder.py`), which holds the connection via
+`async with self._client.stream(...) as resp:` — cancelling the task
+delivers `CancelledError` at the generator's suspension point, which
+unwinds through that `async with`, running `resp.__aexit__`. This is
+standard CPython async-generator/context-manager cancellation semantics,
+not bespoke logic that could itself have a bug in the unwind path.
+
+=== Confirmed by test, not just by reading ===
+
+$ .venv/bin/python -m pytest tests/test_proxy_streaming.py::test_cancellation_closes_upstream_and_commits_once -v
+PASSED
+
+This test (`tests/test_proxy_streaming.py:397-430`) drives a real
+asyncio.Task cancellation through the consumer, asserts the upstream
+generator's `finally` actually ran (`closed.set()`), and asserts exactly
+one terminal commit with `terminal_outcome == "client_disconnected"` — not
+zero (a leak) and not more than one (a double-commit).
+`tests/test_stream_admission_gate.py` additionally proves the concurrency-
+gate slot isn't leaked on abandonment, and
+`tests/test_app_coverage.py::test_sse_commit_on_client_disconnect` proves
+the same guarantee end-to-end through the FastAPI app + `StreamingResponse`
+layer. Native Anthropic streaming reuses the identical
+`BoundedStreamProxy`/`guarded_stream` pair, so it inherits the same
+guarantee rather than needing a separate proof.
+
+=== Non-streaming path checked separately ===
+
+`forward_json` / `forward_native_anthropic` are plain `await`s inside the
+request-handler coroutine — no task is spawned that could become detached.
+Starlette/uvicorn do not proactively cancel a handler coroutine on client
+disconnect unless it polls `receive()`/`is_disconnected()`, which this path
+never does, so the upstream call runs to completion and evidence commits
+regardless of whether the client is still connected. This is consistent
+with the stated policy (`docs/architecture/FAILURE_SEMANTICS.md` §5:
+"Gateway may still commit; the client has no proof" — written for the
+streaming case, but the same "commit anyway" outcome applies here) and is
+not an orphan: nothing is left running after the handler returns, the
+upstream connection is properly closed by the normal `async with` exit.
+
+=== Disposition ===
+
+The concern the row names — an upstream connection, task, or resource kept
+running detached after a client cancels — does not reproduce. It is
+correctly handled and tested at exactly the seam that matters (producer-
+task cancellation → generator/`async with` unwind → gate-slot release →
+shielded evidence commit). Two residuals recorded honestly rather than
+built into a fix nobody asked for:
+
+1. No test drives cancellation through a real/`httpx`-shaped `stream()`
+   context manager to directly assert `__aexit__` fires — only proven via
+   a fake generator with its own `finally`, plus reliance on documented
+   CPython semantics for the real path.
+2. The non-streaming disconnect-runs-to-completion behavior is intentional
+   and consistent with stated policy, but there is no test exercising the
+   disconnect case specifically for that path (only for streaming).
+
+Neither residual describes a defect; both are honest gaps in what's been
+directly exercised. No code change.
