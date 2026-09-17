@@ -1,0 +1,11 @@
+REG-017 — before: tools/wal_repair.py does not exist.
+The defect is not a failing assertion but an absent capability: a torn trailing line
+faults the ledger (wal_corrupt) and every governed endpoint refuses 503, with no
+supported recovery path. Demonstrated by the precondition inside
+test_a_repaired_wal_replays_in_the_real_ledger:
+
+    faulted = CryptographicAuditLedger(str(wal), signing_key=_KEY)
+    assert faulted._fault_state == "wal_corrupt"   # <- holds on pre-fix source
+
+pytest tests/test_wal_repair.py against pre-fix source: collection ERROR,
+tools/wal_repair.py not found.

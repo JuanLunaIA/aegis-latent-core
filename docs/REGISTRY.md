@@ -38,6 +38,7 @@ Five terminal states. `SEED` is **not** terminal — it means the row has been r
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | Registry created. Autodiscovery scans 1–5, 10 executed. W1 verification batch run. 13 rows brought to terminal state; the remainder stay `SEED`. |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-010 FIXED** — retrieved-content injection scanning wired at admission (`CLM-097`). A probe run while writing the test found the first payload was caught by the WAF anyway, so the test proved nothing; it was re-based on a payload the WAF allows and the scanner catches. |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-012 FIXED** — keyed payload digests under shredding (`CLM-098`). Judged **not** an invariant relaxation under `PD-R5`: no fail-closed path becomes fail-open and `verify_integrity` is unaffected, so no owner decision was required. `UC-037` corrected: it stated the weakness as a standing limitation. |
+| 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-017 FIXED** — `tools/wal_repair.py` (`CLM-099`). The tool is mostly refusals: a mid-file bad line is declined rather than truncated, because doing otherwise would discard every valid record after it. |
 
 **Current seal state: NOT SEALED** — rows remain in `SEED`. See §6.
 
@@ -84,7 +85,7 @@ Scans 3, 6, 7, 8, 9 were **not executed this session** and are recorded as outst
 | REG-014 | `[AEG2:ACT-08]` | CODE | P2 | `/metrics` dark by default | `SEED` | DECIDE: core dep vs documented extra |
 | REG-015 | `[AEG2:ACT-09]` | CODE | P1 | ZK preview cap blowup | `SEED` | |
 | REG-016 | `[AEG1:P0#3][CLM-082]` | CODE | P1 | Group-commit memory inversion | `SEED` | PR #180 pinned the invariant rather than building a staging buffer; the chosen semantics need writing down |
-| REG-017 | `[STRAT:P0#1]` | CODE | P1 | JSONL torn-tail recovery | `SEED` | Fix = `wal_repair` tool under an explicit flag; fail-closed stays the default |
+| REG-017 | `[STRAT:P0#1][CLM-099]` | CODE | P1 | JSONL torn-tail recovery | **FIXED** | `tools/wal_repair.py`: removes the final line only when it is the only unparseable one; refuses (exit 2) a mid-file fault; dry run by default and exits non-zero; byte-for-byte backup before truncation; re-scans after. `wal_corrupt` fail-closed default unchanged. Test `tests/test_wal_repair.py` (8), including that a repaired WAL reopens without faulting and passes `verify_integrity`. `evidence/registry/reg-017_before.txt`, `reg-017_after.txt`. Residual: does not establish the removed record never happened |
 | REG-018 | `[STRAT:P0#3][AEG1:3.2]` | CODE | P1 | Cancellation orphans | `SEED` | |
 | REG-019 | `[STRAT:P1#3]` | CODE | P2 | Ledger compaction + cold tiering | `SEED` | |
 | REG-020 | `[AEG1:2.2][STRAT:P1#2]` | CODE | P1 | RFC 8785 `ensure_ascii`/float deviation | `SEED` | |
@@ -162,11 +163,11 @@ Their status is tracked in [Commercial Readiness](commercial/COMMERCIAL_READINES
 
 | Wave | Total | FIXED | VERIFIED | DOCUMENTED | BLOCKED | WONT-FIX | open (`SEED`) |
 |---|---|---|---|---|---|---|---|
-| W1 | 30 | 2 | 12 | 1 | 0 | 0 | **15** |
+| W1 | 30 | 3 | 12 | 1 | 0 | 0 | **14** |
 | W2 | 23 | 0 | 2 | 0 | 0 | 0 | **21** |
 | W3 | 9 | 0 | 2 | 2 | 0 | 0 | **5** |
 | `[DISC]` | 3 | 0 | 0 | 1 | 0 | 0 | **2** |
-| **Total** | **65** | **2** | **16** | **4** | **0** | **0** | **43** |
+| **Total** | **65** | **3** | **16** | **4** | **0** | **0** | **42** |
 
 Human class (9) is excluded from the burn-down by design.
 
@@ -178,7 +179,7 @@ Recorded because a registry that omits its own coverage gaps asserts a completen
 
 **Autodiscovery scans not run:** 3 (`UNSUPPORTED_CLAIMS`/`ROADMAP` open-item extraction), 6 (CI logs, last 30 runs, for flaky/skipped suites), 7 (`evidence/` `NOT_EXECUTED` and `BLOCKED` sections), 8 (full battery failure/skip triage — the suite is green at 6,936 passed / 26 skipped, but the **26 skips were not individually triaged**), 9 (doc-gate findings — all four gates pass, so there are no findings to convert).
 
-**43 rows remain `SEED`**, including genuinely confirmed P0 work: REG-011 (DB append races), REG-023 (pre-forward ePHI), REG-027 (gateway not on PyPI), REG-028 (release readback automation), and REG-042 (multi-pod total order, FATAL).
+**42 rows remain `SEED`**, including genuinely confirmed P0 work: REG-011 (DB append races), REG-023 (pre-forward ePHI), REG-027 (gateway not on PyPI), REG-028 (release readback automation), and REG-042 (multi-pod total order, FATAL).
 
 **Per `PD-R2` and the `R4` gate, this registry is `NOT SEALED`.** No closure attestation is emitted, and none should be written until the `SEED` count reaches zero.
 
