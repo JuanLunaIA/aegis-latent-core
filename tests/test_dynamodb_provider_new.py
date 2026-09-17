@@ -44,9 +44,17 @@ def _client_error(code: str = "TestError", msg: str = "test") -> _ClientError:
     """
     error_response = {"Error": {"Code": code, "Message": msg}}
     try:
-        return _ClientError(error_response, "TestOperation")
+        exc = _ClientError(error_response, "TestOperation")
     except TypeError:
         return _ClientError(code=code, msg=msg)
+    # The stub's constructor is ``(code=, msg=)`` with no keyword-only markers,
+    # so it also accepts two positional arguments without raising — it just
+    # silently misbinds them (code=<error_response dict>, msg="TestOperation").
+    # A non-raising call is therefore not proof the real botocore shape was
+    # used; confirm the code actually round-tripped before trusting `exc`.
+    if exc.response.get("Error", {}).get("Code") != code:
+        return _ClientError(code=code, msg=msg)
+    return exc
 
 
 def _make_provider(table="aegis_audit", region="us-east-1") -> DynamoDBStorageProvider:

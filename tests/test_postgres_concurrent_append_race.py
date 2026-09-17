@@ -45,10 +45,27 @@ import hashlib
 import os
 import uuid
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
 asyncpg = pytest.importorskip("asyncpg", reason="asyncpg is an optional storage-postgres extra")
+if isinstance(asyncpg, MagicMock):
+    # tests/conftest.py stubs asyncpg into sys.modules with a MagicMock when it
+    # is not genuinely installed, so a plain importorskip never sees the
+    # ImportError it is looking for — the stub is already cached in
+    # sys.modules by the time this module is collected. `_server_reachable()`
+    # below happens to catch the TypeError that awaiting a non-async mock
+    # raises and reports "unreachable", so this currently skips by accident
+    # rather than by design. Detect the stub explicitly instead, the same as
+    # the DynamoDB half of this suite (tests/test_dynamodb_concurrent_append_race.py)
+    # does, so the skip reason is honest and does not depend on that
+    # incidental mock behaviour continuing to hold.
+    pytest.skip(
+        "asyncpg is stubbed by tests/conftest.py, not genuinely installed — "
+        "this real-server integration suite cannot run against the stub",
+        allow_module_level=True,
+    )
 
 from aegis_server.storage.base import GENESIS_PREV_HASH, ConcurrentChainMutationError  # noqa: E402
 from aegis_server.storage.postgres_provider import PostgreSQLStorageProvider  # noqa: E402

@@ -1,0 +1,109 @@
+REG-011 — CI-only regression found and fixed after the original FIXED/VERIFIED
+evidence was recorded (reg-011_before.txt / reg-011_after.txt). Root cause and
+fix, with local reproduction of the exact CI failure.
+
+=== Symptom (PR #187, job 105095374476 "Test (Python 3.12)", commit 9e90d99) ===
+
+FAILED tests/test_dynamodb_provider_new.py::test_initialize_table_already_exists - RuntimeError: DynamoDBStorageProvider.initialize failed: TestOperation
+FAILED tests/test_dynamodb_provider_new.py::test_write_node_conditional_check_is_noop - RuntimeError: DynamoDBStorageProvider.write_node failed for node_id='dup': TestOperation
+ERROR tests/test_dynamodb_concurrent_append_race.py::test_concurrent_genesis_writers_produce_exactly_one_winner - AttributeError: 'coroutine' object has no attribute 'wait'
+ERROR tests/test_dynamodb_concurrent_append_race.py::test_a_loser_can_retry_against_the_real_new_tip - AttributeError: 'coroutine' object has no attribute 'wait'
+ERROR tests/test_dynamodb_concurrent_append_race.py::test_the_guard_holds_on_a_grown_chain_not_only_at_genesis - AttributeError: 'coroutine' object has no attribute 'wait'
+= 2 failed, 6847 passed, 119 skipped, 4 warnings, 3 errors in 126.60s (0:02:06) =
+
+Did not reproduce in my local venv, where `aioboto3`/`asyncpg` had been
+`pip install`ed for real during earlier REG-011 work. CI's `test` job runs
+`pip install -e ".[dev]"` only — the `dev` extra in pyproject.toml does not
+pull in `storage-postgres`/`storage-dynamodb`, and confirmed via the job's own
+"Successfully installed ..." line (no aioboto3/asyncpg/boto3/botocore present)
+that CI genuinely never installs these optional packages.
+
+=== Root cause ===
+
+tests/conftest.py's `_install_optional_backend_stubs()` runs at collection
+time and, when a package genuinely is not importable, caches a bare
+`MagicMock()` into `sys.modules[name]` (this is intentional — it lets
+`aegis_server.storage.*` be imported without the optional extras). That
+caching is exactly what breaks `pytest.importorskip("aioboto3", ...)` /
+`pytest.importorskip("asyncpg", ...)` in the two REG-011 real-server
+integration test files added this session: `importorskip` only raises when
+`__import__` fails, but by the time those modules are collected,
+`sys.modules["aioboto3"]` / `sys.modules["asyncpg"]` are already populated
+with the stub, so the import "succeeds" and the module is not skipped. The
+tests then run against a `MagicMock`, not a real server:
+
+  * tests/test_dynamodb_concurrent_append_race.py — proceeds past
+    `_server_reachable()` (its `async with session.client(...) as client:`
+    succeeds against the mock's auto-configured async context manager) and
+    into `DynamoDBStorageProvider.initialize()`, where
+    `client.get_waiter("table_exists")` (aegis_server/storage/dynamodb_provider.py:153)
+    returns a coroutine rather than a waiter object under the mock's
+    attribute-chaining behaviour, so the following `await waiter.wait(...)`
+    (line 154) fails with `AttributeError: 'coroutine' object has no
+    attribute 'wait'`.
+
+  * tests/test_dynamodb_provider_new.py's `_client_error()` helper: its
+    `try: _ClientError(error_response, "TestOperation") / except TypeError:`
+    fallback assumed a real `botocore.exceptions.ClientError` would accept
+    two positional args and the stub would reject them with `TypeError`.
+    But conftest's `_StubClientError(code="TestError", msg="test")` also
+    accepts two positional arguments without raising — it just silently
+    misbinds them (`code=<error_response dict>`, `msg="TestOperation"`), so
+    `exc.response["Error"]["Code"]` becomes a dict instead of the intended
+    code string. `dynamodb_provider.py`'s `except ClientError as exc: if
+    exc.response["Error"]["Code"] == "ResourceInUseException": ...` then
+    never matches, falls through to the generic branch, and re-raises as
+    `RuntimeError(f"... failed: {exc}")` where `str(exc) == "TestOperation"`
+    (the misbound `msg`) — exactly the observed failure text.
+
+tests/test_postgres_concurrent_append_race.py's equivalent
+`pytest.importorskip("asyncpg", ...)` has the identical bug, but happened to
+still skip in CI: `_server_reachable()`'s `await asyncpg.connect(...)` raises
+`TypeError: object MagicMock can't be used in 'await' expression` (plain
+`MagicMock.connect(...)` is not awaitable — unlike aioboto3's async-context-
+manager dunders, this is an ordinary attribute call), which
+`_server_reachable()`'s broad `except Exception` catches and reports as
+"unreachable", producing an accidental (not designed) skip.
+
+=== Fix ===
+
+1. tests/test_dynamodb_provider_new.py — `_client_error()` now verifies the
+   constructed exception's `response["Error"]["Code"]` actually round-trips
+   to the requested `code` before trusting the "no TypeError" branch; falls
+   back to the stub's keyword form on mismatch instead of only on TypeError.
+
+2. tests/test_dynamodb_concurrent_append_race.py and
+   tests/test_postgres_concurrent_append_race.py — added an explicit
+   `isinstance(aioboto3, MagicMock)` / `isinstance(asyncpg, MagicMock)` check
+   right after `pytest.importorskip(...)`, skipping the whole module
+   (`allow_module_level=True`) with an honest reason when the "installed"
+   module is actually conftest's stub. This makes the Postgres file's skip
+   intentional rather than an accident of what TypeError happens to get
+   raised on a MagicMock, and makes the DynamoDB file skip cleanly for the
+   first time.
+
+=== Local reproduction of the exact CI condition ===
+
+Temporarily moved aioboto3/asyncpg/boto3/botocore out of
+.venv/lib/python3.11/site-packages (the only way to force conftest's
+"genuinely absent" branch, since `_real_or_stub()` prefers a real install)
+and re-ran the three affected files.
+
+Before the fix (packages hidden, pre-fix code): reproduces the CI failure
+signature exactly — 2 failed (`TestOperation` RuntimeErrors) + 3 errors
+(`'coroutine' object has no attribute 'wait'`).
+
+After the fix (packages hidden, post-fix code):
+
+$ python -m pytest tests/test_dynamodb_provider_new.py tests/test_dynamodb_concurrent_append_race.py tests/test_postgres_concurrent_append_race.py -v
+collecting ... collected 35 items / 2 skipped
+tests/test_dynamodb_provider_new.py .......................... (35 passed)
+======================== 35 passed, 2 skipped in 0.40s =========================
+
+Packages restored; full suite re-run with the real aioboto3/asyncpg installed
+(the state that already passed before this fix, to prove no regression):
+
+$ python -m pytest tests/ -n auto -q
+6979 passed, 26 skipped in 40.98s
+
+ruff check / ruff format --check on the three edited files: all clean.

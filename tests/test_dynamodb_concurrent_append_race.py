@@ -42,10 +42,26 @@ import os
 import uuid
 from datetime import UTC, datetime
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
 aioboto3 = pytest.importorskip("aioboto3", reason="aioboto3 is an optional storage-dynamodb extra")
+if isinstance(aioboto3, MagicMock):
+    # tests/conftest.py stubs aioboto3 into sys.modules with a MagicMock when it
+    # is not genuinely installed, so a plain importorskip never sees the
+    # ImportError it is looking for — the stub is already cached in
+    # sys.modules by the time this module is collected. Against that stub,
+    # DynamoDBStorageProvider.initialize() does not cleanly raise; it runs
+    # deep into aioboto3-specific call chains (e.g. client.get_waiter(...))
+    # that the stub cannot faithfully emulate, producing confusing failures
+    # unrelated to the real-server race this file exists to test. Detect the
+    # stub explicitly and skip, the same as a genuine ImportError would.
+    pytest.skip(
+        "aioboto3 is stubbed by tests/conftest.py, not genuinely installed — "
+        "this real-server integration suite cannot run against the stub",
+        allow_module_level=True,
+    )
 
 from aegis_server.storage.base import GENESIS_PREV_HASH, ConcurrentChainMutationError  # noqa: E402
 from aegis_server.storage.dynamodb_provider import DynamoDBStorageProvider  # noqa: E402
