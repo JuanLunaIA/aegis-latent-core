@@ -40,6 +40,7 @@ Five terminal states. `SEED` is **not** terminal — it means the row has been r
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-012 FIXED** — keyed payload digests under shredding (`CLM-098`). Judged **not** an invariant relaxation under `PD-R5`: no fail-closed path becomes fail-open and `verify_integrity` is unaffected, so no owner decision was required. `UC-037` corrected: it stated the weakness as a standing limitation. |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-017 FIXED** — `tools/wal_repair.py` (`CLM-099`). The tool is mostly refusals: a mid-file bad line is declined rather than truncated, because doing otherwise would discard every valid record after it. |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-049 FIXED — premise corrected.** The seeded "disk-full deadlock" is not reproducible: `ENOSPC` injected at both real failure points raises and latches `wal_persist_failed`, no deadlock (`reg-049_probe.txt`). Built the real residual instead — an ingress preflight (`CLM-100`) that refuses before the upstream provider is billed, default off. Full re-anchor of W1's prior `FIXED` rows: fresh `pytest` run via the repo's own `.venv` (the bare `pytest` binary is not the venv's and fails all collection with `ModuleNotFoundError: No module named 'aegis'` — an environment artifact, not a regression) shows 6,966 passed / 26 skipped, exactly 30 more than the last recorded 6,936, matching REG-010 (10) + REG-012 (7) + REG-017 (8) + REG-049 (5). |
+| 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-025 VERIFIED.** The reachability gate that the row asked for already exists and already runs (`scripts/verify_import_reachability.py`, PASS: 223 discovered, 112 reached, 34 roadmap, 77 allowlisted, no undeclared orphans). No code change — the control was already in force; the row needed closing, not building. |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-026 VERIFIED, REG-040 VERIFIED — both re-checked from source, not from the prior report.** REG-026's 25-error `aegis_server` figure reproduced exactly under plain `mypy aegis_server`; a near-miss avoided — `mypy-ci.ini` reports 0 for that package only because it sets `ignore_errors = True`, which is not the same claim. REG-040's premise was corrected a **second** time: the intervening autodiscovery note claiming `cargo audit` "no longer reports" `pqcrypto` advisories was itself wrong — three are reported (`RUSTSEC-2026-0162/0163/0166`), on a default-enabled feature, already allowlisted with a written rationale in `.cargo/audit.toml`. Severity corrected P0→P1: unmaintained, not a CVE, already accepted in source. **Reported here as a demonstration of `PD-R1`, not a criticism of the prior session** — the rule exists because a scan's finding can itself be stale, and this round's evidence is what caught it. |
 
 **Current seal state: NOT SEALED** — rows remain in `SEED`. See §6.
@@ -95,7 +96,7 @@ Scans 3, 6, 7, 8, 9 were **not executed this session** and are recorded as outst
 | REG-022 | `[AEG2:8.2]` | CODE | P2 | Shredder vault backup/hardware retention hazard | `SEED` | |
 | REG-023 | `[AEG1:P1#1][HIPAA]` | CODE | P0 | Pre-forward ePHI scrub | `SEED` | DECIDE — touches the "redaction protects the record, not your provider" boundary |
 | REG-024 | `[CLM-064 residual][PR:180]` | CODE | P1 | v1 legacy chains | **VERIFIED** | `tools/anchor_v1_chain_into_v2.py` present; `tests/test_chain_anchor_tool.py` 6 passed |
-| REG-025 | `[MO-XII:P6]` | CODE | P2 | Orphan modules | `SEED` | **Seed premise corrected:** not 99. Gate reports 78 allowlisted + 34 declared roadmap of 223 discovered |
+| REG-025 | `[MO-XII:P6]` | CODE | P2 | Orphan modules | **VERIFIED** | **Seed premise corrected:** not 99. Re-run this session: `python scripts/verify_import_reachability.py` → `modules discovered: 223  reached: 112  declared roadmap: 34  allowlisted: 77` — `PASS: no undeclared orphans, no stale roadmap entries`. The concern this row raised (undeclared orphan modules accumulating unnoticed) is exactly what this gate exists to catch, and it is wired into CI (`REG-D01`-adjacent gates run in `Makefile`'s `security`/`lint` targets); a module reachable neither via an import chain nor a declared roadmap/allowlist entry fails the gate rather than sitting quietly. No code change needed — the control already existed and is exercised. This is not a claim that the 77 allowlisted or 34 roadmap modules are individually justified; each entry's own reason is `scripts/import_reachability_allowlist.txt`'s job, not this row's |
 | REG-045 | `[CLM-067][PR:153]` | CODE | P1 | `GrammarFrontierAutomaton` wiring | **VERIFIED** | Wired in `aegis/core/stream_redactor.py:136-137`, instantiated when `enable_phi or enable_pci`. **Not** in `streaming.py` — a naive grep there returns 0 and misreads as unwired |
 | REG-046 | `[CLM-068][PR:164]` | CODE | P1 | `CryptoShredder` wiring + `shredding_version` | **VERIFIED** | 5 refs in `aegis/core/crypto_audit.py`; opt-in behind `AEGIS_ENABLE_CRYPTOGRAPHIC_SHREDDING`, off by default (`UC-037`) |
 | REG-047 | `[CLM-011]` | CODE | P2 | Windows lock degrade on FAT32/network | `SEED` | |
@@ -165,11 +166,11 @@ Their status is tracked in [Commercial Readiness](commercial/COMMERCIAL_READINES
 
 | Wave | Total | FIXED | VERIFIED | DOCUMENTED | BLOCKED | WONT-FIX | open (`SEED`) |
 |---|---|---|---|---|---|---|---|
-| W1 | 30 | 4 | 12 | 1 | 0 | 0 | **13** |
+| W1 | 30 | 4 | 13 | 1 | 0 | 0 | **12** |
 | W2 | 23 | 0 | 4 | 0 | 0 | 0 | **19** |
 | W3 | 9 | 0 | 2 | 2 | 0 | 0 | **5** |
 | `[DISC]` | 3 | 0 | 0 | 1 | 0 | 0 | **2** |
-| **Total** | **65** | **4** | **18** | **4** | **0** | **0** | **39** |
+| **Total** | **65** | **4** | **19** | **4** | **0** | **0** | **38** |
 
 Human class (9) is excluded from the burn-down by design.
 
@@ -181,7 +182,7 @@ Recorded because a registry that omits its own coverage gaps asserts a completen
 
 **Autodiscovery scans not run:** 3 (`UNSUPPORTED_CLAIMS`/`ROADMAP` open-item extraction), 6 (CI logs, last 30 runs, for flaky/skipped suites), 7 (`evidence/` `NOT_EXECUTED` and `BLOCKED` sections), 8 (full battery failure/skip triage — the suite is green at 6,936 passed / 26 skipped, but the **26 skips were not individually triaged**), 9 (doc-gate findings — all four gates pass, so there are no findings to convert).
 
-**39 rows remain `SEED`**, including genuinely confirmed P0 work: REG-011 (DB append races), REG-023 (pre-forward ePHI), REG-027 (gateway not on PyPI), REG-028 (release readback automation), and REG-042 (multi-pod total order, FATAL).
+**38 rows remain `SEED`**, including genuinely confirmed P0 work: REG-011 (DB append races), REG-023 (pre-forward ePHI), REG-027 (gateway not on PyPI), REG-028 (release readback automation), and REG-042 (multi-pod total order, FATAL).
 
 **Per `PD-R2` and the `R4` gate, this registry is `NOT SEALED`.** No closure attestation is emitted, and none should be written until the `SEED` count reaches zero.
 
