@@ -40,6 +40,7 @@ Five terminal states. `SEED` is **not** terminal — it means the row has been r
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-012 FIXED** — keyed payload digests under shredding (`CLM-098`). Judged **not** an invariant relaxation under `PD-R5`: no fail-closed path becomes fail-open and `verify_integrity` is unaffected, so no owner decision was required. `UC-037` corrected: it stated the weakness as a standing limitation. |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-017 FIXED** — `tools/wal_repair.py` (`CLM-099`). The tool is mostly refusals: a mid-file bad line is declined rather than truncated, because doing otherwise would discard every valid record after it. |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-049 FIXED — premise corrected.** The seeded "disk-full deadlock" is not reproducible: `ENOSPC` injected at both real failure points raises and latches `wal_persist_failed`, no deadlock (`reg-049_probe.txt`). Built the real residual instead — an ingress preflight (`CLM-100`) that refuses before the upstream provider is billed, default off. Full re-anchor of W1's prior `FIXED` rows: fresh `pytest` run via the repo's own `.venv` (the bare `pytest` binary is not the venv's and fails all collection with `ModuleNotFoundError: No module named 'aegis'` — an environment artifact, not a regression) shows 6,966 passed / 26 skipped, exactly 30 more than the last recorded 6,936, matching REG-010 (10) + REG-012 (7) + REG-017 (8) + REG-049 (5). |
+| 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-026 VERIFIED, REG-040 VERIFIED — both re-checked from source, not from the prior report.** REG-026's 25-error `aegis_server` figure reproduced exactly under plain `mypy aegis_server`; a near-miss avoided — `mypy-ci.ini` reports 0 for that package only because it sets `ignore_errors = True`, which is not the same claim. REG-040's premise was corrected a **second** time: the intervening autodiscovery note claiming `cargo audit` "no longer reports" `pqcrypto` advisories was itself wrong — three are reported (`RUSTSEC-2026-0162/0163/0166`), on a default-enabled feature, already allowlisted with a written rationale in `.cargo/audit.toml`. Severity corrected P0→P1: unmaintained, not a CVE, already accepted in source. **Reported here as a demonstration of `PD-R1`, not a criticism of the prior session** — the rule exists because a scan's finding can itself be stale, and this round's evidence is what caught it. |
 
 **Current seal state: NOT SEALED** — rows remain in `SEED`. See §6.
 
@@ -106,7 +107,7 @@ Scans 3, 6, 7, 8, 9 were **not executed this session** and are recorded as outst
 
 | REG | Brands | Class | Sev | Mechanism | Status | Evidence |
 |---|---|---|---|---|---|---|
-| REG-026 | `[TRACK-C]` | CODE | P2 | mypy `--strict` errors | **SEED — premise corrected** | Seed says 73. Actual: `mypy --strict aegis` is **clean over 206 files**. 25 errors remain in `aegis_server/` only |
+| REG-026 | `[TRACK-C]` | CODE | P2 | mypy `--strict` errors | **VERIFIED — premise reconfirmed** | Seed says 73; the earlier session already corrected that to "`aegis` clean, 25 in `aegis_server`". Re-run this session, both halves independently: `mypy --strict aegis` — clean, 206 files. `mypy aegis_server` (plain, no `--strict`) — exactly **25 errors in 4 files** (checked 14), matching the cited figure exactly: `sqlite_provider.py` (4, `Iterable[Row]` indexing/len), `main.py` (21, missing return annotations, untyped-call, `Any` return, `set` vs `frozenset` argument, `sorted` key type). Note for future re-verification: `mypy --config-file mypy-ci.ini aegis_server` reports **0** errors because that config carries `[mypy-aegis_server.*] ignore_errors = True` — it excludes the package rather than passing it; do not cite that invocation as evidence this row is closed. Tracked for remediation by REG-038 (retire/migrate the dual surface) |
 | REG-027 | `[PR:180 note]` | CODE | P0 | PyPI `aegis-latent-core` `5.0.0` unpublished | `SEED` | Confirmed still true. `publish_pypi.yml` builds `sdk/python` only |
 | REG-028 | `[TRACK-A1]` | CODE | P0 | Release readback automation | `SEED` | |
 | REG-029 | `[TRACK-A2]` | CODE | P1 | Consumer provenance one-liner | `SEED` | |
@@ -119,7 +120,7 @@ Scans 3, 6, 7, 8, 9 were **not executed this session** and are recorded as outst
 | REG-037 | `[TRACK-C3]` | CODE | P2 | Memory/disk/rotation recovery tests | `SEED` | |
 | REG-038 | `[TRACK-C4]` | CODE | P2 | Retire/migrate `aegis_server` dual surface | `SEED` | Interacts with REG-026's residual 25 errors |
 | REG-039 | `[TRACK-ops]` | CODE | P2 | K8s operator placeholder image | `SEED` | |
-| REG-040 | `[RUSTSEC-…][TRACK-B2]` | CODE | P0 | `pqcrypto` unmaintained | **SEED — premise likely resolved** | `cargo audit` no longer reports any `pqcrypto` advisory. Needs confirmation that the ml-dsa migration (task B1) removed the dependency rather than the advisory being withdrawn |
+| REG-040 | `[RUSTSEC-…][TRACK-B2]` | CODE | P1 | `pqcrypto` unmaintained | **VERIFIED — premise corrected twice** | Seed implied a P0 vulnerability; the intervening autodiscovery note ("no longer reports any `pqcrypto` advisory") was **also wrong**. Re-run this session: `cargo audit --file aegis_rust_v2/Cargo.lock` reports **three** `pqcrypto` advisories — `RUSTSEC-2026-0162` (`pqcrypto-traits`), `-0163` (`pqcrypto-internals`), `-0166` (`pqcrypto-mldsa`), all dated 2026-06-04, all "unmaintained: upstream PQClean project being archived" — **not CVEs**. `pqclean-pqc` is `aegis_rust_v2/Cargo.toml`'s `default` feature (line 25), so these are default-build dependencies, not incidental. All three are **already deliberately allowlisted** in `aegis_rust_v2/.cargo/audit.toml` with a written rationale ("unmaintained upstream advisories; no replacement available yet"), which is why `cargo audit` exits 0 reporting "6 allowed warnings found" rather than failing. The pure-Rust `ml-dsa` backend from task B1 (`CLM-084`) exists as an **opt-in** build flag precisely because it measured 1.43x slower to verify and 4.80x slower to sign — switching the default is a real trade-off, not a bug fix, and is out of this row's scope. Severity corrected P0→P1: an unmaintained-crate warning with no CVE and an already-documented, already-allowlisted acceptance is not a P0. Re-verify against `.cargo/audit.toml`'s ignore list before ever again reporting this class of advisory as "resolved" or "no longer appears" — allowlisted is not absent |
 | REG-041 | `[CLM-040]` | CODE | P1 | ML-DSA verify timing `p=0.0` | `SEED` | |
 | REG-051 | `[AEG2:13.2]` | CODE | P1 | Missing harnesses | `SEED` | Homoglyph parity harness now exists (REG-001); postgres-race and OOM-saturation do not |
 | REG-053 | `[P2-7]` | CODE | P3 | Coverage badge stale | **VERIFIED** | Badge removed from `README.md` in PR #184 |
@@ -165,10 +166,10 @@ Their status is tracked in [Commercial Readiness](commercial/COMMERCIAL_READINES
 | Wave | Total | FIXED | VERIFIED | DOCUMENTED | BLOCKED | WONT-FIX | open (`SEED`) |
 |---|---|---|---|---|---|---|---|
 | W1 | 30 | 4 | 12 | 1 | 0 | 0 | **13** |
-| W2 | 23 | 0 | 2 | 0 | 0 | 0 | **21** |
+| W2 | 23 | 0 | 4 | 0 | 0 | 0 | **19** |
 | W3 | 9 | 0 | 2 | 2 | 0 | 0 | **5** |
 | `[DISC]` | 3 | 0 | 0 | 1 | 0 | 0 | **2** |
-| **Total** | **65** | **4** | **16** | **4** | **0** | **0** | **41** |
+| **Total** | **65** | **4** | **18** | **4** | **0** | **0** | **39** |
 
 Human class (9) is excluded from the burn-down by design.
 
@@ -180,15 +181,15 @@ Recorded because a registry that omits its own coverage gaps asserts a completen
 
 **Autodiscovery scans not run:** 3 (`UNSUPPORTED_CLAIMS`/`ROADMAP` open-item extraction), 6 (CI logs, last 30 runs, for flaky/skipped suites), 7 (`evidence/` `NOT_EXECUTED` and `BLOCKED` sections), 8 (full battery failure/skip triage — the suite is green at 6,936 passed / 26 skipped, but the **26 skips were not individually triaged**), 9 (doc-gate findings — all four gates pass, so there are no findings to convert).
 
-**42 rows remain `SEED`**, including genuinely confirmed P0 work: REG-011 (DB append races), REG-023 (pre-forward ePHI), REG-027 (gateway not on PyPI), REG-028 (release readback automation), and REG-042 (multi-pod total order, FATAL).
+**39 rows remain `SEED`**, including genuinely confirmed P0 work: REG-011 (DB append races), REG-023 (pre-forward ePHI), REG-027 (gateway not on PyPI), REG-028 (release readback automation), and REG-042 (multi-pod total order, FATAL).
 
 **Per `PD-R2` and the `R4` gate, this registry is `NOT SEALED`.** No closure attestation is emitted, and none should be written until the `SEED` count reaches zero.
 
-**Seed premises corrected by verification** — three seeded rows carried figures that current source contradicts, which is why `PD-R1` requires re-verifying a seed before working it:
+**Seed premises corrected by verification** — several seeded rows carried figures that current source contradicts, which is why `PD-R1` requires re-verifying a seed before working it. Two of these were corrected **twice**, by different sessions, which is itself evidence for the rule rather than an embarrassment: re-verification caught re-verification's own mistakes.
 
-- REG-025: "99 orphan modules" → 78 allowlisted + 34 declared roadmap, of 223 discovered.
-- REG-026: "73 mypy `--strict` errors" → `aegis` is clean over 206 files; 25 remain in `aegis_server/` alone.
-- REG-040: `pqcrypto` advisories → no longer reported by `cargo audit`; two different warnings appear instead.
+- REG-025: "99 orphan modules" → 78 allowlisted + 34 declared roadmap, of 223 discovered (now 112 reached / 77 allowlisted / 34 roadmap of 223, per the gate's live count — the exact split drifts commit to commit and should be re-read from `verify_import_reachability.py`'s own output, never copied from a prior report).
+- REG-026: "73 mypy `--strict` errors" → `aegis` is clean over 206 files; 25 remain in `aegis_server/` — **reconfirmed this session** with the exact figure reproduced (4 files, 25 errors) under plain `mypy aegis_server`. A same-session near-miss is recorded honestly: `mypy --config-file mypy-ci.ini aegis_server` reports 0, but only because that config sets `ignore_errors = True` for the package — it is not evidence the errors are fixed, and citing it would have been a false closure.
+- REG-040: `pqcrypto` advisories → an intervening autodiscovery note claimed `cargo audit` "no longer reports" them; **that note was itself wrong**. Re-verified this session: three `pqcrypto` advisories are reported (`RUSTSEC-2026-0162/0163/0166`, all "unmaintained", none a CVE), on a default-enabled feature, and all three are already allowlisted in `aegis_rust_v2/.cargo/audit.toml` with a written rationale. Allowlisted is not absent, and "no longer reported" was a misreading of `cargo audit`'s exit code rather than its findings.
 
 ---
 
