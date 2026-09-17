@@ -53,6 +53,7 @@ is legal advice.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import os
 import sqlite3
 import threading
@@ -89,6 +90,18 @@ _DOMAIN_COMMITMENT: Final[bytes] = b"\x00"
 # are unvalidated for the identical reason. Add one if a second scheme ever
 # makes `scheme` a real choice rather than a hardcoded return.
 SHRED_SCHEME_V1: Final[str] = "v1-aesgcm256-sha256"
+#: Adds keyed request/response digests to `v1`. Under `v1` the node retained a
+#: plain `SHA-256` of the payload, so a guessed plaintext could be confirmed
+#: against an erased record -- the ciphertext was unreadable and the digest
+#: still answered "was it this?". Under `v2` those digests are HMAC-SHA256 under
+#: a salt derived from the subject key, so destroying the key destroys the
+#: ability to pose that question.
+#:
+#: The cost is real and inherent, not a design slip: a third party holding the
+#: original request can no longer confirm it against the node by hashing. For a
+#: subject whose content is meant to be unrecoverable those two properties are
+#: contradictory, so no scheme provides both.
+SHRED_SCHEME_V2: Final[str] = "v2-aesgcm256-hmacsha256"
 #: No envelope: the record's `mmr_leaf_hash` is a digest of the leaf bytes
 #: themselves. This is what every node written with shredding off carries, and
 #: what every node written before this field existed carries. It is the absence
@@ -97,6 +110,10 @@ SHRED_SCHEME_UNSEALED: Final[str] = ""
 
 
 _NONCE_BYTES: Final[int] = 12  # 96-bit, the GCM-recommended size
+
+#: Domain separator for the digest salt. Distinct from any encryption use of
+#: the same key, so the salt can never collide with key material used elsewhere.
+_DIGEST_SALT_INFO: Final[bytes] = b"aegis-shred-digest-salt-v1"
 
 _SCHEMA: Final[str] = """
 CREATE TABLE IF NOT EXISTS subject_keys (
@@ -153,9 +170,15 @@ class SealedPayload:
         Read from the payload rather than assumed by the caller, so a record
         and the scheme recorded beside it cannot drift apart at the one place
         they are written together.
+
+        ``v2`` since REG-012. The envelope construction is byte-identical to
+        ``v1`` -- what changed is that a ledger holding this payload also keys
+        its request and response digests to the same destructible subject key,
+        so the scheme identifier moves to keep a reader from assuming a ``v2``
+        node carries ``v1``'s confirmable plain digests.
         """
 
-        return SHRED_SCHEME_V1
+        return SHRED_SCHEME_V2
 
 
 class CryptoShredder:
@@ -217,6 +240,38 @@ class CryptoShredder:
             # both keys.
             ciphertext = AESGCM(key).encrypt(nonce, plaintext, subject_id.encode("utf-8"))
         return SealedPayload(subject_id, nonce, ciphertext)
+
+    def digest(self, subject_id: str, data: bytes) -> str:
+        """Return a keyed digest of ``data`` that dies with ``subject_id``'s key.
+
+        Mechanism: the salt is ``HMAC(subject_key, "aegis-shred-digest-salt-v1")``
+        and the digest is ``HMAC(salt, data)``. The salt is *derived*, never
+        stored, so ``shred`` removing the one key row removes the salt with it.
+        A second stored secret would be a second thing to forget to delete.
+
+        What this buys: after the key is destroyed the stored digest is an
+        opaque 64-hex value. Without the salt an adversary holding a candidate
+        plaintext cannot confirm it against the record, which is what a plain
+        ``SHA-256`` of the payload would have let them do however strong the
+        envelope encryption was.
+
+        What it costs: a verifier who holds the original request can no longer
+        confirm it against the node by hashing either. That is the same
+        capability, and for an erased subject it cannot be kept while also
+        making the content unconfirmable -- the two are contradictory. Signature
+        verification is unaffected: ``verify_integrity`` recomputes over the
+        node's *stored* fields and never re-hashes plaintext.
+
+        Creates the subject's key when absent, exactly as ``seal`` does, so a
+        digest and the seal beside it always share one destructible key.
+        """
+
+        if not subject_id:
+            raise ValueError("subject_id must not be empty")
+        with self._lock:
+            key = self._key_for_seal(subject_id)
+        salt = hmac.new(key, _DIGEST_SALT_INFO, hashlib.sha256).digest()
+        return hmac.new(salt, data, hashlib.sha256).hexdigest()
 
     def open(self, sealed: SealedPayload) -> bytes:
         """Decrypt, or say precisely why it cannot be decrypted."""

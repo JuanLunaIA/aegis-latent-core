@@ -979,8 +979,8 @@ class CryptographicAuditLedger:
         if usage:
             params["usage"] = usage
 
-        req_hash = sha256_hex(request_bytes)
-        resp_hash = sha256_hex(response_bytes) if response_bytes else ""
+        req_hash = self._payload_digest(request_bytes, tenant_id)
+        resp_hash = self._payload_digest(response_bytes, tenant_id) if response_bytes else ""
 
         # Build canonical MMR leaf
         # Validate before the lock: a bad verdict must be a caller error, not a
@@ -1127,8 +1127,8 @@ class CryptographicAuditLedger:
 
         # The decision, in a form that hashes deterministically.
         decision = f"REJECTED:{rejection_code}:{reason_category}".encode()
-        req_hash = sha256_hex(request_bytes)
-        resp_hash = sha256_hex(decision)
+        req_hash = self._payload_digest(request_bytes, tenant_id or "unattributed")
+        resp_hash = self._payload_digest(decision, tenant_id or "unattributed")
 
         leaf = build_merkle_leaf(
             state_id=rejection_id,
@@ -1792,6 +1792,22 @@ class CryptographicAuditLedger:
             raise RuntimeError("strong signing required; no verifiable signer is available")
         sig_hex, pub_hex, scheme = _ed25519_sign(data)
         return sig_hex, pub_hex, scheme, True
+
+    def _payload_digest(self, data: bytes, subject_id: str) -> str:
+        """Digest a request or response body for storage on the node.
+
+        With shredding off this is the plain ``SHA-256`` every existing
+        deployment has written, and nothing about those chains changes.
+
+        With it on the digest is keyed to the subject (`REG-012`): a plain hash
+        survives ``crypto_shred`` and still answers "was the erased content
+        this?" for any guessable plaintext, which makes the envelope encryption
+        beside it much weaker than it looks. The keyed digest dies with the key.
+        """
+
+        if self._shredder is None or not subject_id:
+            return sha256_hex(data)
+        return self._shredder.digest(subject_id, data)
 
     def _seal_leaf(self, leaf: bytes, subject_id: str) -> tuple[str, SealedPayload | None]:
         """Return ``(leaf_digest, sealed)`` for one commit.

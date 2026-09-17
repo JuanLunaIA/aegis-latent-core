@@ -37,6 +37,7 @@ Five terminal states. `SEED` is **not** terminal — it means the row has been r
 |---|---|---|
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | Registry created. Autodiscovery scans 1–5, 10 executed. W1 verification batch run. 13 rows brought to terminal state; the remainder stay `SEED`. |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-010 FIXED** — retrieved-content injection scanning wired at admission (`CLM-097`). A probe run while writing the test found the first payload was caught by the WAF anyway, so the test proved nothing; it was re-based on a payload the WAF allows and the scanner catches. |
+| 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-012 FIXED** — keyed payload digests under shredding (`CLM-098`). Judged **not** an invariant relaxation under `PD-R5`: no fail-closed path becomes fail-open and `verify_integrity` is unaffected, so no owner decision was required. `UC-037` corrected: it stated the weakness as a standing limitation. |
 
 **Current seal state: NOT SEALED** — rows remain in `SEED`. See §6.
 
@@ -78,7 +79,7 @@ Scans 3, 6, 7, 8, 9 were **not executed this session** and are recorded as outst
 | REG-008 | `[CLM-064][AEG2:4.1]` | CODE | P0 | MMR v1 type-confusion | **VERIFIED** | `aegis-mmr-inclusion-v2` is the default for new chains; a live ledger commit this session produced `scheme=aegis-mmr-inclusion-v2`. Legacy chains → REG-024 |
 | REG-010 | `[AEG2:ACT-04][BLIND-02][AML.T0051.001][CLM-097]` | CODE | P0 | `RAGInjectionScanner` unwired | **FIXED** | `_guard_retrieved_content` in `aegis/proxy/app.py` runs the scanner at all three governed admission sites, after the WAF and before the forwarder; refusal is committed to the signed chain first. Test `tests/test_rag_injection_admission.py` (10). Before: 6 failed / 4 passed (`evidence/registry/reg-010_before.txt`). After: 10 passed (`reg-010_after.txt`). Full suite 6,946 passed / 26 skipped. Residual: finite pattern set, `UC-042` ceiling unchanged |
 | REG-011 | `[AEG2:ACT-03][BLIND-08]` | CODE | P0 | DB append races drop nodes | `SEED` | Needs testcontainers Postgres/Dynamo harness; likely `BLOCKED` if this environment lacks Docker |
-| REG-012 | `[AEG2:ACT-05][BLIND-05][GDPR-17]` | CODE | P0 | Shredded nodes keep dictionary-attackable plaintext hashes | `SEED` | Fix = per-subject salted digests, salt shredded with the key |
+| REG-012 | `[AEG2:ACT-05][BLIND-05][GDPR-17][CLM-098]` | CODE | P0 | Shredded nodes keep dictionary-attackable plaintext hashes | **FIXED** | `CryptoShredder.digest` keys request/response digests with a salt **derived** from the subject key, so the one row `shred` deletes destroys both; scheme `v2-aesgcm256-hmacsha256`. Probe on pre-fix source: `GUESS CONFIRMED AGAINST ERASED RECORD: True`; after: `False` (`evidence/registry/reg-012_before.txt`, `reg-012_after.txt`). Test `tests/test_shredded_digest_confirmability.py` (7). Chain still verifies with the key gone. `UC-037` corrected — it asserted the weakness this removes. Residual: media-sanitisation limits untouched; a keyed digest hides content, not existence, timestamp, tenant or chain position |
 | REG-013 | `[AEG2:ACT-07][BLIND-09]` | CODE | P2 | OTel `traceparent` not propagated | `SEED` | |
 | REG-014 | `[AEG2:ACT-08]` | CODE | P2 | `/metrics` dark by default | `SEED` | DECIDE: core dep vs documented extra |
 | REG-015 | `[AEG2:ACT-09]` | CODE | P1 | ZK preview cap blowup | `SEED` | |
@@ -161,11 +162,11 @@ Their status is tracked in [Commercial Readiness](commercial/COMMERCIAL_READINES
 
 | Wave | Total | FIXED | VERIFIED | DOCUMENTED | BLOCKED | WONT-FIX | open (`SEED`) |
 |---|---|---|---|---|---|---|---|
-| W1 | 30 | 1 | 12 | 1 | 0 | 0 | **16** |
+| W1 | 30 | 2 | 12 | 1 | 0 | 0 | **15** |
 | W2 | 23 | 0 | 2 | 0 | 0 | 0 | **21** |
 | W3 | 9 | 0 | 2 | 2 | 0 | 0 | **5** |
 | `[DISC]` | 3 | 0 | 0 | 1 | 0 | 0 | **2** |
-| **Total** | **65** | **1** | **16** | **4** | **0** | **0** | **44** |
+| **Total** | **65** | **2** | **16** | **4** | **0** | **0** | **43** |
 
 Human class (9) is excluded from the burn-down by design.
 
@@ -177,7 +178,7 @@ Recorded because a registry that omits its own coverage gaps asserts a completen
 
 **Autodiscovery scans not run:** 3 (`UNSUPPORTED_CLAIMS`/`ROADMAP` open-item extraction), 6 (CI logs, last 30 runs, for flaky/skipped suites), 7 (`evidence/` `NOT_EXECUTED` and `BLOCKED` sections), 8 (full battery failure/skip triage — the suite is green at 6,936 passed / 26 skipped, but the **26 skips were not individually triaged**), 9 (doc-gate findings — all four gates pass, so there are no findings to convert).
 
-**44 rows remain `SEED`**, including genuinely confirmed P0 work: REG-011 (DB append races), REG-012 (shredded-node digests), REG-023 (pre-forward ePHI), REG-027 (gateway not on PyPI), REG-028 (release readback automation), and REG-042 (multi-pod total order, FATAL).
+**43 rows remain `SEED`**, including genuinely confirmed P0 work: REG-011 (DB append races), REG-023 (pre-forward ePHI), REG-027 (gateway not on PyPI), REG-028 (release readback automation), and REG-042 (multi-pod total order, FATAL).
 
 **Per `PD-R2` and the `R4` gate, this registry is `NOT SEALED`.** No closure attestation is emitted, and none should be written until the `SEED` count reaches zero.
 

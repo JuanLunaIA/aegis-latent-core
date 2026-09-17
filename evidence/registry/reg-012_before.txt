@@ -1,0 +1,9 @@
+REG-012 proof of defect — pre-fix source (aegis/core/crypto_audit.py, crypto_shredder.py stashed)
+Probe: commit a guessable payload, crypto_shred the subject, then try to confirm the guess.
+
+stored request_hash : 6160d4d9f315d8e8d1ac6bef5658fe87...
+sha256(guess)       : 6160d4d9f315d8e8d1ac6bef5658fe87...
+GUESS CONFIRMED AGAINST ERASED RECORD: True
+
+pytest tests/test_shredded_digest_confirmability.py against pre-fix source:
+  ERROR — collection fails: SHRED_SCHEME_V2 does not exist (the scheme the fix introduces)
