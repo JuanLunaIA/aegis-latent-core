@@ -1,0 +1,59 @@
+REG-047 — VERIFIED: the Windows lock's degradation on FAT32/network
+filesystems is already handled correctly, tested, and disclosed. Direct
+investigation this session (no subagent delegated — small enough to verify
+in one pass).
+
+=== Mechanism, confirmed from source ===
+
+`aegis/core/crypto_audit.py`'s `_windows_lock_region` places a mandatory
+`msvcrt.locking` byte-range lock at a 1 TiB sentinel offset past any real
+WAL record (`_WINDOWS_LOCK_OFFSET = 1 << 40`), chosen to sit inside NTFS's
+256 TiB ceiling. FAT32's 4 GiB maximum file size — and some network
+filesystems' seek/lock restrictions — cannot address that offset, so
+`os.lseek(fd, _WINDOWS_LOCK_OFFSET, os.SEEK_SET)` raises `OSError` (EINVAL)
+there. `_windows_lock_region` catches exactly that and re-raises as
+`_SentinelUnavailableError`, a type deliberately distinct from a genuine
+lock conflict (`aegis/core/crypto_audit.py:228-257`).
+
+`_lock_wal_fd`'s Windows branch (`:276-293`) catches
+`_SentinelUnavailableError` specifically and calls `_warn_unlocked()` —
+logging that "single-writer discipline ... is operator-enforced, not
+process-enforced" — rather than either crashing or falsely refusing the
+first legitimate writer as though it were a second one. This is the exact
+"lock degrade on FAT32/network" scenario the row names, and it degrades
+gracefully rather than failing closed or failing silently.
+
+=== Confirmed by test, re-run directly ===
+
+$ .venv/bin/python -m pytest tests/security/test_wal_single_writer.py -v
+13 passed in 0.85s
+
+Including `test_windows_unreachable_sentinel_admits_the_first_writer`,
+which monkeypatches `_WINDOWS_LOCK_OFFSET` to `-1` (an address no real
+filesystem can reach, simulating FAT32/restricted-network behavior),
+asserts the lock call is never attempted (`fake.calls == []`), and asserts
+the "operator-enforced" warning is logged — the precise degradation path.
+Also `test_sentinel_offset_clears_any_wal_and_stays_addressable`, which
+pins the *positive* case (NTFS/ext4/APFS/XFS can address the offset) so
+the two cases stay distinguished rather than one silently masking the
+other. This suite is also exercised on real Windows in CI
+(`.github/workflows/ci.yml`'s `windows-wal-lock` job, `windows-2022`
+runner), not only simulated here on Linux.
+
+=== Confirmed already disclosed ===
+
+`docs/CLAIMS_MATRIX.md`, `CLM-011`, already states: "network filesystems
+carry their own lock semantics" and "On a platform offering neither
+primitive, or where the sentinel offset exceeds the filesystem maximum,
+the ledger warns and the discipline is operator-enforced." This matches
+the code precisely — not a stale or aspirational claim.
+
+=== Disposition ===
+
+No defect, no undocumented gap. The degradation path is deliberately
+designed (the module comment at `:204-224` explains exactly why a naive
+"lock the file head" approach was rejected — it would turn "another writer
+holds this path" into "this WAL cannot be read" on Windows, since the WAL
+is read while a writer holds it), tested both by simulation and by real
+Windows CI, and disclosed accurately in the controlling claims register
+before this session touched it. No code change.
