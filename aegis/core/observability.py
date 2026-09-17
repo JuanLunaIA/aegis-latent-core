@@ -199,13 +199,17 @@ else:
         def labels(self, **_kw: Any) -> _NoopMetric:
             return self
 
-        def inc(self, _amount: float = 1.0) -> None: ...
+        def inc(self, _amount: float = 1.0) -> None:
+            pass
 
-        def observe(self, _amount: float) -> None: ...
+        def observe(self, _amount: float) -> None:
+            pass
 
-        def set(self, _value: float) -> None: ...
+        def set(self, _value: float) -> None:
+            pass
 
-        def set_function(self, _fn: Any) -> None: ...
+        def set_function(self, _fn: Any) -> None:
+            pass
 
     REQUEST_TOTAL = _NoopMetric()
     REQUEST_DURATION = _NoopMetric()

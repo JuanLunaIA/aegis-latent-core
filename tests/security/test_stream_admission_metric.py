@@ -16,6 +16,8 @@ gate's own counters lazily at scrape time.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 
 from aegis.config import AegisSettings
@@ -31,9 +33,9 @@ class _Recorder:
     """Stand-in for a Gauge that records the function bound via set_function."""
 
     def __init__(self) -> None:
-        self.fn = None
+        self.fn: Callable[[], float] | None = None
 
-    def set_function(self, fn) -> None:
+    def set_function(self, fn: Callable[[], float]) -> None:
         self.fn = fn
 
 
@@ -120,9 +122,10 @@ def test_registry_reflects_live_gate_state(tmp_path):
                     continue
                 assert len(metric.samples) == 1
                 return metric.samples[0].value
-            pytest.fail(f"{metric_name} is not registered")
+            raise AssertionError(f"{metric_name} is not registered")
 
         assert _read(_ACTIVE_METRIC) == 0
+        assert _read(_REJECTED_METRIC) == 0
 
         app.state.aegis.stream_gate.acquire()
         try:
@@ -131,5 +134,11 @@ def test_registry_reflects_live_gate_state(tmp_path):
             app.state.aegis.stream_gate.release()
 
         assert _read(_ACTIVE_METRIC) == 0
+
+        app.state.aegis.stream_gate = StreamAdmissionGate(limit=1)
+        app.state.aegis.stream_gate.acquire()
+        with pytest.raises(StreamAdmissionFullError):
+            app.state.aegis.stream_gate.acquire()
+        assert _read(_REJECTED_METRIC) == 1
     finally:
         _close(app)
