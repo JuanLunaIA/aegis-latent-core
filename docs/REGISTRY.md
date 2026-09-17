@@ -55,6 +55,7 @@ Five terminal states. `SEED` is **not** terminal — it means the row has been r
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-050 FIXED — closes Wave 1's last non-DECIDE row.** `StreamAdmissionGate` (`CLM-094`) already bounded concurrent streams and therefore worst-case FD usage; the row's real gap — "FD budget metric not present" — is now closed with `aegis_stream_admission_active`/`_rejected_total` gauges (`CLM-102`), bound via `Gauge.set_function` at gate construction rather than pushed at acquire/release, preserving `streaming.py`'s deliberate lack of an `observability` import (confirmed every other stream metric is set from `app.py`, never `streaming.py`, before choosing this design). Test `tests/security/test_stream_admission_metric.py` (5 tests). Verified against both environment states: 3 passed/1 skipped without the optional `metrics` extra (this repo's baseline — `prometheus-client` is not in `requirements.lock`), 5/5 passed with it temporarily installed to exercise the real registry, then uninstalled again; full suite re-confirmed clean at baseline (`6,976 passed, 33 skipped`). Two alert rules added to `MONITORING_ALERTING.md`. `evidence/registry/reg-050_fixed.txt` |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-015 DOCUMENTED — Wave 1 has exactly one `SEED` row left (REG-023, `DECIDE`).** Delegated to a `zk-proof-reviewer` subagent; key citations independently re-verified. No blowup, crash, or DoS found — the ZK circuit is compiled out of every default build and nothing on the gateway request path reaches it (`pytest -k "zk or zero_knowledge"` re-run: 59 passed, 5 skipped). What is real, and was genuinely undocumented: `max_forensic_bytes` is unreachable from gateway configuration at all (`aegis/proxy/app.py:957-968` confirmed to omit it, `aegis/config.py` confirmed to define no setting for it), so `DOC-08` §6.3's existing "an operator must decide to shrink previews" language was true only for an in-process caller, never a gateway operator; and `zk_verifier_key`'s three `usize` shape parameters (confirmed unbounded by reading `zk_bindings.rs`) mean a verifier deriving their own key must bound it themselves. Added both to `DOC-08_ZERO_KNOWLEDGE_INCLUSION.md` (§6.3, §6.5) and a new `BOUNDARIES.md` row. `CLM-089`'s existing economics figure needed no correction. No code change. `evidence/registry/reg-015_verify.txt` |
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-054 FIXED — first Wave 2 closure this session.** `aegis/core/mmr.py`'s module comment said `mmr_hash_scheme` was "still defaulting to v1"; confirmed against source (`aegis/config.py:410-421`, `aegis/core/crypto_audit.py:792-794`) that a prior session's P1-2 work already changed `auto` to start new chains on v2, and this comment was simply never updated to match. Rewrote the block to state current behavior accurately. Doc-only, no behavior change. `pytest tests/test_mmr_v2_migration.py tests/ -k "mmr" -q` → 378 passed. `evidence/registry/reg-054_fixed.txt` |
+| 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-060 FIXED.** `.aegis_ai_context/README.md` already carried a thorough non-authoritative purpose statement, but grepped `README.md`/`CONTRIBUTING.md`/`docs/REPOSITORY_MAP.md` first and confirmed none of them mention the directory at all — a contributor reading the repository's own map would never learn it exists. Added an "AI context and navigation aids" section to `docs/REPOSITORY_MAP.md` covering both `.aegis_ai_context/` and `llms.txt`, restating the existing boundary rather than inventing new language. Doc-only. `evidence/registry/reg-060_fixed.txt` |
 
 **Current seal state: NOT SEALED** — rows remain in `SEED`. See §6.
 
@@ -143,7 +144,7 @@ Scans 3, 6, 7, 8, 9 were **not executed this session** and are recorded as outst
 | REG-056 | `[P2-5]` | CODE | P3 | Checked-in protobuf codegen | `SEED` | |
 | REG-058 | `[P3-1]` | CODE | P3 | Samples/HTML + snapshots in repo | `SEED` | |
 | REG-059 | `[P3-2]` | DOC | P3 | Buyer-guide duplication | `SEED` | |
-| REG-060 | `[P3-5]` | DOC | P3 | `.aegis_ai_context` purpose note | `SEED` | |
+| REG-060 | `[P3-5]` | DOC | P3 | `.aegis_ai_context` purpose note | **FIXED** | `.aegis_ai_context/README.md` already carried a thorough purpose statement ("advisory, progressively disclosed... not concealed directives... not release evidence"), but nothing in `README.md`, `CONTRIBUTING.md` or `docs/REPOSITORY_MAP.md` mentioned the directory at all (confirmed by grep before editing — no matches). A contributor reading the repository's own map would never learn it exists. Added a new "AI context and navigation aids" section to `docs/REPOSITORY_MAP.md` covering both `.aegis_ai_context/` and `llms.txt`, restating the same non-authoritative boundary already established internally rather than introducing new language. Doc-only. `evidence/registry/reg-060_fixed.txt` |
 
 ### 4.3 Wave 3 — architecture decisions
 
@@ -180,10 +181,10 @@ Their status is tracked in [Commercial Readiness](commercial/COMMERCIAL_READINES
 | Wave | Total | FIXED | VERIFIED | DOCUMENTED | BLOCKED | WONT-FIX | open (`SEED`) |
 |---|---|---|---|---|---|---|---|
 | W1 | 30 | 6 | 18 | 5 | 0 | 0 | **1** |
-| W2 | 23 | 1 | 4 | 0 | 0 | 0 | **18** |
+| W2 | 23 | 2 | 4 | 0 | 0 | 0 | **17** |
 | W3 | 9 | 0 | 2 | 2 | 0 | 0 | **5** |
 | `[DISC]` | 3 | 0 | 0 | 1 | 0 | 0 | **2** |
-| **Total** | **65** | **7** | **24** | **8** | **0** | **0** | **26** |
+| **Total** | **65** | **8** | **24** | **8** | **0** | **0** | **25** |
 
 Human class (9) is excluded from the burn-down by design.
 
@@ -195,7 +196,7 @@ Recorded because a registry that omits its own coverage gaps asserts a completen
 
 **Autodiscovery scans not run:** 3 (`UNSUPPORTED_CLAIMS`/`ROADMAP` open-item extraction), 6 (CI logs, last 30 runs, for flaky/skipped suites), 7 (`evidence/` `NOT_EXECUTED` and `BLOCKED` sections), 8 (full battery failure/skip triage — the suite is green at 6,936 passed / 26 skipped, but the **26 skips were not individually triaged**), 9 (doc-gate findings — all four gates pass, so there are no findings to convert).
 
-**26 rows remain `SEED`**, including genuinely confirmed P0 work: REG-023 (pre-forward ePHI), REG-027 (gateway not on PyPI), REG-028 (release readback automation), and REG-042 (multi-pod total order, FATAL). Wave 1 has exactly one `SEED` row left: **REG-023**, explicitly `DECIDE` — it touches the "redaction protects the record, not your provider" boundary and needs an owner decision before it can be worked, not further autodiscovery.
+**25 rows remain `SEED`**, including genuinely confirmed P0 work: REG-023 (pre-forward ePHI), REG-027 (gateway not on PyPI), REG-028 (release readback automation), and REG-042 (multi-pod total order, FATAL). Wave 1 has exactly one `SEED` row left: **REG-023**, explicitly `DECIDE` — it touches the "redaction protects the record, not your provider" boundary and needs an owner decision before it can be worked, not further autodiscovery.
 
 **Per `PD-R2` and the `R4` gate, this registry is `NOT SEALED`.** No closure attestation is emitted, and none should be written until the `SEED` count reaches zero.
 
