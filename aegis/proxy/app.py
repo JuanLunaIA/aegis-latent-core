@@ -905,6 +905,15 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         else None
     )
     state.stream_gate = StreamAdmissionGate(cfg.max_concurrent_streams)
+    # set_function, not set(): the gate is mutated from guarded_stream's
+    # finally (aegis/proxy/streaming.py), which deliberately does not import
+    # observability, so there is no push site on release. Reading the gate's
+    # own counters lazily at scrape time reflects live state without adding
+    # that cross-module dependency. Called unconditionally, like every other
+    # metric write in this module — the no-op stub accepts the same call
+    # when prometheus_client is not installed.
+    observability.STREAM_ADMISSION_ACTIVE.set_function(lambda: state.stream_gate.active)
+    observability.STREAM_ADMISSION_REJECTED.set_function(lambda: state.stream_gate.rejected)
     state.waf_session_tracker = WAFSessionTracker(
         max_sessions=4_096,
         window=cfg.waf_session_window,

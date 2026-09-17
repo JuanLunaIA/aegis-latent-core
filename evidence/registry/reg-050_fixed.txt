@@ -1,0 +1,115 @@
+REG-050 — FIXED: FD-budget observability wired for the SSE slow-drip
+concern. The concurrency bound itself already existed (CLM-094,
+StreamAdmissionGate); the gap this row named — "FD budget metric not
+present" — is now closed with two Prometheus gauges.
+
+=== What already existed (not touched) ===
+
+`StreamAdmissionGate` (`aegis/proxy/streaming.py`) caps concurrent SSE
+streams per process at `AEGIS_MAX_CONCURRENT_STREAMS` (default 256) and
+holds a slot for the life of the stream, including when the client
+disconnects mid-stream without ever reading further ("slow-drip"). Each
+held stream corresponds to roughly one client-socket FD plus one upstream
+connection FD, so the existing concurrency cap already bounds worst-case FD
+usage as a side effect of bounding memory (its own stated purpose). This
+was `CLM-094`, already `IMPLEMENTED`/`LOCALLY TESTED` before this session.
+
+=== What was missing, confirmed by grep before writing anything ===
+
+$ grep -n "STREAM_ADMISSION\|stream_gate\." aegis/core/observability.py
+(no matches before this change)
+
+No metric read `StreamAdmissionGate.active` or `.rejected` — both existed
+as properties on the gate object but were never surfaced on `/metrics`. An
+operator had no way to see how close a process sat to its ceiling, or how
+often it had refused new streams, without attaching a debugger.
+
+=== Fix ===
+
+Added two gauges to `aegis/core/observability.py`:
+- `aegis_stream_admission_active` — concurrent streams admitted right now.
+- `aegis_stream_admission_rejected_total` — cumulative refusals since
+  process start (a Gauge, not a Counter, matching the existing
+  `aegis_audit_chain_nodes_total` precedent for mirroring an internally-
+  tracked count).
+
+Both are bound via `Gauge.set_function(...)` at `state.stream_gate =
+StreamAdmissionGate(...)` in `create_app` (`aegis/proxy/app.py`), reading
+`state.stream_gate.active`/`.rejected` lazily at Prometheus scrape time.
+This was a deliberate design choice, not the obvious one: `guarded_stream`
+(`aegis/proxy/streaming.py`) is what actually releases a slot, in its own
+`finally`, and that module deliberately imports nothing from
+`observability` — every other metric write in this codebase happens from
+`app.py` (confirmed by grep: `STREAM_DURATION`/`STREAM_TOKENS`/
+`STREAM_REDACTIONS` are all set from `app.py`'s terminal-commit callbacks,
+never from `streaming.py` itself). `set_function` preserves that boundary
+without needing a callback threaded through `guarded_stream`'s signature.
+
+Also added a no-op `set_function` method to `observability.py`'s
+`_NoopMetric` stub class, so the call is safe whether or not
+`prometheus_client` is installed — matching every other metric write in
+this codebase, none of which are gated behind `prometheus_available()`.
+
+=== Tests ===
+
+New file `tests/security/test_stream_admission_metric.py`, 5 tests:
+- `test_gate_gauges_wired_via_set_function` — create_app binds both gauges
+  to callables; acquiring/releasing a slot changes what the callable
+  returns.
+- `test_gate_gauges_reflect_rejections` — a rejection is visible through
+  the bound callable with no push call at the reject site, and the
+  callable still reads a `stream_gate` reassigned after construction,
+  proving it reads live state rather than closing over a snapshot.
+- `test_gauges_accept_writes_without_prometheus` — the no-op stub accepts
+  `set_function` identically.
+- `test_registry_reflects_live_gate_state` — end-to-end against the real
+  `prometheus_client` `REGISTRY`, skipped when the extra is absent.
+
+Before (packages hidden — this repo's baseline, `prometheus-client` is not
+in `requirements.lock`/`[dev]` extras, confirmed earlier this session for
+REG-014):
+$ .venv/bin/python -m pytest tests/security/test_stream_admission_metric.py -v
+3 passed, 1 skipped (the end-to-end test skips cleanly without the extra)
+
+After installing `prometheus-client` to exercise the real registry path:
+$ pip install prometheus-client -q
+$ .venv/bin/python -m pytest tests/security/test_stream_admission_metric.py tests/security/test_enforcement_mode_metric.py -v
+10 passed
+
+Full suite with prometheus-client installed: 6976 passed, 28 skipped, plus
+5 pre-existing, unrelated failures in tests/test_observability_new.py
+(confirmed via `git stash` that all 5 fail identically without this
+change too — they require the `opentelemetry` package, which is not
+installed in this environment either, and are exposed only once
+prometheus-client's presence changes which code path those tests reach;
+not caused by this change, out of scope for REG-050).
+
+Restored the baseline environment (`pip uninstall -y prometheus-client`)
+and re-ran the full suite:
+$ .venv/bin/python -m pytest tests/ -n auto -q
+6976 passed, 33 skipped in 118.95s — clean, matches the pre-change baseline
+plus this change's own 5 tests included.
+
+`ruff check`/`ruff format --check` on the 3 touched files: clean.
+`mypy --strict aegis/core/observability.py`: Success, no issues.
+
+=== Docs ===
+
+`docs/CLAIMS_MATRIX.md` — new `CLM-102` (summary + detailed rows).
+`docs/operations/MONITORING_ALERTING.md` — both metrics added to the
+"Streaming and analysis" table; two new alert rules
+(`AegisStreamAdmissionNearCeiling`, `AegisStreamAdmissionRejecting`) added
+to the Availability section, matching the existing alert style.
+
+=== Residual ===
+
+The gauges report the process's own ceiling proximity; they do not report
+an OS-level FD count or `RLIMIT_NOFILE` headroom directly, since
+`StreamAdmissionGate`'s cap is what actually bounds FD usage and the two
+move together by construction (one held stream ~= one client FD + one
+upstream FD). A deployment running multiple concurrent bounded resources
+sharing the same FD budget (e.g. this process plus unrelated file I/O)
+would need to correlate this gauge with `AEGIS_MAX_CONCURRENT_STREAMS` and
+the process's actual `RLIMIT_NOFILE`, neither of which this metric reports
+directly — the alert rule added above states this explicitly rather than
+implying the gauge alone answers "are we near the FD limit."

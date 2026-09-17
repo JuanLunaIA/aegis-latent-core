@@ -176,6 +176,21 @@ if _PROM:
         "limiting and kernel controls, so a governed environment should alert "
         "on 0. This gauge exposes posture only; it carries no config values.",
     )
+    STREAM_ADMISSION_ACTIVE: Any = Gauge(
+        "aegis_stream_admission_active",
+        "Concurrent streams currently admitted by StreamAdmissionGate, out of "
+        "AEGIS_MAX_CONCURRENT_STREAMS on this process. Bound via set_function "
+        "in create_app, so it reflects live gate state at scrape time rather "
+        "than a value pushed on every acquire/release.",
+    )
+    STREAM_ADMISSION_REJECTED: Any = Gauge(
+        "aegis_stream_admission_rejected_total",
+        "Cumulative streaming requests refused since process start because "
+        "the concurrent-stream ceiling was already at AEGIS_MAX_CONCURRENT_STREAMS. "
+        "A Gauge, not a Counter, for the same reason as aegis_audit_chain_nodes_total: "
+        "it mirrors a count the gate already tracks internally rather than being "
+        "independently incremented at each call site.",
+    )
 else:
     # No-op stubs — identical API surface so callers never branch on _PROM.
     # All methods are silent no-ops; the proxy runs identically when
@@ -189,6 +204,8 @@ else:
         def observe(self, _amount: float) -> None: ...
 
         def set(self, _value: float) -> None: ...
+
+        def set_function(self, _fn: Any) -> None: ...
 
     REQUEST_TOTAL = _NoopMetric()
     REQUEST_DURATION = _NoopMetric()
@@ -212,6 +229,8 @@ else:
     SECURITY_ENFORCEMENT_MODE = _NoopMetric()
     WAL_REPLICATION_LAG = _NoopMetric()
     SCHEDULING_JITTER = _NoopMetric()
+    STREAM_ADMISSION_ACTIVE = _NoopMetric()
+    STREAM_ADMISSION_REJECTED = _NoopMetric()
 
 
 def prometheus_available() -> bool:
