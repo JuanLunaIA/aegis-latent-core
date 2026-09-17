@@ -7,15 +7,23 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 # Enterprise Pricing Guide
 
 **Audience:** procurement, finance, and the account team preparing a quote.
-**Status of the numbers below:** these are **published list prices** — offers the vendor is making. They are **not** observed contract values, not an average selling price, and not evidence that anyone has paid them.
+
+> ## `[HYPOTHESIS-UNVALIDATED]`
+>
+> **Every figure in this document is an unvalidated pricing hypothesis.** It is published so a buyer can start a conversation from a number instead of from a silence — not because the number has been tested.
+>
+> No executed commercial agreement exists anywhere in this project. There is therefore **no list price, no average selling price, no annual contract value, no win rate, and no evidence that anyone has paid any of these amounts.** §9 states exactly what has to happen before any figure here may be restated as firm.
+>
+> This is the **single source of truth for pricing.** Any number in any other document that disagrees with this one is stale and this one governs (`COMMERCIAL.md`, `docs/COMMERCIAL_STRATEGY_US.md`).
 
 ## Read this before quoting anything
 
-`docs/institutional/UNSUPPORTED_CLAIMS.md` blocks four claims that a pricing document invites, and none of them is made here:
+`docs/institutional/UNSUPPORTED_CLAIMS.md` blocks the claims a pricing document invites, and none of them is made here:
 
 | Blocked | Why it stays blocked |
 |---|---|
-| "Our ACV is $X" (`UC-033`) | A list price is what is asked. Annual contract value is what was signed. **No executed contract is cited anywhere in this repository**, so no ACV, no average deal size, and no win rate may be quoted. |
+| "Our ACV is $X" (`UC-033`) | An asking figure is what is asked. Annual contract value is what was signed. **No executed contract is cited anywhere in this repository**, so no ACV, no average deal size, and no win rate may be quoted. |
+| "These are our list prices" | A list price is an offer the vendor stands behind. These are hypotheses about what the market will bear. Calling them list prices asserts a commercial position that no validation supports. |
 | "Pricing and procurement readiness are established" (`UC-028`) | These are hypotheses about what the market will bear, published so a buyer can start a conversation. They are not validated by revenue. |
 | "We provide a 99.95% SLA and round-the-clock response" (`UC-019`) | The SLA matrix below is a **proposed schedule for negotiation**. No rota is staffed, no service credits are contracted, and no production history supports an availability figure. |
 | Customer references, logos, case studies | There are none to cite. Do not create them. |
@@ -30,9 +38,13 @@ $$\text{TCV} = \text{Base Subscription} + \sum \text{Engine Licenses} + \text{MG
 
 The commercial subscription grants production use under the Proprietary Commercial License, which supersedes AGPLv3 for the covered deployment. **The AGPLv3 distribution remains free and fully functional** — see "What the free tier keeps" below, because that boundary is a legal statement, not a marketing one.
 
+> **`[FRAMEWORK-ONLY]` — the commercial licence text does not yet exist.** `CR-04` in [Commercial Readiness](COMMERCIAL_READINESS.md) records it as **`NOT STARTED`**: counsel-drafted template, 2–4 weeks, gated on a buyer who needs it. A buyer who asks today to see the agreement will find there is nothing to send.
+>
+> This is stated here, beside the model that depends on it, rather than left for the buyer to discover after they have spent review cycles. Everything below describes what a subscription is intended to grant once that document exists.
+
 ## Packages
 
-| SKU | Annual list price | Engines included | Intended for |
+| SKU | Annual hypothesis `[UNVALIDATED]` | Engines included | Intended for |
 |---|---|---|---|
 | Community | $0 (AGPLv3) | Standalone gateway; every engine importable | Evaluation, research, open-source deployment |
 | Aegis Core | $45,000 | Control plane + any one engine | Teams needing one capability in production |
@@ -46,7 +58,7 @@ The Sovereign band is a range because its scope is bounded by the customer's env
 
 Priced for a buyer who already owns a gateway and wants one capability:
 
-| Add-on | Annual list price | What it is |
+| Add-on | Annual hypothesis `[UNVALIDATED]` | What it is |
 |---|---|---|
 | Veracity Engine | $35,000 | Evidence commitment, portable inclusion proofs, cryptographic erasure |
 | Sanctum Engine | $30,000 | Streaming de-identification and request scanning |
@@ -57,7 +69,7 @@ Each maps to a licensable module name in the token: `veracity`, `sanctum`, `agen
 
 ### Volume: Million Governed Transactions
 
-| Tier | Annual governed transactions | List price per MGT |
+| Tier | Annual governed transactions | Hypothesis per MGT `[UNVALIDATED]` |
 |---|---|---|
 | 1 | up to 10M | included in base |
 | 2 | 10M – 50M | $1,500 |
@@ -72,7 +84,7 @@ Per-transaction rather than per-token, because a per-token line item makes an in
 
 Fixed-scope engagements, quoted before work begins:
 
-| Engagement | List price | Deliverable |
+| Engagement | Hypothesis `[UNVALIDATED]` | Deliverable |
 |---|---|---|
 | GxP qualification pack | $35,000 | Fixed-scope IQ/OQ execution and a signed technical dossier |
 | Custom connector development | $50,000 | One bespoke upstream or downstream connector, with tests |
@@ -110,6 +122,24 @@ Two cautions for whoever writes the response:
 
 - **Indemnification is a contract term, not a property of the software.** Any cap is whatever the executed agreement says. No figure is published here, because publishing one would imply an underwritten position that does not exist in this repository.
 - **This is not legal advice**, and nothing here is a legal opinion about a buyer's obligations under any licence. Their counsel decides.
+
+## 9. What must happen before any figure here is stated as firm
+
+`[HYPOTHESIS-UNVALIDATED]` is not a permanent disclaimer to be worn indefinitely. It is a status with an exit condition, and this is the condition.
+
+A figure in this document may be restated as a firm price **only when all five are true and each is recorded with a date**:
+
+| # | Gate | Why it is necessary | Status |
+|---|---|---|---|
+| 1 | **≥3 buyer interviews** with a named economic buyer who owns a record-keeping obligation, each recording what they would pay and what they compared it against | Three is the minimum at which a number stops being one person's opinion. Fewer, and the price reflects whoever was most polite | `NOT STARTED` |
+| 2 | **≥1 executed paid pilot** at a stated fee, with written acceptance criteria | A price nobody has paid is a guess. A price one buyer has paid is a data point | `NOT STARTED` (`CR-05`) |
+| 3 | **A cost-to-serve model** with measured inputs — support hours actually spent, infrastructure, the founder's time per account | Without it, a margin cannot be computed and the price could be below cost. Nothing in this repository measures any of these | `NOT STARTED` |
+| 4 | **A comparables set** built from publicly published vendor pricing, with sources and retrieval dates | An anchor drawn from memory is not a comparable | `NOT STARTED` |
+| 5 | **The commercial licence template exists** (`CR-04`) | A price for a grant that has not been drafted cannot be accepted, whatever the number says | `NOT STARTED` |
+
+**All five are `NOT STARTED`.** Until they are not, every number above stays labelled, and no document derived from this one may restate a figure as a list price, a quote, an observed contract value, or evidence of market validation.
+
+Gates 1 and 2 are the same activity as `CR-05` in [Commercial Readiness](COMMERCIAL_READINESS.md). Pricing validation is not a separate project; it is a by-product of finding the first design partner, which is why that action blocks more than its own row.
 
 ## Related
 

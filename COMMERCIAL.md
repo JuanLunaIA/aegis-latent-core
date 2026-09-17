@@ -2,8 +2,8 @@
 
 This document summarizes the open-source and commercial licensing boundary and the current packaging hypothesis for Aegis Latent Core. It is for procurement, legal, commercial and technical buyers. It is not legal advice, a binding offer, a warranty, a support SLA or a regulatory representation.
 
-**Last verified:** 2026-08-27 UTC
-**Release baseline:** current source/release candidate
+**Last verified:** 2026-09-16 UTC
+**Release baseline:** `5.0.0` source line; see `docs/RELEASE_STATUS.md` §1.0 for what was read back on each surface
 **Source baseline:** `5.0.0` with fourteen synchronized anchors, **published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)**; `v4.1.2` remains the most recent version published on every surface, whose publication was read back on 2026-09-04 and is recorded in `docs/RELEASE_STATUS.md` §1.1
 **Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 **License source:** [`LICENSE`](LICENSE)
@@ -17,7 +17,11 @@ This file does not determine whether a specific use triggers AGPL obligations, w
 
 ## Product baseline for commercial review
 
-The current source line is **5.0.0** with fourteen synchronized anchors, published 2026-09-16 on every surface except PyPI `aegis-latent-core`; **4.1.2** remains the most recent version published on every surface. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP exports, and an auxiliary `RustWal` streaming segment. External publication is claimed only from readback. On 2026-09-03 the `v4.1.1` signed tag, GitHub Release, PyPI `aegis-latent-sdk` `4.1.1`, and GHCR gateway and dashboard images were read back; **npm still carries `4.0.0`**, and no signature or attestation verification was run. The `v4.0.2` release objects, the prior public `v4.0.1` lightweight tag, and the observed `4.0.0` registry objects are historical external baselines, not provenance for this line; a commercial scope must name the exact commit or the published release it covers.
+The current source line is **5.0.0** with fourteen synchronized anchors, published 2026-09-16 on every surface except PyPI `aegis-latent-core`; **4.1.2** remains the most recent version published on every surface. **No publication is claimed here that was not read back**, and version metadata is never treated as evidence of release. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP exports, and an auxiliary `RustWal` streaming segment. External publication is claimed only from readback. On 2026-09-16 the `v5.0.0` signed annotated tag, the GitHub Release with 31 uploaded assets, PyPI `aegis-latent-sdk` `5.0.0`, npm `aegis-latent-sdk` `5.0.0`, and both GHCR images with cosign signature objects present were read back. **`cosign verify` and `gh attestation verify` were not run, and a signature object resolving is not verification** — it establishes that an object was pushed, not that it validates or who signed it.
+
+**One gap, stated rather than glossed:** PyPI `aegis-latent-core` — the gateway distribution — was **not** published at `5.0.0` and still resolves to `4.1.2`. No workflow publishes that distribution, so waiting will not resolve it. A commercial scope must name the exact commit or the published artifact it covers, and for the gateway that artifact is the GitHub Release assets or `ghcr.io/juanlunaia/aegis-latent-core:5.0.0`, not a `pip install`.
+
+The `v4.0.2` release objects, the prior public `v4.0.1` lightweight tag, and the observed `4.0.0` registry objects are historical external baselines, not provenance for this line.
 
 For non-streaming calls, durable evidence and MMR proof headers are available after commit. For streams, initial headers remain `pending-terminal`; the terminal record is committed before the protocol terminal marker and proof retrieval occurs after termination.
 
@@ -31,11 +35,15 @@ For non-streaming calls, durable evidence and MMR proof headers are available af
 | Enterprise | Multiple environments or procurement-heavy deployment | Negotiated support, security-review assistance, architecture guidance, procurement artifacts and response targets | Custom annual agreement subject to staffing and legal review |
 | Sovereign / OEM | Air-gapped, embedded, redistribution, escrow or dedicated assurance | Separate redistribution, support, assurance and custody terms | Future/custom only; not a default promise |
 
-The project does not publish a permanent one-time price, lifetime update promise, automatic AGPL exemption, unlimited feature entitlement, 24/7 support commitment or sovereign assurance claim. Internal planning retains Team/Pilot USD 10,000–30,000, Production USD 40,000–100,000, and Enterprise USD 100,000–250,000+ solely as hypotheses. They are **not list prices, observed ACV, or a valuation**, and this repository contains no evidence-backed vertical ACV or startup/IP valuation. Those commitments require an executed agreement, an accountable support organization and legal review.
+The project does not publish a permanent one-time price, lifetime update promise, automatic AGPL exemption, unlimited feature entitlement, round-the-clock support commitment or sovereign assurance claim. Those require an executed agreement, an accountable support organization and legal review.
+
+**Pricing lives in one place.** [`docs/commercial/ENTERPRISE_PRICING_GUIDE.md`](docs/commercial/ENTERPRISE_PRICING_GUIDE.md) is the single source of truth, and every figure in it is labelled `[HYPOTHESIS-UNVALIDATED]` with the five gates that would have to close before any of it could be stated as firm. **No figure is repeated here**, deliberately: this file previously carried a competing set of bands, which meant the corpus quoted two different numbers for the same tier under two opposite descriptions of what those numbers were. One source, one label, no restatement.
+
+This repository contains no evidence-backed vertical ACV, no observed contract value and no startup/IP valuation (`UC-032`, `UC-033`).
 
 ## Financial-claim discipline
 
-The ranges above are planning inputs held by the project, not offers, quotes, or market observations. To keep that boundary enforceable rather than aspirational, the following rules apply to every document, deck, and conversation derived from this file.
+The figures in the pricing guide are planning inputs held by the project, not offers, quotes, or market observations. To keep that boundary enforceable rather than aspirational, the following rules apply to every document, deck, and conversation derived from this file.
 
 | Rule | Reason |
 |---|---|

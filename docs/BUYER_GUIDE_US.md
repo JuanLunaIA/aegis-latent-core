@@ -98,9 +98,9 @@ The table above answers questions. This section sequences them into an ordered e
 
 **Gate.** Proceed only when the support boundary is staffed and written, acceptance is measurable and pre-agreed, and no unvalidated financial claim has entered the business case. This project publishes no observed contract value, customer count, return-on-investment percentage, or valuation, and none may be constructed from its documentation.
 
-## v4.1.2 source forensic verification
+## Source forensic verification
 
-The checked-out `v5.0.0` source stores portable `aegis-mmr-inclusion-v1` proofs. Non-streaming responses can carry `X-Aegis-MMR-*` headers; streams provide post-terminal proof retrieval because no completed proof exists in their initial headers. The read-only dashboard exposes retained evidence without fallback sample data and can request a bounded ZIP containing a JCS manifest, canonical DAG-CBOR ledger slice with CIDv1, proof JSON, technical PDF and `VERIFY.sh`. The buyer must pin the trusted MMR root independently, and the export does not determine legal admissibility.
+The checked-out `v5.0.0` source stores portable MMR inclusion proofs. New chains default to `aegis-mmr-inclusion-v2`, which applies RFC 6962-style domain separation; `aegis-mmr-inclusion-v1` chains remain verifiable under v1 and only under v1, because a root is the construction that produced it (`CLM-064`). Non-streaming responses can carry `X-Aegis-MMR-*` headers; streams provide post-terminal proof retrieval because no completed proof exists in their initial headers. The read-only dashboard exposes retained evidence without fallback sample data and can request a bounded ZIP containing a JCS manifest, canonical DAG-CBOR ledger slice with CIDv1, proof JSON, technical PDF and `VERIFY.sh`. The buyer must pin the trusted MMR root independently, and the export does not determine legal admissibility.
 
 ## What the buyer can verify
 
