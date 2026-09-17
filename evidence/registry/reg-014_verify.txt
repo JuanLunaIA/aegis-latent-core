@@ -1,0 +1,70 @@
+REG-014 — VERIFIED: /metrics dark-by-default is already correct in source
+and already disclosed in three independent places; no code change needed.
+
+=== The mechanism (source) ===
+
+$ grep -n "prometheus_available\|@app.get(\"/metrics\"" aegis/proxy/app.py
+1328:    if observability.prometheus_available():
+1331:        @app.get("/metrics", include_in_schema=False)
+
+$ sed -n '217,219p' aegis/core/observability.py
+def prometheus_available() -> bool:
+    """True when prometheus_client is installed and metrics are active."""
+    return _PROM
+
+The /metrics route is only registered on the FastAPI app when
+prometheus_client is importable. Without it, no route exists at that path
+at all (404, not an empty/broken response) — this is "dark," not silently
+broken.
+
+=== pyproject.toml: metrics is an optional extra, not a core dependency ===
+
+$ sed -n '82,83p' pyproject.toml
+# ── Observability ────────────────────────────────────────────────────────────
+metrics = ["prometheus-fastapi-instrumentator>=6.1.0", "prometheus-client>=0.20.0"]
+
+Confirmed core `dependencies = [...]` (pyproject.toml lines 33-49) does not
+list prometheus-client or prometheus-fastapi-instrumentator.
+
+=== Disclosure already exists in three places ===
+
+1. docs/CLAIMS_MATRIX.md, CLM-013:
+   "It requires the optional `metrics` extra and a working scrape; without
+   `prometheus-client` no `/metrics` endpoint is registered and every metric
+   is a no-op."
+
+2. docs/institutional/DOC-04_OPERATIONS_PLAYBOOK.md, DOC04-CLM-011:
+   "The proxy attaches `/metrics` only when `prometheus-client` is
+   importable, which is an optional extra (`aegis[metrics]`); without it
+   every metric is a no-op stub and no endpoint is registered, so
+   metric-based production monitoring depends on an environment-specific
+   install and scrape integration." Status: CONFIGURATION-DEPENDENT.
+   (Corrected a stale line locator in this row while verifying:
+   pyproject.toml:79 -> pyproject.toml:83, since the metrics extra moved
+   under repository changes since that row was written.)
+
+3. docs/operations/MONITORING_ALERTING.md (operator runbook), line 5 + 12:
+   "Metrics require the optional `metrics` extra; without `prometheus-client`
+   no `/metrics` endpoint is registered and every metric is a no-op stub."
+   followed by the exact remediation command:
+       pip install 'aegis-latent-core[metrics]'
+
+=== Disposition ===
+
+REG-014's concern ("is /metrics silently dark, misleading operators?") is
+not a live defect: the behavior is intentional, the claims register does
+not overclaim always-on metrics anywhere (grepped docs/CLAIMS_MATRIX.md;
+only CLM-013 mentions /metrics and it already carries the caveat), and the
+operator runbook gives the exact fix. The row's "DECIDE: core dep vs
+documented extra" note is a genuine product/dependency-footprint decision
+(promoting prometheus-client to a core dependency changes the install
+surface for every user, including embedded aegis.wrap consumers who may
+never scrape Prometheus) that is not mine to make unilaterally under
+AGENTS.md rule 2's "smallest authorized change" — and the disclosure path
+already resolves the actual concern (silent misleading behavior) without
+needing that decision made either way.
+
+Closed VERIFIED, not DOCUMENTED: the disclosure was not newly written by
+this session (unlike REG-020) — it already existed, accurately, before this
+row was touched. The only change made was correcting the one stale line
+number in DOC-04.
