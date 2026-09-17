@@ -74,7 +74,6 @@ aegis.core.pii_confidence
 aegis.core.pinned_ca_bundle
 aegis.core.process_hardening
 aegis.core.raft_consensus
-aegis.core.rag_injection_scanner
 aegis.core.readonly_rootfs
 aegis.core.rt_scheduler
 aegis.core.safe_serialization

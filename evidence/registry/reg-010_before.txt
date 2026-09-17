@@ -1,0 +1,10 @@
+
+tests/test_rag_injection_admission.py:228: Failed
+=========================== short test summary info ============================
+FAILED tests/test_rag_injection_admission.py::test_a_poisoned_tool_result_is_refused
+FAILED tests/test_rag_injection_admission.py::test_the_poisoned_request_never_reaches_the_upstream
+FAILED tests/test_rag_injection_admission.py::test_the_refusal_is_committed_as_evidence
+FAILED tests/test_rag_injection_admission.py::test_an_out_of_range_threshold_is_rejected_at_construction[0.0]
+FAILED tests/test_rag_injection_admission.py::test_an_out_of_range_threshold_is_rejected_at_construction[-0.5]
+FAILED tests/test_rag_injection_admission.py::test_an_out_of_range_threshold_is_rejected_at_construction[1.5]
+6 failed, 4 passed in 1.35s

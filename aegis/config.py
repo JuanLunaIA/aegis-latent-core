@@ -681,6 +681,30 @@ class AegisSettings(BaseSettings):
         default=True,
         description="Reject payloads that match known prompt-injection patterns.",
     )
+    rag_injection_scanning: bool = Field(
+        default=True,
+        description=(
+            "Scan retrieved content — tool results, function results, and RAG context "
+            "blocks — for embedded prompt injection before forwarding. This covers the "
+            "indirect case the WAF structurally cannot: the user turn is clean and the "
+            "payload arrives inside data the application fetched on the model's behalf. "
+            "Set false where retrieved content legitimately contains role-like headers "
+            "(system logs, chat transcripts, structured records), which the scanner's "
+            "own documentation identifies as its false-positive mode. Disabling removes "
+            "a detection; it does not weaken any evidence or durability guarantee."
+        ),
+    )
+    rag_injection_block_threshold: float = Field(
+        default=0.5,
+        gt=0.0,
+        le=1.0,
+        description=(
+            "Minimum aggregate risk score at which retrieved content is refused. "
+            "Raise toward 1.0 to admit more; 1.0 refuses only content that trips a "
+            "signal weighted at full confidence. Validated here so a bad value fails "
+            "at startup rather than on the first request that would have been scanned."
+        ),
+    )
     waf_session_window: int = Field(
         default=10,
         ge=2,
