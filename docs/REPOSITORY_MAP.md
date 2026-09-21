@@ -1,6 +1,6 @@
 # Repository Map — Aegis Latent Core
 
-**Last verified:** 2026-08-27 UTC
+**Last verified:** 2026-09-21 UTC — the 22 source paths cited below were re-checked against the checked-out `5.0.0` tree
 **Release baseline:** four-layer truth model
 **Source baseline:** checked-out source metadata is synchronized at `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core`; `v4.1.2` remains the most recent version published on every surface
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` retains the historical `4.0.0` comparison anchors documented by [`evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md`](../evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md)

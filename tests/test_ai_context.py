@@ -20,8 +20,13 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 CONTEXT = ROOT / ".aegis_ai_context"
 SOURCE_BASELINE_COMMIT = "fdace8844568eb788216740b2cb5daf187d99d3b"
-PUBLISHED_GITHUB_RELEASE_TARGET = "6469904380218584ae0b5221334bc9a46500f5ba"
 SOURCE_BASELINE_VERSION = "4.0.0"
+# The worked example every context file carries for the published-release dimension:
+# the historical lightweight v4.0.1 tag. The *current* published release is the
+# generator's PUBLISHED_GITHUB_RELEASE, asserted in
+# test_manifest_is_deterministic_explicit_and_non_circular.
+HISTORICAL_PUBLISHED_RELEASE = "v4.0.1"
+HISTORICAL_PUBLISHED_RELEASE_TARGET = "6469904380218584ae0b5221334bc9a46500f5ba"
 EXISTING_CONTEXT = tuple(
     CONTEXT / f"{number:02d}_{name}"
     for number, name in (
@@ -124,8 +129,8 @@ def test_all_eight_refreshed_files_separate_release_state_dimensions() -> None:
     for path in EXISTING_CONTEXT:
         text = _text(path).lower()
         assert SOURCE_BASELINE_COMMIT in text, path.name
-        assert PUBLISHED_GITHUB_RELEASE_TARGET in text, path.name
-        assert "v4.0.1" in text, path.name
+        assert HISTORICAL_PUBLISHED_RELEASE_TARGET in text, path.name
+        assert HISTORICAL_PUBLISHED_RELEASE in text, path.name
         assert SOURCE_BASELINE_VERSION in text, path.name
         assert f"v{SOURCE_RELEASE_TARGET_VERSION}" in text, path.name
         assert "14" in text, path.name
@@ -262,12 +267,19 @@ def test_manifest_is_deterministic_explicit_and_non_circular() -> None:
         "synchronized_version_anchors": 14,
         "version": SOURCE_BASELINE_VERSION,
     }
-    assert actual["published_github_release"] == {
-        "release": "v4.0.1",
+    # The published release is whatever the generator names, but the pair must be
+    # internally consistent: a real tag name, a 40-hex commit, and the tag kind
+    # that release actually carries (v4.1.2 is signed and annotated).
+    published = actual["published_github_release"]
+    assert published == {
+        "release": generator.PUBLISHED_GITHUB_RELEASE,
         "state": "published",
-        "tag_kind": "lightweight",
-        "target_commit": PUBLISHED_GITHUB_RELEASE_TARGET,
+        "tag_kind": generator.PUBLISHED_GITHUB_RELEASE_TAG_KIND,
+        "target_commit": generator.PUBLISHED_GITHUB_RELEASE_TARGET,
     }
+    assert re.fullmatch(r"v\d+\.\d+\.\d+", published["release"])
+    assert re.fullmatch(r"[0-9a-f]{40}", published["target_commit"])
+    assert published["tag_kind"] in {"annotated_signed", "lightweight"}
     assert actual["registry_observation"] == {
         "observed_version": SOURCE_BASELINE_VERSION,
         "packages": [

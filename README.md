@@ -325,8 +325,9 @@ Separately, Kani 0.67.0 model-checks the native WAL's frame-bounds arithmetic ov
 | Python suite | 5,974 passed, 52 skipped, 0 failed | `4.1.2` source baseline | 2026-09-03 |
 | Python suite | 6,179 passed, 52 skipped, 0 failed | `4.3.0` source baseline | 2026-09-08 |
 | Python suite | **6,936 passed, 26 skipped, 0 failed** | `5.0.0` source baseline | 2026-09-16 |
+| Python suite | **6,948 passed, 119 skipped, 0 failed** | `5.0.0` source baseline (registry-closure branch) | 2026-09-21 |
 | Rust extension | 31 tests passed; Clippy `-D warnings`; abi3 wheel built | CI | Per run |
-| Static analysis | `mypy --strict` 0 errors over 206 files; Bandit 0 findings at every severity | CI | Per run |
+| Static analysis | `mypy --strict aegis` 0 errors over 207 files; `bandit -r aegis/ aegis_server/ -lll` 0 findings at every severity | CI | Per run |
 | Model checking | 5 Kani harnesses verified, 0 failures, over the whole `usize` domain | CI | Per run |
 | Per-commit cost vs chain length | At 2,000 prior leaves: 30,153.9 → 361.7 µs/commit. Normalised, the prior curve rises `1.00× → 17.65×` with chain length; the current one is flat within noise | [`commit_scaling_measurement`](evidence/commit_scaling_measurement_2026-09-03.md) | 2026-09-03 |
 | MMR append, Rust vs Python | At 100,000 leaves: 775.76k vs 156.90k leaves/s (4.94×) | [`evidence_path_measurements`](evidence/evidence_path_measurements_2026-09-03.md) | 2026-09-03 |

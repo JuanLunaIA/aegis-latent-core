@@ -9,14 +9,14 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/00_CORE_ONTOLOGY_AND_BOUNDARIES.xml",
-      "sha256": "4521c4a37e30a5e462f3500f7a492e6adbaf799b94959d3d349a10086412bcab",
-      "size": 5961
+      "sha256": "285daf0bb2c894f2a91c8518e06c67ee8432174767ec6cf8af659b90ddbb6da1",
+      "size": 6010
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/01_CANONICAL_SYMBOL_AND_TYPE_INDEX.tsv",
-      "sha256": "0308b09aee61d7337378cb73e67a04308b07cd4c5361a0dee22aef93a2fb4387",
-      "size": 6452
+      "sha256": "825f3ffdd264fd403a777d6fd699468047fa6c9cec79380b4189ee79d8c081e5",
+      "size": 7034
     },
     {
       "category": "context",
@@ -27,7 +27,7 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/03_STATE_MACHINES_AND_DAGS.mermaid",
-      "sha256": "ebc0a49d441c9c405a676e9422dfae037da6f5a4b10c932db20421ee50a68ae4",
+      "sha256": "028a9c84fc8af04dab4f522743c897990b6d73880039500256396a581281f7e4",
       "size": 2869
     },
     {
@@ -45,20 +45,20 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/06_SECURITY_AND_SUPPLY_CHAIN_MANIFEST.xml",
-      "sha256": "5c780fe4507ccdb2451fe9780302f6493c2633e859395a4da08af256db42bd33",
+      "sha256": "114a4b911a94906362e23e595a4ed753c8b32c885a2de8462b5fc99c1877c473",
       "size": 6907
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/07_SYSTEM_COMPACT_KERNEL.xml",
-      "sha256": "7e9f33f0b653cc8a5e60a4271e0ff8c2cec560499a558b3f01d1f729ea3bc8d5",
-      "size": 8151
+      "sha256": "fd0c4c2e078f1e8d849803dbb2828c1b3362e243c8d95ae1660c6a4b51f37ae7",
+      "size": 8200
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/08_COMPONENT_PACKAGE_WORKFLOW_MATRIX.md",
-      "sha256": "8b4a7177e3b7911b90077cd8d24dac9d745581b57df857616ff9a580b48073df",
-      "size": 9065
+      "sha256": "9bb0ee0a1443b5b0dad925083f47d62922fc2c9253932fcd87be887862b794b8",
+      "size": 9118
     },
     {
       "category": "context",
@@ -99,8 +99,8 @@
     {
       "category": "governed_input",
       "path": "README.md",
-      "sha256": "0ad5439577092c3a0070a30c910a51a308c37263bbd1eaf9a624b501cf772b63",
-      "size": 28423
+      "sha256": "4af3e7986622cf59119db7c5522b95f466e9818d478bd3fb5d70bec2bc6241ea",
+      "size": 28584
     },
     {
       "category": "governed_input",
@@ -177,8 +177,8 @@
     {
       "category": "governed_input",
       "path": "docs/REPOSITORY_MAP.md",
-      "sha256": "3c93f852b2fe64721821962ccf5e2de3224a6c677e1800380dc8aeac5340809b",
-      "size": 6835
+      "sha256": "602740fb9749d87bcfd3efdf6a89f7fd48a2a23a2963e3492a9d8feddf825f0a",
+      "size": 6924
     },
     {
       "category": "governed_input",
@@ -483,8 +483,8 @@
     {
       "category": "governed_input",
       "path": "scripts/generate_ai_context_manifest.py",
-      "sha256": "640310e59188305649553e9b0d695bc6fe78333dccd6d8fa7ba2ddac94a26e05",
-      "size": 7387
+      "sha256": "55a28abbc915bcfb60162037343e9795f3f4b5b03e3cd98f6eb78deff095e343",
+      "size": 7688
     },
     {
       "category": "governed_input",
@@ -495,17 +495,17 @@
     {
       "category": "governed_input",
       "path": "tests/test_ai_context.py",
-      "sha256": "6f142f183477dc5040508d2dc4912d65b766b359455eeaa2daf98ae39c8ff31c",
-      "size": 13806
+      "sha256": "a7cc605135340b2f7572dfcc97b4ea425d1f5c2437df4a22a0494109ba806e80",
+      "size": 14681
     }
   ],
   "hash_algorithm": "sha256",
   "manifest_self_hash": "excluded_to_avoid_circularity",
   "published_github_release": {
-    "release": "v4.0.1",
+    "release": "v4.1.2",
     "state": "published",
-    "tag_kind": "lightweight",
-    "target_commit": "6469904380218584ae0b5221334bc9a46500f5ba"
+    "tag_kind": "annotated_signed",
+    "target_commit": "860f14177d94c194e5ae7156017d6fa74264e429"
   },
   "registry_observation": {
     "observed_version": "4.0.0",
@@ -533,6 +533,6 @@
     "meaning": "Hashes describe source file bytes at generation time. Source metadata does not establish the external tag, GitHub Release, registry, OCI, signature, or attestation state; read back each surface independently.",
     "state": "external_lifecycle_requires_readback",
     "synchronized_version_anchors": 14,
-    "version": "4.1.2"
+    "version": "5.0.0"
   }
 }
