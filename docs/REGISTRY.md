@@ -159,7 +159,7 @@ Scans 3, 6, 7, 8, 9 were **not executed this session** and are recorded as outst
 | REG-A02 | `[AEG1:2.3][LBP-02]` | ARCH | HIGH | Host-root / HMAC forgery | **DOCUMENTED** | `UC-041`; construction-time warning; `PROVE_IT.md` §5; `OBJECTION_HANDLING.md` §6 |
 | REG-A03 | `[LBP-04]` | ARCH | MEDIUM | Formal non-refinement | **VERIFIED** | `README.md` §Formal verification states the refinement gap and the Kani exception |
 | REG-A04 | `[AEG2:8.1][GDPR]` | ARCH | HIGH | Hash pseudonymity | `SEED` | Depends on REG-012. `UC-037` carries `LEGAL-REVIEW-REQUIRED` |
-| REG-A05 | `[LBP-01]` | ARCH | MEDIUM | fsync PLP dependency | `SEED` | `STORAGE_REQUIREMENTS.md` exists; currency not re-verified this session |
+| REG-A05 | `[LBP-01]` | ARCH | MEDIUM | fsync PLP dependency | **FIXED** | `docs/operations/STORAGE_REQUIREMENTS.md` described the pre-group-commit write path — it had `os.fsync()` running *before* the in-memory append and cited `aegis/core/crypto_audit.py:417-419`, which now lands on `node_signature_assurance`. Actual order (`:1064` → `:1069` → `:1075`, fsync issued at `:2098`): write and flush under the ledger lock, append to the in-memory window, release the lock, then block on the group-commit ticket — so the memory append *precedes* the fsync, which is why the guarantee is commit-before-**response**, not commit-before-anything-observes-it. `_persist_node`'s docstring states it: "Writes and flushes, but does **not** ``fsync``" (`:2022-2023`). Also re-pointed the native-segment locator from `wal.rs:134-175` (now capacity/mmap) to `wal.rs:222-228` (`flush_range`, then the release store) and refreshed the `Last verified` stamp to 2026-09-21. The PLP boundary and the requirements table were already correct and are unchanged. Doc-only. Gates after the edit: `verify_docs` PASS, `verify_claims` PASS (102 claims, 0 findings), `verify_links` PASS, `verify_documentation --strict` PASS. `evidence/registry/reg-a05_fixed.txt` |
 | REG-A06 | `[STRAT:6]` | ARCH | HIGH | Valuation overclaim ($35–50M) | **VERIFIED** | `UC-032` blocks it; PR #184's claim ledger recorded zero valuation figures corpus-wide |
 
 ### 4.4 Autodiscovery additions
@@ -184,9 +184,9 @@ Their status is tracked in [Commercial Readiness](commercial/COMMERCIAL_READINES
 |---|---|---|---|---|---|---|---|
 | W1 | 30 | 6 | 18 | 5 | 0 | 0 | **1** |
 | W2 | 23 | 3 | 5 | 0 | 0 | 0 | **15** |
-| W3 | 9 | 0 | 2 | 2 | 0 | 0 | **5** |
+| W3 | 9 | 1 | 2 | 2 | 0 | 0 | **4** |
 | `[DISC]` | 3 | 0 | 0 | 1 | 0 | 0 | **2** |
-| **Total** | **65** | **9** | **25** | **8** | **0** | **0** | **23** |
+| **Total** | **65** | **10** | **25** | **8** | **0** | **0** | **22** |
 
 Human class (9) is excluded from the burn-down by design.
 

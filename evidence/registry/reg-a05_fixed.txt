@@ -1,0 +1,58 @@
+REG-A05 — after (STORAGE_REQUIREMENTS.md write-path currency)
+===========================================================
+
+Row: REG-A05 [LBP-01] ARCH MEDIUM 'fsync PLP dependency' — SEED -> FIXED
+Seed note under audit: 'STORAGE_REQUIREMENTS.md exists; currency not re-verified'
+
+Finding — the document described the pre-group-commit write path.
+  doc said: '... write the JSON line, flush the language-level buffer, then call
+    `os.fsync()` on the file descriptor, and only then append the node to the
+    in-memory window (`aegis/core/crypto_audit.py:417-419`)'
+
+  cited locator now lands here:
+    $ sed -n '417,419p' aegis/core/crypto_audit.py
+    
+        Reads ``node.signature_scheme`` — recorded at commit time by whichever
+        tier ``_sign`` used for that node — rather than the ledger's current
+
+  actual order:
+    $ sed -n '1064p;1069p;1075p' aegis/core/crypto_audit.py
+                    ticket = self._persist_node(node)
+                self._append_memory_node(node)
+            self._await_durable(ticket)
+
+  and _persist_node says so itself:
+    $ sed -n '2022,2023p' aegis/core/crypto_audit.py
+            Writes and flushes, but does **not** ``fsync``. The record is in the
+            operating system's hands and correctly ordered against every other
+
+  the fsync is issued by the syncer, ledger lock released:
+    $ sed -n '2098p' aegis/core/crypto_audit.py
+                self._fsync(handle.fileno())
+
+  native-segment locator: doc cited wal.rs:134-175; the flush/publish pair is
+    $ sed -n '222,228p' aegis_rust_v2/src/wal.rs
+            if let Err(e) = mmap.flush_range(offset, flush_end - offset) {
+                return Err(PyErr::new::<pyo3::exceptions::PyIOError, _>(format!(
+                    "RustWal flush: {e}"
+                )));
+            }
+    
+            self.inner.write_pos.store(end as u64, Ordering::Release);
+
+Fix (doc-only):
+  * docs/operations/STORAGE_REQUIREMENTS.md:10 rewritten to the real order, with
+    locators :1064 / :1069 / :1075 / :2098, and the scoping sentence made explicit
+    ('never *reported* committed before synchronized' ... commit-before-response).
+  * :12 locator re-pointed to wal.rs:222-228.
+  * 'Last verified' stamp :3 -> 2026-09-21 UTC.
+
+Unchanged because already correct: the PLP boundary ('the process requested
+synchronization', :18-20), the requirements table, and the NFS/EFS writer-lock
+section (:42-78).
+
+Gates re-run after the edit:
+verify_docs: verify_docs: PASS (0 findings)
+verify_claims: verify_claims: PASS (102 claims, 0 findings)
+verify_links: verify_links: PASS (1285 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0 required_files=27
