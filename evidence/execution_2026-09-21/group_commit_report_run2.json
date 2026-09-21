@@ -1,0 +1,69 @@
+{
+  "commit_sha": "4d9d21aea099d5e211d43e276fd8dc4c08d01eca",
+  "delta": {
+    "fsync_calls_after": 67,
+    "fsync_calls_before": 400,
+    "p99_ms_after": 54.654,
+    "p99_ms_before": 113.392,
+    "throughput_ratio": 2.936
+  },
+  "environment": {
+    "cpu_count": 4,
+    "machine": "x86_64",
+    "platform": "Linux-7.2.6-artix2-1-x86_64-with-glibc2.44",
+    "python": "3.11.11"
+  },
+  "experiment": {
+    "concurrent_workers": 32,
+    "method": "same-process A/B of the real ledger against the real filesystem",
+    "payload_bytes": 512,
+    "records": 400
+  },
+  "generated_at_utc": "2026-09-21T12:44:27Z",
+  "limitations": [
+    "fsync cost is a property of the device and filesystem under the run, not of this code; the same A/B on different storage will differ, and a slower device makes the coalescing win larger, not smaller.",
+    "Concurrency here comes from a thread pool in one process. It stands in for the proxy's asyncio.to_thread commit path but is not that path.",
+    "This is a throughput and latency measurement. It is not a durability proof; the durability properties are asserted in tests/test_coalesced_commit.py.",
+    "No capacity, SLA or production-readiness claim is made or implied."
+  ],
+  "repository": "JuanLunaIA/aegis-latent-core",
+  "results": {
+    "group_commit": {
+      "chain_broken_at": null,
+      "chain_intact": true,
+      "commits_per_second": 1040.8,
+      "durable_commits": 400,
+      "fsync_calls": 67,
+      "largest_batch": 24,
+      "latency_ms": {
+        "max": 59.923,
+        "mean": 28.101,
+        "p50": 24.869,
+        "p95": 52.593,
+        "p99": 54.654
+      },
+      "offered_records": 400,
+      "records_per_fsync": 5.97,
+      "wall_seconds": 0.3843
+    },
+    "per_record_fsync": {
+      "chain_broken_at": null,
+      "chain_intact": true,
+      "commits_per_second": 354.5,
+      "durable_commits": 400,
+      "fsync_calls": 400,
+      "largest_batch": 0,
+      "latency_ms": {
+        "max": 136.478,
+        "mean": 85.505,
+        "p50": 89.136,
+        "p95": 112.668,
+        "p99": 113.392
+      },
+      "offered_records": 400,
+      "records_per_fsync": 0.0,
+      "wall_seconds": 1.1282
+    }
+  },
+  "schema": "aegis-group-commit-report-v1"
+}

@@ -35,6 +35,8 @@ import statistics
 import time
 from typing import Any
 
+from benchmarks import print_provenance
+
 # ── Rust extension probe ──────────────────────────────────────────────────────
 
 try:
@@ -181,11 +183,11 @@ def run_benchmark(leaf_sizes: list[int] = _LEAF_SIZES, k: int = _K_REPEATS) -> d
         print(f"  Rust/Python speedup: avg={avg_speedup:.2f}x  max={max_speedup:.2f}x")
         if avg_speedup >= 5.0:
             print(
-                "  [PROVEN] Rust extension yields significant performance gains (>5x throughput)."
+                "  [MEASURED HERE] Rust extension yields significant performance gains (>5x throughput)."
             )
         elif avg_speedup >= 2.0:
             print(
-                f"  [PROVEN] Rust extension is faster than Python ({avg_speedup:.2f}x), "
+                f"  [MEASURED HERE] Rust extension is faster than Python ({avg_speedup:.2f}x), "
                 f"but README 'significant' claim requires quantification — use measured ratio."
             )
         else:
@@ -207,4 +209,5 @@ def run_benchmark(leaf_sizes: list[int] = _LEAF_SIZES, k: int = _K_REPEATS) -> d
 
 
 if __name__ == "__main__":
+    print_provenance("bench_mmr")
     run_benchmark()

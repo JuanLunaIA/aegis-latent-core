@@ -51,6 +51,7 @@ The documents that decide what may be said, and on what evidence.
 | [Usage Examples](USAGE_EXAMPLES.md) | Runnable examples for every mode, with real transcripts. |
 | [SDK Guide](DEVELOPER_SDK_GUIDE.md) | Python and TypeScript SDK detail. |
 | [Repository Map](REPOSITORY_MAP.md) | Where things live. |
+| [Module Inventory](MODULE_INVENTORY.md) | Generated per-file inventory: purpose, reachability status, tests, owner — and every open ticket's owner and unblock path. |
 | [Technical FAQ](FAQ_TECHNICAL.md) | Common technical questions. |
 | [Rust Build](RUST_BUILD.md) | Building the native extension. |
 

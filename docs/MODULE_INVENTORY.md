@@ -30,7 +30,6 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 
 | Ticket | Priority | Owner | Unblock path |
 |---|---|---|---|
-| `AUD-26` | P3 | @JuanLunaIA | Re-label harness output as host-specific observations; commit a retained report or mark the figures historical; remove/replace '[PROVEN]' and 'zero latency' phrasings; decide the fate of UC-015/UC-016 (produce or keep retracted). |
 | `AUD-27` | P3 | @JuanLunaIA | Split `_sign` into scheme selection + signing, build the payload with the selected scheme appended (same additive/conditional pattern as `waf_verdict`), gate the change on a trail-version bump so v1/v2 chains keep verifying, and add a tamper test asserting a label rewrite breaks the signature for every verifiable scheme. No `node_hash` change is required. |
 | `AUD-28` | P3 | @JuanLunaIA | Spool the frozen summary (a small append-only spool file next to the WAL) before the handoff acknowledges, and commit pending spool entries on the next startup before serving traffic; keep the in-memory path as the fast case and expose spool depth as a metric. |
 | `AUD-29` | P3 | @JuanLunaIA | Decide the canonical type-check scope once: add `scripts/` and `tools/` to a mypy job (start with `--strict` on the two directories that already pass, and stage the remainder), annotate `_split_row`'s locals, and add the directory list to the same gate that `AUD-18` reconciles for the formatter. |

@@ -24,6 +24,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from aegis.proxy.streaming import BoundedStreamProxy, StreamEvidenceSummary
+from benchmarks import print_provenance
 
 
 def percentile(values: list[float], probability: float) -> float:
@@ -124,4 +125,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    print_provenance("bench_streaming_sse")
     asyncio.run(main())

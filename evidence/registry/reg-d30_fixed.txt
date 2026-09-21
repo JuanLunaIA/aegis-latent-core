@@ -1,0 +1,104 @@
+REG-D30 / AUD-26 — Evidence retention & claim-generating surfaces (FIXED 2026-09-21)
+
+Row: docs/REGISTRY.md §4.6 REG-D30. Ticket: docs/ROADMAP.md § Audit backlog AUD-26.
+Affected files the ticket names: PR_FINAL_ENTERPRISE_HARDENING.md:26 (producer exists, report JSON
+absent); benchmarks/bench_crypto_audit.py:203 ('[PROVEN]' label on a host-specific number);
+benchmarks/bench_forwarding.py:2 ('zero forensic latency' framing); UC-015:35, UC-016:36 (no
+producers). Finding(s): AF-025 (claim-label surface), AF-026 area, AUD-26.
+
+════════ 1. WHAT WAS BUILT ════════
+
+  benchmarks/__init__.py                  print_provenance() + PROVENANCE_NOTE (new content)
+  benchmarks/bench_*.py                   all 8 harnesses now print the banner before numbers
+  benchmarks/bench_crypto_audit.py        [PROVEN] x3 -> [MEASURED HERE]; dangling citation removed;
+                                          "zero-forensic-latency design" -> "background-commit design"
+  benchmarks/bench_mmr.py                 [PROVEN] x2 -> [MEASURED HERE]
+  benchmarks/bench_forwarding.py          docstring + banner re-framed; [PROVEN] x2 -> [MEASURED HERE]
+  evidence/execution_2026-09-21/          group_commit_report_run{1,2,3}.json — the retained reports
+  PR_FINAL_ENTERPRISE_HARDENING.md        cites the retained paths + the host spread
+  docs/institutional/UNSUPPORTED_CLAIMS.md  UC-015 / UC-016: fate decided (kept retracted)
+  tests/test_benchmark_claim_labels.py    the gate (new, 7 tests)
+  docs/ROADMAP.md, docs/REGISTRY.md       AUD-26 / REG-D30 closed
+
+════════ 2. THE FINDING, ITEM BY ITEM ════════
+
+▌1. "[PROVEN] label on a host-specific number" — FIXED (5 occurrences in 3 harnesses).
+   The label is now [MEASURED HERE] and every harness prints the shared provenance banner first:
+   host, CPU count, Python version, UTC date, and the sentence that says what the numbers are not
+   ("No RPS figure is claimed for any environment" — BENCHMARK_METHOD.md:43, quoted in the banner
+   itself). The docstring legend that cited "CLAUDE.md I-03" was a dangling citation: no such rule
+   exists anywhere in the tree (`grep -rn 'I-03' CLAUDE.md AGENTS.md` → no hits). It is gone, and
+   a test now fails if a harness cites it again.
+
+▌2. "'zero forensic latency' framing" — FIXED. The harness measures a microsecond-scale scheduling
+   delta with a Welch t-test; it never showed absence of cost. Its docstring and banner now say
+   that, and point at BENCHMARK_METHOD's prohibited-phrasing table. The gate scans every harness
+   for the prohibited phrasings, including the design-name variant, so the framing cannot return.
+   Note what was NOT renamed: `tests/test_determinism.py` and `aegis/core/observability.py` use the
+   phrase as the *name of the design property they assert* ("commit path off the response path").
+   The finding named the harness's claim framing, not the design's name, and the gate scopes to the
+   claim-generating surfaces (benchmarks/ + tools/benchmarks/).
+
+▌3. "one comparison's report JSON was never committed" — FIXED by producing and retaining it.
+   `tools/benchmarks/run_group_commit.py` writes a schema'd report and runs both arms against a
+   `tempfile.TemporaryDirectory` ledger (no repository artifact is touched). Three runs are now
+   committed under `evidence/execution_2026-09-21/` — the convention `evidence/execution_2026-09-16/`
+   already established for raw JSON — and `PR_FINAL_ENTERPRISE_HARDENING.md` cites them by path.
+
+   This host, 2026-09-21 (4 CPUs, x86_64, CPython 3.11.11):
+     fsync calls 400 (per-record) -> 64 (group commit)   structural
+     throughput ratio 3.69x                              host-specific
+   The table in PR_FINAL records 1.44x on its own host. Same code path, different host — which is
+   precisely the finding: the structural half reproduces, the rate does not, and the doc now says
+   so with both numbers side by side rather than restating one as the property.
+
+▌4. "UC-015/UC-016 have no producers — decide their fate" — DECIDED: kept retracted.
+   Both rows now record the decision and why: no harness measures BLAKE3 throughput (UC-015), and
+   `bench_forwarding.py` produces neither the 250 ns WAF figure nor the 50 ns limiter figure
+   (UC-016). Reviving either requires a retained artifact produced per BENCHMARK_METHOD.md
+   (workload, build, platform, samples, raw data) — not a restatement of the figure.
+
+════════ 3. THE GATE ════════
+
+tests/test_benchmark_claim_labels.py — 7 tests:
+
+  1. no absolute-claim label in any harness (benchmarks/ + tools/benchmarks/, __pycache__ excluded)
+  2. no prohibited claim phrase in any harness
+  3. every benchmarks/bench_*.py calls print_provenance() inside its __main__ block
+  4. the banner itself carries host / cpus / python / UTC date / caveat, and the caveat contains
+     "No RPS figure is claimed for any environment"
+  5. no harness cites "CLAUDE.md I-03"
+  6. the three retained reports exist, parse, are schema aegis-group-commit-report-v1, carry a
+     40-hex commit_sha and generated_at_utc, an environment with cpu_count/machine/platform/python,
+     the "No capacity, SLA or production-readiness claim is made or implied." limitation, and a
+     delta whose fsync count actually falls
+  7. every `evidence/execution_2026-09-21/...` path cited in PR_FINAL_ENTERPRISE_HARDENING.md exists
+
+Controls (both fired, then restored):
+  * sed '[MEASURED HERE]' -> '[PROVEN]' in bench_mmr.py
+        -> FAILED test_no_harness_prints_an_absolute_claim_label   (1 failed, 6 passed)
+  * mv group_commit_report_run3.json away
+        -> FAILED test_the_cited_group_commit_reports_are_retained_and_carry_their_provenance
+  * restore both -> 7 passed
+
+The gate also caught this row's own first draft: the reworded bench_forwarding docstring quoted the
+prohibited phrase while explaining that it is prohibited, and test 2 failed on it. The wording was
+fixed, not the test.
+
+════════ 4. COMMANDS AND RESULTS (this host, 2026-09-21) ════════
+
+$ .venv/bin/python tools/benchmarks/run_group_commit.py --output evidence/execution_2026-09-21/group_commit_report_run1.json
+  (ditto run2, run3)                                     EXIT 0 for all three
+$ .venv/bin/python benchmarks/bench_crypto_audit.py --n 50 --k 1
+  banner printed: host artixlinux (x86_64, Linux), cpus 4, python 3.11.11,
+  generated 2026-09-21T12:45:01+00:00, caveat "...No RPS figure is claimed for any environment..."
+$ .venv/bin/python -m pytest tests/test_benchmark_claim_labels.py -q
+  7 passed in 0.20s                                      PYTEST EXIT: 0
+$ .venv/bin/python -m ruff check benchmarks/ tests/test_benchmark_claim_labels.py
+  All checks passed!
+$ grep -rn '\[PROVEN\]' benchmarks/ tools/benchmarks/     # sources only
+  (no hits; stale __pycache__ bytecode excluded by the gate)
+
+ENVIRONMENT: /home/luna/aegis-latent-core, branch registry-closure-2026-09-21, python 3.11.11
+(.venv). The harness runs write only to their --output path (temp-dir ledger), so no repository
+artifact outside evidence/ was touched; `git status` before and after shows only the intended files.

@@ -46,6 +46,7 @@ from aegis.core.stream_redactor import (
     ENGINE_GRAMMAR_FRONTIER,
     build_stream_redactor,
 )
+from benchmarks import print_provenance
 
 #: A chunk stream mixing text the detectors fire on with text they do not.
 #: A corpus that never matches measures only the scan; one that always matches
@@ -146,4 +147,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    print_provenance("bench_streaming_engine")
     raise SystemExit(main())

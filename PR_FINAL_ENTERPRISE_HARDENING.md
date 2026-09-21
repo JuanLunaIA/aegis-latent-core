@@ -21,6 +21,8 @@ All figures below are `MEASURED` on the container this branch was developed in �
 
 400 commits across 32 threads, real ledger, real filesystem, same process, both arms. Reproduce with `python tools/benchmarks/run_group_commit.py --output <report>.json`.
 
+**Retained artifact.** The reports behind this table are committed: [`evidence/execution_2026-09-21/group_commit_report_run1.json`](evidence/execution_2026-09-21/group_commit_report_run1.json), `run2`, `run3`. Re-measured 2026-09-21 on a 4-CPU x86_64 host, CPython 3.11.11, at the revision each report records in `commit_sha`. The *structure* reproduces (`fsync` calls fall from one-per-record to one-per-batch: 400 → 64 here); the absolute rates do not, and are not claimed to: this host's ratio is 3.69× where the table below records 1.44×, on the same code path. Cite the report, with its host, not the ratio (AUD-26).
+
 | | per-record `fsync` (before) | group commit (after) |
 | --- | --- | --- |
 | commits/second | 1,065.1 | **1,536.1** (1.44x) |
