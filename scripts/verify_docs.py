@@ -462,7 +462,6 @@ def check_readme_shape(root: Path) -> list[Finding]:
     return findings
 
 
-
 BUYER_BASELINE_DOCS = (
     "docs/BUYER_GUIDE_US.md",
     "docs/PRODUCT_BRIEF_US.md",
@@ -471,7 +470,9 @@ BUYER_BASELINE_DOCS = (
     "docs/FAQ_PROCUREMENT.md",
 )
 
-_BUYER_FINGERPRINT_RE = re.compile(r"^\*\*(?:Source baseline|External baseline|Historical external baseline):\*\*")
+_BUYER_FINGERPRINT_RE = re.compile(
+    r"^\*\*(?:Source baseline|External baseline|Historical external baseline):\*\*"
+)
 _READBACK_DIGEST_RE = re.compile(r"v4\.[0-9]+\.[0-9]+[^\n]{0,400}?\b[0-9a-f]{40}\b")
 
 

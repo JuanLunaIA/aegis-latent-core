@@ -154,6 +154,15 @@ filterwarnings = [
 line-length = 100
 target-version = "py311"
 
+# AUD-18 / REG-D22: one canonical formatter scope for the Makefile and CI.
+# Both now run over the whole tree, so the two invocations cannot drift; the
+# markdown exclusion keeps *linting* of Python fences inside documentation
+# (which `ruff check` still covers) separate from *reformatting* the host
+# document, which would rewrite 9 doc/README files whose content the doc gates
+# verify and which this defect never asked for.
+[tool.ruff.format]
+exclude = ["*.md"]
+
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "S", "B", "A", "COM", "C4", "PT"]
 ignore = ["S101", "COM812", "E501", "S104", "N801", "N806", "S607", "S110"]

@@ -1,0 +1,76 @@
+REG-D22 (AUD-18) — FIXED: one canonical gate scope for the Makefile and CI
+===========================================================================
+HEAD before the fix: 5e175c7. Files changed:
+  Makefile                                 `security` -> CI's exact bandit form;
+                                           `type` -> CI's `mypy --strict aegis`
+  .github/workflows/ci.yml                 both ruff steps -> `.` (whole tree)
+  pyproject.toml                           [tool.ruff.format] exclude = ["*.md"]
+  scripts/verify_docs.py                   reformatted (was outside every gate)
+  scripts/verify_release_readback.py       reformatted (same)
+  tests/test_gate_scope_parity.py          (new, 2 tests)
+
+The defect, measured before touching anything
+---------------------------------------------
+  ruff check .                      -> All checks passed            (exit 0)
+  ruff format --check .             -> 11 files would be reformatted, 818 already formatted
+  ruff format --check <CI list>     -> 530 files already formatted   (exit 0)
+and the 11 are the two scripts plus nine markdown hosts:
+  .claude/agents/property-fuzz-engineer.md, .claude/agents/regex-redos-auditor.md,
+  README.md, docs/DEVELOPER_QUICKSTART.md, docs/DEVELOPER_SDK_GUIDE.md,
+  docs/PROVE_IT.md, docs/USAGE_EXAMPLES.md, docs/api/MMR_PROOF_V1.md,
+  docs/commercial/CONNECTOR_ECOSYSTEM.md, scripts/verify_docs.py,
+  scripts/verify_release_readback.py
+So the Makefile was red, CI was green, and scripts/*.py sat in neither gate. The
+same class existed in two neighbouring targets: `make security` ran
+`bandit -r aegis/ -c pyproject.toml -ll` against CI's `-r aegis/ aegis_server/
+-lll`, and `make type` ran `mypy aegis/ --ignore-missing-imports` against CI's
+`mypy --strict aegis` (CI also keeps a deliberate narrower profile,
+`--config-file=mypy-ci.ini`, for proxy + core runtime; that one is a second
+profile on purpose and is untouched).
+
+The decision
+------------
+The ticket offers two shapes: align the Makefile to CI's list (adding scripts/ to
+both), or make the whole tree canonical and deal with markdown. Chosen: the
+whole tree, with `[tool.ruff.format] exclude = ["*.md"]`. Reasons: (1) a fixed
+path list is what drifted in the first place, and any list can drift again;
+(2) `ruff check .` already passes over the whole tree, so widening *linting* is
+cost-free and scripts/*.py leave their gate-free state; (3) excluding markdown
+from *formatting* only keeps the formatter out of the nine documentation hosts —
+their pinned examples are content the doc gates verify, and reformatting them was
+never part of this defect — while `ruff check` keeps covering the fences.
+
+After the change
+----------------
+  ruff check .                      -> All checks passed                (exit 0)
+  ruff format --check .             -> 578 files already formatted, 0 reformatted
+  make lint                         -> exit 0        (was exit 1)
+  make type                         -> exit 0, mypy --strict aegis: Success, 207 files
+  make security                     -> exit 0        (CI's bandit invocation)
+  scripts/verify_docs.py --root .   -> verify_docs: PASS (0 findings)
+  scripts/verify_release_readback.py --help -> exit 0, usage printed
+Both scripts are covered by existing tests (tests/test_documentation_verifiers.py,
+tests/test_release_readback_script.py), which ran in the closure suite below.
+
+The anti-drift guard, and its controls
+--------------------------------------
+tests/test_gate_scope_parity.py:
+  test_makefile_and_ci_agree_on_ruff_and_bandit_scope   (Makefile args ⊆ CI args:
+      CI must never be narrower; CI may run extra invocations, e.g. the SDK job)
+  test_ruff_format_is_not_scoped_narrower_in_ci_than_in_the_makefile
+      (both files must run `ruff format --check .`, literally)
+Controls, run and reverted:
+  A. Makefile narrowed to `ruff format --check aegis` -> FAILED
+     ("the Makefile runs gate invocations CI never runs ...")
+  B. Makefile bandit reverted to `-ll` over `aegis/`  -> FAILED
+After restoring both: 2 passed in 0.18s, tree clean afterwards.
+
+Deliberately not done
+---------------------
+- scripts/*.py stay outside every *type-check* scope: `mypy --strict
+  scripts/verify_claims.py` still fails at HEAD. That is REG-D33 / AUD-29, a
+  separate row with its own defect (the scripts do not type-check yet), and this
+  change does not claim to close it.
+- The markdown fences are excluded from formatting, not reformatted. If the
+  project later wants them formatted, removing the exclusion is a one-line
+  change whose output this test will then enforce for both invocations at once.

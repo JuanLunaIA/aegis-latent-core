@@ -127,30 +127,14 @@ jobs:
           cache: pip
       - name: Install ruff
         run: pip install ruff
+      # AUD-18/REG-D22: same scope as `make lint`. A fixed path list here and
+      # `.` in the Makefile let the two invocations disagree (and left
+      # scripts/*.py outside every formatter gate); both now cover the tree,
+      # with markdown excluded from formatting in [tool.ruff.format].
       - name: Ruff lint
-        run: |
-          ruff check \
-            aegis \
-            aegis_server \
-            integrations \
-            tests \
-            tools/visualizer \
-            tools/forensic \
-            tools/benchmarks \
-            tools/security \
-            benchmarks
+        run: ruff check .
       - name: Ruff format check
-        run: |
-          ruff format --check \
-            aegis \
-            aegis_server \
-            integrations \
-            tests \
-            tools/visualizer \
-            tools/forensic \
-            tools/benchmarks \
-            tools/security \
-            benchmarks
+        run: ruff format --check .
 
   # ── Type check ────────────────────────────────────────────────────────────
   typecheck:
