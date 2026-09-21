@@ -50,7 +50,9 @@ def test_not_executed_is_not_a_pass_but_does_not_fail_the_run():
         *only_checked,
         mod.Row("cosign verify gateway", mod.STATUS_NOT_EXECUTED, "cosign not installed"),
     ]
-    assert mod.summarize(with_unverified) == 0, "an unrunnable check must not be reported as a mismatch"
+    assert mod.summarize(with_unverified) == 0, (
+        "an unrunnable check must not be reported as a mismatch"
+    )
 
     with_mismatch = [
         *with_unverified,
@@ -65,16 +67,20 @@ def test_sha256sums_parsing_follows_sha256sum_output():
     good = "a" * 64
     binary = "b" * 64
     short = "c" * 63
-    text = "\n".join([
-        f"{good}  aegis_latent_core-5.0.0-py3-none-any.whl",
-        f"{binary} *aegis-latent-sdk-5.0.0.tgz",
-        f"{short}  truncated-digest.whl",
-        "not a checksum line at all",
-        "",
-    ])
+    text = "\n".join(
+        [
+            f"{good}  aegis_latent_core-5.0.0-py3-none-any.whl",
+            f"{binary} *aegis-latent-sdk-5.0.0.tgz",
+            f"{short}  truncated-digest.whl",
+            "not a checksum line at all",
+            "",
+        ]
+    )
     parsed = mod.parse_sha256sums(text)
-    assert parsed == [(good, "aegis_latent_core-5.0.0-py3-none-any.whl"),
-                      (binary, "aegis-latent-sdk-5.0.0.tgz")]
+    assert parsed == [
+        (good, "aegis_latent_core-5.0.0-py3-none-any.whl"),
+        (binary, "aegis-latent-sdk-5.0.0.tgz"),
+    ]
 
 
 def test_readme_consumer_snippet_matches_what_the_tool_emits():
@@ -90,12 +96,16 @@ def test_readme_consumer_snippet_matches_what_the_tool_emits():
     assert documented == emitted.strip(), (
         "README's consumer snippet and verify_release_readback.consumer_snippet() disagree; "
         "regenerate one from the other:\n"
-        f"--- README ---\n{documented}\n--- tool ---\n{emitted}")
+        f"--- README ---\n{documented}\n--- tool ---\n{emitted}"
+    )
 
     # and the same text must come out of the CLI, so the flag is wired to the function.
     # sys.executable and a path inside this repository; shell=False, fixed argv.
     proc = subprocess.run(  # noqa: S603
         [sys.executable, str(SCRIPT), "--tag", "v5.0.0", "--emit-consumer-snippet"],
-        capture_output=True, text=True, timeout=60)
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.strip() == emitted.strip()

@@ -75,9 +75,7 @@ def test_proto_source_and_checked_in_descriptor_agree():
     expected = _proto_fields()
     descriptor = _checked_in_module().AuditNodeProto.DESCRIPTOR
 
-    actual = {
-        field.name: (field.number, field.type) for field in descriptor.fields
-    }
+    actual = {field.name: (field.number, field.type) for field in descriptor.fields}
     assert actual == expected, (
         "the checked-in descriptor and audit_node.proto disagree; regenerate with "
         "scripts/regenerate_protobuf.sh (field name, number and scalar type must match)"
