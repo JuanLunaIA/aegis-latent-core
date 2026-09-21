@@ -427,9 +427,86 @@ def node_signature_assurance(node: AuditNode) -> SignatureAssurance:
     re-examined. An unrecognised scheme maps to ``UNSIGNED`` rather than
     raising, so a reader auditing unfamiliar WAL data gets the floor
     assurance instead of a crash.
+
+    The label is only trusted when the recorded material is *consistent*
+    with it: a node whose ``signature`` / ``public_key`` cannot belong to
+    the declared scheme (see :func:`scheme_material_inconsistency`) reports
+    ``UNSIGNED`` regardless of the label. Rewriting the label to a stronger
+    tier — the v5.0.1-prep audit's P1 (``REG-D06``) — therefore cannot buy
+    that tier here.
     """
 
+    if scheme_material_inconsistency(node) is not None:
+        return SignatureAssurance.UNSIGNED
     return _SCHEME_ASSURANCE.get(node.signature_scheme, SignatureAssurance.UNSIGNED)
+
+
+def _is_hex_token(value: str) -> bool:
+    """True for a non-empty, even-length hexadecimal token."""
+
+    return (
+        bool(value)
+        and len(value) % 2 == 0
+        and all(character in "0123456789abcdefABCDEF" for character in value)
+    )
+
+
+#: Static material invariants per scheme: ``(signature hex length, public-key
+#: hex length)``, where ``0`` means "must be absent" and ``None`` means "must
+#: be present; length is pinned by the implementation, not by this table".
+#: Only the invariants this codebase can assert without its verifiers are
+#: pinned exactly (HMAC-SHA256 = 32-byte tag, Ed25519 = 64-byte signature /
+#: 32-byte key); the HSM and ML-DSA tiers are shape-checked for presence —
+#: the real HSM backend raises ``HSMUnavailableError`` when the token
+#: cannot export the public key, so a public key is always present for
+#: ``pkcs11-*`` (``aegis/core/hsm.py``).
+_SCHEME_MATERIAL: Final[dict[str, tuple[int | None, int | None]]] = {
+    "hmac-sha256": (64, 0),
+    "ed25519-fallback": (128, 64),
+    "pqc-ml-dsa": (None, None),
+    "pkcs11-rsa-pss-sha256": (None, None),
+    "pkcs11-ecdsa-sha256": (None, None),
+}
+
+
+def scheme_material_inconsistency(node: AuditNode) -> str | None:
+    """Reason the recorded material cannot belong to the declared scheme.
+
+    Shape-only, deterministic, and cheap: no key material is read and no
+    signature is computed. Returns ``None`` when the material satisfies the
+    scheme's invariants, otherwise a human-readable reason. This is the
+    allowlist half of the ``REG-D06`` fix — a declared scheme outside
+    :data:`_SCHEME_MATERIAL` is itself an inconsistency, so an unknown label
+    fails closed instead of falling through to ``unverified``.
+    """
+
+    invariant = _SCHEME_MATERIAL.get(node.signature_scheme)
+    if invariant is None:
+        return f"unrecognised signature scheme {node.signature_scheme!r}"
+    expected_signature, expected_public_key = invariant
+    signature = node.signature or ""
+    public_key = node.public_key or ""
+    if not _is_hex_token(signature):
+        return "signature is not a non-empty even-length hex token"
+    if public_key and not _is_hex_token(public_key):
+        return "public key is not an even-length hex token"
+    if expected_signature is not None and len(signature) != expected_signature:
+        return (
+            f"signature length {len(signature)} does not match scheme "
+            f"{node.signature_scheme!r} ({expected_signature})"
+        )
+    if expected_public_key == 0:
+        if public_key:
+            return f"scheme {node.signature_scheme!r} does not carry a public key"
+    elif expected_public_key is None:
+        if not public_key:
+            return f"scheme {node.signature_scheme!r} requires a public key"
+    elif len(public_key) != expected_public_key:
+        return (
+            f"public key length {len(public_key)} does not match scheme "
+            f"{node.signature_scheme!r} ({expected_public_key})"
+        )
+    return None
 
 
 def chain_signature_assurance(nodes: list[AuditNode]) -> SignatureAssurance | None:
@@ -1405,7 +1482,11 @@ class CryptographicAuditLedger:
         Checks:
         1. Each node's node_hash is self-consistent.
         2. Each node's prev_hash matches the preceding node's node_hash.
-        3. HMAC signature is valid (when signing_key is set).
+        3. Each node's signature is valid under its declared scheme through
+           the dispatcher in :meth:`signature_status`; an invalid signature,
+           a scheme/material mismatch, or an unrecognised scheme fails the
+           sweep. A signature this build cannot check reports ``unverified``
+           and does not fail — the published boundary is ``UC-054``.
 
         Returns:
             (True, None) if valid; (False, error_index) on first violation.
@@ -1439,21 +1520,18 @@ class CryptographicAuditLedger:
             if self._require_strong_signing and node.is_fallback:
                 logger.error("Integrity violation: fallback signature at node %d", i)
                 return False, i
-            if self._signing_key and node.signature_scheme == "hmac-sha256":
-                payload = _build_signed_payload(
-                    prev_hash=node.prev_hash,
-                    merkle_root=node.merkle_root,
-                    request_hash=node.request_hash,
-                    response_hash=node.response_hash,
-                    waf_verdict=node.waf_verdict,
+            # Signature verification runs through the scheme dispatcher for
+            # every node, not only for HMAC-labelled ones: a rewritten label
+            # or a failed verification is a violation. A tier this build has
+            # no verifier for reports ``unverified`` and does not fail the
+            # sweep — that boundary is published as UC-054.
+            if self.signature_status(node) == "invalid":
+                logger.error(
+                    "Integrity violation: node %d signature invalid (scheme %s)",
+                    i,
+                    node.signature_scheme,
                 )
-                if not _hmac_verify(
-                    self._signing_key,
-                    payload,
-                    node.signature,
-                ):
-                    logger.error("Integrity violation: node %d HMAC signature invalid", i)
-                    return False, i
+                return False, i
             if node.mmr_proof is not None:
                 try:
                     proof = MMRInclusionProofV1.from_dict(node.mmr_proof)
@@ -1473,7 +1551,19 @@ class CryptographicAuditLedger:
         return True, None
 
     def signature_status(self, node: AuditNode) -> str:
-        """Return ``valid``, ``invalid``, or ``unverified`` for one node."""
+        """Return ``valid``, ``invalid``, or ``unverified`` for one node.
+
+        The scheme label is fenced by :func:`scheme_material_inconsistency`
+        first: material that cannot belong to the declared scheme — or a
+        scheme outside the allowlist — is ``invalid``, not ``unverified``,
+        so a rewritten label is a positive detection rather than an absence
+        of information. ``unverified`` is reserved for material that is
+        consistent with its scheme but cannot be checked by this build (no
+        signing key in memory, or an HSM / ML-DSA tier whose verifier is not
+        available here).
+        """
+        if scheme_material_inconsistency(node) is not None:
+            return "invalid"
         payload = _build_signed_payload(
             prev_hash=node.prev_hash,
             merkle_root=node.merkle_root,

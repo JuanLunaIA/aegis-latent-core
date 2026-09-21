@@ -1,0 +1,39 @@
+REG-D21 / AUD-17 — FIXED: DEEP_DIVE capability table drops the blocked wording
+Recorded 2026-09-21 (UTC) on the working host; commands run from the repository root.
+
+CHECK (executed)
+$ grep -c 'chain-of-custody\|trusted timestamp' docs/architecture/DEEP_DIVE.md || true
+0
+0 (0 = blocked wording gone)
+$ grep -n 'RFC 3161 timestamp token\|evidence-package seal' docs/architecture/DEEP_DIVE.md
+288:| ISO/IEC 27037 evidence package | `iso27037_evidence.py` | evidence-package seal (SHA-256 over identification/preservation fields), offline-verifiable; no custody record is created (`UC-024`) |
+289:| RFC 3161 timestamp token | `rfc3161_timestamper.py` | TSA token bound to bundle imprint; structural verification only — no revocation checking and no RFC 5280 policy/EKU evaluation (`CLM-014`, `CLM-096`) |
+
+DIFF (shared fix commit)
+$ git show --stat --oneline 8ccea5f
+8ccea5f fix(AUD-07/15/16/17 + trivial batch): MAR citation, blocked wording, boundary text
+ aegis/core/crypto_audit.py                    |  4 +--
+ aegis/core/export_audit_log.py                |  7 +++-
+ aegis/core/market_abuse_detector.py           |  7 ++--
+ aegis/core/mifid_record_keeper.py             | 15 ++++----
+ aegis/core/worm_ledger.py                     |  3 +-
+ aegis/proxy/app.py                            |  2 +-
+ aegis/proxy/mtls.py                           |  2 +-
+ aegis_rust_v2/src/hasher.rs                   |  3 +-
+ docs/BOUNDARIES.md                            |  3 +-
+ docs/REGISTRY.md                              |  2 +-
+ docs/ROADMAP.md                               | 52 +++++++++++++--------------
+ docs/architecture/DEEP_DIVE.md                |  4 +--
+ docs/assurance/AUDIT_EVIDENCE_INDEX.md        |  2 +-
+ docs/compliance/COMPLIANCE_MAPPING.md         |  2 +-
+ docs/compliance/EU_AI_ACT_TECHNICAL_INPUTS.md |  4 +--
+ docs/compliance/HIPAA_TECHNICAL_INPUTS.md     |  4 +--
+ docs/institutional/UNSUPPORTED_CLAIMS.md      | 14 ++++----
+ 17 files changed, 71 insertions(+), 59 deletions(-)
+
+DOC GATES (executed)
+"warnings": 0
+}
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1355 relative links and anchors resolved)
+verify_docs: PASS (0 findings)

@@ -180,11 +180,12 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
   - **Proposed solution:** Either route the JCS projection through a float-safe form (project floats as strings per the register's own JCS scope) or catch ForensicBundleError and return a documented 4xx/501 with an explanatory body; add a regression test that exercises the endpoint against a real committed node (every existing test mocks the ledger).
   - **Estimated effort:** S (0.5-1 day)
   - **Closed 2026-09-21:** the JCS companion serves real nodes through the documented evidence projection (`project_jcs_evidence`), and out-of-domain records return 422 instead of an unhandled 500; two real-ledger regression tests added. See `REG-D05`.
-- [ ] **AUD-02 [P1] — Signature verification is dispatched on a self-declared, hash-unbound field**
+- [x] **AUD-02 [P1] — Signature verification is dispatched on a self-declared, hash-unbound field**
   - **Affected files:** aegis/core/crypto_audit.py (_verify dispatch :1442; node_hash :562-574; _build_signed_payload; node_signature_assurance :432)
   - **Root cause:** signature_scheme is not an input to node_hash nor to the signed payload; verify_integrity() verifies HMAC only when the label says hmac-sha256, and node_signature_assurance maps the same unauthenticated label to an assurance tier. Reproduced first-hand: rewriting only the label on all WAL lines yields verify_integrity=(True,None) with signature_assurance=ASYMMETRIC_HARDWARE_ATTESTED and every per-node status 'unverified'.
   - **Proposed solution:** Bind the scheme into the chain: add signature_scheme to the hashed material and the signed payload under a chain-version bump, verify each declared scheme against an allowlist with a real verifier (or mark 'unverified' explicitly in verify_integrity's result), and add a tamper test (edit label -> integrity fails or status is 'unverified' and assurance is floored).
   - **Estimated effort:** M (2-4 days, touches node_hash compatibility + migration note)
+  - **Closed 2026-09-21 (`REG-D06`):** fixed with a narrower mechanism than the ticket's literal wording — the label is fenced by a shape-only allowlist (`scheme_material_inconsistency`), `signature_status` reports `invalid` for fenced material, `verify_integrity()` dispatches every node through that verifier, and `node_signature_assurance` floors inconsistent nodes to `UNSIGNED`; `node_hash` is untouched, so no chain break. Tests: `tests/test_crypto_audit_scheme_binding.py` (7, including the audit's reproduced WAL-relabel attack); evidence `evidence/registry/reg-d06_fixed.txt`. The payload-binding half moved to `AUD-27`.
 - [ ] **AUD-03 [P1] — Terminal evidence is not committed on the teardown styles the ASGI stack actually delivers**
   - **Affected files:** aegis/proxy/streaming.py (_iterate CancelledError handler :357-365; _cancel_producer :567-570; aclose)
   - **Root cause:** Under anyio-delivered cancellation (the real Starlette/uvicorn path) the first await inside the CancelledError handler re-raises, so the shielded _finalize never runs; aclose()/GeneratorExit cannot await at all. Reproduced first-hand: real-app send-failure run -> wal_terminal_nodes=0; controls T1_aclose=0, T2_cancel=1, T3_complete=1. Response headers advertise pending-terminal with no landing proof.
@@ -314,6 +315,12 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
   - **Root cause:** Harness output is labelled as absolute when host-specific; one comparison's report JSON was never committed; two UC rows have no producer at all. The docs' own rules (BENCHMARK_METHOD: 'No RPS figure is claimed for any environment') are contradicted by the harness banners.
   - **Proposed solution:** Re-label harness output as host-specific observations; commit a retained report or mark the figures historical; remove/replace '[PROVEN]' and 'zero latency' phrasings; decide the fate of UC-015/UC-016 (produce or keep retracted).
   - **Estimated effort:** S-M (1-2 days)
+
+- [ ] **AUD-27 [P3] — Bind the declared signature scheme into the signed payload (select-then-sign)**
+  - **Affected files:** aegis/core/crypto_audit.py (_build_signed_payload :629; _sign selection order; the three node-creation paths)
+  - **Root cause:** `REG-D06` authenticated the scheme label by shape and dispatch, but the label is still not an input to the signed payload: the signing path learns its scheme as the *result* of `_sign` (priority order including mid-flight HSM fallback), so the payload cannot be built before the scheme is known. A well-shaped fabricated claim for a tier with no in-build verifier (`pkcs11-*`) therefore still reads `unverified` and passes the sweep (published boundary: `UC-054`).
+  - **Proposed solution:** Split `_sign` into scheme selection + signing, build the payload with the selected scheme appended (same additive/conditional pattern as `waf_verdict`), gate the change on a trail-version bump so v1/v2 chains keep verifying, and add a tamper test asserting a label rewrite breaks the signature for every verifiable scheme. No `node_hash` change is required.
+  - **Estimated effort:** M (2-3 days incl. migration note)
 
 ## Related documents
 

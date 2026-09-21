@@ -1,0 +1,38 @@
+REG-D19 / AUD-15 — FIXED: WAF corpus citations point at the in-tree artifact
+Recorded 2026-09-21 (UTC) on the working host; commands run from the repository root.
+
+CHECK (executed)
+$ grep -rn 'waf_corpus_report' docs/compliance/COMPLIANCE_MAPPING.md docs/assurance/AUDIT_EVIDENCE_INDEX.md
+docs/compliance/COMPLIANCE_MAPPING.md:32:| WAF and normalization | Application-layer normalization and pinned local corpus regression | `aegis/proxy/waf.py`, `tests/data/waf_corpus_v1.json`, `tools/security/run_waf_corpus.py`, `evidence/execution_2026-08-20/waf_corpus_report.json` | `MEASURED` / local corpus | HTTP/2 frame parsing, proxy translation, pseudo-header ordering, H2C, continuation fragments and ingress differentials remain outside this artifact. |
+docs/assurance/AUDIT_EVIDENCE_INDEX.md:123:| WAF corpus | Zero observed bypasses, zero false positives | `evidence/execution_2026-08-20/waf_corpus_report.json` | Per corpus |
+$ ls evidence/execution_2026-08-20/waf_corpus_report.json
+evidence/execution_2026-08-20/waf_corpus_report.json
+
+DIFF (shared fix commit)
+$ git show --stat --oneline 8ccea5f
+8ccea5f fix(AUD-07/15/16/17 + trivial batch): MAR citation, blocked wording, boundary text
+ aegis/core/crypto_audit.py                    |  4 +--
+ aegis/core/export_audit_log.py                |  7 +++-
+ aegis/core/market_abuse_detector.py           |  7 ++--
+ aegis/core/mifid_record_keeper.py             | 15 ++++----
+ aegis/core/worm_ledger.py                     |  3 +-
+ aegis/proxy/app.py                            |  2 +-
+ aegis/proxy/mtls.py                           |  2 +-
+ aegis_rust_v2/src/hasher.rs                   |  3 +-
+ docs/BOUNDARIES.md                            |  3 +-
+ docs/REGISTRY.md                              |  2 +-
+ docs/ROADMAP.md                               | 52 +++++++++++++--------------
+ docs/architecture/DEEP_DIVE.md                |  4 +--
+ docs/assurance/AUDIT_EVIDENCE_INDEX.md        |  2 +-
+ docs/compliance/COMPLIANCE_MAPPING.md         |  2 +-
+ docs/compliance/EU_AI_ACT_TECHNICAL_INPUTS.md |  4 +--
+ docs/compliance/HIPAA_TECHNICAL_INPUTS.md     |  4 +--
+ docs/institutional/UNSUPPORTED_CLAIMS.md      | 14 ++++----
+ 17 files changed, 71 insertions(+), 59 deletions(-)
+
+DOC GATES (executed)
+"warnings": 0
+}
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1355 relative links and anchors resolved)
+verify_docs: PASS (0 findings)

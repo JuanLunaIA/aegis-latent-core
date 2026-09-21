@@ -1,0 +1,88 @@
+REG-D06 / AUD-02 — FIXED: the declared signature scheme is fenced, dispatched, floored
+Recorded 2026-09-21 (UTC) on the working host; commands run from the repository root.
+
+Root cause (reproduced first-hand by the audit): rewriting ONLY ``signature_scheme``
+on stored WAL lines left ``verify_integrity() == (True, None)`` while
+``signature_assurance`` reported ``ASYMMETRIC_HARDWARE_ATTESTED`` and every per-node
+status was ``unverified``.
+
+Fix, in three parts (aegis/core/crypto_audit.py):
+  1. scheme_material_inconsistency() — a shape-only allowlist fence: material that
+     cannot belong to the declared scheme (wrong lengths, non-hex tokens, unknown
+     scheme) is an inconsistency;
+  2. signature_status() reports 'invalid' for fenced material and verify_integrity()
+     runs every node through that dispatcher ('invalid' fails the sweep; 'unverified'
+     remains the documented non-fatal tier for unverifiable schemes);
+  3. node_signature_assurance() floors material-inconsistent nodes to UNSIGNED, so a
+     label rewrite cannot buy a stronger tier.
+
+DIFF (working tree at record time)
+$ git add -N tests/test_crypto_audit_scheme_binding.py && git diff --stat HEAD -- aegis/core/crypto_audit.py tests/test_crypto_audit_scheme_binding.py tests/test_hsm.py
+aegis/core/crypto_audit.py                | 122 +++++++++++++++---
+ tests/test_crypto_audit_scheme_binding.py | 205 ++++++++++++++++++++++++++++++
+ tests/test_hsm.py                         |   8 +-
+ 3 files changed, 317 insertions(+), 18 deletions(-)
+
+TESTS (executed; the attack test is the audit's reproduced path re-run on the fixed code)
+$ .venv/bin/python -m pytest tests/test_crypto_audit_scheme_binding.py -v
+============================= test session starts ==============================
+platform linux -- Python 3.11.11, pytest-9.1.1, pluggy-1.6.0 -- /home/luna/aegis-latent-core/.venv/bin/python
+cachedir: .pytest_cache
+hypothesis profile 'default'
+rootdir: /home/luna/aegis-latent-core
+configfile: pyproject.toml
+plugins: hypothesis-6.168.0, anyio-4.14.2, asyncio-1.4.0, xdist-3.8.0, cov-7.1.0, pytest_httpserver-1.1.5
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 7 items
+
+tests/test_crypto_audit_scheme_binding.py::test_untampered_hmac_chain_stays_green PASSED [ 14%]
+tests/test_crypto_audit_scheme_binding.py::test_label_rewrite_to_hardware_tier_fails_integrity PASSED [ 28%]
+tests/test_crypto_audit_scheme_binding.py::test_unknown_scheme_label_is_invalid_not_unverified PASSED [ 42%]
+tests/test_crypto_audit_scheme_binding.py::test_hmac_material_carrying_a_public_key_is_inconsistent PASSED [ 57%]
+tests/test_crypto_audit_scheme_binding.py::test_ed25519_fallback_chain_verifies_with_its_recorded_key PASSED [ 71%]
+tests/test_crypto_audit_scheme_binding.py::test_pkcs11_labelled_node_without_public_key_is_invalid PASSED [ 85%]
+tests/test_crypto_audit_scheme_binding.py::test_well_shaped_claim_for_an_unverifiable_tier_reports_unverified PASSED [100%]
+
+============================== 7 passed in 0.34s ===============================
+
+SUITE (executed; seal convention)
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
+6881 passed, 116 skipped in 85.82s
+
+GATES (executed)
+$ ruff check aegis/core/crypto_audit.py tests/test_hsm.py tests/test_crypto_audit_scheme_binding.py
+All checks passed!
+"warnings": 0
+}
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1355 relative links and anchors resolved)
+verify_docs: PASS (0 findings)
+
+BOUNDARY / RESIDUAL
+  - A well-shaped fabricated claim for a tier with no in-build verifier (pkcs11-*)
+    reads 'unverified' and does not fail the sweep; it is pinned by
+    tests/test_crypto_audit_scheme_binding.py::test_well_shaped_claim_for_an_unverifiable_tier_reports_unverified
+    and published as UC-054.
+  - Payload binding of the label (the harder half) stays open as AUD-27 / REG-D31.
+
+FIXTURE NOTE
+  tests/test_hsm.py's mock backend returned a public key of "pubhex" (not hex at all);
+  the real backend raises HSMUnavailableError when the token cannot export a hex key
+  (aegis/core/hsm.py), so the mock was corrected to hex-shaped material and its two
+  assertions updated. No production behaviour was relaxed for the fixture.
+
+BATTERY AT THE COMMIT (executed at HEAD d4463f8)
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
+6773 passed, 116 skipped, 5 errors in 84.05s (0:01:24)
+$ .venv/bin/bandit -r aegis/ aegis_server/ -c pyproject.toml -lll
+Medium: 0 · High: 0 (0 issues)
+$ .venv/bin/python scripts/verify_import_reachability.py
+verify_import_reachability: PASS — no undeclared orphans, no stale roadmap entries
+$ .venv/bin/python scripts/verify_release_contract.py --root .
+release source contract: READY (14 synchronized anchors at 5.0.0)
+$ .venv/bin/python tools/docs/verify_documentation.py --root . --strict   -> "warnings": 0
+$ .venv/bin/python scripts/verify_claims.py --root .                      -> PASS (102 claims, 0 findings)
+$ bash scripts/verify_links.sh --root .                                   -> PASS (1355 links resolved)
+$ .venv/bin/python scripts/verify_docs.py --root .                        -> PASS (0 findings)
+$ .venv/bin/ruff check aegis/core/crypto_audit.py tests/test_hsm.py tests/test_crypto_audit_scheme_binding.py
+All checks passed!

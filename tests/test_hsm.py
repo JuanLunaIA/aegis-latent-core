@@ -428,7 +428,11 @@ class TestLedgerHSMIntegration:
         backend = MagicMock()
         backend.available = available
         if available:
-            backend.sign = MagicMock(return_value=(b"hsm-sig", "pubhex", scheme))
+            # The real backend guarantees a hex public key (hsm.py raises
+            # HSMUnavailableError when the token cannot export one), so the
+            # mock feeds hex material too — a non-hex key is not a shape the
+            # production path can produce (REG-D06 fence).
+            backend.sign = MagicMock(return_value=(b"hsm-sig", "ab" * 32, scheme))
         return backend
 
     def test_hsm_signature_scheme_stored_in_node(self, tmp_path):
@@ -441,7 +445,7 @@ class TestLedgerHSMIntegration:
             node = ledger.commit_state("s1", 1.0, b"payload")
             assert node.signature_scheme == "pkcs11-rsa-pss-sha256"
             assert node.signature == b"hsm-sig".hex()
-            assert node.public_key == "pubhex"
+            assert node.public_key == "ab" * 32
             assert node.is_fallback is False
         finally:
             ledger.close()
