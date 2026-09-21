@@ -328,8 +328,9 @@ class WALBackupManager:
                 signing_key=self._signing_key,
                 async_mode=False,
             )
-            node_count = len(ledger.chain)
-            chain_tip = ledger.chain[-1].node_hash if ledger.chain else ""
+            chain = ledger.chain_snapshot()
+            node_count = len(chain)
+            chain_tip = chain[-1].node_hash if chain else ""
             valid, failed_idx = ledger.verify_integrity()
             ledger.close()
             if not valid:

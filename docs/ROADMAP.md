@@ -179,6 +179,7 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
   - **Root cause:** AuditNode.to_dict() always carries float fields (timestamp, entropy, sampling_params.elapsed_seconds); canonical_jcs_bytes rejects floats by design, the ForensicBundleError is uncaught, and no exception handler is registered, so the documented byte-exact RFC 8785 projection 500s on 100% of nodes. Reproduced first-hand (parent probe: GET /nodes/{hash} -> 200; /evidence -> 500).
   - **Proposed solution:** Either route the JCS projection through a float-safe form (project floats as strings per the register's own JCS scope) or catch ForensicBundleError and return a documented 4xx/501 with an explanatory body; add a regression test that exercises the endpoint against a real committed node (every existing test mocks the ledger).
   - **Estimated effort:** S (0.5-1 day)
+  - **Closed 2026-09-21 (`REG-D12`):** `chain_snapshot()` added and used at every read site (one snapshot per handler, so a count and a tail hash can no longer describe different chains in the same response); `wal_backup.py` and `iso27037_evidence.py` moved to the accessor. The endpoint-level probe shows 45 non-200 of 150 under the old path and 0 of 150 after, and the new control test reproduces the deque interleaving on this host. Evidence: `evidence/registry/reg-d12_fixed.txt`.
   - **Closed 2026-09-21:** the JCS companion serves real nodes through the documented evidence projection (`project_jcs_evidence`), and out-of-domain records return 422 instead of an unhandled 500; two real-ledger regression tests added. See `REG-D05`.
 - [x] **AUD-02 [P1] — Signature verification is dispatched on a self-declared, hash-unbound field**
   - **Affected files:** aegis/core/crypto_audit.py (_verify dispatch :1442; node_hash :562-574; _build_signed_payload; node_signature_assurance :432)
@@ -216,7 +217,7 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
   - **Proposed solution:** Either remove the numbers from BOUNDARIES.md and restate the CLM-089 boundary, or promote the cost harness to a reproducible artifact (a committed, runnable command + output file) and update CLM-089 to name it. The two registers must not contradict.
   - **Estimated effort:** S (2-4 h either way)
   - **Closed 2026-09-21** — `8ccea5f`: the measured setup/prove/verify numbers are removed from `docs/BOUNDARIES.md:30`; the row now states the CLM-089 boundary explicitly; doc gates PASS.
-- [ ] **AUD-08 [P2] — Audit read endpoints iterate the live ledger deque without a lock/snapshot**
+- [x] **AUD-08 [P2] — Audit read endpoints iterate the live ledger deque without a lock/snapshot**
   - **Affected files:** aegis/proxy/audit_api.py :133,:148,:153,:177,:215,:230,:254,:288,:297,:324; writer aegis/proxy/app.py:1382,1845; deque aegis/core/crypto_audit.py:806
   - **Root cause:** Commits append to the deque from asyncio worker threads while handlers iterate it; a landing mutation raises RuntimeError('deque mutated during iteration') -> 500 with no data. Ledger accessors elsewhere snapshot under self._lock, so this is an inconsistency.
   - **Proposed solution:** Take a snapshot (list(ledger.chain) or a locked accessor) at every read site, matching signature_assurance/verify_integrity; add a test that commits concurrently with each endpoint.

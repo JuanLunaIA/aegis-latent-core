@@ -129,9 +129,10 @@ def build_audit_router(
         principal = _require(auth, SCOPE_AUDIT_READ)
         fault_state = _string_attr(ledger, "_fault_state", "healthy")
         window_anchor = _string_attr(ledger, "window_anchor_hash", "0" * 64)
+        chain = ledger.chain_snapshot()
         return {
             "status": "ok" if fault_state == "healthy" else "degraded",
-            "node_count": sum(_visible(node, principal) for node in ledger.chain),
+            "node_count": sum(_visible(node, principal) for node in chain),
             "signature_assurance": ledger.signature_assurance,
             "fault_state": fault_state,
             "scope": "retained-memory-window",
@@ -146,12 +147,13 @@ def build_audit_router(
         """Verify the retained Merkle-chain window. O(N); use sparingly."""
         _require(auth, SCOPE_AUDIT_READ)
         is_valid, err_idx = ledger.verify_integrity()
-        tail = ledger.chain[-1].node_hash if ledger.chain else ""
+        chain = ledger.chain_snapshot()
+        tail = chain[-1].node_hash if chain else ""
         window_anchor = _string_attr(ledger, "window_anchor_hash", "0" * 64)
         return IntegrityReport(
             valid=is_valid,
             error_index=err_idx,
-            node_count=len(ledger.chain),
+            node_count=len(chain),
             tail_hash=tail,
             signature_assurance=ledger.signature_assurance,
             scope="retained-memory-window",
@@ -175,7 +177,7 @@ def build_audit_router(
         """Paginated and filtered listing of retained audit nodes."""
         principal = _require(auth, SCOPE_AUDIT_READ)
         effective_tenant = principal_tenant(principal, tenant_id)
-        chain_list = [node for node in ledger.chain if _visible(node, principal)]
+        chain_list = [node for node in ledger.chain_snapshot() if _visible(node, principal)]
         if effective_tenant:
             chain_list = [node for node in chain_list if node.tenant_id == effective_tenant]
         if model:
@@ -213,7 +215,7 @@ def build_audit_router(
     ) -> AuditNodeOut:
         """Retrieve a single audit node by its hash."""
         principal = _require(auth, SCOPE_AUDIT_READ)
-        for index, node in enumerate(ledger.chain):
+        for index, node in enumerate(ledger.chain_snapshot()):
             if node.node_hash == node_hash and _visible(node, principal):
                 return _node_out(index, node, verify_signature=True)
         raise HTTPException(
@@ -236,7 +238,7 @@ def build_audit_router(
         than an unhandled error.
         """
         principal = _require(auth, SCOPE_AUDIT_READ)
-        for node in ledger.chain:
+        for node in ledger.chain_snapshot():
             if node.node_hash != node_hash or not _visible(node, principal):
                 continue
             try:
@@ -266,7 +268,7 @@ def build_audit_router(
     ) -> MMRProofOut:
         """Retrieve a portable inclusion proof by request/state identifier."""
         principal = _require(auth, SCOPE_AUDIT_READ)
-        for node in reversed(ledger.chain):
+        for node in reversed(ledger.chain_snapshot()):
             if node.state_id != state_id or not _visible(node, principal):
                 continue
             if node.mmr_proof is None or not node.mmr_leaf_hash:
@@ -300,7 +302,7 @@ def build_audit_router(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Administrator required"
             )
-        return sorted({node.tenant_id for node in ledger.chain})
+        return sorted({node.tenant_id for node in ledger.chain_snapshot()})
 
     @router.get("/export/part11", response_model=list[dict[str, Any]])
     async def export_part11(
@@ -309,7 +311,9 @@ def build_audit_router(
         """Export 21 CFR Part 11 annotation fields plus cryptographic bindings."""
         principal = _require(auth, SCOPE_AUDIT_EXPORT)
         records = ledger.export_part11_signatures()
-        visible_ids = {node.state_id for node in ledger.chain if _visible(node, principal)}
+        visible_ids = {
+            node.state_id for node in ledger.chain_snapshot() if _visible(node, principal)
+        }
         return [record for record in records if record.get("state_id") in visible_ids]
 
     @router.post("/forensics/export")
@@ -334,9 +338,10 @@ def build_audit_router(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="start_time must precede end_time.",
             )
+        chain = ledger.chain_snapshot()
         selected = [
             node
-            for node in ledger.chain
+            for node in chain
             if start_utc.timestamp() <= node.timestamp <= end_utc.timestamp()
             and _visible(node, principal)
             and (effective_tenant is None or node.tenant_id == effective_tenant)

@@ -994,6 +994,33 @@ class CryptographicAuditLedger:
         with self._lock:
             return self._segment_paths()
 
+    def chain_snapshot(self) -> list[AuditNode]:
+        """A consistent copy of the retained in-memory chain.
+
+        Readers MUST iterate this, never ``self.chain`` directly. Commits
+        append to the deque from worker threads (``asyncio.to_thread``) while
+        request handlers iterate it, and a mutation landing between two
+        ``__next__`` calls raises ``RuntimeError('deque mutated during
+        iteration')`` out of the handler — a 500 with no audit data, on reads
+        that had already passed authentication and scope checks (AUD-08).
+
+        Every mutation of ``self.chain`` happens under ``self._lock``
+        (``_append_memory_node`` is only reached from within it), so a copy
+        taken under the same lock is both consistent and safe to iterate. The
+        commit path deliberately releases the lock before waiting on the
+        ``fsync``, so this does not block on storage I/O.
+
+        One snapshot per handler, not one per field: taking it twice lets a
+        commit land in between, so a count and a tail hash can describe
+        different chains in the same response.
+
+        Do not call this while already holding ``self._lock``: it is a
+        non-reentrant :class:`threading.Lock`.
+        """
+
+        with self._lock:
+            return list(self.chain)
+
     @property
     def window_anchor_hash(self) -> str:
         """Hash immediately preceding the first retained in-memory node."""

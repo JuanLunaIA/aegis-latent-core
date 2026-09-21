@@ -48,6 +48,9 @@ def _make_node(
 def _make_ledger(nodes=None, integrity=(True, None)):
     ledger = MagicMock()
     ledger.chain = nodes or []
+    # Handlers read through the snapshot accessor (AUD-08 fix); the mock must
+    # answer it with a copy, like CryptographicAuditLedger.chain_snapshot does.
+    ledger.chain_snapshot = MagicMock(return_value=list(nodes or []))
     ledger.signature_assurance = "ASYMMETRIC_HARDWARE_ATTESTED"
     ledger._fault_state = None
     ledger.verify_integrity = MagicMock(return_value=integrity)
