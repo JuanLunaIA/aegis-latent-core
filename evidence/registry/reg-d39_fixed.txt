@@ -1,0 +1,70 @@
+REG-D39 — two tests red a gate under load, for reasons that were not defects (FIXED 2026-09-21)
+
+Found by: the 5.0.1 coverage runs. `pytest -n auto -q --cov=aegis --cov-fail-under=90`
+reported them as failing while the coverage floor was being met, which makes every
+gate verdict on this host unreliable until they are understood. They are not
+product defects; both were assertions that depended on how fast the machine is.
+
+Both reproduce **only** under full-suite contention on this 4-core host. Run
+together under the same flags on a quiet machine they pass:
+`pytest tests/test_proxy_streaming.py::test_large_logical_stream_retained_memory_is_bounded
+tests/test_audit_read_snapshot.py::test_read_endpoints_survive_concurrent_commits -q --cov=aegis -n auto`
+→ **2 passed in 33.86 s**.
+
+════ 1. `tests/test_proxy_streaming.py::test_large_logical_stream_retained_memory_is_bounded` ════
+Failure (run 3, gw0):
+
+    async for part in proxy:
+        observed += len(part)
+        assert proxy.retained_bytes <= 1024 + 4096 + 512     # PASSED, every iteration
+    assert observed > 5_000_000
+E   assert 2511420 > 5000000
+
+The memory bound under test held — the in-loop assertion never fired. What failed
+was the *throughput* expectation: the proxy is constructed with
+`max_duration_seconds=30`, and under full-suite contention 100,000 events did not
+drain inside it, so the producer ended the stream with `outcome="timeout"` and the
+consumer saw roughly half the bytes. The test could not tell a truncated stream
+from a completed one, so the truncation was silent and surfaced only as a smaller
+number.
+
+Fix: raise the cap to 300 s — the cap is not what this test measures, and 300 s
+cannot fire on a healthy stream — and capture the terminal summary so completion
+is asserted:
+
+    outcomes: list[str] = []
+    async def commit(summary): ...; outcomes.append(summary.terminal_outcome)
+    ...
+    assert outcomes == ["complete"], outcomes
+
+Control: with the cap forced back to 0.05 s the *new* assertion fires —
+`assert outcomes == ["complete"], outcomes` → FAILED (the byte assertion would have
+been the only thing to fail before, and only sometimes). Restored: 1 passed in 8.93 s.
+
+════ 2. `tests/test_audit_read_snapshot.py::test_read_endpoints_survive_concurrent_commits` ════
+Failure (run 3, gw2):
+
+    assert export.status_code == 200, export.text
+E   AssertionError: {"detail":"a forensic bundle is limited to 1000 nodes"}
+
+Correct product behaviour, wrong workload: the test starts a writer thread that
+commits `_commit(ledger, number)` in a tight loop with no bound, then issues 6
+rounds × 8 requests. On a fast machine the export runs before the ledger passes
+1000 nodes; under contention the writer gets far enough ahead that the export
+window legitimately exceeds the documented limit and the endpoint refuses —
+exactly as `forensic_bundle` is supposed to. The test's own property ("reads
+survive a commit landing mid-iteration") was never at risk.
+
+Fix: bound the writer well short of the documented limit (`number < 900`) while
+still committing throughout the request loop, with the reason in a comment.
+
+════ 3. WHAT WAS NOT DONE ════
+No assertion was weakened and no bound was relaxed to make a run pass:
+`retained_bytes <= 1024 + 4096 + 512`, `peak_queue_items <= 4`, `peak_queue_bytes
+<= 4096`, `calls == 1`, every `status_code == 200` check and the export assertion
+all stand as they were. The two changes remove wall-clock dependencies
+(a duration cap that was not the subject, an unbounded writer) and add one
+assertion that turns a silent truncation into a failure.
+
+Focused run after the fixes: `pytest tests/test_proxy_streaming.py tests/test_audit_read_snapshot.py -q`
+→ **33 passed in 11.66 s**; ruff check clean, both files formatted.

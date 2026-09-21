@@ -3,10 +3,7 @@
 This brief is for executive sponsors, economic buyers, platform leaders and security reviewers evaluating Aegis. It defines the product category, buyer problem, evidence wedge, initial ICP, proof sequence and non-goals. It is not a certification, legal opinion, production SLO, or binding commercial offer.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** checked-out source baseline `v5.0.0` with fourteen synchronized anchors, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)
-**Source baseline:** `v5.0.0` with fourteen synchronized anchors, **published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)** — source metadata does not establish external lifecycle state, so each surface was read back separately. The most recent published release is `v4.1.2`, whose tag, GitHub Release, PyPI, npm, OCI digest and signature objects were read back on 2026-09-04 and are recorded in `docs/RELEASE_STATUS.md` §1.1; `cosign verify` and `gh attestation verify` were not run
-**External baseline:** signed annotated `v4.1.2` tag at `860f14177d94c194e5ae7156017d6fa74264e429`, with GitHub Release (31 assets), PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images, all read back on 2026-09-04
-**Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
+**Release baseline:** checked-out source baseline `v5.0.0` with fourteen synchronized anchors, published 2026-09-16 on every surface except PyPI `aegis-latent-core` — per-surface readbacks, the latest published release and the historical baselines are stated once, and only, in [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1, which is the only document that establishes publication state
 **Positioning owner:** Product and release owner
 **Primary claim control:** [`docs/CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md)
 
@@ -43,7 +40,7 @@ The product is evaluated through concrete artifacts rather than broad category l
 
 ## Measured boundaries
 
-The published v3.1.0 release retained four market-hardening artifacts. The backpressure run preserved 10,000 durable records under a 2 ms injected `fsync` delay but recorded p99 commit latency of 1,189.89 ms. The WAF corpus contains 15 malicious and 8 benign cases. The key-rotation exercise covers three independent local signer instances. The ML-DSA timing experiment passed non-detection for `sign` but returned `p=0.0` for `verify`; no constant-time claim is approved.
+The published v3.1.0 release retained four market-hardening artifacts. The backpressure run committed to this tree preserved 2,500 durable records at 10,000 RPS offered under a 2 ms injected `fsync` delay and recorded p99 commit latency of 836.3514210795984 ms (`evidence/execution_2026-08-20/`); the current baseline records 51.87 ms (`evidence/execution_2026-09-16/`). A previously published 10,000-record run with p99 1,189.89 ms is retracted (`UC-018`) — no artifact in this tree produces it. The WAF corpus contains 15 malicious and 8 benign cases. The key-rotation exercise covers three independent local signer instances. The ML-DSA timing experiment passed non-detection for `sign` but returned `p=0.0` for `verify`; no constant-time claim is approved.
 
 The checked-out `v5.0.0` source separately retains a bounded in-process SSE benchmark of 7 rounds × 1,000 deterministic events. It excludes network, provider and durable-WAL latency and is not capacity or SLO evidence. The auxiliary native `RustWal` segment is likewise not the replay authority; the JSONL ledger remains authoritative.
 

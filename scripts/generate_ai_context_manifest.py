@@ -17,9 +17,13 @@ SOURCE_BASELINE_COMMIT = "fdace8844568eb788216740b2cb5daf187d99d3b"
 # Backward-compatible name used by the manifest verifier; not an active-release link.
 SOURCE_ANCHOR = SOURCE_BASELINE_COMMIT
 SOURCE_BASELINE_VERSION = "4.0.0"
-PUBLISHED_GITHUB_RELEASE = "v4.0.1"
-PUBLISHED_GITHUB_RELEASE_TARGET = "6469904380218584ae0b5221334bc9a46500f5ba"
-SOURCE_RELEASE_TARGET_VERSION = "4.1.2"
+PUBLISHED_GITHUB_RELEASE = "v4.1.2"
+PUBLISHED_GITHUB_RELEASE_TARGET = "860f14177d94c194e5ae7156017d6fa74264e429"
+# v4.1.2 is a signed annotated tag; the historical lightweight v4.0.1 tag
+# (6469904380218584ae0b5221334bc9a46500f5ba, failed tag workflows) is recorded in
+# 01_CANONICAL_SYMBOL_AND_TYPE_INDEX.tsv as HistoricalLightweightTag.
+PUBLISHED_GITHUB_RELEASE_TAG_KIND = "annotated_signed"
+SOURCE_RELEASE_TARGET_VERSION = "5.0.1"
 SYNCHRONIZED_VERSION_ANCHORS = 14
 MANIFEST_PATH = ".aegis_ai_context/MANIFEST.json"
 CONTEXT_FILES = (
@@ -146,7 +150,7 @@ def build_manifest(root: Path) -> dict[str, Any]:
         "published_github_release": {
             "release": PUBLISHED_GITHUB_RELEASE,
             "state": "published",
-            "tag_kind": "lightweight",
+            "tag_kind": PUBLISHED_GITHUB_RELEASE_TAG_KIND,
             "target_commit": PUBLISHED_GITHUB_RELEASE_TARGET,
         },
         "registry_observation": {

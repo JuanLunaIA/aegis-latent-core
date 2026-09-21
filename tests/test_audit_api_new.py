@@ -5,7 +5,10 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import io
+import json
 import time
 import zipfile
 from datetime import UTC, datetime, timedelta
@@ -19,6 +22,7 @@ from fastapi import FastAPI
 from aegis.auth.principal import Principal, Role
 from aegis.auth.scopes import SCOPE_AUDIT_READ
 from aegis.core.crypto_audit import CryptographicAuditLedger
+from aegis.core.forensic_bundle import canonical_jcs_bytes, project_jcs_evidence
 from aegis.proxy.audit_api import build_audit_router
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -44,6 +48,9 @@ def _make_node(
 def _make_ledger(nodes=None, integrity=(True, None)):
     ledger = MagicMock()
     ledger.chain = nodes or []
+    # Handlers read through the snapshot accessor (AUD-08 fix); the mock must
+    # answer it with a copy, like CryptographicAuditLedger.chain_snapshot does.
+    ledger.chain_snapshot = MagicMock(return_value=list(nodes or []))
     ledger.signature_assurance = "ASYMMETRIC_HARDWARE_ATTESTED"
     ledger._fault_state = None
     ledger.verify_integrity = MagicMock(return_value=integrity)
@@ -121,6 +128,72 @@ async def test_forensic_export_returns_verifiable_zip(tmp_path):
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
         assert "VERIFY.sh" in archive.namelist()
         assert "ledger_slice.cbor" in archive.namelist()
+
+
+# ── /nodes/{hash}/evidence ───────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_node_evidence_serves_jcs_projection_for_finite_floats(tmp_path):
+    """REG-D05 regression: the JCS companion must serve real nodes (no 500)."""
+    ledger = CryptographicAuditLedger(
+        persistence_path=str(tmp_path / "audit.jsonl"),
+        signing_key="evidence-key",
+    )
+    ledger.commit_forensic(
+        state_id="evidence-1",
+        request_bytes=b"request",
+        response_bytes=b"response",
+        tenant_id="tenant-a",
+    )
+    node = list(ledger.chain)[0]
+    app = _make_app(ledger)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.get(f"/v1/audit/nodes/{node.node_hash}/evidence")
+    ledger.close()
+
+    assert response.status_code == 200
+    payload = response.json()
+    record = node.to_dict()
+    record["node_hash"] = node.node_hash
+    expected_bytes = canonical_jcs_bytes(project_jcs_evidence(record))
+    assert payload["jcs_json"] == expected_bytes.decode("utf-8")
+    projected = json.loads(payload["jcs_json"])
+    # Finite floats ride as the shortest round-trip strings the WAL persists.
+    assert projected["timestamp"] == repr(record["timestamp"])
+    assert isinstance(projected["entropy"], str)
+    assert (
+        payload["dag_cbor_sha256"]
+        == hashlib.sha256(base64.b64decode(payload["dag_cbor_base64"])).hexdigest()
+    )
+
+
+@pytest.mark.asyncio
+async def test_node_evidence_returns_422_outside_canonical_domain(tmp_path):
+    """Out-of-domain records must return a documented 4xx, never a 500."""
+    ledger = CryptographicAuditLedger(
+        persistence_path=str(tmp_path / "audit.jsonl"),
+        signing_key="evidence-key",
+    )
+    ledger.commit_forensic(
+        state_id="evidence-2",
+        request_bytes=b"request",
+        response_bytes=b"response",
+        tenant_id="tenant-a",
+    )
+    node = list(ledger.chain)[0]
+    node.sampling_params = {**node.sampling_params, "elapsed_seconds": float("nan")}
+    app = _make_app(ledger)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app, raise_app_exceptions=False), base_url="http://test"
+    ) as client:
+        response = await client.get(f"/v1/audit/nodes/{node.node_hash}/evidence")
+    ledger.close()
+
+    assert response.status_code == 422
+    assert "non-finite" in response.json()["detail"]
 
 
 # ── /health ───────────────────────────────────────────────────────────────────

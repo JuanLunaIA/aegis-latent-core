@@ -5,6 +5,26 @@
 **Gates passed:** 11 / 11
 **Environment:** Linux 6.18.44-fc-v33, 4 shared unpinned vCPU; CPython 3.11.15; cargo 1.94.1; ruff 0.15.8; mypy 1.19.1; bandit 1.9.4
 
+**Currency note (2026-09-21).** This seal describes one battery: the `5.0.0`
+tree at base commit `d1b229c31df34ca3a77ac0582cd6b1b72a94ae24`, on the environment
+named above. Its numbers are that run's output and are not updated here — a
+seal's value is that it is a record. Two consequences a reader must know:
+
+- **The base commit is not present in this repository's history** (`git cat-file
+  -t d1b229c31df34ca3a77ac0582cd6b1b72a94ae24` -> `fatal: could not get object
+  info`), so the run cannot be replayed here and its PASS lines cannot be
+  re-derived from this checkout.
+- **Several counts have moved since.** Measured on 2026-09-21 at HEAD of the
+  registry-closure branch: `pytest -n auto -q` 6,948 passed / 119 skipped /
+  0 failed; `python scripts/verify_claims.py --root .` 102 claims, 0 findings;
+  `mypy --strict aegis` 207 source files, no issues; `ruff format --check .`
+  578 files already formatted, 0 to reformat; `bandit -r aegis/ aegis_server/
+  -c pyproject.toml -lll` 0 issues. Gate 6b's recorded "550 files" is a tool
+  version apart from today's run: the seal's ruff 0.15.8 did not format Python
+  fences inside Markdown, and the repository now excludes markdown from
+  formatting so both invocations agree (`AUD-18`/`REG-D22`). Read the numbers
+  above as the state of the seal, and this note as the state of the tree.
+
 A seal is a record of what was executed, not a certification. Every line below is
 a command's actual output. Where a check could not run, the blocking reason is
 recorded instead of a result — there is no third state.

@@ -1,0 +1,36 @@
+REG-031 — blocked (tooling absent from this host)
+===================================================
+
+Row:        REG-031  [TRACK-A4]  BLOCKED-ENV  P1  "syft/cosign/cargo-fuzz absent"
+Transition: SEED -> BLOCKED  (exact failing command + error + owner + unblock path)
+
+(1) Exact probe, 2026-09-21:
+
+$ for t in cosign syft gh cargo-fuzz grype docker kubectl helm protoc; do
+    printf '%-10s ' $t; command -v $t >/dev/null 2>&1 && command -v $t || echo ABSENT; done
+
+
+$ cargo audit --version
+
+
+$ timeout 8 docker info
+
+
+(2) What each absence costs:
+    cosign          no OCI signature verification (REG-034's second limb)
+    syft            no SBOM generation from the command line here
+    gh              no `gh attestation verify`, no release/PR operations
+    cargo-fuzz      no fuzz target execution (harness existence is separate)
+    grype           no vulnerability scan of an image/SBOM here
+    cargo-audit     `cargo audit` has no `audit` subcommand in this environment,
+                    which is what the two rust rows (REG-D02, REG-D03) rest on
+    protoc          PRESENT (/usr/bin/protoc) — so the protobuf path (REG-056) is
+                    not blocked by tooling, and it is the one exception here.
+
+(3) Owner and unblock path:
+    Owner: the release/CI host operator. The artifacts themselves are not in
+    doubt — this row is about this environment's inability to verify them.
+    Unblock: install cosign and syft on a host permitted to verify the published
+    artifacts; run `cargo install cargo-audit` where the Rust advisories must be
+    re-read; `gh` for attestations. The readback tool (REG-028) reports these
+    observables NOT_EXECUTED with the reason rather than assuming them.

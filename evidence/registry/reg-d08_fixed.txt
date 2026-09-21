@@ -1,0 +1,103 @@
+REG-D08 / AUD-04 — FIXED: a second RustWal handle is refused, not destructive
+Recorded 2026-09-21 (UTC) on the working host; commands run from the repository root.
+
+Root cause (reproduced first-hand by the audit, re-reproduced here against a
+stale pre-fix artifact): each RustWal handle kept its own Mutex and write_pos;
+nothing enforced single-writer exclusivity, so a second opener rescanned the
+segment, computed the same offsets, and overwrote flushed frames through its
+own MAP_SHARED mapping. The SAFETY note above the mmap asserted an exclusivity
+invariant no code enforced.
+
+BEFORE / AFTER (real artifacts, same probe: open twice, alternate appends)
+$ ls -l aegis_rust_v2/target/release/libaegis_rust.so   # built 2026-09-21 06:02, pre-fix
+$ ls -l aegis_rust_v2/target/debug/libaegis_rust.so     # rebuilt from the fixed source
+$ python probe_wal_handles.py
+--- BEFORE (stale pre-fix release artifact) ---
+a.read_all=['{"seq":"b1"}', '{"seq":"a2"}']      <- a's first frame was DESTROYED by b
+b.read_all=['{"seq":"b1"}']
+a.write_pos=40 b.write_pos=20
+--- AFTER (rebuilt from the fixed source) ---
+second_open_refused: RuntimeError: RustWal single-writer invariant: another handle already holds
+  ".../seg.rwal" (advisory lock busy); close that handle before opening a second one on the same segment
+a.read_all=['{"seq":"a1"}'] a.write_pos=20
+b_opened=False
+
+Fix (aegis_rust_v2/src/wal.rs):
+  - `open` takes `std::fs::File::try_lock` on the segment file immediately
+    after opening it and BEFORE any resize or mapping: a losing handle cannot
+    touch the segment at all and fails closed with a PyRuntimeError naming the
+    single-writer invariant (a genuine lock error is reported as PyIOError);
+  - the lock is held by the handle (`WalInner::_writer_lock`), so it is
+    released when the handle drops or the process exits — no operator action;
+  - same mechanism as the Python WAL's own guard (fcntl.flock, non-blocking)
+    and inside the seccomp allowlist already present for it;
+  - std `try_lock` (Rust >= 1.89): no new dependency, unchanged Cargo.lock;
+  - the mmap SAFETY note now names the enforcement instead of asserting it.
+
+RUST TESTS (executed; in-crate, `wal::` filter)
+$ cargo test --locked --lib wal::
+running 9 tests
+test wal::tests::rejected_append_does_not_advance_write_position ... ok
+test wal::tests::recovery_terminator_prevents_corrupt_suffix_resurrection ... ok
+test wal::tests::reopen_after_drop_preserves_committed_frames ... ok
+test wal::tests::multiple_records ... ok
+test wal::tests::roundtrip ... ok
+test wal::tests::reopening_with_a_larger_capacity_still_grows_the_segment ... ok
+test wal::tests::second_handle_is_refused_while_a_writer_holds_the_segment ... ok
+test wal::tests::reopening_with_a_smaller_capacity_does_not_truncate_the_segment ... ok
+test wal::tests::concurrent_appends_publish_only_complete_frames ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 60 filtered out
+
+RUST BATTERY (executed)
+$ cargo test --locked
+test result: ok. 69 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 26.25s   (plus 3 block_buffer + doc-tests, all ok)
+$ cargo clippy --locked --all-targets -- -D warnings
+Checking aegis_rust v5.0.0 (/home/luna/aegis-latent-core/aegis_rust_v2)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 20.91s
+
+PYTHON-SURFACE TESTS (executed here against a freshly built debug extension)
+$ cargo build --locked && cp target/debug/libaegis_rust.so <scratch>/aegis_rust.so
+$ PYTHONPATH=<scratch> .venv/bin/python -m pytest tests/test_rust_wal_single_writer.py -v
+tests/test_rust_wal_single_writer.py::test_second_handle_is_refused_and_first_handle_intact PASSED
+tests/test_rust_wal_single_writer.py::test_lock_is_released_when_the_holder_drops PASSED
+tests/test_rust_wal_single_writer.py::test_two_handles_on_distinct_paths_are_both_allowed PASSED
+3 passed in 0.86s
+NOTE ON SCOPE: this venv has no installed extension, so in the ordinary suite
+the file SKIPS (like the repository's other aegis_rust tests); the run above
+used the debug-profile cdylib built from the fixed source on PYTHONPATH. The
+release artifact is produced by the release pipeline, not here.
+
+DIFF (working tree at record time)
+$ git add -N tests/test_rust_wal_single_writer.py && git diff --stat HEAD
+aegis_rust_v2/src/wal.rs             | 91 ++++++++++++++++++++++++++++++++++--
+ tests/test_rust_wal_single_writer.py | 67 ++++++++++++++++++++++++++
+ 2 files changed, 153 insertions(+), 5 deletions(-)
+
+BOUNDARY (published as UC-051)
+  - the lock is advisory (POSIX flock), like the Python WAL's own guard: a
+    non-cooperating writer that bypasses RustWal can still write the segment;
+    what is now refused is the cooperative second handle that destroyed frames;
+  - on Windows std's try_lock maps to LockFileEx over the whole file, which is
+    mandatory; the gateway opens this segment on its Linux deployment, and the
+    Python WAL routes around the Windows behaviour with a lock region past
+    end-of-file (aegis/core/crypto_audit.py).
+
+BATTERY AT THE COMMIT (executed at HEAD d92dfe1)
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
+6889 passed, 117 skipped in 86.21s        (extension absent: the new file's 3 tests are one module-level skip)
+$ PYTHONPATH=<scratch with the rebuilt debug extension> ... pytest tests/ -n auto -q
+6995 passed, 36 skipped in 89.89s         (rust-dependent modules execute instead of skipping; 0 failed)
+  NOTE: the extension-present run was an explicit observation on this host; the registry baseline stays the
+  extension-absent run above. Neither run is a release-pipeline measurement.
+$ .venv/bin/bandit -r aegis/ aegis_server/ -c pyproject.toml -lll
+Medium: 0, High: 0
+$ .venv/bin/python scripts/verify_import_reachability.py
+verify_import_reachability: PASS — no undeclared orphans, no stale roadmap entries
+$ .venv/bin/python scripts/verify_release_contract.py --root .
+release source contract: READY (14 synchronized anchors at 5.0.0)
+$ .venv/bin/python tools/docs/verify_documentation.py --root . --strict   -> "warnings": 0
+$ .venv/bin/python scripts/verify_claims.py --root .                      -> PASS (102 claims, 0 findings)
+$ bash scripts/verify_links.sh --root .                                   -> PASS (1355 links resolved)
+$ .venv/bin/python scripts/verify_docs.py --root .                        -> PASS (0 findings)
+$ cargo test --locked            -> 69 passed, 0 failed (lib) + 3 (block_buffer) + doc-tests, all ok
+$ cargo clippy --locked --all-targets -- -D warnings  -> Finished dev profile, no warnings

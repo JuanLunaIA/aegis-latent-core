@@ -4,12 +4,10 @@
 This prospectus is for US enterprise platform, AppSec, AI engineering, compliance, legal and procurement teams evaluating Aegis. It explains the product category, evidence wedge, measured boundaries and recommended evaluation path. It is not a certification, legal opinion, production SLO, warranty or binding commercial offer.
 
 **Last verified:** 2026-08-27 UTC
-**Source baseline:** `v5.0.0` with fourteen synchronized anchors, **published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)** — source metadata does not establish external lifecycle state, so each surface was read back separately. The most recent published release is `v4.1.2`, whose tag, GitHub Release, PyPI, npm, OCI digest and signature objects were read back on 2026-09-04 and are recorded in `docs/RELEASE_STATUS.md` §1.1; `cosign verify` and `gh attestation verify` were not run
-**Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 
 ## Baseline note
 
-The checked-out source baseline is **5.0.0** with 14 synchronized anchors. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP export, and an auxiliary `RustWal` stream segment. These checked-out-source capabilities do not establish external lifecycle or production-acceptance state; verify the `v4.1.1` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback.
+The checked-out source baseline is **5.0.0** with 14 synchronized anchors. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP export, and an auxiliary `RustWal` stream segment. These checked-out-source capabilities do not establish external lifecycle or production-acceptance state, and this paragraph is not evidence about any of them. The source baseline is published on every surface **except PyPI `aegis-latent-core`**; the per-surface readbacks, the latest published release and the historical baselines are stated once, and only, in [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1 — read them back yourself rather than trusting this note.
 
 ## Executive brief
 
@@ -57,7 +55,7 @@ The ledger supports integrity verification through chain linkage, hashes, signat
 
 The release separates dispatch microbenchmarks, end-to-end proxy behavior, upstream latency, WAL durability, WAF corpus metrics and native crypto timing. The background dispatch measurement in [`docs/BENCHMARKS.md`](BENCHMARKS.md) is not end-to-end latency.
 
-The v3.1.0 backpressure run offered 10,000 requests at 10,000 RPS with a 2 ms injected `fsync` delay and observed 10,000 durable records, zero failures, zero missing IDs, zero duplicate IDs and valid chain integrity. It observed p99 commit latency of 1,189.89 ms. This demonstrates tested correlation under an injected seam; it is not accepted production capacity or an SLO.
+The in-tree backpressure run offered 2,500 requests at 10,000 RPS offered with a 2 ms injected `fsync` delay and observed 2,500 durable records, zero failures, zero missing IDs, zero duplicate IDs and valid chain integrity, at p99 commit latency of 836.3514210795984 ms (`evidence/execution_2026-08-20/backpressure_stall_report.json`); the current source baseline records p99 51.87 ms (`evidence/execution_2026-09-16/`). A previously published `v3.1.0` pair — 10,000 records at p99 1,189.89 ms — is retracted (`UC-018`): no artifact in this tree produces it. This demonstrates tested correlation under an injected seam; it is not accepted production capacity or an SLO.
 
 The checked-out `v5.0.0` source also retains an in-process bounded SSE benchmark (7 rounds × 1,000 deterministic events). It excludes network, provider and durable-WAL latency and is not capacity or SLO evidence. Its optional native `RustWal` stream segment is auxiliary; the JSONL ledger remains the replay authority.
 

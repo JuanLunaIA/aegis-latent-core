@@ -12,7 +12,11 @@
 //!   - Consume is a CAS spin-loop: constant-time under low contention,
 //!     O(contenders) worst-case with fast backoff due to AtomicI64.
 //!
-//! Latency: ~50 ns per check on x86-64 (vs ~5 µs for Python asyncio.Lock).
+//! Latency: **not stated here.** The figure that used to sit in this line
+//! (`~50 ns per check on x86-64` versus `~5 µs`) has no measurement record in
+//! this repository (AUD-24); the design facts above are what is verifiable from
+//! the source. See `docs/benchmarks/BENCHMARK_METHOD.md` for where a number
+//! belongs and what must accompany it.
 
 use dashmap::DashMap;
 use pyo3::prelude::*;
@@ -21,6 +25,18 @@ use std::sync::{
     Arc,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
+
+/// Refill target for a bucket: `cur + gain`, clamped to the capacity.
+///
+/// The addition is saturating on purpose. `gain` is `elapsed_ms ×
+/// refill_per_ms` — both bounded but unbounded in product — so a bucket left
+/// untouched long enough (weeks at a high refill rate) could otherwise overflow
+/// `i64`; with the release profile's `overflow-checks = true` that panics, and
+/// `panic = "abort"` turns it into a process abort (AUD-05 / AF-041).
+#[inline]
+fn refill_target(cur: i64, gain: i64, capacity_milli: i64) -> i64 {
+    cur.saturating_add(gain).min(capacity_milli)
+}
 
 fn now_millis() -> u64 {
     SystemTime::now()
@@ -66,7 +82,7 @@ impl BucketState {
                 // Add gain and clamp to capacity.
                 let mut cur = self.tokens_milli.load(Ordering::Acquire);
                 loop {
-                    let next = (cur + gain).min(capacity_milli);
+                    let next = refill_target(cur, gain, capacity_milli);
                     match self.tokens_milli.compare_exchange_weak(
                         cur,
                         next,
@@ -141,7 +157,10 @@ impl RustRateLimiter {
     /// Evict buckets inactive for more than `max_age_secs` seconds.
     /// Call periodically (e.g. every 60 s) to prevent unbounded map growth.
     pub fn evict_stale(&self, max_age_secs: u64) -> usize {
-        let cutoff = now_millis().saturating_sub(max_age_secs * 1_000);
+        // Saturating: `max_age_secs` is caller-supplied, and the product used
+        // to be evaluated unchecked — `evict_stale(2**63)` panicked here and
+        // aborted the process (AUD-05 / AF-041).
+        let cutoff = now_millis().saturating_sub(max_age_secs.saturating_mul(1_000));
         let before = self.buckets.len();
         self.buckets
             .retain(|_, b| b.last_refill_ms.load(Ordering::Relaxed) > cutoff);
@@ -156,6 +175,23 @@ impl RustRateLimiter {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // AUD-05 / AF-041: the refill sum and the eviction cutoff were evaluated
+    // unchecked, and both operands are reachable from caller-supplied values.
+    #[test]
+    fn refill_target_saturates_instead_of_overflowing() {
+        assert_eq!(refill_target(i64::MAX, i64::MAX, 1_000), 1_000);
+        assert_eq!(refill_target(5, 7, 1_000), 12);
+    }
+
+    #[test]
+    fn evict_stale_tolerates_an_absurd_max_age() {
+        let rl = RustRateLimiter::new(5, 1);
+        assert!(rl.check_and_consume("tenant-a"));
+        // u64::MAX seconds used to overflow the seconds→millis conversion:
+        // overflow-checks = true panics, panic = "abort" killed the process.
+        rl.evict_stale(u64::MAX);
+    }
 
     #[test]
     fn allows_up_to_burst() {

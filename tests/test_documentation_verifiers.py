@@ -234,6 +234,84 @@ def test_roadmap_row_citing_evidence_without_denial_is_flagged():
     assert "roadmap-without-denial" in {f.rule for f in verify_claims.check_claims([claim])}
 
 
+def test_repository_claims_locators_resolve():
+    """Every path a claim cites as evidence must exist in the tree.
+
+    A citation naming an artifact that is not present is the failure this
+    register exists to prevent: the reader takes it as confirmation. Two rows
+    were repaired when this check was added — `CLM-040` cited a `v3.1.0`-era
+    artifact that is not in the tree, and `CLM-032` the same for a WAF report.
+    """
+    text = (ROOT / verify_claims.MATRIX).read_text(encoding="utf-8")
+    claims, _ = verify_claims.parse_claims(text)
+    findings = verify_claims.check_locator_paths(ROOT, claims)
+    assert not findings, [f.render() for f in findings]
+
+
+def test_cited_locator_that_does_not_resolve_is_flagged():
+    claim = verify_claims.Claim(
+        ident="CLM-001",
+        text="A measurement was retained.",
+        state="MEASURED",
+        locator="`evidence/registry/no_such_retained_artifact.json`",
+        boundary="This does not establish that the named artifact is in this tree.",
+        line=1,
+    )
+    rules = {f.rule for f in verify_claims.check_locator_paths(ROOT, [claim])}
+    assert "unresolvable-locator" in rules
+
+
+def test_brace_glob_locators_expand_and_symbol_tokens_are_ignored():
+    """`{a,b}.py` must resolve per alternative; a dotted symbol must not be a path."""
+    claim = verify_claims.Claim(
+        ident="CLM-001",
+        text="Two facades are implemented.",
+        state="IMPLEMENTED",
+        locator="`aegis/engines/{veracity,sanctum}.py`, `RFC3161Timestamper.verify`",
+        boundary="This does not establish anything about the other facades.",
+        line=1,
+    )
+    assert not verify_claims.check_locator_paths(ROOT, [claim])
+
+
 def test_repository_corpus_passes_every_structural_check():
     """The corpus itself must pass. This is the gate CI runs."""
     assert not verify_docs.run(ROOT), [f.render() for f in verify_docs.run(ROOT)]
+
+
+def test_buyer_document_baseline_restatement_is_flagged(tmp_path):
+    """A restated release-state block in the buyer-facing set must fail the gate.
+
+    REG-059: five buyer-facing documents each carried their own copy of the
+    release-state block, and copies drift. The copy that loses the "except PyPI
+    `aegis-latent-core`" caveat is how a procurement reader concludes the gateway
+    installs from pip. The gate must fail on a restatement and stay silent on the
+    pointer form that replaced them — a checker that only ever passes is worse
+    than no checker.
+    """
+    module = _load("verify_docs_buyer_baselines", "scripts/verify_docs.py")
+    doc = tmp_path / "docs" / "BUYER_GUIDE_US.md"
+    doc.parent.mkdir(parents=True, exist_ok=True)
+
+    doc.write_text(
+        "# Buyer Guide\n\n**Release baseline:** see `docs/RELEASE_STATUS.md` section 1.0.\n",
+        encoding="utf-8",
+    )
+    assert module.check_buyer_document_baselines(tmp_path) == []
+
+    doc.write_text(
+        "# Buyer Guide\n\n**Release baseline:** see `docs/RELEASE_STATUS.md` section 1.0.\n"
+        "**External baseline:** signed annotated `v4.1.2` tag at "
+        "860f14177d94c194e5ae7156017d6fa74264e429\n",
+        encoding="utf-8",
+    )
+    findings = module.check_buyer_document_baselines(tmp_path)
+    assert len(findings) == 1
+    assert findings[0].rule == "duplicate-baseline-restatement"
+    assert findings[0].path == "docs/BUYER_GUIDE_US.md"
+
+
+def test_buyer_document_baselines_are_collapsed_in_this_repository():
+    """The shipped corpus must be clean under the REG-059 gate."""
+    module = _load("verify_docs_buyer_baselines_repo", "scripts/verify_docs.py")
+    assert module.check_buyer_document_baselines(ROOT) == []

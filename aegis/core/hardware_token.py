@@ -84,6 +84,30 @@ class TokenTamperedError(HardwareTokenError):
 # ── Data types ────────────────────────────────────────────────────────────────
 
 
+def _length_prefixed(value: bytes) -> bytes:
+    """Return an injective encoding of a field: 8-byte big-endian length + bytes.
+
+    The token preimage used to concatenate ``token_id``, ``subject`` and
+    ``tenant_id`` with a bare ``0x00`` and no length prefix, so two different
+    field splits produced identical bytes — and therefore the same keyed
+    attestation tag. Length-prefixing makes the encoding unambiguous for any
+    field content, which the NUL check in :func:`_require_clean_identifier`
+    enforces on top.
+    """
+    return len(value).to_bytes(8, "big") + value
+
+
+def _require_clean_identifier(field: str, value: str) -> None:
+    """Reject values that can shift a field boundary inside the token preimage."""
+    if not isinstance(value, str):
+        raise HardwareTokenError(f"{field} must be a string, got {type(value).__name__}")
+    if "\x00" in value:
+        raise HardwareTokenError(
+            f"{field} must not contain a NUL byte: the preimage is delimiter-sensitive "
+            "and a NUL lets two different field splits share one attestation tag"
+        )
+
+
 @dataclass(frozen=True)
 class HardwareToken:
     """
@@ -263,6 +287,8 @@ class HardwareTokenManager:
         :class:`HardwareToken`
             Immutable token ready for storage or transmission.
         """
+        _require_clean_identifier("subject", subject)
+        _require_clean_identifier("tenant_id", tenant_id)
         token_id = str(uuid.uuid4())
         issued_at = time.time()
         expires_at = issued_at + self._ttl_seconds
@@ -304,6 +330,16 @@ class HardwareTokenManager:
         :class:`TokenValidationResult`
             Always returns a result object; never raises on invalid tokens.
         """
+        for field_name in ("token_id", "subject", "tenant_id"):
+            presented = getattr(token, field_name, None)
+            if not isinstance(presented, str) or "\x00" in presented:
+                return TokenValidationResult(
+                    valid=False,
+                    token=token,
+                    reason=f"token field {field_name!r} is not a valid identifier",
+                    backend_used=self._backend,
+                )
+
         if self.is_revoked(token.token_id):
             return TokenValidationResult(
                 valid=False,
@@ -395,18 +431,20 @@ class HardwareTokenManager:
         """
         Produce a deterministic byte encoding of the five core token fields.
 
-        Layout: ``token_id_bytes ‖ subject_utf8 ‖ tenant_id_utf8 ‖ issued_at_f64 ‖ expires_at_f64``
+        Layout: ``len(token_id) ‖ token_id_bytes ‖ len(subject) ‖ subject_utf8 ‖
+        len(tenant_id) ‖ tenant_id_utf8 ‖ issued_at_f64 ‖ expires_at_f64`` (each
+        length an 8-byte big-endian count). The length prefixes make the encoding
+        injective: without them a ``0x00`` inside a field shifted the boundary and
+        two distinct field splits produced identical bytes and therefore the same
+        attestation tag.
 
         Both float fields are big-endian IEEE 754 double (8 bytes each) to
         guarantee identical encoding across platforms.
         """
         return (
-            token_id.encode()
-            + b"\x00"
-            + subject.encode()
-            + b"\x00"
-            + tenant_id.encode()
-            + b"\x00"
+            _length_prefixed(token_id.encode())
+            + _length_prefixed(subject.encode())
+            + _length_prefixed(tenant_id.encode())
             + struct.pack(">dd", issued_at, expires_at)
         )
 
@@ -487,11 +525,11 @@ class HardwareTokenManager:
         Returns a hex-encoded string for storage and comparison.
         """
         h = hashlib.sha256()
-        h.update(token_id.encode())
-        h.update(subject.encode())
-        h.update(tenant_id.encode())
+        h.update(_length_prefixed(token_id.encode()))
+        h.update(_length_prefixed(subject.encode()))
+        h.update(_length_prefixed(tenant_id.encode()))
         h.update(struct.pack(">dd", issued_at, expires_at))
-        h.update(attestation_data)
+        h.update(_length_prefixed(attestation_data))
         return h.hexdigest()
 
     @staticmethod

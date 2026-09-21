@@ -47,6 +47,7 @@ from pathlib import Path
 from typing import Any
 
 from aegis.core.crypto_audit import CryptographicAuditLedger
+from benchmarks import print_provenance
 
 _DEFAULT_LENGTHS = (0, 500, 1_000, 2_000, 4_000, 8_000)
 _DEFAULT_BATCH = 500
@@ -214,4 +215,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    print_provenance("bench_commit_scaling")
     raise SystemExit(main())

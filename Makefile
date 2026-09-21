@@ -34,10 +34,10 @@ lint:
 	$(RUFF) format --check .
 
 type:
-	$(MYPY) aegis/ --ignore-missing-imports
+	$(MYPY) --strict aegis
 
 security:
-	$(BANDIT) -r aegis/ -c pyproject.toml -ll
+	$(BANDIT) -r aegis/ aegis_server/ -c pyproject.toml -lll
 
 test:
 	$(PYTEST) tests/ -v

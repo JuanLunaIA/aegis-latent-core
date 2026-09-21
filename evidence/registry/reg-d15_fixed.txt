@@ -1,0 +1,84 @@
+REG-D15 / AUD-11 — FIXED   (transparency log: verify skipped the entry-hash recompute; append was not fsynced)
+aegis/core/transparency_log.py · aegis/core/attestation_capabilities.py (detail)
+tests/test_transparency_log.py (extended: 13 new tests) · evidence/registry/reg-d15_fixed.txt
+
+FINDINGS
+  AF-021 (P2): verify_ledger_integrity compared each entry's prev_hash against the
+    predecessor's *stored* entry_hash and never re-derived entry_hash from the entry's
+    own fields, so editing binary_hash / version / timestamp in place — including on a
+    non-tail entry — left the linkage graph intact, verification returned True, and
+    verify_binary_presence then confirmed the substituted binary.
+  AF-053 (P3): _append_to_disk wrote the JSON line with no flush() and no fsync(), and
+    publish_binary_hash returned the entry hash immediately, so a crash could drop the
+    just-published entry while the caller held a hash for a record not on stable
+    storage. The sibling export_audit_log._append_line already did flush+fsync.
+
+DIFF
+  - compute_entry_hash(index, binary_hash, version, timestamp, prev_hash) is now the one
+    definition of the entry hash, used by the writer and by the verifier, so the two
+    cannot drift.
+  - verify_ledger_integrity re-hashes every entry from its own fields and compares with
+    the stored hash, checks the recorded index against the entry's position, and checks
+    the genesis link on entry 0 (previously entry 0 was not examined at all).
+  - verify_binary_presence is integrity-gated: a substituted hash in a ledger whose
+    entries no longer recompute is not confirmed.
+  - _append_to_disk flushes and fsyncs; publish_binary_hash writes to disk *before*
+    appending in memory, so a failed fsync claims no entry, and the OSError propagates
+    instead of returning a success hash.
+  - Module docstring no longer calls this a "public, immutable ledger"; the capability
+    registry detail names the fsync and the recompute.
+
+BEFORE / AFTER (probe: /home/luna/.hermes/cache/scratch/probe_transparency_log.py; the
+pre-fix module is loaded from its git blob, same chain, same edits, same process)
+    BEFORE (HEAD source, pre-fix verifier): entry 1 binary_hash edited   -> integrity=True
+    BEFORE (HEAD source, pre-fix verifier): entry 2 timestamp edited     -> integrity=True
+    BEFORE (HEAD source, pre-fix verifier): entry 1 edited + rehashed    -> integrity=True
+    BEFORE (HEAD source, pre-fix verifier): presence of a substituted hash -> clean=True, tampered=True
+    AFTER  (working tree, fixed verifier): entry 1 binary_hash edited   -> integrity=False
+    AFTER  (working tree, fixed verifier): entry 2 timestamp edited     -> integrity=False
+    AFTER  (working tree, fixed verifier): entry 1 edited + rehashed    -> integrity=False
+    AFTER  (working tree, fixed verifier): presence of a substituted hash -> clean=True, tampered=False
+    AFTER  : fsync calls during one publish -> 1; entries durable in the file -> 1
+    AFTER  : fsync failure propagates (OSError: no space left on device); in-memory entries=0
+  The "edited + rehashed" row is the case linkage alone cannot see: entry 1's hash is
+  recomputed and entry 2's prev_hash follows it, so every link matches — and entry 2's
+  stored hash no longer recomputes.
+
+TESTS (tests/test_transparency_log.py, extended; 37 passed in the file)
+  TestTamperDetectionRecomputesEntryHashes
+    test_edit_of_a_non_tail_entry_is_detected
+    test_edit_of_a_tail_entry_is_detected
+    test_version_edit_is_detected
+    test_timestamp_edit_is_detected
+    test_edit_with_a_recomputed_hash_and_repaired_linkage_is_detected
+    test_reordering_is_detected
+    test_a_substituted_binary_hash_is_not_confirmed
+    test_a_clean_ledger_still_verifies
+    test_an_edit_on_disk_is_detected_after_replay
+    test_a_deleted_line_is_detected_after_replay
+    test_a_full_suffix_rewrite_is_the_published_limit      (UC-061, asserted, not implied)
+  TestAppendDurability
+    test_publish_fsyncs_before_returning_the_hash
+    test_a_failed_fsync_does_not_report_a_published_entry
+
+BOUNDARY (UC-061, new)
+  The chain is unkeyed: an author who edits an entry and recomputes the hash of every
+  entry after it produces a ledger this module cannot distinguish from an honest one.
+  There is no signing key, no external transparency service, and no anchor outside the
+  file, so verify_binary_presence confirms a hash against *this* ledger rather than
+  against an independent witness. Detection covers edits, reorderings and deletions
+  that leave the rest of the suffix alone. The module docstring, the capability detail
+  and UC-061 say exactly that; the previous "public, immutable ledger" wording is gone.
+
+BATTERY ON THIS COMMIT'S CONTENT (recorded before the final amend; the amend changed only this file)
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
+6938 passed, 118 skipped in 83.24s (0:01:23), exit 0      (+13 = the new tests)
+$ .venv/bin/python -m mypy --strict aegis/core/transparency_log.py aegis/core/attestation_capabilities.py -> Success: no issues found in 2 source files
+$ .venv/bin/bandit -r aegis/ aegis_server/ -c pyproject.toml -lll  -> Medium: 0, High: 0
+$ .venv/bin/python scripts/verify_import_reachability.py           -> PASS (no undeclared orphans, no stale roadmap entries)
+$ .venv/bin/python scripts/verify_release_contract.py --root .     -> READY (14 synchronized anchors at 5.0.0)
+$ .venv/bin/python tools/docs/verify_documentation.py --root . --strict -> exit 0, status PASS, warnings 0
+$ .venv/bin/python scripts/verify_claims.py --root .               -> PASS (102 claims, 0 findings)
+$ bash scripts/verify_links.sh --root .                            -> PASS (1357 links resolved)
+$ .venv/bin/python scripts/verify_docs.py --root .                 -> PASS (0 findings)
+$ .venv/bin/ruff check + format --check <changed files>            -> clean

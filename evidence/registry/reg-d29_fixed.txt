@@ -1,0 +1,156 @@
+REG-D29 / AUD-25 — Module inventory & ownership; navigation coverage (FIXED 2026-09-21)
+
+Row: docs/REGISTRY.md §4.6 REG-D29. Ticket: docs/ROADMAP.md § Audit backlog AUD-25.
+Affected files the ticket names: docs/REPOSITORY_MAP.md; scripts/verify_import_reachability.py:72,:74;
+llms.txt; .github/CODEOWNERS; docs/ROADMAP.md (19 unmapped open items). Finding(s): AF-024, AF-025,
+AF-027, AF-057, AUD-25.
+
+════════ 1. WHAT WAS BUILT ════════
+
+  scripts/generate_module_inventory.py   the generator (new)
+  docs/MODULE_INVENTORY.md               the inventory (new, generated — 300 files)
+  tests/test_module_inventory_current.py the currency + self-consistency gate (new, 5 tests)
+  llms.txt                               "Read first" now points at the inventory
+  docs/REPOSITORY_MAP.md                 navigation-aids table gained the inventory row,
+                                         and its stale "Last verified" stamp (AF-057)
+  docs/ROADMAP.md                        AUD-25 closed
+
+The inventory is generated from the authorities that already existed, not from a hand-written
+list. Import status comes from scripts/verify_import_reachability.py *itself* — the generator
+imports the gate and calls `_discover_modules` / `_reachable_set` / `_roadmap_modules` /
+`_allowlisted_modules`, so a module is `reachable` / `roadmap-omit` / `allowlisted` exactly as
+that gate measures it, and the two cannot drift. Rust status is the transitive `mod` graph from
+aegis_rust_v2/src/lib.rs. Script status is "named by something that runs or documents it" (a CI
+workflow, the Makefile, or a tracked .md/.txt), which is what makes a console script live —
+nothing imports one. Ownership resolves from .github/CODEOWNERS by longest path prefix.
+
+════════ 2. THE FINDING, ITEM BY ITEM ════════
+
+▌1. "No artifact is a per-module inventory (purpose/status/tests/owner)." — FIXED.
+   docs/MODULE_INVENTORY.md now carries all 300 files under the six roots with kind, purpose
+   (first docstring / `//!` / comment line, licence headers filtered out), status, the test
+   files that import the module directly (capped at 4 per row, count exact), and owner.
+
+▌2. "The reachability gate covers only .py under three roots." — FIXED as coverage, deliberately
+   not as failure semantics, and the deviation is stated:
+   * Coverage: all six roots are now classified in one place — 224 Python modules' worth of
+     status plus 15 Rust sources and 67 scripts/tools. Before this row the Rust crate and
+     scripts/ were covered by no navigation artifact at all.
+   * Failure semantics: extending `verify_import_reachability.py` itself to scripts/ and tools/
+     would compare console scripts against an import graph, where every script is an orphan by
+     construction — a gate that fails on 43 correct files is not a gate. The inventory therefore
+     measures them against references instead, and the currency test fails if that set changes
+     without the inventory being regenerated. The gate's own scope is unchanged and still PASSes.
+
+▌3. "The 77-entry allowlist is referenced by no navigation doc." — FIXED.
+   Every allowlisted module now appears in the inventory as status `allowlisted` (77 rows), and
+   the inventory is referenced from llms.txt and docs/REPOSITORY_MAP.md. The column is labelled
+   as what the allowlist is — a disclosure and a worklist, not a verdict.
+
+▌4. "171 of 298 files named in no navigation source; 68 appear nowhere at all, including all 15
+   Rust sources." — MEASURED, with the definition published rather than the ticket's figure
+   restated.
+   The ticket's 43% counts a wider, unstated source set. The inventory publishes its own:
+   llms.txt, docs/REPOSITORY_MAP.md, AGENTS.md, README.md, SECURITY.md,
+   docs/architecture/ARCHITECTURE.md, and .aegis_ai_context/. Against that set:
+     68 of 300 files (23%) named in a navigation source — and all 300 are now reachable through
+     the inventory, which those sources point at. The 15 Rust sources the ticket called out
+     appear in it with their status and owner.
+
+▌5. "CODEOWNERS declares a single owner for everything, so no per-module maintainer field can
+   exist." — CONFIRMED, and made explicit rather than papered over.
+   The inventory resolves owners by longest path prefix and every one of the 300 rows resolves to
+   @JuanLunaIA. No row invents a maintainer; the section says plainly that this is a single
+   accountable owner as CODEOWNERS states, not a staffed review team, so per-module maintainers
+   cannot be named until one exists. Operational ownership is already on the external-acceptance
+   list (llms.txt, docs/REPOSITORY_MAP.md), so this is consistent with, not a new exception to,
+   the boundaries the repository already draws.
+
+▌6. "19 roadmap open items name no owner or unblock path." — FIXED, and the count has moved.
+   The inventory's "Open roadmap tickets, owner and unblock path" table lists every open ticket
+   with its owner and the ticket's own `Proposed solution` text quoted as the unblock path — quoted,
+   not re-derived, so the inventory cannot drift from the roadmap about what would unblock a row.
+   Open tickets today: 9 (AUD-25..AUD-30, AUD-35, AUD-36, AUD-37). The ticket's 19 is a snapshot;
+   ten closed during the wave work. Eight of the nine carry a Proposed-solution line; the ninth
+   (AUD-25, this row) is closed by this change and no longer appears.
+
+▌7. AF-057 (P3, DOCUMENTATION_DRIFT, docs/REPOSITORY_MAP.md:3) — FIXED.
+   The map's "Last verified" stamp read 2026-08-27 while the page described a 2026-09-16 baseline
+   and was last modified 2026-09-17 — a stamp preceding the content it certifies by three weeks.
+   This change edits the file, so the stamp now reads 2026-09-21, the date of the edit.
+
+════════ 3. THE GATE THAT KEEPS IT TRUE ════════
+
+tests/test_module_inventory_current.py — 5 tests, all passing:
+
+  1. test_the_committed_inventory_is_what_the_generator_produces
+     Runs `scripts/generate_module_inventory.py --check` and requires byte-equality, so the file
+     cannot be hand-edited into disagreeing with its own generator.
+  2. test_every_file_under_the_six_roots_is_classified_exactly_once
+     Re-walks the six roots with the generator's own constants and requires the listed set to equal
+     the tree, with no duplicate rows. A file added to a covered root fails this test until the
+     inventory is regenerated — that is the "gate extended to scripts/, tools/ and the Rust crate"
+     in the form that actually holds.
+  3. test_the_status_vocabulary_is_closed
+     No status outside {reachable, roadmap-omit, allowlisted, referenced, unreferenced, orphan, n/a}.
+  4. test_the_counts_it_reports_about_itself_match_its_rows
+     The reported status counts and the navigation-coverage figure must equal what the rows say.
+     A generated table that miscounts itself is worse than no table.
+  5. test_the_open_ticket_table_matches_the_roadmap
+     The open-ticket table and docs/ROADMAP.md must agree about what is open, in both directions.
+
+This is not ceremony: while developing the generator it was caught counting itself as a reference
+(every script became "referenced" because the inventory lists every script) and reporting a
+250-row-tall Tests cell for aegis/__init__.py (a parent-rollup bug in the test map). Both were
+fixed; the tests above are what make them stay fixed.
+
+════════ 4. COMMANDS AND RESULTS (this host, 2026-09-21) ════════
+
+$ .venv/bin/python scripts/generate_module_inventory.py
+  wrote docs/MODULE_INVENTORY.md
+$ grep -c '^| `' docs/MODULE_INVENTORY.md        # data rows
+  307   (= 300 file rows + 7 legend rows; the file rows are exactly the 300 under the roots)
+$ .venv/bin/python scripts/generate_module_inventory.py --check
+  docs/MODULE_INVENTORY.md is current
+$ .venv/bin/python -m pytest tests/test_module_inventory_current.py -q
+  5 passed in 2.48s                                       PYTEST EXIT: 0
+$ .venv/bin/python scripts/verify_docs.py
+  verify_docs: PASS (0 findings)
+$ .venv/bin/python tools/docs/verify_documentation.py --root . --strict
+  "strict": true, "warnings": 0
+$ PYTHON=".venv/bin/python" bash scripts/verify_links.sh
+  verify_links: PASS (1405 relative links and anchors resolved)
+$ .venv/bin/python scripts/verify_claims.py
+  verify_claims: PASS (105 claims, 0 findings)
+$ .venv/bin/python scripts/verify_import_reachability.py
+  modules discovered: 224  reached: 113  declared roadmap: 34  allowlisted: 77
+  verify_import_reachability: PASS — no undeclared orphans, no stale roadmap entries
+$ .venv/bin/python scripts/verify_release_contract.py --root .
+  release source contract: READY      (14/14 anchors = 5.0.1)
+$ .venv/bin/python -m ruff check scripts/generate_module_inventory.py tests/test_module_inventory_current.py
+  All checks passed!
+$ git diff --check
+  (clean)
+
+Status counts as published: allowlisted 77, roadmap-omit 34, reachable 128, referenced 43,
+unreferenced 17, n/a 1 — 300 files. Orphans: 0 (consistent with the reachability gate's PASS).
+
+════════ 5. DELIBERATELY NOT DONE, AND WHY ════════
+
+* The metric did not improve by redefinition. The ticket's 43% and this inventory's 23% measure
+  different source sets; the honest statement is that the set is now published and every file is
+  reachable through a referenced artifact — not that coverage rose.
+* No per-module maintainer is claimed (see §2.5) and no unblock path was invented for a ticket
+  that states none (§2.6, one ticket rendered as "*(none stated in the ticket)*" when it has no
+  line — this row's own ticket, before it closed).
+* `verify_import_reachability.py`'s failure semantics were left alone (see §2.2). Extending them
+  to console scripts would have made the gate fail on correct files; the inventory carries that
+  measurement instead, and the deviation is stated here rather than presented as the ticket's
+  letter.
+
+ENVIRONMENT: /home/luna/aegis-latent-core, branch registry-closure-2026-09-21, python 3.11.11
+(.venv), AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true. The gate scripts call
+`python3` (system 3.14) unless PYTHON is set — after exporting PYTHONHOME for the Rust crate,
+either unset it or run them with PYTHON=.venv/bin/python, or they fail with
+"Fatal Python error: Failed to import encodings module" (a 3.11 stdlib path under a 3.14
+interpreter: environment, not repository).

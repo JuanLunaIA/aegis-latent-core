@@ -1,0 +1,88 @@
+REG-D09 / AUD-05 — FIXED   (release-profile aborts instead of exceptions)
+aegis_rust_v2 + tests/ · evidence captured 2026-09-21 on this host
+
+FINDING (AUDIT_REPORT_v5.0.1_PREP.md §AF-014, AF-015, AF-040, AF-041)
+  Caller-controlled sizes and resource failures reached Rust code that panics.
+  The release profile sets `panic = "abort"` and `overflow-checks = true`, so
+  every one of those panics killed the gateway process instead of raising into
+  Python: AuditRingBuffer(0) panicked in crossbeam's ArrayQueue, a huge
+  capacity died in the allocator, `evict_stale` overflowed on an unchecked
+  multiply, Tokio runtime init used `.expect()`, and the pure-Rust PQ backend
+  expected the OS RNG. Reproduced first-hand by the audit (exit 134 / SIGABRT).
+
+DIFF (src; + tests/test_rust_limits_are_validated.py, new, extension-gated)
+  aegis_rust_v2/src/audit.rs       AuditRingBuffer::new -> PyResult<Self>;
+                                   0 and > MAX_CAPACITY (1 << 22) -> ValueError
+  aegis_rust_v2/src/session.rs     RustSessionStore::new -> PyResult<Self>;
+                                   0 and > MAX_SESSIONS (1 << 20) -> ValueError
+  aegis_rust_v2/src/rate_limit.rs  refill_target() (saturating add, was `cur + gain`);
+                                   evict_stale() saturating_mul(1_000), was `max_age_secs * 1_000`
+  aegis_rust_v2/src/forwarder.rs   TOKIO_RT: OnceLock<Result<Runtime, String>>; rt() -> Result<_, String>
+                                   (plain Result, so it is safe inside Python::detach);
+                                   preflight_threads(workers) acquires the threads before tokio
+                                   spawns its own; `.expect()` removed; warmup_runtime() -> PyResult<usize>;
+                                   both rt() call sites raise while the GIL is held
+  aegis_rust_v2/src/pqc_trait.rs   PostQuantumSigner::keypair() -> Result<(Vec<u8>, Vec<u8>), PqcError>;
+                                   pure-Rust backend propagates the getrandom failure;
+                                   PQClean impl documents the upstream `.expect("RNG Failed")`
+  aegis_rust_v2/src/pqc.rs         generate_pqc_keypair() maps the failure to RuntimeError
+  tests/test_rust_limits_are_validated.py   9 tests (module skips without the extension)
+
+BEFORE — pre-fix release artifact (target/release/libaegis_rust.so, 11,561,624 B,
+source rebuilt later), same committed test file:
+  $ PYTHONPATH=<pre-fix .so> .venv/bin/python -m pytest tests/test_rust_limits_are_validated.py -x -q
+  exit 134 (SIGABRT) — no Python exception
+    Fatal Python error: Aborted
+    Current thread ... File ".../tests/test_rust_limits_are_validated.py", line 34
+      in test_ring_buffer_capacity_zero_is_rejected
+  $ probe_runtime_rlimit.py <pre-fix .so>     (RLIMIT_NPROC = 1, then warmup_runtime)
+  child exit code: -6  (SIGABRT)
+    thread '<unnamed>' panicked at tokio-1.52.3/src/runtime/scheduler/multi_thread/worker.rs:503:
+    OS can't spawn worker thread: Resource temporarily unavailable (os error 11)
+
+AFTER — release profile rebuilt from the fixed source (`cargo build --release --locked`,
+11,568,464 B), same tests:
+  $ PYTHONPATH=<release .so> .venv/bin/python -m pytest tests/test_rust_limits_are_validated.py tests/test_rust_wal_single_writer.py -q
+  12 passed in 0.91s
+  $ probe_runtime_rlimit.py <release .so>
+  child exit code: 0  (-6 = SIGABRT, 134 = 128+6)
+  rlimit_nproc before: soft=14994 hard=14994
+  RAISED RuntimeError: aegis-rust: Tokio runtime init failed: cannot spawn worker thread 0/4:
+    Resource temporarily unavailable (os error 11)
+  (Same 9 tests against the debug artifact rebuilt from the fixed source: 9 passed.)
+
+  Why the pre-flight, not just `map_err`: tokio spawns its worker threads *through* its
+  blocking pool, and a failed spawn there is `panic!("OS can't spawn worker thread: {e}")`
+  (tokio-1.52.3 src/runtime/blocking/pool.rs:325 — SpawnError::NoThreads), not a returned
+  error, so under `panic = "abort"` an `expect()`-free build would still have died. The
+  thread creation is acquired first, where it is still an `io::Result`.
+
+RUST BATTERY AT THE COMMIT
+  $ cargo test --locked                              77 passed; 0 failed   (was 69; +8 new tests)
+  $ cargo test --locked --features pure-rust-pqc     81 passed; 0 failed   (config the audit did not build)
+  $ cargo clippy --locked --all-targets -- -D warnings                          clean
+  $ cargo clippy --locked --all-targets --features pure-rust-pqc -- -D warnings clean
+
+  Test names added: audit.rs zero_capacity_is_rejected /
+  capacity_above_the_ceiling_is_rejected / capacity_within_range_is_accepted;
+  session.rs zero_max_sessions_is_rejected / max_sessions_above_the_ceiling_is_rejected;
+  rate_limit.rs refill_target_saturates_instead_of_overflowing /
+  evict_stale_tolerates_an_absurd_max_age; forwarder.rs
+  preflight_threads_reports_creation_failures / runtime_initializes_once_and_is_cached.
+
+SCOPE NOTE
+  The release cdylib used above was built on this host for verification; the shipped
+  wheel comes from the release pipeline, which is not exercised here.
+
+BATTERY AT THE COMMIT (executed at HEAD b59f9da)
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
+6889 passed, 118 skipped in 85.74s     (+1 skip = the new module-level importorskip; extension absent in this venv)
+$ .venv/bin/bandit -r aegis/ aegis_server/ -c pyproject.toml -lll      -> Medium: 0, High: 0
+$ .venv/bin/python scripts/verify_import_reachability.py               -> PASS — no undeclared orphans, no stale roadmap entries
+$ .venv/bin/python scripts/verify_release_contract.py --root .         -> 14 synchronized anchors at 5.0.0
+$ .venv/bin/python tools/docs/verify_documentation.py --root . --strict -> "warnings": 0
+$ .venv/bin/python scripts/verify_claims.py --root .                   -> PASS (102 claims, 0 findings)
+$ bash scripts/verify_links.sh --root .                                -> PASS (1355 links resolved)
+$ .venv/bin/python scripts/verify_docs.py --root .                     -> PASS (0 findings)
+$ .venv/bin/ruff check tests/test_rust_limits_are_validated.py         -> All checks passed
+$ .venv/bin/ruff format --check tests/test_rust_limits_are_validated.py -> 1 file already formatted

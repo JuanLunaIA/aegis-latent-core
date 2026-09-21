@@ -1,0 +1,111 @@
+REG-D14 / AUD-10 — FIXED   (Part 11 signer annotation was bound by nothing)
+aegis/core/crypto_audit.py · docs/institutional/UNSUPPORTED_CLAIMS.md (UC-055 narrowed)
+tests/test_part11_annotation_binding.py (new, 10 tests)
+
+FINDING (AF-020)
+  `signer_name`, `signature_meaning` and the admission `status` were absent from
+  node_hash, from `_build_signed_payload` and from the MMR leaf, while
+  `export_part11_signatures`' docstring presented `node_hash` as "SHA-256 chain
+  accumulator (tamper-evident binding)" for the annotation. An attacker with WAL
+  write access could rewrite who signed a record, what the signature meant, and
+  relabel a rejected request as admitted, with `verify_integrity()` unchanged.
+
+DIFF
+  `_build_signed_payload` gains three parameters (defaults keep every existing
+  call valid) and appends, in the same value-derived-conditional style the
+  `waf_verdict` field already used:
+    - a SHA-256 token over `signer_name` + `signature_meaning`, appended only
+      when one of the two is non-empty. The fields are free text, so they cannot
+      be fenced against the `|` delimiter the way the closed WAF vocabulary is;
+      hashing the pair keeps the binding exact while making it impossible for a
+      crafted name to serialise two different field lists alike.
+    - the `status`, appended only when it differs from `committed`, fenced by the
+      new `validate_node_status` (closed vocabulary: committed, rejected). A
+      status outside it raises, and `signature_status` maps that ValueError to
+      `invalid` — a detection, not a silent omission.
+  `_build_prebinding_signed_payload` is a named builder for the old shape, so
+  legacy verification cannot be silently redefined by a future edit to the
+  current builder. `signed_payload_candidates_for(node)` returns the annotated
+  payload, plus the pre-binding payload only when the two differ.
+  `signature_status` now verifies against those candidates for all three schemes
+  (hmac-sha256, ed25519-fallback, pqc-ml-dsa); the candidate construction moved
+  inside its try block, so a bad status is `invalid` rather than a crash.
+  The three signature-producing write sites (commit_forensic, commit_rejection,
+  the stream-terminal writer) sign over the annotation and the status.
+  `export_part11_signatures`' docstring now names `signature` as the binding and
+  `node_hash` as the chain accumulator over hashed fields that exclude the
+  annotation, with the residual pointing at UC-055.
+
+WHY THE FALLBACK IS NOT A LOOPHOLE (both directions checked)
+  Blanking a recorded annotation rebuilds the pre-binding list where the
+  annotated one was signed; adding one to a record that had none rebuilds the
+  longer list. Relabelling a rejection as committed drops the status field;
+  relabelling the other way adds it. All four mismatch — and the fallback cannot
+  rescue the first case, because a record this build writes carries a stored
+  signature over the annotated material, which no pre-binding digest can equal.
+  Pinned by `test_blanking_both_annotation_fields_invalidates_the_signature` and
+  `test_a_freshly_written_chain_is_not_reachable_by_the_fallback`.
+
+WHAT REMAINS, PRECISELY (UC-055, narrowed)
+  A record whose stored signature is over the pre-binding material still verifies
+  after its annotation is rewritten: that record never committed to the value, no
+  verification-time change can tell the rewrite from the original, and
+  re-signing it would rewrite the chain. Pinned by
+  `test_a_prebinding_record_keeps_its_unbound_annotation`, which asserts the
+  residual rather than leaving it implied. The export now says which records bind.
+
+EXECUTED EVIDENCE
+  tests/test_part11_annotation_binding.py — 10 passed. Same real-ledger path as
+  the sibling REG-D06 file: write a chain, rewrite the WAL the way the audit's
+  attack did, reopen, ask the ledger.
+    baseline          annotated chain: all nodes valid, verify_integrity (True, None)
+    signer_name       rewritten to "Dr. Mallory Impostor" -> invalid, (False, 0)
+    signature_meaning rewritten to "approved"           -> invalid, (False, 0)
+    both blanked      (the case a fallback could wrongly accept) -> invalid, (False, 0)
+    status            rejected -> committed             -> invalid, (False, 3)
+    status            committed -> rejected             -> invalid, (False, 0)
+    status            "approved" (outside the vocabulary) -> invalid
+    pre-binding       re-signed with the pre-binding digest on disk -> valid, (True, None)
+    residual          that record's annotation rewritten -> still valid (UC-055)
+    export            names signer, meaning, signature, node_hash, scheme
+  Payload probes, run directly against the fixed module:
+    _build_signed_payload('a','b','c','d')                          -> b'a|b|c|d'
+    _build_prebinding_signed_payload('a','b','c','d') == that       -> True
+    ... signer_name='Dr. A'  -> b'a|b|c|d|9c92aec3134a990de4e7d17d8dd4df25...'
+    ... status='rejected'    -> b'a|b|c|d|rejected'
+    ... status='foo'         -> ValueError: status must be one of ['committed', 'rejected'], got 'foo'
+  Suites re-run green: tests/test_crypto_audit_scheme_binding.py + test_hsm.py +
+  test_audit_api_new.py -> 43 passed (the REG-D06 file still passes unchanged,
+  which is the additive property: its chains were written without annotations).
+
+TWO TEST BUGS OF MINE, CORRECTED RATHER THAN WORKED AROUND
+  1. I asserted `verify_integrity() == (False, 1)` after rewriting a field on
+     *every* WAL line; the first violation is index 0. Assertion corrected.
+  2. I edited a node's signature in memory and expected the change to be on disk.
+     It is not — commits write the WAL, in-memory edits do not. Rewritten as a
+     `_downgrade_to_prebinding_signatures` helper that re-signs the file.
+  Writing that helper surfaced a real property worth recording: `node_hash`
+  includes the signature, so re-signing a line changes its hash and breaks the
+  *next* line's linkage. That is why the pre-binding emulation uses a single-node
+  chain — a property of the node hash, not of this binding.
+
+BOUNDARY
+  No chain-format change and no migration: `node_hash`'s field list is untouched
+  and the annotation stays out of it (and out of the MMR leaf), which is what
+  keeps already-issued MMR proofs validating. The binding is the keyed signature,
+  not the unkeyed node hash. Records written before this change keep verifying
+  through the pre-binding shape, and their annotation stays rewritable — scoped
+  in UC-055, not claimed closed.
+
+BATTERY ON THIS COMMIT'S CONTENT (recorded before the final amend; the amend changed only this file)
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
+6925 passed, 118 skipped in 83.95s (0:01:23), exit 0      (+10 = the new test module)
+$ .venv/bin/python -m mypy --strict aegis/core/crypto_audit.py     -> Success: no issues found in 1 source file
+$ .venv/bin/bandit -r aegis/ aegis_server/ -c pyproject.toml -lll  -> Medium: 0, High: 0
+$ .venv/bin/python scripts/verify_import_reachability.py           -> PASS (no undeclared orphans, no stale roadmap entries)
+$ .venv/bin/python scripts/verify_release_contract.py --root .     -> READY (14 synchronized anchors at 5.0.0)
+$ .venv/bin/python tools/docs/verify_documentation.py --root . --strict -> exit 0, status PASS, warnings 0
+$ .venv/bin/python scripts/verify_claims.py --root .               -> PASS (102 claims, 0 findings)
+$ bash scripts/verify_links.sh --root .                            -> PASS (1357 links resolved)
+$ .venv/bin/python scripts/verify_docs.py --root .                 -> PASS (0 findings)
+$ .venv/bin/ruff check + format --check <changed files>            -> clean

@@ -1,0 +1,61 @@
+REG-D17 (AUD-13 / AF-043) — FIXED: the Rust WAF no longer claims NFKC
+======================================================================
+HEAD before the fix: e674d05. Files changed:
+  aegis_rust_v2/src/waf.rs   module header, CRITICAL_PATTERNS doc, scan()
+                             docstring, two new tests
+  docs/REGISTRY.md, docs/ROADMAP.md, docs/institutional/UNSUPPORTED_CLAIMS.md
+
+The false statement (pre-fix source)
+------------------------------------
+  /// Patterns that unconditionally block a request on any match (Layer 1).
+  /// NFKC normalisation applied before scan to collapse Unicode lookalikes.   <- waf.rs:19
+  pub fn scan(&self, text: &str) -> WafResult {
+      let normalised = strip_zero_width(text);     // the only transformation   <- waf.rs:130
+and the crate declares no unicode-normalization dependency: `grep -n unicode
+aegis_rust_v2/Cargo.toml` -> NONE; `grep -rn unicode-normalization Cargo.lock`
+-> NONE. So the claim described a transformation that does not exist anywhere in
+the crate, attached to the pattern constant rather than to the function.
+
+Why the documentation branch, not a normalisation implementation
+----------------------------------------------------------------
+The ticket allows either. Measured on this host with the pre-filter active, the
+gateway still denies both variant spellings through Layer 1:
+  gateway_ascii        allowed=False score=1.0  Rust-WAF: critical pattern matched: "ignore previous instructions"
+  gateway_fullwidth    allowed=False score=0.2  Layer-1 adversarial pattern: ignore\b.{0,20}?\bprevious\b...
+  gateway_math_bold    allowed=False score=0.2  Layer-1 adversarial pattern: ignore\b.{0,20}?\bprevious\b...
+Layer 1's authority comes from `_normalize_text` (zero-width strip -> NFKC ->
+homoglyph map) and `_scan_variants`. Implementing NFKC in the crate would add a
+dependency and a second normalisation authority that could disagree with the
+gateway's, and the crate's own docstrings would still owe a precise statement of
+what it does. The false statement is the defect the audit names; the residual
+false negative is real and is now published instead of implied away (UC-063).
+
+The audit's four measured rows, reproduced on this host
+--------------------------------------------------------
+  aegis_rust: /home/luna/.hermes/cache/scratch/ext_cap/aegis_rust.so   (cargo build --locked, freshly built)
+  waf_ascii                          blocked=True  soft_score=0.0
+  waf_fullwidth                      blocked=False soft_score=0.0
+  waf_math_bold                      blocked=False soft_score=0.0
+  waf_fullwidth_nfkc_normalised      blocked=True  soft_score=0.0
+Identical to AF-043's evidence lines. The change is documentation plus tests, so
+this also confirms behaviour did not move.
+
+Executed tests
+--------------
+1. cargo test --locked (waf:: filter):
+   test waf::tests::compatibility_variants_are_not_matched ... ok
+   test waf::tests::the_nfkc_normalised_form_is_what_matches ... ok
+   (plus the five pre-existing cases) -> test result: ok. 7 passed; 0 failed
+   `compatibility_variants_are_not_matched` asserts blocked=false, soft_score=0.0
+   and no matched patterns for both spellings and says in the test body that it
+   must fail on purpose if NFKC is ever implemented here, so the published
+   boundary cannot be deleted quietly.
+2. tests/test_waf_hardening.py: 32 passed (includes
+   test_fullwidth_unicode_ignore_blocked, the end-to-end denial).
+
+Non-changes, deliberately
+-------------------------
+- No dependency added; Cargo.toml and Cargo.lock untouched.
+- The gateway is not changed to normalise before the pre-filter: that would
+  duplicate Layer 1's work and is not what the ticket asks for; the pre-filter's
+  role as a fast exact-match pre-filter over raw text stays as designed.

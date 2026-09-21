@@ -428,7 +428,7 @@ internet connection is used only to load the Chart.js / Mermaid CDNs).
 | `07-waf.html` | WAF & Limits — injection blocks, rate-limit pressure |
 | `08-audit.html` | Audit Chain — Merkle root, node explorer, growth |
 | `09-forensics.html` | Forensics — entropy / KL, static security scan |
-| `10-compliance.html` | Compliance — SOC2 / HIPAA sealed bundles |
+| `10-compliance.html` | Compliance inputs — sealed bundles an assessor may evaluate (no certification) |
 | `11-architecture.html` | Architecture — topology, lifecycle, data flow |
 | `12-code.html` | Code Map — Python / Rust symbol explorer |
 

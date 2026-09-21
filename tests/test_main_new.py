@@ -417,7 +417,7 @@ def test_proxy_chat_completions_timeout():
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client.post = AsyncMock(side_effect=httpx.TimeoutException("timed out"))
+        mock_client.stream = MagicMock(side_effect=httpx.TimeoutException("timed out"))
         stack.enter_context(patch("httpx.AsyncClient", return_value=mock_client))
 
         with TestClient(app) as client:
@@ -443,7 +443,7 @@ def test_proxy_chat_completions_connection_error():
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("refused"))
+        mock_client.stream = MagicMock(side_effect=httpx.ConnectError("refused"))
         stack.enter_context(patch("httpx.AsyncClient", return_value=mock_client))
 
         with TestClient(app) as client:
@@ -452,6 +452,35 @@ def test_proxy_chat_completions_connection_error():
                 json={"model": "gpt-4", "messages": []},
             )
     assert r.status_code == 502
+
+
+# ── Upstream doubles for the streaming relay (AUD-09) ───────────────────────
+# The proxy route now consumes the upstream response through `client.stream(...)`
+# and `aiter_bytes()`, so the doubles below provide a context manager plus an
+# async chunk iterator rather than a buffered `aread()`.
+
+
+def _aiter(parts: list[bytes]):
+    """Async iterator over the given byte chunks."""
+
+    async def _gen():
+        for part in parts:
+            yield part
+
+    return _gen()
+
+
+class _StreamContext:
+    """What `client.stream(...)` returns: a context manager, not a response."""
+
+    def __init__(self, response):
+        self._response = response
+
+    async def __aenter__(self):
+        return self._response
+
+    async def __aexit__(self, *exc):
+        return False
 
 
 def test_proxy_chat_completions_success():
@@ -469,12 +498,12 @@ def test_proxy_chat_completions_success():
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.headers = {"content-type": "application/json"}
-        mock_resp.aread = AsyncMock(return_value=upstream_body)
+        mock_resp.aiter_bytes = MagicMock(return_value=_aiter([upstream_body]))
 
         mock_client_instance = AsyncMock()
         mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
         mock_client_instance.__aexit__ = AsyncMock(return_value=False)
-        mock_client_instance.post = AsyncMock(return_value=mock_resp)
+        mock_client_instance.stream = MagicMock(return_value=_StreamContext(mock_resp))
         stack.enter_context(patch("httpx.AsyncClient", return_value=mock_client_instance))
 
         with TestClient(app) as client:
@@ -921,12 +950,12 @@ def test_proxy_auth_valid_key_forwards():
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.headers = {"content-type": "application/json"}
-        mock_resp.aread = AsyncMock(return_value=upstream_body)
+        mock_resp.aiter_bytes = MagicMock(return_value=_aiter([upstream_body]))
 
         mock_client_instance = AsyncMock()
         mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
         mock_client_instance.__aexit__ = AsyncMock(return_value=False)
-        mock_client_instance.post = AsyncMock(return_value=mock_resp)
+        mock_client_instance.stream = MagicMock(return_value=_StreamContext(mock_resp))
         stack.enter_context(patch("httpx.AsyncClient", return_value=mock_client_instance))
 
         with TestClient(app) as client:
@@ -953,12 +982,12 @@ def test_proxy_non_json_request_body():
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.headers = {"content-type": "text/plain"}
-        mock_resp.aread = AsyncMock(return_value=upstream_body)
+        mock_resp.aiter_bytes = MagicMock(return_value=_aiter([upstream_body]))
 
         mock_client_instance = AsyncMock()
         mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
         mock_client_instance.__aexit__ = AsyncMock(return_value=False)
-        mock_client_instance.post = AsyncMock(return_value=mock_resp)
+        mock_client_instance.stream = MagicMock(return_value=_StreamContext(mock_resp))
         stack.enter_context(patch("httpx.AsyncClient", return_value=mock_client_instance))
 
         with TestClient(app) as client:
@@ -984,18 +1013,18 @@ def test_proxy_with_backend_api_key():
 
         captured_headers: dict = {}
 
-        async def _capture_post(*args, **kwargs):
+        def _capture_stream(*args, **kwargs):
             captured_headers.update(kwargs.get("headers", {}))
             mock_resp = MagicMock()
             mock_resp.status_code = 200
             mock_resp.headers = {"content-type": "application/json"}
-            mock_resp.aread = AsyncMock(return_value=upstream_body)
-            return mock_resp
+            mock_resp.aiter_bytes = MagicMock(return_value=_aiter([upstream_body]))
+            return _StreamContext(mock_resp)
 
         mock_client_instance = AsyncMock()
         mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
         mock_client_instance.__aexit__ = AsyncMock(return_value=False)
-        mock_client_instance.post = _capture_post
+        mock_client_instance.stream = _capture_stream
         stack.enter_context(patch("httpx.AsyncClient", return_value=mock_client_instance))
 
         with TestClient(app) as client:

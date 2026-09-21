@@ -1,0 +1,62 @@
+REG-059 — after (buyer-facing release-state blocks collapsed; the rule is now a gate)
+=====================================================================================
+
+Row:        REG-059  [P3-2]  DOC  P3  "Buyer-guide duplication"
+Transition: SEED -> FIXED
+
+(1) What was duplicated, counted:
+
+    docs/BUYER_GUIDE_US.md         3 restatement lines collapsed -> 1 line
+    docs/PRODUCT_BRIEF_US.md       3 restatement lines collapsed -> 1 line
+    docs/COMMERCIAL_STRATEGY_US.md 2 restatement lines collapsed -> 1 line
+    docs/PROSPECTUS.md             2 restatement lines collapsed -> 1 line
+    docs/FAQ_PROCUREMENT.md        3 restatement lines collapsed -> 1 line
+    ------------------------------------------------------------------
+    13 restatement lines removed, 5 pointer lines with the boundary kept.
+
+    The surviving line keeps what matters and drops the copy:
+
+    **Release baseline:** checked-out source baseline `v5.0.0` with fourteen
+    synchronized anchors, published 2026-09-16 on every surface except PyPI
+    `aegis-latent-core` — per-surface readbacks, the latest published release and
+    the historical baselines are stated once, and only, in
+    [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1, which is the only
+    document that establishes publication state
+
+(2) The defect the copies were hiding. With the pointer rule in place, the new
+    check failed on the real corpus immediately:
+
+    missing-status-pointer: docs/PROSPECTUS.md:1 — no pointer to docs/RELEASE_STATUS.md
+
+    Inspecting it: the baseline note told readers to "verify the `v4.1.1` tag,
+    GitHub Release, PyPI and npm artifacts, OCI digest, signature, and
+    attestation" — two releases behind the recorded external baseline (v4.1.2)
+    and pointing at nothing. This is the failure mode REG-059 predicted, found in
+    the corpus rather than argued about. Its note now states the boundary and the
+    pointer (the capability list is untouched).
+
+(3) The gate, and the proof it fails closed:
+
+    check_buyer_document_baselines() in scripts/verify_docs.py flags
+    - duplicate-baseline-restatement  (`**Source|External|Historical external baseline:**`)
+    - restated-readback-digest        (a v4.x.y line carrying a 40-hex SHA)
+    - missing-status-pointer          (no RELEASE_STATUS.md reference)
+
+$ # planted a duplicate baseline line in docs/BUYER_GUIDE_US.md
+$ python scripts/verify_docs.py --root .
+    duplicate-baseline-restatement (1):   -> exit 1
+$ # reverted
+$ python scripts/verify_docs.py --root .
+verify_docs: PASS (0 findings)   -> exit 0
+
+(4) Regression tests (both directions — silent on the pointer form, failing on a
+    restatement):
+
+$ pytest tests/test_documentation_verifiers.py -q
+31 passed in 0.91s
+
+(5) All four documentation gates after the edit:
+verify_docs: PASS (0 findings)
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1294 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0 required_files=27

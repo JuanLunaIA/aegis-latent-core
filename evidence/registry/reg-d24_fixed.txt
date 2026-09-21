@@ -1,0 +1,113 @@
+REG-D24 / AUD-20 — FIXED (2026-09-21)
+MiFID II / MAR: unwired modules, wrong citation, register silence
+Audit findings AF-028, AF-029, AF-061, AF-062. Branch
+registry-closure-2026-09-21, HEAD before this row: edfd081.
+
+WHAT WAS ALREADY DONE (8ccea5f) AND VERIFIED HERE, NOT ASSUMED
+  The citation and docstring half of AUD-20 landed in the earlier batch:
+  - aegis/core/market_abuse_detector.py now cites MAR (Reg. (EU) 596/2014)
+    Art. 12(1)(a)(ii) for spoofing, and its header says plainly that it is not
+    wired into the gateway request path;
+  - aegis/core/mifid_record_keeper.py now says it "contributes technical inputs
+    toward the obligations below; it does not, by itself, establish compliance",
+    states the MiFID II five-year minimum with the competent-authority extension
+    to seven, and puts UK SMCR outside its scope pending counsel review.
+  Read back from disk before starting this row, not taken from the batch note.
+
+WHAT THIS ROW CLOSED: THE REGISTER SILENCE
+  Before: `grep -n "MiFID\|MAR\|market_abuse" docs/CLAIMS_MATRIX.md` -> no
+  matching row; the register that controls public language had no entry for
+  either module. A reader could not tell wired from compliant from dead code.
+
+  Added to docs/CLAIMS_MATRIX.md under a new section
+  "Regulatory-input claims (built, not wired)":
+    CLM-103  market_abuse_detector: classifies text into MAR/MiFID II categories
+             and returns a structured verdict. State IMPLEMENTED. Locator:
+             module + tests/test_market_abuse_detector.py + allowlist entry 64.
+             Boundary: not wired — no request path, endpoint or configuration
+             invokes it; a verdict is a text classification over one request,
+             not a finding of law, not surveillance coverage; the spoofing basis
+             is MAR Art. 12(1)(a)(ii) (MiFID II Art. 12 is "Assessment period").
+    CLM-104  mifid_record_keeper: builds communication/transaction records that
+             store a SHA-256 content hash rather than message text. State
+             IMPLEMENTED. Locator: module + tests/test_mifid_record_keeper.py +
+             allowlist entry 65. Boundary: not wired; no retention store is
+             created or configured by this repository; hash-only design means it
+             cannot reproduce message content on its own; MiFID II Art. 16(6)/
+             25(1) is a five-year floor extendable to seven at a competent
+             authority's request — not a seven-year default; SMCR is with
+             counsel (REG-H10).
+
+  Control register: range `CLM-103`–`CLM-104` added, forbidding "MiFID II
+  compliant", "MAR compliant", "satisfies Article 16", "satisfies Article 12",
+  "market-abuse monitoring in place", "surveillance coverage", "keeps records
+  for a regulated entity", "satisfies the five-year rule", "SMCR compliant",
+  with review date 2026-09-21 and owner Privacy/legal + Release owner. This is
+  also what scripts/verify_claims.py requires: every claim id must sit inside a
+  control-register range (check_control_register).
+
+  UC-056 (MiFID II / MAR modules unwired) was already present from 8ccea5f and
+  is now pinned by a test instead of resting on a grep.
+
+  One stale line found while editing and fixed: the matrix's `Status:` field
+  still read "**`v4.1.2` source metadata is synchronized; SDK registry
+  publication remains at `4.0.0`**". Corrected to the 5.0.0 baseline with the
+  PyPI `aegis-latent-core` exception, and the matrix's `Source baseline:` line
+  added to the REG-D23 currency gate so the class cannot return unnoticed.
+
+THE DECISION THIS ROW REFUSED TO MAKE
+  Whether the two modules are wired into a request path or retired is a product
+  decision with a configuration surface, a routing choice and a claims rewrite
+  behind it. Opened as AUD-36 in docs/ROADMAP.md § Audit backlog with both
+  branches costed (M to wire either module, S to retire both). Writing "wired" or
+  "retired" into a documentation row would have been a claim with nothing behind
+  it.
+
+  The SMCR question is not a code decision at all: docs/REGISTRY_HUMAN_PACK.md
+  gains REG-H10 — regulatory counsel review of the retention statement and the
+  SMCR scope — and the pack's count line, its gating note and REGISTRY.md's two
+  references were updated from nine human rows to ten. REG-H10 is a wording
+  review; AUD-36 does not wait on it.
+
+THE GATE — tests/test_regulatory_input_claims.py (7 tests)
+  a) both claim rows exist, are IMPLEMENTED, and say "Not wired";
+  b) their locators name the module AND its test file, and every cited .py path
+     resolves in the tree (the failure mode the claims register exists to
+     prevent: a citation read as a present artefact);
+  c) the citations are the right instruments (MAR Art. 12(1)(a)(ii) with the
+     MiFID II Art. 12 correction spelled out; five-year floor and seven-year
+     extension kept distinct);
+  d) UC-056 exists and names both module paths;
+  e) the control-register range exists, forbids the three named phrases, and
+     carries a review date and owner;
+  f) both modules are still allowlisted by the repository's own reachability
+     input, and the allowlist header still says "a worklist, not a verdict" —
+     so a future wiring fails this test instead of silently ageing CLM-103/104;
+  g) a tripwire that neither document asserts the forbidden phrases outside the
+     control register.
+
+  NEGATIVE CONTROLS (executed, then restored)
+    baseline                                        -> 7 passed
+    NC1 CLM-103 boundary "Not wired" -> "Wired"     -> 1 failed, 6 passed
+    NC2 citation -> MiFID II Art. 12(1)(a)(ii)      -> 1 failed, 6 passed
+    NC3 module dropped from the allowlist           -> 1 failed, 6 passed
+    restored                                        -> 7 passed
+
+WHAT THIS ROW DOES NOT ESTABLISH (boundaries)
+  - It does not make the modules compliant, wired, or legally reviewed. Nothing
+    here is legal advice; the wording review is REG-H10.
+  - The citation statements are recorded as the audit's finding plus the
+    corrected module docstrings, not as an independent legal opinion. Counsel
+    confirms or corrects them at REG-H10; if it corrects them, CLM-103/104 and
+    UC-056 change with it.
+  - "Not wired" is asserted from this repository's own reachability tooling (an
+    import-edge measurement), not from runtime observation of a deployment.
+  - No external lifecycle state is touched: 5.0.0 remains the source baseline and
+    release target, v4.1.2 the most recent published release, and the gateway
+    distribution is still absent from PyPI.
+
+COMMANDS RUN FOR THIS ROW
+  AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
+  .venv/bin/python -m pytest -q -p no:randomly tests/test_regulatory_input_claims.py tests/test_documentation_currency.py
+  .venv/bin/python scripts/verify_claims.py --root .
+  grep -n "MiFID\|MAR\|market_abuse\|mifid" docs/CLAIMS_MATRIX.md   (before: no rows)

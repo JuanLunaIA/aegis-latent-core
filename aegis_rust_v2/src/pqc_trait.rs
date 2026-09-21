@@ -104,7 +104,11 @@ pub trait PostQuantumSigner {
     const BACKEND: &'static str;
 
     /// A fresh keypair as `(public_key, secret_key)` in FIPS 204 encodings.
-    fn keypair() -> (Vec<u8>, Vec<u8>);
+    ///
+    /// Fallible because a keypair is generated from the OS entropy source, and
+    /// an unavailable RNG is a resource failure to report — not a panic that
+    /// aborts the process under the release profile (AUD-05 / AF-040).
+    fn keypair() -> Result<(Vec<u8>, Vec<u8>), PqcError>;
 
     /// Derive the public key from a persisted secret key.
     ///
@@ -159,10 +163,13 @@ pub struct PqCleanBackend;
 impl PostQuantumSigner for PqCleanBackend {
     const BACKEND: &'static str = "pqcrypto-mldsa";
 
-    fn keypair() -> (Vec<u8>, Vec<u8>) {
+    fn keypair() -> Result<(Vec<u8>, Vec<u8>), PqcError> {
         use pqcrypto_traits::sign::{PublicKey as _, SecretKey as _};
+        // PQClean's `keypair()` aborts inside pqcrypto-internals if the OS RNG
+        // fails; that `.expect("RNG Failed")` lives in the dependency and
+        // cannot be intercepted from here (documented in UC-050).
         let (pk, sk) = pqcrypto_mldsa::mldsa65::keypair();
-        (pk.as_bytes().to_vec(), sk.as_bytes().to_vec())
+        Ok((pk.as_bytes().to_vec(), sk.as_bytes().to_vec()))
     }
 
     fn public_from_secret(secret_key: &[u8]) -> Result<Vec<u8>, PqcError> {
@@ -244,16 +251,17 @@ mod pure_rust {
     impl PostQuantumSigner for MlDsaBackend {
         const BACKEND: &'static str = "ml-dsa";
 
-        fn keypair() -> (Vec<u8>, Vec<u8>) {
+        fn keypair() -> Result<(Vec<u8>, Vec<u8>), PqcError> {
             #[allow(deprecated)]
             {
                 let mut seed = ml_dsa::B32::default();
-                getrandom::fill(&mut seed)
-                    .expect("system RNG must be available for key generation");
+                getrandom::fill(&mut seed).map_err(|e| {
+                    PqcError(format!("system RNG unavailable for key generation: {e}"))
+                })?;
                 let sk = ExpandedSigningKey::<MlDsa65>::from_seed(&seed);
                 let public = sk.verifying_key().encode().to_vec();
                 let secret = sk.to_expanded().to_vec();
-                (public, secret)
+                Ok((public, secret))
             }
         }
 
@@ -353,7 +361,7 @@ mod tests {
 
     #[test]
     fn active_backend_round_trips() {
-        let (pk, sk) = <ActiveBackend as PostQuantumSigner>::keypair();
+        let (pk, sk) = <ActiveBackend as PostQuantumSigner>::keypair().unwrap();
         assert_eq!(pk.len(), PUBLIC_KEY_BYTES);
         assert_eq!(sk.len(), SECRET_KEY_BYTES);
         let sig = <ActiveBackend as PostQuantumSigner>::sign_detached(MSG, &sk).unwrap();
@@ -369,7 +377,7 @@ mod tests {
         // A truncated key is a different fact from a signature that did not
         // verify, and collapsing them would hide a provisioning bug behind
         // what looks like a tampering alert.
-        let (pk, sk) = <ActiveBackend as PostQuantumSigner>::keypair();
+        let (pk, sk) = <ActiveBackend as PostQuantumSigner>::keypair().unwrap();
         let sig = <ActiveBackend as PostQuantumSigner>::sign_detached(MSG, &sk).unwrap();
 
         assert!(
@@ -383,8 +391,8 @@ mod tests {
 
     #[test]
     fn a_signature_does_not_verify_under_another_key() {
-        let (_pk_a, sk_a) = <ActiveBackend as PostQuantumSigner>::keypair();
-        let (pk_b, _sk_b) = <ActiveBackend as PostQuantumSigner>::keypair();
+        let (_pk_a, sk_a) = <ActiveBackend as PostQuantumSigner>::keypair().unwrap();
+        let (pk_b, _sk_b) = <ActiveBackend as PostQuantumSigner>::keypair().unwrap();
         let sig = <ActiveBackend as PostQuantumSigner>::sign_detached(MSG, &sk_a).unwrap();
         assert!(!<ActiveBackend as PostQuantumSigner>::verify_detached(MSG, &sig, &pk_b).unwrap());
     }
@@ -399,7 +407,7 @@ mod tests {
         #[test]
         fn ml_dsa_verifies_a_pqclean_signature() {
             // Evidence already in a WAL must stay verifiable after a swap.
-            let (pk, sk) = PqCleanBackend::keypair();
+            let (pk, sk) = PqCleanBackend::keypair().unwrap();
             let sig = PqCleanBackend::sign_detached(MSG, &sk).unwrap();
             assert!(MlDsaBackend::verify_detached(MSG, &sig, &pk).unwrap());
             assert!(!MlDsaBackend::verify_detached(b"tampered", &sig, &pk).unwrap());
@@ -409,7 +417,7 @@ mod tests {
         fn pqclean_verifies_an_ml_dsa_signature() {
             // A rollback must stay open: nodes signed after a swap have to
             // remain verifiable by the backend being rolled back to.
-            let (pk, sk) = PqCleanBackend::keypair();
+            let (pk, sk) = PqCleanBackend::keypair().unwrap();
             let sig = MlDsaBackend::sign_detached(MSG, &sk).unwrap();
             assert!(PqCleanBackend::verify_detached(MSG, &sig, &pk).unwrap());
             assert!(!PqCleanBackend::verify_detached(b"tampered", &sig, &pk).unwrap());
@@ -421,13 +429,13 @@ mod tests {
             // beside its public key. If the pure-Rust backend derived a
             // different public key from it, every node ever signed under the
             // stored one would be stranded.
-            let (pk, sk) = PqCleanBackend::keypair();
+            let (pk, sk) = PqCleanBackend::keypair().unwrap();
             assert_eq!(MlDsaBackend::public_from_secret(&sk).unwrap(), pk);
         }
 
         #[test]
         fn a_fresh_pure_rust_identity_is_verifiable_by_pqclean() {
-            let (pk, sk) = MlDsaBackend::keypair();
+            let (pk, sk) = MlDsaBackend::keypair().unwrap();
             let sig = MlDsaBackend::sign_detached(MSG, &sk).unwrap();
             assert!(PqCleanBackend::verify_detached(MSG, &sig, &pk).unwrap());
         }

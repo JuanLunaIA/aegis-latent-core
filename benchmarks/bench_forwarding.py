@@ -1,5 +1,14 @@
 """
-Forwarding latency benchmark — validates "zero forensic latency" claim.
+Forwarding latency benchmark — measures what the background-commit design costs
+the response path.
+
+The design keeps the durable commit off the response path (``_commit_and_alert``
+is scheduled with ``asyncio.create_task`` and runs after the response is returned),
+so the cost it adds is the scheduling call plus whatever the interpreter does
+between tasks. This harness measures that delta, and only that delta: it is an
+observation on one host, not the absence of cost. ``docs/benchmarks/BENCHMARK_METHOD.md``
+lists unqualified "zero …" framing as prohibited phrasing and says no RPS figure
+is claimed for any environment (AUD-26).
 
 Claim under test (aegis/proxy/app.py, _spawn_background):
   _commit_and_alert is scheduled via asyncio.create_task() and runs AFTER the HTTP
@@ -47,6 +56,8 @@ import httpx
 import numpy as np
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+
+from benchmarks import print_provenance
 
 # ── Fixed upstream mock response (OpenAI format) ─────────────────────────────
 
@@ -266,7 +277,7 @@ def _row(label: str, samples: list[float], w: int = 10) -> str:
 async def run_benchmark(n_warmup: int = 200, n_measure: int = 2_000) -> dict[str, Any]:
     sep = "=" * 72
     print(f"\n{sep}")
-    print("FORWARDING LATENCY BENCHMARK — zero forensic latency validation")
+    print("FORWARDING LATENCY BENCHMARK — cost of the background-commit design")
     print(sep)
 
     # ── Part 1: _spawn_background hot-path overhead ──────────────────────────
@@ -288,7 +299,7 @@ async def run_benchmark(n_warmup: int = 200, n_measure: int = 2_000) -> dict[str
     print()
     if task_p99_us < 100:
         print(
-            f"  [PROVEN] _spawn_background() p99 < 100 µs ({task_p99_us:.2f} µs). "
+            f"  [MEASURED HERE] _spawn_background() p99 < 100 µs ({task_p99_us:.2f} µs). "
             "Scheduling overhead is negligible on the response hot path."
         )
     else:
@@ -344,7 +355,7 @@ async def run_benchmark(n_warmup: int = 200, n_measure: int = 2_000) -> dict[str
 
     if p_value >= alpha:
         http_verdict = (
-            f"[PROVEN] p_value={p_value:.4f} >= {alpha}. "
+            f"[MEASURED HERE] p_value={p_value:.4f} >= {alpha}. "
             "BackgroundTask adds no statistically significant HTTP overhead."
         )
     else:
@@ -405,5 +416,6 @@ def _parse_args() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
+    print_provenance("bench_forwarding")
     args = _parse_args()
     asyncio.run(run_benchmark(n_warmup=args.warmup, n_measure=args.n))

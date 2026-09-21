@@ -1,6 +1,6 @@
 # Aegis Latent Core — Deployment Guide
 
-This guide distinguishes the current `4.1.2` source and published release from historical external baselines. It is for platform, SRE, security and procurement reviewers. It does not claim a v4 publication, grant regulatory certification, create a production SLO or replace an environment-specific review of kernel, storage, network, identity, secrets, backup and incident-response controls.
+This guide distinguishes the checked-out `5.0.0` source baseline — published 2026-09-16 on every surface except PyPI `aegis-latent-core` — and the `4.1.2` release still served for the gateway distribution on PyPI from historical external baselines. It is for platform, SRE, security and procurement reviewers. It does not claim a v4 publication, grant regulatory certification, create a production SLO or replace an environment-specific review of kernel, storage, network, identity, secrets, backup and incident-response controls.
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** current source/release candidate
@@ -135,7 +135,7 @@ PYTHONPATH=. .venv/bin/python tools/benchmarks/run_backpressure_stall.py \
   --output evidence/backpressure_stall_report.json
 ```
 
-The gate requires zero missing evidence IDs, zero duplicate IDs, valid chain integrity, and no silent drop. The retained candidate run recorded 10,000 offered requests, 10,000 durable commits, zero failures, zero missing IDs, zero duplicate IDs, valid chain integrity, and p99 commit latency of 1,189.89 ms. This is offered load and injected latency, not accepted production capacity. A `dm-delay` run is separate and remains unexecuted in the retained release evidence; it must use a disposable device with verified isolation.
+The gate requires zero missing evidence IDs, zero duplicate IDs, valid chain integrity, and no silent drop. The in-tree candidate run recorded 2,500 offered requests at 10,000 RPS offered, 2,500 durable commits, zero failures, zero missing IDs, zero duplicate IDs, valid chain integrity, and p99 commit latency of 836.3514210795984 ms (`evidence/execution_2026-08-20/backpressure_stall_report.json`); the current source baseline records p99 51.87 ms (`evidence/execution_2026-09-16/`). The previously published 10,000-request run and its p99 1,189.89 ms are retracted (`UC-018`): no artifact in this tree produces that pair. This is offered load and injected latency, not accepted production capacity. A `dm-delay` run is separate and remains unexecuted in the release evidence in this tree; it must use a disposable device with verified isolation.
 
 ### WAF evasion boundary
 

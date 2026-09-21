@@ -3,10 +3,7 @@
 This guide is for CISO and AppSec reviewers, platform leaders, AI/ML engineering, privacy/compliance, procurement and executive sponsors evaluating Aegis. It describes the product boundary, verification questions, pilot acceptance criteria and procurement blockers. It is not a certification, legal opinion, production SLO, or binding offer.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** checked-out source baseline `v5.0.0` with fourteen synchronized anchors, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)
-**Source baseline:** `v5.0.0` with fourteen synchronized anchors, **published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)** — source metadata does not establish external lifecycle state, so each surface was read back separately. The most recent published release is `v4.1.2`, whose tag, GitHub Release, PyPI, npm, OCI digest and signature objects were read back on 2026-09-04 and are recorded in `docs/RELEASE_STATUS.md` §1.1; `cosign verify` and `gh attestation verify` were not run
-**External baseline:** signed annotated `v4.1.2` tag at `860f14177d94c194e5ae7156017d6fa74264e429`, with GitHub Release (31 assets), PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images, all read back on 2026-09-04
-**Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
+**Release baseline:** checked-out source baseline `v5.0.0` with fourteen synchronized anchors, published 2026-09-16 on every surface except PyPI `aegis-latent-core` — per-surface readbacks, the latest published release and the historical baselines are stated once, and only, in [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1, which is the only document that establishes publication state
 **Audience:** US enterprise buyer committee
 **Commercial context:** [`docs/COMMERCIAL_STRATEGY_US.md`](COMMERCIAL_STRATEGY_US.md)
 

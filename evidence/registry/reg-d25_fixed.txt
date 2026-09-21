@@ -1,0 +1,19 @@
+REG-D25 / AUD-21 — FIXED: the terminal-row boundary trio is published
+Recorded 2026-09-21 (UTC) on the working host; commands run from the repository root.
+
+CHECK (executed)
+$ grep -n 'UC-059\|UC-060' docs/institutional/UNSUPPORTED_CLAIMS.md | head -4
+6:**Amended:** 2026-09-21 UTC (v5.0.1-prep audit) — `UC-050`–`UC-060` added from the forensic audit recorded in `AUDIT_REPORT_v5.0.1_PREP.md`: the released Rust extension aborts rather than raises (`UC-050`), concurrent `RustWal` handles are unsupported (`UC-051`), mid-stream teardown does not guarantee a terminal node (`UC-052`), the JCS evidence endpoint is 500 in 5.0.0 (`UC-053`), verification is dispatched on a self-declared scheme label (`UC-054`), the Part 11 annotation is unbound (`UC-055`), MiFID II/MAR modules are unwired (`UC-056`), no module inventory or per-module owner exists (`UC-057`), and the format gate does not cover the repository (`UC-058`). `UC-059` publishes the dev-venv advisory boundary (`REG-D01`) and `UC-060` the MMR v1 residual (`CLM-064`). **Amended 2026-09-21 again:** `UC-053` rewritten when `REG-D05` fixed the evidence endpoint — the boundary now describes the evidence projection and the 422 path instead of the 500.
+81:| `UC-059` | The development virtual environment is free of known supply-chain advisories. | `pip 24.0` and `setuptools 79.0.1` in the dev venv carry 14 advisories (`REG-D01`). Neither is in `requirements.lock`: they are venv bootstrap tooling, not shipped runtime, and the production wheel is unaffected. | Boundary published here per the registry's terminal-row rule (`AUD-21`); dev-only posture is the accepted state. |
+82:| `UC-060` | MMR v1 is completely deprecated and inaccessible. | `AEGIS_MMR_HASH_SCHEME=auto` reopens existing chains under their recorded scheme, so v1 stays live for historical chains, and the v1 residual (`verify_portable_inclusion` accepts caller-supplied leaf bytes) remains reachable for them. New chains use v2 domain separation (`0x00`/`0x01`/`0x02`). | Boundary published here per the registry's terminal-row rule (`AUD-21`); see `CLM-064`. |
+$ grep -n 'RFC 3161 TSA response acceptance' docs/BOUNDARIES.md
+32:| RFC 3161 TSA response acceptance | Tokens are persisted only after nonce/imprint checks and OpenSSL verification against an explicit trust store; no OCSP/CRL revocation checking and no RFC 5280 name-constraint/policy/EKU evaluation is performed, and an obtained response is not a trusted timestamp. | `REG-021`, `CLM-014`, `CLM-096` |
+$ grep -n 'storage-growth boundary' docs/ROADMAP.md
+62:- [ ] Publish the storage-growth boundary for the retained window: no module compacts WAL segments or tiers records to cheaper storage (`REG-019`, DOCUMENTED) - segments grow with the retained window, and capacity is the operator's dimension.
+
+DIFF
+$ git show --stat --oneline 6711db1
+6711db1 registry(REG-D25): FIXED - the boundary trio is published; REG-019 item added
+ docs/REGISTRY.md | 10 +++++-----
+ docs/ROADMAP.md  |  4 +++-
+ 2 files changed, 8 insertions(+), 6 deletions(-)

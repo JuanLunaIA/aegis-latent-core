@@ -181,7 +181,7 @@ class HSMSigningBackend:
 
         with self._lock:
             try:
-                return self._sign_internal(data)
+                signature, public_key, scheme = self._sign_internal(data)
             except Exception as exc:
                 logger.warning(
                     "HSM sign failed (%s); attempting session refresh", type(exc).__name__
@@ -191,7 +191,52 @@ class HSMSigningBackend:
                     raise HSMUnavailableError(
                         f"HSM session lost and could not be re-established ({type(exc).__name__})"
                     ) from exc
-                return self._sign_internal(data)
+                signature, public_key, scheme = self._sign_internal(data)
+            self._scheme = scheme
+            return signature, public_key, scheme
+
+    def scheme_label(self) -> str:
+        """The scheme name this backend will report, resolved without signing.
+
+        The ledger binds the declared scheme into the signed payload (AUD-27),
+        which means the label has to be known *before* the signature exists. The
+        label is a property of the key on the token (RSA-PSS or ECDSA), so it can
+        be read from the key's own ``CKA_KEY_TYPE`` rather than learned as the
+        return value of a signature.
+
+        Returns ``""`` when the backend is unavailable, the key cannot be found,
+        or its type is unsupported — callers then learn the label the slower way
+        (by signing) rather than assuming one, so a failure here degrades cost,
+        never security.
+        """
+        if not self._available:
+            raise HSMUnavailableError("HSM signing backend is not available")
+        if self._scheme:
+            return self._scheme
+        with self._lock:
+            try:
+                import pkcs11 as _pkcs11  # noqa: PLC0415
+
+                session = self._session
+                priv_keys = list(
+                    session.get_objects(
+                        {
+                            _pkcs11.Attribute.CLASS: _pkcs11.ObjectClass.PRIVATE_KEY,
+                            _pkcs11.Attribute.LABEL: self._key_label,
+                        }
+                    )
+                )
+                if len(priv_keys) != 1:
+                    return ""
+                key_type = priv_keys[0][_pkcs11.Attribute.KEY_TYPE]
+                if key_type == _pkcs11.KeyType.RSA:
+                    self._scheme = "pkcs11-rsa-pss-sha256"
+                elif key_type == _pkcs11.KeyType.EC:
+                    self._scheme = "pkcs11-ecdsa-sha256"
+            except Exception as exc:
+                logger.warning("HSM scheme lookup failed (%s)", type(exc).__name__)
+                return ""
+            return self._scheme
 
     def _sign_internal(self, data: bytes) -> tuple[bytes, str, str]:
         """Inner sign — must be called under self._lock with an active session."""

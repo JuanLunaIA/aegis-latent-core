@@ -1,15 +1,15 @@
 # Storage Requirements for the Evidence Path
 
-**Last verified:** 2026-09-01 UTC
+**Last verified:** 2026-09-21 UTC
 **Release baseline:** checked-out source baseline `v5.0.0` with fourteen synchronized anchors, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)
 
 The evidence guarantee Aegis offers is *commit before response*: for a governed non-streaming call the record is written, flushed, and synchronized before the response returns, and for an admitted stream one terminal summary is committed before the terminal marker is emitted. That guarantee is only as strong as the storage underneath it. This document states what the gateway actually does, what the substrate must provide, and how to choose one.
 
 ## What the gateway does
 
-On the authoritative JSONL path the commit sequence is: acquire the ledger lock, compute the chain node and signature, write the JSON line, flush the language-level buffer, then call `os.fsync()` on the file descriptor, and only then append the node to the in-memory window (`aegis/core/crypto_audit.py:417-419`). The awaiting request does not return until that sequence completes.
+On the authoritative JSONL path the commit sequence is: acquire the ledger lock, compute the chain node and signature, write the JSON line and flush the language-level buffer, append the node to the in-memory window (`aegis/core/crypto_audit.py:1064`, `:1069`), release the ledger lock, and only then wait on the group-commit ticket (`_await_durable`, `:1075`). The `os.fsync()` itself is issued by the group-commit engine's syncer with the ledger lock released (`:2098`), so one device round trip retires every record written while it was in flight rather than charging each request its own. The awaiting request does not return until that wait completes, so a node is never *reported* committed before its record is synchronized — though it is written to the buffer and visible in the in-memory window before the flush is confirmed, which is why the guarantee is commit-before-*response*, not commit-before-anything-observes-it.
 
-On the optional native segment the sequence is: reserve an offset, copy the CRC32-framed payload into the memory map, write a zero-length terminator after it, call `flush_range`, and publish the new write position with a release store only after the flush returns (`aegis_rust_v2/src/wal.rs:134-175`).
+On the optional native segment the sequence is: reserve an offset, copy the CRC32-framed payload into the memory map, write a zero-length terminator after it, call `flush_range`, and publish the new write position with a release store only after the flush returns (`aegis_rust_v2/src/wal.rs:222-228`).
 
 ## What `fsync` actually guarantees
 

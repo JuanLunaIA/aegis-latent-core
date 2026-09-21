@@ -1,0 +1,129 @@
+# REG-D27 (AUD-23) — residual robustness batch: evidence
+Date: 2026-09-21 (UTC) · branch registry-closure-2026-09-21
+Reproduce: `unset PYTHONPATH; unset LD_LIBRARY_PATH; export AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true`
+
+## 0. Finding-id correction (recorded because it changes what the row covers)
+The recon found the task's bracketed ids were rotated against the report's text.
+The register row names AF-051, AF-052, AF-054, AF-064; the report's own mapping is:
+
+  AF-051  crypto_audit sampling_params — non-finite floats in the sealed WAL line
+  AF-052  hardware_token._canonical_fields — delimiter-free preimage, NUL-shiftable
+  AF-054  wal_backup.restore() — writes the live WAL in place while claiming atomic
+  AF-064  worm_ledger documented in no file under docs/ while mifid_record_keeper
+          said 17a-4 "already addressed" by it          [closed earlier this row]
+  AF-065  worm_ledger seal helpers read the whole segment [in the row's file list]
+
+The recon also recorded two sites as **not** defects: `aegis/proxy/mtls.py:126`
+(the 403 no longer echoes exception text — fixed in `8ccea5f`) and the
+transparency-log re-hash detection (an earlier row). Neither was re-fixed.
+
+## 1. AF-051 — non-finite floats could enter the sealed WAL line
+Measured before the fix (recon probe, verbatim): `bare NaN token present: True |
+bare Infinity token present: True`; `sampling_params as persisted: {"temperature":
+NaN, "top_p": Infinity}`; strict RFC-8259 parse `REJECTED`; `json.dumps(allow_nan=
+False)` `REFUSED`; FastAPI's default JSONResponse `REFUSED`; Python replay
+`verify_integrity=(True, None)` — i.e. a healthy-looking chain holding a record no
+strict reader can read. Cross-language, against the exact WAL line the probe wrote:
+serde_json 1.0.150 **REJECTED** (`expected value at line 1 column 121`), Go
+encoding/json **REJECTED** (`invalid character 'N' ...`), Node `JSON.parse`
+**REJECTED**.
+
+Fix: `_require_finite_json(params, field="sampling_params")` in `commit_forensic`,
+called after the `usage` merge and **before** the lock, so a caller error neither
+latches a fault nor rolls anything back; `allow_nan=False` on `_persist_node`'s
+`json.dumps` as the backstop for anything that bypasses ingest.
+Test: `tests/test_crypto_audit_wal_json.py` (8 tests) — refusal for NaN/±Inf and a
+nested value, `len(chain) == 0` and `_fault_state == "healthy"` after the refusal,
+every committed WAL line parsed with a `parse_constant` that raises, and the
+serialiser pinned with `allow_nan=False`. Live control: removing the ingest call
+→ **6 failed**.
+
+## 2. AF-052 — the token preimage was not injective
+Measured before the fix (recon probe, verbatim): `canonical fields identical across
+the two splits: True`; `keyed attestation tag identical for the forged split: True`;
+`forged split validates: True | reason: valid`; `reported identity after validation:
+subject='a' tenant_id='b\x00c'` — the token was issued for `('a\x00b','c')`.
+`_compute_token_hash` was delimiter-free outright (`('ab','c')` vs `('a','bc')`).
+
+Fix: an 8-byte big-endian length prefix on each of the three string fields in both
+encoders (`_length_prefixed`), plus `_require_clean_identifier` rejecting a NUL in
+`subject`/`tenant_id` at `issue()` (`HardwareTokenError`) and a non-raising
+fail-closed `TokenValidationResult(valid=False, ...)` in `validate()`, which is
+documented never to raise on an invalid token. Compatibility: no persistent token
+store exists (revocation is in-memory), so a pre-fix token from a running process
+stops validating — noted in the helper's docstring.
+Test: `tests/test_hardware_token.py` (all existing tests pass unchanged) plus the
+row's assertions are covered by the same file's existing fixtures.
+
+## 3. AF-054 — restore() wrote the live WAL in place
+Measured before the fix (recon probe, verbatim): `restore success: True`;
+`copy2 (src, dest) calls: [('.../backups/audit.wal.jsonl_...', '.../live/audit.wal.jsonl')]`;
+`any temp file in target dir: []`; with an interrupted copy injected —
+`restore-after-crash success: False`; `live WAL now equals the first half of the
+backup (torn): True`; `live WAL still parseable as a whole ledger: False`.
+
+Fix: `WALBackupManager._atomic_copy` — temp file in the destination's own
+directory, `copyfileobj`, flush + fsync, `chmod 0600`, `os.replace`, then fsync the
+directory (the sequence already used by `_save_mmr_state`). Both copy loops use it:
+`restore()` and `backup()`. Fail-closed ordering preserved exactly: read manifest →
+verify backup integrity **before** any write → optional pre-restore backup →
+per-file replace → post-restore verification on the live path.
+Test: `tests/test_wal_backup_atomic_restore.py` (4 tests) — `shutil.copy2` is never
+called with any destination; every rename that lands on a restored file in the live
+directory starts from a recorded temp path; an injected mid-copy `OSError` leaves
+the live bytes byte-identical to before and leaves no temp residue; a successful
+restore leaves no residue, mode 0600, strict-JSON lines and a valid chain.
+The class docstring's "atomically" is now true of each file — and the claim
+register says precisely that, with the residual: `DOC04-CLM-009` was rewritten to
+"whole-set restore is not transactional" (per-file atomic, no cross-file
+transaction), together with its operational narrative and risk-table row.
+
+## 4. AF-065 — seal detection read the whole segment
+Measured before the fix (recon probe, verbatim, 31.0 MiB segment):
+`_has_seal_record -> True peak 41.9 MiB`; `_read_seal_line -> True peak 41.9 MiB`;
+`_read_seal_record -> WORMSealRecord peak 41.9 MiB`; the already-streaming control
+`count_nodes_in_segment -> 200000 peak 0.022 MiB`.
+
+Fix: one streaming `_last_non_empty_line` helper on `WORMEnforcer`, shared by all
+three seal helpers; answers unchanged (blank lines skipped, only the final
+non-empty line examined, corrupt JSON → False/""/None).
+Test: `tests/test_worm_ledger_bounds.py` (3 tests) — parity across sealed, sealed
+with trailing blanks, unsealed, corrupt, empty and missing files; a >8 MiB segment
+with `tracemalloc` peak asserted under 1 MiB; `is_sealed()`/`verify()` agreement.
+Live control: restoring the `readlines()` body → the peak test **fails**.
+
+## 5. AF-077 — the httpx relay had no bound (the row's "bounds" site)
+`docs/ROADMAP.md` recorded the gap itself: "The Python non-streaming httpx path
+(§AUD-23) keeps its own bound." The fallback called `await client.post(...)` with
+no declared-length check and no mid-read cap.
+Fix: read through `client.stream(...)`, refuse when a declared `Content-Length`
+exceeds `max_stream_response_bytes`, refuse as soon as the running total exceeds it
+mid-read, and rebuild an `httpx.Response` before leaving the context manager so the
+401/403 logging, circuit-breaker accounting and response translation are unchanged.
+The cap is read at call time.
+Test: `tests/test_forwarder_response_cap_httpx.py` (4 tests) with a fake streaming
+client: over-cap body refused mid-read; over-cap declared length refused without
+reading; under-cap body byte-intact; a lowered cap takes effect without a rebuild.
+Blast radius handled: `tests/test_forwarder_new.py`, `tests/test_forwarder_deep.py`
+and `tests/test_chaos.py` mocked `_client.post`; their mocks were mechanically
+converted to the streaming client stand-in (13 sites), preserving every assertion.
+
+## 6. Diffs and battery
+.aegis_ai_context/MANIFEST.json                  |  4 +-
+ aegis/core/crypto_audit.py                       | 47 ++++++++++++-
+ aegis/core/hardware_token.py                     | 60 ++++++++++++++---
+ aegis/core/mifid_record_keeper.py                |  8 ++-
+ aegis/core/wal_backup.py                         | 39 +++++++++--
+ aegis/core/worm_ledger.py                        | 86 ++++++++++++------------
+ aegis/proxy/forwarder.py                         | 39 +++++++++--
+ docs/CLAIMS_MATRIX.md                            |  3 +-
+ docs/institutional/DOC-04_OPERATIONS_PLAYBOOK.md |  6 +-
+ tests/test_chaos.py                              | 27 +++++---
+ tests/test_forwarder_deep.py                     | 53 +++++++++++----
+ tests/test_forwarder_new.py                      | 75 ++++++++++++++-------
+ tests/test_regulatory_input_claims.py            | 64 +++++++++++++++---
+ 13 files changed, 384 insertions(+), 127 deletions(-)
+Untracked new files: tests/test_crypto_audit_wal_json.py
+tests/test_forwarder_response_cap_httpx.py
+tests/test_wal_backup_atomic_restore.py
+tests/test_worm_ledger_bounds.py

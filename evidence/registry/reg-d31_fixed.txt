@@ -1,0 +1,165 @@
+REG-D31 / AUD-27 — signature scheme bound into the signed payload
+=================================================================
+Closed: 2026-09-21   Repo: aegis-latent-core   Branch: registry-closure-2026-09-21
+Row: docs/REGISTRY.md §4.6 `REG-D31` (`[AUD]`, CODE, P3)   Ticket: docs/ROADMAP.md § AUD-27
+Host: 4-core Haswell i5, 3.7 GiB RAM   Seal: AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true
+
+1. WHAT THE FINDING WAS
+-----------------------
+The audit (AF-005 follow-up) found that signature verification dispatched on
+`node.signature_scheme` — a *self-declared* field — and then checked the signature over
+material that did not contain it. `REG-D06` closed half of this: the label was fenced by
+the shape of the material beside it (`scheme_material_inconsistency`) and every scheme
+this build can verify was actually verified. The remaining half was that the label itself
+was not an input to the signed bytes: the signing path learned its scheme as the *result*
+of signing (`_sign` returned it), which is why it could not be known before the payload
+was built. A relabel inside one material-shape class — the presence-only tiers
+`pqc-ml-dsa` / `pkcs11-rsa-pss-sha256` / `pkcs11-ecdsa-sha256` — therefore changed which
+verifier was consulted and nothing else, so a deployment that holds the claimed tier's key
+would verify a claim that was never made.
+
+2. STATE READ BEFORE CHANGING ANYTHING
+--------------------------------------
+- `_build_signed_payload(...)` (aegis/core/crypto_audit.py) — canonical bytes, additive
+  field appends (`waf_verdict`, Part 11 annotation, admission status), each conditional.
+- `signed_payload_candidates_for(node)` — newest-shape-first candidate list; the AUD-10
+  precedent for adding a field without invalidating already-written records.
+- `_sign(data)` — priority order HSM -> ML-DSA -> HMAC -> Ed25519-ephemeral, returning the
+  scheme as a value; three call sites: commit_forensic (1267), commit_rejection (1422),
+  commit_forensic_summary (1597).
+- `HSMSigningBackend` (aegis/core/hsm.py) — the scheme is chosen from the token key's
+  `CKA_KEY_TYPE` inside `_sign_internal`; the key object search already exists there, so
+  the label is derivable *without* signing.
+- SDK check: no Python/TypeScript SDK code rebuilds this payload (grep for prev_hash /
+  merkle_root in sdk/ returns nothing), so this is not a wire-format change for consumers.
+
+3. THE FIX
+----------
+aegis/core/crypto_audit.py
+- `_build_signed_payload(..., signature_scheme: str = "")` — appends the label as the last
+  field when supplied; omitted for the pre-binding shape, so rebuilding an old record
+  reproduces its original bytes exactly.
+- `validate_signature_scheme(scheme)` — closed vocabulary (`_SCHEME_MATERIAL`), so a label
+  carrying the `|` delimiter cannot be bound (same rule as `waf_verdict`/status).
+- `signed_payload_candidates_for(node)` — three shapes, newest first: scheme-bound,
+  annotated, pre-binding (offered only when it differs and only when the label is in the
+  vocabulary). Older shapes are reachable only by a signature actually made over them.
+- `_sign` -> `_sign_bound(build_payload)`: the tier is selected first and the payload is
+  rebuilt per attempt with that attempt's label appended, returning the signed payload.
+  Tier order unchanged (HSM -> ML-DSA -> HMAC -> Ed25519). An HSM failure mid-flight now
+  falls through with the *fallback tier's* label in the bytes, not the abandoned one.
+- All three record-creating paths pass a builder lambda.
+- `_hsm_label_or_empty()` — asks the backend for its label before signing; a label outside
+  the vocabulary, or no `scheme_label` attribute at all, means "learn it by signing" (one
+  discarded signature, cached in `self._hsm_learned_scheme` so the cost is once per ledger,
+  not once per record), never an assumed label.
+aegis/core/hsm.py
+- `HSMSigningBackend.scheme_label()` — resolves the label from the key's `CKA_KEY_TYPE`
+  (RSA -> pkcs11-rsa-pss-sha256, EC -> pkcs11-ecdsa-sha256), caches it, returns `""` when
+  unavailable/ambiguous/unsupported. Never raises into the caller's security decision:
+  `""` costs one extra signature, it does not weaken the binding.
+- `sign()` caches the reported scheme so post-sign and pre-sign answers agree.
+
+Deviation from the ticket's literal wording: the ticket said "gate the change on a
+trail-version bump so v1/v2 chains keep verifying". No trail-version gate was needed and
+none was added — the candidate order is what keeps already-written records verifying (the
+same mechanism AUD-10 used), and `node_hash` is untouched, so no chain break and no
+re-hash of existing WALs. Recorded rather than presented as the ticket's letter.
+
+4. TESTS
+--------
+tests/test_signature_scheme_binding.py (new, 11 tests)
+ 1  test_a_new_record_signs_over_the_scheme_bound_payload
+       candidates[0] ends with |hmac-sha256; the scheme-less (annotated) candidate is
+       exactly candidates[0] minus the label and does NOT verify; node verifies; sweep green.
+ 2  test_the_bound_label_is_the_one_the_record_declares
+ 3  test_the_rejection_path_binds_its_scheme
+ 4  test_the_stream_terminal_path_binds_its_scheme
+ 5  test_a_pre_binding_signature_still_verifies_and_keeps_the_old_boundary
+       additive: a signature over the scheme-less payload still verifies; the same record
+       relabelled into an unverifiable tier still reads `unverified` (UC-054 (b) scope).
+ 6  test_a_relabelled_claim_is_caught_when_a_verifier_for_the_tier_exists
+       the audit's scenario: stand-in token signs as pkcs11-ecdsa-sha256, record relabelled
+       to pqc-ml-dsa (same shape class), stand-in verifier refuses it -> "invalid".
+ 7  test_the_same_relabel_is_accepted_on_a_pre_binding_record   (CONTROL for 6)
+       identical in every respect except that the token signed the scheme-less payload —
+       i.e. the pre-fix code path. The same relabel verifies ("valid"). 6 without 7 would
+       only assert a verdict; 7 is what shows the verdict changed because of the binding.
+ 8  test_an_hsm_failure_mid_flight_binds_the_fallback_tiers_label
+       token raises HSMUnavailableError -> node is HMAC-signed and the bound label is
+       hmac-sha256 (the tier that actually signed).
+ 9  test_a_backend_without_label_introspection_pays_the_extra_sign_once
+       learn-by-signing path: 3 token calls for 2 records (probe + one per record), both
+       records bound to the learned label.
+10  test_a_label_carrying_the_delimiter_cannot_be_bound        (ValueError)
+11  test_an_empty_label_is_refused_and_omission_reproduces_the_legacy_payload
+tests/test_hsm.py (+5, 23 -> 28)
+ - test_scheme_label_is_resolved_without_signing (RSA; asserts priv.sign not called)
+ - test_scheme_label_is_empty_when_the_key_is_not_found
+ - test_scheme_label_raises_when_unavailable
+ - test_scheme_label_is_empty_when_the_token_errors
+ - test_ec_scheme_label_is_resolved_without_signing
+ - the existing mock backend gained `scheme_label()`: it stands in for the real token class,
+   which now has that surface; without it the mock would exercise the slower path and the
+   per-commit call-count test (`test_hsm_sign_called_per_commit`) would measure a mock gap
+   rather than the production path. No production rule was relaxed.
+tests/test_crypto_audit_scheme_binding.py — the REG-D06 test that pinned this residual now
+   records what is closed and what remains; its assertions are unchanged (the in-build
+   reading for a verifier-less tier is still `unverified`).
+
+5. EXECUTED OUTPUT
+------------------
+$ .venv/bin/python -m pytest tests/test_signature_scheme_binding.py tests/test_crypto_audit_scheme_binding.py tests/test_hsm.py -q
+41 passed in 1.24s
+
+$ .venv/bin/python -m pytest tests/test_crypto_audit_branch.py tests/test_crypto_audit_rollover.py \
+    tests/test_crypto_audit_wal_json.py tests/test_part11_signatures.py tests/test_audit_node_encryptor.py \
+    tests/test_audit_read_snapshot.py tests/test_export_audit_log.py tests/test_compliance_exporter_new.py \
+    tests/test_dfir_export.py -q
+218 passed in 41.03s        (signature / evidence surfaces, run before the doc updates)
+
+$ .venv/bin/ruff check tests/ aegis/core/crypto_audit.py aegis/core/hsm.py
+All checks passed!
+
+Gates after the change (all PASS):
+  verify_claims.py ................ verify_claims: PASS (105 claims, 0 findings)
+  tools/docs/verify_documentation.py --root . --strict .. "warnings": 0
+  scripts/verify_links.sh .......... verify_links: PASS (1407 relative links and anchors resolved)
+  scripts/verify_import_reachability.py .. PASS — no undeclared orphans, no stale roadmap entries
+  scripts/verify_release_contract.py .... release source contract: READY (14 anchors, all 5.0.1)
+
+6. NOT EXECUTED HERE / BOUNDARIES (stated, not implied green)
+-------------------------------------------------------------
+- No PKCS#11 device or library on this host: `scheme_label()` is exercised against the
+  suite's mocked `pkcs11` module (the same mock the signing tests use), not against a real
+  token. The production path is therefore "implemented and unit-tested", not "measured on
+  hardware".
+- No ML-DSA extension (`aegis_rust`) and no built `.so` here: the pqc dispatch branch and
+  the relabelling scenario use a stand-in verifier whose acceptance depends on the payload
+  bytes — the property under test. A real ML-DSA verification of a bound payload needs the
+  rust job in CI.
+- In-build residual unchanged: for a tier with no verifier (`pkcs11-*`, or `pqc-ml-dsa`
+  without the extension) a well-shaped claim still reads `unverified` and does not fail the
+  sweep. The binding is what makes it *checkable* by a verifier-equipped deployment; it does
+  not make this build able to check it. Published as UC-054 (a).
+- Records written before 2026-09-21 keep the old reading (their label is not anchored).
+  Published as UC-054 (b), now scoped to pre-binding records.
+- `cargo`/Rust is unaffected by this row (no Rust file changed).
+
+7. FULL SUITE ON THIS ROW'S FINAL TREE (run11)
+----------------------------------------------
+$ .venv/bin/python -m pytest tests/ -n auto -q --cov=aegis --cov-precision=2 --cov-fail-under=90
+TOTAL                                            20366   2014  90.11%
+Required test coverage of 90% reached. Total coverage: 90.11%
+7233 passed, 116 skipped in 218.13s (0:03:38)
+EXIT: 0
+
+The first full run on this tree (run10) reported 5 failures and 90.01%: tests/test_mmr_rollback.py
+injects signing failures through the seam `ledger._sign`, which the rename removed, so the three
+parametrised "failed commit" tests injected nothing and asserted behaviour that never happened.
+The seam moved to `_sign_bound` — the whole select-then-sign step, which is the thing that fails —
+and those tests pass again with their assertions unchanged. The 90.01% -> 90.11% move is the
+branch tests added for the new paths: token answers a different label than its key type
+predicted; token reports a label outside the vocabulary; label lookup raising both
+HSMUnavailableError and an unexpected error; a configured ML-DSA signer that fails; scheme_label
+on an unavailable backend and when the token errors.

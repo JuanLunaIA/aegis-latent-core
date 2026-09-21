@@ -1,0 +1,72 @@
+REG-023 — after (ePHI scrub stays opt-in; record-versus-provider boundary corrected)
+====================================================================================
+
+Row:        REG-023  [AEG1:P1#1][HIPAA]  CODE  P0  "Pre-forward ePHI scrub"
+Transition: SEED -> DOCUMENTED
+Owner decision recorded 2026-09-21: keep the flag off by default; record the
+boundary precisely rather than change the default.
+
+(1) The capability the row asks for already exists, before the forwarder:
+
+    $ sed -n '1770,1778p' aegis/proxy/app.py
+        # Best-effort PHI identifier redaction on the hot request path.
+        # Scrubs 18 HIPAA identifier categories from message content before forwarding.
+        # raw_body (used for audit) retains the original; body is the scrubbed copy.
+        body, _phi_scrubbed, _scrub_method = _apply_phi_scrub_request(body, state)
+
+        # PCI-DSS cardholder-data scrubbing (PAN/CVV/Track) before forwarding.
+        body, _pci_scrubbed = _apply_pci_scrub_request(body, state)
+
+    Gate: AEGIS_PHI_DEIDENTIFY / AEGIS_PCI_SCRUB, both default false.
+    So the premise "scrub does not exist" is corrected, not fixed: it existed.
+
+(2) The premise was checked empirically rather than argued. A real ledger commit
+    with an SSN-bearing request marked phi_scrubbed=True was searched for that
+    value in every form the record could plausibly carry:
+
+    probe: /home/luna/.hermes/cache/scratch/reg023_probe2.py
+           (alignment-aware: hex at BOTH byte offsets, plus base64 and plaintext)
+    output:
+      audit.wal.jsonl               1354 bytes   contains unscrubbed PHI ... False
+      audit.wal.jsonl.mmr.state      290 bytes   contains unscrubbed PHI ... False
+      WAL record fields (json keys of every line):
+        mmr_leaf_hash, phi_scrubbed, prev_hash, request_hash, response_hash,
+        scrub_method, sequence_number, ...  — no payload field of any kind
+
+    Conclusion: the durable record holds digests. The one place a preview is
+    built (build_merkle_leaf, aegis/core/forensic.py:77 -> request_preview_hex)
+    feeds the hash that is committed; the preview itself is not persisted.
+
+(3) The live defect was documentation, and it was fixed:
+
+    BEFORE  docs/privacy/PII_REDACTION_BOUNDARIES.md:48
+      "Redaction runs **before** the evidence record is committed, so the
+       record holds the scrubbed form."
+      False twice over: (a) the record holds digests, not content; (b) the
+      request digest is taken over raw_body — the bytes as received — because
+      the pre-forward scrub rewrites only the parsed body. That is stated in
+      the in-code comment at aegis/proxy/app.py:1773 and confirmed by
+      request_bytes=raw_body at aegis/proxy/app.py:1385.
+
+    AFTER   line 48 states digests/raw_body precisely; §4 gained the opt-in
+            paragraph ("One opt-in changes the provider path — it does not
+            change the section above"), which keeps the section's claim intact
+            while recording that AEGIS_PHI_DEIDENTIFY moves the provider path
+            and not the record.
+
+    Boundary published: UC-045 in docs/institutional/UNSUPPORTED_CLAIMS.md
+    (blocks "PHI never leaves the gateway", "the provider never sees PII",
+    "the WAL holds the scrubbed payload"), Amended line updated.
+
+    $ grep -c 'UC-045' docs/institutional/UNSUPPORTED_CLAIMS.md
+    2
+    $ grep -c 'digests, not content' docs/privacy/PII_REDACTION_BOUNDARIES.md
+    1
+    $ grep -c 'One opt-in changes the provider path' docs/privacy/PII_REDACTION_BOUNDARIES.md
+    1
+
+(4) Gates after the edit (same run as the commit):
+verify_docs: PASS (0 findings)
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1285 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0 required_files=27

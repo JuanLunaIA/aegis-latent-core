@@ -17,7 +17,8 @@ de-identification path:
 * **Track data** — magnetic-stripe Track 1/Track 2 patterns (SAD). Always fully
   redacted.
 
-Masking follows PCI-DSS §3.4: a detected PAN is replaced with a token that
+Masking follows the PCI-DSS §3.4 requirement (a technical control, not a PCI
+certification): a detected PAN is replaced with a token that
 exposes at most the last four digits (``[PAN-****1111]``); CVV and track data are
 replaced with ``[REDACTED:CVV]`` / ``[REDACTED:TRACK_DATA]`` (no residual digits).
 """

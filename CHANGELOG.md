@@ -7,13 +7,185 @@ All notable changes to **Aegis Latent Core** are documented in this file.
 **Most recent published release (readback 2026-09-04):** `v4.1.2` signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway image `sha256:b3f6aadc…f80710` and dashboard image `sha256:27e1bbc2…d92398`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
-**Source release target:** `v5.0.0` (fourteen synchronized `5.0.0` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts, none of which exist yet for `5.0.0` — recorded in `docs/RELEASE_STATUS.md` §1.0)
+**Source release target:** `v5.0.1` (fourteen synchronized `5.0.1` anchors). **Published nowhere** — read back 2026-09-21: GitHub Release 404, both OCI tags 404, registries still at `5.0.0`/`4.1.2`; recorded in `docs/RELEASE_STATUS.md` §1.0a. `v5.0.0` remains the most recent published release (every surface except PyPI `aegis-latent-core`)
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [5.0.1] — unreleased source target
+
+**Nothing is published for `5.0.1`.** Source metadata only: fourteen anchors were
+moved from `5.0.0` to `5.0.1` and the release contract reports `READY`; the
+2026-09-21 readback found no tag, no GitHub Release, no OCI tag and no registry
+version for it (`docs/RELEASE_STATUS.md` §1.0a). This section is not a release
+announcement and sets no release date.
+
+### Changed
+
+- **Global version bump to `5.0.1`** across the fourteen synchronized anchors and
+every deployment literal the release contract binds: `pyproject.toml`,
+`aegis/__init__.py`, both SDKs (`sdk/python/pyproject.toml`,
+`sdk/python/src/aegis_sdk/__init__.py`, `sdk/typescript/package.json` and its
+lockfile), `dashboard/package.json` and its lockfile, `aegis_rust_v2/Cargo.toml`,
+`Cargo.lock` (the `aegis_rust` package entry), `aegis_rust_v2/pyproject.toml`,
+`deploy/helm/Chart.yaml` (`version` and `appVersion`), `deploy/helm/values.yaml`
+(`image.tag`), `deploy/docker/Dockerfile`, `deploy/docker/Dockerfile.airgap`,
+`deploy/docker/docker-compose.yml`,
+`deploy/docker/docker-compose.enterprise.yml` (both services),
+`deploy/k8s/aegis-operator/operator.py`, `deploy/k8s/aegis-operator/crd.yaml`,
+`connectors/envoy-wasm/Cargo.toml` and its lockfile, `scripts/vendor_wheels.sh`,
+`scripts/install_aegis.sh`. Dependency pins that merely contain the string
+(`protobuf>=5.0.0`, `redis>=5.0.0`, `sugarss ^5.0.0`) are deliberately unchanged.
+- **Publication statements restructured rather than renumbered.** Every artifact
+that said "the source release target is `v5.0.0` **and it was published
+2026-09-16**" now separates the two facts: the target is `5.0.1` (published
+nowhere, §1.0a) and `v5.0.0` is the most recent published release, with its
+readback record intact. A blind string swap would have made the publication claim
+false against the new target.
+- **Two SDK READMEs corrected.** Both said the registry's `aegis-latent-sdk`
+`5.0.0` "matches this source tree's SDK"; after the bump it no longer does, and
+the sentence now says so.
+- `AUD-35` comments in `deploy/docker/docker-compose.enterprise.yml` and
+`deploy/helm/templates/statefulset.yaml` no longer pin an open finding to a
+version number.
+- **`dev` extra carries the two packages whose tests nothing installed.**
+  `pyarrow>=16.0.0` and `prometheus-client>=0.20.0` are added to `[dev]` because
+  every suite-running job installs `-e ".[dev]"`: with them only in `lakehouse`
+  and `metrics`, the Parquet exporter's twelve tests and seven `/metrics` tests
+  skipped in **every** environment, including the end-to-end registry test
+  `CLM-102` cites as its `LOCALLY TESTED` proof (`REG-D38`, `REG-D40`). No
+  runtime dependence changes; both extras still carry them for operators.
+- **`[tool.coverage.report] precision = 2`.** `--cov-fail-under` is decided by
+  `coverage.results.should_fail_under(total, floor, precision)`, and the default
+  precision of `0` rounds the total *up* before comparing, so a run in
+  `(floor - 0.5, floor)` printed `FAIL Required test coverage … not reached` and
+  still exited `0`. That hole applies to the repository's own
+  `--cov-fail-under=65` (`Makefile:46`, `.github/workflows/ci.yml:306-309`) as
+  much as to any stricter invocation; the displayed and the enforced percentage
+  are now the same number (`REG-D41`).
+
+### Fixed (unreleased, since the `5.0.0` source target)
+
+All of the audit remediation on this branch ships under this version. Per-register
+detail is in `docs/REGISTRY.md`; the summary:
+
+- **REG-D27 (AUD-23)** — five defects: non-finite floats could reach the sealed
+  audit WAL line (now refused before the lock, `allow_nan=False` as backstop);
+  `hardware_token` canonical fields were delimiter-free and NUL-shiftable (now
+  length-prefixed, with NUL rejected); `wal_backup.restore()` wrote the live WAL
+  in place while its docstring said "atomically" (now temp file + `os.replace` +
+  directory fsync); the `worm_ledger` seal helpers read the whole segment (now
+  streaming, peak <1 MiB on a >8 MiB file); the httpx relay buffered any upstream
+  body (now bounded by `max_stream_response_bytes`). Tests:
+  `tests/test_crypto_audit_wal_json.py`, `tests/test_wal_backup_atomic_restore.py`,
+  `tests/test_worm_ledger_bounds.py`, `tests/test_forwarder_response_cap_httpx.py`.
+- **REG-D26 (AUD-22)** — compliance wording: 64 locations across 26 files carried
+  SOC 2 / HIPAA / GDPR / ISO 27001 / FedRAMP / PCI / admissibility claims without
+  the style guide's qualifier. Corrected, including two generators and the
+  OpenAPI description served at `/docs`;
+  `tests/test_compliance_wording_gate.py`.
+- **REG-D23 (AUD-19)** — documentation currency: four statements were **false**,
+  not merely stale (SDK guide, FAQ, deployment guide, release status). Corrected
+  against the readback record and gated repository-wide at sentence granularity:
+  `tests/test_documentation_currency.py`.
+- **REG-D24 (AUD-20)** — the MiFID II and MAR modules are built but unwired; they
+  are in `docs/CLAIMS_MATRIX.md` as `CLM-103`/`CLM-104` with corrected citations,
+  and wiring-or-retire is `AUD-36`; `tests/test_regulatory_input_claims.py`.
+- **REG-D22 (AUD-18)** — the Makefile and CI now share one canonical gate scope;
+  `tests/test_gate_scope_parity.py`.
+- Earlier rows (`REG-D05` … `REG-D18`, `REG-D25`, plus the legacy register's 66
+  terminal rows) are recorded in `docs/REGISTRY.md` with per-row evidence under
+  `evidence/registry/`.
+- **REG-D37** — the guarded-pickle allow-list never reached nested values:
+  `_validate_allowed` tested `isinstance(obj, allowed)` before recursing, and
+  `dict`/`list` are themselves in `DEFAULT_ALLOWED`, so the recursion branches
+  were unreachable and `{"k": <anything>}` passed. A `set` payload carries no
+  `GLOBAL` opcode (`EMPTY_SET`/`ADDITEMS`), so the post-load check was the only
+  guard and it never fired. Fixed by reordering; with the old order restored,
+  seven tests fail. The module is allowlisted for import reachability, so the
+  exposure was library callers of `safe_pickle_load`/`safe_pickle_dump`, not the
+  request path. `tests/test_safe_serialization_failclosed.py`.
+- **REG-D38** — the Parquet exporter's twelve tests ran nowhere: no workflow
+  installs the `lakehouse` extra, so the module sat at 0% coverage while
+  `CLM-071`'s `LOCALLY TESTED` rested on a suite that module-level-skipped.
+  Fixed by the `dev`-extra rule above, plus a tree-wide sweep over every
+  `pytest.importorskip` so a future silent skip fails the build.
+  `tests/test_optional_backend_declarations.py`.
+- **REG-D39** — two tests reddened every full-suite run on a loaded machine for
+  reasons that were not defects. The streaming test truncated silently when its
+  own 30 s duration cap fired under contention (its in-loop memory bound held on
+  every iteration), and the audit-export test's unbounded writer thread crossed
+  the endpoint's documented 1000-node limit, which is correct product behaviour.
+  Both fixed by removing the wall-clock dependency, with one *added* assertion
+  (`outcomes == ["complete"]`) that turns a truncation into a failure. No bound
+  was relaxed.
+- **REG-D40** — the `metrics` extra was installed by no job, so seven `/metrics`
+  tests skipped in every environment (see the `dev`-extra entry above). The skip
+  sits inside those tests, which is why `REG-D38`'s module-level sweep could not
+  see it; it was found by checking that fix against the authoritative skip
+  taxonomy (`pytest -rs`) instead of the source. Installing the extra also
+  exposed a pre-existing order coupling in `tests/test_observability_new.py`:
+  two reload tests were passing on globals left behind by a neighbouring test,
+  because `importlib.reload` never clears the namespace. Those two now skip with
+  the mechanism in their `reason=`, and the branch-only attributes they patch
+  are created with `raising=False` rather than relied on.
+- **REG-D41** — the coverage gate itself, described under *Changed*.
+
+### Tests
+
+- **Coverage: 88.67% → 90.06%** for the 5.0.1 mission order's
+  `--cov-fail-under=90`: 20,300 statements / 2,300 missed → 20,298 / 2,018, so
+  284 statements are newly covered, and the suite is
+  `7,201 passed, 115 skipped, 0 failed, exit 0`. The repository's own enforced
+  floor is unchanged at 65%.
+- New test files: `test_error_response_hygiene.py`,
+  `test_no_defect_markers_in_shipped_code.py`,
+  `test_safe_serialization_failclosed.py`, `test_forwarder_sse_framing.py`,
+  `test_rate_limiter_reservation.py`, `test_dependencies_identity_helpers.py`,
+  `test_config_validation_branches.py`, `test_gossip_runtime_lifecycle.py`,
+  `test_observability_without_the_metrics_extra.py`; plus new cases in
+  `test_optional_backend_declarations.py` (the availability-gate table).
+- `aegis/core/observability.py` 65% → **98.43%**: installing the extra made the
+  real metrics branch the one that executes, which left the `except ImportError`
+  fallback untested; it is covered by re-importing the module under a private
+  name with `sys.modules["prometheus_client"] = None` (what makes the import
+  raise), in-process, because coverage does not follow a subprocess.
+
+### Fixed — the declared signature scheme is now covered by the signature
+
+`node.signature_scheme` was a self-declared label: verification dispatched on it, and `REG-D06`
+fenced it by the shape of the material beside it, but the label itself was not an input to the
+signed bytes — the signing path learned its scheme as the *result* of signing (`_sign` returned
+it), so it could not exist before the payload was built. A relabel inside one material-shape
+class (the presence-only tiers `pqc-ml-dsa` / `pkcs11-*`) changed which verifier was consulted
+and nothing else, so a deployment holding the claimed tier's key would verify a claim nobody
+made.
+
+`_sign` is now `_sign_bound(build_payload)`: the tier is selected first and the payload is
+rebuilt per attempt with that attempt's label appended, on all three record-creating paths
+(`commit_forensic`, `commit_rejection`, `commit_forensic_summary`). `HSMSigningBackend` gained
+`scheme_label()`, which resolves the label from the token key's `CKA_KEY_TYPE` before a
+signature exists; a backend that cannot answer learns it from one extra, ledger-cached
+signature instead of assuming one — a cost, never a weaker binding. The label is validated
+against the closed scheme vocabulary, so the `|` delimiter cannot be smuggled into it.
+
+Compatibility is additive rather than version-gated: `signed_payload_candidates_for` offers the
+scheme-bound shape first and the older shapes only for signatures actually made over them, so
+chains written before this change keep verifying unchanged and no `node_hash` moved. Two
+boundaries stay published as `UC-054`: for records written before 2026-09-21 the label is still
+unanchored, and a tier this build has no verifier for still reads `unverified` in-build — what
+the binding changes is that such a claim becomes *checkable* by a deployment that holds the
+tier's key, instead of being trusted on shape alone.
+
+Tests: `tests/test_signature_scheme_binding.py` (15, including the audit's relabel scenario
+refused once a verifier for the claimed tier exists, its pre-binding control, and the HSM
+mid-flight fallback), 5 added in `tests/test_hsm.py` (`scheme_label()` resolved without
+signing, when the key is missing, when the backend is unavailable, when the token errors, and
+on EC keys), and the failure-injection seam `_sign` → `_sign_bound` in
+`tests/test_mmr_rollback.py`. Row `REG-D31`, ticket `AUD-27`.
 
 ## [5.0.0] — unreleased source target
 

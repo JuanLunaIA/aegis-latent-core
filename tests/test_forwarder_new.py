@@ -35,6 +35,51 @@ def _make_response(status_code: int = 200, content: bytes = b'{"id":"c"}') -> ht
     return httpx.Response(status_code, content=content)
 
 
+class _StreamContext:
+    """Async context manager returned by the fake client's stream()."""
+
+    def __init__(self, response: httpx.Response):
+        self._response = response
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc_info):
+        return False
+
+    @property
+    def status_code(self) -> int:
+        return self._response.status_code
+
+    @property
+    def headers(self) -> dict:
+        return dict(self._response.headers)
+
+    async def aiter_bytes(self):
+        yield self._response.content
+
+
+class _StreamingClient:
+    """AsyncClient stand-in: forward_json reads the upstream body through
+    stream() so the response cap applies to the httpx path too (REG-D27)."""
+
+    def __init__(self, response: httpx.Response):
+        self._response = response
+
+    def stream(self, *args, **kwargs) -> _StreamContext:
+        return _StreamContext(self._response)
+
+
+class _FailingClient:
+    """AsyncClient stand-in whose stream() raises before any body is read."""
+
+    def __init__(self, error: Exception):
+        self._error = error
+
+    def stream(self, *args, **kwargs):
+        raise self._error
+
+
 # ── start() — mTLS cert loading (lines 117-121) ──────────────────────────────
 
 
@@ -116,9 +161,7 @@ async def test_stop_no_client_is_noop():
 @pytest.mark.asyncio
 async def test_forward_json_connect_error_records_failure():
     fwd = _make_forwarder()
-    mock_client = AsyncMock()
-    mock_client.post = AsyncMock(side_effect=httpx.ConnectError("refused"))
-    fwd._client = mock_client
+    fwd._client = _FailingClient(httpx.ConnectError("refused"))
 
     with (
         patch.object(fwd._circuit_breaker, "check"),
@@ -133,9 +176,7 @@ async def test_forward_json_connect_error_records_failure():
 @pytest.mark.asyncio
 async def test_forward_json_timeout_records_failure():
     fwd = _make_forwarder()
-    mock_client = AsyncMock()
-    mock_client.post = AsyncMock(side_effect=httpx.TimeoutException("timeout"))
-    fwd._client = mock_client
+    fwd._client = _FailingClient(httpx.TimeoutException("timeout"))
 
     with (
         patch.object(fwd._circuit_breaker, "check"),
@@ -153,9 +194,7 @@ async def test_forward_json_timeout_records_failure():
 @pytest.mark.asyncio
 async def test_forward_json_5xx_records_failure():
     fwd = _make_forwarder()
-    mock_client = AsyncMock()
-    mock_client.post = AsyncMock(return_value=_make_response(500, b"error"))
-    fwd._client = mock_client
+    fwd._client = _StreamingClient(_make_response(500, b"error"))
 
     with (
         patch.object(fwd._circuit_breaker, "check"),
@@ -173,9 +212,7 @@ async def test_forward_json_5xx_records_failure():
 @pytest.mark.asyncio
 async def test_forward_json_200_records_success():
     fwd = _make_forwarder()
-    mock_client = AsyncMock()
-    mock_client.post = AsyncMock(return_value=_make_response(200, b'{"id":"c"}'))
-    fwd._client = mock_client
+    fwd._client = _StreamingClient(_make_response(200, b'{"id":"c"}'))
 
     with (
         patch.object(fwd._circuit_breaker, "check"),
@@ -192,9 +229,7 @@ async def test_forward_json_200_records_success():
 @pytest.mark.asyncio
 async def test_forward_json_401_logs_error():
     fwd = _make_forwarder()
-    mock_client = AsyncMock()
-    mock_client.post = AsyncMock(return_value=_make_response(401, b"unauthorized"))
-    fwd._client = mock_client
+    fwd._client = _StreamingClient(_make_response(401, b"unauthorized"))
 
     with (
         patch.object(fwd._circuit_breaker, "check"),
@@ -212,9 +247,7 @@ async def test_forward_json_401_logs_error():
 @pytest.mark.asyncio
 async def test_forward_json_403_logs_error():
     fwd = _make_forwarder()
-    mock_client = AsyncMock()
-    mock_client.post = AsyncMock(return_value=_make_response(403, b"forbidden"))
-    fwd._client = mock_client
+    fwd._client = _StreamingClient(_make_response(403, b"forbidden"))
 
     with (
         patch.object(fwd._circuit_breaker, "check"),
@@ -243,11 +276,7 @@ async def test_forward_json_non_openai_translates_response():
     mock_provider.translate_response.return_value = b'{"choices":[{"message":{"content":"hi"}}]}'
 
     fwd = LLMForwarder(settings=settings, provider=mock_provider)
-    mock_client = AsyncMock()
-    mock_client.post = AsyncMock(
-        return_value=httpx.Response(200, content=b'{"content":[{"text":"hi"}]}')
-    )
-    fwd._client = mock_client
+    fwd._client = _StreamingClient(httpx.Response(200, content=b'{"content":[{"text":"hi"}]}'))
 
     with (
         patch.object(fwd._circuit_breaker, "check"),

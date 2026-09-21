@@ -22,7 +22,8 @@ Review references
   altered or deleted after commitment.
 - NIST SP 800-53 AU-9: protection of audit information against unauthorized
   access, modification, and deletion.
-- ISO/IEC 27037 forensic chain-of-custody: immutable evidence segments.
+- ISO/IEC 27037 forensic evidence: write-once segments; no custody record is
+  created or maintained (`UC-024`).
 
 Usage::
 
@@ -542,65 +543,63 @@ class WORMEnforcer:
     # ── Private helpers ───────────────────────────────────────────────────────
 
     @staticmethod
-    def _has_seal_record(path: str) -> bool:
-        """Return True if the last non-empty line of *path* is a worm_seal record."""
+    def _last_non_empty_line(path: str) -> str:
+        """Return the last non-empty line of *path*, streaming it.
+
+        The seal helpers only ever need the final record, but they used to read
+        the whole segment with ``readlines()`` — a peak of one file size per call
+        on a file that grows without bound by design (a 31 MiB segment measured
+        ~42 MiB of peak allocation per helper). Streaming keeps the peak flat.
+        """
         try:
             with open(path) as fh:
-                lines = fh.readlines()
+                last = ""
+                for line in fh:
+                    stripped = line.strip()
+                    if stripped:
+                        last = stripped
         except OSError:
-            return False
+            return ""
+        return last
 
-        for line in reversed(lines):
-            stripped = line.strip()
-            if not stripped:
-                continue
-            try:
-                data = json.loads(stripped)
-                return bool(data.get("record_type") == _WORM_SEAL_RECORD_TYPE)
-            except (json.JSONDecodeError, AttributeError):
-                return False
-        return False
+    @staticmethod
+    def _has_seal_record(path: str) -> bool:
+        """Return True if the last non-empty line of *path* is a worm_seal record."""
+        stripped = WORMEnforcer._last_non_empty_line(path)
+        if not stripped:
+            return False
+        try:
+            data = json.loads(stripped)
+            return bool(data.get("record_type") == _WORM_SEAL_RECORD_TYPE)
+        except (json.JSONDecodeError, AttributeError):
+            return False
 
     @staticmethod
     def _read_seal_line(path: str) -> str:
         """Return the raw seal-sentinel JSON line, or empty string if not found."""
+        stripped = WORMEnforcer._last_non_empty_line(path)
+        if not stripped:
+            return ""
         try:
-            with open(path) as fh:
-                lines = fh.readlines()
-        except OSError:
-            return ""
-        for line in reversed(lines):
-            stripped = line.strip()
-            if not stripped:
-                continue
-            try:
-                data = json.loads(stripped)
-                if data.get("record_type") == _WORM_SEAL_RECORD_TYPE:
-                    return stripped
-            except (json.JSONDecodeError, AttributeError):
-                pass
-            return ""
+            data = json.loads(stripped)
+            if data.get("record_type") == _WORM_SEAL_RECORD_TYPE:
+                return stripped
+        except (json.JSONDecodeError, AttributeError):
+            pass
         return ""
 
     @staticmethod
     def _read_seal_record(path: str) -> WORMSealRecord | None:
         """Parse and return the seal sentinel from *path*, or None if absent."""
+        stripped = WORMEnforcer._last_non_empty_line(path)
+        if not stripped:
+            return None
         try:
-            with open(path) as fh:
-                lines = fh.readlines()
-        except OSError:
-            return None
-        for line in reversed(lines):
-            stripped = line.strip()
-            if not stripped:
-                continue
-            try:
-                data = json.loads(stripped)
-                if data.get("record_type") == _WORM_SEAL_RECORD_TYPE:
-                    return WORMSealRecord.from_dict(data)
-            except (json.JSONDecodeError, AttributeError):
-                pass
-            return None
+            data = json.loads(stripped)
+            if data.get("record_type") == _WORM_SEAL_RECORD_TYPE:
+                return WORMSealRecord.from_dict(data)
+        except (json.JSONDecodeError, AttributeError, KeyError, TypeError):
+            pass
         return None
 
 

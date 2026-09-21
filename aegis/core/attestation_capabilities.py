@@ -264,7 +264,10 @@ def _transparency_log() -> ControlCapability:
         category="assurance-pipeline",
         status="REAL",
         module="aegis.core.transparency_log",
-        detail="append-only JSONL ledger with replay-on-init (stdlib json/io)",
+        detail=(
+            "append-only JSONL ledger with replay-on-init, per-append fsync, and entry-hash "
+            "recomputation on verification (stdlib json/io/os)"
+        ),
     )
 
 

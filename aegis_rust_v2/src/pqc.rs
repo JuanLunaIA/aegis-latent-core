@@ -43,6 +43,19 @@ impl PqcKeypair {
         PyBytes::new(py, &self.private_key)
     }
 
+    /// Sign `data` with this keypair; returns the detached ML-DSA-65 signature.
+    ///
+    /// # The GIL is held for the whole call
+    ///
+    /// Signing is pure CPU inside Rust and this binding does **not** release the
+    /// interpreter the way the forwarder's I/O path does (`py.detach` in
+    /// `forwarder.rs`): a signature costs ~135 µs on this repository's hardware
+    /// (mean, 20,000 hedged samples — `pqc_trait.rs`), so every other Python
+    /// thread waits out that window. On the evidence path that is one such
+    /// window per commit. Stated rather than changed (AUD-24): releasing the GIL
+    /// here is a concurrency change whose effect at this duration is not
+    /// observable by any test this repository can run on its hardware, so
+    /// shipping it would be an unverified claim rather than a verified one.
     fn sign<'py>(&self, py: Python<'py>, data: &[u8]) -> PyResult<Bound<'py, PyBytes>> {
         let signature = ActiveBackend::sign_detached(data, &self.private_key)
             .map_err(|e| value_error(e.to_string()))?;
@@ -70,7 +83,9 @@ impl Drop for PqcKeypair {
 #[pyfunction]
 #[pyo3(signature = ())]
 pub fn generate_pqc_keypair() -> PyResult<PqcKeypair> {
-    let (public_key, private_key) = ActiveBackend::keypair();
+    let (public_key, private_key) = ActiveBackend::keypair().map_err(|e| {
+        pyo3::exceptions::PyRuntimeError::new_err(format!("PQC key generation failed: {}", e.0))
+    })?;
     Ok(PqcKeypair {
         public_key,
         private_key,
@@ -196,6 +211,13 @@ pub fn keypair_from_bytes(public_key: &[u8], private_key: &[u8]) -> PyResult<Pqc
 /// one per request. That is a throughput requirement (it removes ~5.6% of the
 /// call), not a mitigation: it does not narrow the timing difference above, and
 /// it must not be described as one.
+///
+/// ## The GIL is held for the whole call
+///
+/// As with `PqcKeypair.sign`, this function does not release the interpreter:
+/// verification measures ~73 µs per call on this repository's hardware (median,
+/// 800 samples, 2026-09-03), and other Python threads wait out that window.
+/// Stated rather than changed (AUD-24); see `sign` for why.
 #[pyfunction]
 pub fn verify_pqc_signature(data: &[u8], signature: &[u8], public_key: &[u8]) -> PyResult<bool> {
     if signature.len() != SIGNATURE_BYTES {
@@ -214,7 +236,7 @@ mod tests {
 
     #[test]
     fn roundtrip_sign_verify() {
-        let (pk, sk) = ActiveBackend::keypair();
+        let (pk, sk) = ActiveBackend::keypair().unwrap();
         let msg = b"aegis-audit-node";
         let sig = ActiveBackend::sign_detached(msg, &sk).unwrap();
         assert!(ActiveBackend::verify_detached(msg, &sig, &pk).unwrap());
@@ -223,7 +245,7 @@ mod tests {
 
     #[test]
     fn keypair_from_bytes_rejects_wrong_sizes() {
-        let (pk, sk) = ActiveBackend::keypair();
+        let (pk, sk) = ActiveBackend::keypair().unwrap();
         assert!(keypair_from_bytes(&pk[..10], &sk).is_err());
         assert!(keypair_from_bytes(&pk, &sk[..10]).is_err());
         assert!(keypair_from_bytes(&pk, &sk).is_ok());
@@ -234,7 +256,7 @@ mod tests {
         // A persisted-then-reloaded identity must produce signatures that verify
         // under the public key stored beside it, or every node written after a
         // restart is stranded.
-        let (pk, sk) = ActiveBackend::keypair();
+        let (pk, sk) = ActiveBackend::keypair().unwrap();
         let reloaded = keypair_from_bytes(&pk, &sk).unwrap();
         let msg = b"after a restart";
         let sig = ActiveBackend::sign_detached(msg, &reloaded.private_key).unwrap();
@@ -243,7 +265,7 @@ mod tests {
 
     #[test]
     fn a_malformed_signature_length_is_an_error_not_a_false() {
-        let (pk, _sk) = ActiveBackend::keypair();
+        let (pk, _sk) = ActiveBackend::keypair().unwrap();
         assert!(verify_pqc_signature(b"m", &[0u8; 10], &pk).is_err());
     }
 }

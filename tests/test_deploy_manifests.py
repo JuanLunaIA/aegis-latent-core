@@ -151,6 +151,9 @@ def test_operator_install_deployment_is_restricted_and_requires_reviewed_image()
         "source-template-unreleased"
     )
     assert container["image"].startswith("example.invalid/")
+    assert deployment["metadata"]["annotations"]["aegis.io/image-required"] == (
+        "replace-with-reviewed-operator-image"
+    )
     assert pod["securityContext"]["runAsNonRoot"] is True
     assert pod["securityContext"]["seccompProfile"] == {"type": "RuntimeDefault"}
     assert container["securityContext"]["allowPrivilegeEscalation"] is False

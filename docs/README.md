@@ -1,6 +1,6 @@
 # Documentation Index
 
-**Last verified:** 2026-08-27 UTC
+**Last verified:** 2026-09-21 UTC — the 16 targets below were re-checked against the checked-out `5.0.0` tree; the `4.1.2` lines describe the last release on every surface, not the checked-out baseline
 **Release baseline:** checked-out source baseline `v5.0.0` with 14 synchronized anchors, published 2026-09-16 on every surface except PyPI `aegis-latent-core`, plus historical external observations
 **Source baseline:** `5.0.0` with fourteen synchronized anchors; immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
 **External state:** `4.1.2` is published, read back 2026-09-04 — signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway and dashboard images. The previous published release is signed annotated `v4.0.2` at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, whose GitHub Release and GHCR readbacks passed on 2026-08-28 and whose SDK publish jobs were skipped

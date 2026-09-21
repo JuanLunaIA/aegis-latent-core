@@ -1,0 +1,36 @@
+REG-D05 / AUD-01 — FIXED: the evidence endpoint serves the JCS projection
+Recorded 2026-09-21 (UTC) on the working host; commands run from the repository root.
+
+DIFF
+$ git show --stat --oneline 8dae513
+8dae513 registry(REG-D05): FIXED - the evidence endpoint serves the JCS projection
+ aegis/core/forensic_bundle.py            | 26 ++++++++++++
+ aegis/proxy/audit_api.py                 | 21 ++++++++--
+ docs/REGISTRY.md                         |  8 ++--
+ docs/ROADMAP.md                          |  3 +-
+ docs/institutional/UNSUPPORTED_CLAIMS.md |  4 +-
+ tests/test_audit_api_new.py              | 70 ++++++++++++++++++++++++++++++++
+ 6 files changed, 122 insertions(+), 10 deletions(-)
+
+TESTS (executed)
+$ .venv/bin/python -m pytest \
+    tests/test_audit_api_new.py::test_node_evidence_serves_jcs_projection_for_finite_floats \
+    tests/test_audit_api_new.py::test_node_evidence_returns_422_outside_canonical_domain -v
+============================= test session starts ==============================
+platform linux -- Python 3.11.11, pytest-9.1.1, pluggy-1.6.0 -- /home/luna/aegis-latent-core/.venv/bin/python
+cachedir: .pytest_cache
+hypothesis profile 'default'
+rootdir: /home/luna/aegis-latent-core
+configfile: pyproject.toml
+plugins: hypothesis-6.168.0, anyio-4.14.2, asyncio-1.4.0, xdist-3.8.0, cov-7.1.0, pytest_httpserver-1.1.5
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 2 items
+
+tests/test_audit_api_new.py::test_node_evidence_serves_jcs_projection_for_finite_floats PASSED [ 50%]
+tests/test_audit_api_new.py::test_node_evidence_returns_422_outside_canonical_domain PASSED [100%]
+
+============================== 2 passed in 0.91s ===============================
+
+SUITE (executed; seal convention)
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
+6874 passed, 116 skipped in 84.41s

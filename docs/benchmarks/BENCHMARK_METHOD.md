@@ -107,7 +107,7 @@ it measured:
 
 | Run | Workload | p99 commit latency | Raw artifact |
 |---|---|---|---|
-| Retained `v3.1.0` historical | 10,000 offered requests over 32.4 s, 2 ms injected `fsync` | 1,189.89 ms | **Not committed to this tree.** The figure comes from the retained v3.1.0 release evidence |
+| Retracted `v3.1.0` historical | 10,000 offered requests over 32.4 s, 2 ms injected `fsync` (as previously published) | **Not citable — retracted (`UC-018`)** | **No committed artifact produces this run or its p99.** Kept here only to record the retraction; cite the two in-tree rows instead |
 | Pre-group-commit baseline (2026-08-20, `20fa011`) | 2,500 offered requests over 0.25 s at 10k RPS offered, 2 ms injected `fsync` | 836.35 ms | [`evidence/execution_2026-08-20/backpressure_stall_report.json`](../../evidence/execution_2026-08-20/backpressure_stall_report.json) |
 | **Current in-tree baseline (2026-09-16, `88e01f0`)** | Identical parameters | **51.87 ms** (three runs: 52.317 / 51.875 / 47.531 ms) | [`evidence/execution_2026-09-16/`](../../evidence/execution_2026-09-16/), recorded in [`backpressure_group_commit_remeasurement_2026-09-16.md`](../../evidence/backpressure_group_commit_remeasurement_2026-09-16.md) |
 
@@ -171,8 +171,10 @@ python tools/benchmarks/run_backpressure_stall.py
 # WAF corpus
 python tools/security/run_waf_corpus.py
 
-# Rust benchmarks
-cd aegis_rust_v2 && cargo bench
+# Rust-side cost measurement. There is no Criterion bench target in the crate:
+# `cargo bench` compiles nothing to run (AUD-24). This harness prints numbers
+# that are attributable to the host that printed them and to nothing else.
+cd aegis_rust_v2 && cargo test --release --features zk-spartan --test zk_mmr_cost -- --ignored --nocapture
 
 # Commit-cost scaling
 python -m benchmarks.bench_commit_scaling --json

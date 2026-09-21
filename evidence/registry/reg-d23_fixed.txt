@@ -1,0 +1,264 @@
+REG-D23 / AUD-19 — FIXED (2026-09-21)
+Stale baselines and counts across navigation and seal artifacts
+Audit findings AF-022, AF-026, AF-030, AF-031 (and the corpus-wide instances the
+first sweep did not name). Branch registry-closure-2026-09-21, HEAD before this
+row: 09d594a.
+
+WHY THESE ARE DEFECTS AND NOT COSMETICS
+  A navigation artifact answers "which baseline is checked out?" and "what did
+  the battery run produce?". Two artifacts answered with numbers that were true
+  on an earlier date and false here; a third answered with a commit that is not
+  in this repository at all. A reader cannot tell a stale answer from a current
+  one, because nothing in the sentence is dated. AF-030/AF-031 are the sharper
+  case: a *seal* was being read as current state.
+
+1. THE SITES, BEFORE -> AFTER (each measured with the command shown)
+
+  1.1 llms.txt (AF-026) — two independent stalenesses
+      BEFORE  "- Checked-out source baseline/release target: 4.1.2; all fourteen
+               source anchors are synchronized."
+              "...The most recent published release is signed annotated tag
+               v4.0.2 at a6eb58dc..."
+      AFTER   baseline/release target **5.0.0** with the 2026-09-16 readback
+              objects named (tag c34d4128..., commit b2e43354..., 31 assets,
+              PyPI/ npm aegis-latent-sdk 5.0.0, GHCR digests), the unrun
+              verifications stated (cosign verify, gh attestation verify,
+              SHA256SUMS sweep), and the case a reader will hit: **the gateway
+              distribution aegis-latent-core is NOT on PyPI at 5.0.0** (latest
+              there 4.1.2).
+              "Most recent published release on every surface" corrected to
+              **v4.1.2** per AGENTS.md's 2026-09-04 readback, with the v4.0.2 and
+              v4.0.1 facts kept as history.
+      Check   grep -n "source baseline/release target" llms.txt
+
+  1.2 .aegis_ai_context/ corpus — 12 files, wider than the ticket named
+      The ticket named 01_CANONICAL_SYMBOL_AND_TYPE_INDEX.tsv:5. The same stale
+      target ran through the whole corpus, and through the *generator constants*
+      that produce the generated manifest:
+        scripts/generate_ai_context_manifest.py  SOURCE_RELEASE_TARGET_VERSION
+                                                 4.1.2 -> 5.0.0
+                                                 PUBLISHED_GITHUB_RELEASE
+                                                 v4.0.1 -> v4.1.2
+                                                 PUBLISHED_GITHUB_RELEASE_TARGET
+                                                 64699043... -> 860f1417...
+                                                 NEW: PUBLISHED_GITHUB_RELEASE_TAG_KIND
+                                                 = "annotated_signed" (the block
+                                                 said "lightweight", which was true
+                                                 of v4.0.1 and false of v4.1.2)
+        01_CANONICAL_SYMBOL_AND_TYPE_INDEX.tsv  SourceReleaseTarget,
+          SynchronizedVersionAnchors, CorePythonDistribution,
+          PythonSDKDistribution, TypeScriptSDKPackage refreshed to 5.0.0 with the
+          registry facts; PublishedGitHubRelease v4.0.1 replaced by
+          LatestPublishedGitHubRelease v4.1.2, and the historical lightweight tag
+          retained as a new HistoricalLightweightTag row (append-only: the v4.0.1
+          fact is kept, not deleted).
+        00_CORE_ONTOLOGY_AND_BOUNDARIES.xml:23   version="v4.1.2" -> "v5.0.0",
+          text 4.1.2 -> 5.0.0 with the 2026-09-16 readback and the PyPI-core
+          exception.
+        06_SECURITY_AND_SUPPLY_CHAIN_MANIFEST.xml:7 and :51   same target swap
+          (the sentence at :51 keeps "historical v4.0.1 ... prior observed 4.0.0"
+          as history).
+        07_SYSTEM_COMPACT_KERNEL.xml:14   same rewrite as 00_.
+        03_STATE_MACHINES_AND_DAGS.mermaid:39   TARGET node: "checked-out source
+          release target v4.1.2 / 14 synchronized anchors at 4.1.2" -> v5.0.0.
+        05_DETERMINISTIC_RECIPES_PLAYBOOK.md:11   already said 5.0.0 (verified,
+          unchanged); its v4.1.2 mention is the dated 2026-09-04 readback and
+          stays.
+        08_COMPONENT_PACKAGE_WORKFLOW_MATRIX.md:13,:15   source-target 4.1.2 ->
+          5.0.0; npm row: "carries 4.1.2 as of the 2026-09-04 readback" ->
+          "carries 5.0.0 as of the 2026-09-16 readback", version list
+          {4.0.0, 4.1.2} -> {4.0.0, 4.1.2, 5.0.0}.
+        02_, 04_, 09_, README.md, 10_   audited; no stale current-target claim
+          (10_TOOL_ADAPTER_COMPATIBILITY.md names no version).
+      Check   python .venv/bin/python -c "<load generator>" ; grep -rn 4.1.2 .aegis_ai_context/
+
+  1.3 docs/REPOSITORY_MAP.md:3 (AF-022 class)
+      "Last verified: 2026-08-27 UTC" -> 2026-09-21, AND the verification stated:
+      its 22 cited source paths were re-checked against the checked-out tree
+      (0 missing). The document itself already said v5.0.0; only the date was
+      stale, which is exactly the failure mode the date is there to prevent.
+      Check   python - <<'PY' (extract backticked paths, assert each exists) -> 0 missing
+
+  1.4 docs/README.md:3
+      Same stale date 2026-08-27 -> 2026-09-21 with the 16 link targets
+      re-checked (0 broken).
+
+  1.5 docs/INDEX.md (AF-022)
+      Declared "Scope: every maintained document" and linked 74 of 109 tracked
+      docs/**/*.md. The unlinked 35 included docs/REGISTRY.md (this register),
+      REGISTRY_HUMAN_PACK.md, ROADMAP.md, PROVE_IT.md, SECURITY_ASSURANCE_ROADMAP.md,
+      PLATFORM_OPERATOR_GUIDE.md, PLATFORM_COMPATIBILITY.md, UPGRADING.md,
+      PROSPECTUS(.md/_ES), PRODUCT_BRIEF_US.md, the whole commercial/ tree (13),
+      four security/ documents, compliance/LICENSE_AUDIT.md, institutional/DOC-08,
+      and the three section READMEs.
+      AFTER   33 rows added to the existing sections (Purpose column written from
+              each document's own scope), plus a "Section indexes" line in Start
+              here; coverage is now **108 of 109**, the one unlinked file being
+              docs/INDEX.md itself (an index cannot usefully link itself).
+      Check   python - <<'PY' (parse INDEX.md link targets; compare to
+              git ls-files docs/) -> unlinked: ['docs/INDEX.md']
+
+  1.6 INTEGRITY_SEAL.md (AF-030, AF-031)
+      This file is a dated record of one battery: 2026-09-16, base commit
+      d1b229c..., with its own environment block. It was being read as current
+      state, and the audit's re-run of its recorded commands produced different
+      numbers (806 files / 11 to reformat vs the seal's 550).
+      Two facts, both measured here:
+        a) the base commit is NOT in this repository's history:
+             $ git cat-file -t d1b229c31df34ca3a77ac0582cd6b1b72a94ae24
+             fatal: git cat-file: could not get object info
+             (exit 128)
+           so the run cannot be replayed from this checkout and its PASS lines
+           cannot be re-derived here;
+        b) the 550-vs-806 difference is a tool-version difference: the seal's
+           ruff (0.15.8) did not format Python fences inside Markdown. That is now
+           moot because `[tool.ruff.format] exclude = ["*.md"]` makes the two
+           invocations agree (AUD-18 / REG-D22).
+      FIX     the seal's numbers are NOT rewritten (they are the record of a real
+              run); a "Currency note (2026-09-21)" is inserted above the
+              certification-boundary line stating (a) and (b) and listing the
+              date-current values, with the command that produces each:
+                pytest -n auto -q                              6,948 passed / 119 skipped / 0 failed
+                scripts/verify_claims.py --root .              102 claims, 0 findings
+                mypy --strict aegis                            207 source files, no issues
+                ruff format --check .                          578 already formatted, 0 to reformat
+                bandit -r aegis/ aegis_server/ -c pyproject.toml -lll   0 issues
+      Check   sed -n '1,40p' INTEGRITY_SEAL.md ; git cat-file -t d1b229c...
+
+  1.7 README.md:327,:329
+      The measurement table's newest row is baseline-scoped, so the newest 5.0.0
+      row is the current claim. Added (not replaced — the table is dated history):
+        | Python suite | 6,948 passed, 119 skipped, 0 failed | 5.0.0 source
+          baseline (registry-closure branch) | 2026-09-21 |
+      and the per-run static-analysis row's file count corrected 206 -> 207 for
+      the command CI actually runs (`mypy --strict aegis`).
+      Check   .venv/bin/python -m pytest tests/ -n auto -q (seal convention);
+              mypy --strict aegis
+
+2. THE GATE (the ticket's "force multiplier") — tests/test_documentation_currency.py
+   15 tests, three classes:
+   a) baseline agreement — the version is read from pyproject.toml (the core of
+      the fourteen anchors the release contract checks) and required in AGENTS.md,
+      llms.txt, the tsv, docs/REPOSITORY_MAP.md and the generator constant; a
+      stale artifact can no longer pass by agreeing with another stale artifact.
+   b) framing — 12 parametrised checks that `4.1.2` appears only in sentences that
+      frame it as published/historical/read-back, never as the checked-out
+      baseline. .aegis_ai_context/MANIFEST.json is exempt *by name* and the reason
+      is in the file: it is generated from the constants class (a) already pins.
+   c) coverage — every tracked docs/**/*.md must be reachable from docs/INDEX.md
+      except docs/INDEX.md itself.
+   Non-vacuity guard included (the anchor must parse and five artifacts must be
+   readable), so a rewording that breaks a pattern fails loudly instead of
+   silently disabling the check.
+
+   NEGATIVE CONTROLS (executed, then restored)
+     NC1  llms.txt baseline -> 4.1.2                 -> 1 failed, 7 passed
+     NC2  INDEX.md drops the REGISTRY.md link        -> 1 failed, 7 passed
+     NC3  REPOSITORY_MAP baseline -> v4.1.2          -> 1 failed, 7 passed
+     restored                                        -> 8 passed (later 15 with
+                                                        the corpus parameters)
+
+3. FIXTURES CORRECTED TO MATCH THE NEW REALITY (not production code relaxed)
+   a) tests/test_ai_context.py:265 hard-coded the published-release block as
+      {v4.0.1, lightweight, 64699043...}. It now derives every field from the
+      generator's constants and asserts the shape (tag matches v\d+\.\d+\.\d+,
+      target is 40 hex, kind is one of the two). Reason: the block is *generated*
+      from those constants; a second hard-coded copy is what let the generator
+      drift from its own test.
+   b) tests/test_ai_context.py's dimension test used a module constant that was
+      the historical v4.0.1 pair. Renamed HISTORICAL_PUBLISHED_RELEASE /
+      _TARGET with a comment saying so, and the *current* published release is
+      asserted from the generator. The test's intent (every context file separates
+      the immutable baseline / published release / registry observation / target
+      dimensions) is unchanged.
+   c) scripts/generate_ai_context_manifest.py emitted "tag_kind": "lightweight"
+      for whatever release PUBLISHED_GITHUB_RELEASE named — true for v4.0.1, false
+      for v4.1.2 (signed annotated). Now a named constant.
+
+4. WHAT THIS ROW DOES NOT DO (boundaries, so the row is not over-read)
+   - It pins *agreement on the baseline* and *index coverage*, not the truth of
+     any individual sentence. A document can still be wrong while all twelve
+     agree.
+   - "Most recent published release" remains v4.1.2. 5.0.0 is the checked-out
+     source baseline and release *target*; the gateway distribution is still
+     absent from PyPI (aegis-latent-core's latest there is 4.1.2) and no workflow
+     publishes it, so `pip install aegis-latent-core` still gets 4.1.2. Nothing in
+     this row changes external lifecycle state.
+   - The seal's historical numbers stay historical. Its base commit remains
+     absent from this repository, so the 2026-09-16 battery cannot be replayed
+     here; REG-D23 does not claim it was.
+   - scripts/*.py are inside the ruff lint+format gates after REG-D22 but remain
+     outside every *type-check* scope (REG-D33 / AUD-29) — a different gate class,
+     not closed here.
+
+COMMANDS RUN FOR THIS ROW (all on this host, seal convention where applicable)
+  AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
+  .venv/bin/python -m pytest -q -p no:randomly tests/test_documentation_currency.py tests/test_ai_context.py
+  .venv/bin/python scripts/verify_docs.py --root .
+  .venv/bin/python scripts/verify_claims.py --root .
+  .venv/bin/python tools/docs/verify_documentation.py --root . --strict
+  .venv/bin/python scripts/verify_ai_context_manifest.py --root .
+  git cat-file -t d1b229c31df34ca3a77ac0582cd6b1b72a94ae24
+
+
+================================================================================
+FOLLOW-UP, same day — the row was RE-OPENED and re-closed (second pass)
+
+WHY IT WAS RE-OPENED
+  A survey of every tracked document had been delegated before the first pass was
+  closed. Its report (1 subagent, 41 tool calls, 7m21s, delivered after the
+  closing commit) listed 58 hits. The first pass had fixed the sites the ticket
+  named; it had NOT fixed the class.
+
+THE FOUR SITES THAT WERE FALSE RATHER THAN MERELY OLD
+  DEPLOYMENT_GUIDE.md:3        "the current `4.1.2` source and published release"
+  docs/FAQ_SECURITY.md:1       "# Security FAQ — Aegis Latent Core v4.1.2 source"
+  docs/DEVELOPER_SDK_GUIDE.md:5 "no `5.0.0` artifact is published anywhere"
+  docs/RELEASE_STATUS.md:159   "nothing is published for the `5.0.0` source baseline"
+  Each contradicted AGENTS.md's readback record and the files' own neighbouring
+  lines. Corrected with the 2026-09-16 readback facts, keeping the true half each
+  time: `aegis-latent-core` is still `4.1.2` on PyPI, and that is now stated
+  wherever a reader would otherwise be misled (SDK READMEs, SDK guide, executive
+  summary, usage examples).
+
+THE OTHER THIRTEEN EDITS
+  docs/FAQ_SECURITY.md:16, docs/FAQ_TECHNICAL.md:13,
+  docs/DEVELOPER_INTEGRATIONS_GUIDE.md:22,:65, docs/DEVELOPER_SDK_GUIDE.md:36,
+  docs/USAGE_EXAMPLES.md:4,:114, docs/architecture/ARCHITECTURE.md:2,:9,
+  docs/corporate/EXECUTIVE_SUMMARY.md:77, sdk/python/README.md:17,
+  sdk/typescript/README.md:21, README.md:13, docs/commercial/COMMERCIAL_READINESS.md:34,
+  .claude/agents/codeql-finding-resolver.md:30.
+  Counts used, each measured on this host at this commit: 6,971 passed / 118
+  skipped; 104 claims / 0 findings; 207 mypy source files; UC rows UC-001…UC-067.
+
+THE GATE WAS GENERALISED — AND ITS FIRST VERSION WAS VACUOUS
+  The whole-corpus framing scan was first written per line. Its negative control
+  (reintroducing "refer to the `v4.1.2` source" in docs/FAQ_TECHNICAL.md) PASSED,
+  because that line's paragraph mentions "registry" sixty characters later, which
+  satisfied the framing test. That is the same defect class the row is about, one
+  level up: a check that reports green on what it exists to catch.
+  Fixed by judging per sentence, not per paragraph or line. Re-run: the same
+  negative control fails 1 test; restored, 17 pass. The sentence granularity then
+  found two sites the line-granular version had let through
+  (docs/architecture/ARCHITECTURE.md:9 and a belt-and-braces look at the correction
+  ledger), and the ledger is now exempt *by name with its reason in the file*.
+
+WHAT IS STILL OPEN, AND WHY IT IS TICKETED RATHER THAN DONE HERE
+  33 documents carry a `Last verified`/`Last reviewed` date between 2026-08-22 and
+  2026-09-08, i.e. before the 5.0.0 baseline existed. A stale date is not a false
+  statement the way a stale baseline is — it truthfully says when the review ran.
+  Rewriting 33 date lines to 2026-09-21 without reviewing 33 documents would
+  manufacture exactly the kind of claim this register exists to prevent, so the
+  work is AUD-37 and its instruction is explicit: content review, not date bump.
+  Inventory (25 at 2026-08-27, 3 at 2026-08-22, 1 each at 2026-09-01, 2026-09-02,
+  2026-09-04, 2026-09-08) is in the ticket, measured by a script over
+  `git ls-files '*.md'` on this host.
+
+SURVEY CROSS-CHECK
+  The delegated survey's 58 hits and this host's own sweep agree on every site
+  that was fixed. Two of its rows were judged false positives and left alone with
+  the reasoning recorded: docs/UPGRADING.md:3 ("anyone running `4.1.2` — the most
+  recent release on PyPI, npm and GHCR" — true), and README.md:327 (a dated
+  measurement row whose date column frames it). One of its rows was already fixed
+  before it ran: .aegis_ai_context/MANIFEST.json's `tag_kind` (the survey read the
+  pre-fix manifest).

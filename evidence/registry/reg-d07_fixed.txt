@@ -1,0 +1,112 @@
+REG-D07 / AUD-03 — FIXED: terminal evidence lands on every teardown style the ASGI stack delivers
+Recorded 2026-09-21 (UTC) on the working host; commands run from the repository root.
+
+Root cause (reproduced first-hand by the audit, re-reproduced here before fixing):
+Starlette cancels the response's collapsing anyio task group BEFORE the generator
+observes the disconnect, so the first await inside the CancelledError handler
+re-raises; the shielded _finalize never ran and no terminal node was written,
+while the response advertised X-Aegis-Evidence-Status: pending-terminal.  The
+aclose()/GeneratorExit path cannot await at all and wrote nothing either.
+
+BEFORE (pre-fix tree at 2f216a1, same probes, same host)
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development .venv/bin/python probe_aclose_evidence.py
+T1_aclose: chunks_received=2 terminal_commits=0 outcomes=[]
+T2_cancel: chunks_received=10 terminal_commits=1 outcomes=['client_disconnected']
+T3_complete: chunks_received=1001 terminal_commits=1 outcomes=['complete']
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development .venv/bin/python probe_v4.py
+v4_send_fails_after_2: outcome=raised ClientGone sends=2 wal_terminal_nodes=0
+   teardown_events=['cancel_producer:enter', 'cancel_producer:raised:CancelledError', 'aclose:enter', 'cancel_producer:enter', 'cancel_producer:returned', 'aclose:returned']
+
+Fix:
+  1. BoundedStreamProxy._freeze_summary() — the once-only summary guard is now
+     synchronous (check-and-set with no await between), so it survives a
+     cancelled scope and a GeneratorExit path;
+  2. teardown (CancelledError handler and aclose) freezes and hands the commit
+     off SYNCHRONOUSLY (TerminalCommitHandoff.submit / put_nowait) before any
+     further await — nothing the cancellation can reach;
+  3. the app owns a TerminalCommitHandoff, started in its lifespan (a context
+     no request scope reaches) and drained at shutdown before the ledger
+     closes; both streaming endpoints submit to it;
+  4. an inline commit a teardown interrupts is re-dispatched from the frozen
+     summary instead of being dropped (at-least-once on teardown — the
+     deliberate trade against silently unrecorded disconnects);
+  5. the queue is bounded (64); a full queue drops, counts
+     (aegis_audit_handoff_dropped_total) and logs at error level rather than
+     blocking teardown; completed handoffs bump
+     aegis_audit_handoff_committed_total.
+
+AFTER (this tree)
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development .venv/bin/python probe_aclose_evidence.py
+T1_aclose: chunks_received=2 terminal_commits=1 outcomes=['client_disconnected']
+T2_cancel: chunks_received=10 terminal_commits=1 outcomes=['client_disconnected']
+T3_complete: chunks_received=1001 terminal_commits=1 outcomes=['complete']
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development .venv/bin/python probe_v4.py
+v4_send_fails_after_2: outcome=raised ClientGone sends=2 wal_terminal_nodes=1
+   teardown_events=['cancel_producer:enter', 'cancel_producer:raised:CancelledError', 'aclose:enter', 'cancel_producer:enter', 'cancel_producer:returned', 'aclose:returned']
+
+DIFF (working tree at record time)
+$ git add -N tests/test_streaming_teardown.py && git diff --stat HEAD
+aegis/core/observability.py      |  10 ++
+ aegis/proxy/app.py               |  17 +++
+ aegis/proxy/streaming.py         | 265 +++++++++++++++++++++++++++++++---
+ tests/test_streaming_teardown.py | 303 +++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 574 insertions(+), 21 deletions(-)
+
+TESTS (executed)
+$ .venv/bin/python -m pytest tests/test_streaming_teardown.py -v
+============================= test session starts ==============================
+platform linux -- Python 3.11.11, pytest-9.1.1, pluggy-1.6.0 -- /home/luna/aegis-latent-core/.venv/bin/python
+cachedir: .pytest_cache
+hypothesis profile 'default'
+rootdir: /home/luna/aegis-latent-core
+configfile: pyproject.toml
+plugins: hypothesis-6.168.0, anyio-4.14.2, asyncio-1.4.0, xdist-3.8.0, cov-7.1.0, pytest_httpserver-1.1.5
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 8 items
+
+tests/test_streaming_teardown.py::test_aclose_teardown_hands_off_terminal_evidence PASSED [ 12%]
+tests/test_streaming_teardown.py::test_asyncio_cancel_teardown_hands_off_terminal_evidence PASSED [ 25%]
+tests/test_streaming_teardown.py::test_complete_stream_commits_inline_without_handoff PASSED [ 37%]
+tests/test_streaming_teardown.py::test_anyio_cancelled_scope_lands_evidence_through_the_handoff PASSED [ 50%]
+tests/test_streaming_teardown.py::test_handoff_queue_is_bounded_and_counts_drops PASSED [ 62%]
+tests/test_streaming_teardown.py::test_handoff_stop_drains_pending_then_stops_the_worker PASSED [ 75%]
+tests/test_streaming_teardown.py::test_detached_commit_runs_without_a_handoff PASSED [ 87%]
+tests/test_streaming_teardown.py::test_interrupted_inline_commit_is_dispatched_by_teardown PASSED [100%]
+
+============================== 8 passed in 0.50s ===============================
+
+GATES (executed)
+$ ruff check + ruff format --check (changed files) -> All checks passed!
+$ mypy --strict aegis/proxy/streaming.py aegis/proxy/app.py aegis/core/observability.py
+Success: no issues found in 3 source files
+}
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1355 relative links and anchors resolved)
+verify_docs: PASS (0 findings)
+
+BOUNDARY / RESIDUALS (published as UC-052, tracked as AUD-28 / REG-D32)
+  - the handoff is in-process: a crash or SIGKILL between teardown and the
+    drained commit still loses the terminal node (a durable outbox is AUD-28);
+  - a full queue drops with a counted metric rather than blocking teardown;
+  - at-least-once on teardown: an inline commit that partially succeeded and
+    then was interrupted can be re-dispatched, so a duplicate terminal node is
+    possible where previously evidence could be dropped instead.
+
+BATTERY AT THE COMMIT (executed at HEAD c19e3ab)
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
+6889 passed, 116 skipped in 83.38s
+$ .venv/bin/bandit -r aegis/ aegis_server/ -c pyproject.toml -lll
+Low: 0
+Medium: 0
+High: 0
+Low: 0
+Medium: 0
+High: 0
+$ .venv/bin/python scripts/verify_import_reachability.py
+verify_import_reachability: PASS — no undeclared orphans, no stale roadmap entries
+$ .venv/bin/python scripts/verify_release_contract.py --root .
+release source contract: READY (14 synchronized anchors at 5.0.0)
+$ .venv/bin/python tools/docs/verify_documentation.py --root . --strict   -> "warnings": 0
+$ .venv/bin/python scripts/verify_claims.py --root .                      -> PASS (102 claims, 0 findings)
+$ bash scripts/verify_links.sh --root .                                   -> PASS (1355 links resolved)
+$ .venv/bin/python scripts/verify_docs.py --root .                        -> PASS (0 findings)

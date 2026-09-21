@@ -12,6 +12,14 @@
 //! (O(n) scan, amortised O(1) under steady state).
 
 use dashmap::DashMap;
+
+/// Hard ceiling for a caller-supplied session count.
+///
+/// The default is 4 096; the value arrives from Python and used to size a
+/// `DashMap` without a bound, so an out-of-range value was an allocation the
+/// process could not survive under `panic = "abort"` (AUD-05). 256 × the
+/// default: far above any deployment that legitimately sizes this.
+const MAX_SESSIONS: usize = 1 << 20;
 use pyo3::prelude::*;
 use std::{
     sync::{
@@ -47,13 +55,24 @@ pub struct RustSessionStore {
 impl RustSessionStore {
     #[new]
     #[pyo3(signature = (max_sessions = 4096, evict_after_secs = 3600))]
-    pub fn new(max_sessions: usize, evict_after_secs: u64) -> Self {
-        RustSessionStore {
+    pub fn new(max_sessions: usize, evict_after_secs: u64) -> PyResult<Self> {
+        if max_sessions == 0 {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "RustSessionStore max_sessions must be at least 1",
+            ));
+        }
+        if max_sessions > MAX_SESSIONS {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "RustSessionStore max_sessions {max_sessions} exceeds the supported ceiling \
+                 {MAX_SESSIONS}"
+            )));
+        }
+        Ok(RustSessionStore {
             sessions: Arc::new(DashMap::with_capacity_and_shard_amount(max_sessions, 64)),
             max_sessions,
             evict_after_secs,
             total_evictions: Arc::new(AtomicU64::new(0)),
-        }
+        })
     }
 
     /// Record a request for `session_id`. Returns `true` if this is a new session.
@@ -142,16 +161,39 @@ impl RustSessionStore {
 mod tests {
     use super::*;
 
+    // AUD-05: `max_sessions` arrives from Python and used to size a DashMap
+    // wholesale; an out-of-range value was an allocation the process did not
+    // survive under `panic = "abort"`.
+    #[test]
+    fn zero_max_sessions_is_rejected() {
+        pyo3::Python::initialize();
+        let err = match RustSessionStore::new(0, 3600) {
+            Ok(_) => panic!("zero max_sessions was accepted"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("at least 1"), "{err}");
+    }
+
+    #[test]
+    fn max_sessions_above_the_ceiling_is_rejected() {
+        pyo3::Python::initialize();
+        let err = match RustSessionStore::new(MAX_SESSIONS + 1, 3600) {
+            Ok(_) => panic!("max_sessions above the ceiling was accepted"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("ceiling"), "{err}");
+    }
+
     #[test]
     fn new_session_detected() {
-        let store = RustSessionStore::new(100, 3600);
+        let store = RustSessionStore::new(100, 3600).unwrap();
         assert!(store.touch("s1"));
         assert!(!store.touch("s1")); // second call: not new
     }
 
     #[test]
     fn request_count_increments() {
-        let store = RustSessionStore::new(100, 3600);
+        let store = RustSessionStore::new(100, 3600).unwrap();
         store.touch("s1");
         store.touch("s1");
         store.touch("s1");
@@ -160,7 +202,7 @@ mod tests {
 
     #[test]
     fn evict_on_capacity() {
-        let store = RustSessionStore::new(2, 3600);
+        let store = RustSessionStore::new(2, 3600).unwrap();
         store.touch("a");
         store.touch("b");
         store.touch("c"); // triggers eviction of oldest

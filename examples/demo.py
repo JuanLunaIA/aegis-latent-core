@@ -7,7 +7,8 @@ examples/demo.py — Aegis end-to-end reproducible demo.
 Boots Aegis in-process (no real LLM provider: uses an in-process
 OpenAI-compatible mock upstream), sends requests through the proxy, shows the
 audit chain growing node by node, verifies cryptographic integrity, demonstrates
-tamper-detection, and exports a sealed SOC2/HIPAA compliance bundle.
+tamper-detection, and exports a sealed evidence bundle for a SOC 2 / HIPAA
+programme (technical inputs an assessor may evaluate, not a certification).
 
 Everything runs in a single process, with no external network and no real
 credentials, so an evaluator can run it and see the value in under one minute:
@@ -375,7 +376,7 @@ def main() -> int:
         results.append(_demo_tamper_evidence())
 
         # ── STEP 5: export compliance bundle ──────────────────────────────
-        _step(5, "Export a sealed SOC2/HIPAA compliance bundle")
+        _step(5, "Export a sealed evidence bundle (SOC 2 / HIPAA assessor inputs)")
         results.append(asyncio.run(_export_compliance(chain)))
 
     finally:

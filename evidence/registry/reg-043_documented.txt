@@ -1,0 +1,64 @@
+REG-043 — after (zk_proof stub surface boundary published in the register)
+===========================================================================
+
+Row: REG-043 [CLM-019][TRACK-B5] ARCH P1 'zk_proof public surface' — SEED -> DOCUMENTED
+
+Why the row was open: the boundary was true and disclosed elsewhere, but absent here.
+  $ grep -in "stub" docs/institutional/UNSUPPORTED_CLAIMS.md     # before the edit
+    (no output — zero hits, case-insensitive)
+  $ grep -in "zk" docs/BOUNDARIES.md
+    (one hit, real-circuit row only: the unconfigurable max_forensic_bytes / CLM-089)
+
+The stub, verified against source this session:
+  $ sed -n '35p;115,118p;174,178p;217,220p;249,256p' aegis/core/zk_proof.py
+    HAS_ZK_NATIVE: bool = False  # True when bellman/halo2 Rust extension loaded
+    def _derive_proof_bytes(
+        audit_node_hash: str,
+        chain_root: str,
+        proof_system: ProofSystem,
+        def __init__(self, *, require_real: bool = False) -> None:
+            if require_real and not HAS_ZK_NATIVE:
+                raise ZKProofUnavailableError(
+                    "real ZK backend (bellman/halo2/winterfell) is not integrated; "
+                    "refusing to operate with require_real=True (stub proofs are not sound)"
+        @property
+        def is_stub(self) -> bool:
+            """Always True until real ZK library is integrated."""
+            return True
+            expected = _derive_proof_bytes(audit_node_hash, chain_root, result.proof_system)
+            if result.proof_bytes == expected:
+                return ZKVerificationResult(
+                    valid=True,
+                    proof_system=result.proof_system,
+                    verified_at=now,
+                    reason="stub verification passed",
+                )
+
+  $ sed -n '53,61p' aegis/crypto/__init__.py      # public re-export
+    from aegis.core.zk_proof import (
+        ProofSystem,
+        ZKProofRequest,
+        ZKProofResult,
+        ZKProofUnavailableError,
+        ZKProver,
+        ZKVerificationResult,
+        ZKVerifier,
+    )
+
+Fix: UC-043 added (doc-only edit).
+  docs/institutional/UNSUPPORTED_CLAIMS.md — new UC-043 row after UC-042 + an
+  'Amended:' line dated 2026-09-21. The row states the digest construction, that
+  valid=True carries no soundness, that fail-closed needs require_real=True, the
+  seven exported symbols, and the separation from UC-039/CLM-089/DOC-08.
+
+  $ grep -in "stub" docs/institutional/UNSUPPORTED_CLAIMS.md     # after the edit
+    5:**Amended:** 2026-09-21 UTC — `UC-043` added for the exported `zk_proof` stub surface, whose boundary lived only in 
+    63:| `UC-043` | Aegis provides zero-knowledge audit proofs through its public API, or a `ZKVerificationResult(valid=True
+
+No code change. Nothing retracted: CLM-019, DOC-08 §5/§6.6 and ROADMAP.md:110 all stand.
+
+Gates re-run after the edit:
+verify_docs: verify_docs: PASS (0 findings)
+verify_claims: verify_claims: PASS (102 claims, 0 findings)
+verify_links: verify_links: PASS (1285 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0 required_files=27

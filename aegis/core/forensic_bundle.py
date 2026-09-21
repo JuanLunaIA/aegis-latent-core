@@ -128,6 +128,32 @@ def _dag_cbor_cid(payload: bytes) -> str:
     return "b" + base64.b32encode(cid_bytes).decode("ascii").lower().rstrip("=")
 
 
+def project_jcs_evidence(value: Any) -> Any:
+    """Project an evidence record into the bundle's restricted JCS domain.
+
+    The canonical domain intentionally excludes floats (there is no
+    ECMAScript float formatter here), while evidence records carry finite
+    floats such as ``timestamp``, ``entropy`` and ``sampling_params``
+    values. This projection maps each finite float to its shortest
+    round-trip decimal string — the exact token the WAL persists — so the
+    projected record is canonicalized byte-for-byte under RFC 8785 for this
+    domain. Non-finite floats and negative zero are rejected, mirroring the
+    DAG-CBOR policy, so both projections share one domain rule.
+    """
+
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ForensicBundleError("evidence projection does not accept non-finite floats")
+        if value == 0.0 and math.copysign(1.0, value) < 0:
+            raise ForensicBundleError("evidence projection does not accept negative zero")
+        return repr(value)
+    if isinstance(value, Mapping):
+        return {key: project_jcs_evidence(child) for key, child in value.items()}
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [project_jcs_evidence(child) for child in value]
+    return value
+
+
 def canonical_jcs_bytes(value: Mapping[str, Any]) -> bytes:
     """Return RFC 8785 bytes for the bundle's restricted canonical domain."""
     return _jcs_bytes(value)

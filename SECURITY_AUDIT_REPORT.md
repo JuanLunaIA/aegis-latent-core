@@ -11,7 +11,7 @@ Summary (automated findings)
 -----------------------------
 
 - Repository scanned for common sensitive patterns (API keys, secrets): none found.
-- Many `FIXME` and `TODO` markers present across the codebase — technical debt hotspots.
+- **No `FIXME`, `TODO` or `HACK` marker remains in shipped code.** Measured 2026-09-21 across `aegis/`, `aegis_server/`, `aegis_rust_v2/src/`, `sdk/`, `dashboard/`, `config/` and `deploy/`: every occurrence of those words in the tree is a detector pattern, a comment about the detector rule, or a test fixture. `tests/test_no_defect_markers_in_shipped_code.py` keeps it that way.
 - Dangerous patterns found in multiple files: `exec(`, `eval(`, `pickle.load` — these require manual review when handling untrusted inputs.
 - Rust extension build failed in CI environment: linker errors referencing Python C API symbols (PyObject_Str, _Py_IncRef, PyErr_Print, etc.). Likely root causes:
   - Missing libpython development headers / shared library (install `libpythonX.Y-dev` / `pythonX.Y-dev`), or
@@ -69,7 +69,7 @@ Notes for sensitive audiences
 -----------------------------
 
 - For governments / military / medical deployments, consider an HSM or KMS for `AEGIS_SIGNING_KEY` and strictly controlled key rotation and auditing.
-- For forensic and legal admissibility, record full chain of custody (timestamps, hashes, signer identity) and store signed SBOMs with release artifacts.
+- For forensic use and any later admissibility question — a judicial determination, not a property of this software — record full chain of custody (timestamps, hashes, signer identity) and store signed SBOMs with release artifacts.
 
 Actions taken in this run
 -------------------------
@@ -82,6 +82,6 @@ Actions taken in this run
 
 Recommended immediate next steps:
 - Run the CI workflow (.github/workflows/forensic.yml) on GitHub to collect full build artifacts and address any remaining Rust linking errors.
-- Create targeted PRs for critical TODO/FIXME markers (security, chain-of-custody blockers) listed in TODO_ISSUES.md.
+- Marker-based remediation is retired: there are no `TODO`/`FIXME` markers left in shipped code to target, and `TODO_ISSUES.md` is not in this tree. Pending security and chain-of-custody work is tracked as rows in `docs/ROADMAP.md` (`AUD-*`) and `docs/REGISTRY.md` (`REG-*`), each carrying its own evidence and terminal state.
 - Consider pinning or upgrading PyO3 only after CI confirms the target Python matrix and toolchain availability.
 

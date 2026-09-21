@@ -1,0 +1,30 @@
+REG-035 — blocked (no reference environment from this host)
+=============================================================
+
+Row:        REG-035  [TRACK-C1]  CODE  P1  "Reference deployment profile acceptance"
+Transition: SEED -> BLOCKED  (exact failing command + error + owner + unblock path)
+
+(1) Exact probe, 2026-09-21:
+
+$ command -v docker kubectl helm
+    (no output for any of the three — all absent)
+
+$ docker info
+
+
+$ helm version
+    bash: helm: command not found
+$ kubectl version --client
+    bash: kubectl: command not found
+
+(2) What this means: no profile can be instantiated from this host, so no profile
+    can be accepted from it. Acceptance means deploying the profile and reading
+    the result back — it is deployment-specific by definition, and no amount of
+    source-tree inspection substitutes for it (the profiles are documentation-
+    backed in deploy/helm and deploy/k8s, and are checked statically by
+    tests/test_deploy_manifests.py, which passes; that is a different claim).
+
+(3) Owner and unblock path: the Kubernetes/SRE owner of the target environment
+    (DOC-01's topology table names that role for exactly this row). Unblock:
+    instantiate a profile on a real cluster, record the readback against the
+    profile's stated shape, and have the environment's owner sign it.

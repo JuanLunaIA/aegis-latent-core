@@ -1,0 +1,108 @@
+REG-D37 — the guarded-pickle allow-list never reached nested values (FIXED 2026-09-21)
+
+Found by: writing coverage tests for `aegis/core/safe_serialization.py` (60 of its
+126 statements were uncovered, every one of them a refusal branch). One of the new
+tests asserted that a dict containing a set is refused; it failed, and the failure
+was a real defect rather than a wrong expectation.
+
+════ 1. THE DEFECT ════
+`_validate_allowed(obj, allowed)` tested allow-list membership FIRST:
+
+    if isinstance(obj, allowed):      # `dict` and `list` ARE in DEFAULT_ALLOWED
+        return True
+    if isinstance(obj, list):         # unreachable for any list
+        ...
+    if isinstance(obj, dict):         # unreachable for any dict
+        ...
+    return False
+
+`DEFAULT_ALLOWED = (dict, list, str, int, float, bool, type(None))` — so the first
+test answered True for *any* dict or list, including one whose values the caller
+meant to exclude, and both recursion branches were unreachable for every payload
+shape that occurs in practice. Both call sites pass `DEFAULT_ALLOWED` when the
+caller does not narrow it:
+
+    aegis/core/safe_serialization.py:202   allowed = tuple(allowed_types) if allowed_types is not None else DEFAULT_ALLOWED
+    aegis/core/safe_serialization.py:278   same, on the dump side
+
+Measured, before the fix (probe, this host):
+
+    bare set            -> False     (the only shape the check could reject)
+    dict->set           -> True      <- WRONG
+    dict->list->set     -> True      <- WRONG
+    list->set           -> True      <- WRONG
+    dict->tuple         -> True      <- WRONG
+    dict->frozenset     -> True      <- WRONG
+    dict->bytes         -> True      <- WRONG
+    bare tuple          -> False
+
+Disassembly confirms the branches are dead rather than merely hard to reach:
+`LOAD_GLOBAL isinstance` / `LOAD_DEREF allowed` / `JUMP_FORWARD_IF_FALSE` to the
+list branch — with `dict` and `list` in the tuple, that jump is never taken for a
+container.
+
+Why the post-load half mattered: `set` is in neither `DEFAULT_ALLOWED` nor
+`RestrictedUnpickler.allowed_classes`, yet a set of strings pickles to
+EMPTY_SET + ADDITEMS with **no GLOBAL opcode**, so `find_class` is never consulted:
+
+    opcodes: ['ADDITEMS', 'EMPTY_DICT', 'EMPTY_SET', 'FRAME', 'MARK', 'MEMOIZE',
+              'PROTO', 'SETITEM', 'SHORT_BINUNICODE', 'STOP']
+
+Before the fix, `safe_pickle_load(path, require_signature=False)` returned
+`{'tags': {'a', 'b'}}` to the caller — a container the module documents as
+disallowed, delivered by the check that was supposed to refuse it.
+
+Reachability, stated precisely: `aegis.core.safe_serialization` is allowlisted in
+`scripts/import_reachability_allowlist.txt:79` and has **no production importer**
+(the only references outside the module are comments in `tools/forensic/*.py`), so
+this was never reachable from the gateway request path. The exposure is the module
+API — a library caller who passes `allowed_types` and relies on it.
+
+Also found and fixed: two tests in `tests/test_safe_serialization_new.py` had been
+written *around* the defect, with comments saying so — "Use an allowed tuple that
+doesn't include list, triggering the recursive branch" and "allowed doesn't include
+dict, so triggers dict recursion branch". They pass a narrowed tuple precisely
+because the default made the branch unreachable. Those comments now describe what
+the tests actually check; the assertions are unchanged.
+
+════ 2. THE FIX ════
+`aegis/core/safe_serialization.py:124-145` — containers are dispatched before the
+membership test, so the allow-list governs what may appear as a *leaf* and no
+longer decides whether leaves are looked at:
+
+    if isinstance(obj, list):  return all(_validate_allowed(i, allowed) for i in obj)
+    if isinstance(obj, dict):  return all(isinstance(k, (str, int)) and _validate_allowed(v, allowed) ...)
+    return isinstance(obj, allowed)
+
+Same behaviour as before for every shape the old code got right; the only change is
+that containers are now descended into. After the fix:
+
+    dict->set -> False   dict->list->set -> False   list->set -> False
+    dict->tuple -> False dict->frozenset -> False   dict->bytes -> False
+    {"a": [1, "two", None, True, 3.0]} -> True      (allowed leaves unaffected)
+
+Behaviour note, not a defect: with `allowed` including `bytes` (as the unpickler's
+class list does), a bytes leaf is still accepted — the leaf rule is the caller's.
+One line remains uncovered: `safe_serialization.py:117` (`terminal upstream line`
+is a redundant second bound after the per-chunk check at :113-114; it cannot fire).
+Left as-is: removing a defence-in-depth guard is not this row's business.
+
+════ 3. TESTS ════
+`tests/test_safe_serialization_failclosed.py` — 13 tests, 7 of them in
+`TestTheAllowListReachesNestedValues` (the class-level pin, with the production
+allow-list): nested dict/list/depth/key refusals, allowed leaves at depth accepted,
+a caller-narrowed leaf refused, and an end-to-end `safe_pickle_load` refusal of the
+exact set payload that used to reach callers. The rest pin the key/signature
+refusals (`_compute_hmac` with no key, a mismatched signature, a missing signature
+file, an unreadable one, a tampered payload, a truncated stream reported as
+UnsafePickleError rather than the generic wrapper) and the dump-side refusals.
+
+Focused run: `pytest tests/test_safe_serialization_failclosed.py tests/test_safe_serialization.py tests/test_safe_serialization_new.py tests/test_misc_gaps.py -q`
+→ **71 passed**.
+
+════ 4. CONTROL (the guard must fire without the fix) ════
+Pre-fix order restored in `_validate_allowed`:
+`pytest tests/test_safe_serialization_failclosed.py tests/test_safe_serialization_new.py -q`
+→ **7 failed, 28 passed** — the four nested-value tests, the key test, the
+caller-narrowed-leaf test and the end-to-end load test, i.e. the class and its
+end-to-end consequence. Fix restored: **35 passed**.

@@ -27,7 +27,7 @@ Never take the fourth path — silencing it to make CI green.
 
 ```bash
 ruff check .                       # fast, mechanical, fix nearly always obvious
-mypy --strict aegis                # 206 files clean; keep it that way
+mypy --strict aegis                # 207 files clean; keep it that way
 mypy --config-file mypy-ci.ini .   # the CI configuration
 cargo clippy --manifest-path aegis_rust_v2/Cargo.toml --all-targets -- -D warnings
 make security

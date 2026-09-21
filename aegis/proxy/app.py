@@ -56,6 +56,7 @@ from aegis.core.waf_session import WAFSessionTracker
 from aegis.proxy.analyzer import ResponseAnalyzer
 from aegis.proxy.attestation_api import build_attestation_router
 from aegis.proxy.audit_api import build_audit_router
+from aegis.proxy.body_limits import RequestBodyLimitMiddleware
 from aegis.proxy.dependencies import validate_audit_auth, validate_proxy_auth
 from aegis.proxy.dmz_middleware import DMZSourceIPMiddleware
 from aegis.proxy.forwarder import LLMForwarder
@@ -72,6 +73,7 @@ from aegis.proxy.streaming import (
     StreamAdmissionFullError,
     StreamAdmissionGate,
     StreamEvidenceSummary,
+    TerminalCommitHandoff,
     guarded_stream,
 )
 from aegis.proxy.waf import AegisWAF
@@ -116,42 +118,6 @@ def _spawn_background(coro: Any) -> asyncio.Task[Any]:
 # Mirrors the cap in SessionLifecycleManager to prevent unbounded memory growth
 # when callers omit the x-session-id header (UUID-per-request path).
 _MAX_ANALYZER_SESSIONS = 4_096
-
-
-class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
-    """Reject oversized bodies before JSON parsing or provider forwarding."""
-
-    def __init__(self, app: Any, max_body_bytes: int) -> None:
-        super().__init__(app)
-        self._max_body_bytes = max_body_bytes
-
-    async def dispatch(self, request: Request, call_next: Any) -> Response:
-        content_length = request.headers.get("content-length")
-        if content_length:
-            try:
-                declared = int(content_length)
-            except ValueError:
-                return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length"})
-            if declared < 0 or declared > self._max_body_bytes:
-                return JSONResponse(status_code=413, content={"detail": "Request body too large"})
-        received = 0
-        original_receive = request.receive
-
-        async def bounded_receive() -> dict[str, Any]:
-            nonlocal received
-            message = await original_receive()
-            if message.get("type") == "http.request":
-                chunk = message.get("body", b"")
-                received += len(chunk)
-                if received > self._max_body_bytes:
-                    raise HTTPException(status_code=413, detail="Request body too large")
-            return dict(message)
-
-        request._receive = bounded_receive  # type: ignore[attr-defined]
-        try:
-            return cast("Response", await call_next(request))
-        except HTTPException as exc:
-            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 class RequestSmugglingProtectionMiddleware(BaseHTTPMiddleware):
@@ -367,6 +333,10 @@ class _AppState:
     alert_store: _AlertStore
     analysis_queue: asyncio.Queue[_AnalysisJob]
     analysis_workers: list[asyncio.Task[Any]]
+    # Terminal-evidence handoff owned by the app: stream teardown submits its
+    # commit here synchronously, and the worker drains it outside the request
+    # scope that Starlette cancels (AUD-03 / REG-D07).
+    terminal_handoff: TerminalCommitHandoff
     proxy_auth: ProxyKeyAuth
     audit_auth: AuditKeyAuth
     settings: AegisSettings
@@ -896,6 +866,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     state.alert_store = _AlertStore()
     state.analysis_queue = asyncio.Queue(maxsize=cfg.analysis_queue_size)
     state.analysis_workers = []
+    state.terminal_handoff = TerminalCommitHandoff()
     state.proxy_auth = ProxyKeyAuth(cfg)
     state.audit_auth = AuditKeyAuth(cfg)
     state.waf = AegisWAF(strict_mode=cfg.waf_strict_mode)
@@ -1128,6 +1099,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 name="aegis-finalized-segment-archive",
             )
 
+        # The terminal-evidence handoff worker is started here, on purpose:
+        # this context is not inside any request's task group, so commits it
+        # runs for a torn-down stream survive the cancellation Starlette
+        # delivers to the response (AUD-03 / REG-D07).
+        state.terminal_handoff.start()
+
         # NOTE: the seccomp filter is applied LAST in this startup sequence
         # (just before `yield`), NOT here.  The async Rust forwarder's Tokio
         # runtime must spawn its worker threads and load the TLS trust store
@@ -1239,6 +1216,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         app.state.aegis = state
         yield
 
+        # First on the way down: a stream torn down by shutdown should land its
+        # terminal evidence while the ledger is still open (AUD-03 / REG-D07).
+        await state.terminal_handoff.stop(timeout=cfg.analysis_shutdown_timeout_seconds)
         if state.gossip is not None:
             # First on the way down: a peer's round against a listener that is
             # already gone logs a failure that reads like a fault and is only
@@ -1281,7 +1261,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         title="Aegis Latent Core",
         description=(
             "Forensic telemetry proxy for LLM inference pipelines. "
-            "OpenAI-compatible drop-in with Merkle chain-of-custody."
+            "OpenAI-compatible drop-in with a Merkle-linked evidence ledger."
         ),
         version=aegis.__version__,
         docs_url="/docs" if cfg.debug_mode else None,
@@ -1894,6 +1874,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             bounded_stream = BoundedStreamProxy(
                 stream,
                 terminal_commit=_commit_stream_terminal,
+                terminal_handoff=state.terminal_handoff.for_commit(_commit_stream_terminal),
                 max_response_bytes=cfg.max_stream_response_bytes,
                 max_duration_seconds=cfg.max_stream_duration_seconds,
                 max_event_bytes=cfg.max_stream_event_bytes,
@@ -2181,6 +2162,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             bounded = BoundedStreamProxy(
                 upstream_stream,
                 terminal_commit=_commit_anthropic_terminal,
+                terminal_handoff=state.terminal_handoff.for_commit(_commit_anthropic_terminal),
                 max_response_bytes=cfg.max_stream_response_bytes,
                 max_duration_seconds=cfg.max_stream_duration_seconds,
                 max_event_bytes=cfg.max_stream_event_bytes,

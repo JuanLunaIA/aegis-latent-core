@@ -311,7 +311,12 @@ class ExportAuditLog:
         return len(errors) == 0, errors
 
     def read_all(self) -> list[ExportLogEntry]:
-        """Return all entries from the log file (unsignature-checked)."""
+        """Return all entries from the log file (unsignature-checked).
+
+        Note: malformed lines (``json.JSONDecodeError`` / ``KeyError``) are
+        silently skipped here; :meth:`verify` is the authoritative detection
+        path and reports them as errors.
+        """
         entries: list[ExportLogEntry] = []
         if not self._path.exists():
             return entries

@@ -1,0 +1,38 @@
+REG-D20 / AUD-16 — FIXED: compliance docs state the record commits digests (UC-045)
+Recorded 2026-09-21 (UTC) on the working host; commands run from the repository root.
+
+CHECK (executed)
+$ grep -rn 'scrubbed form' docs/compliance/ | wc -l
+0 (0 = superseded text gone)
+$ grep -n 'digests' docs/compliance/HIPAA_TECHNICAL_INPUTS.md | head -3
+25:| Pattern-based scrubbing across seventeen Safe Harbor-associated categories | Reduces matched PHI in the provider-bound request when the opt-in is set; the evidence record commits digests, not content (`UC-045`) | `aegis/core/phi_deidentifier.py` |
+67:**PHI reaches the provider unscrubbed unless the opt-in is set.** `AEGIS_PHI_DEIDENTIFY` / `AEGIS_PCI_SCRUB` are off by default, so the request goes upstream as received; when either is set, what crosses is text with matched patterns removed. The evidence record itself commits digests rather than content, so the flag does not change what the record commits (`UC-045`). If PHI must not reach your model provider, you need filtering before the gateway, plus a Business Associate Agreement with the provider. See [PII Redaction Boundaries §4](../privacy/PII_REDACTION_BOUNDARIES.md#4-the-limit-that-surprises-people).
+
+DIFF (shared fix commit)
+$ git show --stat --oneline 8ccea5f
+8ccea5f fix(AUD-07/15/16/17 + trivial batch): MAR citation, blocked wording, boundary text
+ aegis/core/crypto_audit.py                    |  4 +--
+ aegis/core/export_audit_log.py                |  7 +++-
+ aegis/core/market_abuse_detector.py           |  7 ++--
+ aegis/core/mifid_record_keeper.py             | 15 ++++----
+ aegis/core/worm_ledger.py                     |  3 +-
+ aegis/proxy/app.py                            |  2 +-
+ aegis/proxy/mtls.py                           |  2 +-
+ aegis_rust_v2/src/hasher.rs                   |  3 +-
+ docs/BOUNDARIES.md                            |  3 +-
+ docs/REGISTRY.md                              |  2 +-
+ docs/ROADMAP.md                               | 52 +++++++++++++--------------
+ docs/architecture/DEEP_DIVE.md                |  4 +--
+ docs/assurance/AUDIT_EVIDENCE_INDEX.md        |  2 +-
+ docs/compliance/COMPLIANCE_MAPPING.md         |  2 +-
+ docs/compliance/EU_AI_ACT_TECHNICAL_INPUTS.md |  4 +--
+ docs/compliance/HIPAA_TECHNICAL_INPUTS.md     |  4 +--
+ docs/institutional/UNSUPPORTED_CLAIMS.md      | 14 ++++----
+ 17 files changed, 71 insertions(+), 59 deletions(-)
+
+DOC GATES (executed)
+"warnings": 0
+}
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1355 relative links and anchors resolved)
+verify_docs: PASS (0 findings)

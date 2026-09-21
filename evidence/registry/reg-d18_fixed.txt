@@ -1,0 +1,110 @@
+REG-D18 (AUD-14 / AF-035, AF-036, AF-075) — FIXED: inert configuration controls
+================================================================================
+HEAD before the fix: d798a1a. Files changed:
+  aegis/config.py                     phi_master_key deleted; 10 ldap_* fields,
+                                      ldap_required_groups, cac_piv_required,
+                                      rate_limit_window, webhook_url labelled
+  aegis_server/config.py              webhook_url labelled
+  aegis/core/phi_encryption.py        docstring no longer names the deleted setting
+  aegis/core/audit_node_encryptor.py  same, incl. the key-separation note
+  tests/test_config_surface_inert_fields.py   (new, 8 tests)
+  config/presets/*.env (4), deploy/helm/templates/statefulset.yaml,
+  deploy/docker/docker-compose.enterprise.yml,
+  docs/operations/DEPLOYMENT_PROFILES.md      operator-facing copies labelled
+  docs/REGISTRY.md, docs/ROADMAP.md, docs/institutional/UNSUPPORTED_CLAIMS.md
+
+Independently re-verified before changing anything
+--------------------------------------------------
+Method: import the real settings classes and take `model_fields` (the
+authoritative list), then search every production `.py` under aegis/,
+aegis_server/, integrations/, scripts/, tools/, benchmarks/ for
+`[.\[]<field>\b` or `['"]<field>['"]`. First attempt (name-only search) reported
+30 fields, which was wrong in both directions: `api_keys` is read through
+`AegisSettings.get_api_keys()`, and `airgap_mode` reaches its consumer as a
+parameter — so the accessor form is what makes the search sound, and the same
+run confirmed the audit's families independently:
+
+  grep -rn "mtls_trusted_proxy_cidrs|api_keys|airgap_mode|ldap_url|phi_master_key|cac_piv_required" aegis/ aegis_server/ integrations/
+    api_keys           -> read via settings.get_api_keys() (accessor)
+    airgap_mode        -> passed as a parameter into the egress guard
+    ldap_url           -> no hits
+    phi_master_key     -> no hits
+    cac_piv_required   -> no hits
+
+Refined run (fields vs readers): 15 inert — the audited 11 (10 ldap_* +
+phi_master_key + cac_piv_required) plus rate_limit_window and webhook_url in both
+classes. ldap_required_groups is excluded on purpose: `get_ldap_required_groups()`
+reads it, but that accessor has no caller — stated in the test docstring and in
+UC-064 rather than hidden.
+
+What was changed, per control
+-----------------------------
+1. phi_master_key — DELETED. It was read by nothing, and it could not have been:
+   the WAL holds node digests rather than payload bytes (REG-023), so the
+   "payload bytes encrypted at rest" the description promised do not exist in
+   this repository's write path. The two encryptor modules remain as primitives;
+   their docstrings now say so instead of telling operators to set a variable the
+   gateway never reads. Boundary: UC-067.
+2. cac_piv_required — LABELLED (not deleted; CACPIVAuth exists, so the wire-up is
+   real work with a specification worth keeping). Boundary: UC-065.
+3. The LDAP family (11 fields) — LABELLED. Boundary: UC-064.
+4. rate_limit_window, webhook_url (AegisSettings + EnterpriseSettings) — LABELLED,
+   and their operator-facing copies corrected. This is new relative to the audit:
+   the sender reads siem_url / siem_*, so an operator who follows the presets, the
+   Helm chart, the compose file or DEPLOYMENT_PROFILES.md and sets only
+   AEGIS_WEBHOOK_URL receives no alerts. Boundary: UC-066, ticket: AUD-35.
+
+The gate (the ticket's third element)
+-------------------------------------
+tests/test_config_surface_inert_fields.py — 8 tests:
+  test_no_undeclared_inert_settings_fields        (unread field must be declared)
+  test_the_inert_list_has_no_stale_entries        (declared field must still be unread)
+  test_every_inert_entry_names_its_register       (entry cites UC-nnn or AUD-nn)
+  test_the_scanned_surface_is_not_vacuous         (guards the gate itself)
+  test_the_audited_families_are_still_inert[4]    (parametrised pin)
+Run against the tree: 8 passed in 6.76s.
+
+Live negative controls (both directions, then restored)
+-------------------------------------------------------
+A. temporarily declared `probe_unread_knob` in AegisSettings ->
+   test_no_undeclared_inert_settings_fields FAILED
+   ("settings field(s) with no production reader: ...")
+B. temporarily added a production reader for webhook_url ->
+   test_the_inert_list_has_no_stale_entries FAILED
+   ("INERT entries that now have a production reader: ['webhook_url'] ...")
+After restoring both: 8 passed in 6.74s, and `git status --short` shows no
+probe residue.
+
+Not done, deliberately
+----------------------
+- No control was wired in this row. Constructing LDAPAuthenticator, CACPIVAuth,
+  or a payload encryptor changes authentication, certificate policy or storage
+  behaviour, which is a product decision with its own tests — AUD-35 carries it,
+  with the labelled descriptions as the specification.
+- The gate is field-level: an accessor that nothing calls still counts as a
+  reader (UC-064 records that exact case for ldap_required_groups), and a name
+  appearing only in a production string literal counts as a reader too. Both are
+  limits of a name-based gate, not claims of completeness.
+
+Closure run (final numbers, HEAD a40d7fe)
+----------------------------------------
+- pytest -n auto (AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true):
+  6946 passed, 119 skipped, 0 failed, exit 0.
+  The first run of the battery failed once —
+  tests/test_ai_context.py::test_manifest_is_deterministic_explicit_and_non_circular
+  — because this commit changes hashed files, so .aegis_ai_context/MANIFEST.json
+  had gone stale. It is regenerated from the generator's own build_manifest()
+  (the same function the test compares against, 83 entries) rather than edited.
+- tests/test_config_surface_inert_fields.py + test_enterprise_config_new.py +
+  test_phi_encryption.py + test_audit_node_encryptor.py: 100 passed.
+- bandit -r aegis/ aegis_server/ -c pyproject.toml -lll: 0 issues (exit 0).
+- ruff check (CI scope): All checks passed. ruff format --check (CI path list):
+  clean, 530 files (the first format pass flagged 3 files, all this commit's —
+  config.py, aegis_server/config.py, the new gate test — and all were
+  reformatted before the commit was finalised).
+- verify_docs: PASS (0 findings). verify_claims: PASS (102 claims, 0 findings).
+  verify_links: PASS (1361 links). verify_documentation --strict: PASS.
+  verify_import_reachability: PASS (224 discovered / 113 reached / 34 declared /
+  77 allowlisted). Release source contract: READY, 14 anchors @5.0.0.
+- Rust untouched by this commit; cargo test --locked and clippy -D warnings were
+  last run green at d798a1a (83 lib + 3 bin tests passed).

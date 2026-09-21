@@ -32,6 +32,8 @@ from pathlib import Path
 
 import httpx
 
+from benchmarks import print_provenance
+
 
 def _read_proc_rss_kb(pid: int) -> int:
     """Resident set size (KiB) for *pid* from /proc/<pid>/status, or 0."""
@@ -180,4 +182,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    print_provenance("bench_http_load")
     main()

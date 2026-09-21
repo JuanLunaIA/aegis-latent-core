@@ -139,9 +139,16 @@ pub fn generate_zk_proof(
             peaks,
         };
         let circuit = zk_mmr::WafPassInclusionCircuit::new(shape, witness).map_err(zk_error)?;
-        let root = circuit
-            .committed_root()
-            .expect("a circuit built from a witness always has a root");
+        // AUD-24: this was an `expect` on a Python-reachable path, where the
+        // release profile's `panic = "abort"` turns a violated invariant into a
+        // process kill instead of a Python exception. The invariant still holds
+        // — a circuit built from a witness carries its root — but it is now a
+        // refusal the caller can see rather than an abort it cannot.
+        let root = circuit.committed_root().ok_or_else(|| {
+            zk_error(zk_mmr::ZkError::ShapeMismatch(
+                "a circuit built from a witness must expose its committed root".to_string(),
+            ))
+        })?;
 
         let (prover_key, verifier_key) = zk_mmr::setup(shape).map_err(zk_error)?;
         let proof = zk_mmr::prove(&prover_key, &verifier_key, circuit).map_err(zk_error)?;

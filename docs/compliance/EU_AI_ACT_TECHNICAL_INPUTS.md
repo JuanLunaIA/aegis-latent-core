@@ -35,7 +35,7 @@ Article 12 concerns automatic recording of events (logs) over the lifetime of a 
 | Bounded export | A ZIP extract with manifest, records, proofs and a digest checker | [Forensic Export](../api/FORENSIC_EXPORT.md) |
 | Identity binding | Records bound to an authenticated principal, never a client-supplied header | `aegis/auth/principal.py` |
 | Model and parameter capture | The model identifier and request parameters as forwarded | `aegis/proxy/app.py` |
-| Optional timestamping | RFC 3161 exchanges persisted after nonce and imprint checks | `aegis/anchoring/rfc3161.py` |
+| Optional timestamping | RFC 3161 exchanges persisted after nonce and imprint checks and OpenSSL verification against an explicit trust store (no revocation checking; `CLM-014`) | `aegis/anchoring/rfc3161.py` |
 
 ## 4. What the gateway does not determine
 
@@ -64,7 +64,7 @@ These are the limits most likely to matter in an assessment, stated so they are 
 
 **Signature semantics.** With the default HMAC signer, the signature is symmetric: anyone holding the key could produce it. That is authenticity relative to key custody, not third-party non-repudiation. An asymmetric or HSM signer changes this and should be specified if your assessment depends on it.
 
-**Redaction interacts with record completeness.** Enabling PHI or PCI scrubbing means the record holds the scrubbed form. If your assessment requires the original input, redaction reduces record fidelity. That trade-off is yours to make explicitly.
+**Redaction interacts with record completeness.** Enabling PHI or PCI scrubbing changes the provider-bound request — matched patterns are removed before it crosses upstream — and it does not change what the evidence record commits, because the record commits digests (`request_hash`, `response_hash`, `mmr_leaf_hash`) rather than content (`UC-045`). If your assessment requires the original input to reach the provider, redaction reduces fidelity at that boundary. That trade-off is yours to make explicitly.
 
 ## 6. What you must assess
 

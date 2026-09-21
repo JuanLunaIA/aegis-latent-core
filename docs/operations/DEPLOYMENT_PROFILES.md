@@ -97,6 +97,8 @@ Use the chart at `deploy/helm/`. It renders a `StatefulSet` with one volume clai
 
 **Migrating from the superseded shared-PVC chart** is not an upgrade. The workload kind changes and the claim names do not overlap, so nothing adopts the old volume. Follow [DOC-04 §6.4](../institutional/DOC-04_OPERATIONS_PLAYBOOK.md) before upgrading.
 
+**The operator manifest is a source template, not a published artifact.** `deploy/k8s/aegis-operator/` carries a CRD, RBAC, a service account and one `Deployment` whose pod template is hardened (`runAsNonRoot`, `runAsUser: 10001`, `seccompProfile: RuntimeDefault`, `readOnlyRootFilesystem`, `allowPrivilegeEscalation: false`, `drop: [ALL]`) but whose image reference is deliberately a placeholder: `image: example.invalid/aegis-operator:unreleased-source-template`, annotated `aegis.io/status: source-template-unreleased` and `aegis.io/image-required: replace-with-reviewed-operator-image`, with the in-manifest comment "No operator image is published by this source contract. Replace this fail-closed reference with an independently reviewed immutable digest." Both annotations are asserted by `tests/test_deploy_manifests.py`, so the marker cannot be dropped silently. **Nothing in this repository builds or publishes an operator image** — `deploy/docker/` holds only the gateway `Dockerfile` and `Dockerfile.airgap`, and no workflow references the operator — so this manifest cannot start a pod until you supply an image. Pin your own independently reviewed immutable digest; do not replace the placeholder with an unpinned or unread-back tag, which would remove the fail-closed control the test pins. The *workload* image the operator deploys is a different reference and is real and version-pinned to the synchronized release: `ghcr.io/juanlunaia/aegis-latent-core:5.0.0` (`operator.py` `DEFAULT_AEGIS_IMAGE`, `crd.yaml` default), cross-checked by `scripts/verify_release_contract.py`.
+
 **Evidence boundary:** N replicas produce N independent chains. There is no cross-pod ordering or atomicity. A query spanning replicas is a merge you perform and justify, not a guarantee the system provides. Scaling down retains the departing replica's claim, so its evidence survives.
 
 ---
@@ -114,7 +116,7 @@ Use the chart at `deploy/helm/`. It renders a `StatefulSet` with one volume clai
 | RFC 3161 timestamping | Needs a reachable TSA | Leave `AEGIS_TSA_URL` unset |
 | S3 Object Lock archival | Needs an object store | Leave `AEGIS_S3_ARCHIVE_ENABLED=false` |
 | SIEM HTTP export | Needs a reachable collector | Leave `AEGIS_SIEM_URL` unset, or point it inside the enclave |
-| Webhook alerts | Needs a reachable endpoint | Leave `AEGIS_WEBHOOK_URL` empty |
+| Webhook alerts | **Not wired in 5.0.0** — `AEGIS_WEBHOOK_URL` is read by no code path (`AUD-35`); the alert sender reads `AEGIS_SIEM_URL` | Leave both empty |
 | Upstream model provider | Needs the provider | Point `AEGIS_BACKEND_URL` at an in-enclave model service |
 | `gh attestation verify`, `cosign verify` | Need the transparency log and GitHub | Verify artifacts **before** transfer, at the boundary |
 

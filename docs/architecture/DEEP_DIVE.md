@@ -285,8 +285,8 @@ the append-after-restore equivalence, every fallback path, and rotation; `CLM-06
 
 | Capability | Module | Note |
 |---|---|---|
-| ISO/IEC 27037 evidence package | `iso27037_evidence.py` | chain-of-custody + SHA-256 seal, offline-verifiable |
-| RFC 3161 trusted timestamp | `rfc3161_timestamper.py` | TSA token bound to bundle imprint |
+| ISO/IEC 27037 evidence package | `iso27037_evidence.py` | evidence-package seal (SHA-256 over identification/preservation fields), offline-verifiable; no custody record is created (`UC-024`) |
+| RFC 3161 timestamp token | `rfc3161_timestamper.py` | TSA token bound to bundle imprint; structural verification only — no revocation checking and no RFC 5280 policy/EKU evaluation (`CLM-014`, `CLM-096`) |
 | Operator seal | `operator_seal.py` | HMAC/HSM attestation gate before export |
 | Witness co-signing | `witness_cosign.py` | m-of-n threshold, per-witness derived keys |
 | DFIR formats | `dfir_export.py` | PKCS#7 SignedData + EWF/E01 container |

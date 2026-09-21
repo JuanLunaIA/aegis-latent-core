@@ -1,0 +1,77 @@
+REG-D12 / AUD-08 — FIXED   (audit reads iterated the live ledger deque)
+aegis/core/crypto_audit.py · aegis/proxy/audit_api.py · aegis/core/{wal_backup,iso27037_evidence}.py
+tests/test_audit_read_snapshot.py · evidence captured 2026-09-21 on this host
+
+FINDING (AUDIT_REPORT_v5.0.1_PREP.md §AF-037)
+  Commits append to CryptographicAuditLedger.chain from worker threads
+  (app.py: `await asyncio.to_thread(state.ledger.commit_forensic, ...)`) while
+  every audit read endpoint iterated that deque directly. A mutation landing
+  between two `__next__` calls raises RuntimeError('deque mutated during
+  iteration') out of the handler: a 500 with no audit data on a request that had
+  already passed auth and scope checks. The ledger's own accessors
+  (signature_assurance, archived_segments, verify_integrity) already snapshot
+  under self._lock, so the read paths were the inconsistency.
+
+DIFF
+  aegis/core/crypto_audit.py    new `CryptographicAuditLedger.chain_snapshot()`:
+                                `with self._lock: return list(self.chain)`, with the
+                                rationale, the one-snapshot-per-handler rule and the
+                                non-reentrancy warning in the docstring.
+  aegis/proxy/audit_api.py      all ten iteration sites the audit listed now read one
+                                snapshot per handler: /health :132, /integrity :150
+                                (count AND tail from the same snapshot), /nodes :180,
+                                /nodes/{hash} :218, /nodes/{hash}/evidence :241,
+                                /proofs/{state_id} :271, /tenants :305,
+                                /export/part11 :315, /forensics/export :341.
+  aegis/core/wal_backup.py      len + tip from one snapshot (they could disagree before).
+  aegis/core/iso27037_evidence.py  uses the public accessor instead of reaching into
+                                `ledger._lock` directly (same behaviour).
+  tests/test_audit_api_new.py   the mock ledger fixture answers `chain_snapshot()`
+                                with a copy, as the real accessor does.
+  tests/test_audit_read_snapshot.py  (new, 7 tests)
+
+ENDPOINT-LEVEL BEFORE / AFTER (probe: /home/luna/.hermes/cache/scratch/probe_audit_read_race.py)
+  Same ledger (801 nodes, then a writer thread committing continuously),
+  same 25-round workload over /health, /integrity, /nodes?limit=100, /tenants,
+  /export/part11, /proofs/state-50, with sys.setswitchinterval(1e-6).
+  "BEFORE" emulates the pre-fix read path by making `chain_snapshot()` hand back
+  the live deque; "AFTER" restores the real accessor.
+    BEFORE (live deque, pre-fix behaviour): chain=6298 non-200=45
+        /v1/audit/health: 10 · /v1/audit/nodes?limit=100: 9 · /v1/audit/tenants: 6 ·
+        /v1/audit/export/part11: 16 · /v1/audit/proofs/state-50: 4
+    AFTER  (chain_snapshot, fixed behaviour): chain=6207 non-200=0
+  The exception itself, surfaced from the handler stack under the old path:
+    SURFACED: RuntimeError - deque mutated during iteration
+  (The 25 rounds x 6 paths = 150 requests; the AFTER run's 0 non-200 is over the
+  same workload with the same writer thread.)
+
+TEST (`tests/test_audit_read_snapshot.py` — 7 passed)
+  $ .venv/bin/python -m pytest tests/test_audit_read_snapshot.py -q
+  1. test_deque_mutation_between_next_calls_raises        deterministic, no threads:
+                                                          the mechanism, in one line
+  2. test_snapshot_is_immune_to_a_later_mutation          the copy is stable
+  3. test_live_deque_iteration_can_be_torn_by_a_writer_thread   CONTROL — it tripped on
+                                                          this host, so the workload
+                                                          below is a real one (it skips
+                                                          rather than asserting if a
+                                                          host never exposes it)
+  4. test_chain_snapshot_is_a_copy_and_carries_committed_nodes
+  5. test_chain_snapshot_never_tears_while_commits_land   300 rounds against a real
+                                                          committer thread
+  6. test_read_endpoints_survive_concurrent_commits       ASGI, 6 rounds x 7 endpoints +
+                                                          the forensic export POST
+  7. test_health_counts_and_integrity_tail_agree_within_a_response
+
+BATTERY ON THIS COMMIT'S CONTENT (recorded before the final amend; the amend changed only this file)
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
+6903 passed, 118 skipped in 84.40s (0:01:24), exit 0      (+7 = the new test module)
+$ .venv/bin/python -m mypy --strict aegis/core/crypto_audit.py aegis/proxy/audit_api.py aegis/core/wal_backup.py aegis/core/iso27037_evidence.py
+Success: no issues found in 4 source files
+$ .venv/bin/bandit -r aegis/ aegis_server/ -c pyproject.toml -lll      -> Medium: 0, High: 0
+$ .venv/bin/python scripts/verify_import_reachability.py               -> PASS (no undeclared orphans, no stale roadmap entries)
+$ .venv/bin/python scripts/verify_release_contract.py --root .         -> 14 synchronized anchors at 5.0.0
+$ .venv/bin/python tools/docs/verify_documentation.py --root . --strict -> exit 0, status PASS, warnings 0
+$ .venv/bin/python scripts/verify_claims.py --root .                   -> PASS (102 claims, 0 findings)
+$ bash scripts/verify_links.sh --root .                                -> PASS (1357 links resolved)
+$ .venv/bin/python scripts/verify_docs.py --root .                     -> PASS (0 findings)
+$ .venv/bin/ruff check <changed files>                              -> All checks passed

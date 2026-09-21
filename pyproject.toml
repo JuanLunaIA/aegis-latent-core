@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aegis-latent-core"
-version = "5.0.0"
+version = "5.0.1"
 description = "Fail-closed LLM gateway with durable signed forensic evidence and bounded response enrichment"
 readme = "README.md"
 license = { text = "AGPL-3.0-only" }
@@ -115,6 +115,17 @@ dev = [
     "cachetools>=5.3.0",
     "ldap3>=2.9.1",
     "PyJWT[crypto]>=2.10.1,<3",
+    # The Parquet exporter's tests module-skip on this import (see
+    # tests/test_optional_backend_declarations.py). Declared here as well as in
+    # the lakehouse extra so the suite that CI runs actually executes them,
+    # rather than reporting the connector green while never importing it.
+    "pyarrow>=16.0.0",
+    # Same rule, and the same reason: `prometheus-client` gates `pytest.skip`
+    # calls in tests/test_observability.py, both tests/security/test_*_metric.py
+    # and tests/compat/test_public_api_compat.py — including the end-to-end
+    # registry test CLM-102's evidence cell cites as its LOCALLY TESTED proof.
+    # The `metrics` extra is installed by no job, so every one of those skipped.
+    "prometheus-client>=0.20.0",
 ]
 # ── Full install (all optional extras) ───────────────────────────────────────
 all = [
@@ -153,6 +164,15 @@ filterwarnings = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+# AUD-18 / REG-D22: one canonical formatter scope for the Makefile and CI.
+# Both now run over the whole tree, so the two invocations cannot drift; the
+# markdown exclusion keeps *linting* of Python fences inside documentation
+# (which `ruff check` still covers) separate from *reformatting* the host
+# document, which would rewrite 9 doc/README files whose content the doc gates
+# verify and which this defect never asked for.
+[tool.ruff.format]
+exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "S", "B", "A", "COM", "C4", "PT"]
@@ -247,6 +267,16 @@ omit = [
 ]
 
 [tool.coverage.report]
+# `--cov-fail-under` is decided with this precision, and coverage.py's default is
+# 0. At 0 the gate's message and its enforcement disagree inside a half-point
+# band below the floor: a run at 89.87% against --cov-fail-under=90 prints
+# "FAIL Required test coverage of 90% not reached" and the process still exits 0,
+# because should_fail_under rounds the total up to 90 before comparing. Measured
+# against coverage 7.x: should_fail_under(89.87, 90, 0) is False while
+# (89.4, 90, 0) is True; at precision 2 the whole band fails, which is what the
+# printed verdict already said. This applies to every invocation -- the Makefile
+# target and the CI step both pass --cov-fail-under=65 without a precision flag.
+precision = 2
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",

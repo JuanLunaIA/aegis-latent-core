@@ -1,0 +1,113 @@
+# REG-D26 (AUD-22) — compliance-wording sweep: evidence
+Date: 2026-09-21 (UTC) · branch registry-closure-2026-09-21 · base commit for this row: HEAD before the REG-D26 commit
+Reproduce: `unset PYTHONPATH; unset LD_LIBRARY_PATH; export AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true`
+
+## 1. What the audit (AUD-22) named, and what the survey extended
+AUD-22 named seven surfaces for unqualified SOC 2 / HIPAA / GDPR / admissibility
+language: examples/README.md:35, tools/visualizer/README.md:25, Samples/README.md:6,:26,
+SECURITY_AUDIT_EXECUTION_LOG.md:130, docs/enterprise/VENDOR_SECURITY_QUESTIONNAIRE.md:148,
+SECURITY_AUDIT_REPORT.md:72 and README.md:18. A delegated repository-wide survey
+(deleg_0dfa7810, 2026-09-21, 9m25s, 39 api_calls) classified all 1,233 occurrences of the
+term set in 1,218 tracked files and returned **117 unqualified occurrences at 64 distinct
+path:line locations across 26 files** — including sites no audit finding named:
+`aegis_server/compliance/exporter.py:5-10` and `aegis_server/main.py:726` asserted in
+shipped code that the bundle "satisfies SOC2 Type II CC6.1 / CC7.2 and HIPAA 45 CFR
+§164.312(b)", `aegis_server/main.py:241` advertised "SOC2 / HIPAA compliance exports" in
+the OpenAPI description served at /docs, and `config/presets/judicial.env:13` said
+"Aegis satisfies Daubert".
+
+Survey artifacts (outside the repo): /home/luna/.hermes/cache/scratch/ADMISSIBILITY_SURVEY_FINDINGS.md
+and .../admissibility_survey_final.tsv (all 1,233 occurrences with verdicts:
+731 explicit-negation-ok, 208 mention-only, 141 historical-quoted-ok, 36 qualifier-adjacent-ok,
+117 no-qualifier). Method caveat, from the survey itself: its qualifier test is
+line/sentence-scoped, so a qualifier more than one block away can read as absent.
+
+## 2. Wording corrections (23 files)
+ SECURITY_AUDIT_EXECUTION_LOG.md                  |  2 +-
+ SECURITY_AUDIT_REPORT.md                         |  2 +-
+ Samples/01-overview.html                         |  6 ++---
+ Samples/02-performance.html                      |  6 ++---
+ Samples/03-providers.html                        |  6 ++---
+ Samples/04-health.html                           |  6 ++---
+ Samples/05-threatlab.html                        |  6 ++---
+ Samples/06-detectors.html                        |  6 ++---
+ Samples/07-waf.html                              |  6 ++---
+ Samples/08-audit.html                            |  6 ++---
+ Samples/09-forensics.html                        |  6 ++---
+ Samples/10-compliance.html                       |  6 ++---
+ Samples/11-architecture.html                     |  6 ++---
+ Samples/12-code.html                             |  6 ++---
+ Samples/README.md                                |  4 ++--
+ Samples/index.html                               |  6 ++---
+ aegis/config.py                                  |  5 ++--
+ aegis/core/pci_detector.py                       |  3 ++-
+ aegis_server/compliance/exporter.py              |  7 ++++--
+ aegis_server/main.py                             | 10 ++++----
+ config/presets/fedramp.env                       |  3 ++-
+ config/presets/healthcare.env                    |  3 ++-
+ config/presets/judicial.env                      |  5 ++--
+ deploy/docker/docker-compose.enterprise.yml      |  4 ++++
+ docs/enterprise/VENDOR_SECURITY_QUESTIONNAIRE.md |  2 +-
+ examples/README.md                               |  2 +-
+ examples/demo.py                                 |  5 ++--
+ scripts/verify_docs.py                           | 30 +++++++++++++++++++++++-
+ tools/visualizer/README.md                       |  2 +-
+ tools/visualizer/generate_samples.py             |  2 +-
+ tools/visualizer/static/index.html               |  6 ++---
+ 31 files changed, 109 insertions(+), 66 deletions(-)
+
+New file: tests/test_compliance_wording_gate.py (10 tests); untracked before this row: tests/test_compliance_wording_gate.py
+
+Selected diffs, by class:
+- **False-as-written (code/operator surfaces)**: `aegis_server/compliance/exporter.py:5` module
+  docstring; `aegis_server/main.py:726` operator string; `aegis_server/main.py:241` OpenAPI
+  description; `config/presets/judicial.env:13` ("satisfies Daubert" → technical inputs for a
+  Daubert analysis; admissibility is a judicial determination); `config/presets/fedramp.env:9`
+  ("most directly satisfied by Aegis" → the families Aegis supplies inputs for, no
+  authorization claimed).
+- **Labels**: the 13 tracked `Samples/*.html` pages (39 label sites: nav subtitle, KPI and
+  mermaid node) + their two generators `tools/visualizer/static/index.html` and
+  `tools/visualizer/generate_samples.py` — the generators were corrected too, because fixing
+  the pages alone would have re-emitted the label on the next regeneration.
+- **Markdown**: examples/README.md, tools/visualizer/README.md, Samples/README.md,
+  SECURITY_AUDIT_EXECUTION_LOG.md, SECURITY_AUDIT_REPORT.md,
+  docs/enterprise/VENDOR_SECURITY_QUESTIONNAIRE.md (GDPR answer now opens "No." like its five
+  neighbours), examples/demo.py.
+- **Not changed, deliberately**: `README.md:18` already says the software "is an input to them,
+  never a discharge of them" — an audit-list false positive, recorded as such.
+- **Data values left as data**: `format:'SOC2'` / `"format": "HIPAA"` on bundle records and
+  in the bootstrap JSON; the pages still declare themselves demo-only (tests/test_sample_provenance.py).
+
+## 3. The 13 sample pages were corrected in place, not regenerated
+REG-058 froze the tracked pages' embedded provenance (`git_head` 7ba28ac, version 3.1.0) and
+its own test pins that freeze; regenerating would have rewritten those fields. The labels were
+therefore edited in both the pages and their generators, and the equivalence (regeneration from
+the corrected generators reproduces the corrected pages) is asserted by
+`test_generated_sample_pages_carry_the_qualified_label`.
+
+## 4. The gate, and why its first version was too weak
+Two live negative controls during construction:
+1. Rule B (file-level boundary) DID NOT FIRE when the boundary sentence was deleted from
+   `aegis_server/main.py`, because another boundary token elsewhere in that large file still
+   satisfied it — the same per-line-vs-per-claim flaw the row is about, one level up. Fixed by
+   an AST rule keyed to the *string that names the regime*: any string constant naming a
+   regime (case-sensitive uppercase, so lowercase keys and profile names are not claims) must
+   carry its own boundary, with an explicit allowlist for bare data values
+   (`"SOC2"`, `"HIPAA"` — a bundle's format field, not a claim).
+2. After the fix, three controls each fired exactly one test and were restored: index.html
+   label reverted; compose-file boundary block removed; main.py operator string reverted to
+   "The bundle satisfies SOC2 …"; plus the data-value allowlist control (a value turned into a
+   claim: `"SOC2"` → `"SOC2 certified"`).
+
+Final focused run: `pytest -q tests/test_compliance_wording_gate.py` → **10 passed**;
+with tests/test_sample_provenance.py → 13 passed.
+`(no unqualified prose label remains in Samples/)
+1`
+
+## 5. Boundary of this row
+The phrase list is shared with `scripts/verify_docs.py` (imported, single source of truth);
+`verify_docs.py` itself remains markdown-scoped by contract, so the non-markdown surfaces are
+enforced by tests/test_compliance_wording_gate.py instead. Nothing here is legal advice or a
+compliance claim: "input, not determination" is asserted from the repository's own import
+graph and file text, not from runtime observation, and none of these edits changes behaviour
+— the tests above plus the full suite are the behavioural evidence.

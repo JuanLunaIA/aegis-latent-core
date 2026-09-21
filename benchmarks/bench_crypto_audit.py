@@ -6,7 +6,8 @@ Measures the three costs that define the forensic core guarantee (G1/G3):
   1. HMAC-SHA256 node signing (crypto-only, no I/O)  — isolates the signature cost
   2. ``commit_forensic()`` end-to-end                — full node: SHA-256 of payload,
      MMR leaf insertion, HMAC sign, and WAL append (fsync) — the real sustainable
-     background-commit rate behind the zero-forensic-latency design.
+     background-commit rate behind the background-commit design (the commit path
+     is off the response path; it is not zero latency and is not claimed as such).
   3. ``verify_integrity()``                          — full hash-chain sweep over N
      committed nodes — the auditor-side replay cost.
 
@@ -19,8 +20,10 @@ the numbers include genuine durable-write cost, not an in-memory mock. Each phas
 is repeated K times; the best-of-K (min-latency) trial is reported, consistent with
 ``bench_mmr.py`` (Google Benchmark min methodology — strips OS scheduling noise).
 
-Epistemic tags per CLAUDE.md I-03: [PROVEN] = executor output, [INFERENCE] =
-deduction from proven facts.
+Labels: [MEASURED HERE] = executor output on this host, printed under
+:func:`benchmarks.print_provenance`'s banner; [INFERENCE] = deduction from those
+observations. Neither label transfers to another host: see
+``docs/benchmarks/BENCHMARK_METHOD.md`` (AUD-26).
 
 Usage
 -----
@@ -45,6 +48,7 @@ from pathlib import Path
 from typing import Any
 
 from aegis.core.crypto_audit import CryptographicAuditLedger
+from benchmarks import print_provenance
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 
@@ -195,17 +199,17 @@ def run_benchmark(n: int = _DEFAULT_N, k: int = _DEFAULT_K) -> dict[str, Any]:
     )
     print()
     print(
-        f"  [PROVEN] HMAC-SHA256 node signing sustains "
+        f"  [MEASURED HERE] HMAC-SHA256 node signing sustains "
         f"{_fmt_throughput(hmac_r['best_throughput'])} ops/s "
         f"({hmac_r['best_us_per_op']:.3f} µs/op) — signature cost is negligible vs WAL I/O."
     )
     print(
-        f"  [PROVEN] Full durable commit (fsync per node) sustains "
+        f"  [MEASURED HERE] Full durable commit (fsync per node) sustains "
         f"{_fmt_throughput(commit_r['best_throughput'])} commits/s "
         f"({commit_r['best_us_per_op']:.1f} µs/commit) on this host."
     )
     print(
-        f"  [PROVEN] Offline chain verification sweeps "
+        f"  [MEASURED HERE] Offline chain verification sweeps "
         f"{_fmt_throughput(verify_r['best_throughput'])} nodes/s "
         f"({verify_r['best_us_per_op']:.3f} µs/node)."
     )
@@ -227,4 +231,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    print_provenance("bench_crypto_audit")
     main()

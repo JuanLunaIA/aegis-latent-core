@@ -145,7 +145,7 @@
 
 **Q: Are you HIPAA compliant?** → **No.** The software provides pattern-based redaction and audit records that an organisation may evaluate as technical inputs. Compliance is an organisational determination. See `docs/compliance/HIPAA_TECHNICAL_INPUTS.md`.
 
-**Q: Are you GDPR compliant?** → Compliance is a determination about a controller or processor, not about a software component. The software is self-hosted, so the customer is the controller of data in their deployment. See `docs/privacy/DATA_PROCESSING_CHECKLIST.md`.
+**Q: Are you GDPR compliant?** → **No.** The software implements controls an organisation may evaluate as technical inputs. Compliance is a determination about a controller or processor, not about a software component. The software is self-hosted, so the customer is the controller of data in their deployment. See `docs/privacy/DATA_PROCESSING_CHECKLIST.md`.
 
 **Q: Are you FedRAMP authorized?** → **No.**
 

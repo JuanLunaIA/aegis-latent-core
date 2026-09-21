@@ -653,13 +653,36 @@ pub fn verify(
     Ok(())
 }
 
+/// Ceiling on a serialised proof, in bytes.
+///
+/// A proof for any supported shape is a small fixed-size object, and this
+/// decoder sits on the Python boundary, so it must refuse a blob whose size is
+/// unrelated to a proof: inside `bincode`, length prefixes are the only thing
+/// between the caller and a parse with attacker-chosen field counts (AUD-24).
+///
+/// This is a policy bound rather than a measured maximum — `zk-spartan` is off
+/// in the default build and its test legs SIGILL on this CPU (REG-D04) — and it
+/// is deliberately far above any real proof for any supported shape.
+pub const MAX_PROOF_BYTES: usize = 1 << 20;
+
+/// Ceiling on a serialised verifier key, in bytes. Same reasoning as
+/// [`MAX_PROOF_BYTES`]; a key is larger than a proof and still small.
+pub const MAX_VERIFIER_KEY_BYTES: usize = 1 << 22;
+
 /// Serialise a proof for transport.
 pub fn encode_proof(proof: &Snark) -> Result<Vec<u8>, ZkError> {
     bincode::serialize(proof).map_err(|e| ZkError::Decoding(e.to_string()))
 }
 
-/// Decode a proof. Malformed bytes are refused rather than partially accepted.
+/// Decode a proof. Malformed bytes are refused rather than partially accepted,
+/// and so is a blob above [`MAX_PROOF_BYTES`] — refused before it is parsed.
 pub fn decode_proof(bytes: &[u8]) -> Result<Snark, ZkError> {
+    if bytes.len() > MAX_PROOF_BYTES {
+        return Err(ZkError::Decoding(format!(
+            "proof is {} bytes; the ceiling is {MAX_PROOF_BYTES}",
+            bytes.len()
+        )));
+    }
     bincode::deserialize(bytes).map_err(|e| ZkError::Decoding(e.to_string()))
 }
 
@@ -673,6 +696,12 @@ pub fn encode_verifier_key(key: &VerifierKey) -> Result<Vec<u8>, ZkError> {
 /// Decoding a key says nothing about whether it should be trusted; see
 /// [`verify`].
 pub fn decode_verifier_key(bytes: &[u8]) -> Result<VerifierKey, ZkError> {
+    if bytes.len() > MAX_VERIFIER_KEY_BYTES {
+        return Err(ZkError::Decoding(format!(
+            "verifier key is {} bytes; the ceiling is {MAX_VERIFIER_KEY_BYTES}",
+            bytes.len()
+        )));
+    }
     bincode::deserialize(bytes).map_err(|e| ZkError::Decoding(e.to_string()))
 }
 

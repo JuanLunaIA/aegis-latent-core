@@ -225,6 +225,13 @@ class LLMForwarder:
                 self._rust_forwarder = aegis_rust.RustForwarder.new(
                     base_url,
                     self._settings.backend_api_key,
+                    # AUD-12: the non-streaming relay reads the upstream body under
+                    # the gateway's response-size bound. This is the same knob the
+                    # streaming path uses (max_stream_response_bytes); a second
+                    # configuration field for the same policy would need its own
+                    # docs and rollout. A breach is raised, not relayed, and the
+                    # gateway's durable error path answers the client.
+                    max_response_bytes=self._settings.max_stream_response_bytes,
                 )
                 logger.info("LLMForwarder: Rust acceleration enabled")
             except Exception as exc:
@@ -281,12 +288,41 @@ class LLMForwarder:
                 raise
 
         assert self._client is not None, "LLMForwarder.start() was not called"
+        # AUD-23 / REG-D27: this fallback used to buffer whatever the upstream
+        # sent — no declared-length check, no mid-read cap — so a huge or hostile
+        # provider response set the peak memory of the request, and the largest
+        # copy is held across the mandatory durable-evidence gate. Read through a
+        # stream and refuse as soon as the running total exceeds the configured
+        # bound, the same contract the Rust relay keeps (read_body_bounded,
+        # AUD-12 / REG-D16). Read at call time so a lowered bound takes effect
+        # without a rebuild.
+        cap = self._settings.max_stream_response_bytes
         try:
-            raw_resp = await self._client.post(
-                provider_path,
-                json=provider_body,
-                headers=extra_headers,
-            )
+            async with self._client.stream(
+                "POST", provider_path, json=provider_body, headers=extra_headers
+            ) as streamed:
+                declared = streamed.headers.get("content-length")
+                if declared is not None and declared.isdigit() and int(declared) > cap:
+                    self._circuit_breaker.record_failure()
+                    raise RuntimeError(
+                        f"upstream response declares {declared} bytes, which exceeds the "
+                        f"configured limit of {cap} bytes"
+                    )
+                chunks: list[bytes] = []
+                total = 0
+                async for chunk in streamed.aiter_bytes():
+                    total += len(chunk)
+                    if total > cap:
+                        self._circuit_breaker.record_failure()
+                        raise RuntimeError(
+                            f"upstream response body exceeds the configured limit of {cap} bytes"
+                        )
+                    chunks.append(chunk)
+                raw_resp = httpx.Response(
+                    status_code=streamed.status_code,
+                    headers=dict(streamed.headers),
+                    content=b"".join(chunks),
+                )
         except (httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError):
             self._circuit_breaker.record_failure()
             raise

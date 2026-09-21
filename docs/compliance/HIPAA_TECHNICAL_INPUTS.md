@@ -22,7 +22,7 @@
 
 | Capability | Contribution | Evidence locator |
 | --- | --- | --- |
-| Pattern-based scrubbing across seventeen Safe Harbor-associated categories | Reduces PHI written into the evidence record | `aegis/core/phi_deidentifier.py` |
+| Pattern-based scrubbing across seventeen Safe Harbor-associated categories | Reduces matched PHI in the provider-bound request when the opt-in is set; the evidence record commits digests, not content (`UC-045`) | `aegis/core/phi_deidentifier.py` |
 | Scrub audit record | Per-category hit counts, confidence scores and a UTC timestamp, containing **no PHI** — only category metadata | `ScrubAuditRecord` in the same module |
 | Minimum-necessary support | Scope separation between `audit:read` and `audit:export` | `aegis/proxy/audit_api.py` |
 
@@ -64,7 +64,7 @@ So: pattern removal is a contribution toward a Safe Harbor effort. It is not Saf
 
 ## 5. Boundaries a reviewer must record
 
-**PHI reaches the provider unscrubbed.** The request goes upstream as sent; redaction changes the evidence record only. If PHI must not reach your model provider, you need filtering before the gateway, plus a Business Associate Agreement with the provider. See [PII Redaction Boundaries §4](../privacy/PII_REDACTION_BOUNDARIES.md#4-the-limit-that-surprises-people).
+**PHI reaches the provider unscrubbed unless the opt-in is set.** `AEGIS_PHI_DEIDENTIFY` / `AEGIS_PCI_SCRUB` are off by default, so the request goes upstream as received; when either is set, what crosses is text with matched patterns removed. The evidence record itself commits digests rather than content, so the flag does not change what the record commits (`UC-045`). If PHI must not reach your model provider, you need filtering before the gateway, plus a Business Associate Agreement with the provider. See [PII Redaction Boundaries §4](../privacy/PII_REDACTION_BOUNDARIES.md#4-the-limit-that-surprises-people).
 
 **Only three payload fields are visited.** `content`, `system`, `text`. PHI elsewhere is not scrubbed.
 

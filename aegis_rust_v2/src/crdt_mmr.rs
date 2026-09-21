@@ -335,6 +335,37 @@ const MAX_STATE_LEAVES: u64 = 1_000_000;
 /// Ceiling on clock entries in one leaf, i.e. on distinct replicas.
 const MAX_CLOCK_ENTRIES: u32 = 4_096;
 
+/// Why a local state was refused by its own encoder.
+///
+/// AUD-24: the same ceilings that make the wire format safe to *accept* from a
+/// peer were enforced only on decode, so a replica could merge more than
+/// [`MAX_CLOCK_ENTRIES`] peers, append once, and `encode_state()` would emit a
+/// leaf its own decoder — and every peer's — refuses. The state cannot
+/// round-trip, and the failure showed up on the receiving side (or not at all:
+/// `merge_encoded` fails closed with `ValueError` on the peer, while the sender
+/// learned nothing). Checking the invariants that the decoder relies on, at the
+/// boundary that creates the bytes, makes the local failure local.
+#[derive(Debug, PartialEq, Eq)]
+pub enum StateEncodeError {
+    TooManyLeaves(u64),
+    TooManyClockEntries(u32),
+}
+
+impl std::fmt::Display for StateEncodeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::TooManyLeaves(n) => write!(
+                f,
+                "state holds {n} leaves; the ceiling is {MAX_STATE_LEAVES}"
+            ),
+            Self::TooManyClockEntries(n) => write!(
+                f,
+                "leaf clock holds {n} entries; the ceiling is {MAX_CLOCK_ENTRIES}"
+            ),
+        }
+    }
+}
+
 /// Why a peer's state was refused. Every variant is a rejection, never a
 /// partial acceptance: a state that does not decode wholly is not merged.
 #[derive(Debug, PartialEq, Eq)]
@@ -444,7 +475,19 @@ impl CausalMmr {
     /// transport already establishes from the peer certificate. Two answers
     /// to "who sent this", one of them forgeable, is a trap rather than a
     /// convenience.
-    pub fn encode_state(&self) -> Vec<u8> {
+    pub fn encode_state(&self) -> Result<Vec<u8>, StateEncodeError> {
+        // Refuse to emit what the decoder refuses to accept (AUD-24).
+        if self.leaves.len() as u64 > MAX_STATE_LEAVES {
+            return Err(StateEncodeError::TooManyLeaves(self.leaves.len() as u64));
+        }
+        for leaf in &self.leaves {
+            if leaf.clock.clock.len() as u32 > MAX_CLOCK_ENTRIES {
+                return Err(StateEncodeError::TooManyClockEntries(
+                    leaf.clock.clock.len() as u32,
+                ));
+            }
+        }
+
         let mut out = Vec::with_capacity(8 + 8 + self.leaves.len() * 48);
         out.extend_from_slice(STATE_MAGIC);
         out.extend_from_slice(&(self.leaves.len() as u64).to_be_bytes());
@@ -459,7 +502,7 @@ impl CausalMmr {
             }
             out.extend_from_slice(&leaf.payload_hash);
         }
-        out
+        Ok(out)
     }
 
     /// Rebuild a replica from `encode_state` output, under `local_id`.
@@ -605,8 +648,17 @@ impl PyCausalMmr {
     }
 
     /// This replica's leaf set, in the canonical wire form.
-    fn encode_state<'py>(&self, py: Python<'py>) -> Bound<'py, PyBytes> {
-        PyBytes::new(py, &self.inner.encode_state())
+    ///
+    /// Fails closed rather than emitting a state the peer will refuse: a leaf
+    /// clock above the wire ceiling is a local error here, raised while the
+    /// replica that created it is still in a position to act on it (AUD-24).
+    fn encode_state<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyBytes>> {
+        let encoded = self.inner.encode_state().map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "refusing to encode state: {e}"
+            ))
+        })?;
+        Ok(PyBytes::new(py, &encoded))
     }
 
     /// Merge a peer's encoded state, returning the joined accumulator.
@@ -910,7 +962,7 @@ mod tests {
     #[test]
     fn a_decoded_replica_is_indistinguishable_from_an_appended_one() {
         let a = replica(1, &["a1", "a2", "a3"]);
-        let round_tripped = CausalMmr::decode_state(&a.encode_state(), 1).expect("decodes");
+        let round_tripped = CausalMmr::decode_state(&a.encode_state().unwrap(), 1).expect("decodes");
         assert_eq!(round_tripped.root(), a.root());
         assert_eq!(round_tripped.leaf_count(), a.leaf_count());
         assert_eq!(round_tripped.peaks(), a.peaks());
@@ -925,7 +977,7 @@ mod tests {
         let b = replica(2, &["b1", "b2", "b3"]);
 
         let in_process = a.join(&b);
-        let over_wire = a.join(&CausalMmr::decode_state(&b.encode_state(), 1).expect("decodes"));
+        let over_wire = a.join(&CausalMmr::decode_state(&b.encode_state().unwrap(), 1).expect("decodes"));
 
         assert_eq!(over_wire.root(), in_process.root());
         assert_eq!(over_wire.leaf_count(), in_process.leaf_count());
@@ -940,7 +992,7 @@ mod tests {
         // Same leaf set reached from opposite directions on different
         // replicas: the bytes must be identical, sender id included in
         // nothing.
-        assert_eq!(a.join(&b).encode_state(), b.join(&a).encode_state());
+        assert_eq!(a.join(&b).encode_state().unwrap(), b.join(&a).encode_state().unwrap());
         assert_eq!(a.join(&b).root(), b.join(&a).root());
     }
 
@@ -948,7 +1000,7 @@ mod tests {
     fn a_declared_leaf_count_larger_than_the_bytes_is_refused_before_allocating() {
         // Eight bytes from the network must not be able to ask for a
         // 68-exabyte Vec.
-        let mut state = replica(1, &["a1"]).encode_state();
+        let mut state = replica(1, &["a1"]).encode_state().unwrap();
         state[8..16].copy_from_slice(&u64::MAX.to_be_bytes());
         assert_eq!(
             CausalMmr::decode_state(&state, 1).unwrap_err(),
@@ -1004,9 +1056,65 @@ mod tests {
         );
     }
 
+    /// AUD-24: the ceilings the decoder enforces are enforced by the encoder
+    /// too, on the boundary that creates the bytes. The measured case from the
+    /// audit: merge more than `MAX_CLOCK_ENTRIES` peers into one replica, append
+    /// once, and the new leaf carries a clock above the wire ceiling — which our
+    /// own decoder refuses, and every peer's would. The failure used to surface
+    /// only on the receiving side, while the replica that built it learned
+    /// nothing.
+    #[test]
+    fn a_clock_above_the_wire_ceiling_is_refused_by_our_own_encoder() {
+        // A leaf's clock is its writer's replica clock at append time, so the
+        // ceiling is reached by merging peers and *then* appending.
+        let mut merged = replica(0, &["seed"]);
+        for writer in 1..MAX_CLOCK_ENTRIES {
+            merged = merged.join(&replica(writer, &["seed"]));
+        }
+        assert_eq!(merged.clock.clock.len(), MAX_CLOCK_ENTRIES as usize);
+
+        // At the ceiling: the new leaf's clock holds exactly the ceiling, which
+        // encodes, and the decoder that would have been the peer's accepts it.
+        let _ = merged.append(b"at-the-ceiling");
+        let at_ceiling = merged
+            .encode_state()
+            .expect("a state at the ceiling must still encode");
+        assert!(
+            CausalMmr::decode_state(&at_ceiling, 0).is_ok(),
+            "a state at the ceiling must still round-trip"
+        );
+
+        // One more peer, one more append: the clock crosses the ceiling, and the
+        // refusal happens here, on the side that created the offending leaf.
+        let mut over = merged.join(&replica(MAX_CLOCK_ENTRIES, &["seed"]));
+        let _ = over.append(b"above-the-ceiling");
+        assert_eq!(
+            over.encode_state().unwrap_err(),
+            StateEncodeError::TooManyClockEntries(MAX_CLOCK_ENTRIES + 1)
+        );
+
+        // The decoder's answer for the same shape is unchanged: it still refuses
+        // a peer's copy, which is exactly what made the encoder's silence the
+        // defect rather than the bound.
+        let mut forged = Vec::new();
+        forged.extend_from_slice(STATE_MAGIC);
+        forged.extend_from_slice(&1u64.to_be_bytes()); // one leaf
+        forged.extend_from_slice(&1u32.to_be_bytes()); // leaf replica
+        forged.extend_from_slice(&(MAX_CLOCK_ENTRIES + 1).to_be_bytes());
+        for replica in 0..=MAX_CLOCK_ENTRIES {
+            forged.extend_from_slice(&replica.to_be_bytes());
+            forged.extend_from_slice(&1u64.to_be_bytes());
+        }
+        forged.extend_from_slice(&[0u8; 32]);
+        assert_eq!(
+            CausalMmr::decode_state(&forged, 0).unwrap_err(),
+            StateDecodeError::TooManyClockEntries(MAX_CLOCK_ENTRIES + 1)
+        );
+    }
+
     #[test]
     fn a_foreign_or_newer_format_is_refused_rather_than_misread() {
-        let mut state = replica(1, &["a1"]).encode_state();
+        let mut state = replica(1, &["a1"]).encode_state().unwrap();
         state[7] = 0x02; // bump the format version byte
         assert_eq!(
             CausalMmr::decode_state(&state, 1).unwrap_err(),
@@ -1022,7 +1130,7 @@ mod tests {
     fn trailing_bytes_are_refused() {
         // Appended bytes would otherwise ride along unnoticed, and a state
         // that decodes "mostly" is a state whose digest nobody agrees on.
-        let mut state = replica(1, &["a1"]).encode_state();
+        let mut state = replica(1, &["a1"]).encode_state().unwrap();
         state.push(0x00);
         assert_eq!(
             CausalMmr::decode_state(&state, 1).unwrap_err(),
@@ -1034,7 +1142,7 @@ mod tests {
     fn every_truncation_is_refused_and_none_panics() {
         // The decoder sits behind a PyO3 boundary, where an unwind aborts the
         // interpreter. Every prefix must return Err, not panic.
-        let state = replica(1, &["a1", "a2", "a3"]).encode_state();
+        let state = replica(1, &["a1", "a2", "a3"]).encode_state().unwrap();
         for cut in 0..state.len() {
             assert!(
                 CausalMmr::decode_state(&state[..cut], 1).is_err(),
@@ -1049,7 +1157,7 @@ mod tests {
         // The clock is recomputed from the leaves, so the only thing a peer
         // influences is which leaves it sends.
         let a = replica(1, &["a1", "a2"]);
-        let decoded = CausalMmr::decode_state(&a.encode_state(), 9).expect("decodes");
+        let decoded = CausalMmr::decode_state(&a.encode_state().unwrap(), 9).expect("decodes");
         assert_eq!(decoded.clock().get(1), 2);
         assert_eq!(decoded.clock().get(9), 0);
     }

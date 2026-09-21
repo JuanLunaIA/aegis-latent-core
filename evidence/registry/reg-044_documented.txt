@@ -1,0 +1,60 @@
+REG-044 — after (CausalMmr/gossip staleness corrected in three governing documents)
+==============================================================================
+
+Row: REG-044 [TRACK-B3] ARCH P2 'CausalMmr wiring' — SEED -> DOCUMENTED
+Seed note: 'GossipDaemon exists (task C1) — UC-038's "not wired" text may now be
+stale; verify before deciding'
+
+VERDICT: the suspicion was half right. The ledger-wiring clause holds; the
+'no gossip transport' clause is stale.
+
+Half 1 — the accumulator is still unwired from the ledger:
+  $ grep -c "CausalMmr\|crdt_mmr\|gossip" aegis/core/crypto_audit.py
+    0
+
+Half 2 — a gossip transport exists and is started by the gateway itself:
+  $ ls aegis/consensus/
+    __init__.py
+    gossip.py
+    runtime.py
+    transport.py
+  $ sed -n '1204,1206p' aegis/proxy/app.py
+                from aegis.consensus.runtime import start_gossip
+    
+                state.gossip = await start_gossip(cfg)
+  $ grep -n -A1 '^gossip:' deploy/helm/values.yaml
+    82:gossip:
+    83-  enabled: false
+
+  and the code states its own boundary (aegis/consensus/runtime.py:20-28):
+    Nothing about the audit ledger. The mesh reconciles the ``CausalMmr``
+    accumulator, which is a separate structure with a separate root; each replica's
+    WAL remains its own single-writer chain and no receipt, root or inclusion proof
+    the ledger issues is affected by enabling this. That boundary is the whole
+    reason the daemon does not touch `CryptographicAuditLedger`, and
+    `aegis.core.a2a.verify_cluster_receipt` documents the verifier-side half of it.
+    
+
+The stale text, corrected in three places:
+  * docs/institutional/UNSUPPORTED_CLAIMS.md UC-038 — 'and has no gossip transport,
+    membership protocol, or persistence' -> 'and has no membership protocol or
+    persistence', plus the transport's existence, its accumulator-not-ledger
+    scope and its off-by-default opt-in; 'none can until a transport does' ->
+    'none is claimed, even now that a transport exists (CLM-080)'.
+  * docs/ROADMAP.md:61 — 'no gossip transport, membership, persistence, or replica
+    authentication' -> 'no membership protocol or persistence' + the transport.
+  * docs/architecture/ARCHITECTURE.md:103 — same clause, same narrowing.
+
+Not changed, because still true: the ledger is unwired, there is no membership
+protocol, no persistence, no convergence-latency figure, and join reconciles
+disagreement about ordering rather than dishonesty.
+
+Executed after the edits:
+  $ python -m pytest tests/consensus/ -p no:cacheprovider -q
+    18 passed, 1 skipped in 0.46s
+
+Gates re-run after the edits:
+verify_docs: verify_docs: PASS (0 findings)
+verify_claims: verify_claims: PASS (102 claims, 0 findings)
+verify_links: verify_links: PASS (1285 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0

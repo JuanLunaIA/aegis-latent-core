@@ -160,7 +160,7 @@ python tools/benchmarks/run_key_rotation.py
 python tools/benchmarks/run_pqc_timing.py --samples 1000000
 ```
 
-The retained `v3.1.0` release evidence is local and bounded. It covers 15 malicious and 8 benign WAF cases, 10,000 offered backpressure requests, 2,239 local key-rotation records and 1,000,000 timing samples per declared ML-DSA operation. The ML-DSA verify experiment returned `p=0.0`, so no constant-time claim is approved.
+The retained `v3.1.0` release evidence is local and bounded. It covers 15 malicious and 8 benign WAF cases, a 2,500-request backpressure run at 10,000 RPS offered (p99 836.3514210795984 ms), 2,239 local key-rotation records and 1,000,000 timing samples per declared ML-DSA operation. The 10,000-request backpressure figure formerly listed here is retracted (`UC-018`). The ML-DSA verify experiment returned `p=0.0`, so no constant-time claim is approved.
 
 Running the commands above will **not** reproduce those numbers, and that is expected rather than a fault. For backpressure and key rotation this tree carries its own smaller artifacts under `evidence/execution_2026-08-20/` — 2,500 offered requests at p99 836.35 ms, and 2,033 rotation records — which are different runs of different workloads, not corrections. The ML-DSA timing artifact has no in-tree counterpart at all. Cite the run you rely on with its request or record count and whether its raw JSON is in this tree; see [`docs/benchmarks/BENCHMARK_METHOD.md`](benchmarks/BENCHMARK_METHOD.md).
 

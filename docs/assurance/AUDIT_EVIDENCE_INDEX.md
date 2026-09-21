@@ -120,7 +120,7 @@ Absence of findings is not absence of vulnerabilities.
 | Python suite | 5,707 passed, 37 skipped | Candidate gate record | 2026-08-24 |
 | Python suite | 5,661 passed, 81 skipped, 0 failed | `evidence/cold_start_reproduction_audit_2026-09-01.md` | 2026-09-01 |
 | Rust extension | 29 tests passed; Clippy `-D warnings`; abi3 wheel built | CI | Per run |
-| WAF corpus | Zero observed bypasses, zero false positives | `waf_corpus_report_v1_candidate.json` | Per corpus |
+| WAF corpus | Zero observed bypasses, zero false positives | `evidence/execution_2026-08-20/waf_corpus_report.json` | Per corpus |
 | Backpressure | 2,500 offered, 2,500 durable, p99 commit 51.87 ms under 2 ms injected `fsync` delay, 200 `fsync` calls | `evidence/execution_2026-09-16/`, `evidence/backpressure_group_commit_remeasurement_2026-09-16.md` | 2026-09-16 |
 | Backpressure (superseded, pre-group-commit) | Same parameters at `20fa011`: 2,500 durable, p99 commit 836.35 ms, 2,501 `fsync` calls | `evidence/execution_2026-08-20/backpressure_stall_report.json` | 2026-08-20 |
 

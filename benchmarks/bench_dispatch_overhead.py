@@ -50,6 +50,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from benchmarks import print_provenance
+
 _DEFAULT_DISPATCH_SAMPLES = 5_000
 _DEFAULT_MEMORY_ROUNDS = 30
 _DEFAULT_COMMITS_PER_ROUND = 200
@@ -253,4 +255,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    print_provenance("bench_dispatch_overhead")
     raise SystemExit(main())

@@ -1,0 +1,80 @@
+REG-037 — after (assertion-free recovery tests repaired; memory leg named as a gap)
+======================================================================================
+
+Row:        REG-037  [TRACK-B1]  CODE  P2  "Memory/disk/rotation recovery tests"
+Transition: SEED -> FIXED  (with one residual named explicitly, not implied)
+
+(1) The premise, checked leg by leg instead of as one claim:
+
+    rotation  COVERED   tests/test_wal_rotation.py — six tests:
+                          test_rotation_disabled_by_default
+                          test_wal_rotates_when_threshold_exceeded
+                          test_archived_segments_are_owner_only
+                          test_full_chain_reconstructed_across_segments
+                          test_rotation_preserves_commit_order
+                          test_segment_sequence_continues_after_restart
+    disk      DEFECTIVE tests/test_chaos.py — three tests asserted nothing, and
+                        their class docstring contradicted the documented contract
+    memory    PARTIAL   tests/test_proxy_streaming.py::test_large_logical_stream_retained_memory_is_bounded
+                        bounds retained growth on the streaming path; the admission
+                        gate bounds concurrency. Note tests/test_memory_invariants.py
+                        is about process-memory PAGE invariants (hashing mapped
+                        ranges), not retained growth — a naming trap for the next
+                        reader, recorded in the row.
+
+(2) The disk-full defect, and what the behaviour actually is. Probed BEFORE any
+    assertion was written, because the old bodies asserted nothing at all and the
+    docstring claimed fail-open:
+
+$ python reg037_probe.py
+first commit ok: True | fault: healthy
+second commit raised: OSError | No space left on device
+fault after failed write: wal_persist_failed
+chain state_ids: ['s1']
+verify_integrity: (True, None)
+third commit ok: True
+fault after recovery attempt: wal_persist_failed
+chain state_ids now: ['s1', 's3']
+wal mode after first commit: 0o600
+missing-file commit: RETURNED; file recreated: True
+fault on missing-file path: healthy
+
+$ python reg037_probe2.py
+after recreate: exists True bytes 1417
+replay chain len: 1 state_ids: ['b']
+replay fault: mmr_replay_mismatch
+replay verify_integrity: (False, 0)
+
+    So: the failure ABORTS the record and LATCHES `wal_persist_failed` — sticky,
+    since a later successful commit does not clear it, which is exactly what makes
+    the gateway's 503 at aegis/proxy/app.py:475 correct rather than decorative;
+    what already landed stays verifiable; the WAL is created 0o600; and a WAL that
+    disappears mid-run is recreated for the live process while a replay catches the
+    orphaned record (`mmr_replay_mismatch`, verify_integrity False at index 0)
+    instead of accepting a chain that starts mid-stream.
+
+(3) The repaired tests:
+
+$ pytest tests/test_chaos.py tests/test_wal_rotation.py -q
+26 passed in 2.24s
+    test_wal_ioerror_on_write_latches_and_aborts
+        (was test_wal_ioerror_on_write_does_not_propagate — wrong twice over: the
+         error did propagate, and nothing was asserted)
+    test_wal_is_owner_only_and_commits
+        (was test_wal_file_permission_denied — it created a normal 0o600 file,
+         denied nothing, and checked one non-empty hash)
+    test_wal_missing_after_startup_is_detected_on_replay
+        (was ..._triggers_reopen — the reopen is now asserted, and so is the
+         replay detection that makes the loss visible)
+
+(4) Residual, stated rather than hidden: there is no in-tree contract for
+    allocation failure, so an OOM kill is not simulated. Writing that test would
+    mean pinning semantics the code does not document; the honest options are a
+    chosen contract or an accepted gap, and the gap is the one taken here and
+    recorded in the row.
+
+(5) Gates after the edit (same run as the commit):
+verify_docs: PASS (0 findings)
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1289 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0 required_files=27

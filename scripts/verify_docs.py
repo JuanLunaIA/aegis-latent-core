@@ -171,6 +171,14 @@ INTERNAL_MARKER = "**INTERNAL DOCUMENT — NOT FOR EXTERNAL DISTRIBUTION**"
 
 #: Prohibited assurance and marketing language. Matched case-insensitively on
 #: prose only, and only when asserted (see ``_is_negated``).
+#:
+#: The hyphenated, adjectival and ``meets/satisfies X`` forms were added when
+#: AUD-22/REG-D26 found the class alive at surfaces that carried the claim as a
+#: *label* ("SOC2 / HIPAA bundle", "hipaa-ready") rather than as a sentence the
+#: original list would match. A bare "soc 2" is deliberately NOT a phrase: the
+#: corpora that legitimately discuss the standard are claim-control documents, and
+#: flagging the subject would punish them for naming it. What is forbidden is the
+#: assertion, including its compressed forms.
 PROHIBITED_PHRASES = (
     "fully compliant",
     "legally admissible",
@@ -185,11 +193,31 @@ PROHIBITED_PHRASES = (
     "market-leading",
     "top #1",
     "soc 2 certified",
-    "iso 27001 certified",
+    "soc2 certified",
+    "soc 2 compliant",
+    "soc2 compliant",
+    "soc 2 ready",
+    "soc2 ready",
+    "iso 27001 compliant",
     "hipaa compliant",
+    "hipaa certified",
+    "hipaa ready",
+    "hipaa-ready",
     "gdpr compliant",
+    "gdpr certified",
+    "gdpr-compliant",
     "fedramp authorized",
+    "fedramp compliant",
     "pci compliant",
+    "pci-dss compliant",
+    "court-admissible",
+    "admissible in court",
+    "satisfies hipaa",
+    "satisfies gdpr",
+    "satisfies soc 2",
+    "meets hipaa",
+    "meets soc 2",
+    "audit-proof",
     "guarantees prevention",
     "guaranteed prevention",
     "removes all pii",
@@ -462,6 +490,66 @@ def check_readme_shape(root: Path) -> list[Finding]:
     return findings
 
 
+BUYER_BASELINE_DOCS = (
+    "docs/BUYER_GUIDE_US.md",
+    "docs/PRODUCT_BRIEF_US.md",
+    "docs/COMMERCIAL_STRATEGY_US.md",
+    "docs/PROSPECTUS.md",
+    "docs/FAQ_PROCUREMENT.md",
+)
+
+_BUYER_FINGERPRINT_RE = re.compile(
+    r"^\*\*(?:Source baseline|External baseline|Historical external baseline):\*\*"
+)
+_READBACK_DIGEST_RE = re.compile(r"v4\.[0-9]+\.[0-9]+[^\n]{0,400}?\b[0-9a-f]{40}\b")
+
+
+def check_buyer_document_baselines(root: Path) -> list[Finding]:
+    """Release-state restatement in the buyer-facing set — REG-059.
+
+    Every one of these documents once carried its own copy of the release-state
+    block: a "release baseline" line, its own restatement of the same thing, and
+    then the external and historical readbacks with tag SHAs. Four copies of the
+    same facts drift independently, and one of them missing the PyPI caveat is
+    how a procurement reader comes to believe the gateway is installable from
+    pip. `docs/RELEASE_STATUS.md` is the document that establishes publication
+    state; these files may point at it and may state the boundary, but they may
+    not restate its table or re-derive its digests.
+    """
+    findings = []
+    for rel in BUYER_BASELINE_DOCS:
+        path = root / rel
+        if not path.is_file():
+            continue
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for line_no, text in _strip_code_blocks(lines):
+            if _BUYER_FINGERPRINT_RE.match(text):
+                findings.append(
+                    Finding(
+                        rel,
+                        line_no,
+                        "duplicate-baseline-restatement",
+                        "release-state block restated here; state the boundary and link "
+                        "docs/RELEASE_STATUS.md instead (REG-059)",
+                    )
+                )
+            elif _READBACK_DIGEST_RE.search(text):
+                findings.append(
+                    Finding(
+                        rel,
+                        line_no,
+                        "restated-readback-digest",
+                        "readback digest restated outside docs/RELEASE_STATUS.md; "
+                        "pointers cannot drift, copies do (REG-059)",
+                    )
+                )
+        if "RELEASE_STATUS.md" not in path.read_text(encoding="utf-8"):
+            findings.append(
+                Finding(rel, 1, "missing-status-pointer", "no pointer to docs/RELEASE_STATUS.md")
+            )
+    return findings
+
+
 def check_internal_markers(root: Path) -> list[Finding]:
     findings = []
     for rel in sorted(INTERNAL_FILES):
@@ -502,6 +590,7 @@ def run(root: Path) -> list[Finding]:
     findings: list[Finding] = []
     findings += check_required_files(root)
     findings += check_readme_shape(root)
+    findings += check_buyer_document_baselines(root)
     findings += check_internal_markers(root)
     findings += check_non_empty(root)
 

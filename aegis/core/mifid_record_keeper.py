@@ -4,24 +4,31 @@
 """aegis.core.mifid_record_keeper — MiFID II / Dodd-Frank communication records.
 
 Implements communication and transaction record-keeping for LLM-mediated
-financial services interactions, satisfying:
+financial services interactions. It contributes technical inputs toward the
+obligations below; it does not, by itself, establish compliance:
 
 - **MiFID II Article 16(6) / Article 25(1)**: retain records of all services,
   transactions, and communication (phone, email, electronic messaging) related
-  to orders and advice for at least 5 years (7 years for SMCR-scope firms and
-  for RTS 6/7 order records).
+  to orders and advice for at least 5 years (MiFID II sets the five-year
+  minimum, extendable to seven at a competent authority's request;
+  jurisdictional overlays such as UK SMCR are outside this module's scope and
+  need counsel review).
 - **Dodd-Frank Section 727 / CFTC Rule 45.2**: swap transaction and
   communication records for 5 years (or the term of the trade plus 5 years
   for long-dated instruments).
-- **SEC Rule 17a-4**: already addressed by ``worm_ledger.py``; referenced here
-  for cross-regulation mapping.
+- **SEC Rule 17a-4**: retention labels are supplied by
+  :mod:`aegis.core.worm_ledger`, which applies application-level sealed-segment
+  enforcement only — it does not resist a privileged actor, does not establish
+  regulatory WORM media, and creates no custody record (`UC-024`). Nothing in
+  this repository discharges a 17a-4 obligation; the labels exist for
+  cross-regulation mapping.
 
 Record design
 -------------
 Full message text is **not** stored — only a SHA-256 content hash.  This
-satisfies the record-keeping obligation (the hash is immutable evidence that
-a specific message was sent/received at a specific time) while minimising
-GDPR/personal-data exposure.  Firms that require full-text retention must add
+contributes to the record-keeping obligation (the hash records that a specific
+message was sent/received at a specific time, in the retention store the caller
+provides) while minimising GDPR/personal-data exposure.  Firms that require full-text retention must add
 an encrypted side-channel with a separate key hierarchy.
 
 Usage::

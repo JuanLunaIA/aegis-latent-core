@@ -1,0 +1,53 @@
+REG-027 — after (PyPI gateway gap recorded as intended, not pending)
+=====================================================================
+
+Row:        REG-027  [TRACK-A5]  CODE  P0  "PyPI `aegis-latent-core` `5.0.0` unpublished"
+Transition: SEED -> WONT-FIX  (decision + rationale + claim updated; owner, 2026-09-21)
+
+(1) Re-verified live before closing, 2026-09-21:
+
+$ curl -s https://pypi.org/pypi/aegis-latent-core/json
+
+
+$ curl -s https://pypi.org/pypi/aegis-latent-sdk/json
+
+
+    So the gateway distribution has no 5.0.0 and its only published version is
+    4.1.2, while the SDK is at 5.0.0 on the same registry.
+
+(2) Why the gap cannot close by itself — the publisher does not build it:
+
+$ grep -n 'sdk/python|aegis-latent-core|working-directory' .github/workflows/publish_pypi.yml
+
+
+    The workflow checks out sdk/python/pyproject.toml, validates the tag against
+    the SDK version and uploads to the aegis-latent-sdk project. Nothing builds
+    the root pyproject.toml distribution. This is the recorded reason the absence
+    is stable rather than a failed upload.
+
+(3) What changed, and what did not:
+
+    docs/RELEASE_STATUS.md §1.0 — added the owner position (2026-09-21): the
+    absence stands for now as a recorded position rather than an oversight, the
+    gateway is distributed from source and GHCR, and the consumer consequence is
+    stated plainly: `pip install aegis-latent-core` gets 4.1.2, earlier than this
+    baseline and earlier than the 4.3.0->5.0.0 public-API change (CLM-090), so a
+    pip install and a source checkout do not expose the same API.
+    The line-9 summary now says the position is recorded rather than outstanding.
+    UNSUPPORTED_CLAIMS.md — UC-047 added, blocking "install with pip" as an
+    unqualified instruction for the gateway and any version statement that treats
+    PyPI as carrying 5.0.0.
+
+    NOT changed: no upload was performed, no workflow was added, and no version
+    claim was added to any surface. The registry row's closure is the record.
+
+(4) Revisit path (so the decision is revisable rather than buried): a publish job
+    for the root distribution, which must arrive with its own readback —
+    scripts/verify_release_readback.py already reports the PyPI state and would
+    show the change (REG-028).
+
+(5) Gates after the edit (same run as the commit):
+verify_docs: PASS (0 findings)
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1289 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0 required_files=27

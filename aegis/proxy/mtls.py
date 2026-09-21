@@ -123,7 +123,7 @@ class CACPIVAuth:
             logger.warning("CAC/PIV: Certificate rejected — %s", exc)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"CAC/PIV certificate rejected: {exc}",
+                detail="CAC/PIV certificate rejected: invalid or untrusted certificate",
             ) from exc
         except Exception as exc:
             logger.exception("CAC/PIV: Unexpected error parsing certificate: %s", exc)

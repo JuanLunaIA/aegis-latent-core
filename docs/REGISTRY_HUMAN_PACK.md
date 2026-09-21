@@ -7,14 +7,14 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 # Registry — Human Handoff Pack
 
 **Audience:** the founder. Nobody else can execute any item in this file.
-**Scope:** the nine `REG-Hxx` items from the master registry that require a signature, a purchase order, or another person.
+**Scope:** the ten `REG-Hxx` items from the master registry that require a signature, a purchase order, or another person.
 **Boundary:** this file records *intent, cost estimates and vendor candidates*. Nothing here has happened. Every item is `NOT STARTED` unless a linked artifact says otherwise, and naming a vendor is not a relationship with them.
 
 > ## No code REG substitutes for any HUMAN REG
 >
 > This is the point of keeping them in a separate file. An agent can close a `CLM` row, wire a scanner, or fix a race. It cannot commission a penetration test, sign an escrow agreement, form a company, or hire an engineer. Conflating the two produces a roadmap that looks closeable and is not.
 >
-> These nine also gate more of the product's public language than all the code items combined. Until `REG-H01` completes, **no document may say "externally assessed", "pen-tested", or "independently reviewed"** — see [Unsupported Claims](institutional/UNSUPPORTED_CLAIMS.md).
+> These ten also gate more of the product's public language than all the code items combined. Until `REG-H01` completes, **no document may say "externally assessed", "pen-tested", or "independently reviewed"** — see [Unsupported Claims](institutional/UNSUPPORTED_CLAIMS.md).
 
 ---
 
@@ -176,6 +176,28 @@ Both are stated rather than silently carried, because a handoff pack that passes
 
 ---
 
+## REG-H10 — Regulatory counsel review: MiFID II / MAR input modules and the SMCR reference
+
+| | |
+|---|---|
+| **Severity** | MEDIUM |
+| **Cost** | $1,500–4,000 |
+| **Timeline** | 2–4 weeks |
+| **Vendors** | Regulatory counsel with UK FCA / EU MiFID II experience |
+| **Tracked as** | `AUD-20` (closed on the repository side) |
+
+**Checklist**
+
+1. Confirm the retention statement `aegis/core/mifid_record_keeper.py` and `CLM-104` now carry: MiFID II Art. 16(6)/25(1) is a **five-year** minimum, extendable to seven at a competent authority's request — not a seven-year default.
+2. Decide the **UK SMCR** question the module explicitly puts outside its scope: whether an SMCR-scope firm would have a retention period this module cannot serve, and if so, whether that belongs in the module's docstring, its CLM row, or neither.
+3. Confirm the market-abuse citation split in `CLM-103` (MAR Art. 12(1)(a)(ii) for spoofing; MiFID II Art. 12 is "Assessment period") and that no document may read either module as monitoring coverage.
+
+**Unblocks:** the last unverified legal statement in the repository's MiFID II / MAR surfaces. Until it completes, `CLM-103`/`CLM-104` and `UC-056` carry the contribute-technical-inputs framing, and `docs/compliance/MIFID_II_TECHNICAL_INPUTS.md` keeps its "Not a MiFID II compliance statement" boundary.
+
+**Note:** this is a *wording* review. The wiring-or-retire decision for the two modules is `AUD-36`, which is code work and does not wait on counsel.
+
+---
+
 ## Ordering
 
 ```
@@ -186,7 +208,7 @@ REG-H06 (design partner + pilot)
                                    └──> REG-H03 (escrow), REG-H05 (2nd maintainer)
 ```
 
-`REG-H07` and `REG-H08` are independent and can run in parallel whenever infrastructure work resumes.
+`REG-H07` and `REG-H08` are independent and can run in parallel whenever infrastructure work resumes. `REG-H10` is independent too and can ride along with the next counsel engagement (`REG-H04`).
 
 ---
 

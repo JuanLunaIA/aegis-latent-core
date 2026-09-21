@@ -10,7 +10,7 @@ Aegis sits between your application and your model provider. For every governed 
 [![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
 
-**6,936 tests passing, 26 skipped** on the `5.0.0` source line — [check it yourself](#verified-metrics) with `pytest -n auto -q`, which is the only kind of badge worth having.
+**6,971 tests passing, 118 skipped** on the `5.0.0` source line (measured 2026-09-21) — [check it yourself](#verified-metrics) with `pytest -n auto -q`, which is the only kind of badge worth having.
 
 ## Why this matters, in three lines
 
@@ -20,7 +20,8 @@ Aegis sits between your application and your model provider. For every governed 
 
 > **→ [Prove it yourself](docs/PROVE_IT.md)** — twelve lines of Python, no call to our servers, three cases of which two must fail.
 
-> **Current release:** `v5.0.0`, with fourteen synchronized anchors, published 2026-09-16. The signed tag, the GitHub Release and its 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk` and both GHCR images were read back; see [Release Status](docs/RELEASE_STATUS.md) §1.0. **The gateway distribution `aegis-latent-core` was not published at `5.0.0`** — `pip install aegis-latent-core` still gets `4.1.2`. There is no `4.2.0`; the number was skipped.
+> **Current release:** `v5.0.0` — published 2026-09-16 on every surface except PyPI `aegis-latent-core`; the signed tag, the GitHub Release and its 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk` and both GHCR images were read back ([Release Status](docs/RELEASE_STATUS.md) §1.0).
+> **Current release candidate:** `v5.0.1`, fourteen synchronized anchors — **published nowhere**: read back 2026-09-21, no tag, no GitHub Release, no OCI tag and no registry version exists for it ([Release Status](docs/RELEASE_STATUS.md) §1.0a). **The gateway distribution `aegis-latent-core` was not published at `5.0.0`** — `pip install aegis-latent-core` still gets `4.1.2`. There is no `4.2.0`; the number was skipped.
 >
 > **Most recent published release:** `v4.1.2`, read back on 2026-09-04 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images. **`4.1.2` is the first version installable from PyPI as `aegis-latent-core`**; before it the gateway came from source or GHCR only. The npm version list skips `4.1.1`, whose publish step failed. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The two PyPI gateway artifacts are byte-different from the release assets of the same name — same content, different build host — so `SHA256SUMS` does not cover the PyPI downloads. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
@@ -88,6 +89,21 @@ The verifier is 313 lines of pure Python, exists in TypeScript with the same sem
 A passing verification establishes inclusion under the root you supplied — not that the response was correct, not who produced the record, and not that nothing was omitted.
 
 Full worked transcript with the failing cases: **[docs/PROVE_IT.md](docs/PROVE_IT.md)**
+
+### Verify what you downloaded
+
+Release assets carry a digest, and checking one needs no checkout and no cooperation from this project:
+
+```
+curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.0/SHA256SUMS
+# then, for each artifact you downloaded:
+curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.0/<artifact-name>
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+Two things that snippet does not establish. It shows the bytes match the manifest; it does not show who built them — an OCI signature (`cosign verify`) and a build attestation (`gh attestation verify`) are separate checks against separate infrastructure. And it covers the **release assets only**: the PyPI wheels for `aegis-latent-core` are rebuilt from the same source on a different build host, so their bytes differ from the release assets of the same name, and `SHA256SUMS` does not cover them (see [docs/RELEASE_STATUS.md](docs/RELEASE_STATUS.md)).
+
+`python scripts/verify_release_readback.py --tag v5.0.0 --verify-assets` automates the whole readback — the GitHub Release, the `SHA256SUMS` sweep, the PyPI and npm versions, and the GHCR manifest digests — and prints `NOT_EXECUTED`, with the reason, for anything it could not check from where it ran.
 
 ---
 
@@ -310,8 +326,9 @@ Separately, Kani 0.67.0 model-checks the native WAL's frame-bounds arithmetic ov
 | Python suite | 5,974 passed, 52 skipped, 0 failed | `4.1.2` source baseline | 2026-09-03 |
 | Python suite | 6,179 passed, 52 skipped, 0 failed | `4.3.0` source baseline | 2026-09-08 |
 | Python suite | **6,936 passed, 26 skipped, 0 failed** | `5.0.0` source baseline | 2026-09-16 |
+| Python suite | **6,948 passed, 119 skipped, 0 failed** | `5.0.0` source baseline (registry-closure branch) | 2026-09-21 |
 | Rust extension | 31 tests passed; Clippy `-D warnings`; abi3 wheel built | CI | Per run |
-| Static analysis | `mypy --strict` 0 errors over 206 files; Bandit 0 findings at every severity | CI | Per run |
+| Static analysis | `mypy --strict aegis` 0 errors over 207 files; `bandit -r aegis/ aegis_server/ -lll` 0 findings at every severity | CI | Per run |
 | Model checking | 5 Kani harnesses verified, 0 failures, over the whole `usize` domain | CI | Per run |
 | Per-commit cost vs chain length | At 2,000 prior leaves: 30,153.9 → 361.7 µs/commit. Normalised, the prior curve rises `1.00× → 17.65×` with chain length; the current one is flat within noise | [`commit_scaling_measurement`](evidence/commit_scaling_measurement_2026-09-03.md) | 2026-09-03 |
 | MMR append, Rust vs Python | At 100,000 leaves: 775.76k vs 156.90k leaves/s (4.94×) | [`evidence_path_measurements`](evidence/evidence_path_measurements_2026-09-03.md) | 2026-09-03 |

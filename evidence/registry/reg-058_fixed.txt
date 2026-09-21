@@ -1,0 +1,53 @@
+REG-058 — after (sample provenance markers pinned by test; frozen metadata explained)
+=====================================================================================
+
+Row: REG-058 [P3-1] CODE P3 'Samples/HTML + snapshots in repo' — SEED -> FIXED
+
+What is tracked (13 pages + README, ~1.9 MB), generated not hand-authored:
+  $ ls Samples/ | tr '\n' ' '
+01-overview.html 02-performance.html 03-providers.html 04-health.html 05-threatlab.html 06-detectors.html 07-waf.html 08-audit.html 09-forensics.html 10-compliance.html 11-architecture.html 12-code.html README.md index.html 
+  $ grep -n 'generate_samples' Samples/README.md | head -2
+    34:python tools/visualizer/generate_samples.py
+    51:> `tools/visualizer/generate_samples.py` if you need them to match the current
+
+The markers that were never enforced before this change:
+  $ grep -o 'demo_only[^,]*\|live_runtime[^,]*\|data_provenance[^,]*\|git_head[^,]*' Samples/01-overview.html | head -4
+    demo_only":true
+    live_runtime":false
+    data_provenance":"static-demo-only"
+    git_head":"7ba28ac"
+  $ grep -c 'class="demo-banner"' Samples/01-overview.html
+    1
+
+New enforcement — tests/test_sample_provenance.py (4 tests):
+  * every page's real embedded JSON block must carry demo_only=true,
+    live_runtime=false, data_provenance='static-demo-only' (parsed, not grepped)
+  * every page must still render a demo-banner element
+  * all pages must embed one and the same git_head (one generator run)
+  * Samples/README.md must state the freeze
+
+The stale-value residual, now explained where a reader meets it:
+  embedded git_head is 7ba28ac (3.1.0-era) against a 5.0.0 checked-out baseline.
+  $ tail -6 Samples/README.md
+    >
+    > The `version` and `git_head` fields embedded in each page's
+    > `window.__AEGIS_BOOTSTRAP__` block are frozen at the commit that generated the
+    > pages and are **not refreshed per release**; regenerate with
+    > `tools/visualizer/generate_samples.py` if you need them to match the current
+    > tree. They record what produced the page, not what the release contains.
+
+Executed:
+  $ python -m pytest tests/test_sample_provenance.py -q
+    4 passed in 0.21s
+  $ ruff check tests/test_sample_provenance.py
+    All checks passed!
+
+Not done deliberately: the 13 pages were neither deleted nor regenerated - they are
+indexed in evidence/documentation_audit_*/CORPUS_INVENTORY.* and referenced by CLM-038,
+so removal is a repository-shape decision for the owner.
+
+Gates:
+verify_docs: PASS (0 findings)
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1285 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0
