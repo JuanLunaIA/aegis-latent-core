@@ -4,7 +4,7 @@
 **Scope:** every public claim this project makes, its evidence state, and its boundary.
 **Boundary:** this is a claim-control document, not a certification. It records what may be said and on what evidence; it does not itself establish assurance.
 
-**Status:** `v4.1.2` source metadata is synchronized; SDK registry publication remains at `4.0.0` and target-environment acceptance requires independent evidence
+**Status:** `5.0.0` source metadata is synchronized across the fourteen anchors; the source is published on every surface except PyPI `aegis-latent-core` (latest there `4.1.2`), and target-environment acceptance requires independent evidence
 **Canonical language:** US English
 **Last verified:** 2026-09-02 UTC
 **Release baseline:** four-layer truth model
@@ -171,6 +171,21 @@ Aegis is an **OpenAI-compatible AI Governance and Evidence Gateway**. It sits be
 | `CLM-102` | `aegis_stream_admission_active` (Gauge) and `aegis_stream_admission_rejected_total` (Gauge) expose `StreamAdmissionGate`'s live concurrent-stream count and cumulative refusal count on `/metrics`, bound via `Gauge.set_function` at gate construction in `create_app` rather than pushed at each `acquire()`/`release()`/reject call site. | `IMPLEMENTED`; `LOCALLY TESTED` | `aegis/core/observability.py`; `aegis/proxy/app.py` (`state.stream_gate` construction); `tests/security/test_stream_admission_metric.py` (5 tests: gauges wired to callables that read live gate state; a rejection is visible with no push call from the reject site; the no-op stub accepts the same call when `prometheus_client` is absent; end-to-end against the real `prometheus_client` registry, gated behind `prometheus_available()`) | `guarded_stream` (`aegis/proxy/streaming.py`) releases the gate slot from its own `finally` and deliberately does not import `observability` — every other metric write in this codebase happens from `aegis/proxy/app.py`, and this preserves that boundary rather than adding a new cross-module dependency. `set_function` means the value is computed at Prometheus scrape time, not continuously pushed; between scrapes the true value can differ from what was last read, which is a property of pull-based Gauges generally and not specific to this metric. `_rejected_total` is a Gauge, not a Counter, mirroring `aegis_audit_chain_nodes_total`'s existing precedent: it mirrors a count `StreamAdmissionGate` already tracks internally (`._rejected`) rather than an independent counter incremented at the two reject call sites, so the two can never drift apart. This adds observability only — `StreamAdmissionGate`'s admission behavior (`CLM-094`) is unchanged, and the concurrent-stream ceiling remains per-process, not cluster-wide, exactly as before. |
 
 
+## Regulatory-input claims (built, not wired)
+
+Two modules produce regulatory-relevant technical inputs and are reachable from no
+documented entrypoint (`scripts/import_reachability_allowlist.txt` entries 64-65,
+whose header calls that list "a worklist, not a verdict"). Their rows are here,
+not under buyer-facing claims, because the honest state of both is *implemented
+and unwired*: nothing in the gateway calls them, no configuration enables them,
+and neither establishes a legal obligation. Whether they are wired into a request
+path or retired is tracked as `AUD-36`.
+
+| ID | Claim | State | Evidence locator | Boundary / falsification |
+|---|---|---|---|---|
+| `CLM-103` | `aegis/core/market_abuse_detector.py` classifies prompt and response text into MAR/MiFID II market-abuse categories (insider dealing, spoofing, layering, and the module's other categories) and returns a structured `MarketAbuseVerdict` with rule identifiers and evidence excerpts. | `IMPLEMENTED` | `aegis/core/market_abuse_detector.py`; `tests/test_market_abuse_detector.py`; reachability allowlist entry 64 | **Not wired:** no request path, endpoint, or configuration invokes it; a verdict is a text classification over one request, not a finding of law, not surveillance coverage, and not evidence that abuse did or did not occur. The spoofing basis is **MAR (Reg. (EU) No 596/2014) Art. 12(1)(a)(ii)** — MiFID II Art. 12 is "Assessment period" and must not be cited for it. Falsified by a pattern that fires on benign text, or by the module acquiring a caller without this row being rewritten. |
+| `CLM-104` | `aegis/core/mifid_record_keeper.py` builds MiFID II / Dodd-Frank communication and transaction records that store a SHA-256 content hash and metadata rather than message text, into a caller-supplied retention store. | `IMPLEMENTED` | `aegis/core/mifid_record_keeper.py`; `tests/test_mifid_record_keeper.py`; reachability allowlist entry 65 | **Not wired:** no request path invokes it and no retention store is configured or created by this repository; hash-only design means the module cannot reproduce message content, so it cannot satisfy a reproduction request on its own. MiFID II Art. 16(6)/25(1) sets a **five-year** minimum, extendable to seven at a competent authority's request — the seven-year figure is that extension, not a default. UK SMCR-scope retention is outside this module and is with counsel (`REG-H10`). Falsified by any statement that the repository keeps financial-services records for a regulated entity. |
+
 ## Claim control register
 
 Governance metadata for each claim, keyed by ID. The register is split from the claim table above so both stay readable; together they carry claim, state, evidence locator, boundary, forbidden phrasing, review date, and owner.
@@ -191,6 +206,7 @@ Forbidden phrasing is additive to the global prohibitions in [Style Guide §3](S
 | `CLM-051`–`CLM-053` | Service levels and storage immutability | "SLA", "uptime guarantee", "immutable", "WORM" | 2026-09-02 | Release owner + Platform/SRE owner |
 | `CLM-054`–`CLM-059` | Verified mechanism properties | Do not use: "the WAL is memory-safe"; "formally verified"; "proven crash-safe"; "zero memory leaks"; "guaranteed single writer" — advisory locks are cooperative, and the Kani proofs cover two arithmetic functions, not a system | 2026-09-03 | Release owner + qualified formal-methods reviewer |
 | `CLM-060`–`CLM-063` | Rejection evidence, embedded mode, A2A receipts, peak restore | Do not use: "blocks are always recorded"; "the embedded mode sandboxes the application"; "a receipt proves the tool ran"; "receipts authenticate agents"; "arguments are encrypted"; "restore is verified continuity" — a rejection commit can fail while the block still holds, the embedded engine is bypassable from inside its own process, and a receipt proves inclusion only | 2026-09-03 | Release owner + Architecture owner |
+| `CLM-103`–`CLM-104` | Market-abuse detection and communication record-keeping as regulatory inputs | Do not use: "MiFID II compliant", "MAR compliant", "satisfies Article 16", "satisfies Article 12", "market-abuse monitoring in place", "surveillance coverage", "keeps records for a regulated entity", "satisfies the five-year rule", "SMCR compliant" — both modules are unwired and hash-only where record content is concerned; the modules contribute technical inputs only. | 2026-09-21 | Privacy/legal owner + Release owner |
 
 ## Required wording controls
 

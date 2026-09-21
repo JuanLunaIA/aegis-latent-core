@@ -55,6 +55,9 @@ def _baseline_claims() -> dict[str, str | None]:
         + version
         + r")\b",
         "docs/REPOSITORY_MAP.md": r"Source baseline:\*\*[^\n]*?at `v(" + version + r")`",
+        "docs/CLAIMS_MATRIX.md": r"Source baseline:\*\*[^\n]*?synchronized at `v("
+        + version
+        + r")`",
         "scripts/generate_ai_context_manifest.py": r'SOURCE_RELEASE_TARGET_VERSION\s*=\s*"('
         + version
         + r')"',
