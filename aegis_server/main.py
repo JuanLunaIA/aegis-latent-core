@@ -823,9 +823,7 @@ def _enterprise_router():
             )
         except (ValueError, RuntimeError) as exc:
             logger.warning("node listing rejected: %s", exc)
-            raise HTTPException(
-                status_code=400, detail="invalid node listing parameters"
-            ) from exc
+            raise HTTPException(status_code=400, detail="invalid node listing parameters") from exc
 
         return {
             "nodes": nodes,
@@ -879,9 +877,7 @@ def _enterprise_router():
             return await storage.check_integrity()
         except RuntimeError as exc:
             logger.error("audit integrity check failed: %s", exc)
-            raise HTTPException(
-                status_code=500, detail="audit integrity check failed"
-            ) from exc
+            raise HTTPException(status_code=500, detail="audit integrity check failed") from exc
 
     # ── Proxy: chat completions with background analytics ─────────────
 
@@ -1002,10 +998,7 @@ def _enterprise_router():
                             declared_bytes = int(declared_length)
                         except ValueError:
                             declared_bytes = -1
-                        if (
-                            declared_bytes < 0
-                            or declared_bytes > settings.max_response_body_bytes
-                        ):
+                        if declared_bytes < 0 or declared_bytes > settings.max_response_body_bytes:
                             return await durable_error_response(
                                 502, "upstream LLM response exceeded the configured limit"
                             )

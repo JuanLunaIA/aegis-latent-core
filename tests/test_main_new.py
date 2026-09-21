@@ -454,7 +454,6 @@ def test_proxy_chat_completions_connection_error():
     assert r.status_code == 502
 
 
-
 # ── Upstream doubles for the streaming relay (AUD-09) ───────────────────────
 # The proxy route now consumes the upstream response through `client.stream(...)`
 # and `aiter_bytes()`, so the doubles below provide a context manager plus an

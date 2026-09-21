@@ -90,3 +90,22 @@ $ .venv/bin/python scripts/verify_claims.py --root .                            
 $ bash scripts/verify_links.sh --root .                                           -> PASS (1357 links resolved)
 $ .venv/bin/python scripts/verify_docs.py --root .                                -> PASS (0 findings)
 $ .venv/bin/ruff check + format --check <changed files>                           -> clean
+
+CORRECTION (found while closing REG-D17, 2026-09-21)
+---------------------------------------------------
+This file's closure list said "ruff clean". That was true for `ruff check`, and
+for `ruff format --check` it was only true of the narrower file set used in that
+run. Run over the CI path list — `ruff format --check aegis aegis_server
+integrations tests tools/visualizer tools/forensic tools/benchmarks
+tools/security benchmarks` (ci.yml:143-152) — two files fail:
+
+  Would reformat: aegis_server/main.py        (3 hunks, all from this REG:
+      the AF-066 `raise HTTPException(...) from exc` fixes and the
+      declared_bytes check were wrapped across lines)
+  Would reformat: tests/test_main_new.py      (1 hunk, from this REG)
+
+So the closure claim is corrected here rather than left standing. Both files are
+now formatted (the `registry(REG-D13): CORRECTED - format drift under the exact CI ruff
+scope` commit), and both files' only unformatted hunks were this REG's own code.
+The lesson is recorded in the closure procedure: the format check must be run
+over the CI path list, not over the changed files or a subtree.
