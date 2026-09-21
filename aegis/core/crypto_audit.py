@@ -703,12 +703,46 @@ class AuditNode:
 # ── Signing helpers ───────────────────────────────────────────────────────────
 
 
+NODE_STATUS_COMMITTED = "committed"
+NODE_STATUS_REJECTED = "rejected"
+_NODE_STATUSES = frozenset({NODE_STATUS_COMMITTED, NODE_STATUS_REJECTED})
+
+
+def validate_node_status(status: str) -> str:
+    """Return *status* if it is a member of the closed vocabulary, else raise.
+
+    Mirrors :func:`aegis.core.forensic.validate_waf_verdict`. The vocabulary is
+    closed and delimiter-free so no status value can smuggle a ``|`` into the
+    signed material. A status outside it is a verification failure rather than a
+    silent omission: :meth:`CryptographicAuditLedger.signature_status` maps the
+    ``ValueError`` to ``invalid``.
+    """
+    if not isinstance(status, str) or status not in _NODE_STATUSES:
+        raise ValueError(f"status must be one of {sorted(_NODE_STATUSES)!r}, got {status!r}")
+    return status
+
+
+def _part11_annotation_token(signer_name: str, signature_meaning: str) -> str:
+    """SHA-256 over both Part 11 annotation fields, as one payload field.
+
+    The fields are free text, so unlike the closed WAF vocabulary they cannot be
+    fenced against the ``|`` delimiter that separates payload fields. Hashing the
+    pair keeps the binding exact — any change to either value changes the token —
+    while making it impossible for a crafted name to serialise two different
+    field lists alike.
+    """
+    return hashlib.sha256(f"{signer_name}\x00{signature_meaning}".encode()).hexdigest()
+
+
 def _build_signed_payload(
     prev_hash: str,
     merkle_root: str,
     request_hash: str,
     response_hash: str,
     waf_verdict: str = WAF_VERDICT_UNRECORDED,
+    signer_name: str = "",
+    signature_meaning: str = "",
+    status: str = NODE_STATUS_COMMITTED,
 ) -> bytes:
     """Canonical bytes covered by a node's signature.
 
@@ -737,11 +771,90 @@ def _build_signed_payload(
     vocabulary is closed and delimiter-free (`validate_waf_verdict`), so no
     verdict can smuggle a ``|`` and make two different field lists serialise
     alike.
+
+    The Part 11 annotation (``signer_name`` / ``signature_meaning``) and the
+    admission ``status`` follow the same value-derived conditional, which is what
+    keeps AUD-10's binding additive:
+
+    - an annotation is appended only when one of its two fields is non-empty, so
+      a node written before annotations existed rebuilds the same payload it was
+      signed over, and blanking a recorded name rebuilds the shorter list while
+      adding one to a node that had none rebuilds the longer — both mismatch;
+    - ``status`` is appended only when it differs from the committed default, so
+      relabelling a rejection as committed drops a field where one was signed and
+      relabelling a committed node as rejected adds one where none was signed —
+      both mismatch as well.
+
+    Old rejection records are the exception that proves the rule: they were
+    signed *before* the field was bound, so their stored signature matches the
+    pre-binding material and not the annotated one. :meth:`signature_status`
+    therefore tries the annotated payload first and falls back to the pre-binding
+    payload only when it differs — which no edit of a node written by this build
+    can reach, because that node's stored signature is over the annotated
+    material. The pre-binding gap that remains for already-written records is
+    published as ``UC-055``.
+    """
+    fields = [prev_hash, merkle_root, request_hash, response_hash]
+    if validate_waf_verdict(waf_verdict) != WAF_VERDICT_UNRECORDED:
+        fields.append(waf_verdict)
+    annotation_token = (
+        _part11_annotation_token(signer_name, signature_meaning)
+        if (signer_name or signature_meaning)
+        else ""
+    )
+    if annotation_token:
+        fields.append(annotation_token)
+    if validate_node_status(status) != NODE_STATUS_COMMITTED:
+        fields.append(status)
+    return "|".join(fields).encode()
+
+
+def _build_prebinding_signed_payload(
+    prev_hash: str,
+    merkle_root: str,
+    request_hash: str,
+    response_hash: str,
+    waf_verdict: str = WAF_VERDICT_UNRECORDED,
+) -> bytes:
+    """The payload as it was before the Part 11 annotation was bound (AUD-10).
+
+    Kept as a named builder rather than a default-argument call so that the shape
+    it reproduces is explicit at the one call site that needs it, and so a future
+    change to the current builder cannot silently redefine legacy verification.
     """
     fields = [prev_hash, merkle_root, request_hash, response_hash]
     if validate_waf_verdict(waf_verdict) != WAF_VERDICT_UNRECORDED:
         fields.append(waf_verdict)
     return "|".join(fields).encode()
+
+
+def signed_payload_candidates_for(node: AuditNode) -> list[bytes]:
+    """Every payload a node's signature may legitimately be over, newest first.
+
+    The annotated payload comes first. The pre-binding payload is offered only
+    when it differs, which is what keeps chains written before AUD-10 verifiable
+    without letting a rewritten annotation pass: a node written by this build is
+    signed over the annotated material, so its stored signature cannot equal the
+    pre-binding digest.
+    """
+    annotated = _build_signed_payload(
+        prev_hash=node.prev_hash,
+        merkle_root=node.merkle_root,
+        request_hash=node.request_hash,
+        response_hash=node.response_hash,
+        waf_verdict=node.waf_verdict,
+        signer_name=node.signer_name,
+        signature_meaning=node.signature_meaning,
+        status=node.status,
+    )
+    prebinding = _build_prebinding_signed_payload(
+        prev_hash=node.prev_hash,
+        merkle_root=node.merkle_root,
+        request_hash=node.request_hash,
+        response_hash=node.response_hash,
+        waf_verdict=node.waf_verdict,
+    )
+    return [annotated] if annotated == prebinding else [annotated, prebinding]
 
 
 def _hmac_sign(signing_key: str, data: bytes) -> str:
@@ -1124,6 +1237,9 @@ class CryptographicAuditLedger:
                 request_hash=req_hash,
                 response_hash=resp_hash,
                 waf_verdict=waf_verdict,
+                signer_name=signer_name,
+                signature_meaning=signature_meaning,
+                status=NODE_STATUS_COMMITTED,
             )
             try:
                 signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
@@ -1264,6 +1380,7 @@ class CryptographicAuditLedger:
                 merkle_root=merkle_root,
                 request_hash=req_hash,
                 response_hash=resp_hash,
+                status=NODE_STATUS_REJECTED,
             )
             try:
                 signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
@@ -1450,6 +1567,9 @@ class CryptographicAuditLedger:
                 merkle_root=merkle_root,
                 request_hash=request_hash,
                 response_hash=response_hash,
+                signer_name=signer_name,
+                signature_meaning=signature_meaning,
+                status=NODE_STATUS_COMMITTED,
             )
             try:
                 signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
@@ -1591,38 +1711,42 @@ class CryptographicAuditLedger:
         """
         if scheme_material_inconsistency(node) is not None:
             return "invalid"
-        payload = _build_signed_payload(
-            prev_hash=node.prev_hash,
-            merkle_root=node.merkle_root,
-            request_hash=node.request_hash,
-            response_hash=node.response_hash,
-            waf_verdict=node.waf_verdict,
-        )
         try:
+            # AUD-10: the Part 11 annotation and the admission status are part of
+            # the annotated payload; the pre-binding payload is offered only as a
+            # fallback for records signed before they were bound. A status outside
+            # the closed vocabulary raises here and is reported as ``invalid``.
+            payloads = signed_payload_candidates_for(node)
             if node.signature_scheme == "hmac-sha256":
                 if not self._signing_key:
                     return "unverified"
-                return (
-                    "valid"
-                    if _hmac_verify(self._signing_key, payload, node.signature)
-                    else "invalid"
-                )
+                if any(
+                    _hmac_verify(self._signing_key, payload, node.signature) for payload in payloads
+                ):
+                    return "valid"
+                return "invalid"
             if node.signature_scheme == "ed25519-fallback":
                 public_key = ed25519.Ed25519PublicKey.from_public_bytes(
                     bytes.fromhex(node.public_key)
                 )
-                public_key.verify(bytes.fromhex(node.signature), payload)
-                return "valid"
+                for payload in payloads:
+                    try:
+                        public_key.verify(bytes.fromhex(node.signature), payload)
+                    except InvalidSignature:
+                        continue
+                    return "valid"
+                return "invalid"
             if node.signature_scheme == "pqc-ml-dsa" and RUST_AVAILABLE:
-                return (
-                    "valid"
-                    if aegis_rust.verify_pqc_signature(  # type: ignore[name-defined]
+                if any(
+                    aegis_rust.verify_pqc_signature(  # type: ignore[name-defined]
                         payload,
                         bytes.fromhex(node.signature),
                         bytes.fromhex(node.public_key),
                     )
-                    else "invalid"
-                )
+                    for payload in payloads
+                ):
+                    return "valid"
+                return "invalid"
         except (ValueError, TypeError, InvalidSignature):
             return "invalid"
         except Exception:
@@ -1638,10 +1762,18 @@ class CryptographicAuditLedger:
         - ``signature_meaning``— human-readable meaning (authored/reviewed/approved)
         - ``timestamp_iso``    — date and time when the signature was executed (UTC ISO-8601)
 
-        Plus cryptographic binding fields that link the annotation to the node:
-        - ``node_hash``        — SHA-256 chain accumulator (tamper-evident binding)
-        - ``signature``        — hex-encoded cryptographic signature
+        Plus the fields that link the record to the chain:
+        - ``signature``        — hex-encoded cryptographic signature. For nodes
+          written by this build the signed material includes both annotation
+          fields and the admission status, so a rewritten ``signer_name``,
+          ``signature_meaning`` or ``status`` fails verification. Records signed
+          before that binding was introduced verify against the pre-binding
+          material instead; that gap is published as ``UC-055``.
         - ``signature_scheme`` — signing algorithm used
+        - ``node_hash``        — SHA-256 chain accumulator over the node's hashed
+          fields, which do not include the annotation. It links the record into
+          the chain (and into its MMR leaf) but is not itself the annotation's
+          binding — ``signature`` is.
         - ``state_id``         — unique node identifier
 
         Records with no signer_name are included with empty strings so that
