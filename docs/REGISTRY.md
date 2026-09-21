@@ -58,8 +58,9 @@ Five terminal states. `SEED` is **not** terminal — it means the row has been r
 | 2026-09-17 | `session_01HXm9uxZjTkDFnaV6U8R9oa` | **REG-060 FIXED.** `.aegis_ai_context/README.md` already carried a thorough non-authoritative purpose statement, but grepped `README.md`/`CONTRIBUTING.md`/`docs/REPOSITORY_MAP.md` first and confirmed none of them mention the directory at all — a contributor reading the repository's own map would never learn it exists. Added an "AI context and navigation aids" section to `docs/REPOSITORY_MAP.md` covering both `.aegis_ai_context/` and `llms.txt`, restating the existing boundary rather than inventing new language. Doc-only. `evidence/registry/reg-060_fixed.txt` |
 
 | 2026-09-21 | `session_2026-09-21_registry_closure` | **Re-anchor at `dc20a2c`; environment rebuilt before any verification.** The working copy had no `.venv`, no Rust toolchain and no container runtime, so the recorded command paths were re-established first (uv + CPython 3.11.11 against the hash-locked `requirements.lock`; `rustup default stable`). Gates at the anchor commit: `ruff check` and `ruff format --check` clean; `mypy --strict aegis` clean over 206 files; `mypy aegis_server` (plain) 25 errors in 4 files — REG-026's figure reproduced exactly; `bandit -r aegis/ aegis_server/ -c pyproject.toml -lll` 0 issues; all four doc gates pass; reachability PASS (223/112/34/77); release contract READY with all fourteen `5.0.0` anchors synchronized. **Two suite failures, both triaged, neither a code regression:** `test_documentation_verifiers.py` failed only because an untracked `.aider.chat.history.md` — a 1.5 MB transcript left in the repository root by an interrupted earlier agent session, ignored by an uncommitted `.gitignore` line — was walked by the filesystem-level structural checkers; the artifact was archived out of the tree (kept, not deleted) and the test then passes 26/26. `test_determinism.py::test_no_outlier_exceeds_500us` reported three outliers (537 µs–1529 µs) under `-n auto` on this 4-core/3 GiB host; the test's own docstring scopes it to dedicated CPU-isolated hardware and the CI workflow skips it via `HERMES_SANDBOX`, so it is recorded as an environment artifact. A third failure appeared once in the CI-mode run — `test_large_logical_stream_retained_memory_is_bounded`, `observed` 4.85 MB against a 5 MB floor — and is wall-clock-coupled by construction: it drives a 100 000-event stream under a 30 s duration bound, so host contention truncates it; alone and with its file under `-n auto` it passes. Recorded rather than loosened, because relaxing a threshold to green a gate is the suppression `AGENTS.md` rule 6 forbids. **Terminal-row evidence re-verified, not assumed:** every test cited by a `FIXED`/`VERIFIED` row re-run together — 77 passed, 3 skipped (REG-011's live-server races; no container runtime on this host). **Arithmetic corrected:** §5's Wave 2 row read `VERIFIED 4 / open 17` against rows carrying `VERIFIED 5 / open 16`; totals are now `VERIFIED 25 / open 24`. The rows were always right. `evidence/registry/reanchor_2026-09-21.txt` |
+| 2026-09-21 | `session_2026-09-21_seal` | **Registry sealed: all 66 rows terminal, full battery green, two red gates repaired, one new boundary.** The seal re-anchor re-ran every gate at HEAD instead of trusting the branch's own closure commits, and found real work left: `ruff format --check` was red on the two test files the closure work added (`REG-028`, `REG-056` — their rows' claims covered lint, not format; reformatted, tests re-run green, evidence cells corrected), and `tests/test_ai_context.py`'s manifest test was red because `.aegis_ai_context/MANIFEST.json` hashes `README.md`/`CLAIMS_MATRIX.md`/`FAQ_TECHNICAL.md`, all three changed by `REG-029`/`REG-A04` without regeneration (regenerated through its own generator; `--check` verifies 83 files). `REG-054`'s cited `378 passed` did not reproduce — the same command now gives **335 passed / 27 skipped / 6,626 deselected**, the delta being the environment-dependent `aegis_rust` skip class — so the cell was corrected rather than the figure defended. Battery at the seal: `ruff check` and `ruff format --check` clean (519 files); `mypy --strict aegis` clean (206 files); `mypy aegis_server` 25 errors in 4 files (the accepted `REG-038` debt, reproduced exactly); bandit 0; `verify_docs` 0 findings; `verify_claims` 102 claims/0; `verify_links` 1,296; `verify_documentation --strict` 27 files, 0 errors and 0 warnings; reachability 223/112/34/77; release contract READY with fourteen `5.0.0` anchors; `git diff --check` clean; full suite **6,868 passed, 120 skipped, exit 0**; Rust default-features tests **70 passed, 0 failed** and clippy `-D warnings` exit 0. One genuinely new finding came out of running the Rust legs instead of assuming them: the opt-in `zk-spartan` feature crashes with `SIGILL` on this host because `spartan2 0.9.0` hard-enables `halo2curves`' ADX (`adcx`/`adox`) assembly on x86-64 and this CPU predates ADX — recorded as `REG-D04` and published in `BOUNDARIES.md`, not reported green. Scans 3, 6, 7, 8 and 9 closed out; the suite's 120 skips triaged into ten classes in §6, including the one class genuinely unconverted in CI (`tests/test_a2a_protocol.py`). `evidence/registry/seal_2026-09-21.txt` |
 
-**Current seal state: NOT SEALED** — rows remain in `SEED`. See §6.
+**Current seal state: SEALED (2026-09-21)** — every row in §4 is terminal, `SEED` = 0 of 66; the closure attestation and its residuals are in §6.
 
 ---
 
@@ -73,13 +74,25 @@ Executed against `e96dc30`. Each scan's actual output, not a summary of intent.
 | 2 | Claims register status mix | `grep` over `CLAIMS_MATRIX.md` | 71 `IMPLEMENTED`, 11 `ROADMAP`, 10 `CONFIGURATION-DEPENDENT`, 7 `MEASURED`, 2 `LEGAL-REVIEW-REQUIRED`. The 23 non-`IMPLEMENTED` rows are already tracked by seeded REGs or by `ROADMAP.md` |
 | 4 | Reachability allowlist | `wc -l scripts/import_reachability_allowlist.txt` | 97 lines; gate reports 223 discovered / 111 reached / 34 roadmap / 78 allowlisted. **The seed's "99 orphan modules" is stale** — see REG-025 |
 | 5a | `pip-audit` | executed | 14 advisories, **all on `pip` 24.0 and `setuptools` 79.0.1**. Neither is in `requirements.lock` — they are venv bootstrap tooling, not shipped runtime. New: **REG-D01** |
-| 5b | `cargo audit` | executed | **0 vulnerabilities.** 2 allowed warnings: `bincode` 1.3.3 unmaintained (`RUSTSEC-2025-0141`), `chacha20` 0.10.1 yanked. New: **REG-D02**, **REG-D03**. Note: the `pqcrypto` advisories named in REG-040 **no longer appear** |
+| 5b | `cargo audit` | executed | **0 vulnerabilities.** 2 allowed warnings: `bincode` 1.3.3 unmaintained (`RUSTSEC-2025-0141`), `chacha20` 0.10.1 yanked. New: **REG-D02**, **REG-D03**. Note: the `pqcrypto` advisories named in REG-040 **no longer appear** — **stale, corrected at the seal:** they are still reported, are not CVEs, and are already allowlisted in `.cargo/audit.toml` (§6, `REG-040`) |
 | 5c | `npm audit` | executed | **0 vulnerabilities** |
 | 10 | Stale branches | `git ls-remote --heads origin` | Only `main` and the working branch exist. `docs/comprehensive-corpus-synchronization` is **gone** — REG-033 resolves on inspection |
 
 **Discovery total: 3 new REG ids (`REG-D01`–`REG-D03`), 2 seeded rows resolved by inspection (REG-033, and REG-032 below).**
 
-Scans 3, 6, 7, 8, 9 were **not executed this session** and are recorded as outstanding in §6 rather than reported as clean.
+Scans 3, 6, 7, 8, 9 were **not executed this session** and were recorded as outstanding rather than reported as clean; they were closed out at the seal — §3.1.
+
+### 3.1 Autodiscovery close-out at the seal (2026-09-21)
+
+The five scans §3 recorded as outstanding were re-attempted at the seal. Each result is the command's own output, not a summary of intent.
+
+| # | Scan | Command | Result |
+|---|---|---|---|
+| 3 | `UNSUPPORTED_CLAIMS` / `ROADMAP` open-item extraction | `grep -n "^- \[ \]" docs/ROADMAP.md` plus the register's dispositions | 31 open `[ ]` items. Code-shaped ones map to registry rows — `REG-019` (compaction), `REG-037` (recovery and memory tests), `REG-038` (retire `aegis_server`), `REG-043` (`zk_proof` stub) — and the remainder are roadmap- or owner-level work with named unblock paths (external assurance, pricing validation, hiring — the Human Pack). No untracked code defect surfaced |
+| 6 | CI logs, last 30 runs, for flaky/skipped suites | the public Actions page read in a browser (`gh` is absent from this host; run conclusions and annotations are readable without sign-in — log bodies are not) | **Executed by browser instead of `gh`.** The 50 most recent runs across two pages: on `main` after `dc20a2c` every workflow is green (CI #582, Forensic CI #590, Validate Python package #380, Security #461); on PR #187, ten CI runs read `cancelled` — the CI workflow's own `cancel-in-progress` concurrency on rapid pushes, its designed behaviour, not a failure — and one Forensic CI run (#588) read `failed` at an intermediate commit with all three Python matrix legs failing identically, then passed on the next run of the same branch, so it was resolved by a subsequent commit rather than persisting. No flaky pattern on `main`, no skipped-suite signal. Log bodies need sign-in, so the #588 failure's *content* is not characterized here |
+| 7 | `evidence/` `NOT_EXECUTED` and `BLOCKED` sections | `grep -rln "NOT_EXECUTED\|BLOCKED" evidence/` | `NOT_EXECUTED` in 5 files: the readback evidence (`reg-028_fixed`, `reg-031_blocked`, `reg-034_blocked` — the cosign/attestation observables) and two 2026-08-20 gate reports whose own gate objects state their boundaries (`http2_ingress_boundary`, `nuclei_templates`, `deployment_boundary`). `BLOCKED` in the three blocked rows' evidence. Every one maps to a terminal row or its named unblock path |
+| 8 | Full battery failure/skip triage | full-suite run with `-rs` | 120 skips over 104 sites in ten classes, triaged in §6. One class is genuinely unconverted in CI: `tests/test_a2a_protocol.py` needs `aegis_sdk` installed beside the core package, and no workflow installs both (the SDK jobs run `sdk/python`'s own tests) |
+| 9 | Doc-gate findings | the four gates | All four PASS with 0 findings at the seal — nothing to convert |
 
 ---
 
@@ -186,22 +199,64 @@ Their status is tracked in [Commercial Readiness](commercial/COMMERCIAL_READINES
 | W1 | 30 | 6 | 18 | 6 | 0 | 0 | **0** |
 | W2 | 23 | 11 | 6 | 2 | 3 | 1 | **0** |
 | W3 | 9 | 1 | 2 | 5 | 0 | 1 | **0** |
-| `[DISC]` | 3 | 0 | 0 | 3 | 0 | 0 | **0** |
-| **Total** | **65** | **18** | **26** | **16** | **3** | **2** | **0** |
+| `[DISC]` | 4 | 0 | 0 | 4 | 0 | 0 | **0** |
+| **Total** | **66** | **18** | **26** | **17** | **3** | **2** | **0** |
 
-Human class (9) is excluded from the burn-down by design.
+Human class (9) is excluded from the burn-down by design. **Sealed 2026-09-21: `SEED` = 0 across all 66 rows — see the closure attestation in §6.**
 
 ---
 
-## 6. What this session did not do
+## 6. Closure attestation and residual coverage
 
-Recorded because a registry that omits its own coverage gaps asserts a completeness it did not earn.
+Recorded because a registry that omits its own coverage gaps asserts a completeness it did not earn — and a seal that overstates itself is worse than an open row.
 
-**Autodiscovery scans not run:** 3 (`UNSUPPORTED_CLAIMS`/`ROADMAP` open-item extraction), 6 (CI logs, last 30 runs, for flaky/skipped suites), 7 (`evidence/` `NOT_EXECUTED` and `BLOCKED` sections), 8 (full battery failure/skip triage — the suite is green at 6,936 passed / 26 skipped, but the **26 skips were not individually triaged**), 9 (doc-gate findings — all four gates pass, so there are no findings to convert).
+**State: `SEALED` — every row in §4 is terminal (`SEED` = 0 of 66).** This is the closure attestation the previous revision of this section required once the `SEED` count reached zero (`PD-R2`, the `R4` gate); the 66 rows carry 18 `FIXED`, 26 `VERIFIED`, 17 `DOCUMENTED`, 3 `BLOCKED` and 2 `WONT-FIX` (§5), re-derived from §4's own rows at the seal rather than carried from a prior report.
 
-**25 rows remain `SEED`**, including genuinely confirmed P0 work: REG-023 (pre-forward ePHI), REG-027 (gateway not on PyPI), REG-028 (release readback automation), and REG-042 (multi-pod total order, FATAL). Wave 1 has exactly one `SEED` row left: **REG-023**, explicitly `DECIDE` — it touches the "redaction protects the record, not your provider" boundary and needs an owner decision before it can be worked, not further autodiscovery.
+**What the seal establishes**
 
-**Per `PD-R2` and the `R4` gate, this registry is `NOT SEALED`.** No closure attestation is emitted, and none should be written until the `SEED` count reaches zero.
+- Every gate was executed at the seal on this host, with its own output recorded (`evidence/registry/seal_2026-09-21.txt`):
+  - `ruff check` clean; `ruff format --check` clean (519 files);
+  - `mypy --strict aegis` clean (206 files); `mypy aegis_server` 25 errors in 4 files — the accepted debt that is `REG-038`'s recorded content, reproduced exactly, not a regression;
+  - `bandit -r aegis/ aegis_server/ -c pyproject.toml -lll` 0 issues;
+  - the four doc gates: `verify_docs` PASS (0 findings), `verify_claims` PASS (102 claims, 0 findings), `verify_links` PASS (1,296 links and anchors), `verify_documentation --strict` PASS (27 required files, 0 errors, 0 warnings);
+  - reachability PASS (223 discovered / 112 reached / 34 roadmap / 77 allowlisted); release contract READY (fourteen anchors synchronized at `5.0.0`); `git diff --check` clean;
+  - full Python suite in the CI configuration: **6,868 passed, 120 skipped, exit 0**;
+  - Rust: `cargo test --release` **70 passed, 0 failed**; `cargo clippy --locked --all-targets --all-features -- -D warnings` **exit 0**. The two `zk-spartan` test legs do **not** execute on this host — they die with `SIGILL` on its pre-ADX CPU — and that is `REG-D04`, recorded with its disassembly and dependency chain rather than reported green.
+- Terminal-row evidence was re-executed at the seal, not copied: every test file cited by a `FIXED`/`VERIFIED` row re-run together — **258 passed, 3 skipped** (the three are `REG-011`'s live-server races, which skip honestly with no container runtime on this host).
+- The re-anchor for this seal found and repaired two genuine red gates and one wrong figure before sealing (below). None moved a row out of a terminal state; each repair is recorded on the row it touches.
+
+**What the seal does not establish**
+
+- It is not a claim that no limitation remains. The limitations *are* the content of the 17 `DOCUMENTED` and 2 `WONT-FIX` rows, plus `UNSUPPORTED_CLAIMS.md` and `BOUNDARIES.md`.
+- Three rows remain externally `BLOCKED`, terminal by §1's vocabulary: `REG-031` (verification tooling absent), `REG-034` (two signature limbs await a host with `cosign`/`gh`), `REG-035` (no reference deployment exists to accept). Each unblocks by running a recorded command on the right host; none waits on code.
+- The nine human rows (`REG-H01`…`REG-H09`, `REGISTRY_HUMAN_PACK.md`) are `NOT STARTED` and excluded by design. **No code row substitutes for any of them.**
+- Registry closure is not product acceptance: no certification, compliance, court-admissibility, external-assessment or production-readiness claim is made or implied. Those remain controlled by `CLAIMS_MATRIX.md` and `UNSUPPORTED_CLAIMS.md`.
+
+**Autodiscovery close-out.** Scans 3, 6, 7, 8 and 9, recorded as not run in §3, were all executed at the seal (§3.1). Scan 6 needed a browser because `gh` is absent on this host: 50 recent runs read, `main` green, one transient Forensic CI failure at an intermediate commit resolved by the next run, and ten `cancelled` CI runs explained by the workflow's own `cancel-in-progress` rule. Its **log bodies** — as opposed to run conclusions and annotations — still need sign-in and remain unread.
+
+**Skip triage (scan 8).** The full suite's 120 skips at the seal are 104 skip sites in ten classes, each with a disposition:
+
+| Class | Sites (tests) | Disposition |
+|---|---|---|
+| `aegis_rust` extension not installed | 70 (74) | Honest environment gap: the extension is not built into this venv. CI builds it (the `Rust Extension` job) and these tests run there — not a product defect |
+| `zk-spartan` binding absent (`built without the ZK binding`, `proving is unavailable`) | 7 (7) | The opt-in feature is off by design; `REG-D04` now records the same feature's x86-64 CPU requirement |
+| Optional dependencies absent (`prometheus_client`, `pyarrow`, `pip-audit`) | 8 (8) | Extras are deliberately absent from `requirements.lock`; `REG-050`'s evidence records the both-states run |
+| Real-server integration suites whose clients `conftest` stubs (`asyncpg`, `aioboto3`) | 2 (2) | Correct refusal — a stub cannot evidence a real server; the rows describing that posture already exist |
+| Real-time / scheduling-sensitive (`tests/test_determinism.py`) | 5 (5) | The tests' own docstrings require a dedicated CPU-isolated host; scoped as environment, and the threshold was not loosened to green a gate |
+| ML-DSA backend not built (`tests/engines/test_modular_engines.py`) | 4 (4) | The same `aegis_rust` gap as the 70 above, phrased by the engine harness |
+| Rust release binary not built (`tests/test_cfi_manager.py`) | 4 (4) | The CFI sentinel assertions need `target/release`, built in CI, not here |
+| ARM MTE hardware absent (`tests/test_mte_guard.py`) | 2 (2) | Hardware-scoped by construction; cannot run on x86-64 |
+| `aegis_sdk` not installed (`tests/test_a2a_protocol.py`) | 1 (1) | **Genuinely unconverted in CI**: it needs the SDK installed beside the core package and no workflow installs both (the SDK jobs run `sdk/python`'s own tests). Recorded, not hidden |
+| Data-dependent scenario (`tests/test_sse_utf8_boundaries.py`) | 1 (13) | A parametrized case whose split point lies beyond the payload; the surrounding cases run |
+
+The two columns reconcile exactly: **104 sites across the ten classes carry 120 skipped tests**, the difference being parametrized cases at two sites (`aegis_rust`, 70 sites/74 tests; and the data-dependent site, 1 site/13 tests).
+
+**Re-anchor findings at the seal (2026-09-21).** Two red gates and one wrong figure, found by re-verifying rather than trusting the branch's own closure commits:
+
+- **`ruff format --check` was red at HEAD** on the two test files this branch's closure work added: `tests/test_audit_node_proto_freshness.py` (`REG-056`, `a4631ef`) and `tests/test_release_readback_script.py` (`REG-028`, `c426f36`). Their rows' gate claims covered lint, not format. Both files were reformatted mechanically, their tests re-run green, and the rows' evidence cells carry the correction.
+- **`tests/test_ai_context.py`'s manifest-determinism test was red at HEAD.** `.aegis_ai_context/MANIFEST.json` hashes three governed inputs (`README.md`, `docs/CLAIMS_MATRIX.md`, `docs/FAQ_TECHNICAL.md`) and the closure commits changed all three — `REG-029`'s README section, `REG-A04`'s `CLM-068`/FAQ edits — without regenerating the manifest. Regenerated through the manifest's own generator; `--check` then verifies 83 files.
+- **`REG-054`'s cited count did not reproduce.** The row recorded `pytest tests/test_mmr_v2_migration.py tests/ -k "mmr" -q` → `378 passed`; at the seal the same command gives **335 passed, 27 skipped, 6,626 deselected** — the delta is the environment-dependent `aegis_rust` skip class, and no failure appears in either run. Corrected on the row.
+- **One new boundary, `REG-D04`.** Running the battery's Rust legs — rather than assuming them — surfaced that the opt-in `zk-spartan` feature compiles ADX assembly and crashes with `SIGILL` on an x86-64 CPU without ADX. Published to `BOUNDARIES.md` and closed `DOCUMENTED` in the same change.
 
 **Seed premises corrected by verification** — several seeded rows carried figures that current source contradicts, which is why `PD-R1` requires re-verifying a seed before working it. Two of these were corrected **twice**, by different sessions, which is itself evidence for the rule rather than an embarrassment: re-verification caught re-verification's own mistakes.
 

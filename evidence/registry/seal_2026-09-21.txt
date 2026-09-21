@@ -1,0 +1,135 @@
+REGISTRY SEAL - 2026-09-21
+aegis-latent-core, branch `registry-closure-2026-09-21`, anchor HEAD `dd30512`
+(20 commits ahead of `origin/main` at `dc20a2c`).
+
+This file records the battery that the closure attestation in `docs/REGISTRY.md`
+section 6 cites. Every line below is a command's own output at the seal, captured
+with `bash /home/luna/.hermes/cache/scratch/final_battery.sh`; nothing here is a
+summary written from memory.
+
+=== 1. State ===
+
+66 rows, all terminal: 18 FIXED / 26 VERIFIED / 17 DOCUMENTED / 3 BLOCKED /
+2 WONT-FIX, SEED = 0 (docs/REGISTRY.md section 4 rows, re-derived at the seal).
+
+=== 2. Gates (each gate, its own result line, its exit code) ===
+
+- ruff check
+    All checks passed! | EXIT=0
+- ruff format
+    519 files already formatted | EXIT=0
+- mypy --strict aegis
+    Success: no issues found in 206 source files | EXIT=0
+- mypy aegis_server
+    Found 25 errors in 4 files (checked 14 source files) | EXIT=1 (accepted REG-038 debt, reproduced exactly)
+- bandit
+    Total issues (by severity): | Low: 0 | Medium: 0 | High: 0 | EXIT=0
+- verify_docs
+    verify_docs: PASS (0 findings) | EXIT=0
+- verify_claims
+    verify_claims: PASS (102 claims, 0 findings) | EXIT=0
+- verify_links
+    verify_links: PASS (1296 relative links and anchors resolved) | EXIT=0
+- verify_documentation --strict
+    "status": "PASS", "errors": 0, "warnings": 0, "findings": [], "required_files": 27 | EXIT=0
+- reachability
+    modules discovered: 223  reached: 112  declared roadmap: 34  allowlisted: 77 | verify_import_reachability: PASS — no undeclared orphans, no stale roadmap entries | EXIT=0
+- release contract
+    release source contract: READY | synchronized versions: {'core': '5.0.0', 'core-runtime': '5.0.0', 'python-sdk': '5.0.0', 'python-sdk-runtime': '5.0.0', 'typescript-sdk': '5.0.0', 'typescript-lock': '5.0.0', 'dashboard': '5.0.0', 'dashboard-lock': '5.0.0', 'rust-cargo': '5.0.0', 'rust-pyproject': '5.0.0', 'rust-lock': '5.0.0', 'helm-chart': '5.0.0', 'helm-app': '5.0.0', 'helm-image': '5.0.0'} | EXIT=0
+- git diff --check
+    EXIT=0
+
+mypy aegis_server exits 1 by design: its 25 errors in 4 files are the accepted
+debt recorded by REG-038/REG-026 and reproduced here exactly. Every other gate
+above exits 0.
+
+=== 3. Full Python suite (CI configuration) ===
+
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true \
+    .venv/bin/python -X faulthandler -m pytest tests/ -n auto \
+    -o faulthandler_timeout=60 -q -rs
+
+6868 passed, 120 skipped in 113.11s (0:01:53)
+EXIT=0
+
+The run's 104 skip sites are classified into ten classes in docs/REGISTRY.md
+section 6 ("Skip triage (scan 8)").
+
+=== 4. Cited-test batch (every test file cited by a FIXED/VERIFIED row) ===
+
+======================= 258 passed, 3 skipped in 58.20s ========================
+EXIT=0
+
+The 3 skips there are REG-011's live-server race tests, which skip honestly with
+no container runtime on this host.
+
+=== 5. REG-054's cited invocation, re-run ===
+
+$ .venv/bin/python -m pytest tests/test_mmr_v2_migration.py tests/ -k "mmr" -q
+
+335 passed, 27 skipped, 6626 deselected in 10.11s
+EXIT=0
+
+The row recorded 378 passed; the reproducible figure at the seal is 335 passed /
+27 skipped / 6,626 deselected. The delta is the environment-dependent aegis_rust
+skip class, and no failure appears in either run. Corrected on the row.
+
+=== 6. Rust battery ===
+
+Executed with LD_LIBRARY_PATH set to the uv-managed CPython's lib directory (pyo3
+links that interpreter; without it the test binaries exit 127 with
+"libpython3.11.so.1.0: cannot open shared object file").
+
+$ cargo test --release                      -> 70 passed, 0 failed, exit 0
+    (67 lib unittests + 3 in tests/block_buffer_panic_safety.rs; zk_mmr_cost and
+     zk_mmr_end_to_end are 0-test targets under default features, by design)
+$ cargo clippy --locked --all-targets --all-features -- -D warnings  -> exit 0
+
+$ cargo test --release --features zk-spartan --lib zk_mmr        -> exit 101
+    "running 16 tests" then: (signal: 4, SIGILL: illegal instruction)
+$ cargo test --release --features zk-spartan --test zk_mmr_end_to_end -> exit 101
+    "running 7 tests" then: (signal: 4, SIGILL: illegal instruction)
+
+Not green, and not reported as green. Root cause, characterized rather than
+guessed: gdb stops at `adcx %r11,%r10` inside
+<halo2curves::pasta::fq::Fq as From<u64>>::from; `adcx` is ADX (Broadwell 2014+)
+and this host is a Haswell i5-4300U without ADX. The chain is zk-spartan ->
+spartan2 0.9.0, whose cfg(target_arch = "x86_64") dependency hard-enables
+halo2curves' "asm" feature (no runtime dispatch), which makes halo2derive emit
+the adcx/adox limb code. Nine of the sixteen unit tests crash (every one calling
+the is_satisfied helper) and seven pass. The same commands pass in CI's Rust
+Extension job on ADX-capable runners (CI run #582 at dc20a2c: workflow Success,
+job 8m 59s, read from the public Actions page). Full trace:
+evidence/registry/reg-d04_documented.txt; boundary published in docs/BOUNDARIES.md.
+
+=== 7. Red gates repaired at the seal ===
+
+$ .venv/bin/ruff format --check <targets>
+    before the repair: two files were unformatted -
+    tests/test_audit_node_proto_freshness.py (REG-056, commit a4631ef) and
+    tests/test_release_readback_script.py (REG-028, commit c426f36);
+    after: "519 files already formatted", exit 0 (see section 2 above).
+
+$ .venv/bin/python -m pytest tests/test_ai_context.py -q
+    before: 1 failed (manifest hash mismatch). .aegis_ai_context/MANIFEST.json
+    (schema v3) hashes README.md, docs/CLAIMS_MATRIX.md and docs/FAQ_TECHNICAL.md;
+    the closure commits changed all three (REG-029's README section, REG-A04's
+    CLM-068/FAQ edits) without regenerating the manifest.
+    after: `python scripts/generate_ai_context_manifest.py` -> 83 files verified;
+    test_ai_context.py 11/11 passed; the full suite in section 3 is the post-fix run.
+
+=== 8. Scans ===
+
+Scans 3, 6, 7, 8 and 9 are closed out with the command and its result per scan in
+docs/REGISTRY.md section 3.1. Scan 6 was executed in a browser against the public
+Actions page because `gh` is absent on this host; run conclusions and annotations
+are readable without sign-in, log bodies are not, and that limit is stated there.
+
+=== 9. What this seal does not claim ===
+
+- The 3 BLOCKED rows (REG-031, REG-034, REG-035) need a host with the missing
+  verification tooling or a reference deployment; each has its unblock command.
+- The 9 human rows (REG-H01..REG-H09) are NOT STARTED and excluded by design.
+- No certification, compliance, court-admissibility, external-assessment or
+  production-readiness claim is made or implied; those remain governed by
+  docs/CLAIMS_MATRIX.md and docs/institutional/UNSUPPORTED_CLAIMS.md.
