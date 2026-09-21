@@ -21,4 +21,4 @@ __all__ = [
     "verify_proof_headers",
     "verify_receipt",
 ]
-__version__ = "5.0.0"
+__version__ = "5.0.1"

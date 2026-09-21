@@ -7,13 +7,83 @@ All notable changes to **Aegis Latent Core** are documented in this file.
 **Most recent published release (readback 2026-09-04):** `v4.1.2` signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway image `sha256:b3f6aadc…f80710` and dashboard image `sha256:27e1bbc2…d92398`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
-**Source release target:** `v5.0.0` (fourteen synchronized `5.0.0` anchors; tag, release, registry, image, signature, and attestation state remain external readback facts, none of which exist yet for `5.0.0` — recorded in `docs/RELEASE_STATUS.md` §1.0)
+**Source release target:** `v5.0.1` (fourteen synchronized `5.0.1` anchors). **Published nowhere** — read back 2026-09-21: GitHub Release 404, both OCI tags 404, registries still at `5.0.0`/`4.1.2`; recorded in `docs/RELEASE_STATUS.md` §1.0a. `v5.0.0` remains the most recent published release (every surface except PyPI `aegis-latent-core`)
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [5.0.1] — unreleased source target
+
+**Nothing is published for `5.0.1`.** Source metadata only: fourteen anchors were
+moved from `5.0.0` to `5.0.1` and the release contract reports `READY`; the
+2026-09-21 readback found no tag, no GitHub Release, no OCI tag and no registry
+version for it (`docs/RELEASE_STATUS.md` §1.0a). This section is not a release
+announcement and sets no release date.
+
+### Changed
+
+- **Global version bump to `5.0.1`** across the fourteen synchronized anchors and
+every deployment literal the release contract binds: `pyproject.toml`,
+`aegis/__init__.py`, both SDKs (`sdk/python/pyproject.toml`,
+`sdk/python/src/aegis_sdk/__init__.py`, `sdk/typescript/package.json` and its
+lockfile), `dashboard/package.json` and its lockfile, `aegis_rust_v2/Cargo.toml`,
+`Cargo.lock` (the `aegis_rust` package entry), `aegis_rust_v2/pyproject.toml`,
+`deploy/helm/Chart.yaml` (`version` and `appVersion`), `deploy/helm/values.yaml`
+(`image.tag`), `deploy/docker/Dockerfile`, `deploy/docker/Dockerfile.airgap`,
+`deploy/docker/docker-compose.yml`,
+`deploy/docker/docker-compose.enterprise.yml` (both services),
+`deploy/k8s/aegis-operator/operator.py`, `deploy/k8s/aegis-operator/crd.yaml`,
+`connectors/envoy-wasm/Cargo.toml` and its lockfile, `scripts/vendor_wheels.sh`,
+`scripts/install_aegis.sh`. Dependency pins that merely contain the string
+(`protobuf>=5.0.0`, `redis>=5.0.0`, `sugarss ^5.0.0`) are deliberately unchanged.
+- **Publication statements restructured rather than renumbered.** Every artifact
+that said "the source release target is `v5.0.0` **and it was published
+2026-09-16**" now separates the two facts: the target is `5.0.1` (published
+nowhere, §1.0a) and `v5.0.0` is the most recent published release, with its
+readback record intact. A blind string swap would have made the publication claim
+false against the new target.
+- **Two SDK READMEs corrected.** Both said the registry's `aegis-latent-sdk`
+`5.0.0` "matches this source tree's SDK"; after the bump it no longer does, and
+the sentence now says so.
+- `AUD-35` comments in `deploy/docker/docker-compose.enterprise.yml` and
+`deploy/helm/templates/statefulset.yaml` no longer pin an open finding to a
+version number.
+
+### Fixed (unreleased, since the `5.0.0` source target)
+
+All of the audit remediation on this branch ships under this version. Per-register
+detail is in `docs/REGISTRY.md`; the summary:
+
+- **REG-D27 (AUD-23)** — five defects: non-finite floats could reach the sealed
+  audit WAL line (now refused before the lock, `allow_nan=False` as backstop);
+  `hardware_token` canonical fields were delimiter-free and NUL-shiftable (now
+  length-prefixed, with NUL rejected); `wal_backup.restore()` wrote the live WAL
+  in place while its docstring said "atomically" (now temp file + `os.replace` +
+  directory fsync); the `worm_ledger` seal helpers read the whole segment (now
+  streaming, peak <1 MiB on a >8 MiB file); the httpx relay buffered any upstream
+  body (now bounded by `max_stream_response_bytes`). Tests:
+  `tests/test_crypto_audit_wal_json.py`, `tests/test_wal_backup_atomic_restore.py`,
+  `tests/test_worm_ledger_bounds.py`, `tests/test_forwarder_response_cap_httpx.py`.
+- **REG-D26 (AUD-22)** — compliance wording: 64 locations across 26 files carried
+  SOC 2 / HIPAA / GDPR / ISO 27001 / FedRAMP / PCI / admissibility claims without
+  the style guide's qualifier. Corrected, including two generators and the
+  OpenAPI description served at `/docs`;
+  `tests/test_compliance_wording_gate.py`.
+- **REG-D23 (AUD-19)** — documentation currency: four statements were **false**,
+  not merely stale (SDK guide, FAQ, deployment guide, release status). Corrected
+  against the readback record and gated repository-wide at sentence granularity:
+  `tests/test_documentation_currency.py`.
+- **REG-D24 (AUD-20)** — the MiFID II and MAR modules are built but unwired; they
+  are in `docs/CLAIMS_MATRIX.md` as `CLM-103`/`CLM-104` with corrected citations,
+  and wiring-or-retire is `AUD-36`; `tests/test_regulatory_input_claims.py`.
+- **REG-D22 (AUD-18)** — the Makefile and CI now share one canonical gate scope;
+  `tests/test_gate_scope_parity.py`.
+- Earlier rows (`REG-D05` … `REG-D18`, `REG-D25`, plus the legacy register's 66
+  terminal rows) are recorded in `docs/REGISTRY.md` with per-row evidence under
+  `evidence/registry/`.
 
 ## [5.0.0] — unreleased source target
 

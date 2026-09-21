@@ -1,0 +1,138 @@
+5.0.1 — global version bump and the order's Phase-2 items
+Evidence recorded 2026-09-21T11:28:35Z
+
+════ 1. THE BUMP: the repository's own contract is the completeness proof ════
+$ .venv/bin/python scripts/verify_release_contract.py
+release source contract: READY
+synchronized versions: {'core': '5.0.1', 'core-runtime': '5.0.1', 'python-sdk': '5.0.1', 'python-sdk-runtime': '5.0.1', 'typescript-sdk': '5.0.1', 'typescript-lock': '5.0.1', 'dashboard': '5.0.1', 'dashboard-lock': '5.0.1', 'rust-cargo': '5.0.1', 'rust-pyproject': '5.0.1', 'rust-lock': '5.0.1', 'helm-chart': '5.0.1', 'helm-app': '5.0.1', 'helm-image': '5.0.1'}
+
+The 14 anchors are enumerated by _load_versions (scripts/verify_release_contract.py:279-312) and
+the active deployment literals by _validate_active_deployment_versions (:841-905). The gate exists
+because a previous bump left literals behind while the contract still said READY; it is a drift
+check now, and it reports READY with all fourteen at 5.0.1.
+
+Also bumped though NOT contract-checked (would have drifted silently):
+  connectors/envoy-wasm/Cargo.toml            version = "5.0.1"
+  connectors/envoy-wasm/Cargo.lock            aegis-envoy-wasm entry
+Deliberately NOT bumped (dependency pins, not release versions):
+  pyproject.toml:43-44  "protobuf>=5.0.0", "redis>=5.0.0"
+  sdk/typescript/package-lock.json:1198  "sugarss": "^5.0.0"
+
+════ 2. PUBLICATION STATE OF 5.0.1 — MEASURED, NOT ASSERTED ════
+$ .venv/bin/python scripts/verify_release_readback.py --tag v5.0.1
+release readback for v5.0.1 (repository juanlunaia/aegis-latent-core)
+----------------------------------------------------------------------------------------------------
+GitHub Release v5.0.1     MISMATCH      API returned HTTP 404; v5.0.1 is not a published release
+PyPI aegis-latent-sdk     CHECKED       latest 5.0.0 != tag version 5.0.1; releases: ['4.0.0', '4.1.1', '4.1.2', '5.0.0']
+PyPI aegis-latent-core    CHECKED       latest 4.1.2 != tag version 5.0.1; releases: ['4.1.2']
+npm aegis-latent-sdk      MISMATCH      latest 5.0.0 != 5.0.1
+GHCR gateway v5.0.1       MISMATCH      manifest request returned HTTP 404 for tags '5.0.1' and 'v5.0.1', digest=None
+GHCR dashboard v5.0.1     MISMATCH      manifest request returned HTTP 404 for tags '5.0.1' and 'v5.0.1', digest=None
+cosign verify gateway     NOT_EXECUTED  cosign is not installed on this host (no `cosign` on PATH)
+cosign verify dashboard   NOT_EXECUTED  cosign is not installed on this host (no `cosign` on PATH)
+gh attestation verify     NOT_EXECUTED  gh CLI is not installed on this host (no `gh` on PATH)
+----------------------------------------------------------------------------------------------------
+2 checked, 4 mismatched, 3 not executed
+NOT EXECUTED is not a pass: these observables are unverified from this host.
+
+════ 3. SUITE (quiet host, fresh governed manifest) ════
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true pytest tests/ -n auto -q
+........................................................................ [ 94%]
+........................................................................ [ 95%]
+.............................sss.ssss................................... [ 96%]
+........................................................................ [ 97%]
+........................................................................ [ 98%]
+........................................................................ [ 99%]
+.................................................................        [100%]
+7010 passed, 119 skipped in 95.80s (0:01:35)
+PYTEST EXIT: 0
+
+Earlier runs of the same suite, kept for the record:
+  run 1 (with a stale manifest):      1 failed, 7003 passed, 119 skipped   [manifest only]
+  run 2 (competing with a cargo build): 3 failed, 7007 passed, 119 skipped
+      tests/test_ai_context.py::test_manifest_is_deterministic_explicit_and_non_circular  (stale manifest)
+      tests/test_audit_read_snapshot.py::test_read_endpoints_survive_concurrent_commits   (load)
+      tests/test_proxy_streaming.py::test_large_logical_stream_retained_memory_is_bounded (load)
+  isolation: both load-sensitive tests pass — "2 passed in 24.37s"
+  The manifest failure in runs 1-2 is the governed-input hash: README.md is a GOVERNED_INPUT and
+  was edited after the first regeneration. Regenerated last, then run 3 is green.
+
+════ 4. COVERAGE — the order's floor is NOT met (REG-D36 OPEN / AUD-38) ════
+$ pytest -n auto -q --cov=aegis --cov-fail-under=90
+metry/siem.py                            244     24    90%
+--------------------------------------------------------------------
+TOTAL                                            20300   2300    89%
+FAIL Required test coverage of 90% not reached. Total coverage: 88.67%
+=========================== short test summary info ============================
+FAILED tests/test_ai_context.py::test_manifest_is_deterministic_explicit_and_non_circular
+FAILED tests/test_audit_read_snapshot.py::test_read_endpoints_survive_concurrent_commits
+FAILED tests/test_proxy_streaming.py::test_large_logical_stream_retained_memory_is_bounded
+3 failed, 7004 passed, 119 skipped, 1 warning in 418.16s (0:06:58)
+PYTEST EXIT: 1
+
+88.67% measured (20,300 statements, 2,300 missed) against the mission floor of 90%.
+The repository's own floor is 65%: Makefile:46 and .github/workflows/ci.yml:306-309.
+Not raised in this commit — raising it to a value the suite does not meet would break CI.
+
+════ 5. RUST ════
+$ cargo clippy --all-targets --all-features --locked -- -D warnings
+    Checking aegis_rust v5.0.1 (/home/luna/aegis-latent-core/aegis_rust_v2)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 35.29s
+CLIPPY EXIT: 0
+
+$ cargo test --all-features      # THE ORDER'S COMMAND — CANNOT LINK IN THIS REPOSITORY
+    rust-lld: error: undefined symbol: PyExc_TypeError
+    rust-lld: error: undefined symbol: PyUnicode_Type
+    ... "too many errors emitted"
+CARGO TEST EXIT: 101
+Documented in-tree at aegis_rust_v2/Cargo.toml:12-20: "a default extension-module would also
+apply to `cargo test`, which then omits the libpython link and fails with undefined Py* symbols",
+and `full = ["extension-module"]` makes --all-features enable exactly that. CI therefore runs
+`cargo test --release` (.github/workflows/ci.yml:429) plus the two zk-spartan steps (:445-446).
+
+$ cargo test --release --locked        # attempt 1: LD_LIBRARY_PATH + PYO3_PYTHON only
+    Fatal Python error: init_fs_encoding: failed to get the Python codec of the filesystem encoding
+    sys.prefix = '/install'    <- uv-managed CPython's build-time placeholder prefix
+CARGO TEST EXIT: 1
+
+$ ... PYTHONHOME=<uv base> only        # attempt 2: pyo3 then picked the system interpreter
+    sys.path = ['.../cpython-3.11.11-linux-x86_64-gnu/lib/python3.14', ...]
+    ModuleNotFoundError: No module named 'encodings'
+EXIT: 101
+
+$ LD_LIBRARY_PATH=<uv base>/lib PYTHONHOME=<uv base> PYO3_PYTHON=.venv/bin/python cargo test --release --locked
+running 83 tests
+test result: ok. 83 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.18s
+running 3 tests
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+EXIT: 0
+DONE
+
+════ 6. THE REST OF THE BATTERY ════
+verify_docs (prohibited phrases, TODO rules)          PASS (0 findings)
+verify_claims --root .                                PASS (105 claims, 0 findings)
+verify_documentation --strict                          PASS (errors 0, warnings 0, required_files 27)
+verify_links                                           PASS (1404 relative links and anchors resolved)
+verify_import_reachability                             PASS (224 discovered / 113 reached / 34 roadmap / 77 allowlisted)
+mypy --strict aegis                                    Success: no issues found in 207 source files
+bandit -r aegis/ aegis_server/ -c pyproject.toml -lll  Low 0, Medium 0, High 0
+ruff check .                                           All checks passed!   (1 PT018 in the new marker gate, fixed)
+ruff format --check .                                  587 files already formatted, 0 to reformat
+new gates                                              tests/test_error_response_hygiene.py 3 passed
+                                                       tests/test_no_defect_markers_in_shipped_code.py 3 passed
+                                                       tests/test_ai_context.py + test_documentation_currency.py: 28 passed
+
+════ 7. GATE DEFECTS FOUND IN MY OWN WORK, FIXED ════
+* README.md lost the literal "Current release:" label when the banner was restructured, which
+  tools/docs/verify_documentation.py --strict requires (it accepts "Current release:" or
+  "Current release candidate:" plus the RELEASE_STATUS and BOUNDARIES routes). Caught by the gate,
+  fixed by using both labels — v5.0.0 as the current released version, v5.0.1 as the candidate.
+* tests/test_no_defect_markers_in_shipped_code.py had a compound assertion (PT018), split.
+* The register's burn-down wave table was stale and was recomputed from the rows (§ register diff);
+  REG-D34's row had been placed after the §5 heading; "Human class (9)" was corrected to (10).

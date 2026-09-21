@@ -2,7 +2,7 @@
 
 **Last verified:** 2026-09-21 UTC — the 22 source paths cited below were re-checked against the checked-out `5.0.0` tree
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out source metadata is synchronized at `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core`; `v4.1.2` remains the most recent version published on every surface
+**Source baseline:** checked-out source metadata is synchronized at `v5.0.1`; nothing is published for it. The most recent published release `v5.0.0` was published 2026-09-16 on every surface except PyPI `aegis-latent-core`; `v4.1.2` remains the most recent version published on every surface
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` retains the historical `4.0.0` comparison anchors documented by [`evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md`](../evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md)
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** previously published `v3.1.0` artifacts and retained measurements remain historical

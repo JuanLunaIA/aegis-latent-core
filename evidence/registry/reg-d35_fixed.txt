@@ -1,0 +1,45 @@
+REG-D35 — FIXED — SECURITY_AUDIT_REPORT.md's TODO/FIXME claims and the file they pointed at
+Evidence recorded 2026-09-21T11:16:05Z
+
+CLAIM 1 IN THE REPORT (line 14, corrected here)
+    "Many `FIXME` and `TODO` markers present across the codebase — technical debt hotspots."
+MEASURED — markers in shipped directories ($ git grep -n -E '\b(TODO|FIXME|HACK)\b' -- aegis/
+aegis_server/ aegis_rust_v2/src/ sdk/ dashboard/ config/ deploy/):
+    (no output — zero matches)
+Every occurrence of the words elsewhere in the tree is one of:
+    * a detector pattern — scripts/verify_docs.py:273, scripts/audit_documentation_corpus.py:37
+    * a comment about that rule — scripts/verify_docs.py:269-271, :402,
+      tools/docs/verify_documentation.py:407
+    * a test fixture — tests/test_documentation_verifiers.py:170, :180
+    * demo data carrying its own provenance marker — tools/visualizer/generate_samples.py:147
+      ("fixme": ["aegis/core/mmr.py"]) rendered inside Samples/*.html, whose bootstrap says
+      "demo_only":true,"data_provenance":"static-demo-only" (frozen by REG-058)
+    * a historical forensic report — tools/forensic/report.json (v2.5.0-era artefact)
+
+CLAIM 2 IN THE REPORT (line 85, corrected here)
+    "Create targeted PRs for critical TODO/FIXME markers ... listed in TODO_ISSUES.md."
+MEASURED — the file does not exist:
+    $ ls TODO_ISSUES.md  ->  No such file or directory
+    $ git grep -ln 'TODO_ISSUES' -- .  ->  SECURITY_AUDIT_REPORT.md   (its only referent)
+
+CORRECTIONS APPLIED (both sentences rewritten with the measured facts; the instruction now
+points at docs/ROADMAP.md (AUD-*) and docs/REGISTRY.md (REG-*), where the work actually lives)
+
+GATE — tests/test_no_defect_markers_in_shipped_code.py
+    ...                                                                      [100%]
+3 passed in 0.53s
+    Walked set asserted non-empty (>100 files, app.py and wal.rs present) so the scan cannot
+    go vacuous; third test is a negative control that makes the detector fire on synthetic
+    markers and refuse identifier substrings (TODOLIST, aegis_fixme_counter, "FIXMEs are ...").
+
+DOC GATE UNAFFECTED
+    verify_docs: PASS (0 findings)
+
+REGISTRY BOOKKEEPING (corrected in this commit, see the register's own diff)
+    * the burn-down wave table was STALE: it read `[AUDIT] 28 rows / 9 FIXED / 19 open` and
+      `Total 94 / 27 FIXED / 19 open` while the rows themselves said 30 / 23 / 7 and
+      96 / 41 / 7. Recomputed from the 96 rows by parsing each row's status cell and
+      validated against four rows whose status was independently known (REG-D27 FIXED,
+      REG-D34 OPEN, REG-026 VERIFIED, REG-042 WONT-FIX; 0 unparsed rows).
+    * REG-D34's row had been placed after the §5 Burn-down heading; moved back into §4.6.
+    * "Human class (9)" corrected to (10) — REG-H10 was added by REG-D24.
