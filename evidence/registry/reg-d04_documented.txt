@@ -58,7 +58,9 @@ property of this host's uv-managed interpreter, not of the repository.
 
 === 2. Bisect: which tests crash ===
 
-$ for t in <the 16 zk_mmr unit tests>; do timeout 120 $BIN zk_mmr::tests::$t --exact; done
+$ BIN=target/release/deps/aegis_rust-3c6abae0059acd0a      # LD_LIBRARY_PATH set as above
+$ for t in <one name per line - all 16 are printed in the result block below>; do
+      timeout 120 "$BIN" "zk_mmr::tests::$t" --exact; done
 
 a_blocked_leaf_cannot_be_proved_passed                                 SIGILL (128+4)
 a_flipped_direction_is_refused                                         SIGILL (128+4)
@@ -145,7 +147,7 @@ at `halo2curves-0.10.0/src/pasta/fq.rs:17`. Confirmed with
   page on 2026-09-21.
 - A user on a pre-ADX x86-64 CPU who enables `zk-spartan` gets a crash, not a
   refusal. That is the boundary now published in `docs/BOUNDARIES.md` (Evidence
-  boundaries, "Zero-knowledge circuit build on x86-64").
+  boundaries, "Zero-knowledge circuit build (`zk-spartan`) on x86-64").
 
 === 7. Disposition ===
 

@@ -1,6 +1,9 @@
 REGISTRY SEAL - 2026-09-21
-aegis-latent-core, branch `registry-closure-2026-09-21`, anchor HEAD `dd30512`
-(20 commits ahead of `origin/main` at `dc20a2c`).
+aegis-latent-core, branch `registry-closure-2026-09-21`.
+The battery below was executed on the working tree carrying the branch tip `dd30512`
+(20 commits ahead of `origin/main` at `dc20a2c`) plus this seal's edits. The seal
+edits were committed afterwards, so the branch tip that contains this file is three
+commits past `dd30512`, not `dd30512` itself.
 
 This file records the battery that the closure attestation in `docs/REGISTRY.md`
 section 6 cites. Every line below is a command's own output at the seal, captured
