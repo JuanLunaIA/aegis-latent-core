@@ -51,6 +51,21 @@ the sentence now says so.
 - `AUD-35` comments in `deploy/docker/docker-compose.enterprise.yml` and
 `deploy/helm/templates/statefulset.yaml` no longer pin an open finding to a
 version number.
+- **`dev` extra carries the two packages whose tests nothing installed.**
+  `pyarrow>=16.0.0` and `prometheus-client>=0.20.0` are added to `[dev]` because
+  every suite-running job installs `-e ".[dev]"`: with them only in `lakehouse`
+  and `metrics`, the Parquet exporter's twelve tests and seven `/metrics` tests
+  skipped in **every** environment, including the end-to-end registry test
+  `CLM-102` cites as its `LOCALLY TESTED` proof (`REG-D38`, `REG-D40`). No
+  runtime dependence changes; both extras still carry them for operators.
+- **`[tool.coverage.report] precision = 2`.** `--cov-fail-under` is decided by
+  `coverage.results.should_fail_under(total, floor, precision)`, and the default
+  precision of `0` rounds the total *up* before comparing, so a run in
+  `(floor - 0.5, floor)` printed `FAIL Required test coverage … not reached` and
+  still exited `0`. That hole applies to the repository's own
+  `--cov-fail-under=65` (`Makefile:46`, `.github/workflows/ci.yml:306-309`) as
+  much as to any stricter invocation; the displayed and the enforced percentage
+  are now the same number (`REG-D41`).
 
 ### Fixed (unreleased, since the `5.0.0` source target)
 
@@ -84,6 +99,60 @@ detail is in `docs/REGISTRY.md`; the summary:
 - Earlier rows (`REG-D05` … `REG-D18`, `REG-D25`, plus the legacy register's 66
   terminal rows) are recorded in `docs/REGISTRY.md` with per-row evidence under
   `evidence/registry/`.
+- **REG-D37** — the guarded-pickle allow-list never reached nested values:
+  `_validate_allowed` tested `isinstance(obj, allowed)` before recursing, and
+  `dict`/`list` are themselves in `DEFAULT_ALLOWED`, so the recursion branches
+  were unreachable and `{"k": <anything>}` passed. A `set` payload carries no
+  `GLOBAL` opcode (`EMPTY_SET`/`ADDITEMS`), so the post-load check was the only
+  guard and it never fired. Fixed by reordering; with the old order restored,
+  seven tests fail. The module is allowlisted for import reachability, so the
+  exposure was library callers of `safe_pickle_load`/`safe_pickle_dump`, not the
+  request path. `tests/test_safe_serialization_failclosed.py`.
+- **REG-D38** — the Parquet exporter's twelve tests ran nowhere: no workflow
+  installs the `lakehouse` extra, so the module sat at 0% coverage while
+  `CLM-071`'s `LOCALLY TESTED` rested on a suite that module-level-skipped.
+  Fixed by the `dev`-extra rule above, plus a tree-wide sweep over every
+  `pytest.importorskip` so a future silent skip fails the build.
+  `tests/test_optional_backend_declarations.py`.
+- **REG-D39** — two tests reddened every full-suite run on a loaded machine for
+  reasons that were not defects. The streaming test truncated silently when its
+  own 30 s duration cap fired under contention (its in-loop memory bound held on
+  every iteration), and the audit-export test's unbounded writer thread crossed
+  the endpoint's documented 1000-node limit, which is correct product behaviour.
+  Both fixed by removing the wall-clock dependency, with one *added* assertion
+  (`outcomes == ["complete"]`) that turns a truncation into a failure. No bound
+  was relaxed.
+- **REG-D40** — the `metrics` extra was installed by no job, so seven `/metrics`
+  tests skipped in every environment (see the `dev`-extra entry above). The skip
+  sits inside those tests, which is why `REG-D38`'s module-level sweep could not
+  see it; it was found by checking that fix against the authoritative skip
+  taxonomy (`pytest -rs`) instead of the source. Installing the extra also
+  exposed a pre-existing order coupling in `tests/test_observability_new.py`:
+  two reload tests were passing on globals left behind by a neighbouring test,
+  because `importlib.reload` never clears the namespace. Those two now skip with
+  the mechanism in their `reason=`, and the branch-only attributes they patch
+  are created with `raising=False` rather than relied on.
+- **REG-D41** — the coverage gate itself, described under *Changed*.
+
+### Tests
+
+- **Coverage: 88.67% → 90.06%** for the 5.0.1 mission order's
+  `--cov-fail-under=90`: 20,300 statements / 2,300 missed → 20,298 / 2,018, so
+  284 statements are newly covered, and the suite is
+  `7,201 passed, 115 skipped, 0 failed, exit 0`. The repository's own enforced
+  floor is unchanged at 65%.
+- New test files: `test_error_response_hygiene.py`,
+  `test_no_defect_markers_in_shipped_code.py`,
+  `test_safe_serialization_failclosed.py`, `test_forwarder_sse_framing.py`,
+  `test_rate_limiter_reservation.py`, `test_dependencies_identity_helpers.py`,
+  `test_config_validation_branches.py`, `test_gossip_runtime_lifecycle.py`,
+  `test_observability_without_the_metrics_extra.py`; plus new cases in
+  `test_optional_backend_declarations.py` (the availability-gate table).
+- `aegis/core/observability.py` 65% → **98.43%**: installing the extra made the
+  real metrics branch the one that executes, which left the `except ImportError`
+  fallback untested; it is covered by re-importing the module under a private
+  name with `sys.modules["prometheus_client"] = None` (what makes the import
+  raise), in-process, because coverage does not follow a subprocess.
 
 ## [5.0.0] — unreleased source target
 
