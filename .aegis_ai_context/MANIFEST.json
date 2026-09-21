@@ -249,8 +249,8 @@
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/Cargo.toml",
-      "sha256": "67ed85afdb5204a49e60cf51cf67e8278347de8ef441bc213bcb1f23eb8d1550",
-      "size": 10253
+      "sha256": "d6c339a8727fd6a85e05e4ef2e446356b8e8809c70b3ff6f3f84f7248644a05c",
+      "size": 10620
     },
     {
       "category": "governed_input",
@@ -261,14 +261,14 @@
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/Cargo.lock",
-      "sha256": "b322e371bd7a4004b37aea2f64f057f33b3dfafd41dc2557eecb925d063dc027",
-      "size": 80202
+      "sha256": "14b6be2650e024f4fb1d5ac76e2b8cef20e47ef854de3290b3fb53213a815d62",
+      "size": 80191
     },
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/src/lib.rs",
-      "sha256": "45c20515beed852cb36ed0f1db6c93ffe7786044f5e1ebbfbe85c9ec08587b51",
-      "size": 6589
+      "sha256": "7b92d009a9509de3cfa388b6e67018aea8e4ccf74c3ac874cb079a68b061fd1a",
+      "size": 7066
     },
     {
       "category": "governed_input",

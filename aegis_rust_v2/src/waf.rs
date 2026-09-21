@@ -8,9 +8,12 @@
 //! FIX-WAF-01 from the Python implementation).
 //! Layer 2 — soft patterns: accumulated score; block when >= SOFT_BLOCK_THRESHOLD.
 //!
-//! Throughput: Aho-Corasick processes ~4 GB/s on x86-64 vs ~150 MB/s for
-//! Python's `re` module on the same patterns, removing WAF from the hot-path
-//! latency budget entirely.
+//! Throughput: **not stated here.** The figures that used to sit in this
+//! paragraph (`~4 GB/s on x86-64` versus `~150 MB/s` for Python's `re`) appear
+//! in no measurement record in this repository and carried no host or date;
+//! they are removed rather than restated (AUD-24). What the Rust path removes
+//! is the per-call interpreter boundary; measure the rest before claiming it,
+//! and record it the way `docs/benchmarks/BENCHMARK_METHOD.md` requires.
 //!
 //! Normalisation: this crate performs **no** Unicode normalisation and no
 //! homoglyph mapping. `scan` strips zero-width characters (see

@@ -43,6 +43,19 @@ impl PqcKeypair {
         PyBytes::new(py, &self.private_key)
     }
 
+    /// Sign `data` with this keypair; returns the detached ML-DSA-65 signature.
+    ///
+    /// # The GIL is held for the whole call
+    ///
+    /// Signing is pure CPU inside Rust and this binding does **not** release the
+    /// interpreter the way the forwarder's I/O path does (`py.detach` in
+    /// `forwarder.rs`): a signature costs ~135 µs on this repository's hardware
+    /// (mean, 20,000 hedged samples — `pqc_trait.rs`), so every other Python
+    /// thread waits out that window. On the evidence path that is one such
+    /// window per commit. Stated rather than changed (AUD-24): releasing the GIL
+    /// here is a concurrency change whose effect at this duration is not
+    /// observable by any test this repository can run on its hardware, so
+    /// shipping it would be an unverified claim rather than a verified one.
     fn sign<'py>(&self, py: Python<'py>, data: &[u8]) -> PyResult<Bound<'py, PyBytes>> {
         let signature = ActiveBackend::sign_detached(data, &self.private_key)
             .map_err(|e| value_error(e.to_string()))?;
@@ -198,6 +211,13 @@ pub fn keypair_from_bytes(public_key: &[u8], private_key: &[u8]) -> PyResult<Pqc
 /// one per request. That is a throughput requirement (it removes ~5.6% of the
 /// call), not a mitigation: it does not narrow the timing difference above, and
 /// it must not be described as one.
+///
+/// ## The GIL is held for the whole call
+///
+/// As with `PqcKeypair.sign`, this function does not release the interpreter:
+/// verification measures ~73 µs per call on this repository's hardware (median,
+/// 800 samples, 2026-09-03), and other Python threads wait out that window.
+/// Stated rather than changed (AUD-24); see `sign` for why.
 #[pyfunction]
 pub fn verify_pqc_signature(data: &[u8], signature: &[u8], public_key: &[u8]) -> PyResult<bool> {
     if signature.len() != SIGNATURE_BYTES {

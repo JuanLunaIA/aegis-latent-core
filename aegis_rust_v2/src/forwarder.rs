@@ -16,8 +16,11 @@
 //!   - Global OnceLock runtime: constructed once, reused across all forwarder
 //!     instances; no per-request runtime creation overhead.
 //!
-//! Throughput: a single async reqwest client can sustain >100k RPS on a
-//! 32-core host vs ~8k RPS for reqwest::blocking with the same thread count.
+//! Throughput: **not stated here.** The figures that used to sit in this
+//! paragraph (`>100k RPS on a 32-core host` versus `~8k RPS` for
+//! `reqwest::blocking`) have no measurement record in this repository and
+//! carried no host or date (AUD-24); they are removed rather than restated.
+//! The mechanism above is what the code shows; measure the rest.
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

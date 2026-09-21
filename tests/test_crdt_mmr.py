@@ -188,3 +188,32 @@ class TestBoundary:
         assert empty.leaf_count == 0
         assert len(empty.root) == 64
         assert empty.root != "0" * 64
+
+
+class TestWireCeilingThroughTheBinding:
+    """AUD-24: the encoder enforces the same ceilings the decoder does.
+
+    The Rust suite proves the invariant inside the crate. This proves the half
+    the gateway sees — that the binding *raises* rather than returning bytes
+    every peer will refuse. Before the fix, a replica that merged more than the
+    ceiling could encode a state its own decoder rejected, and the failure
+    surfaced only on the receiving side.
+    """
+
+    def test_a_state_above_the_clock_ceiling_is_refused_not_encoded(self):
+        ceiling = 4_096  # MAX_CLOCK_ENTRIES in aegis_rust_v2/src/crdt_mmr.rs
+        merged = _replica(0, ["seed"])
+        for writer in range(1, ceiling):
+            merged = merged.join(_replica(writer, ["seed"]))
+
+        # At the ceiling: encodable, and the wire form is the documented one.
+        merged.append(b"at-the-ceiling")
+        encoded = merged.encode_state()
+        assert isinstance(encoded, bytes)
+        assert encoded[:8] == b"AEGCRDT\x01"
+
+        # One writer more crosses it, and the refusal is local this time.
+        over = merged.join(_replica(ceiling, ["seed"]))
+        over.append(b"above-the-ceiling")
+        with pytest.raises(ValueError, match="ceiling"):
+            over.encode_state()

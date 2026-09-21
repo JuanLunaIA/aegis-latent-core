@@ -171,8 +171,10 @@ python tools/benchmarks/run_backpressure_stall.py
 # WAF corpus
 python tools/security/run_waf_corpus.py
 
-# Rust benchmarks
-cd aegis_rust_v2 && cargo bench
+# Rust-side cost measurement. There is no Criterion bench target in the crate:
+# `cargo bench` compiles nothing to run (AUD-24). This harness prints numbers
+# that are attributable to the host that printed them and to nothing else.
+cd aegis_rust_v2 && cargo test --release --features zk-spartan --test zk_mmr_cost -- --ignored --nocapture
 
 # Commit-cost scaling
 python -m benchmarks.bench_commit_scaling --json

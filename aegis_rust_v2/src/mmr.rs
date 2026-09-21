@@ -84,6 +84,13 @@ fn leaf_hash(scheme: HashScheme, data: &[u8]) -> String {
 /// SHA-256 output, so a decode failure means memory corruption or a caller
 /// that reached past the public API, not bad input. Panicking is the honest
 /// response: continuing would silently fold a wrong digest into the root.
+///
+/// Under the shipped release profile (`panic = "abort"`) that response is
+/// process termination with no traceback rather than a catchable failure, so
+/// "panics" here must not be read as "raises". The invariant is asserted by
+/// test (`digest_bytes_refuses_a_non_hex_digest` and its sibling) — the check
+/// AUD-24 found missing — and no public entry point accepts a foreign digest
+/// with which to reach it.
 fn digest_bytes(hex_digest: &str) -> [u8; 32] {
     let raw = hex::decode(hex_digest).expect("accumulator digest is not valid hex");
     <[u8; 32]>::try_from(raw.as_slice()).expect("accumulator digest is not 32 bytes")
@@ -235,6 +242,22 @@ impl MmrAccumulator {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // AUD-24: the invariant `digest_bytes` relies on, asserted rather than
+    // asserted-in-a-comment. These pass under `cargo test` (the test profile
+    // unwinds); under the shipped release profile the same path aborts, which
+    // the function's doc comment states.
+    #[test]
+    #[should_panic(expected = "accumulator digest is not valid hex")]
+    fn digest_bytes_refuses_a_non_hex_digest() {
+        let _ = digest_bytes("zz");
+    }
+
+    #[test]
+    #[should_panic(expected = "accumulator digest is not 32 bytes")]
+    fn digest_bytes_refuses_a_wrong_length_digest() {
+        let _ = digest_bytes(&"ab".repeat(16));
+    }
 
     #[test]
     fn append_changes_root() {

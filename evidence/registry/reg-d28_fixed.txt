@@ -1,0 +1,172 @@
+REG-D28 / AUD-24 — Rust P3 batch: doc claims, guards, latent edges (FIXED 2026-09-21)
+
+Row: docs/REGISTRY.md §4.6 REG-D28. Ticket: docs/ROADMAP.md AUD-24.
+Findings: AF-085 (mmr.rs digest_bytes), AF-086 (unused subtle), AF-087 (GIL across
+ML-DSA), AF-088 (rate_limit unchecked refill add), AF-089 (capacity ceiling),
+AF-090 (frame-arithmetic doc claim), AF-091 (hand-written unsafe Send/Sync),
+plus the batch's hasher rationale (already fixed in `8ccea5f`), the forwarder /
+lib / WAF / rate-limit / ring-buffer unmeasured numbers, and the benchmark doc's
+non-existent `cargo bench` target.
+
+Every item, its disposition, and the evidence for it
+────────────────────────────────────────────────────
+
+(1) AF-091 · unnecessary `unsafe impl Send/Sync` for `WalInner` — FIXED
+    aegis_rust_v2/src/wal.rs: both impls deleted; the auto-traits now come from
+    the compiler, which is the check the impls suppressed.
+    Cargo.toml: `[lints.rust] unsafe_code = "deny"`, so the crate's one inherent
+    unsafe call (`MmapMut::map_mut`) carries an explicit `#[allow(unsafe_code)]`
+    with its safety argument, and the next unsafe site is a deliberate act.
+    Test: `wal::tests::wal_inner_auto_traits_come_from_the_compiler` asserts the
+    property the hand-written impls claimed (`fn assert_send_sync<T: Send + Sync>()`).
+    Control: with the allow removed, `cargo check --release` →
+        error: usage of an `unsafe` block
+        error: could not compile `aegis_rust` (lib) due to 1 previous error
+    i.e. the lint is live, not decorative.
+
+(2) AF-089 · documented-but-unenforced segment ceiling — FIXED
+    wal.rs: `MAX_SEGMENT_BYTES = 1 << 31` (2 GiB: the largest segment a 32-bit
+    target in this crate's wheel matrix can map, and 8× the 256 MiB default),
+    enforced on the *request* in `RustWal::open` **before** `OpenOptions::open`,
+    so a refused call creates nothing on disk. An existing segment above the
+    ceiling still opens read/write — refusing it would lose committed frames to
+    a limit that arrived after the fact (recorded in the constant's docs).
+    Test: `wal::tests::segment_ceiling_is_enforced_before_the_file_is_created`
+    refuses `MAX_SEGMENT_BYTES + 1` and the measured `1 << 40`, asserting
+    `!path.exists()` after each refusal, then opens successfully under the
+    ceiling and asserts the file now exists.
+
+(3) AF-090 · doc claim that all slicing goes through the model-checked helpers —
+    FIXED by making it true, not by weakening it.
+    wal.rs: new `header_end(pos, limit) -> Option<usize>`, a one-line wrapper over
+    the model-checked `header_range`, used at both writer sites that used to do
+    open-coded `pos + FRAME_HEADER` (the recovery terminator in `open`, the
+    sentinel after `append`). The doc comment now names all three helpers, states
+    which shape each serves, scopes the claim to the module's non-test code, and
+    points at `CLM-054` for the model-checked scope (unchanged: `header_range`
+    and `payload_range`).
+    Tests: `wal::tests::header_end_is_bounded_and_never_wraps` (exact fit at the
+    top of the address space → `Some(usize::MAX)`; one past → `None`; overflow →
+    `None`); a Kani harness `verification::header_end_is_the_same_bound` added
+    beside the existing two. **Kani was not run on this host (not installed)** —
+    the harness is source-only evidence, and the Kani CI job is where it runs.
+
+(4) AF-085 · two `expect`s in `digest_bytes` (mmr.rs) — PARTIAL, stated as such
+    The invariant was never the problem (nothing accepts a foreign digest —
+    `MmrAccumulator` has no decoder), and the audit's complaint was that nothing
+    asserted it. That is now asserted:
+      * `mmr::tests::digest_bytes_refuses_a_non_hex_digest` (`#[should_panic]`)
+      * `mmr::tests::digest_bytes_refuses_a_wrong_length_digest` (`#[should_panic]`)
+    and the function's docs now state the production consequence the audit
+    raised: under the shipped release profile (`panic = "abort"`) this path is
+    process termination with no traceback, so "panics" must not be read as
+    "raises". The two `expect`s remain, deliberately: converting them to a
+    `Result` would ripple through `combine_hashes`/`root_hash` (whose public
+    signatures cannot express "the accumulator is corrupt") for an unreachable
+    branch, and the audit rates it P3 on exactly that basis.
+
+(5) zk_bindings.rs:144 · `expect` on a Python-reachable path — FIXED
+    Now `.ok_or_else(|| zk_error(zk_mmr::ZkError::ShapeMismatch(...)))?`, so a
+    violated invariant is a Python exception rather than a process kill.
+    Compiled under `cargo clippy --all-targets --all-features` (below), which is
+    the only execution this host can give the zk-spartan feature.
+
+(6) zk_mmr.rs · unbounded bincode input — FIXED
+    `MAX_PROOF_BYTES = 1 << 20` and `MAX_VERIFIER_KEY_BYTES = 1 << 22`, both
+    checked before `bincode::deserialize`, both returning `ZkError::Decoding`
+    with the size and the ceiling in the message. Documented as a policy bound
+    rather than a measured maximum, since `zk-spartan` is off in the default
+    build and its legs SIGILL on this CPU (REG-D04).
+
+(7) AF-087 · GIL held across ML-DSA sign/verify — DOCUMENTED (the audit's remedy)
+    `PqcKeypair.sign` and `verify_pqc_signature` now state in their Python
+    docstrings that the GIL is held for the whole call, with the crate's own
+    measured cost (~135 µs mean sign over 20,000 hedged samples; ~73 µs median
+    verify over 800 samples) and the consequence: other Python threads wait that
+    out, once per commit on the evidence path. Releasing it (`py.detach`, as the
+    forwarder's I/O path does) is deliberately **not** shipped: at this duration
+    no test this repository can run on its hardware observes the difference, so
+    it would be an unverified change rather than a verified one (PD-02).
+
+(8) AF-086 · `subtle` declared but unreferenced — FIXED
+    Removed from `aegis_rust_v2/Cargo.toml` `[dependencies]`; `Cargo.lock` loses
+    exactly one line. `cargo test --release` and
+    `cargo clippy --all-targets --all-features --locked -- -D warnings` both pass
+    afterwards, so nothing was relying on it transitively for its own build.
+
+(9) AF-088 · unchecked refill add in `rate_limit.rs` — ALREADY FIXED, verified
+    This one predates the audit text: `refill_target(cur, gain, capacity)` is
+    `cur.saturating_add(gain).min(capacity_milli)` and carries the AF-041 /
+    REG-D09 comment plus the test
+    `rate_limit::tests::refill_target_saturates_instead_of_overflowing`
+    (`refill_target(i64::MAX, i64::MAX, 1_000) == 1_000`). No change needed; the
+    audit's `(cur + gain)` reading is of the pre-REG-D09 tree.
+
+(10) audit.rs · ring-buffer drop contract vs. concurrent reality — FIXED in code
+    `enqueue`'s overflow path is now a single `ArrayQueue::force_push`, which
+    replaces the oldest element atomically and always accepts the incoming
+    event, instead of a `pop`-then-best-effort-`push` pair that could evict a
+    non-oldest head and could lose the *incoming* event while reporting only
+    "an event was dropped". `enqueue_count` counts events accepted into the
+    buffer (including the replacement), `drop_count` counts evictions, and the
+    module doc now states the contract the code implements.
+    Test: `audit::tests::overflow_evicts_the_oldest_and_keeps_the_newest` — a
+    3-slot buffer takes 1,2,3, refuses to *retain* 4 while accepting it, drains
+    to exactly `[2,3,4]`, and asserts `drop_count == 1`, `enqueue_count == 4`.
+
+(11) Unmeasured performance numbers in public doc comments — FIXED (removed)
+    Removed from `src/lib.rs` (the whole speedup column), `src/forwarder.rs`
+    (`>100k RPS` / `~8k RPS`), `src/waf.rs` (`~4 GB/s` / `~150 MB/s`),
+    `src/rate_limit.rs` (`~50 ns` / `~5 µs`) and `src/audit.rs` (`<1 µs`); each
+    site now says what is verifiable from the code and points at
+    `docs/benchmarks/BENCHMARK_METHOD.md` for where a number belongs.
+    (The crate's *measured* numbers in `pqc_trait.rs`/`pqc.rs` are untouched —
+    those carry a method, a sample count and a date.)
+
+(12) docs/benchmarks/BENCHMARK_METHOD.md:175 · cites a `cargo bench` target that
+     does not exist — FIXED
+     `ls aegis_rust_v2/benches` → no such directory; no `[[bench]]` in
+     Cargo.toml. Replaced with the harness that does exist and prints
+     host-attributable numbers:
+       cd aegis_rust_v2 && cargo test --release --features zk-spartan \
+         --test zk_mmr_cost -- --ignored --nocapture
+
+(13) hasher.rs separator rationale — already fixed in `8ccea5f` (batch note).
+
+Execution on this host
+──────────────────────
+    cargo test --release            (PYTHONHOME + LD_LIBRARY_PATH + PYO3_PYTHON pinned)
+        test result: ok. 90 passed; 0 failed; 0 ignored  (+ 3 panic-safety, + 3 empty targets)
+        EXIT 0
+        (was 83 lib tests before this batch; the seven new ones are listed above)
+    cargo clippy --all-targets --all-features --locked -- -D warnings
+        Finished `dev` profile ... CLIPPY EXIT: 0
+    cargo check --release, allow removed (control)  → error: usage of an `unsafe` block
+    git diff --stat aegis_rust_v2/Cargo.lock → 1 file changed, 1 deletion(-)  (subtle)
+
+Not executed here, and not claimed
+──────────────────────────────────
+  * Kani (not installed): the new `header_end` harness and its two neighbours are
+    source-only on this host.
+  * `zk_spartan` execution: the feature compiles under `--all-features` clippy but
+    its test legs SIGILL on this CPU (REG-D04) — the ZK CI job is where the new
+    size ceilings are exercised.
+  * The PyO3 surface was **not** rebuilt here (`maturin` is not installed and no
+    `aegis_rust*.so` is present), so the binding-level test added for (4') below
+    skips on this host exactly as it does in CI's pure-Python `test` job; CI's
+    `rust` job, which installs the built wheel with `AEGIS_REQUIRE_RUST=1`, is
+    where it runs. The Rust-side tests above are what executed here.
+
+(4') Binding-level regression test added for the encoder ceiling
+    tests/test_crdt_mmr.py::TestWireCeilingThroughTheBinding::
+      test_a_state_above_the_clock_ceiling_is_refused_not_encoded
+    It merges 4,096 replicas into one (a leaf's clock is its writer's replica
+    clock at append time), asserts the state at the ceiling still encodes and
+    still decodes, crosses the ceiling with one more writer, and asserts
+    `pytest.raises(ValueError, match="ceiling")` — i.e. that the half the gateway
+    sees refuses locally instead of emitting a state every peer will reject.
+
+Also added: crdt_mmr's encoder now enforces the ceilings its decoder enforces —
+`encode_state` returns `Result<Vec<u8>, StateEncodeError>` (leaves, and every
+leaf's clock) and the PyO3 wrapper raises `ValueError`; Rust coverage is
+`crdt_mmr::tests::a_clock_above_the_wire_ceiling_is_refused_by_our_own_encoder`.

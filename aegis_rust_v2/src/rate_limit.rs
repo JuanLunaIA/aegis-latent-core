@@ -12,7 +12,11 @@
 //!   - Consume is a CAS spin-loop: constant-time under low contention,
 //!     O(contenders) worst-case with fast backoff due to AtomicI64.
 //!
-//! Latency: ~50 ns per check on x86-64 (vs ~5 µs for Python asyncio.Lock).
+//! Latency: **not stated here.** The figure that used to sit in this line
+//! (`~50 ns per check on x86-64` versus `~5 µs`) has no measurement record in
+//! this repository (AUD-24); the design facts above are what is verifiable from
+//! the source. See `docs/benchmarks/BENCHMARK_METHOD.md` for where a number
+//! belongs and what must accompany it.
 
 use dashmap::DashMap;
 use pyo3::prelude::*;
