@@ -441,6 +441,31 @@ def node_signature_assurance(node: AuditNode) -> SignatureAssurance:
     return _SCHEME_ASSURANCE.get(node.signature_scheme, SignatureAssurance.UNSIGNED)
 
 
+def validate_signature_scheme(scheme: str) -> str:
+    """Return ``scheme`` if it is one this codebase writes, else raise.
+
+    The scheme travels inside the signed payload (AUD-27), so it is held to the
+    same standard as the other bound fields: a closed vocabulary with no
+    delimiter in it. ``_SCHEME_MATERIAL`` is that vocabulary — it is already the
+    set :func:`scheme_material_inconsistency` enforces on the reading side, so a
+    label that can be *written* here is exactly a label that can be *checked*
+    there, and no other.
+
+    Raises
+    ------
+    ValueError
+        For any label outside the vocabulary, including an empty one. Callers
+        that legitimately have no label (the pre-binding payload builder) simply
+        omit the argument.
+    """
+    if scheme not in _SCHEME_MATERIAL:
+        raise ValueError(
+            f"signature scheme {scheme!r} is not one this codebase writes "
+            f"({sorted(_SCHEME_MATERIAL)}); it cannot be bound into a signed payload"
+        )
+    return scheme
+
+
 def _is_hex_token(value: str) -> bool:
     """True for a non-empty, even-length hexadecimal token."""
 
@@ -787,6 +812,7 @@ def _build_signed_payload(
     signer_name: str = "",
     signature_meaning: str = "",
     status: str = NODE_STATUS_COMMITTED,
+    signature_scheme: str = "",
 ) -> bytes:
     """Canonical bytes covered by a node's signature.
 
@@ -837,6 +863,23 @@ def _build_signed_payload(
     can reach, because that node's stored signature is over the annotated
     material. The pre-binding gap that remains for already-written records is
     published as ``UC-055``.
+
+    ``signature_scheme`` (AUD-27) follows the same pattern with one difference:
+    the caller passes the label the signing tier *will* use, so the scheme is an
+    input to the bytes rather than a report about them. Before this, verification
+    dispatched on ``node.signature_scheme`` — a self-declared value — and checked
+    the signature over material that did not contain it, so the label was
+    authenticated only by the shape of the material beside it (``REG-D06``). A
+    relabel inside one shape class (the presence-only tiers ``pqc-ml-dsa`` /
+    ``pkcs11-*``) changed which verifier was consulted and nothing else. Bound,
+    the label cannot be rewritten without invalidating the signature — and a
+    verifier that has the tier's key now checks the claim instead of trusting it.
+
+    The label is appended only when the signing tier supplied it, so a payload
+    rebuilt from a record signed before this binding reproduces its original
+    shape exactly. ``signature_scheme`` is validated against the closed scheme
+    vocabulary for the same reason ``waf_verdict`` is: a label carrying ``|``
+    could make two different field lists serialise alike.
     """
     fields = [prev_hash, merkle_root, request_hash, response_hash]
     if validate_waf_verdict(waf_verdict) != WAF_VERDICT_UNRECORDED:
@@ -850,6 +893,8 @@ def _build_signed_payload(
         fields.append(annotation_token)
     if validate_node_status(status) != NODE_STATUS_COMMITTED:
         fields.append(status)
+    if signature_scheme:
+        fields.append(validate_signature_scheme(signature_scheme))
     return "|".join(fields).encode()
 
 
@@ -875,11 +920,22 @@ def _build_prebinding_signed_payload(
 def signed_payload_candidates_for(node: AuditNode) -> list[bytes]:
     """Every payload a node's signature may legitimately be over, newest first.
 
-    The annotated payload comes first. The pre-binding payload is offered only
-    when it differs, which is what keeps chains written before AUD-10 verifiable
-    without letting a rewritten annotation pass: a node written by this build is
-    signed over the annotated material, so its stored signature cannot equal the
-    pre-binding digest.
+    Three shapes, newest first:
+
+    1. **scheme-bound** (AUD-27) — the annotated payload with the node's own
+       declared scheme appended, offered when that scheme is in the vocabulary.
+       A record written by this build is signed over this shape, so rewriting its
+       ``signature_scheme`` produces a candidate list in which nothing matches.
+    2. **annotated** — the current four/five/seven-field shape without a scheme,
+       which is what records written between AUD-10 and this binding were signed
+       over.
+    3. **pre-binding** — offered only when it differs, which keeps chains written
+       before AUD-10 verifiable.
+
+    Each older shape is reachable only by a signature that was actually made over
+    it, because a node written by this build has its stored signature over shape
+    1: the fallbacks exist for records that predate the binding, not as an
+    alternative reading of a current one.
     """
     annotated = _build_signed_payload(
         prev_hash=node.prev_hash,
@@ -898,7 +954,25 @@ def signed_payload_candidates_for(node: AuditNode) -> list[bytes]:
         response_hash=node.response_hash,
         waf_verdict=node.waf_verdict,
     )
-    return [annotated] if annotated == prebinding else [annotated, prebinding]
+    candidates: list[bytes] = []
+    if node.signature_scheme in _SCHEME_MATERIAL:
+        candidates.append(
+            _build_signed_payload(
+                prev_hash=node.prev_hash,
+                merkle_root=node.merkle_root,
+                request_hash=node.request_hash,
+                response_hash=node.response_hash,
+                waf_verdict=node.waf_verdict,
+                signer_name=node.signer_name,
+                signature_meaning=node.signature_meaning,
+                status=node.status,
+                signature_scheme=node.signature_scheme,
+            )
+        )
+    for candidate in (annotated, prebinding):
+        if candidate not in candidates:
+            candidates.append(candidate)
+    return candidates
 
 
 def _hmac_sign(signing_key: str, data: bytes) -> str:
@@ -1032,6 +1106,9 @@ class CryptographicAuditLedger:
         self._signing_key = signing_key
         self._fsync = fsync_fn or os.fsync
         self._hsm_backend = hsm_backend
+        #: Scheme label learned from a signature when the backend cannot resolve
+        #: its key type up front (AUD-27). Empty means "not learned yet".
+        self._hsm_learned_scheme = ""
         self._require_strong_signing = require_strong_signing
         self.max_memory_nodes = max_memory_nodes
         self.max_forensic_bytes = max_forensic_bytes
@@ -1276,18 +1353,23 @@ class CryptographicAuditLedger:
             # Sign over prev_hash + merkle_root + request/response hashes so the
             # signature binds chain linkage, not merkle_root alone (see
             # _build_signed_payload).
-            signed_payload = _build_signed_payload(
-                prev_hash=prev_hash,
-                merkle_root=merkle_root,
-                request_hash=req_hash,
-                response_hash=resp_hash,
-                waf_verdict=waf_verdict,
-                signer_name=signer_name,
-                signature_meaning=signature_meaning,
-                status=NODE_STATUS_COMMITTED,
-            )
+            # AUD-27: the signing tier is selected first and its scheme is
+            # appended to the payload, so the recorded label is part of what the
+            # signature covers (see _sign_bound).
             try:
-                signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
+                signature, pub_key_hex, scheme, is_fallback, signed_payload = self._sign_bound(
+                    lambda bound_scheme: _build_signed_payload(
+                        prev_hash=prev_hash,
+                        merkle_root=merkle_root,
+                        request_hash=req_hash,
+                        response_hash=resp_hash,
+                        waf_verdict=waf_verdict,
+                        signer_name=signer_name,
+                        signature_meaning=signature_meaning,
+                        status=NODE_STATUS_COMMITTED,
+                        signature_scheme=bound_scheme,
+                    )
+                )
             except Exception:
                 self._mmr.rollback_to(mmr_before)
                 self._fault_state = "signing_failed"
@@ -1420,15 +1502,18 @@ class CryptographicAuditLedger:
             mmr_leaf_index = mmr_leaf_count - 1
             mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
 
-            signed_payload = _build_signed_payload(
-                prev_hash=prev_hash,
-                merkle_root=merkle_root,
-                request_hash=req_hash,
-                response_hash=resp_hash,
-                status=NODE_STATUS_REJECTED,
-            )
+            # AUD-27: scheme bound into the signed bytes, as on the committed path.
             try:
-                signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
+                signature, pub_key_hex, scheme, is_fallback, signed_payload = self._sign_bound(
+                    lambda bound_scheme: _build_signed_payload(
+                        prev_hash=prev_hash,
+                        merkle_root=merkle_root,
+                        request_hash=req_hash,
+                        response_hash=resp_hash,
+                        status=NODE_STATUS_REJECTED,
+                        signature_scheme=bound_scheme,
+                    )
+                )
             except Exception:
                 self._mmr.rollback_to(mmr_before)
                 self._fault_state = "signing_failed"
@@ -1607,17 +1692,20 @@ class CryptographicAuditLedger:
             mmr_leaf_count = self._mmr.get_leaf_count()
             mmr_leaf_index = mmr_leaf_count - 1
             mmr_proof = self._mmr.get_portable_inclusion_proof(mmr_leaf_index).to_dict()
-            signed_payload = _build_signed_payload(
-                prev_hash=prev_hash,
-                merkle_root=merkle_root,
-                request_hash=request_hash,
-                response_hash=response_hash,
-                signer_name=signer_name,
-                signature_meaning=signature_meaning,
-                status=NODE_STATUS_COMMITTED,
-            )
+            # AUD-27: scheme bound into the signed bytes, as on the ingest path.
             try:
-                signature, pub_key_hex, scheme, is_fallback = self._sign(signed_payload)
+                signature, pub_key_hex, scheme, is_fallback, signed_payload = self._sign_bound(
+                    lambda bound_scheme: _build_signed_payload(
+                        prev_hash=prev_hash,
+                        merkle_root=merkle_root,
+                        request_hash=request_hash,
+                        response_hash=response_hash,
+                        signer_name=signer_name,
+                        signature_meaning=signature_meaning,
+                        status=NODE_STATUS_COMMITTED,
+                        signature_scheme=bound_scheme,
+                    )
+                )
             except Exception:
                 self._mmr.rollback_to(mmr_before)
                 self._fault_state = "signing_failed"
@@ -1753,6 +1841,11 @@ class CryptographicAuditLedger:
         consistent with its scheme but cannot be checked by this build (no
         signing key in memory, or an HSM / ML-DSA tier whose verifier is not
         available here).
+
+        Since AUD-27 the candidate material includes the node's own declared
+        scheme for records written by this build, so a rewritten label does not
+        merely change which verifier is consulted — it changes the bytes that
+        verifier is asked about, and nothing matches.
         """
         if scheme_material_inconsistency(node) is not None:
             return "invalid"
@@ -1761,6 +1854,9 @@ class CryptographicAuditLedger:
             # the annotated payload; the pre-binding payload is offered only as a
             # fallback for records signed before they were bound. A status outside
             # the closed vocabulary raises here and is reported as ``invalid``.
+            # AUD-27: the node's declared scheme is bound the same way, so the
+            # first candidate is the shape this build writes, and the two older
+            # shapes are reachable only by signatures actually made over them.
             payloads = signed_payload_candidates_for(node)
             if node.signature_scheme == "hmac-sha256":
                 if not self._signing_key:
@@ -1814,7 +1910,10 @@ class CryptographicAuditLedger:
           ``signature_meaning`` or ``status`` fails verification. Records signed
           before that binding was introduced verify against the pre-binding
           material instead; that gap is published as ``UC-055``.
-        - ``signature_scheme`` — signing algorithm used
+        - ``signature_scheme`` — signing algorithm used. For records written by
+          this build the label is part of the signed material, so it cannot be
+          rewritten without failing verification; records signed before AUD-27
+          carry it unanchored, which is the boundary published as ``UC-054`` (b).
         - ``node_hash``        — SHA-256 chain accumulator over the node's hashed
           fields, which do not include the annotation. It links the record into
           the chain (and into its MMR leaf) but is not itself the annotation's
@@ -2038,22 +2137,69 @@ class CryptographicAuditLedger:
         self._wal_bytes = 0
         self._open_wal()
 
-    def _sign(self, data: bytes) -> tuple[str, str, str, bool]:
-        """Sign ``data``. Returns (signature_hex, pubkey_hex, scheme, is_fallback).
+    def _sign_bound(
+        self, build_payload: Callable[[str], bytes]
+    ) -> tuple[str, str, str, bool, bytes]:
+        """Select a tier, bind its scheme into the payload, then sign it.
 
-        Priority order (highest security first):
-        1. HSM/PKCS#11: key never leaves token boundary.
-        2. PQC ML-DSA via Rust extension (FIPS 204 post-quantum signing).
-        3. HMAC-SHA256: fast, verifiable, requires signing_key in memory.
-        4. Ed25519 ephemeral fallback: non-verifiable across restarts.
+        Returns ``(signature_hex, pubkey_hex, scheme, is_fallback, signed_payload)``.
+
+        AUD-27's shape: the tier is chosen **before** the bytes exist, and the
+        payload is rebuilt for each attempt with that attempt's own scheme
+        appended, so the label the node records is the label that was signed
+        over. The previous shape signed once and learned the scheme as the
+        *result*, which left the label authenticated only by the shape of the
+        material beside it — a relabel inside one shape class (the presence-only
+        tiers ``pqc-ml-dsa`` / ``pkcs11-*``) changed which verifier was consulted
+        and nothing else.
+
+        The cost of building per attempt is a handful of string joins; the cost
+        of an HSM fallback is one extra call, and it is bounded by the tier order
+        below, which is unchanged (highest security first):
+
+        1. HSM/PKCS#11: key never leaves the token boundary. Its label is read
+           from the key type before signing (``scheme_label``); a backend that
+           cannot answer falls back to signing once to learn it and signs again
+           over the labelled payload, so the security property never depends on
+           the backend's introspection.
+        2. PQC ML-DSA under a configured persistent identity.
+        3. HMAC-SHA256 with the ledger's signing key.
+        4. Ed25519 ephemeral fallback (flagged; non-verifiable across restarts).
+
+        ``build_payload`` raises ``ValueError`` for a label outside the closed
+        vocabulary; that happens only when a tier reports a label this build does
+        not know how to check, which is a bug in that tier, not input to accept.
         """
         # ── 1. HSM/PKCS#11 path ───────────────────────────────────────────
         if self._hsm_backend and self._hsm_backend.available:
             try:
-                sig_bytes, pub_hex, scheme = self._hsm_backend.sign(data)
-                return sig_bytes.hex(), pub_hex, scheme, False
+                scheme = self._hsm_label_or_empty()
+                if scheme:
+                    payload = build_payload(scheme)
+                    sig_bytes, pub_hex, reported = self._hsm_backend.sign(payload)
+                    if reported != scheme:
+                        # The token answered with a different label than its key
+                        # type predicted; the payload must be rebuilt over what it
+                        # actually produced, or the binding would be wrong.
+                        payload = build_payload(reported)
+                        sig_bytes, pub_hex, reported = self._hsm_backend.sign(payload)
+                    return sig_bytes.hex(), pub_hex, reported, False, payload
+                # No introspection: sign once to learn the label, then sign the
+                # labelled payload. The first signature is discarded unread.
+                # No introspection: sign once to learn the label, then sign the
+                # labelled payload. The first signature is discarded unread, and
+                # the label is remembered so the extra call happens at most once
+                # per ledger, not once per record.
+                probe = build_payload("")
+                _sig, _pub, reported = self._hsm_backend.sign(probe)
+                self._hsm_learned_scheme = reported
+                payload = build_payload(reported)
+                sig_bytes, pub_hex, reported = self._hsm_backend.sign(payload)
+                return sig_bytes.hex(), pub_hex, reported, False, payload
             except HSMUnavailableError as exc:
                 logger.warning("HSM signing failed (%s); falling back to next tier", exc)
+            except ValueError as exc:
+                logger.warning("HSM reported an unknown scheme (%s); falling back", exc)
 
         # ── 2. ML-DSA path, under a *persistent* identity ──────────────────
         #
@@ -2070,22 +2216,51 @@ class CryptographicAuditLedger:
         signer = self._pqc_signer()
         if signer is not None:
             try:
-                sig_bytes = bytes(signer.sign(data))
+                payload = build_payload("pqc-ml-dsa")
+                sig_bytes = bytes(signer.sign(payload))
                 pub_bytes: bytes = signer.public_key
-                return sig_bytes.hex(), pub_bytes.hex(), "pqc-ml-dsa", False
+                return sig_bytes.hex(), pub_bytes.hex(), "pqc-ml-dsa", False, payload
+            except ValueError:
+                raise
             except Exception as exc:
                 logger.warning("ML-DSA signing failed (%s); falling back", exc)
 
         # ── 3. HMAC-SHA256 path ───────────────────────────────────────────
         if self._signing_key:
-            sig = _hmac_sign(self._signing_key, data)
-            return sig, "", "hmac-sha256", False
+            payload = build_payload("hmac-sha256")
+            return _hmac_sign(self._signing_key, payload), "", "hmac-sha256", False, payload
 
         # ── 4. Ed25519 ephemeral fallback ─────────────────────────────────
         if self._require_strong_signing:
             raise RuntimeError("strong signing required; no verifiable signer is available")
-        sig_hex, pub_hex, scheme = _ed25519_sign(data)
-        return sig_hex, pub_hex, scheme, True
+        payload = build_payload("ed25519-fallback")
+        sig_hex, pub_hex, scheme = _ed25519_sign(payload)
+        return sig_hex, pub_hex, scheme, True, payload
+
+    def _hsm_label_or_empty(self) -> str:
+        """The HSM tier's scheme label before signing, or ``""`` if unanswerable.
+
+        ``""`` is not a downgrade: it means the backend cannot resolve its key
+        type up front, and :meth:`_sign_bound` then learns the label from a
+        signature instead of assuming one. A backend that answers must answer
+        with a label this build knows, or the binding refuses it.
+        """
+        if self._hsm_learned_scheme:
+            return self._hsm_learned_scheme
+        getter = getattr(self._hsm_backend, "scheme_label", None)
+        if getter is None:
+            return ""
+        try:
+            label = str(getter() or "")
+        except HSMUnavailableError:
+            raise
+        except Exception as exc:
+            logger.warning("HSM scheme lookup failed (%s)", type(exc).__name__)
+            return ""
+        if label and label not in _SCHEME_MATERIAL:
+            logger.warning("HSM reported an unknown scheme %r; learning it by signing", label)
+            return ""
+        return label
 
     def _payload_digest(self, data: bytes, subject_id: str) -> str:
         """Digest a request or response body for storage on the node.

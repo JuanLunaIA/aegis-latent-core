@@ -346,12 +346,25 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
   - **Proposed solution:** Re-label harness output as host-specific observations; commit a retained report or mark the figures historical; remove/replace '[PROVEN]' and 'zero latency' phrasings; decide the fate of UC-015/UC-016 (produce or keep retracted).
   - **Estimated effort:** S-M (1-2 days)
   - **Closed 2026-09-21 (`REG-D30`).** `[PROVEN]` (5 occurrences, 3 harnesses) became `[MEASURED HERE]`, and every harness now prints a shared provenance banner before its numbers — host, CPU count, Python, UTC date, and the sentence that no RPS figure is claimed for any environment — through `benchmarks.print_provenance`; the legend's citation of "CLAUDE.md I-03" was a dangling reference to a rule that exists nowhere in the tree, and is gone. `bench_forwarding.py` no longer frames itself as validating a zero-latency claim: it measures a scheduling delta. The group-commit comparison's reports are committed (`evidence/execution_2026-09-21/group_commit_report_run{1,2,3}.json`) and cited from `PR_FINAL_ENTERPRISE_HARDENING.md` with this host's 3.69x beside the table's 1.44x, because the `fsync`-call reduction (400 → 64) is structural and the rate is not. UC-015 and UC-016 are **kept retracted**, with the missing-producer reason recorded. Gate: `tests/test_benchmark_claim_labels.py` (7 tests; both controls fire).
-- [ ] **AUD-27 [P3] — Bind the declared signature scheme into the signed payload (select-then-sign)**
+- [x] **AUD-27 [P3] — Bind the declared signature scheme into the signed payload (select-then-sign)**
   - **Affected files:** aegis/core/crypto_audit.py (_build_signed_payload :629; _sign selection order; the three node-creation paths)
   - **Root cause:** `REG-D06` authenticated the scheme label by shape and dispatch, but the label is still not an input to the signed payload: the signing path learns its scheme as the *result* of `_sign` (priority order including mid-flight HSM fallback), so the payload cannot be built before the scheme is known. A well-shaped fabricated claim for a tier with no in-build verifier (`pkcs11-*`) therefore still reads `unverified` and passes the sweep (published boundary: `UC-054`).
   - **Proposed solution:** Split `_sign` into scheme selection + signing, build the payload with the selected scheme appended (same additive/conditional pattern as `waf_verdict`), gate the change on a trail-version bump so v1/v2 chains keep verifying, and add a tamper test asserting a label rewrite breaks the signature for every verifiable scheme. No `node_hash` change is required.
   - **Estimated effort:** M (2-3 days incl. migration note)
 
+  - **Closed 2026-09-21 (`REG-D31`):** the tier is selected first and the payload is rebuilt per
+    attempt with that attempt's label appended (`_sign_bound` replaces `_sign`), on all three
+    record-creating paths (`commit_forensic`, `commit_rejection`, `commit_forensic_summary`);
+    `signature_status`/`signed_payload_candidates_for` offer the scheme-bound shape first and fall
+    back to the pre-binding shapes only for signatures actually made over them. `HSMSigningBackend`
+    gained `scheme_label()` — the label is a property of the token's key (CKA_KEY_TYPE), so it is
+    known before a signature exists; a backend that cannot answer learns it from one extra,
+    ledger-cached signature rather than assuming a label. Deviates from the ticket's literal
+    "trail-version bump" wording: the additive candidate order is what keeps v1/v2 chains
+    verifying, the same mechanism AUD-10 used for the annotation, and no `node_hash` changed.
+    Tests: `tests/test_signature_scheme_binding.py` (11, including the relabel-refused control and
+    the pre-binding control) + 3 in `tests/test_hsm.py`; evidence
+    `evidence/registry/reg-d31_fixed.txt`.
 - [ ] **AUD-28 [P3] — Durable outbox for terminal evidence torn down by cancellation**
   - **Affected files:** aegis/proxy/streaming.py (`TerminalCommitHandoff`), aegis/proxy/app.py (lifespan start/drain)
   - **Root cause:** `REG-D07` lands the terminal node through an in-process handoff. A crash or SIGKILL between teardown and the drained commit loses the frozen summary, and the bounded queue (64) drops-and-counts instead of blocking, so heavy teardown bursts can still lose evidence.

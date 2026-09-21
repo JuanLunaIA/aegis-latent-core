@@ -198,7 +198,7 @@ def _attempt(ledger: CryptographicAuditLedger, commit: str, state_id: str) -> No
         )
 
 
-@pytest.mark.parametrize("failing_stage", ["_sign", "_persist_node"])
+@pytest.mark.parametrize("failing_stage", ["_sign_bound", "_persist_node"])
 @pytest.mark.parametrize("commit", ["commit_forensic", "commit_state", "commit_forensic_summary"])
 def test_failed_commit_leaves_no_leaf_in_the_mmr(
     tmp_path: Path, failing_stage: str, commit: str
@@ -225,7 +225,7 @@ def test_failed_commit_leaves_no_leaf_in_the_mmr(
     ledger.close()
 
 
-@pytest.mark.parametrize("failing_stage", ["_sign", "_persist_node"])
+@pytest.mark.parametrize("failing_stage", ["_sign_bound", "_persist_node"])
 def test_commit_after_a_failed_commit_matches_an_unbroken_run(
     tmp_path: Path, failing_stage: str
 ) -> None:
@@ -267,7 +267,7 @@ def test_failed_commit_writes_no_wal_record(tmp_path: Path) -> None:
     for i in range(3):
         ledger.commit_forensic(state_id=f"ok-{i}", request_bytes=REQUEST, response_bytes=RESPONSE)
 
-    ledger._sign = _boom  # type: ignore[method-assign]
+    ledger._sign_bound = _boom  # type: ignore[method-assign]
     with pytest.raises(RuntimeError):
         ledger.commit_forensic(state_id="doomed", request_bytes=REQUEST, response_bytes=RESPONSE)
     ledger.close()

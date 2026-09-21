@@ -179,8 +179,16 @@ def test_well_shaped_claim_for_an_unverifiable_tier_reports_unverified(tmp_path)
     build has no verifier for is shape-consistent, so it reads as
     ``unverified`` rather than ``invalid``, and the sweep does not fail on
     it. Distinguishing a fabricated claim from a genuine HSM signature needs
-    the deployment's PKCS#11 library — the boundary is published as UC-054
-    and the payload-binding hardening stays tracked as AUD-27 / REG-D31.
+    the deployment's PKCS#11 library — the boundary is published as UC-054.
+
+    AUD-27 (2026-09-21) bound the label into the signed payload, which removes
+    the *other* half of this residual for records written since: the claim can no
+    longer be rewritten without invalidating the signature, so a deployment that
+    holds the tier's key rejects it. This record still reads ``unverified`` here
+    because that half is exactly what this build cannot do. The binding —
+    including that the same relabel is refused once a verifier exists, and that a
+    pre-binding record keeps the old reading — is pinned in
+    ``tests/test_signature_scheme_binding.py``.
     """
 
     wal = tmp_path / "audit.jsonl"

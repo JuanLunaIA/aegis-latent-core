@@ -154,6 +154,39 @@ detail is in `docs/REGISTRY.md`; the summary:
   name with `sys.modules["prometheus_client"] = None` (what makes the import
   raise), in-process, because coverage does not follow a subprocess.
 
+### Fixed — the declared signature scheme is now covered by the signature
+
+`node.signature_scheme` was a self-declared label: verification dispatched on it, and `REG-D06`
+fenced it by the shape of the material beside it, but the label itself was not an input to the
+signed bytes — the signing path learned its scheme as the *result* of signing (`_sign` returned
+it), so it could not exist before the payload was built. A relabel inside one material-shape
+class (the presence-only tiers `pqc-ml-dsa` / `pkcs11-*`) changed which verifier was consulted
+and nothing else, so a deployment holding the claimed tier's key would verify a claim nobody
+made.
+
+`_sign` is now `_sign_bound(build_payload)`: the tier is selected first and the payload is
+rebuilt per attempt with that attempt's label appended, on all three record-creating paths
+(`commit_forensic`, `commit_rejection`, `commit_forensic_summary`). `HSMSigningBackend` gained
+`scheme_label()`, which resolves the label from the token key's `CKA_KEY_TYPE` before a
+signature exists; a backend that cannot answer learns it from one extra, ledger-cached
+signature instead of assuming one — a cost, never a weaker binding. The label is validated
+against the closed scheme vocabulary, so the `|` delimiter cannot be smuggled into it.
+
+Compatibility is additive rather than version-gated: `signed_payload_candidates_for` offers the
+scheme-bound shape first and the older shapes only for signatures actually made over them, so
+chains written before this change keep verifying unchanged and no `node_hash` moved. Two
+boundaries stay published as `UC-054`: for records written before 2026-09-21 the label is still
+unanchored, and a tier this build has no verifier for still reads `unverified` in-build — what
+the binding changes is that such a claim becomes *checkable* by a deployment that holds the
+tier's key, instead of being trusted on shape alone.
+
+Tests: `tests/test_signature_scheme_binding.py` (15, including the audit's relabel scenario
+refused once a verifier for the claimed tier exists, its pre-binding control, and the HSM
+mid-flight fallback), 5 added in `tests/test_hsm.py` (`scheme_label()` resolved without
+signing, when the key is missing, when the backend is unavailable, when the token errors, and
+on EC keys), and the failure-injection seam `_sign` → `_sign_bound` in
+`tests/test_mmr_rollback.py`. Row `REG-D31`, ticket `AUD-27`.
+
 ## [5.0.0] — unreleased source target
 
 **Nothing is published for `5.0.0`.** There is no tag, GitHub Release, PyPI or

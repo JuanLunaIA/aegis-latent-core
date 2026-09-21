@@ -273,6 +273,70 @@ class TestHSMSigningBackendRSA:
             # Public key hex exported
             assert isinstance(pub_hex, str)
 
+    def test_scheme_label_is_resolved_without_signing(self, pkcs11_rsa_env):
+        """AUD-27: the ledger binds this label before a signature exists.
+
+        The label is a property of the key on the token, so the backend answers
+        it from ``CKA_KEY_TYPE`` and the payload can carry it. Nothing is signed
+        to learn it — the assertion below is what keeps that true.
+        """
+        pkcs11_mod, priv, pub, session = pkcs11_rsa_env
+        import aegis.core.hsm as hsm_mod
+
+        with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
+            backend = hsm_mod.HSMSigningBackend(
+                library_path="/fake/libsofthsm2.so",
+                key_label="aegis-signing-key",
+            )
+            assert backend.scheme_label() == "pkcs11-rsa-pss-sha256"
+            # Cached: a second call does not re-query the token either.
+            assert backend.scheme_label() == "pkcs11-rsa-pss-sha256"
+        assert priv.sign.call_count == 0
+
+    def test_scheme_label_is_empty_when_the_key_is_not_found(self, pkcs11_rsa_env):
+        """Unanswerable is ``""``, never a guess: the ledger then learns the label
+        from a signature rather than assuming one."""
+        pkcs11_mod, priv, pub, session = pkcs11_rsa_env
+        import aegis.core.hsm as hsm_mod
+
+        with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
+            backend = hsm_mod.HSMSigningBackend(
+                library_path="/fake/libsofthsm2.so",
+                key_label="aegis-signing-key",
+            )
+            session.get_objects = MagicMock(return_value=[])
+            assert backend.scheme_label() == ""
+
+    def test_scheme_label_raises_when_unavailable(self, pkcs11_rsa_env):
+        """Same contract as ``sign``: an unavailable backend does not guess."""
+        import aegis.core.hsm as hsm_mod
+
+        with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
+            backend = hsm_mod.HSMSigningBackend(
+                library_path="/fake/libsofthsm2.so",
+                key_label="aegis-signing-key",
+            )
+            backend._available = False
+            with pytest.raises(hsm_mod.HSMUnavailableError):
+                backend.scheme_label()
+
+    def test_scheme_label_is_empty_when_the_token_errors(self, pkcs11_rsa_env):
+        """A token that errors during the lookup returns nothing, not a label.
+
+        The ledger treats ``""`` as "learn it from a signature"; an exception
+        escaping here would abort a commit that could otherwise be signed.
+        """
+        pkcs11_mod, priv, pub, session = pkcs11_rsa_env
+        import aegis.core.hsm as hsm_mod
+
+        with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
+            backend = hsm_mod.HSMSigningBackend(
+                library_path="/fake/libsofthsm2.so",
+                key_label="aegis-signing-key",
+            )
+            session.get_objects = MagicMock(side_effect=RuntimeError("token gone"))
+            assert backend.scheme_label() == ""
+
     def test_rsa_signature_matches_mock(self, pkcs11_rsa_env):
         pkcs11_mod, priv, pub, session = pkcs11_rsa_env
         import aegis.core.hsm as hsm_mod
@@ -349,6 +413,20 @@ class TestHSMSigningBackendEC:
                 if backend.available:
                     sig_bytes, pub_hex, scheme = backend.sign(b"test-ec")
                     assert scheme == "pkcs11-ecdsa-sha256"
+
+    def test_ec_scheme_label_is_resolved_without_signing(self, pkcs11_ec_env):
+        pkcs11_mod, priv, pub, session = pkcs11_ec_env
+        import aegis.core.hsm as hsm_mod
+
+        with patch.object(hsm_mod, "_PKCS11_AVAILABLE", True):
+            with patch.object(pkcs11_mod.KeyType, "RSA", "RSA_NEVER_MATCH"):
+                backend = hsm_mod.HSMSigningBackend(
+                    library_path="/fake/libsofthsm2.so",
+                    key_label="aegis-signing-key",
+                )
+                if backend.available:
+                    assert backend.scheme_label() == "pkcs11-ecdsa-sha256"
+                    assert priv.sign.call_count == 0
 
 
 class TestRSAPublicKeyExport:
@@ -433,6 +511,11 @@ class TestLedgerHSMIntegration:
             # mock feeds hex material too — a non-hex key is not a shape the
             # production path can produce (REG-D06 fence).
             backend.sign = MagicMock(return_value=(b"hsm-sig", "ab" * 32, scheme))
+            # The real backend also answers scheme_label() from the token's key
+            # type without signing (AUD-27 binds that label into the payload
+            # before the signature exists). A mock without it would exercise the
+            # learn-by-signing path instead of the production one.
+            backend.scheme_label = MagicMock(return_value=scheme)
         return backend
 
     def test_hsm_signature_scheme_stored_in_node(self, tmp_path):

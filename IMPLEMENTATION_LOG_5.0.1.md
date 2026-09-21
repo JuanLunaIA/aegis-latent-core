@@ -158,8 +158,9 @@ hashing". This repository does something stricter, and it should keep doing it:
 `git grep -c '\[FEASIBLE_FOR_5.0.1\]' -- .` → zero occurrences anywhere in the tree, as does
 `[IMPLEMENTED_IN_5.0.1]`. Nothing was skipped by tag. The actionable backlog in this repository is
 `docs/ROADMAP.md`'s `AUD-*` tickets and `docs/REGISTRY.md`'s rows, which are processed in wave
-order under the standing directive — `REG-D28` … `REG-D36` remain open, each with a ticket and an
-owner-or-blocker.
+order under the standing directive — the `[AUDIT]` block stands at 27 terminal of 30 after the
+second closure batch (see §7), the three open rows being `REG-D32`, `REG-D33` and `REG-D34`, each
+with a ticket and a blocker recorded in its own row.
 
 ---
 
@@ -398,6 +399,31 @@ git push origin v5.0.1
 - That `REG-D37`'s allow-list is a gateway-reachable control. `aegis.core.safe_serialization` is
   allowlisted in the import-reachability gate — no production module imports it — so the exposure
   was to library callers of `safe_pickle_load`/`safe_pickle_dump`, not to the request path.
-- That the seven `[AUDIT]` rows still open are unimplemented features. They are `OPEN` with their
+- That the three `[AUDIT]` rows still open are unimplemented features. They are `OPEN` with their
   own scope recorded; a terminal state for each is the standing directive's business, not this
-  release's.
+  release's. (This bullet said "seven" until the second closure batch; the count is re-derived
+  from `docs/REGISTRY.md` §5 — see §7.)
+
+---
+
+## 7. Closure progress since this log's Phase-5 record
+
+Recorded because §3's and §6's open-set counts, and §4's suite numbers, are the state at the
+Phase-5 commit — not the state of the branch. Each row below was closed after that record, one
+commit per row, each with an executed evidence file under `evidence/registry/`. Nothing here
+changes what §6 refuses to claim: `5.0.1` is still untagged and unpublished.
+
+| Row | Ticket | What closed | Evidence |
+| --- | --- | --- | --- |
+| `REG-D28` | `AUD-24` | Rust P3 batch: two hand-written `unsafe impl Send/Sync` deleted (the compiler derives them), a 2 GiB segment ceiling checked before the file exists, the frame-arithmetic doc claim made true, `encode_state` → `Result`, size ceilings on both `zk_mmr` decoders before parsing, ring-buffer "oldest evicted" contract fixed, the unused `subtle` dependency removed, unmeasured speedup numbers removed. `cargo test --release --locked`: 90 passed / 0 failed, exit 0 (was 83). | `reg-d28_fixed.txt` |
+| `REG-D29` | `AUD-25` | Module inventory: `scripts/generate_module_inventory.py` + generated `docs/MODULE_INVENTORY.md` (300 rows, kind/purpose/status/tests/owner) + `tests/test_module_inventory_current.py` (5 tests: currency, coverage, vocabulary, self-counts, roadmap agreement). Deviates from the ticket's 19-orphan count — the inventory re-derives it as 9 open tickets from the roadmap it reads. | `reg-d29_fixed.txt` |
+| `REG-D30` | `AUD-26` | Claim-generating surfaces: harness labels no longer assert host-specific numbers, one shared provenance banner, three retained benchmark reports with explicit limits, and a gate (`tests/test_benchmark_claim_labels.py`) with both controls fired. | `reg-d30_fixed.txt` |
+| `REG-D31` | `AUD-27` | The declared signature scheme is bound into the signed payload: `_sign_bound` selects the tier, rebuilds the payload per attempt with that tier's label appended; `HSMSigningBackend.scheme_label()` resolves the label from the key type before a signature exists; additive candidate order, so pre-binding chains still verify. 15 new tests + 5 in `test_hsm.py`. | `reg-d31_fixed.txt` |
+
+**Suite at `REG-D31`'s commit (re-measured, not carried):** `7,233 passed, 116 skipped, 0 failed`,
+coverage `90.11%` at precision 2, `EXIT: 0` — the Phase-5 section's `7,201 / 90.06%` is the
+earlier commit's state and stays as history. `verify_claims` 105 · `verify_links` 1,407 ·
+`verify_documentation --strict` 0 · reachability PASS · release contract READY (14/14 at `5.0.1`).
+
+**Still owed and unchanged:** the signed tag `v5.0.1` (the register is not yet at zero open rows,
+and this host has no GPG secret key), and the single PR (no push credentials on this host).
