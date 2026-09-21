@@ -98,6 +98,14 @@ if _PROM:
         "aegis_audit_commit_errors_total",
         "Mandatory audit commit failures; each failure rejects the governed request",
     )
+    AUDIT_HANDOFF_COMMITTED: Any = Counter(
+        "aegis_audit_handoff_committed_total",
+        "Terminal evidence commits completed by the app-owned handoff after stream teardown",
+    )
+    AUDIT_HANDOFF_DROPPED: Any = Counter(
+        "aegis_audit_handoff_dropped_total",
+        "Terminal evidence commits dropped because the teardown handoff queue was full",
+    )
     RATELIMIT_BACKEND_ERRORS: Any = Counter(
         "aegis_ratelimit_backend_errors_total",
         "Distributed rate-limit backend errors; affected requests are rejected",
@@ -235,6 +243,8 @@ else:
     SCHEDULING_JITTER = _NoopMetric()
     STREAM_ADMISSION_ACTIVE = _NoopMetric()
     STREAM_ADMISSION_REJECTED = _NoopMetric()
+    AUDIT_HANDOFF_COMMITTED = _NoopMetric()
+    AUDIT_HANDOFF_DROPPED = _NoopMetric()
 
 
 def prometheus_available() -> bool:

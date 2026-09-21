@@ -72,6 +72,7 @@ from aegis.proxy.streaming import (
     StreamAdmissionFullError,
     StreamAdmissionGate,
     StreamEvidenceSummary,
+    TerminalCommitHandoff,
     guarded_stream,
 )
 from aegis.proxy.waf import AegisWAF
@@ -367,6 +368,10 @@ class _AppState:
     alert_store: _AlertStore
     analysis_queue: asyncio.Queue[_AnalysisJob]
     analysis_workers: list[asyncio.Task[Any]]
+    # Terminal-evidence handoff owned by the app: stream teardown submits its
+    # commit here synchronously, and the worker drains it outside the request
+    # scope that Starlette cancels (AUD-03 / REG-D07).
+    terminal_handoff: TerminalCommitHandoff
     proxy_auth: ProxyKeyAuth
     audit_auth: AuditKeyAuth
     settings: AegisSettings
@@ -896,6 +901,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     state.alert_store = _AlertStore()
     state.analysis_queue = asyncio.Queue(maxsize=cfg.analysis_queue_size)
     state.analysis_workers = []
+    state.terminal_handoff = TerminalCommitHandoff()
     state.proxy_auth = ProxyKeyAuth(cfg)
     state.audit_auth = AuditKeyAuth(cfg)
     state.waf = AegisWAF(strict_mode=cfg.waf_strict_mode)
@@ -1128,6 +1134,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 name="aegis-finalized-segment-archive",
             )
 
+        # The terminal-evidence handoff worker is started here, on purpose:
+        # this context is not inside any request's task group, so commits it
+        # runs for a torn-down stream survive the cancellation Starlette
+        # delivers to the response (AUD-03 / REG-D07).
+        state.terminal_handoff.start()
+
         # NOTE: the seccomp filter is applied LAST in this startup sequence
         # (just before `yield`), NOT here.  The async Rust forwarder's Tokio
         # runtime must spawn its worker threads and load the TLS trust store
@@ -1239,6 +1251,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         app.state.aegis = state
         yield
 
+        # First on the way down: a stream torn down by shutdown should land its
+        # terminal evidence while the ledger is still open (AUD-03 / REG-D07).
+        await state.terminal_handoff.stop(timeout=cfg.analysis_shutdown_timeout_seconds)
         if state.gossip is not None:
             # First on the way down: a peer's round against a listener that is
             # already gone logs a failure that reads like a fault and is only
@@ -1894,6 +1909,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             bounded_stream = BoundedStreamProxy(
                 stream,
                 terminal_commit=_commit_stream_terminal,
+                terminal_handoff=state.terminal_handoff.for_commit(_commit_stream_terminal),
                 max_response_bytes=cfg.max_stream_response_bytes,
                 max_duration_seconds=cfg.max_stream_duration_seconds,
                 max_event_bytes=cfg.max_stream_event_bytes,
@@ -2181,6 +2197,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             bounded = BoundedStreamProxy(
                 upstream_stream,
                 terminal_commit=_commit_anthropic_terminal,
+                terminal_handoff=state.terminal_handoff.for_commit(_commit_anthropic_terminal),
                 max_response_bytes=cfg.max_stream_response_bytes,
                 max_duration_seconds=cfg.max_stream_duration_seconds,
                 max_event_bytes=cfg.max_stream_event_bytes,

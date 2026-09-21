@@ -15,6 +15,7 @@ from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from aegis.core import observability
 from aegis.core.stream_bounds import UTF8_MAX_BYTES_PER_CHAR, StreamRetentionBounds
 from aegis.core.stream_redactor import (
     ENGINE_GRAMMAR_FRONTIER,
@@ -60,6 +61,150 @@ class StreamEvidenceSummary:
     token_count: int
     elapsed_seconds: float
     redaction_hits: dict[str, int]
+
+
+_DETACHED_TERMINAL_COMMITS: set[asyncio.Task[None]] = set()
+
+
+def _reap_detached_commit(task: asyncio.Task[None]) -> None:
+    """Strong-reference holder for detached commits; logs what they raised."""
+
+    _DETACHED_TERMINAL_COMMITS.discard(task)
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.error("detached terminal-evidence commit failed", exc_info=exc)
+
+
+class TerminalCommitHandoff:
+    """Run handed-off terminal commits outside the scope that tore the stream down.
+
+    Starlette cancels the response's anyio task group *before* the streaming
+    generator observes the disconnect, so a terminal commit awaited from the
+    generator's teardown never lands: any await there is re-cancelled, or is
+    illegal (``GeneratorExit``) — reproduced first-hand as AUD-03 / REG-D07.
+
+    The app owns one of these, started from its lifespan — a context no
+    request scope reaches — and the generator only ever calls the synchronous
+    :meth:`submit`, which nothing can cancel.  Commits run one at a time, in
+    submission order, so evidence lands in teardown order.
+
+    ``max_pending`` bounds the queue: teardown must not block, so a full queue
+    drops the commit, counts it (``dropped``) and logs at error level rather
+    than waiting.  ``committed`` and ``dropped`` are exposed for operators and
+    tests.
+    """
+
+    def __init__(self, *, max_pending: int = 64) -> None:
+        if max_pending < 1:
+            raise ValueError("max_pending must be positive")
+        self._max_pending = max_pending
+        self._queue: asyncio.Queue[
+            tuple[Callable[[StreamEvidenceSummary], Awaitable[None]], StreamEvidenceSummary]
+        ] = asyncio.Queue(maxsize=max_pending)
+        self._task: asyncio.Task[None] | None = None
+        self._committed = 0
+        self._dropped = 0
+
+    @property
+    def running(self) -> bool:
+        return self._task is not None and not self._task.done()
+
+    @property
+    def pending(self) -> int:
+        return self._queue.qsize()
+
+    @property
+    def committed(self) -> int:
+        return self._committed
+
+    @property
+    def dropped(self) -> int:
+        return self._dropped
+
+    def start(self) -> None:
+        """Start the worker.  Call from the app lifespan, outside any request."""
+
+        if self.running:
+            return
+        self._task = asyncio.create_task(self._drain(), name="aegis-terminal-commit-handoff")
+
+    def for_commit(
+        self, commit: Callable[[StreamEvidenceSummary], Awaitable[None]]
+    ) -> Callable[[StreamEvidenceSummary], None]:
+        """Bind ``commit`` into the synchronous callback a stream hands off to."""
+
+        def handoff(summary: StreamEvidenceSummary) -> None:
+            self.submit(commit, summary)
+
+        return handoff
+
+    def submit(
+        self,
+        commit: Callable[[StreamEvidenceSummary], Awaitable[None]],
+        summary: StreamEvidenceSummary,
+    ) -> bool:
+        """Queue one commit.  Synchronous and non-blocking: it cannot be cancelled."""
+
+        if not self.running:
+            # Fallback for a caller that never started the worker (a test or a
+            # library user).  The lifespan start is still the right home: this
+            # context may be the cancelled scope being torn down.
+            logger.warning("terminal-evidence handoff worker was not running; starting it lazily")
+            self.start()
+        try:
+            self._queue.put_nowait((commit, summary))
+        except asyncio.QueueFull:
+            self._dropped += 1
+            observability.AUDIT_HANDOFF_DROPPED.inc()
+            logger.error(
+                "terminal-evidence handoff queue full (max_pending=%d); commit dropped "
+                "(outcome=%s, dropped=%d)",
+                self._max_pending,
+                summary.terminal_outcome,
+                self._dropped,
+            )
+            return False
+        return True
+
+    async def stop(self, *, timeout: float) -> None:
+        """Drain pending commits (bounded), then stop the worker."""
+
+        if self._task is None:
+            return
+        try:
+            async with asyncio.timeout(timeout):
+                await self._queue.join()
+        except TimeoutError:
+            logger.error(
+                "terminal-evidence handoff did not drain within %.1fs; pending=%d",
+                timeout,
+                self._queue.qsize(),
+            )
+        finally:
+            task, self._task = self._task, None
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
+    async def _drain(self) -> None:
+        while True:
+            commit, summary = await self._queue.get()
+            try:
+                await commit(summary)
+            except asyncio.CancelledError:
+                self._queue.task_done()
+                raise
+            except Exception:
+                observability.AUDIT_COMMIT_ERRORS.inc()
+                logger.exception(
+                    "handed-off terminal commit failed (outcome=%s)", summary.terminal_outcome
+                )
+            else:
+                self._committed += 1
+                observability.AUDIT_HANDOFF_COMMITTED.inc()
+            finally:
+                self._queue.task_done()
 
 
 @dataclass(frozen=True)
@@ -216,6 +361,7 @@ class BoundedStreamProxy:
         upstream: AsyncIterator[tuple[bytes, Any]],
         *,
         terminal_commit: Callable[[StreamEvidenceSummary], Awaitable[None]],
+        terminal_handoff: Callable[[StreamEvidenceSummary], None] | None = None,
         max_response_bytes: int,
         max_duration_seconds: float,
         max_event_bytes: int,
@@ -236,6 +382,7 @@ class BoundedStreamProxy:
             raise ValueError("max_duration_seconds must be positive")
         self._upstream = upstream
         self._terminal_commit = terminal_commit
+        self._terminal_handoff = terminal_handoff
         self._max_response_bytes = max_response_bytes
         self._max_duration_seconds = max_duration_seconds
         self._max_event_bytes = max_event_bytes
@@ -261,8 +408,9 @@ class BoundedStreamProxy:
         self._token_count = 0
         self._last_content_template: dict[str, Any] | None = None
         self._producer: asyncio.Task[None] | None = None
-        self._finalize_lock = asyncio.Lock()
         self._finalized = False
+        self._frozen_summary: StreamEvidenceSummary | None = None
+        self._terminal_dispatched = False
         self._closed = False
         self._upstream_closed = False
 
@@ -355,13 +503,19 @@ class BoundedStreamProxy:
                 yield self._terminal_marker
                 return
         except asyncio.CancelledError:
-            await self._cancel_producer()
+            # The teardown this app actually runs (Starlette's collapsing anyio
+            # task group, cancelled before the generator observes the
+            # disconnect) re-cancels the first await in this handler, so the
+            # shielded finalize that used to live here never reached the
+            # commit (AUD-03 / REG-D07).  Freeze and hand off synchronously
+            # FIRST; the awaits below are best effort only.
+            self._handoff_terminal("client_disconnected", final_marker_included=False)
             try:
-                await asyncio.shield(
-                    self._finalize("client_disconnected", final_marker_included=False)
-                )
+                await self._cancel_producer()
+            except asyncio.CancelledError:
+                logger.debug("producer cancellation re-delivered during teardown")
             except Exception:
-                logger.exception("client-disconnect terminal commit failed")
+                logger.exception("producer cancellation failed during teardown")
             raise
         except Exception as exc:
             await self._cancel_producer()
@@ -547,22 +701,86 @@ class BoundedStreamProxy:
         if remaining > 0:
             self._preview.extend(data[:remaining])
 
-    async def _finalize(self, outcome: TerminalOutcome, *, final_marker_included: bool) -> None:
-        async with self._finalize_lock:
-            if self._finalized:
-                return
-            self._finalized = True
-            summary = StreamEvidenceSummary(
-                response_hash=self._digest.hexdigest(),
-                response_size=self._size,
-                response_preview=bytes(self._preview),
-                terminal_outcome=outcome,
-                final_marker_included=final_marker_included,
-                token_count=self._token_count,
-                elapsed_seconds=time.perf_counter() - self._started,
-                redaction_hits=self._deidentifier.stats.entity_hits,
+    def _freeze_summary(
+        self, outcome: TerminalOutcome, *, final_marker_included: bool
+    ) -> StreamEvidenceSummary | None:
+        """Freeze the terminal summary exactly once; synchronous by design.
+
+        The teardown styles the ASGI stack delivers cannot await anything
+        before the summary is secured (anyio re-cancels the first await; a
+        ``GeneratorExit`` path cannot await at all), so the once-only guard
+        must not be an ``asyncio.Lock``: check-and-set with no await between
+        the two is atomic on a single event loop.
+        """
+        if self._finalized:
+            return None
+        self._finalized = True
+        self._frozen_summary = summary = StreamEvidenceSummary(
+            response_hash=self._digest.hexdigest(),
+            response_size=self._size,
+            response_preview=bytes(self._preview),
+            terminal_outcome=outcome,
+            final_marker_included=final_marker_included,
+            token_count=self._token_count,
+            elapsed_seconds=time.perf_counter() - self._started,
+            redaction_hits=self._deidentifier.stats.entity_hits,
+        )
+        return summary
+
+    def _handoff_terminal(self, outcome: TerminalOutcome, *, final_marker_included: bool) -> None:
+        """Secure the terminal summary and hand the commit off without awaiting.
+
+        Used by the teardown paths (cancellation, ``aclose``/``GeneratorExit``)
+        where an await either re-raises immediately or is illegal.  The
+        configured handoff runs the commit outside the cancelled scope; with
+        no handoff configured, a strongly-referenced detached task is
+        scheduled as a best effort — fine for a bare asyncio caller, while the
+        ASGI app injects the app-owned handoff instead.
+        """
+        summary = self._freeze_summary(outcome, final_marker_included=final_marker_included)
+        if summary is None:
+            # Already frozen: either its commit finished, or an inline commit
+            # was interrupted by this very teardown — in which case the frozen
+            # summary is dispatched now rather than lost.
+            summary = self._frozen_summary
+        if summary is None or self._terminal_dispatched:
+            return
+        self._terminal_dispatched = True
+        if self._terminal_handoff is not None:
+            try:
+                self._terminal_handoff(summary)
+            except Exception:
+                logger.exception("terminal-evidence handoff failed")
+            return
+        self._spawn_detached_commit(summary)
+
+    async def _detached_commit(self, summary: StreamEvidenceSummary) -> None:
+        await self._terminal_commit(summary)
+
+    def _spawn_detached_commit(self, summary: StreamEvidenceSummary) -> None:
+        try:
+            task: asyncio.Task[None] = asyncio.get_running_loop().create_task(
+                self._detached_commit(summary), name="aegis-terminal-commit-detached"
             )
-            await self._terminal_commit(summary)
+        except RuntimeError:
+            logger.error(
+                "terminal evidence dropped (outcome=%s): no running loop to schedule the commit",
+                summary.terminal_outcome,
+            )
+            return
+        _DETACHED_TERMINAL_COMMITS.add(task)
+        task.add_done_callback(_reap_detached_commit)
+
+    async def _finalize(self, outcome: TerminalOutcome, *, final_marker_included: bool) -> None:
+        summary = self._freeze_summary(outcome, final_marker_included=final_marker_included)
+        if summary is None:
+            return
+        await self._terminal_commit(summary)
+        # Marked only after the commit returned: an inline commit that a
+        # teardown interrupts is retried by the handoff path instead of being
+        # dropped.  At-least-once on teardown is the deliberate trade against
+        # silently unrecorded disconnects (see REG-D07 / UC-052).
+        self._terminal_dispatched = True
 
     async def _cancel_producer(self) -> None:
         if self._producer is not None and not self._producer.done():
@@ -581,4 +799,9 @@ class BoundedStreamProxy:
         if self._closed:
             return
         self._closed = True
+        # ``aclose``/``GeneratorExit`` teardown cannot await, and this is the
+        # only teardown hook Starlette's abandoned-iterator path gives us, so
+        # the terminal evidence is secured and handed off before the producer
+        # cancellation below (AUD-03 / REG-D07).
+        self._handoff_terminal("client_disconnected", final_marker_included=False)
         await self._cancel_producer()
