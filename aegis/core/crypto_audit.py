@@ -1,5 +1,5 @@
 """
-aegis.core.crypto_audit — Cryptographic audit ledger with Merkle chain-of-custody.
+aegis.core.crypto_audit — Cryptographic audit ledger with a Merkle-linked evidence chain.
 
 Architecture:
   - CryptographicAuditLedger: append-only Merkle chain backed by WAL.
@@ -958,7 +958,7 @@ class CryptographicAuditLedger:
             tenant_id: Session/tenant identifier.
             model: LLM model name.
             endpoint: API endpoint (e.g. "chat.completions").
-            token_trail: Per-token logprob records for chain-of-custody.
+            token_trail: Per-token logprob records for evidence tracing.
             usage: OpenAI usage dict (prompt_tokens, completion_tokens, etc.).
             sampling_params: Temperature, top_p, etc.
 

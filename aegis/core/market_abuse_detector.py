@@ -4,8 +4,9 @@
 """aegis.core.market_abuse_detector — MAR / MiFID II market-abuse pattern detection.
 
 Scans LLM prompts and responses for language indicative of market abuse,
-producing a structured :class:`MarketAbuseVerdict` that feeds directly into
-the proxy WAF verdict pipeline.
+producing a structured :class:`MarketAbuseVerdict` for market-abuse review.
+The module classifies text only; it is not wired into the gateway request
+path (see `docs/ROADMAP.md` `AUD-20`).
 
 Regulatory basis
 -----------------
@@ -24,7 +25,7 @@ Detection categories
 
 ``SPOOFING``
     Instructions to place orders with intent to cancel to move price — a
-    Dodd-Frank § 747 / MiFID II Art. 12(1)(a)(ii) violation.
+    Dodd-Frank § 747 / MAR (Reg. (EU) 596/2014) Art. 12(1)(a)(ii) violation.
 
 ``LAYERING``
     Multi-level quote stuffing with cancellation intent; a subset of spoofing

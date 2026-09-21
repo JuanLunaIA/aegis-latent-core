@@ -173,132 +173,132 @@ Nothing is published for the current `5.0.0` source baseline. Deployment accepta
 
 A deep audit of this baseline (forensic scan of the code surface, claims and quantitative cross-reference across every `.md`/`.txt`, regulator/article verification, governance coverage; full record with per-finding verification in [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md)) produced **94 findings**. Of those, 26 require engineering or documentation work beyond a wording fix and are ticketed here; each ticket is also a registry row (`REG-D05`–`REG-D30`, state `OPEN`, [Registry](REGISTRY.md) §4.6) and, where it is a boundary rather than a bug, an unsupported-claims entry (`UC-050`–`UC-058`, [Unsupported Claims](institutional/UNSUPPORTED_CLAIMS.md)). The audit did **not** fix these items — nothing here is reported as done.
 
-- **AUD-01 [P1] — Audit evidence endpoint returns HTTP 500 for every node (JCS projection)**
+- [ ] **AUD-01 [P1] — Audit evidence endpoint returns HTTP 500 for every node (JCS projection)**
   - **Affected files:** aegis/proxy/audit_api.py (handler at :233-234; canonicalizer in aegis/core/forensic_bundle.py)
   - **Root cause:** AuditNode.to_dict() always carries float fields (timestamp, entropy, sampling_params.elapsed_seconds); canonical_jcs_bytes rejects floats by design, the ForensicBundleError is uncaught, and no exception handler is registered, so the documented byte-exact RFC 8785 projection 500s on 100% of nodes. Reproduced first-hand (parent probe: GET /nodes/{hash} -> 200; /evidence -> 500).
   - **Proposed solution:** Either route the JCS projection through a float-safe form (project floats as strings per the register's own JCS scope) or catch ForensicBundleError and return a documented 4xx/501 with an explanatory body; add a regression test that exercises the endpoint against a real committed node (every existing test mocks the ledger).
   - **Estimated effort:** S (0.5-1 day)
-- **AUD-02 [P1] — Signature verification is dispatched on a self-declared, hash-unbound field**
+- [ ] **AUD-02 [P1] — Signature verification is dispatched on a self-declared, hash-unbound field**
   - **Affected files:** aegis/core/crypto_audit.py (_verify dispatch :1442; node_hash :562-574; _build_signed_payload; node_signature_assurance :432)
   - **Root cause:** signature_scheme is not an input to node_hash nor to the signed payload; verify_integrity() verifies HMAC only when the label says hmac-sha256, and node_signature_assurance maps the same unauthenticated label to an assurance tier. Reproduced first-hand: rewriting only the label on all WAL lines yields verify_integrity=(True,None) with signature_assurance=ASYMMETRIC_HARDWARE_ATTESTED and every per-node status 'unverified'.
   - **Proposed solution:** Bind the scheme into the chain: add signature_scheme to the hashed material and the signed payload under a chain-version bump, verify each declared scheme against an allowlist with a real verifier (or mark 'unverified' explicitly in verify_integrity's result), and add a tamper test (edit label -> integrity fails or status is 'unverified' and assurance is floored).
   - **Estimated effort:** M (2-4 days, touches node_hash compatibility + migration note)
-- **AUD-03 [P1] — Terminal evidence is not committed on the teardown styles the ASGI stack actually delivers**
+- [ ] **AUD-03 [P1] — Terminal evidence is not committed on the teardown styles the ASGI stack actually delivers**
   - **Affected files:** aegis/proxy/streaming.py (_iterate CancelledError handler :357-365; _cancel_producer :567-570; aclose)
   - **Root cause:** Under anyio-delivered cancellation (the real Starlette/uvicorn path) the first await inside the CancelledError handler re-raises, so the shielded _finalize never runs; aclose()/GeneratorExit cannot await at all. Reproduced first-hand: real-app send-failure run -> wal_terminal_nodes=0; controls T1_aclose=0, T2_cancel=1, T3_complete=1. Response headers advertise pending-terminal with no landing proof.
   - **Proposed solution:** Commit terminal evidence on every teardown style: wrap the finalize in a shielded, cancellation-proof task created before the generator is abandoned (e.g. spawn the terminal commit as a task the response object owns, committed in the server-side task group), and add teardown tests for all three styles (cancel, aclose/GeneratorExit, send failure) counting terminal nodes.
   - **Estimated effort:** M (1-3 days + tests)
-- **AUD-04 [P1] — RustWal: two handles on one path silently destroy committed frames (unexercised SAFETY invariant)**
+- [ ] **AUD-04 [P1] — RustWal: two handles on one path silently destroy committed frames (unexercised SAFETY invariant)**
   - **Affected files:** aegis_rust_v2/src/wal.rs (SAFETY comment :149-150; WalInner :78-83; open :101-102)
   - **Root cause:** Each handle owns its own Mutex and AtomicU64 write_pos; nothing enforces single-writer exclusivity, so a second opener rescans, computes the same offsets, and overwrites flushed frames through its own MAP_SHARED mapping. Reproduced first-hand: alternating appends -> b's frames overwrote a's; a.read_all returned only b's records; both handles reported write_pos 92.
   - **Proposed solution:** Add a single-writer guard (flock or O_EXCL lock file) in RustWal::open and fail closed with a clear PyErr; document concurrent multi-handle use as unsupported (UC-051) until then; add a test that opening a second handle either fails or is safe.
   - **Estimated effort:** S-M (1-2 days + test)
-- **AUD-05 [P1] — Release-profile aborts instead of exceptions for caller-controlled sizes and resource failures**
+- [ ] **AUD-05 [P1] — Release-profile aborts instead of exceptions for caller-controlled sizes and resource failures**
   - **Affected files:** aegis_rust_v2/src/audit.rs :44; session.rs :52; rate_limit.rs :144 and :69; forwarder.rs :55; pqc_trait.rs :252; Cargo.toml panic=abort
   - **Root cause:** Caller-supplied usize capacities reach crossbeam ArrayQueue and DashMap constructors unvalidated (capacity 0 panics; 2**40 aborts on allocation failure - reproduced first-hand), an unchecked multiply can panic on overflow, a fallible Tokio build uses .expect(), and the pure-Rust PQ backend expects the OS RNG. With panic="abort" in the release profile none of these become Python exceptions - the gateway process dies.
   - **Proposed solution:** Validate and clamp all caller-supplied sizes (reject 0 and > documented ceilings with ValueError), replace overflow-prone arithmetic with saturating ops or checked_mul+error, map runtime/RNG failures to PyErr, and add a regression suite that exercises each invalid input path.
   - **Estimated effort:** M (2-3 days + tests)
-- **AUD-06 [P1] — Retracted backpressure figures (10,000 records / p99 1,189.89 ms) still presented as measured evidence in 12 documents**
+- [ ] **AUD-06 [P1] — Retracted backpressure figures (10,000 records / p99 1,189.89 ms) still presented as measured evidence in 12 documents**
   - **Affected files:** docs/PROSPECTUS.md:58; docs/PRODUCT_BRIEF_US.md:43; docs/BENCHMARKS.md:37; docs/benchmarks/BENCHMARK_RESULTS.md:15; docs/benchmarks/BENCHMARK_METHOD.md; docs/benchmarks/README.md; docs/FAQ_TECHNICAL.md:118; docs/FAQ_PROCUREMENT.md:64; docs/operations/BACKPRESSURE_RUNBOOK.md:53; docs/performance/SCALING_GUIDE.md:38; docs/ROADMAP.md:79; DEPLOYMENT_GUIDE.md:138 (plus CHANGELOG history)
   - **Root cause:** UC-018 declares the 10,000-record / p99 1,189.89 ms pair false and retracted (the committed artifact contains 2,500 records at p99 836.3514210795984 ms), but the sweep stopped at the canonical matrices; buyer-facing docs still carry the pair as the retained v3.1.0 measurement. Parent verified 13 files carry the pair (14 with CHANGELOG history); UC-017 also uses 'retained' for a different run, which is the naming mechanism that keeps the error propagating.
   - **Proposed solution:** Run a scripted sweep: replace every occurrence with the artifact-backed pair (2,500 / 836.3514210795984 ms) or an explicit retraction note, standardise the word 'retained' to name one run (the 2026-09-16 execution evidence), and add the sweep to the docs gate (a grep-based check that no md file cites the retracted pair outside the retraction rows themselves).
   - **Estimated effort:** S (1 day for the sweep; +0.5 day for a gate check)
-- **AUD-07 [P1] — BOUNDARIES.md publishes ZK cost numbers that CLM-089 forbids**
+- [ ] **AUD-07 [P1] — BOUNDARIES.md publishes ZK cost numbers that CLM-089 forbids**
   - **Affected files:** docs/BOUNDARIES.md:30 vs docs/CLAIMS_MATRIX.md:115 (CLM-089)
   - **Root cause:** The ZK row states 'measured on one host at setup 2.5 s, prove 1.3 s, verify 0.19 s', while CLM-089 prohibits 'any setup, proving, verification or proof-size number' because the cost harness is #[ignore]d and not a reproducible artifact.
   - **Proposed solution:** Either remove the numbers from BOUNDARIES.md and restate the CLM-089 boundary, or promote the cost harness to a reproducible artifact (a committed, runnable command + output file) and update CLM-089 to name it. The two registers must not contradict.
   - **Estimated effort:** S (2-4 h either way)
-- **AUD-08 [P2] — Audit read endpoints iterate the live ledger deque without a lock/snapshot**
+- [ ] **AUD-08 [P2] — Audit read endpoints iterate the live ledger deque without a lock/snapshot**
   - **Affected files:** aegis/proxy/audit_api.py :133,:148,:153,:177,:215,:230,:254,:288,:297,:324; writer aegis/proxy/app.py:1382,1845; deque aegis/core/crypto_audit.py:806
   - **Root cause:** Commits append to the deque from asyncio worker threads while handlers iterate it; a landing mutation raises RuntimeError('deque mutated during iteration') -> 500 with no data. Ledger accessors elsewhere snapshot under self._lock, so this is an inconsistency.
   - **Proposed solution:** Take a snapshot (list(ledger.chain) or a locked accessor) at every read site, matching signature_assurance/verify_integrity; add a test that commits concurrently with each endpoint.
   - **Estimated effort:** S (0.5-1 day)
-- **AUD-09 [P2] — Enterprise surface buffers request and response bodies without limits**
+- [ ] **AUD-09 [P2] — Enterprise surface buffers request and response bodies without limits**
   - **Affected files:** aegis_server/main.py :894, :976 (middleware :253-262); contrast aegis/proxy/app.py:1323
   - **Root cause:** await request.body() and await resp.aread() buffer full bodies; no RequestBodyLimitMiddleware is installed on the enterprise app, so it is weaker than the gateway it fronts.
   - **Proposed solution:** Install the gateway's body-limit middleware with max_request_body_bytes and add a response-side cap/streaming path; test oversized request and oversized upstream response.
   - **Estimated effort:** S-M (1-2 days)
-- **AUD-10 [P2] — 21 CFR Part 11 signer annotation fields are not cryptographically bound**
+- [ ] **AUD-10 [P2] — 21 CFR Part 11 signer annotation fields are not cryptographically bound**
   - **Affected files:** aegis/core/crypto_audit.py (node_hash fields :562-574; _build_signed_payload; export_part11_signatures :1520-1545)
   - **Root cause:** signer_name/signature_meaning/status are absent from node_hash, the signed payload and the MMR leaf, yet the export docstring calls node_hash a 'tamper-evident binding' for the annotation; a WAL-write attacker can rewrite signer identity and relabel rejected as committed with no verification change.
   - **Proposed solution:** Include the annotation in the hashed material (chain-versioned) or, if that is not wanted, rewrite the export to state plainly which fields are unbound; add a tamper test.
   - **Estimated effort:** M (1-2 days + migration note)
-- **AUD-11 [P2] — Transparency log: verify does not recompute entry hashes; append is not fsynced**
+- [ ] **AUD-11 [P2] — Transparency log: verify does not recompute entry hashes; append is not fsynced**
   - **Affected files:** aegis/core/transparency_log.py :75-79 (append), :129-140 (verify); contrast export_audit_log.py:200-204
   - **Root cause:** verify_ledger_integrity only compares prev_hash linkage against stored entry_hash, so in-place edits of binary_hash/version/timestamp verify clean; publish_binary_hash returns a success hash after a buffered write with no flush/fsync.
   - **Proposed solution:** Recompute entry_hash from fields inside verify_ledger_integrity; flush+fsync (or document the weaker durability contract) on append; test tamper detection on a non-tail entry.
   - **Estimated effort:** S (0.5 day + tests)
-- **AUD-12 [P2] — Rust forwarder buffers upstream responses with no cap**
+- [ ] **AUD-12 [P2] — Rust forwarder buffers upstream responses with no cap**
   - **Affected files:** aegis_rust_v2/src/forwarder.rs :169-173; lib.rs:72-74
   - **Root cause:** resp.bytes().await collects the whole body, then it is copied again into a Python bytes object; a hostile or misconfigured upstream drives gateway RSS to 2x response size.
   - **Proposed solution:** Stream with a bounded reader and enforce a configurable maximum (mirroring the Python stream bound); return a PyErr on breach.
   - **Estimated effort:** S-M (1-2 days + tests)
-- **AUD-13 [P2] — RustWaf documents NFKC normalisation that does not exist**
+- [ ] **AUD-13 [P2] — RustWaf documents NFKC normalisation that does not exist**
   - **Affected files:** aegis_rust_v2/src/waf.rs :19 (claim) vs :128-131 (only strip_zero_width)
   - **Root cause:** No Unicode normalisation exists in the crate (no unicode-normalization dependency); compatibility variants (fullwidth/mathematical-bold) of a critical pattern are not blocked by a direct RustWaf consumer. The Python gateway layer applies NFKC and is authoritative, so this is a library-level false negative and a false API statement, not a demonstrated gateway bypass.
   - **Proposed solution:** Implement NFKC via unicode-normalization (and non-ASCII case folding via the same path) or correct the module documentation and add the fullwidth control to the crate's tests.
   - **Estimated effort:** S-M (1-2 days)
-- **AUD-14 [P2] — Inert configuration controls presented as enforceable (CAC/PIV, PHI at-rest key, LDAP family)**
+- [ ] **AUD-14 [P2] — Inert configuration controls presented as enforceable (CAC/PIV, PHI at-rest key, LDAP family)**
   - **Affected files:** aegis/config.py :306 (cac_piv_required), :295 (phi_master_key), :191-199 (ldap_*)
   - **Root cause:** cac_piv_required and phi_master_key are read nowhere (0 references outside the declaration); no ldap_* setting is read and no LDAP authenticator is wired; each field's description promises enforcement or encryption that never happens. Operators sizing HIPAA/DoD deployments on this text are misled.
   - **Proposed solution:** Choose per control: wire it (instantiate CACPIVAuth; construct the payload encryptor; wire LDAPAuthenticator) or reword the description to say the control is not yet wired and delete the knob if it cannot ever work; add a config-surface test that fails when a settings field has no reader (a small grep-based gate).
   - **Estimated effort:** M (wire-up path is larger; reword path is S)
-- **AUD-15 [P2] — WAF corpus cited from a non-in-tree artifact, the practice CLM-032 retired**
+- [ ] **AUD-15 [P2] — WAF corpus cited from a non-in-tree artifact, the practice CLM-032 retired**
   - **Affected files:** docs/compliance/COMPLIANCE_MAPPING.md:32; docs/assurance/AUDIT_EVIDENCE_INDEX.md:123
   - **Root cause:** Both still name waf_corpus_report_v1_candidate.json, which is not in the tree; CLM-032's correct in-tree evidence is evidence/execution_2026-08-20/waf_corpus_report.json.
   - **Proposed solution:** Point both rows at the in-tree artifact (or the 2026-09-16 evidence) and add a link check that artifacts named as evidence exist in-tree.
   - **Estimated effort:** S (2 h)
-- **AUD-16 [P2] — Two compliance technical-input docs carry boundary text that REG-023/UC-045 superseded**
+- [ ] **AUD-16 [P2] — Two compliance technical-input docs carry boundary text that REG-023/UC-045 superseded**
   - **Affected files:** docs/compliance/EU_AI_ACT_TECHNICAL_INPUTS.md:67; docs/compliance/HIPAA_TECHNICAL_INPUTS.md:67 (also :25,:38 for the RFC 3161 depth)
   - **Root cause:** Both still say 'the record holds the scrubbed form' / 'redaction changes the evidence record only' and 'PHI reaches the provider unscrubbed' unconditionally - text corrected in docs/privacy/PII_REDACTION_BOUNDARIES.md:48 and UC-045 but not propagated.
   - **Proposed solution:** Apply the corrected wording verbatim from PII_REDACTION_BOUNDARIES.md and UC-045 to both files; align the RFC 3161 row with CLM-014's full statement.
   - **Estimated effort:** S (3-4 h)
-- **AUD-17 [P2] — Capability table uses blocked wording: 'chain-of-custody' and 'trusted timestamp'**
+- [ ] **AUD-17 [P2] — Capability table uses blocked wording: 'chain-of-custody' and 'trusted timestamp'**
   - **Affected files:** docs/architecture/DEEP_DIVE.md :288, :289
   - **Root cause:** The ISO 27037 row claims 'chain-of-custody' (the project's own boundary: no custody record is created - UC-024) and the RFC 3161 row says 'trusted timestamp' (blocked by CLM-014/CLM-096; the gaps - no revocation checking, no RFC 5280 name-constraint evaluation - are not named).
   - **Proposed solution:** Replace with the register's own words: evidence-package seal, offline-verifiable, and 'TSA token bound to bundle imprint - not a trusted timestamp; no revocation checking'.
   - **Estimated effort:** S (2 h)
-- **AUD-18 [P2] — Gate-scope drift: the Makefile formatter gate is broader than CI's and fails at HEAD**
+- [ ] **AUD-18 [P2] — Gate-scope drift: the Makefile formatter gate is broader than CI's and fails at HEAD**
   - **Affected files:** Makefile:34 (`ruff format --check .`) vs .github/workflows/ci.yml:144 (fixed path list); unformatted: scripts/verify_docs.py, scripts/verify_release_readback.py; newly covered: 9 markdown code fences
   - **Root cause:** Modern ruff (0.16.8) formats Python fences inside Markdown and includes .md under `.`, so `make lint` fails on 11 files while CI (narrower path list, same unpinned ruff) passes. The two Python files are outside every gate. Reproduced first-hand: exit 1, '11 files would be reformatted, 806 files already formatted'.
   - **Proposed solution:** Decide the canonical scope once: either align the Makefile with CI's path list (and add scripts/ to both), or extend CI to the whole tree and format/exclude markdown fences; then fix the two scripts and add the chosen form to CI.
   - **Estimated effort:** S (0.5-1 day incl. policy decision)
-- **AUD-19 [P2] — Documentation currency & provenance sweep (stale baselines and counts)**
+- [ ] **AUD-19 [P2] — Documentation currency & provenance sweep (stale baselines and counts)**
   - **Affected files:** llms.txt:6 (baseline 4.1.2); .aegis_ai_context/01_CANONICAL_SYMBOL_AND_TYPE_INDEX.tsv:5 (v4.1.2); docs/REPOSITORY_MAP.md:3 (Last verified 2026-08-27); docs/INDEX.md (35 of 109 docs unlinked); INTEGRITY_SEAL.md:18/:24/:26 (6920/550 files/96 claims); README.md:327,:329 (6,936 tests / mypy 206 files)
   - **Root cause:** These artifacts were written for earlier baselines and never refreshed; two in-tree counts disagree with each other and with today's measurements (ruff now scans 817 files; claims register is 102; parent's suite run at HEAD: 6,868 passed / 120 skipped).
   - **Proposed solution:** Refresh each with the current measured values (or mark historical with an explicit baseline tag); regenerate the AI-context tsv; add the 35 unlinked docs to INDEX.md (or narrow its scope statement); and add a check that llms.txt/tsv baselines match AGENTS.md's baseline line.
   - **Estimated effort:** S-M (1 day; the baseline-consistency check is the force multiplier)
-- **AUD-20 [P2] — MiFID II / MAR: modules unwired, citations partly wrong, registers silent**
+- [ ] **AUD-20 [P2] — MiFID II / MAR: modules unwired, citations partly wrong, registers silent**
   - **Affected files:** aegis/core/market_abuse_detector.py :27 (mis-cites MiFID II Art. 12(1)(a)(ii); the provision is MAR Art. 12(1)(a)(ii)), :4-8 ('feeds directly into the proxy WAF verdict pipeline' - no proxy import exists); aegis/core/mifid_record_keeper.py :6-7,:21-23 ('satisfying...' / '7 years for SMCR-scope firms'); docs/CLAIMS_MATRIX.md, docs/ROADMAP.md, docs/institutional/UNSUPPORTED_CLAIMS.md (no MiFID/MAR entries)
   - **Root cause:** Two compliance modules are allowlist-classified (built, not wired) and their docstrings overclaim wiring/legal satisfaction; MiFID II has a buyer doc and a dossier section but no claims-matrix row, no UC entry and no roadmap ticket; the SMCR 7-year attribution does not match the FCA-based retention we could verify (6 years) and the MiFID 7-year figure is the competent-authority extension, not a default.
   - **Proposed solution:** Correct the citations and docstrings (MAR not MiFID for Art. 12; 'contributes technical inputs' not 'satisfying'); add CLM rows for both modules with explicit 'not wired' boundaries; add UC-056; open the roadmap items (wire or retire the modules). Counsel review for the SMCR reference.
   - **Estimated effort:** S for wording + M for wiring decision
-- **AUD-21 [P2] — Registry rule not met for three terminal rows: boundary missing from UC/BOUNDARIES**
+- [ ] **AUD-21 [P2] — Registry rule not met for three terminal rows: boundary missing from UC/BOUNDARIES**
   - **Affected files:** docs/REGISTRY.md:122 (REG-019 compaction/cold tiering), :124 (REG-021 RFC 3161 revocation), :182 (REG-D01 dev-venv advisories); docs/institutional/UNSUPPORTED_CLAIMS.md; docs/BOUNDARIES.md
   - **Root cause:** The registry's own rule says a DOCUMENTED row's boundary must live in UNSUPPORTED_CLAIMS.md or BOUNDARIES.md; greps for 'compaction', 'cold tier', 'OCSP', 'revocation', 'setuptools', 'pip-audit' return zero hits in both registers, so three terminal rows are terminal without their boundary published where the rule says it lives. Same class: the MMR v1 residual (caller-supplied leaf bytes in verify_portable_inclusion, CLM-064) has no UC/BOUNDARIES entry.
   - **Proposed solution:** Add the three boundary entries (and the MMR v1 note) to the register that owns each class - ROADMAP-only for REG-019, BOUNDARIES for REG-021's revocation gap, UC for the dev-venv advisories and MMR v1 - or amend the rule to accept the current homes.
   - **Estimated effort:** S (3-4 h)
-- **AUD-22 [P2] — Compliance-wording sweep: unqualified SOC2/HIPAA/GDPR/admissibility language in sample and tooling surfaces**
+- [ ] **AUD-22 [P2] — Compliance-wording sweep: unqualified SOC2/HIPAA/GDPR/admissibility language in sample and tooling surfaces**
   - **Affected files:** examples/README.md:35; tools/visualizer/README.md:25; Samples/README.md:26 (and :6); SECURITY_AUDIT_EXECUTION_LOG.md:130; docs/enterprise/VENDOR_SECURITY_QUESTIONNAIRE.md:148; SECURITY_AUDIT_REPORT.md:72; README.md:18
   - **Root cause:** These surfaces name SOC 2/HIPAA/GDPR/admissibility without the repository's required qualifier ('contributes technical inputs that an assessor may evaluate'; 'admissibility is a judicial determination'), while neighbouring files apply it correctly. No file asserts certification as fact, so this is drift, not fabrication.
   - **Proposed solution:** Apply the style-guide wording to each; add the deltas to the wording gate if one exists; give VENDOR_SECURITY_QUESTIONNAIRE's GDPR answer the same explicit 'No' shape as its neighbours.
   - **Estimated effort:** S (3-4 h)
-- **AUD-23 [P3] — Residual robustness batch: durability, ingest validation, delimiters, bounds**
+- [ ] **AUD-23 [P3] — Residual robustness batch: durability, ingest validation, delimiters, bounds**
   - **Affected files:** aegis/core/wal_backup.py:85,:254-262; aegis/core/crypto_audit.py:978,:2373; aegis/core/hardware_token.py:403; aegis/proxy/app.py:1997; aegis/proxy/mtls.py:126; aegis/core/worm_ledger.py:549 (latent; module allowlisted)
   - **Root cause:** (1) restore() copies over the live WAL without temp+replace while documenting 'atomically'; (2) NaN/Infinity admitted into sealed bytes via sampling_params (non-RFC-8259 tokens; cross-language verifiers cannot parse); (3) hardware_token canonical fields are NUL-joined without validation, so a token can be re-split and (with the unkeyed hash recomputed) validate under a different subject/tenant; (4) non-streaming path buffers provider responses and re-serialises a second copy; (5) mtls 403 echoes internal exception text; (6) worm_ledger seal helpers read whole files (latent, no caller).
   - **Proposed solution:** Batch fix each with its own test: temp-file+replace+fsync restore; reject non-finite floats at ingest (or serialise them as strings); delimiter-free/length-prefixed token canonicalisation (and reject NUL in identifiers); bound the non-streaming body; fixed-string 403.
   - **Estimated effort:** M (2-3 days all-in)
-- **AUD-24 [P3] — Rust P3 batch: doc claims, guards, and latent edges**
+- [ ] **AUD-24 [P3] — Rust P3 batch: doc claims, guards, and latent edges**
   - **Affected files:** aegis_rust_v2/src/wal.rs :47,:87,:102; crdt_mmr.rs :336 (encode-side ceiling); mmr.rs :88,:213; zk_bindings.rs :144; zk_mmr.rs :663 (unbounded bincode input); pqc.rs :47,:113; rate_limit.rs :69; forwarder.rs :19,:83; audit.rs :68; hasher.rs :57; docs/benchmarks/BENCHMARK_METHOD.md:175
   - **Root cause:** Assorted: unnecessary unsafe Send/Sync impls remove compiler checking; documented capacity ceiling never enforced (1 TiB accepted); a doc comment claims all slicing goes through model-checked helpers while three sites do not; a replica can encode a clock above its own decode ceiling; two expects in non-test paths; unbounded deserialize; GIL held across ML-DSA sign/verify; unused subtle dependency; doc-comment performance numbers with no measurement record; the benchmark method doc cites a cargo bench target that does not exist; hasher doc rationale is wrong (separator suffix vs length extension).
   - **Proposed solution:** One small PR per item in the batch: add lint for unsafe_code; enforce the capacity ceiling; fix or scope the doc comments; add the encode-side ceiling check; convert expects to PyErr; cap bincode input; document the GIL behaviour; drop or use subtle; remove unmeasured numbers; correct the bench command; fix the rationale.
   - **Estimated effort:** M (2-3 days across the batch)
-- **AUD-25 [P2] — Module inventory & ownership do not exist; navigation covers 43% of files**
+- [ ] **AUD-25 [P2] — Module inventory & ownership do not exist; navigation covers 43% of files**
   - **Affected files:** docs/REPOSITORY_MAP.md; scripts/verify_import_reachability.py:72,:74; llms.txt; .github/CODEOWNERS; docs/ROADMAP.md (19 unmapped open items)
   - **Root cause:** No artifact is a per-module inventory (purpose/status/tests/owner); the reachability gate covers only .py under three roots and its 77-entry allowlist is referenced by no navigation doc; 171 of 298 files under the six roots are named in no navigation source (68 appear nowhere at all, including all 15 Rust sources); CODEOWNERS declares a single owner for everything, so no per-module maintainer field can exist; 19 roadmap open items name no owner or unblock path.
   - **Proposed solution:** Generate a module inventory (path, purpose, status, tests, owner) from the reachability gate + allowlist + pyproject omit list, extend the gate to scripts/, tools/ and the Rust crate, reference it from the navigation docs, and name owners for the 19 unmapped roadmap items.
   - **Estimated effort:** L (3-5 days; the generator can be incremental)
-- **AUD-26 [P3] — Evidence retention & claim-generating surfaces**
+- [ ] **AUD-26 [P3] — Evidence retention & claim-generating surfaces**
   - **Affected files:** PR_FINAL_ENTERPRISE_HARDENING.md:26 (producer exists, report JSON absent); benchmarks/bench_crypto_audit.py:203 ('[PROVEN]' label on a host-specific number); benchmarks/bench_forwarding.py:2 ('zero forensic latency' framing); UC-015:35, UC-016:36 (no producers)
   - **Root cause:** Harness output is labelled as absolute when host-specific; one comparison's report JSON was never committed; two UC rows have no producer at all. The docs' own rules (BENCHMARK_METHOD: 'No RPS figure is claimed for any environment') are contradicted by the harness banners.
   - **Proposed solution:** Re-label harness output as host-specific observations; commit a retained report or mark the figures historical; remove/replace '[PROVEN]' and 'zero latency' phrasings; decide the fate of UC-015/UC-016 (produce or keep retracted).

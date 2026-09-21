@@ -22,7 +22,8 @@ Review references
   altered or deleted after commitment.
 - NIST SP 800-53 AU-9: protection of audit information against unauthorized
   access, modification, and deletion.
-- ISO/IEC 27037 forensic chain-of-custody: immutable evidence segments.
+- ISO/IEC 27037 forensic evidence: write-once segments; no custody record is
+  created or maintained (`UC-024`).
 
 Usage::
 

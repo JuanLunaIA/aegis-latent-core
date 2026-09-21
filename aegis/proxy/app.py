@@ -1281,7 +1281,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         title="Aegis Latent Core",
         description=(
             "Forensic telemetry proxy for LLM inference pipelines. "
-            "OpenAI-compatible drop-in with Merkle chain-of-custody."
+            "OpenAI-compatible drop-in with a Merkle-linked evidence ledger."
         ),
         version=aegis.__version__,
         docs_url="/docs" if cfg.debug_mode else None,

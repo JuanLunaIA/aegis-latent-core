@@ -54,7 +54,8 @@ pub fn keyed_hash_blake3_bytes<'py>(
 /// Field order: prev_hash || state_id || timestamp || merkle_root ||
 ///              request_hash || response_hash
 ///
-/// The null separator prevents length-extension attacks on the concatenation.
+/// The null separator delimits fields so the concatenation is unambiguous for
+/// NUL-free inputs.
 #[pyfunction]
 pub fn hash_audit_payload(
     prev_hash: &str,
