@@ -243,21 +243,24 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
   - **Root cause:** cac_piv_required and phi_master_key are read nowhere (0 references outside the declaration); no ldap_* setting is read and no LDAP authenticator is wired; each field's description promises enforcement or encryption that never happens. Operators sizing HIPAA/DoD deployments on this text are misled.
   - **Proposed solution:** Choose per control: wire it (instantiate CACPIVAuth; construct the payload encryptor; wire LDAPAuthenticator) or reword the description to say the control is not yet wired and delete the knob if it cannot ever work; add a config-surface test that fails when a settings field has no reader (a small grep-based gate).
   - **Estimated effort:** M (wire-up path is larger; reword path is S)
-- [ ] **AUD-15 [P2] — WAF corpus cited from a non-in-tree artifact, the practice CLM-032 retired**
+- [x] **AUD-15 [P2] — WAF corpus cited from a non-in-tree artifact, the practice CLM-032 retired**
   - **Affected files:** docs/compliance/COMPLIANCE_MAPPING.md:32; docs/assurance/AUDIT_EVIDENCE_INDEX.md:123
   - **Root cause:** Both still name waf_corpus_report_v1_candidate.json, which is not in the tree; CLM-032's correct in-tree evidence is evidence/execution_2026-08-20/waf_corpus_report.json.
   - **Proposed solution:** Point both rows at the in-tree artifact (or the 2026-09-16 evidence) and add a link check that artifacts named as evidence exist in-tree.
   - **Estimated effort:** S (2 h)
-- [ ] **AUD-16 [P2] — Two compliance technical-input docs carry boundary text that REG-023/UC-045 superseded**
+- **Closed 2026-09-21** — `8ccea5f`: both rows now cite `evidence/execution_2026-08-20/waf_corpus_report.json`; doc gates PASS. The 'gate that named evidence exists in-tree' half stays with `AUD-18`/`AUD-19` scope.
+- [x] **AUD-16 [P2] — Two compliance technical-input docs carry boundary text that REG-023/UC-045 superseded**
   - **Affected files:** docs/compliance/EU_AI_ACT_TECHNICAL_INPUTS.md:67; docs/compliance/HIPAA_TECHNICAL_INPUTS.md:67 (also :25,:38 for the RFC 3161 depth)
   - **Root cause:** Both still say 'the record holds the scrubbed form' / 'redaction changes the evidence record only' and 'PHI reaches the provider unscrubbed' unconditionally - text corrected in docs/privacy/PII_REDACTION_BOUNDARIES.md:48 and UC-045 but not propagated.
   - **Proposed solution:** Apply the corrected wording verbatim from PII_REDACTION_BOUNDARIES.md and UC-045 to both files; align the RFC 3161 row with CLM-014's full statement.
   - **Estimated effort:** S (3-4 h)
-- [ ] **AUD-17 [P2] — Capability table uses blocked wording: 'chain-of-custody' and 'trusted timestamp'**
+- **Closed 2026-09-21** — `8ccea5f`: corrected wording applied at :25, :38 and :67 of both files (`UC-045`, `CLM-014`); doc gates PASS.
+- [x] **AUD-17 [P2] — Capability table uses blocked wording: 'chain-of-custody' and 'trusted timestamp'**
   - **Affected files:** docs/architecture/DEEP_DIVE.md :288, :289
   - **Root cause:** The ISO 27037 row claims 'chain-of-custody' (the project's own boundary: no custody record is created - UC-024) and the RFC 3161 row says 'trusted timestamp' (blocked by CLM-014/CLM-096; the gaps - no revocation checking, no RFC 5280 name-constraint evaluation - are not named).
   - **Proposed solution:** Replace with the register's own words: evidence-package seal, offline-verifiable, and 'TSA token bound to bundle imprint - not a trusted timestamp; no revocation checking'.
   - **Estimated effort:** S (2 h)
+- **Closed 2026-09-21** — `8ccea5f`: DEEP_DIVE :288/:289 rewritten; the follow-up sweep corrected the same wording class in `worm_ledger.py`, `crypto_audit.py` (2 sites) and the `app.py` OpenAPI description; doc gates PASS.
 - [ ] **AUD-18 [P2] — Gate-scope drift: the Makefile formatter gate is broader than CI's and fails at HEAD**
   - **Affected files:** Makefile:34 (`ruff format --check .`) vs .github/workflows/ci.yml:144 (fixed path list); unformatted: scripts/verify_docs.py, scripts/verify_release_readback.py; newly covered: 9 markdown code fences
   - **Root cause:** Modern ruff (0.16.8) formats Python fences inside Markdown and includes .md under `.`, so `make lint` fails on 11 files while CI (narrower path list, same unpinned ruff) passes. The two Python files are outside every gate. Reproduced first-hand: exit 1, '11 files would be reformatted, 806 files already formatted'.
@@ -273,6 +276,7 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
   - **Root cause:** Two compliance modules are allowlist-classified (built, not wired) and their docstrings overclaim wiring/legal satisfaction; MiFID II has a buyer doc and a dossier section but no claims-matrix row, no UC entry and no roadmap ticket; the SMCR 7-year attribution does not match the FCA-based retention we could verify (6 years) and the MiFID 7-year figure is the competent-authority extension, not a default.
   - **Proposed solution:** Correct the citations and docstrings (MAR not MiFID for Art. 12; 'contributes technical inputs' not 'satisfying'); add CLM rows for both modules with explicit 'not wired' boundaries; add UC-056; open the roadmap items (wire or retire the modules). Counsel review for the SMCR reference.
   - **Estimated effort:** S for wording + M for wiring decision
+- **Batch note 2026-09-21 (`8ccea5f`):** MAR citation and both module docstrings corrected (MiFID II five-year floor with the competent-authority extension; no 'immutable evidence' claim). Open remainder: `CLAIMS_MATRIX`/register rows for MiFID/MAR, wiring decision.
 - [ ] **AUD-21 [P2] — Registry rule not met for three terminal rows: boundary missing from UC/BOUNDARIES**
   - **Affected files:** docs/REGISTRY.md:122 (REG-019 compaction/cold tiering), :124 (REG-021 RFC 3161 revocation), :182 (REG-D01 dev-venv advisories); docs/institutional/UNSUPPORTED_CLAIMS.md; docs/BOUNDARIES.md
   - **Root cause:** The registry's own rule says a DOCUMENTED row's boundary must live in UNSUPPORTED_CLAIMS.md or BOUNDARIES.md; greps for 'compaction', 'cold tier', 'OCSP', 'revocation', 'setuptools', 'pip-audit' return zero hits in both registers, so three terminal rows are terminal without their boundary published where the rule says it lives. Same class: the MMR v1 residual (caller-supplied leaf bytes in verify_portable_inclusion, CLM-064) has no UC/BOUNDARIES entry.
@@ -283,16 +287,19 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
   - **Root cause:** These surfaces name SOC 2/HIPAA/GDPR/admissibility without the repository's required qualifier ('contributes technical inputs that an assessor may evaluate'; 'admissibility is a judicial determination'), while neighbouring files apply it correctly. No file asserts certification as fact, so this is drift, not fabrication.
   - **Proposed solution:** Apply the style-guide wording to each; add the deltas to the wording gate if one exists; give VENDOR_SECURITY_QUESTIONNAIRE's GDPR answer the same explicit 'No' shape as its neighbours.
   - **Estimated effort:** S (3-4 h)
+- **Batch note 2026-09-21 (`8ccea5f`):** the overlapping HIPAA / EU-AI-Act / DEEP_DIVE wording is corrected; the sample and tooling surfaces listed above remain open.
 - [ ] **AUD-23 [P3] — Residual robustness batch: durability, ingest validation, delimiters, bounds**
   - **Affected files:** aegis/core/wal_backup.py:85,:254-262; aegis/core/crypto_audit.py:978,:2373; aegis/core/hardware_token.py:403; aegis/proxy/app.py:1997; aegis/proxy/mtls.py:126; aegis/core/worm_ledger.py:549 (latent; module allowlisted)
   - **Root cause:** (1) restore() copies over the live WAL without temp+replace while documenting 'atomically'; (2) NaN/Infinity admitted into sealed bytes via sampling_params (non-RFC-8259 tokens; cross-language verifiers cannot parse); (3) hardware_token canonical fields are NUL-joined without validation, so a token can be re-split and (with the unkeyed hash recomputed) validate under a different subject/tenant; (4) non-streaming path buffers provider responses and re-serialises a second copy; (5) mtls 403 echoes internal exception text; (6) worm_ledger seal helpers read whole files (latent, no caller).
   - **Proposed solution:** Batch fix each with its own test: temp-file+replace+fsync restore; reject non-finite floats at ingest (or serialise them as strings); delimiter-free/length-prefixed token canonicalisation (and reject NUL in identifiers); bound the non-streaming body; fixed-string 403.
   - **Estimated effort:** M (2-3 days all-in)
+- **Batch note 2026-09-21 (`8ccea5f`):** mtls 403 exception-echo fixed, plus the `export_audit_log` skip-path docstring. Open remainder: WAL-restore atomicity, NaN ingest, NUL delimiter, remaining bounds.
 - [ ] **AUD-24 [P3] — Rust P3 batch: doc claims, guards, and latent edges**
   - **Affected files:** aegis_rust_v2/src/wal.rs :47,:87,:102; crdt_mmr.rs :336 (encode-side ceiling); mmr.rs :88,:213; zk_bindings.rs :144; zk_mmr.rs :663 (unbounded bincode input); pqc.rs :47,:113; rate_limit.rs :69; forwarder.rs :19,:83; audit.rs :68; hasher.rs :57; docs/benchmarks/BENCHMARK_METHOD.md:175
   - **Root cause:** Assorted: unnecessary unsafe Send/Sync impls remove compiler checking; documented capacity ceiling never enforced (1 TiB accepted); a doc comment claims all slicing goes through model-checked helpers while three sites do not; a replica can encode a clock above its own decode ceiling; two expects in non-test paths; unbounded deserialize; GIL held across ML-DSA sign/verify; unused subtle dependency; doc-comment performance numbers with no measurement record; the benchmark method doc cites a cargo bench target that does not exist; hasher doc rationale is wrong (separator suffix vs length extension).
   - **Proposed solution:** One small PR per item in the batch: add lint for unsafe_code; enforce the capacity ceiling; fix or scope the doc comments; add the encode-side ceiling check; convert expects to PyErr; cap bincode input; document the GIL behaviour; drop or use subtle; remove unmeasured numbers; correct the bench command; fix the rationale.
   - **Estimated effort:** M (2-3 days across the batch)
+- **Batch note 2026-09-21 (`8ccea5f`):** `hasher.rs` separator comment corrected. Open remainder: Send/Sync claims, WAL cap, GIL, bincode bounds.
 - [ ] **AUD-25 [P2] — Module inventory & ownership do not exist; navigation covers 43% of files**
   - **Affected files:** docs/REPOSITORY_MAP.md; scripts/verify_import_reachability.py:72,:74; llms.txt; .github/CODEOWNERS; docs/ROADMAP.md (19 unmapped open items)
   - **Root cause:** No artifact is a per-module inventory (purpose/status/tests/owner); the reachability gate covers only .py under three roots and its 77-entry allowlist is referenced by no navigation doc; 171 of 298 files under the six roots are named in no navigation source (68 appear nowhere at all, including all 15 Rust sources); CODEOWNERS declares a single owner for everything, so no per-module maintainer field can exist; 19 roadmap open items name no owner or unblock path.
