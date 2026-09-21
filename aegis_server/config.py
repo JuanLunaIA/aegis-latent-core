@@ -69,6 +69,32 @@ class EnterpriseSettings(BaseSettings):
     )
 
     # ------------------------------------------------------------------
+    # Body limits (AUD-09)
+    # ------------------------------------------------------------------
+    # The enterprise surface fronts the gateway, so it must not be the weaker
+    # of the two: both limits are enforced on this surface as well. Bounds and
+    # defaults mirror aegis.config.AegisSettings so one environment variable
+    # (AEGIS_MAX_REQUEST_BODY_BYTES) governs both surfaces.
+    max_request_body_bytes: int = Field(
+        default=1_048_576,
+        ge=1_024,
+        le=16_777_216,
+        description=(
+            "Streaming HTTP request body limit, enforced before JSON parsing. "
+            "Request bodies over this size are refused with 413."
+        ),
+    )
+    max_response_body_bytes: int = Field(
+        default=16_777_216,
+        ge=1_024,
+        le=268_435_456,
+        description=(
+            "Upstream response size limit for the proxied chat-completions path, "
+            "counted while the response is streamed. Larger upstream responses are "
+            "refused with 502 and the refusal is durably evidenced."
+        ),
+    )
+    # ------------------------------------------------------------------
     # Authentication
     # ------------------------------------------------------------------
     api_keys: str = Field(

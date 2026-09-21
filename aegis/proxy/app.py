@@ -56,6 +56,7 @@ from aegis.core.waf_session import WAFSessionTracker
 from aegis.proxy.analyzer import ResponseAnalyzer
 from aegis.proxy.attestation_api import build_attestation_router
 from aegis.proxy.audit_api import build_audit_router
+from aegis.proxy.body_limits import RequestBodyLimitMiddleware
 from aegis.proxy.dependencies import validate_audit_auth, validate_proxy_auth
 from aegis.proxy.dmz_middleware import DMZSourceIPMiddleware
 from aegis.proxy.forwarder import LLMForwarder
@@ -117,42 +118,6 @@ def _spawn_background(coro: Any) -> asyncio.Task[Any]:
 # Mirrors the cap in SessionLifecycleManager to prevent unbounded memory growth
 # when callers omit the x-session-id header (UUID-per-request path).
 _MAX_ANALYZER_SESSIONS = 4_096
-
-
-class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
-    """Reject oversized bodies before JSON parsing or provider forwarding."""
-
-    def __init__(self, app: Any, max_body_bytes: int) -> None:
-        super().__init__(app)
-        self._max_body_bytes = max_body_bytes
-
-    async def dispatch(self, request: Request, call_next: Any) -> Response:
-        content_length = request.headers.get("content-length")
-        if content_length:
-            try:
-                declared = int(content_length)
-            except ValueError:
-                return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length"})
-            if declared < 0 or declared > self._max_body_bytes:
-                return JSONResponse(status_code=413, content={"detail": "Request body too large"})
-        received = 0
-        original_receive = request.receive
-
-        async def bounded_receive() -> dict[str, Any]:
-            nonlocal received
-            message = await original_receive()
-            if message.get("type") == "http.request":
-                chunk = message.get("body", b"")
-                received += len(chunk)
-                if received > self._max_body_bytes:
-                    raise HTTPException(status_code=413, detail="Request body too large")
-            return dict(message)
-
-        request._receive = bounded_receive  # type: ignore[attr-defined]
-        try:
-            return cast("Response", await call_next(request))
-        except HTTPException as exc:
-            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 class RequestSmugglingProtectionMiddleware(BaseHTTPMiddleware):

@@ -222,11 +222,12 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
   - **Root cause:** Commits append to the deque from asyncio worker threads while handlers iterate it; a landing mutation raises RuntimeError('deque mutated during iteration') -> 500 with no data. Ledger accessors elsewhere snapshot under self._lock, so this is an inconsistency.
   - **Proposed solution:** Take a snapshot (list(ledger.chain) or a locked accessor) at every read site, matching signature_assurance/verify_integrity; add a test that commits concurrently with each endpoint.
   - **Estimated effort:** S (0.5-1 day)
-- [ ] **AUD-09 [P2] — Enterprise surface buffers request and response bodies without limits**
+- [x] **AUD-09 [P2] — Enterprise surface buffers request and response bodies without limits**
   - **Affected files:** aegis_server/main.py :894, :976 (middleware :253-262); contrast aegis/proxy/app.py:1323
   - **Root cause:** await request.body() and await resp.aread() buffer full bodies; no RequestBodyLimitMiddleware is installed on the enterprise app, so it is weaker than the gateway it fronts.
   - **Proposed solution:** Install the gateway's body-limit middleware with max_request_body_bytes and add a response-side cap/streaming path; test oversized request and oversized upstream response.
   - **Estimated effort:** S-M (1-2 days)
+  - **Closed 2026-09-21 (`REG-D13`):** the gateway's body-limit middleware is installed on the enterprise app (both limits now live in `EnterpriseSettings`, so `AEGIS_MAX_REQUEST_BODY_BYTES` governs both surfaces), the proxied upstream response is streamed through `client.stream(...)` and counted rather than buffered, and the four exception-echo sites return fixed details. The middleware's chunked-body path was found broken during this work — the 413 arrived wrapped in an anyio exception group and surfaced as an unhandled server error, on both surfaces — and is fixed here. Evidence: `evidence/registry/reg-d13_fixed.txt`.
 - [ ] **AUD-10 [P2] — 21 CFR Part 11 signer annotation fields are not cryptographically bound**
   - **Affected files:** aegis/core/crypto_audit.py (node_hash fields :562-574; _build_signed_payload; export_part11_signatures :1520-1545)
   - **Root cause:** signer_name/signature_meaning/status are absent from node_hash, the signed payload and the MMR leaf, yet the export docstring calls node_hash a 'tamper-evident binding' for the annotation; a WAL-write attacker can rewrite signer identity and relabel rejected as committed with no verification change.

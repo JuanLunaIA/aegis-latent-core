@@ -64,6 +64,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
 from aegis.auth.apikey import constant_time_key_in
+from aegis.proxy.body_limits import RequestBodyLimitMiddleware
 from aegis_server import __version__
 from aegis_server.compliance.exporter import ComplianceExporter, ExportParams
 from aegis_server.config import EnterpriseSettings, get_settings
@@ -260,6 +261,13 @@ def create_app(settings: EnterpriseSettings | None = None) -> FastAPI:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+    # ── Request body limit (AUD-09) ───────────────────────────────────
+    # The gateway installs this middleware; without it the enterprise surface
+    # that fronts the gateway is the weaker of the two. Oversized bodies are
+    # refused (413) before JSON parsing, and the count is enforced on the
+    # receive stream, not only on a declared Content-Length.
+    app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=cfg.max_request_body_bytes)
 
     # ── Register route groups ─────────────────────────────────────────
     app.include_router(_health_router())
@@ -733,7 +741,7 @@ def _enterprise_router():
             result = await exporter.export(params=params)
         except RuntimeError as exc:
             logger.error("compliance export failed: %s", exc)
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+            raise HTTPException(status_code=500, detail="compliance export failed") from exc
 
         return ComplianceExportResponse(
             export_id=result.export_id,
@@ -814,7 +822,10 @@ def _enterprise_router():
                 tenant_id=tenant_id or None,
             )
         except (ValueError, RuntimeError) as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            logger.warning("node listing rejected: %s", exc)
+            raise HTTPException(
+                status_code=400, detail="invalid node listing parameters"
+            ) from exc
 
         return {
             "nodes": nodes,
@@ -841,7 +852,8 @@ def _enterprise_router():
         try:
             node = await storage.get_node(node_hash)
         except RuntimeError as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+            logger.error("audit node lookup failed: %s", exc)
+            raise HTTPException(status_code=500, detail="audit node lookup failed") from exc
 
         if node is None:
             raise HTTPException(
@@ -866,7 +878,10 @@ def _enterprise_router():
         try:
             return await storage.check_integrity()
         except RuntimeError as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+            logger.error("audit integrity check failed: %s", exc)
+            raise HTTPException(
+                status_code=500, detail="audit integrity check failed"
+            ) from exc
 
     # ── Proxy: chat completions with background analytics ─────────────
 
@@ -968,14 +983,40 @@ def _enterprise_router():
                     pool=5.0,
                 )
             ) as client:
-                resp = await client.post(
+                async with client.stream(
+                    "POST",
                     upstream_url,
                     content=request_bytes,
                     headers=upstream_headers,
-                )
-                response_bytes = await resp.aread()
-                upstream_status = resp.status_code
-                upstream_resp_headers = dict(resp.headers)
+                ) as resp:
+                    upstream_status = resp.status_code
+                    upstream_resp_headers = dict(resp.headers)
+                    # AUD-09: bound the relayed response on both the declared
+                    # length and the bytes actually read, so an upstream that
+                    # omits or understates Content-Length cannot grow this
+                    # process without limit. `client.stream` is what keeps the
+                    # body out of memory until the count above it clears.
+                    declared_length = resp.headers.get("content-length")
+                    if declared_length is not None:
+                        try:
+                            declared_bytes = int(declared_length)
+                        except ValueError:
+                            declared_bytes = -1
+                        if (
+                            declared_bytes < 0
+                            or declared_bytes > settings.max_response_body_bytes
+                        ):
+                            return await durable_error_response(
+                                502, "upstream LLM response exceeded the configured limit"
+                            )
+                    buffered = bytearray()
+                    async for chunk in resp.aiter_bytes():
+                        buffered.extend(chunk)
+                        if len(buffered) > settings.max_response_body_bytes:
+                            return await durable_error_response(
+                                502, "upstream LLM response exceeded the configured limit"
+                            )
+                    response_bytes = bytes(buffered)
         except httpx.TimeoutException as exc:
             logger.error("request_id=%s: upstream timeout: %s", request_id, exc)
             return await durable_error_response(504, "upstream LLM backend timed out")

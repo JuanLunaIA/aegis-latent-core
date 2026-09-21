@@ -25,6 +25,35 @@ def _settings() -> EnterpriseSettings:
     )
 
 
+# ── Upstream doubles for the streaming relay (AUD-09) ───────────────────────
+# The proxy route now consumes the upstream response through `client.stream(...)`
+# and `aiter_bytes()`, so the doubles below provide a context manager plus an
+# async chunk iterator rather than a buffered `aread()`.
+
+
+def _aiter(parts: list[bytes]):
+    """Async iterator over the given byte chunks."""
+
+    async def _gen():
+        for part in parts:
+            yield part
+
+    return _gen()
+
+
+class _StreamContext:
+    """What `client.stream(...)` returns: a context manager, not a response."""
+
+    def __init__(self, response):
+        self._response = response
+
+    async def __aenter__(self):
+        return self._response
+
+    async def __aexit__(self, *exc):
+        return False
+
+
 def _storage(*, write_error: Exception | None = None) -> MagicMock:
     storage = MagicMock()
     storage.initialize = AsyncMock()
@@ -53,14 +82,13 @@ def _client(storage: MagicMock, signer: MagicMock, upstream_response=None, upstr
     stack.enter_context(patch("aegis_server.main.get_settings", return_value=settings))
     stack.enter_context(patch("aegis_server.main.get_provider", return_value=storage))
     stack.enter_context(patch("aegis_server.main.get_signer", return_value=signer))
-    if upstream_error is not None:
-        upstream = AsyncMock(side_effect=upstream_error)
-    else:
-        upstream = AsyncMock(return_value=upstream_response)
     http_client = AsyncMock()
     http_client.__aenter__ = AsyncMock(return_value=http_client)
     http_client.__aexit__ = AsyncMock(return_value=False)
-    http_client.post = upstream
+    if upstream_error is not None:
+        http_client.stream = MagicMock(side_effect=upstream_error)
+    else:
+        http_client.stream = MagicMock(return_value=_StreamContext(upstream_response))
     stack.enter_context(patch("httpx.AsyncClient", return_value=http_client))
     app = create_app(settings=settings)
     return stack, TestClient(app), storage
@@ -69,7 +97,7 @@ def _client(storage: MagicMock, signer: MagicMock, upstream_response=None, upstr
 def test_success_response_is_returned_only_after_durable_evidence():
     body = json.dumps({"id": "chatcmpl-1", "choices": []}).encode()
     response = MagicMock(status_code=200, headers={"content-type": "application/json"})
-    response.aread = AsyncMock(return_value=body)
+    response.aiter_bytes = MagicMock(return_value=_aiter([body]))
     stack, client, storage = _client(_storage(), _signer(), upstream_response=response)
     with stack, client:
         result = client.post(
@@ -84,7 +112,7 @@ def test_success_response_is_returned_only_after_durable_evidence():
 def test_upstream_non_2xx_is_durably_evidenced_before_return():
     body = json.dumps({"error": {"message": "rate limited"}}).encode()
     response = MagicMock(status_code=429, headers={"content-type": "application/json"})
-    response.aread = AsyncMock(return_value=body)
+    response.aiter_bytes = MagicMock(return_value=_aiter([body]))
     stack, client, storage = _client(_storage(), _signer(), upstream_response=response)
     with stack, client:
         result = client.post(

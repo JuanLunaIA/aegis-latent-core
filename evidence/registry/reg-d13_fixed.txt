@@ -1,0 +1,92 @@
+REG-D13 / AUD-09 — FIXED   (enterprise surface buffered request/response bodies without limits)
+aegis/proxy/body_limits.py (new) · aegis/proxy/app.py · aegis_server/{main,config}.py
+tests/test_enterprise_body_limits.py · tests/test_main_new.py · tests/test_enterprise_durable_evidence.py
+
+FINDINGS
+  AF-038 (P2): `aegis_server/main.py` did `request_bytes = await request.body()` (:894) and
+    `response_bytes = await resp.aread()` (:976) with no limit and installed no body-limit
+    middleware (only CORS), while the gateway installs RequestBodyLimitMiddleware with
+    max_request_body_bytes — the surface that fronts the gateway was the weaker of the two.
+  AF-066 (P3): four handlers returned `detail=str(exc)` for 500/400, echoing raw storage and
+    export exception text to API clients. The audit named three; the fourth was
+    `audit_integrity` at :869. All four are fixed.
+
+DIFF
+  aegis/proxy/body_limits.py   NEW. `RequestBodyLimitMiddleware` moved here out of
+      `aegis.proxy.app` so `aegis_server` can install it without importing the gateway module:
+      that import pulls 795 modules / ~0.8 s and the gateway's import-time egress-guard probe
+      into the enterprise process (verified: `import aegis.proxy.app` logs "No kernel firewall
+      backend available", `import aegis_server.main` does not). `aegis.proxy.app` still
+      re-exports the name, so `from aegis.proxy.app import RequestBodyLimitMiddleware` (used by
+      tests/test_p0_release_gates.py) still resolves.
+  aegis_server/config.py       `max_request_body_bytes` (default 1_048_576, 1 KiB..16 MiB) and
+      `max_response_body_bytes` (default 16_777_216, 1 KiB..256 MiB), bounds mirroring
+      aegis.config.AegisSettings so `AEGIS_MAX_REQUEST_BODY_BYTES` configures both surfaces.
+  aegis_server/main.py         installs the middleware; the proxy route relays the upstream
+      response through `client.stream(...)` and counts bytes as they arrive instead of
+      `aread()`; four `detail=str(exc)` sites now log the exception and return a fixed detail.
+
+THE SUB-DEFECT THIS WORK SURFACED (fixed in the same commit, both surfaces)
+  The middleware's second enforcement path — counting the receive stream, for bodies that are
+  chunked or understate Content-Length — raised a plain HTTPException from inside the receive
+  callable. Starlette runs that callable in an anyio task group, so the refusal arrived at
+  `dispatch` wrapped in a BaseExceptionGroup and `except HTTPException` missed it. Captured on
+  the failing run of the new test before the fix:
+
+    aegis/proxy/body_limits.py:55: in bounded_receive
+        raise HTTPException(status_code=413, detail="Request body too large")
+    E   fastapi.exceptions.HTTPException: 413: Request body too large
+    The above exception was the direct cause of the following exception:
+    + Exception Group Traceback (most recent call last): ...
+
+  i.e. an oversized *chunked* body produced an unhandled server error rather than a 413 — on
+  the gateway too, because it installs the same middleware and its only middleware test
+  (tests/test_p0_release_gates.py:85) covers the declared-length path alone; `grep -rn
+  "max_body_bytes|bounded_receive" tests/` finds no other test. Fix: the receive path raises
+  `RequestBodyTooLargeError`, and `dispatch` unwraps it out of any BaseExceptionGroup while
+  re-raising anything else untouched (`test_middleware_lets_an_unrelated_exception_group_through`).
+
+EXECUTED EVIDENCE
+  tests/test_enterprise_body_limits.py (new, 12 tests) — 12 passed:
+    request side: declared oversize -> 413 and the route never runs (write_node_atomic not
+      awaited); chunked oversize (no Content-Length) -> 413; body within the limit -> 200
+      with the upstream body relayed byte for byte
+    response side: 4 KiB undeclared upstream body under a 1 KiB cap -> 502 with
+      "upstream LLM response exceeded the configured limit", durable evidence written with
+      upstream_status=502, and the oversized bytes absent from the client response;
+      declared 4 KiB Content-Length -> 502 with `aiter_bytes` never called;
+      in-limit response -> 200, X-Aegis-Evidence-Status: durable
+    AF-066: storage failures raise RuntimeError("sqlite3: /var/lib/aegis/ledger.db is locked by
+      pid 4242") -> 400 "invalid node listing parameters" / 500 "audit node lookup failed" /
+      500 "audit integrity check failed", with the leak string absent from every response body
+    middleware: both enforcement paths return 413 when driven directly over ASGI
+  Suites re-run green with the doubles updated to the streaming shape:
+    tests/test_main_new.py + tests/test_enterprise_durable_evidence.py + tests/test_p0_release_gates.py
+    + tests/test_enterprise_body_limits.py -> 69 passed
+  Type/lint: `mypy --strict aegis/proxy/body_limits.py aegis/proxy/app.py` -> Success (no issues);
+    `mypy aegis_server` -> "Found 25 errors in 4 files", unchanged from the recorded debt that is
+    REG-026 / REG-038 (aegis_server is outside every CI type-check scope by design);
+    ruff check + format clean on all changed files.
+
+BOUNDARY
+  The response cap applies to the one route that relays an upstream body
+  (/v1/enterprise/proxy/chat/completions) — the module has exactly two body/aread sites, both
+  covered. The cap is on the relayed bytes, not on what the upstream sent: an upstream that
+  streams more than the cap is cut off at the cap and the refusal is durably evidenced, but the
+  connection is not a streaming pass-through (this route was never streaming). The declared
+  Content-Length is checked first as a cheap refusal; it is not trusted, because the byte count
+  is enforced independently.
+
+BATTERY ON THIS COMMIT'S CONTENT (recorded before the final amend; the amend changed only this file)
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
+6915 passed, 118 skipped in 85.29s (0:01:25), exit 0      (+12 = the new test module)
+$ .venv/bin/python -m mypy --strict aegis/proxy/body_limits.py aegis/proxy/app.py   -> Success: no issues found in 2 source files
+$ .venv/bin/python -m mypy aegis_server                                          -> Found 25 errors in 4 files (the recorded REG-026/REG-038 debt, unchanged)
+$ .venv/bin/bandit -r aegis/ aegis_server/ -c pyproject.toml -lll                -> Medium: 0, High: 0
+$ .venv/bin/python scripts/verify_import_reachability.py                          -> PASS (no undeclared orphans, no stale roadmap entries)
+$ .venv/bin/python scripts/verify_release_contract.py --root .                    -> PASS (14 synchronized anchors at 5.0.0)
+$ .venv/bin/python tools/docs/verify_documentation.py --root . --strict           -> exit 0, status PASS, warnings 0
+$ .venv/bin/python scripts/verify_claims.py --root .                              -> PASS (102 claims, 0 findings)
+$ bash scripts/verify_links.sh --root .                                           -> PASS (1357 links resolved)
+$ .venv/bin/python scripts/verify_docs.py --root .                                -> PASS (0 findings)
+$ .venv/bin/ruff check + format --check <changed files>                           -> clean
