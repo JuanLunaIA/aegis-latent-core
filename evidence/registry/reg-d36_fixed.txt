@@ -79,3 +79,45 @@ now closed for the floor and open-ended as ordinary coverage debt.
     the generator's own serialiser: 83 files, test passes.
   * `safe_serialization.py:117` remains uncovered: a redundant second bound after
     the per-chunk check, unreachable by construction. Left as defence in depth.
+
+
+════ 4. CORRECTION (2026-09-21, later the same session) ════
+The "final" numbers above were measured at commit `4aaeb63`, and a later row falsified them as
+the *current* state. Recorded rather than rewritten, because the intermediate measurement is the
+evidence for the row that found the next defect.
+
+    run 4, at commit 4aaeb63
+        pytest -n auto -q --cov=aegis --cov-fail-under=90
+        Required test coverage of 90% reached. Total coverage: 90.05%
+        7189 passed, 118 skipped, EXIT 0
+
+    run 6, after REG-D40 put prometheus-client into the `dev` extra
+        FAIL Required test coverage of 90% not reached. Total coverage: 89.87%
+        7199 passed, 115 skipped, EXIT 0        <-- FAIL printed, exit 0: REG-D41
+
+The total *fell* by 0.18 points for an honest reason: installing the extra makes the real
+metrics branch the one that executes, so the module's `except ImportError` fallback — roughly 38
+statements of `_NoopMetric` and its twenty-odd assignments — stopped running in the suite
+(`aegis/core/observability.py` 65% at that point, 44 missed). The branch `CLM-013`'s boundary
+describes was, for the first time, exercised nowhere.
+
+Resolution:
+
+  * `tests/test_observability_without_the_metrics_extra.py` imports the module a second time
+    under a private name with `sys.modules["prometheus_client"] = None` (which makes the import
+    raise), so the fallback is covered in-process — subprocess coverage is not measured, which
+    is why an earlier subprocess-only version of this probe restored the verification but not
+    the number. It also exercises every stub's full method surface, so no caller ever has to
+    branch on `_PROM`. The file's second test asks the same question of a fresh interpreter.
+  * `observability.py` is back to **98.43%, 2 missed** (from 65%, 44 missed).
+  * The gate is quoted with `--cov-precision=2` from here on, so its verdict and its message are
+    the same number (`REG-D41`).
+
+    run 7, with the fallback probe and --cov-precision=2
+        Required test coverage of 90% reached. Total coverage: 90.06%
+        7200 passed, 115 skipped  (one failure: the stale governed manifest, since pyproject.toml
+        had just been edited for `precision = 2`; regenerated immediately after)
+
+The current state of this row is whichever measured value stands at the tip of the branch; the
+invocation to reproduce it is the one quoted above, and the numbers here are honest for the
+commits named.

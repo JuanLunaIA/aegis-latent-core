@@ -153,6 +153,61 @@ def _importorskip_targets() -> dict[str, list[str]]:
     return targets
 
 
+#: Availability gates the suite uses to skip work an environment cannot do.
+#: A gate naming a PyPI distribution must have that distribution in `dev`, or
+#: the tests behind it skip in every job -- which is how the `metrics` extra
+#: went unexercised while CLAIMS_MATRIX cited one of those tests as proof.
+#: A gate naming `None` is a hardware or kernel facility no install can supply,
+#: and the reason string on its skip says so.
+_AVAILABILITY_GATES: dict[str, tuple[str, str] | None] = {
+    "prometheus_available": ("prometheus-client", "metrics"),
+    "backend_available": ("kyber-py", "pqc"),
+    "_is_tpm_available": None,  # TPM hardware
+    "is_cgroups_v2_available": None,  # kernel facility
+    "_libseccomp_available": None,  # system shared library
+}
+
+
+class TestAvailabilityGatesNameSomethingInstallableOrExplainThemselves:
+    """Every skip-by-availability gate must be a package in `dev`, or hardware.
+
+    The module-level `importorskip` sweep above only sees one skip idiom. This
+    one covers the other: a helper the test calls and a `pytest.skip` when it
+    says no. `prometheus-client` sat in the `metrics` extra alone, so seven
+    tests skipped in every job while `CLM-013` and `CLM-102` were registered
+    against them.
+    """
+
+    @pytest.mark.parametrize("gate", sorted(_AVAILABILITY_GATES))
+    def test_the_gate_still_exists(self, gate: str) -> None:
+        """The list must track code, not memory: a renamed gate fails here."""
+        found = [
+            path
+            for root in (ROOT / "tests", ROOT / "aegis")
+            for path in root.rglob("*.py")
+            if f"def {gate}(" in path.read_text(encoding="utf-8")
+        ]
+        assert found, f"no definition of {gate}() in tests/ or aegis/"
+
+    @pytest.mark.parametrize(
+        ("gate", "distribution", "extra"),
+        [
+            (gate, pair[0], pair[1])
+            for gate, pair in sorted(_AVAILABILITY_GATES.items())
+            if pair is not None
+        ],
+    )
+    def test_an_installable_gate_is_declared_by_its_extra_and_by_dev(
+        self, gate: str, distribution: str, extra: str
+    ) -> None:
+        assert distribution in _distributions(extra), f"{extra} does not declare {distribution}"
+        declared = _distributions("dev")
+        assert distribution in declared, (
+            f"{gate}() skips on {distribution}, which is not in the dev extra, "
+            f"so every test behind that gate skips in CI"
+        )
+
+
 class TestOptionalSkipsAreDeliberate:
     def test_every_skippable_import_is_either_installed_or_explained(self) -> None:
         """A silent module-level skip is a claim with no run behind it.

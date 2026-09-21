@@ -1,0 +1,105 @@
+REG-D40 — the `metrics` extra was installed by nobody, so every /metrics test skipped (FIXED 2026-09-21)
+
+Found by verifying `REG-D38`'s fix against the authoritative skip report instead of only
+against the suite source. The taxonomy (`pytest -n auto -q -rs`, 118 skips) put the whole
+class on one screen and two entries needed checking against CI; `pip-audit` checked out
+fine (CI installs it in its own job, `.github/workflows/ci.yml:590,594`), and
+`prometheus_client` did not.
+
+════ 1. THE DEFECT ════
+`prometheus-client` is declared by the `metrics` extra and by `all`, and installed by **no
+workflow**: every job that runs the suite installs `-e ".[dev]"` (`ci.yml:150,296,355,371,468`),
+none installs `.[metrics]` or `.[all]`. The package is not in this venv either. Seven tests
+gate on it and therefore skipped everywhere:
+
+    tests/test_observability.py:148,258          prometheus_client not installed
+    tests/security/test_stream_admission_metric.py:109
+    tests/security/test_enforcement_mode_metric.py:118,134
+    tests/compat/test_public_api_compat.py:227   "…/metrics is not registered"
+
+This is `REG-D38`'s shape with a sharper consequence: the skip is *inside* the tests, so a
+sweep over module-level `importorskip` cannot see it (that is why REG-D38's guard passed
+while this existed), and one of the skipped tests is cited as the evidence for a registered
+claim. `CLM-102` is `IMPLEMENTED; LOCALLY TESTED` and its proof cell reads: "…end-to-end
+against the real `prometheus_client` registry, gated behind `prometheus_available()`" — a
+gate that, in every environment this repository had, said no. `CLM-013`'s registered metric
+rides the same endpoint. The claim's wording was honest (it names the gate); what was missing
+is that no run reproduced it, which is exactly the boundary `REG-D38` established.
+
+════ 2. THE FIX ════
+`pyproject.toml`: `prometheus-client>=0.20.0` added to the `dev` extra, with the reason in a
+comment — the same rule the repository already applies to `kyber-py` and now to `pyarrow`
+("a package another extra provides must be declared here too or its tests skip silently in
+every job"). The `metrics` extra keeps it for operators; nothing about the runtime surface
+changes.
+
+Local verification of the intent, over the five affected files (`tests/test_observability.py`,
+`tests/test_observability_new.py`, both `tests/security/test_*_metric.py`,
+`tests/compat/test_public_api_compat.py`), before and after:
+
+    before (no extra):        44 passed, 7 skipped
+    after  (extra present):   48 passed, 3 skipped
+
+Four previously-skipping tests now execute — including the end-to-end registry test `CLM-102`
+cites and the `/metrics`-registration test behind `CLM-013`.
+
+════ 2a. THE CONSEQUENCE, AND WHY THE SKIP COUNT WENT DOWN BY TWO NOT FOUR ════
+Installing the extra turned two earlier-passing tests red, and the mechanism matters:
+
+    prometheus_client.registry.DuplicateTimeseries: Duplicated timeseries in
+    CollectorRegistry: {'aegis_requests_total', 'aegis_requests_created', 'aegis_requests'}
+
+`tests/test_observability_new.py` re-imports `aegis.core.observability` with
+`sys.modules["prometheus_client"]` replaced by a `MagicMock`, then reloads it again to restore. A
+reload re-executes the module **in place**, so the module's metric objects are replaced by mocks
+in a namespace every later test in the same worker reads, while the process-wide default registry
+keeps what the real objects registered — the second reload therefore constructs real counters a
+second time and collides. Two further failures cascaded from that (`test_setup_otel_*`,
+`test_current_trace_id_when_otel_enabled`): they monkeypatch `_TracerProvider` / `_otel_trace`,
+names that `importlib.reload` only leaves in the namespace when a previous execution defined
+them, so those tests had been passing on a **stale global left by the mocked-reload test** —
+i.e. on test-order coupling inside the worker — and they lost that crutch as soon as the reload
+raised.
+
+Treatment, in the repository's own idiom:
+
+  * Both reload tests now carry `@pytest.mark.skipif(prometheus_available(), reason=…)` naming
+    the mechanism (`_REAL_PROMETHEUS`, computed once). They run in a tree without the extra —
+    the environment they were written for — and skip where the real package is present, because
+    the `_PROM=True` branch is then exercised for real by `tests/test_observability.py` and the
+    security metric tests, and the reload would otherwise corrupt shared state for the rest of
+    the run. This was verified in both directions by simulating absence with a stub module on
+    `PYTHONPATH` that raises `ImportError`.
+  * The order coupling was removed rather than relied on: the five `monkeypatch.setattr` calls
+    for names that exist only in the OTel-enabled reload now pass `raising=False`, so the tests
+    create the attribute they need instead of depending on a neighbour's leftovers. No assertion
+    changed.
+
+A first attempt at this fix — unregistering the module's collectors before each reload — was
+discarded: it passed the file in isolation and then made
+`tests/security/test_enforcement_mode_metric.py::test_registry_reflects_the_config_the_process_loaded`
+fail, because it is the *mock* that poisons the shared namespace, not the registration. It is
+recorded here because the discarded attempt is the reason the shipped fix takes the skipif
+shape.
+
+════ 3. THE GUARD ════
+`tests/test_optional_backend_declarations.py` gains
+`TestAvailabilityGatesNameSomethingInstallableOrExplainThemselves`, which covers the idiom
+the older sweep could not see: a table of the suite's availability gates, each mapped either
+to `(distribution, extra)` or to `None` with the reason in a comment (TPM hardware, cgroup
+v2 kernel facility, libseccomp shared library). Two assertions per gate:
+
+  * the gate still exists in `tests/` or `aegis/` — so the list tracks code, and a rename
+    fails the test instead of quietly shrinking the sweep;
+  * an installable gate's distribution is declared by its own extra **and** by `dev`.
+
+Control: with `"prometheus-client>=0.20.0"` removed from `dev` and the file otherwise
+identical, `test_an_installable_gate_is_declared_by_its_extra_and_by_dev[prometheus_available-prometheus-client-metrics]`
+fails; restoring the line → **34 passed**. The control was run against a byte-identical
+restore (`/tmp/pyproject_fixed.toml`).
+
+════ 4. WHAT WAS NOT DONE ════
+No test was made unconditional and no skip was deleted: the gates still skip where the extra
+is genuinely absent, which is correct for an optional feature. What changed is that the
+suite CI runs now has the extra, so the skips are for the environment that lacks it rather
+than for every environment.

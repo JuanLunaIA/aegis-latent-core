@@ -9,9 +9,29 @@ import importlib
 import sys
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+from aegis.core.observability import prometheus_available
+
+#: The two reload tests below re-import `aegis.core.observability` with a module
+#: mocked in `sys.modules`, and a reload re-executes the module *in place*: its
+#: metric objects are replaced by mocks in the namespace every other test in the
+#: worker then reads, while the process-wide default registry keeps whatever the
+#: real objects registered. That is only sound where the mocked import is the
+#: only one available. With the real `prometheus_client` installed the `_PROM`
+#: branch runs for real in `tests/test_observability.py` and the metric tests in
+#: `tests/security/`, so these two skip and say why, rather than corrupting the
+#: shared registry for the rest of the run.
+_REAL_PROMETHEUS = prometheus_available()
+
 # ── Prometheus paths (lines 46, 52-109) ───────────────────────────────────────
 
 
+@pytest.mark.skipif(
+    _REAL_PROMETHEUS,
+    reason="prometheus_client is installed: the _PROM=True branch runs for real, "
+    "and this reload would replace the module's metrics with mocks for the rest of the worker",
+)
 def test_observability_prometheus_paths_via_reload():
     """Reload the module with prometheus_client mocked to hit the _PROM=True branch."""
     mock_counter = MagicMock()
@@ -45,6 +65,11 @@ def test_observability_prometheus_paths_via_reload():
 # ── OTel paths (lines 151-153, 170-183, 200-203, 210-213) ────────────────────
 
 
+@pytest.mark.skipif(
+    _REAL_PROMETHEUS,
+    reason="the reloaded module re-registers real metric objects in the default "
+    "registry, which raises DuplicateTimeseries whenever prometheus_client is installed",
+)
 def test_observability_otel_paths_via_reload():
     """Reload with opentelemetry mocked to cover _OTEL=True branch (lines 151-153)."""
     mock_otel_trace = MagicMock()
@@ -96,8 +121,8 @@ def test_setup_otel_when_otel_enabled(monkeypatch):
     mock_trace = MagicMock()
 
     monkeypatch.setattr(obs, "_OTEL", True)
-    monkeypatch.setattr(obs, "_TracerProvider", mock_provider)
-    monkeypatch.setattr(obs, "_otel_trace", mock_trace)
+    monkeypatch.setattr(obs, "_TracerProvider", mock_provider, raising=False)
+    monkeypatch.setattr(obs, "_otel_trace", mock_trace, raising=False)
 
     obs.setup_otel("test-service")
 
@@ -121,8 +146,8 @@ def test_setup_otel_with_endpoint(monkeypatch):
     mock_exporter_cls = MagicMock(return_value=mock_exporter)
 
     monkeypatch.setattr(obs, "_OTEL", True)
-    monkeypatch.setattr(obs, "_TracerProvider", mock_provider)
-    monkeypatch.setattr(obs, "_otel_trace", mock_trace)
+    monkeypatch.setattr(obs, "_TracerProvider", mock_provider, raising=False)
+    monkeypatch.setattr(obs, "_otel_trace", mock_trace, raising=False)
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4317")
 
     mock_otlp_mod = MagicMock()
@@ -182,7 +207,7 @@ def test_current_trace_id_when_otel_enabled(monkeypatch):
     mock_trace.get_current_span.return_value = mock_span
 
     monkeypatch.setattr(obs, "_OTEL", True)
-    monkeypatch.setattr(obs, "_otel_trace", mock_trace)
+    monkeypatch.setattr(obs, "_otel_trace", mock_trace, raising=False)
 
     result = obs.current_trace_id()
     assert result is not None

@@ -189,12 +189,20 @@ before:  pytest -n auto -q --cov=aegis --cov-fail-under=90
          TOTAL   20300   2300    89%
          FAIL Required test coverage of 90% not reached. Total coverage: 88.67%
 
-final:   pytest -n auto -q --cov=aegis --cov-fail-under=90
-         TOTAL   20298   2019    90%
-         Required test coverage of 90% reached. Total coverage: 90.05%
-         7189 passed, 118 skipped in 223.46s (0:03:43)
+final:   pytest -n auto -q --cov=aegis --cov-precision=2 --cov-fail-under=90
+         TOTAL   20298   2018  90.06%
+         Required test coverage of 90% reached. Total coverage: 90.06%
+         7201 passed, 115 skipped in 224.06s (0:03:44)
          EXIT: 0
 ```
+
+`--cov-precision=2` is part of the final invocation because the gate's verdict is decided with
+that precision and coverage.py's default of **0** rounds the total up before comparing: a run at
+89.87% against a 90 floor prints `FAIL Required test coverage of 90% not reached` and still
+exits **0**, because `should_fail_under(89.87, 90, 0)` is `False` while `(89.4, 90, 0)` is `True`.
+That is `REG-D41`, it affects this repository's own `--cov-fail-under=65` in `Makefile:46` and
+`.github/workflows/ci.yml:306-309`, and it is closed by `precision = 2` under
+`[tool.coverage.report]` so every invocation inherits it.
 
 - **284 statements newly covered** (2,300 missed → 2,019). The statement total moved by two because
   `aegis/core/safe_serialization.py` gained a docstring and no executable statements left.
@@ -202,7 +210,7 @@ final:   pytest -n auto -q --cov=aegis --cov-fail-under=90
   (`Makefile:46`, `.github/workflows/ci.yml:306-309`) and a floor belongs in a release act with its
   own CI observation. CI cannot be executed on this host (`gh` absent). The 90% figure is the
   order's requirement, met on this host; the repo's floor remains the repo's.
-- **Working the gap found two defects that reading had missed** — which is the argument for
+- **Working the gap found four defects that reading had missed** — which is the argument for
   registering a measured gap rather than a conclusion:
   - **`REG-D37`** — the guarded-pickle allow-list was **inert for containers**: `_validate_allowed`
     tested `isinstance(obj, allowed)` before its recursion, and `dict`/`list` are themselves in
@@ -215,6 +223,18 @@ final:   pytest -n auto -q --cov=aegis --cov-fail-under=90
     `CLM-071`'s "locally tested" rested on a suite that module-level-skipped. Fixed the way the
     repository's own `pqc` precedent does it — `pyarrow` into `dev`, plus a guard that fails on any
     future silent skip.
+  - **`REG-D40`** — the `metrics` extra was installed by **no** job, so seven `/metrics` tests
+    skipped in every environment, including the end-to-end registry test `CLM-102` cites as its
+    `LOCALLY TESTED` proof. The skip sits *inside* those tests, which is why `REG-D38`'s
+    module-level sweep could not see it — it was found by checking the fix against the
+    authoritative skip taxonomy (`pytest -rs`, 118 skips) rather than against the source. Fixed
+    by the same rule (`prometheus-client` into `dev`); measured 44 passed / 7 skipped → 48 passed /
+    3 skipped. Installing it also exposed a pre-existing order coupling in
+    `tests/test_observability_new.py` (two reload tests were passing on stale globals from a
+    neighbour, and would have corrupted the shared registry), fixed there with the mechanism in
+    the skip reason and `raising=False` on the attributes that only exist in one branch.
+  - **`REG-D41`** — the coverage gate itself: printed verdict and exit status disagreed inside a
+    half-point band below the floor, for this mission's command and for the repository's own.
 - **What is still uncovered, with the reason**: `aegis/proxy/app.py` (265 missed) and
   `aegis/core/crypto_audit.py` (124) need route-level and ledger-level fixtures — a project, not a
   batch; `aegis/consensus/gossip.py` (111) and `rust_integration.py` (92) are gated on the native
@@ -287,7 +307,7 @@ the same reason.
 
 | Gate | Result |
 | --- | --- |
-| `pytest -n auto -q --cov=aegis --cov-fail-under=90` | **7,189 passed / 118 skipped / 0 failed, EXIT 0**, coverage 90.05% |
+| `pytest -n auto -q --cov=aegis --cov-precision=2 --cov-fail-under=90` | **7,201 passed / 115 skipped / 0 failed, EXIT 0**, coverage 90.06% |
 | `ruff check .` | 0 findings (593 files) |
 | `ruff format --check .` | 593 files already formatted |
 | `mypy --strict aegis` | Success, 207 source files |
@@ -370,8 +390,8 @@ git push origin v5.0.1
 ## 6. What this log does not claim
 
 - That `5.0.1` is released, tagged, or published anywhere. It is not, and the tag is still owed.
-- That CI runs at 90%. CI's floor is 65% and stays there; 90.05% is measured on this host, from this
-  checkout, with the coverage command the order specified.
+- That CI runs at 90%. CI's floor is 65% and stays there; 90.06% is measured on this host, from
+  this checkout, with the coverage command the order specified (`--cov-precision=2`).
 - That `cargo test --all-features` was run successfully. It cannot link in this repository by
   design, and the documented one-feature cause is reproduced in §4.4.
 - That `cosign verify` or `gh attestation verify` ran. Neither tool is installed on this host.

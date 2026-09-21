@@ -1,0 +1,71 @@
+REG-D41 — the coverage gate printed FAIL and exited 0 inside a half-point band (FIXED 2026-09-21)
+
+Found because `REG-D40`'s fix produced a run that contradicted itself: the log's last lines
+were
+
+    TOTAL                                            20298   2057    90%
+    FAIL Required test coverage of 90% not reached. Total coverage: 89.87%
+    7199 passed, 115 skipped in 218.53s (0:03:38)
+    EXIT: 0
+
+A gate that says FAIL and exits 0 is not a gate. The first hypothesis — an xdist interaction —
+was wrong, and the control that killed it is in the log: `--cov-fail-under=99` over a small
+subset exits 1 both with and without `-n auto`.
+
+════ 1. THE MECHANISM ════
+There are two evaluators, and only one of them is consulted for the exit status:
+
+  * coverage.py's own report prints the verdict line ("FAIL Required test coverage of 90% not
+    reached. Total coverage: 89.87%") using the *displayed* precision;
+  * pytest-cov decides the process result by calling `coverage.results.should_fail_under(total,
+    fail_under, precision)` — with `precision` taken from `--cov-precision`, else from coverage's
+    `report.precision`, else **0**.
+
+At precision 0 that function rounds the total to a whole number before comparing, so a run
+anywhere in `(floor - 0.5, floor)` rounds *up* to the floor and passes:
+
+    should_fail_under / precision 0        should_fail_under / precision 2
+    89.87 against 90 -> False (exit 0)     89.87 -> True
+    89.50 against 90 -> False (exit 0)     89.50 -> True
+    89.40 against 90 -> True               89.40 -> True
+    64.60 against 65 -> False (exit 0)     64.60 -> True
+    64.40 against 65 -> True               64.40 -> True
+
+Measured against the installed coverage 7.x (`coverage.results.should_fail_under`, both
+precisions, printed in the cell that produced this file).
+
+That is not a display artefact: `session.testsfailed += 1` — the mechanism pytest-cov uses to
+force the failure exit code — is only reached when `should_fail_under` says yes. So in the band
+the message is printed by one evaluator and ignored by the other.
+
+════ 2. WHY IT MATTERS BEYOND THIS MISSION ════
+The repository's own gate is `--cov-fail-under=65`, in two places, and neither passes a
+precision:
+
+    Makefile:46            $(PYTEST) tests/ ... --cov-fail-under=65
+    .github/workflows/ci.yml:306-309   python -m pytest tests/ -n auto --cov=aegis ... --cov-fail-under=65
+
+So a run at 64.6% would print the FAIL line and leave the CI job green. The floor this
+repository believes it enforces is, in that band, advisory.
+
+════ 3. THE FIX ════
+One setting, in the file coverage itself reads, so it holds for every invocation rather than
+only the one in the mission order:
+
+    [tool.coverage.report]
+    precision = 2
+
+`--cov-precision` overrides it; neither the Makefile nor CI passes that flag, and both now
+enforce what they print. The mission order's invocation additionally passes `--cov-precision=2`
+explicitly so the flag is visible in the command that is quoted as evidence.
+
+Verification: the printed percentages move to two decimals (the whole-suite TOTAL line reads
+`89.87%` rather than `90%`), i.e. the same number is both displayed and enforced, and the band
+values above flip to `True`. CI itself was **not** run — `gh` is absent on this host — so the CI
+step's behaviour is inferred from the config it reads plus the library semantics, and is
+recorded as such.
+
+════ 4. WHAT WAS NOT DONE ════
+The floor was not raised, lowered, or removed, and no coverage was excluded to make a run pass.
+`precision` is the only knob touched, and it only widens the set of runs that fail: every total
+that failed before still fails.
