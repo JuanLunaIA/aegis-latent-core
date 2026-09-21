@@ -26,6 +26,7 @@ from aegis.core.forensic_bundle import (
     canonical_dag_cbor_bytes,
     canonical_jcs_bytes,
     dag_cbor_cid,
+    project_jcs_evidence,
 )
 from aegis.proxy.dependencies import principal_tenant
 from aegis.proxy.schemas import (
@@ -225,13 +226,27 @@ def build_audit_router(
         node_hash: str,
         auth: object = Depends(read_dependency),
     ) -> RawEvidenceOut:
-        """Return byte-exact JCS and deterministic DAG-CBOR projections."""
+        """Return the DAG-CBOR projection and its RFC 8785 (JCS) companion.
+
+        The record is first projected into the canonical evidence domain:
+        finite floats ride as their shortest round-trip decimal strings (the
+        token the WAL persists), because the bundle canonicalizer excludes
+        floats. Records outside the domain — non-finite floats, integers
+        beyond the I-JSON safe range, lone surrogates — return 422 rather
+        than an unhandled error.
+        """
         principal = _require(auth, SCOPE_AUDIT_READ)
         for node in ledger.chain:
             if node.node_hash != node_hash or not _visible(node, principal):
                 continue
-            record, dag_cbor = _canonical_node(node)
-            jcs = canonical_jcs_bytes(record)
+            try:
+                record, dag_cbor = _canonical_node(node)
+                jcs = canonical_jcs_bytes(project_jcs_evidence(record))
+            except ForensicBundleError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail=(f"The evidence record is outside the canonical evidence domain: {exc}"),
+                ) from exc
             return RawEvidenceOut(
                 node_hash=node.node_hash,
                 cid=dag_cbor_cid(dag_cbor),

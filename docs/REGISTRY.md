@@ -202,7 +202,7 @@ A deep forensic audit (2026-09-21; full record in [`AUDIT_REPORT_v5.0.1_PREP.md`
 
 | REG | Brands | Class | Sev | Mechanism | Status | Evidence |
 |---|---|---|---|---|---|---|
-| REG-D05 | `[AUD]` | CODE | P1 | JCS evidence endpoint 500s for every node | **OPEN** — `AUD-01` | Audit finding(s) AF-006 verified on this host: [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md); ticket `AUD-01` in [Roadmap](ROADMAP.md) § Audit backlog. |
+| REG-D05 | `[AUD]` | CODE | P1 | JCS evidence endpoint 500s for every node | **FIXED** 2026-09-21 — `AUD-01` | Audit finding(s) AF-006 verified on this host: [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md); ticket `AUD-01` in [Roadmap](ROADMAP.md) § Audit backlog. **Fixed:** `project_jcs_evidence()` (`aegis/core/forensic_bundle.py`) projects finite floats to their shortest round-trip decimal strings (the WAL token) before `canonical_jcs_bytes`, and the handler catches `ForensicBundleError` returning 422 with the reason (`aegis/proxy/audit_api.py`). Regression tests: `tests/test_audit_api_new.py::test_node_evidence_serves_jcs_projection_for_finite_floats`, `::test_node_evidence_returns_422_outside_canonical_domain` (real ledger + real ASGI app). Suite: 6,874 passed / 116 skipped / 0 failed (`HERMES_SANDBOX=true`, `-n auto`); doc gates + ruff PASS. |
 | REG-D06 | `[AUD]` | CODE | P1 | signature verification dispatched on an unbound self-declared scheme | **OPEN** — `AUD-02` | Audit finding(s) AF-005 verified on this host: [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md); ticket `AUD-02` in [Roadmap](ROADMAP.md) § Audit backlog. |
 | REG-D07 | `[AUD]` | CODE | P1 | no terminal evidence on ASGI-cancellation/aclose teardown | **OPEN** — `AUD-03` | Audit finding(s) AF-013 verified on this host: [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md); ticket `AUD-03` in [Roadmap](ROADMAP.md) § Audit backlog. |
 | REG-D08 | `[AUD]` | CODE | P1 | RustWal multi-handle frame overwrite (no single-writer guard) | **OPEN** — `AUD-04` | Audit finding(s) AF-016 verified on this host: [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md); ticket `AUD-04` in [Roadmap](ROADMAP.md) § Audit backlog. |
@@ -237,10 +237,10 @@ A deep forensic audit (2026-09-21; full record in [`AUDIT_REPORT_v5.0.1_PREP.md`
 | W2 | 23 | 11 | 6 | 2 | 3 | 1 | **0** |
 | W3 | 9 | 1 | 2 | 5 | 0 | 1 | **0** |
 | `[DISC]` | 4 | 0 | 0 | 4 | 0 | 0 | **0** |
-| `[AUDIT]` | 26 | 5 | 0 | 0 | 0 | 0 | **21** |
-| **Total** | **92** | **23** | **26** | **17** | **3** | **2** | **21** |
+| `[AUDIT]` | 26 | 6 | 0 | 0 | 0 | 0 | **20** |
+| **Total** | **92** | **24** | **26** | **17** | **3** | **2** | **20** |
 
-Human class (9) is excluded from the burn-down by design. **Sealed 2026-09-21: `SEED` = 0 across all 66 rows — see the closure attestation in §6.** **The `[AUDIT]` block (26 rows) is the v5.0.1-prep audit's addition — see §4.6; it does not reopen the 66 sealed rows, and its closure is tracked by roadmap tickets `AUD-01`–`AUD-26`. Five rows (`REG-D11`, `REG-D19`–`REG-D21`, `REG-D25`) are `FIXED` as of 2026-09-21; the remaining 21 are `OPEN`.**
+Human class (9) is excluded from the burn-down by design. **Sealed 2026-09-21: `SEED` = 0 across all 66 rows — see the closure attestation in §6.** **The `[AUDIT]` block (26 rows) is the v5.0.1-prep audit's addition — see §4.6; it does not reopen the 66 sealed rows, and its closure is tracked by roadmap tickets `AUD-01`–`AUD-26`. Six rows (`REG-D05`, `REG-D11`, `REG-D19`–`REG-D21`, `REG-D25`) are `FIXED` as of 2026-09-21; the remaining 20 are `OPEN`.**
 
 ---
 
