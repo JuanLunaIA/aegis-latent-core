@@ -225,6 +225,13 @@ class LLMForwarder:
                 self._rust_forwarder = aegis_rust.RustForwarder.new(
                     base_url,
                     self._settings.backend_api_key,
+                    # AUD-12: the non-streaming relay reads the upstream body under
+                    # the gateway's response-size bound. This is the same knob the
+                    # streaming path uses (max_stream_response_bytes); a second
+                    # configuration field for the same policy would need its own
+                    # docs and rollout. A breach is raised, not relayed, and the
+                    # gateway's durable error path answers the client.
+                    max_response_bytes=self._settings.max_stream_response_bytes,
                 )
                 logger.info("LLMForwarder: Rust acceleration enabled")
             except Exception as exc:

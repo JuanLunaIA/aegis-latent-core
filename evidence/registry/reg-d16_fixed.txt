@@ -1,0 +1,69 @@
+REG-D16 (AUD-12 / AF-039) — FIXED: Rust forwarder reads upstream bodies under a cap
+================================================================================
+HEAD before the fix: d010575. Files changed:
+  aegis_rust_v2/src/forwarder.rs   ForwardError, read_body_bounded(), the
+                                   max_response_bytes constructor argument,
+                                   the two match arms, three in-crate tests
+  aegis/proxy/forwarder.py         start() passes
+                                   max_response_bytes=settings.max_stream_response_bytes
+  tests/test_rust_forwarder_response_cap.py (new, 5 tests)
+  docs/REGISTRY.md, docs/ROADMAP.md, docs/institutional/UNSUPPORTED_CLAIMS.md
+
+The defect (pre-fix source, read from git)
+------------------------------------------
+  let content = resp.bytes().await.map_err(...)?.to_vec();
+  // and lib.rs's HttpResponse::content -> PyBytes::new(py, &self.content)
+so a body of size N was buffered in Rust in full and then copied again into a
+Python bytes object: peak ~2N, with nothing in the crate able to refuse. The
+stale debug extension on this host still carries that signature —
+  sig: (base_url, api_key, timeout_seconds=None, connect_timeout_seconds=None)
+  cap param: TypeError -> RustForwarder.new() got an unexpected keyword argument
+             'max_response_bytes'
+(observed with the extension built before the change; that observation is why
+the Python module skips — rather than fails or false-passes — when handed an
+extension that predates the parameter).
+
+The fix
+-------
+  if let Some(declared) = resp.content_length() { if declared > cap as u64 { refuse } }
+  while let Some(chunk) = resp.chunk().await? {
+      if body.len() + chunk.len() > cap { refuse }      // before copying
+      body.extend_from_slice(&chunk);
+  }
+Declared length = cheap refusal; counted chunks = authoritative bound (an
+upstream that omits or understates the length still cannot cross the cap). The
+buffer never exceeds the cap; the only transient above it is one transport
+chunk, which is in memory before it can be inspected (UC-062).
+
+Executed evidence
+-----------------
+1. In-crate (cargo test --locked, forwarder:: filter):
+   test forwarder::tests::a_chunked_body_over_the_cap_is_refused_mid_stream ... ok
+   test forwarder::tests::a_body_within_the_cap_is_returned_intact ... ok
+   test forwarder::tests::a_declared_length_over_the_cap_is_refused ... ok
+   test result: ok. 5 passed; 0 failed  (76 filtered out)
+   The chunked case drives a raw 127.0.0.1 listener serving four 400-byte chunks
+   with no Content-Length against a 1,024-byte cap: only the counted reads can
+   stop it, and the refusal arrives before 1,600 bytes accumulate.
+2. cargo test --locked (whole crate): lib 81 passed / 0 failed; bins 3 passed;
+   doctests 0.
+3. cargo clippy --locked --all-targets -- -D warnings: exit 0.
+4. Python surface, against the freshly built debug cdylib
+   (PYTHONPATH=scratch/ext_cap, cargo build --locked, 10.10s):
+   tests/test_rust_forwarder_response_cap.py ... 5 passed in 2.61s
+     - 32,768-byte body vs max_response_bytes=4096 -> RuntimeError naming 4096
+     - 2,048-byte body -> 200 and the exact bytes back
+     - no argument -> the 16 MiB default admits 32,768 bytes
+     - max_response_bytes=0 -> ValueError "must be positive"
+     - the gateway's start() passes max_stream_response_bytes=8,388,608 through
+       (patch.object on RustForwarder.new, call_args asserted)
+5. ruff check + ruff format --check on both Python files: clean.
+
+Divergences from the ticket's literal wording
+---------------------------------------------
+- "Return a PyErr on breach" — taken literally (PyRuntimeError), while the
+  pre-existing transport failures keep returning a 502 response body. The
+  gateway's own exception path turns the raise into a durable error response,
+  so the client still gets a fail-closed answer with evidence.
+- The cap is the same knob the streaming path uses (`max_stream_response_bytes`)
+  instead of a new configuration field for the same policy; noted in the code.
