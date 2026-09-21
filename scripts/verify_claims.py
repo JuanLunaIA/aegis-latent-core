@@ -22,6 +22,9 @@ Checks performed:
 6. Every ``CLM-NNN`` referenced anywhere in the corpus is defined here.
 7. Every claim is covered by a control-register range (forbidden phrasing,
    review date, owner).
+8. Every path a claim cites as evidence resolves in the tree. A locator naming
+   an artifact that is not present is the same failure as no locator at all:
+   the reader takes the citation as confirmation that the artifact exists.
 
 Exit codes: 0 clean, 1 findings, 2 the check could not run.
 """
@@ -56,6 +59,45 @@ NO_EVIDENCE_MARKERS = (
     "n/a",
     "does not exist",
 )
+
+#: Suffixes that make a backticked token a file locator rather than prose or a
+#: dotted symbol name. The set is closed on purpose: `RFC3161Timestamper.verify`
+#: is a symbol, and treating every dotted token as a path reports it as a
+#: missing file.
+LOCATOR_SUFFIXES = frozenset(
+    {
+        "cfg",
+        "cff",
+        "csv",
+        "html",
+        "ini",
+        "js",
+        "json",
+        "jsonl",
+        "lock",
+        "md",
+        "proto",
+        "py",
+        "rs",
+        "sh",
+        "sig",
+        "smt2",
+        "sql",
+        "tgz",
+        "toml",
+        "ts",
+        "tsx",
+        "txt",
+        "whl",
+        "yaml",
+        "yml",
+    }
+)
+
+LOCATOR_TOKEN_RE = re.compile(r"`([^`]+)`")
+BRACE_GLOB_RE = re.compile(r"\{([^{}]*)\}")
+#: `path.py:118`, `path.py:118-140` and `path.py::symbol` all point at a file.
+REFERENCE_SUFFIX_RE = re.compile(r"(?:::[A-Za-z_][A-Za-z0-9_]*|:\d[\d,\-]*).*$")
 
 #: A boundary that denies the capability. A ROADMAP row that cites source must
 #: carry one, or a reader takes the citation as confirmation.
@@ -259,6 +301,69 @@ def check_corpus_references(root: Path, claims: list[Claim]) -> list[Finding]:
     return findings
 
 
+def _expand_braces(token: str) -> list[str]:
+    """Expand one level of ``{a,b}`` so a glob citation can be resolved."""
+    match = BRACE_GLOB_RE.search(token)
+    if not match:
+        return [token]
+    expanded: list[str] = []
+    for alternative in match.group(1).split(","):
+        replaced = token[: match.start()] + alternative + token[match.end() :]
+        expanded.extend(_expand_braces(replaced))
+    return expanded
+
+
+def _is_locator_token(token: str) -> bool:
+    """True when a backticked token names a path rather than prose or a symbol."""
+    token = token.strip()
+    if not token or " " in token or token.startswith("http"):
+        return False
+    if token.endswith("/"):
+        return True
+    tail = token.rsplit("/", 1)[-1]
+    if "." not in tail:
+        # `amazon/dynamodb-local` is a container image reference, not a path.
+        return False
+    return tail.rsplit(".", 1)[-1].lower() in LOCATOR_SUFFIXES
+
+
+def _locator_resolves(root: Path, token: str) -> bool:
+    return (root / token).exists() or (root / "evidence" / "registry" / token).exists()
+
+
+def check_locator_paths(root: Path, claims: list[Claim]) -> list[Finding]:
+    """Every artifact a claim cites must exist, or the citation claims too much.
+
+    The failure mode is the one this register exists to prevent: a reader takes
+    a cited path as confirmation that the evidence is there. A locator naming an
+    artifact outside the tree -- a release-envelope file, or one that was renamed
+    and never followed up -- is reported here instead of being read as present. A
+    row with no evidence (see ``NO_EVIDENCE_MARKERS``) is exempt, as are tokens
+    naming a symbol rather than a file.
+    """
+    findings: list[Finding] = []
+    for claim in claims:
+        if any(claim.locator.lower().startswith(marker) for marker in NO_EVIDENCE_MARKERS):
+            continue
+        for raw in LOCATOR_TOKEN_RE.findall(claim.locator):
+            token = raw.strip()
+            if not _is_locator_token(token):
+                continue
+            for alternative in _expand_braces(token):
+                path = REFERENCE_SUFFIX_RE.sub("", alternative).strip()
+                if path and not _locator_resolves(root, path):
+                    findings.append(
+                        Finding(
+                            claim.ident,
+                            "unresolvable-locator",
+                            f"cited evidence path does not resolve: {path!r}. Name an "
+                            "artifact that is in the tree, or state in the boundary "
+                            "that the cited artifact is not in this tree.",
+                        )
+                    )
+    return findings
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=".", help="repository root")
@@ -281,6 +386,7 @@ def main(argv: list[str] | None = None) -> int:
     findings += check_claims(claims)
     findings += check_control_register(text, claims)
     findings += check_corpus_references(root, claims)
+    findings += check_locator_paths(root, claims)
 
     if args.json:
         print(

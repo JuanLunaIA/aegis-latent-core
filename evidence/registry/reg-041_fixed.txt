@@ -1,0 +1,138 @@
+REG-041 — after (CLM-040's citation repaired; the claims gate now resolves locators)
+====================================================================================
+
+Row: REG-041 `[CLM-040]` ML-DSA verify timing `p=0.0`.
+Anchor: 6a857d1 (re-anchor commit), branch registry-closure-2026-09-21.
+
+--- FINDING 1 — the citation named an artifact that is not in the tree --------
+
+`docs/CLAIMS_MATRIX.md` CLM-040 cited `pqc_timing_report_v2.json`. It is absent
+from the working tree and from all history:
+
+  $ find . -name 'pqc_timing*' -not -path './.git/*'
+  ./tools/benchmarks/run_pqc_timing.py
+
+  $ git log --all --oneline -- '*pqc_timing*'
+  1c38f91 Release 3.1.0 candidate: market hardening and validation scenarios
+  (that commit touches the harness only — no report artifact was ever committed)
+
+The numbers survive only as restated prose, which the repository itself says:
+
+  docs/benchmarks/BENCHMARK_RESULTS.md:21-22   "raw JSON not in this tree"
+  docs/benchmarks/README.md:45                 "Retained v3.1.0-era, not in tree."
+  docs/security/PQC_CONSTANT_TIME.md:52        restates p and the mean delta
+
+Name drift, recorded rather than silently normalised: the citation said
+`pqc_timing_report_v2.json`, the harness invocation writes
+`evidence/pqc_timing_report.json`, and the prose calls the source "the retained
+historical v3.1.0-era v2 artifact". Three names, none of them present.
+
+--- FINDING 2 — `p = 0.0` is a floating-point floor, not a probability -------
+
+Independent check on this host against the harness's own formula, by bisection
+for the smallest argument at which erfc underflows:
+
+  $ .venv/bin/python -c "...bisect math.erfc(x) == 0.0..."
+  smallest x with erfc(x)==0.0: 27.226017111108366
+  => |t| = x*sqrt(2): 38.50340264793141
+  erfc(27.28)= 0.0   erfc(27.2)= 1e-323
+
+And the harness computes exactly that value:
+
+  tools/benchmarks/run_pqc_timing.py:26-27
+      def online_two_sided_p_value(t_statistic: float) -> float:
+          return math.erfc(abs(t_statistic) / math.sqrt(2.0))
+  tools/benchmarks/run_pqc_timing.py:212-220
+      p_value = online_two_sided_p_value(t_statistic)
+      report["results"][operation] = {..., "t_statistic": ...,
+                                      "degrees_of_freedom": ...,
+                                      "p_value_normal_tail": p_value, ...}
+
+So the report stores the t-statistic and the Welch degrees of freedom separately,
+and the degrees of freedom are not used in the p-value. "p = 0.0" is the floor.
+
+--- FINDING 3 (the class) — the gate never resolved locator paths ------------
+
+`scripts/verify_claims.py` checked claim-ID references across the corpus and the
+structural shape of each row, but never checked that the paths a claim cites
+exist. Its own docstring already names the failure mode it was not testing for:
+"a reader takes the citation as confirmation that it exists."
+
+--- FIX ----------------------------------------------------------------------
+
+* scripts/verify_claims.py — new check 8, `check_locator_paths(root, claims)`:
+  every path-like token in a claim's Evidence column must resolve. Resolution is
+  root-relative, with a bare filename also tried under `evidence/registry/`.
+  `{a,b}` globs are expanded and required to resolve per alternative; dotted
+  symbol names (`RFC3161Timestamper.verify`) and extension-less references
+  (`amazon/dynamodb-local`) are not treated as paths; a row that declares it has
+  no evidence is exempt. Wired into `main()`, so CI's documentation gate 2
+  (`python scripts/verify_claims.py --root .`, ci.yml) enforces it from now on.
+
+* docs/CLAIMS_MATRIX.md — CLM-040 cites `docs/security/PQC_CONSTANT_TIME.md`,
+  `docs/benchmarks/BENCHMARK_RESULTS.md` and `tools/benchmarks/run_pqc_timing.py`
+  (all in-tree) and its boundary now carries both qualifications; CLM-032 cites
+  the retained `evidence/execution_2026-08-20/waf_corpus_report.json` — the
+  corpus report that matches its own description (23 cases: 15 malicious, 8
+  benign) — instead of a candidate-named artifact that is not in the tree.
+
+* docs/security/PQC_CONSTANT_TIME.md — §Historical v3.1.0 timing status records
+  the same two qualifications beside the number.
+
+--- BEFORE / AFTER -----------------------------------------------------------
+
+  $ .venv/bin/python scripts/verify_claims.py --root .     # gate added, register not yet repaired
+  verify_claims: FAIL (102 claims, 2 findings)
+
+  unresolvable-locator (2):
+    [unresolvable-locator] CLM-032
+        cited evidence path does not resolve: 'waf_corpus_report_v1_candidate.json'.
+    [unresolvable-locator] CLM-040
+        cited evidence path does not resolve: 'pqc_timing_report_v2.json'.
+
+  $ .venv/bin/python scripts/verify_claims.py --root .     # after the repair
+  verify_claims: PASS (102 claims, 0 findings)
+
+A checker that only ever passes is worse than no checker, because it is trusted,
+so the new one was shown still catching a deliberate break — constructed in
+memory, no file touched:
+
+  $ .venv/bin/python -c "...Claim(..., locator='`evidence/registry/not_a_real_file.json`')..."
+  [unresolvable-locator] CLM-999
+      cited evidence path does not resolve: 'evidence/registry/not_a_real_file.json'.
+      Name an artifact that is in the tree, or state in the boundary that the
+      cited artifact is not in this tree.
+
+Live register through the real gate function: 102 claim rows, 279 path-like
+locator tokens, **0 unresolved**.
+
+--- TESTS AND GATES ----------------------------------------------------------
+
+  $ .venv/bin/python -m pytest tests/test_documentation_verifiers.py -q
+  29 passed in 1.00s          (26 before; 3 added by this fix)
+
+  Added: test_repository_claims_locators_resolve
+         test_cited_locator_that_does_not_resolve_is_flagged
+         test_brace_glob_locators_expand_and_symbol_tokens_are_ignored
+
+  $ ruff check scripts/verify_claims.py tests/test_documentation_verifiers.py
+  All checks passed!
+  $ ruff format --check scripts/verify_claims.py tests/test_documentation_verifiers.py
+  2 files already formatted
+
+  $ python scripts/verify_docs.py --root .                 -> PASS (0 findings)
+  $ python scripts/verify_claims.py --root .               -> PASS (102 claims, 0 findings)
+  $ bash scripts/verify_links.sh --root .                  -> PASS (1285 links/anchors)
+  $ python tools/docs/verify_documentation.py --root . --strict -> PASS (strict, 0 warnings)
+
+--- RESIDUAL (recorded, not glossed over) ------------------------------------
+
+The row's premise remains historically true and is not re-derivable in-tree: a
+retained 1,000,000-sample verify measurement produced a p-value at the erfc
+floor, and no artifact in this repository lets a reviewer recover its
+t-statistic. Re-running the harness produces a new measurement rather than
+reproducing that one, and it refuses fewer than 1,000,000 samples
+(`run_pqc_timing.py:129-130`), so there is no cheap end-to-end re-run here. The
+release gate on any constant-time claim is unchanged and closed; nothing in this
+fix licenses different wording. What it does remove is a citation a reader would
+have taken as confirmation that the evidence exists.

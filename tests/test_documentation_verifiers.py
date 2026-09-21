@@ -234,6 +234,46 @@ def test_roadmap_row_citing_evidence_without_denial_is_flagged():
     assert "roadmap-without-denial" in {f.rule for f in verify_claims.check_claims([claim])}
 
 
+def test_repository_claims_locators_resolve():
+    """Every path a claim cites as evidence must exist in the tree.
+
+    A citation naming an artifact that is not present is the failure this
+    register exists to prevent: the reader takes it as confirmation. Two rows
+    were repaired when this check was added — `CLM-040` cited a `v3.1.0`-era
+    artifact that is not in the tree, and `CLM-032` the same for a WAF report.
+    """
+    text = (ROOT / verify_claims.MATRIX).read_text(encoding="utf-8")
+    claims, _ = verify_claims.parse_claims(text)
+    findings = verify_claims.check_locator_paths(ROOT, claims)
+    assert not findings, [f.render() for f in findings]
+
+
+def test_cited_locator_that_does_not_resolve_is_flagged():
+    claim = verify_claims.Claim(
+        ident="CLM-001",
+        text="A measurement was retained.",
+        state="MEASURED",
+        locator="`evidence/registry/no_such_retained_artifact.json`",
+        boundary="This does not establish that the named artifact is in this tree.",
+        line=1,
+    )
+    rules = {f.rule for f in verify_claims.check_locator_paths(ROOT, [claim])}
+    assert "unresolvable-locator" in rules
+
+
+def test_brace_glob_locators_expand_and_symbol_tokens_are_ignored():
+    """`{a,b}.py` must resolve per alternative; a dotted symbol must not be a path."""
+    claim = verify_claims.Claim(
+        ident="CLM-001",
+        text="Two facades are implemented.",
+        state="IMPLEMENTED",
+        locator="`aegis/engines/{veracity,sanctum}.py`, `RFC3161Timestamper.verify`",
+        boundary="This does not establish anything about the other facades.",
+        line=1,
+    )
+    assert not verify_claims.check_locator_paths(ROOT, [claim])
+
+
 def test_repository_corpus_passes_every_structural_check():
     """The corpus itself must pass. This is the gate CI runs."""
     assert not verify_docs.run(ROOT), [f.render() for f in verify_docs.run(ROOT)]
