@@ -44,3 +44,9 @@ is in the [repository overview](../README.md) and
 > The numbers here are illustrative mock data for presentation only. The live
 > dashboard reports real code/forensic metrics and renders honest "connect
 > telemetry" states until a running proxy's metrics are wired in.
+>
+> The `version` and `git_head` fields embedded in each page's
+> `window.__AEGIS_BOOTSTRAP__` block are frozen at the commit that generated the
+> pages and are **not refreshed per release**; regenerate with
+> `tools/visualizer/generate_samples.py` if you need them to match the current
+> tree. They record what produced the page, not what the release contains.
