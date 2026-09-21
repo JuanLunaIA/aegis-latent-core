@@ -6,8 +6,10 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+from unittest.mock import patch
 
-from aegis.core.transparency_log import TransparencyLogManager
+from aegis.core.transparency_log import TransparencyLogManager, compute_entry_hash
 
 
 class TestTransparencyLogManagerInit:
@@ -175,3 +177,141 @@ class TestFilePersistence:
         )
         mgr = TransparencyLogManager(storage_path=path)
         assert len(mgr._ledger) == 1
+
+
+# ── AUD-11: the verifier recomputes, and the append is durable ───────────────
+
+
+def _chain(count: int = 3) -> TransparencyLogManager:
+    mgr = TransparencyLogManager()
+    for n in range(count):
+        mgr.publish_binary_hash(chr(ord("a") + n) * 64, f"1.0.{n}")
+    return mgr
+
+
+class TestTamperDetectionRecomputesEntryHashes:
+    """The pre-fix verifier compared linkage only; these pin the recompute.
+
+    Before AUD-11 every case below returned True: the stored entry_hash was
+    compared against the successor's prev_hash and never re-derived from the
+    entry's own fields, so an in-place edit kept the graph intact and
+    `verify_binary_presence` then confirmed the substituted binary.
+    """
+
+    def test_edit_of_a_non_tail_entry_is_detected(self):
+        mgr = _chain()
+        mgr._ledger[1].binary_hash = "f" * 64
+        assert mgr.verify_ledger_integrity() is False
+
+    def test_edit_of_a_tail_entry_is_detected(self):
+        mgr = _chain()
+        mgr._ledger[2].binary_hash = "f" * 64
+        assert mgr.verify_ledger_integrity() is False
+
+    def test_version_edit_is_detected(self):
+        mgr = _chain()
+        mgr._ledger[1].version = "9.9.9"
+        assert mgr.verify_ledger_integrity() is False
+
+    def test_timestamp_edit_is_detected(self):
+        mgr = _chain()
+        mgr._ledger[1].timestamp += 1.0
+        assert mgr.verify_ledger_integrity() is False
+
+    def test_edit_with_a_recomputed_hash_and_repaired_linkage_is_detected(self):
+        """The edit that linkage alone cannot see: entry 1 is rehashed and entry
+        2's prev_hash follows it, so every link still matches. Verification
+        catches it because entry 2's stored hash no longer recomputes."""
+        mgr = _chain()
+        entry = mgr._ledger[1]
+        entry.binary_hash = "f" * 64
+        entry.entry_hash = compute_entry_hash(
+            entry.index, entry.binary_hash, entry.version, entry.timestamp, entry.prev_hash
+        )
+        mgr._ledger[2].prev_hash = entry.entry_hash
+        assert mgr.verify_ledger_integrity() is False
+
+    def test_reordering_is_detected(self):
+        mgr = _chain()
+        mgr._ledger[1], mgr._ledger[2] = mgr._ledger[2], mgr._ledger[1]
+        assert mgr.verify_ledger_integrity() is False
+
+    def test_a_substituted_binary_hash_is_not_confirmed(self):
+        mgr = _chain()
+        mgr._ledger[1].binary_hash = "a" * 64  # pretend the audited binary was entry 1
+        assert mgr._ledger[1].binary_hash == "a" * 64
+        assert mgr.verify_binary_presence("a" * 64) is False
+
+    def test_a_clean_ledger_still_verifies(self):
+        mgr = _chain()
+        assert mgr.verify_ledger_integrity() is True
+        assert mgr.verify_binary_presence("a" * 64) is True
+        assert mgr.verify_binary_presence("z" * 64) is False
+        assert TransparencyLogManager().verify_ledger_integrity() is True
+
+    def test_an_edit_on_disk_is_detected_after_replay(self, tmp_path):
+        path = tmp_path / "log.jsonl"
+        mgr = TransparencyLogManager(storage_path=path)
+        for n in range(3):
+            mgr.publish_binary_hash(chr(ord("a") + n) * 64, f"1.0.{n}")
+        lines = path.read_text(encoding="utf-8").strip().split("\n")
+        record = json.loads(lines[1])
+        record["binary_hash"] = "f" * 64
+        lines[1] = json.dumps(record)
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        replayed = TransparencyLogManager(storage_path=path)
+        assert replayed._ledger[1].binary_hash == "f" * 64
+        assert replayed.verify_ledger_integrity() is False
+
+    def test_a_deleted_line_is_detected_after_replay(self, tmp_path):
+        path = tmp_path / "log.jsonl"
+        mgr = TransparencyLogManager(storage_path=path)
+        for n in range(3):
+            mgr.publish_binary_hash(chr(ord("a") + n) * 64, f"1.0.{n}")
+        lines = path.read_text(encoding="utf-8").strip().split("\n")
+        path.write_text("\n".join([lines[0], lines[2]]) + "\n", encoding="utf-8")
+        replayed = TransparencyLogManager(storage_path=path)
+        assert replayed.verify_ledger_integrity() is False
+
+    def test_a_full_suffix_rewrite_is_the_published_limit(self):
+        """UC-061, pinned: the chain is unkeyed.
+
+        An author who edits an entry *and* recomputes every hash after it
+        produces a ledger this module cannot distinguish from an honest one.
+        Asserted so the boundary is not implied to be stronger than it is.
+        """
+        mgr = _chain()
+        mgr._ledger[1].binary_hash = "f" * 64
+        for index in (1, 2):
+            entry = mgr._ledger[index]
+            if index == 2:
+                entry.prev_hash = mgr._ledger[1].entry_hash
+            entry.entry_hash = compute_entry_hash(
+                entry.index, entry.binary_hash, entry.version, entry.timestamp, entry.prev_hash
+            )
+        assert mgr.verify_ledger_integrity() is True
+
+
+class TestAppendDurability:
+    def test_publish_fsyncs_before_returning_the_hash(self, tmp_path):
+        path = Path(tmp_path) / "log.jsonl"
+        calls: list[int] = []
+        with patch("os.fsync", side_effect=lambda fd: calls.append(fd)):
+            mgr = TransparencyLogManager(storage_path=path)
+            mgr.publish_binary_hash("cafebabe", "1.0.0")
+        assert len(calls) == 1
+        assert len(TransparencyLogManager(storage_path=path)._ledger) == 1
+
+    def test_a_failed_fsync_does_not_report_a_published_entry(self, tmp_path):
+        path = Path(tmp_path) / "log.jsonl"
+        with patch("os.fsync", side_effect=OSError("no space left on device")):
+            mgr = TransparencyLogManager(storage_path=path)
+            try:
+                mgr.publish_binary_hash("cafebabe", "1.0.0")
+            except OSError as exc:
+                assert "no space left" in str(exc)
+            else:
+                raise AssertionError("publish_binary_hash returned despite a failed fsync")
+        # Disk first, memory second: no entry is claimed that the file lacks.
+        assert len(mgr._ledger) == 0
+        assert mgr.verify_ledger_integrity() is True
