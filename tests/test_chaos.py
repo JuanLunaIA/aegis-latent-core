@@ -28,19 +28,25 @@ from aegis.core.crypto_audit import CryptographicAuditLedger
 
 
 class TestWALWriteFailure:
-    """Verify that WAL write failures do not crash the proxy.
+    """Verify what a WAL write failure actually does.
 
-    Policy: audit writes are fail-open — the proxy continues serving traffic
-    even if the WAL is unavailable (network share, full disk, revoked fd).
+    Policy: a durable-write failure **latches** ``wal_persist_failed`` and the
+    gateway answers 503 from ``_require_intact_ledger`` while the fault stands
+    (`docs/architecture/FAILURE_SEMANTICS.md:50`, `aegis/proxy/app.py:475`). This
+    class asserted the opposite in its docstring until REG-037 — it claimed the
+    ledger was fail-open on WAL failures — and asserted *nothing* in its bodies,
+    so neither claim was checked. The latch is sticky on purpose: recovery is a
+    restart, not a later successful commit that quietly clears the flag.
     """
 
-    def test_wal_ioerror_on_write_does_not_propagate(self, tmp_path, monkeypatch):
-        """An IOError during WAL write must be caught; existing chain is unaffected."""
+    def test_wal_ioerror_on_write_latches_and_aborts(self, tmp_path):
+        """A disk-full WAL write aborts the commit, latches the fault, and leaves
+        everything already committed verifiable."""
         ledger = CryptographicAuditLedger(str(tmp_path / "wal.jsonl"))
 
-        # First commit succeeds normally.
         n0 = ledger.commit_state("s1", 1.0, b"payload1", tenant_id="t1")
         assert n0 is not None
+        assert ledger._fault_state == "healthy"
 
         # Simulate disk-full by making the WAL file's write raise OSError.
         original_write = None
@@ -48,42 +54,81 @@ class TestWALWriteFailure:
             original_write = ledger._wal_handle.write
             ledger._wal_handle.write = MagicMock(side_effect=OSError("No space left on device"))
 
-        # The second commit may raise but the ledger must not corrupt.
         try:
-            ledger.commit_state("s2", 1.0, b"payload2", tenant_id="t1")
-        except OSError:
-            pass  # expected — disk-full errors propagate from _persist_node
+            with pytest.raises(OSError, match="No space left on device"):
+                ledger.commit_state("s2", 1.0, b"payload2", tenant_id="t1")
         finally:
             if original_write is not None:
                 ledger._wal_handle.write = original_write
 
-    def test_wal_file_permission_denied(self, tmp_path):
-        """A 0o000-mode WAL is caught at open time with a clear error."""
+        # The aborted record must not appear, and the fault must be latched for
+        # the gateway to act on — a silent success here would be the defect.
+        assert [n.state_id for n in ledger.chain] == ["s1"]
+        assert ledger._fault_state == "wal_persist_failed"
+
+        # What already landed stays verifiable after the fault.
+        ok, err_idx = ledger.verify_integrity()
+        assert ok is True, f"chain corrupted at index {err_idx}"
+
+        # The latch is sticky: a later commit that succeeds does not clear it, so
+        # a gateway reading the flag keeps answering 503 until it restarts.
+        recovered = ledger.commit_state("s3", 2.0, b"payload3", tenant_id="t1")
+        assert recovered is not None
+        assert ledger._fault_state == "wal_persist_failed"
+        ledger.close()
+
+    def test_wal_is_owner_only_and_commits(self, tmp_path):
+        """The WAL is created owner-only (0o600) and commits normally.
+
+        Renamed from ``test_wal_file_permission_denied``, which created a normal
+        0o600 file, denied nothing, and checked only that a hash was non-empty.
+        """
         wal_path = tmp_path / "wal.jsonl"
-        # Create file with no permissions after ledger opens it
         ledger = CryptographicAuditLedger(str(wal_path))
-        # Verify normal operation
+
         node = ledger.commit_state("s1", 1.0, b"data", tenant_id="t1")
         assert node.node_hash != ""
 
-    def test_wal_missing_after_startup_triggers_reopen(self, tmp_path, monkeypatch):
-        """If WAL disappears mid-run, a new write attempt should not silently drop data."""
+        mode = wal_path.stat().st_mode & 0o777
+        assert mode == 0o600, f"WAL is not owner-only: 0o{mode:o}"
+        ledger.close()
+
+    def test_wal_missing_after_startup_is_detected_on_replay(self, tmp_path):
+        """If the WAL disappears mid-run the loss is *detected*, not absorbed.
+
+        The running ledger keeps serving from memory and recreates the file, but
+        the record it writes there has no predecessor on disk. A fresh process
+        replaying that file must not accept a chain that starts mid-stream: it
+        latches ``mmr_replay_mismatch`` and ``verify_integrity()`` fails.
+        """
         wal_path = tmp_path / "wal.jsonl"
         ledger = CryptographicAuditLedger(str(wal_path))
         ledger.commit_state("s1", 1.0, b"x", tenant_id="t1")
 
-        # Simulate file disappearing (e.g., tmpfs unmount)
+        # Simulate the file disappearing (e.g. tmpfs unmount, volume re-map).
         if ledger._wal_handle:
             ledger._wal_handle.close()
             ledger._wal_handle = None
         if wal_path.exists():
             wal_path.unlink()
 
-        # Subsequent commit should either succeed or raise — not hang.
-        try:
-            ledger.commit_state("s2", 1.0, b"y", tenant_id="t1")
-        except (OSError, FileNotFoundError):
-            pass  # acceptable
+        # A subsequent commit must neither hang nor silently drop the record.
+        node = ledger.commit_state("s2", 1.0, b"y", tenant_id="t1")
+        assert node is not None
+        assert wal_path.exists(), "the WAL was not recreated, so the record is in memory only"
+        assert [n.state_id for n in ledger.chain] == ["s1", "s2"]
+        ok, _ = ledger.verify_integrity()
+        assert ok is True
+        ledger.close()
+
+        # Replay from disk: the orphaned record is caught rather than trusted.
+        replayed = CryptographicAuditLedger(str(wal_path))
+        assert [n.state_id for n in replayed.chain] == ["s2"]
+        assert replayed._fault_state == "mmr_replay_mismatch"
+        ok, err_idx = replayed.verify_integrity()
+        assert ok is False, "a chain whose first record has no predecessor must not verify"
+        assert err_idx == 0
+        replayed.close()
 
     def test_wal_integrity_survives_partial_write(self, tmp_path):
         """Truncated last line in WAL is handled on replay without corrupting good nodes."""
