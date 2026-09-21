@@ -4,9 +4,15 @@
 """aegis.core.audit_node_encryptor — AES-256-GCM envelope encryption for IL6 audit nodes.
 
 Provides per-tenant AES-256-GCM authenticated encryption for serialized
-:class:`~aegis.core.crypto_audit.AuditNode` JSON payloads when operating at
-DoD Impact Level 6 (IL6) or any deployment requiring data-at-rest protection
-for audit records.
+:class:`~aegis.core.crypto_audit.AuditNode` JSON payloads.
+
+**Nothing in the gateway constructs this class**, so a deployment that does not
+call it encrypts no audit node (`UC-064`).  `from_env()` reads
+``AEGIS_AUDIT_MASTER_KEY`` directly and has no production caller; no
+``aegis.config`` setting sources a key for it, and ``phi_master_key`` no longer
+exists.  The WAL these nodes are chained in holds digests rather than payload
+bytes (node hashes, not plaintext), so this is a primitive for deployments that
+store node payloads elsewhere — not an at-rest control the gateway enforces.
 
 Key hierarchy
 -------------
@@ -38,7 +44,7 @@ Usage::
     import os, json
     from aegis.core.audit_node_encryptor import AuditNodeEncryptor
 
-    master_key = os.urandom(32)  # in production: from AEGIS_AUDIT_MASTER_KEY
+    master_key = os.urandom(32)  # a key you manage; see Environment variables below
     enc = AuditNodeEncryptor(master_key=master_key)
 
     # Encrypt before persisting to WAL
@@ -53,8 +59,9 @@ Usage::
 Environment variables
 ---------------------
 ``AEGIS_AUDIT_MASTER_KEY``
-    Hex-encoded 32-byte master key.  Do NOT reuse ``AEGIS_SIGNING_KEY`` or
-    ``AEGIS_PHI_MASTER_KEY`` — key separation is required for defense in depth.
+    Hex-encoded 32-byte master key, read by ``from_env()`` and by nothing in the
+    gateway.  Do NOT reuse ``AEGIS_SIGNING_KEY`` — key separation is required for
+    defense in depth.
     Example: ``export AEGIS_AUDIT_MASTER_KEY=$(python -c "import os,binascii;print(binascii.hexlify(os.urandom(32)).decode())")``
 """
 

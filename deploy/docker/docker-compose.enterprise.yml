@@ -62,6 +62,7 @@ services:
       AEGIS_COMPLIANCE_PRESET:     ${AEGIS_COMPLIANCE_PRESET:-standard}
       # ── Observability ────────────────────────────────────────────────────
       AEGIS_LOG_LEVEL:             ${AEGIS_LOG_LEVEL:-INFO}
+      # Not read by any code path in 5.0.0 (AUD-35); the alert sender reads AEGIS_SIEM_URL
       AEGIS_WEBHOOK_URL:           ${AEGIS_WEBHOOK_URL:-}
     healthcheck:
       test:

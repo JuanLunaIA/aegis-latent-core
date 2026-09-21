@@ -4,14 +4,21 @@
 """aegis.core.phi_encryption — AES-256-GCM field-level encryption for PHI payloads.
 
 Provides per-tenant data-encryption-key (DEK) derivation and AES-256-GCM
-authenticated encryption for audit node ``payload`` bytes when PHI
-de-identification is enabled (``AEGIS_PHI_DEIDENTIFY=true``).
+authenticated encryption for audit node ``payload`` bytes.
+
+**No production path constructs this class, and no gateway setting supplies its
+key** (`UC-064`).  It is a tested primitive, not an enforced control: since the
+5.0.0 config-surface cleanup there is no `AEGIS_PHI_MASTER_KEY` / `phi_master_key`
+setting at all, the WAL holds digests rather than payload bytes for the nodes it
+chains, and PHI de-identification (`AEGIS_PHI_DEIDENTIFY=true`, which *is* wired
+in `aegis/proxy/app.py`) scrubs content without encrypting it.  Calling this
+class is a deliberate deployment-side act: pass a 32-byte key you manage.
 
 Key hierarchy
 -------------
 ::
 
-    AEGIS_PHI_MASTER_KEY (32 bytes, env var)
+    caller-supplied 32-byte master key
          │
          └── HKDF-SHA256(info="phi-dek:" + tenant_id) → per-tenant DEK (32 bytes)
                                                               │
@@ -62,8 +69,8 @@ class PHIPayloadEncryptor:
     Parameters
     ----------
     master_key:
-        32-byte master encryption key.  Must be sourced from ``AEGIS_PHI_MASTER_KEY``
-        (or equivalent Vault secret) — never derived from ``AEGIS_SIGNING_KEY``.
+        32-byte master encryption key, supplied by the caller (no gateway setting
+        carries it — `UC-064`) and never derived from ``AEGIS_SIGNING_KEY``.
     salt:
         Optional 16-byte HKDF salt.  When None a fixed zero-salt is used (HKDF
         still provides domain-separation via the ``info`` parameter).  For maximum

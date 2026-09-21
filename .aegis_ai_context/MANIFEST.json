@@ -303,8 +303,8 @@
     {
       "category": "governed_input",
       "path": "deploy/docker/docker-compose.enterprise.yml",
-      "sha256": "5a1ad79f7fff3cbec61a77c78255c490893ecf3de099339fc3b31ca9869f82fe",
-      "size": 10509
+      "sha256": "a53cf0d2fca9760f7905c7561a63825d27b613f37e939dd17b58674999602f1b",
+      "size": 10600
     },
     {
       "category": "governed_input",

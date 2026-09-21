@@ -162,6 +162,7 @@ spec:
               value: {{ .Values.aegis.jsAlertThreshold | quote }}
             - name: AEGIS_ENTROPY_ALERT_THRESHOLD_BITS
               value: {{ .Values.aegis.entropyAlertThresholdBits | quote }}
+            # Not read by any code path in 5.0.0 (AUD-35); the alert sender reads AEGIS_SIEM_URL
             - name: AEGIS_WEBHOOK_URL
               value: {{ .Values.aegis.webhookUrl | quote }}
             - name: AEGIS_WORKERS

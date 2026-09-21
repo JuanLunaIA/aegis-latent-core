@@ -116,7 +116,7 @@ Use the chart at `deploy/helm/`. It renders a `StatefulSet` with one volume clai
 | RFC 3161 timestamping | Needs a reachable TSA | Leave `AEGIS_TSA_URL` unset |
 | S3 Object Lock archival | Needs an object store | Leave `AEGIS_S3_ARCHIVE_ENABLED=false` |
 | SIEM HTTP export | Needs a reachable collector | Leave `AEGIS_SIEM_URL` unset, or point it inside the enclave |
-| Webhook alerts | Needs a reachable endpoint | Leave `AEGIS_WEBHOOK_URL` empty |
+| Webhook alerts | **Not wired in 5.0.0** — `AEGIS_WEBHOOK_URL` is read by no code path (`AUD-35`); the alert sender reads `AEGIS_SIEM_URL` | Leave both empty |
 | Upstream model provider | Needs the provider | Point `AEGIS_BACKEND_URL` at an in-enclave model service |
 | `gh attestation verify`, `cosign verify` | Need the transparency log and GitHub | Verify artifacts **before** transfer, at the boundary |
 
