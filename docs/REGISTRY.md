@@ -153,7 +153,7 @@ Scans 3, 6, 7, 8, 9 were **not executed this session** and are recorded as outst
 | REG | Brands | Class | Sev | Mechanism | Status | Evidence |
 |---|---|---|---|---|---|---|
 | REG-042 | `[BLIND-01][CLM-012]` | ARCH | FATAL | Multi-pod total order absent | `SEED` | DECIDE: centralized writer / compare-and-append / Raft. ADR required either way |
-| REG-043 | `[CLM-019][TRACK-B5]` | ARCH | P1 | `zk_proof` public surface | `SEED` | |
+| REG-043 | `[CLM-019][TRACK-B5]` | ARCH | P1 | `zk_proof` public surface | **DOCUMENTED** | `UC-043` added to `docs/institutional/UNSUPPORTED_CLAIMS.md` — the destination the register's §1 vocabulary requires for a DOCUMENTED boundary. The stub was already honestly disclosed (capability report `status="stub"`, `real=False`, "no zero-knowledge, soundness, or native proving assurance" at `aegis/crypto/capabilities.py:86-96`; `CLM-019`; `DOC-08` §5/§6.6; `ROADMAP.md:110` records removal as open work), but a case-insensitive search for `stub` in `UNSUPPORTED_CLAIMS.md` returned **zero hits** and `BOUNDARIES.md` had no stub row — so a reader of *this* register could not learn that the exported `ZKProver`/`ZKVerifier` accept a reproducible digest as `valid=True`, or that fail-closed behaviour requires `require_real=True` (default `False`). `UC-043` now states both, with the exact call path (`zk_proof.py:35`, `:115-133`, `:174-179`, `:217-220`, `:249-256`), the seven re-exported symbols (`aegis/crypto/__init__.py:53-61`, `__all__` `:90-97`), and the separation from the real circuit (`UC-039`, `CLM-089`, `DOC-08`). No code change; no existing claim retracted. Gates after the edit: `verify_docs` PASS, `verify_claims` PASS (102 claims, 0 findings), `verify_links` PASS, `verify_documentation --strict` PASS (27 required files). `evidence/registry/reg-043_documented.txt` |
 | REG-044 | `[TRACK-B3]` | ARCH | P2 | `CausalMmr` wiring | `SEED` | `GossipDaemon` exists (task C1) — `UC-038`'s "not wired" text may now be stale; verify before deciding |
 | REG-A01 | `[BLIND-01]` | ARCH | FATAL | Single-node contract | **DOCUMENTED** | `UC-005`, `UC-038`, `CLM-064`; `README.md` §Boundaries; `POSITIONING.md` §5 |
 | REG-A02 | `[AEG1:2.3][LBP-02]` | ARCH | HIGH | Host-root / HMAC forgery | **DOCUMENTED** | `UC-041`; construction-time warning; `PROVE_IT.md` §5; `OBJECTION_HANDLING.md` §6 |
@@ -184,9 +184,9 @@ Their status is tracked in [Commercial Readiness](commercial/COMMERCIAL_READINES
 |---|---|---|---|---|---|---|---|
 | W1 | 30 | 6 | 18 | 5 | 0 | 0 | **1** |
 | W2 | 23 | 3 | 5 | 0 | 0 | 0 | **15** |
-| W3 | 9 | 1 | 2 | 2 | 0 | 0 | **4** |
+| W3 | 9 | 1 | 2 | 3 | 0 | 0 | **3** |
 | `[DISC]` | 3 | 0 | 0 | 1 | 0 | 0 | **2** |
-| **Total** | **65** | **10** | **25** | **8** | **0** | **0** | **22** |
+| **Total** | **65** | **10** | **25** | **9** | **0** | **0** | **21** |
 
 Human class (9) is excluded from the burn-down by design.
 
