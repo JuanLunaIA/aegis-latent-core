@@ -43,6 +43,41 @@ def _make_response(status: int = 200, body: dict | None = None) -> httpx.Respons
     )
 
 
+class _StreamContext:
+    """Async context manager returned by the fake client's stream()."""
+
+    def __init__(self, response: httpx.Response):
+        self._response = response
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc_info):
+        return False
+
+    @property
+    def status_code(self) -> int:
+        return self._response.status_code
+
+    @property
+    def headers(self) -> dict:
+        return dict(self._response.headers)
+
+    async def aiter_bytes(self):
+        yield self._response.content
+
+
+class _StreamingClient:
+    """AsyncClient stand-in: forward_json now reads through stream() so the
+    response cap applies to the httpx path (REG-D27)."""
+
+    def __init__(self, response: httpx.Response):
+        self._response = response
+
+    def stream(self, *args, **kwargs) -> _StreamContext:
+        return _StreamContext(self._response)
+
+
 # ── lifecycle ─────────────────────────────────────────────────────────────────
 
 
@@ -127,9 +162,7 @@ async def test_start_mtls_required_missing_certs_logs_warning(caplog):
 @pytest.mark.asyncio
 async def test_forward_json_200_openai():
     fwd = LLMForwarder(settings=_settings(), provider=OpenAIAdapter())
-    mock_client = AsyncMock()
-    mock_client.post = AsyncMock(return_value=_make_response(200, {"id": "r1"}))
-    fwd._client = mock_client
+    fwd._client = _StreamingClient(_make_response(200, {"id": "r1"}))
 
     resp = await fwd.forward_json("/v1/chat/completions", {"model": "gpt-4o", "messages": []})
     assert resp.status_code == 200
@@ -140,11 +173,7 @@ async def test_forward_json_401_logs_error(caplog):
     import logging
 
     fwd = LLMForwarder(settings=_settings(), provider=OpenAIAdapter())
-    mock_client = AsyncMock()
-    mock_client.post = AsyncMock(
-        return_value=_make_response(401, {"error": {"message": "Incorrect API key"}})
-    )
-    fwd._client = mock_client
+    fwd._client = _StreamingClient(_make_response(401, {"error": {"message": "Incorrect API key"}}))
 
     with caplog.at_level(logging.ERROR, logger="aegis.proxy.forwarder"):
         resp = await fwd.forward_json("/v1/chat/completions", {"model": "gpt-4o", "messages": []})
@@ -158,9 +187,7 @@ async def test_forward_json_403_logs_error(caplog):
     import logging
 
     fwd = LLMForwarder(settings=_settings(), provider=OpenAIAdapter())
-    mock_client = AsyncMock()
-    mock_client.post = AsyncMock(return_value=_make_response(403, {"error": "forbidden"}))
-    fwd._client = mock_client
+    fwd._client = _StreamingClient(_make_response(403, {"error": "forbidden"}))
 
     with caplog.at_level(logging.ERROR, logger="aegis.proxy.forwarder"):
         resp = await fwd.forward_json("/v1/chat/completions", {"model": "gpt-4o", "messages": []})
@@ -194,9 +221,7 @@ async def test_forward_json_non_openai_translates_response():
         content=anthropic_body,
         headers={"content-type": "application/json"},
     )
-    mock_client = AsyncMock()
-    mock_client.post = AsyncMock(return_value=mock_resp)
-    fwd._client = mock_client
+    fwd._client = _StreamingClient(mock_resp)
 
     result = await fwd.forward_json(
         "/v1/chat/completions",

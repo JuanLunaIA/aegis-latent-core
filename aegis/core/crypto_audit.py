@@ -722,6 +722,50 @@ def validate_node_status(status: str) -> str:
     return status
 
 
+def _require_finite_json(value: Any, *, field: str) -> None:
+    """Reject anything the durable WAL cannot represent as RFC 8259 JSON.
+
+    ``sampling_params`` and the merged ``usage`` reach :meth:`_persist_node`,
+    which serialises the node into the WAL — the replay authority. CPython's
+    ``json.dumps`` emits the ECMA-262 extensions ``NaN`` / ``Infinity`` for
+    non-finite floats, and ``json.loads`` accepts them on the way in, so a client
+    (or a library caller) could place bytes in the ledger that no strict JSON
+    reader can parse: serde_json, Go's encoding/json and ``JSON.parse`` all
+    reject the line, while Python's lenient replay keeps reporting a healthy
+    chain. That is a silent cross-language verification failure, so the value is
+    refused at ingest instead — before the lock, like the other caller errors in
+    :meth:`commit_forensic`, so nothing is latched and no rollback is needed.
+
+    Walks dict/list/tuple so a non-finite float nested inside metadata is caught
+    too, and rejects values ``json.dumps`` cannot serialise at all (bytes,
+    ``datetime``, ``Decimal``) so a caller finds out at the call, not while the
+    ledger lock is held mid-commit.
+    """
+    if isinstance(value, bool) or value is None or isinstance(value, (int, str)):
+        return
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError(
+                f"{field} contains a non-finite float ({value!r}); the WAL must stay "
+                "valid RFC 8259 JSON and NaN/Infinity are not JSON numbers"
+            )
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise ValueError(f"{field} keys must be strings, got {type(key).__name__}")
+            _require_finite_json(item, field=f"{field}.{key}")
+        return
+    if isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            _require_finite_json(item, field=f"{field}[{index}]")
+        return
+    raise ValueError(
+        f"{field} contains {type(value).__name__}, which is not JSON-representable; "
+        "pass JSON-native types only"
+    )
+
+
 def _part11_annotation_token(signer_name: str, signature_meaning: str) -> str:
     """SHA-256 over both Part 11 annotation fields, as one payload field.
 
@@ -1195,6 +1239,7 @@ class CryptographicAuditLedger:
         params = {**(sampling_params or {})}
         if usage:
             params["usage"] = usage
+        _require_finite_json(params, field="sampling_params")
 
         req_hash = self._payload_digest(request_bytes, tenant_id)
         resp_hash = self._payload_digest(response_bytes, tenant_id) if response_bytes else ""
@@ -2281,7 +2326,7 @@ class CryptographicAuditLedger:
             A ticket for :meth:`_await_durable`, or ``None`` when the record was
             already made durable inline (the handle-less fallback path below).
         """
-        line = json.dumps(node.to_dict(), separators=(",", ":")) + "\n"
+        line = json.dumps(node.to_dict(), separators=(",", ":"), allow_nan=False) + "\n"
         nbytes = len(line.encode("utf-8"))
         ticket: int | None = None
         if self._wal_handle is not None:

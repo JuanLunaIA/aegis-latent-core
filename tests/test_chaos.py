@@ -221,6 +221,21 @@ class TestRedisFailure:
 # ── Upstream timeout scenarios ────────────────────────────────────────────────
 
 
+class _FailingStreamClient:
+    """AsyncClient stand-in whose stream() raises before any body is read.
+
+    forward_json reads the upstream body through stream() so the response cap
+    applies to the httpx path (REG-D27); a client-level failure still surfaces
+    from the same call site.
+    """
+
+    def __init__(self, error: Exception):
+        self._error = error
+
+    def stream(self, *args, **kwargs):
+        raise self._error
+
+
 class TestUpstreamTimeout:
     """Verify that upstream LLM timeout propagates as a 504 or 503, not a crash."""
 
@@ -232,9 +247,7 @@ class TestUpstreamTimeout:
         settings = AegisSettings()
         fwd = LLMForwarder(settings)
 
-        mock_client = AsyncMock()
-        mock_client.post = AsyncMock(side_effect=httpx.TimeoutException("timed out"))
-        fwd._client = mock_client
+        fwd._client = _FailingStreamClient(httpx.TimeoutException("timed out"))
 
         with pytest.raises(httpx.TimeoutException):
             await fwd.forward_json("/v1/chat/completions", {"model": "gpt-4"})
@@ -247,9 +260,7 @@ class TestUpstreamTimeout:
         settings = AegisSettings()
         fwd = LLMForwarder(settings)
 
-        mock_client = AsyncMock()
-        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
-        fwd._client = mock_client
+        fwd._client = _FailingStreamClient(httpx.ConnectError("Connection refused"))
 
         with pytest.raises(httpx.ConnectError):
             await fwd.forward_json("/v1/chat/completions", {"model": "gpt-4"})
@@ -262,9 +273,7 @@ class TestUpstreamTimeout:
         settings = AegisSettings()
         fwd = LLMForwarder(settings)
 
-        mock_client = AsyncMock()
-        mock_client.post = AsyncMock(side_effect=httpx.TimeoutException("timed out"))
-        fwd._client = mock_client
+        fwd._client = _FailingStreamClient(httpx.TimeoutException("timed out"))
 
         # Exhaust the failure threshold (default: 5).
         failure_count = settings.circuit_breaker_failure_threshold

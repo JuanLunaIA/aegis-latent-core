@@ -37,6 +37,12 @@ ALLOWLIST = REPO_ROOT / "scripts/import_reachability_allowlist.txt"
 
 MODULES = ("aegis.core.market_abuse_detector", "aegis.core.mifid_record_keeper")
 
+# AUD-23 / REG-D27 (AF-064): the sealed-segment module was named in no document
+# under docs/ while mifid_record_keeper's docstring asserted 17a-4 was "already
+# addressed" by it. Both halves are pinned here.
+WORM_MODULE = "aegis.core.worm_ledger"
+WORM_SOURCE = REPO_ROOT / "aegis/core/worm_ledger.py"
+
 
 def _text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
@@ -92,11 +98,19 @@ def test_unsupported_claims_register_carries_uc_056() -> None:
 
 
 def test_control_register_covers_the_new_claims_and_names_the_language() -> None:
+    """The range widened to CLM-105 in REG-D27; it must still start at CLM-103 and
+    cover every row the section added, or a new row can escape the phrases."""
     matrix = _text(MATRIX)
-    match = re.search(r"^\| `CLM-103`–`CLM-104` \|.*$", matrix, re.M)
-    assert match, "no control-register range covers CLM-103/CLM-104"
+    match = re.search(r"^\| `CLM-103`–`CLM-105` \|.*$", matrix, re.M)
+    assert match, "no control-register range covers CLM-103..CLM-105"
     row = match.group(0)
-    for phrase in ('"MiFID II compliant"', '"MAR compliant"', '"SMCR compliant"'):
+    for phrase in (
+        '"MiFID II compliant"',
+        '"MAR compliant"',
+        '"SMCR compliant"',
+        '"WORM compliant"',
+        '"17a-4 compliant"',
+    ):
         assert phrase in row, f"the register must forbid {phrase}"
     assert row.count("|") >= 5, "the range row must carry review date and owner"
 
@@ -123,13 +137,56 @@ def test_no_document_asserts_the_modules_satisfy_an_obligation() -> None:
         r"MAR compliant",
         r"market-abuse monitoring in place",
         r"satisfies Article 16",
+        r"WORM compliant",
+        r"17a-4 compliant",
+        r"satisfies Rule 17a-4",
+        r"immutable storage",
     )
     for path in (MATRIX, UC_REGISTER):
         body = _text(path)
-        # The control register quotes the phrases it forbids; those quotations are
-        # allowed. Anywhere else in the corpus, they are a claim.
-        body_without_register = re.sub(r"^\| `CLM-\d+`–`CLM-\d+` \|.*$", "", body, flags=re.M)
+        # Table rows are exempt: the control register quotes each phrase in order to
+        # forbid it, and a claim row may quote it to name the statement that would
+        # falsify the row. Prose is where a claim would be made, so prose is what
+        # this checks.
+        prose = re.sub(r"^\|.*$", "", body, flags=re.M)
         for pattern in forbidden:
-            assert not re.search(pattern, body_without_register, re.I), (
-                f"{path.name} asserts {pattern!r} outside the control register"
+            assert not re.search(pattern, prose, re.I), (
+                f"{path.name} asserts {pattern!r} in prose outside the table rows"
             )
+
+
+def test_worm_ledger_has_a_claim_row_with_its_own_boundary() -> None:
+    """AF-064: the module was named in no document under docs/ at all, so a
+    reader could not tell whether it was wired, compliant or dead code."""
+    row = _claim_row("CLM-105")
+    assert "IMPLEMENTED" in row, "CLM-105 lost its state"
+    assert "Not wired" in row, "CLM-105 lost its unwired boundary"
+    assert WORM_MODULE.replace(".", "/") + ".py" in row, "CLM-105 does not name the module"
+    assert "17a-4" in row.lower(), "CLM-105 lost the 17a-4 cross-reference"
+    # The module's own boundaries, which the row must not contradict.
+    source = _text(WORM_SOURCE)
+    assert "do not resist a privileged actor" in source
+    assert (
+        "do not\nestablish regulatory WORM media" in source
+        or "do not establish regulatory WORM media" in source
+    )
+
+
+def test_nothing_claims_17a4_is_already_addressed_by_the_worm_module() -> None:
+    """The claim AF-064 named, pinned where it was made."""
+    body = _text(REPO_ROOT / "aegis/core/mifid_record_keeper.py")
+    assert "already addressed by" not in body, (
+        "mifid_record_keeper again asserts that Rule 17a-4 is already addressed by "
+        "worm_ledger; nothing in this repository discharges that obligation"
+    )
+    assert "does not establish" in body
+    assert WORM_MODULE in body or "worm_ledger" in body
+
+
+def test_worm_module_is_still_unwired_by_the_repository_tool() -> None:
+    allowlist = _text(ALLOWLIST)
+    assert WORM_MODULE in allowlist, (
+        "worm_ledger left the reachability allowlist — it now has an import edge from a "
+        "documented entrypoint, so CLM-105's 'Not wired' boundary is wrong until rewritten"
+    )
+    importlib.import_module(WORM_MODULE)

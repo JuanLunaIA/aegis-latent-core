@@ -33,10 +33,12 @@ Security: backup files are created with 0o600 permissions (same as WAL).
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
 import shutil
+import tempfile
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -98,6 +100,37 @@ class WALBackupManager:
 
     # ── Public API ────────────────────────────────────────────────────────────
 
+    def _atomic_copy(self, src: str, dest: str, *, mode: int = 0o600) -> None:
+        """Copy *src* to *dest* through a temp file: fsync, rename, directory fsync.
+
+        ``shutil.copy2`` writes straight into the destination, so a copy that is
+        interrupted (crash, ``ENOSPC``, ``EIO``, SIGKILL) leaves the destination
+        truncated or half-written. For a restore that destination is the live WAL
+        — the replay authority — so a torn copy is evidence loss rather than a
+        transient error. The sequence below is the one already used for the MMR
+        checkpoint in :meth:`CryptographicAuditLedger._save_mmr_state`: temp file
+        in the same directory, flush + fsync, ``os.replace``, then fsync the
+        directory so the rename itself is durable.
+        """
+        directory = os.path.dirname(os.path.abspath(dest))
+        fd, tmp = tempfile.mkstemp(dir=directory, prefix=os.path.basename(dest) + ".tmp-")
+        try:
+            with os.fdopen(fd, "wb") as handle, open(src, "rb") as source:
+                shutil.copyfileobj(source, handle)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.chmod(tmp, mode)
+            os.replace(tmp, dest)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                os.unlink(tmp)
+            raise
+        dir_fd = os.open(directory, os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+
     def backup(
         self,
         source_path: str,
@@ -138,8 +171,7 @@ class WALBackupManager:
             backed_up: list[str] = []
             for src in source_files:
                 dest = os.path.join(backup_path, os.path.basename(src))
-                shutil.copy2(src, dest)
-                os.chmod(dest, 0o600)
+                self._atomic_copy(src, dest)
                 backed_up.append(os.path.basename(src))
 
             # The active WAL copy in the backup directory
@@ -258,8 +290,7 @@ class WALBackupManager:
                 dest_name = filename
                 dest = os.path.join(target_dir, dest_name)
                 if os.path.isfile(src):
-                    shutil.copy2(src, dest)
-                    os.chmod(dest, 0o600)
+                    self._atomic_copy(src, dest)
 
             # Final verification on restored files
             _, _, restored_valid, restore_err = self._verify_wal(target_path)
