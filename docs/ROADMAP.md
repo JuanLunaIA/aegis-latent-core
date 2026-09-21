@@ -338,6 +338,12 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
   - **Proposed solution:** Decide the canonical type-check scope once: add `scripts/` and `tools/` to a mypy job (start with `--strict` on the two directories that already pass, and stage the remainder), annotate `_split_row`'s locals, and add the directory list to the same gate that `AUD-18` reconciles for the formatter.
   - **Estimated effort:** S (2-3 h; the annotation is one line, the scope decision is the work)
 
+- [ ] **AUD-30 [P3] — Doc gate false positive: a decimal's last digit reads as a `v4` token in the publication rule**
+  - **Affected files:** tools/docs/verify_documentation.py:126-138 (`v4 external publication or release` rule); reproduced on docs/FAQ_TECHNICAL.md:118
+  - **Root cause:** The rule's trigger is `\bv?4(?:\.0(?:\.0)?)?\b` within 100 characters of `published|released`. `\b4\b` matches the final digit of an ordinary measurement — "32.4 s", "12.4 ms" — so any sentence combining a decimal that ends in 4 with the word "published" is an ERROR in strict mode even when nothing about a release is claimed. Found while sweeping the retracted backpressure pair (`REG-D10`): the corrected row was rejected for "32.4 s, ... (as previously published)".
+  - **Proposed solution:** Narrow the trigger to version-shaped tokens (`v4(?:\.[0-9]+)*`, `4\.0(?:\.0)?`, `version 4`) and keep a test for the intended catch (`tests/test_documentation_verifier.py:56` already asserts "Aegis v4.0.0 has been published and released." must fail). Do not relax the prohibition itself.
+  - **Estimated effort:** S (1-2 h incl. the test)
+
 ## Related documents
 
 - [`README.md`](../README.md)

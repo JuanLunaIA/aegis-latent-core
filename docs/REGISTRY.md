@@ -236,6 +236,7 @@ A deep forensic audit (2026-09-21; full record in [`AUDIT_REPORT_v5.0.1_PREP.md`
 
 | REG-D33 | `[AUD]` | CODE | P3 | gate scripts are outside every type-check scope | **OPEN** — `AUD-29` | Opened by the `REG-D10` work itself: adding the retracted-figure check to `scripts/verify_claims.py` showed that `mypy --strict` fails on that file at HEAD (an un-annotated local in `_split_row`) and that no CI job type-checks `scripts/` or `tools/`, so the gate programs that police every claim cannot be policed by the type checker. Ticket `AUD-29` in [Roadmap](../docs/ROADMAP.md) § Audit backlog. |
 ## 5. Burn-down
+| REG-D34 | `[AUD]` | CODE | P3 | doc-gate publication rule matches a decimal's last digit as `v4` | **OPEN** — `AUD-30` | Opened by the `REG-D10` sweep itself: the corrected `docs/FAQ_TECHNICAL.md` row was rejected in strict mode for the text "32.4 s, 2 ms injected `fsync` delay (as previously published)", because the rule's trigger `\bv?4(?:\.0(?:\.0)?)?\b` matches a bare `4`. The claim prohibition is correct; the trigger is too wide. Ticket `AUD-30` in [Roadmap](../docs/ROADMAP.md) § Audit backlog. |
 
 | Wave | Total | FIXED | VERIFIED | DOCUMENTED | BLOCKED | WONT-FIX | open (`SEED`) |
 |---|---|---|---|---|---|---|---|

@@ -54,11 +54,17 @@ TEST (`tests/test_retracted_figure_gate.py`, 7 tests)
 BATTERY ON THIS COMMIT'S CONTENT (recorded before the final amend; the amend changed only this file)
 $ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
 6896 passed, 118 skipped in 85.33s (0:01:25)   [recorded run, exit 0]
-  (An earlier attempt of the same command recorded "6788 passed, 118 skipped,
-   5 errors in 85.01s" while other heavy jobs were still finishing on this
-   4-core/3.7 GB host; it was not reproducible — the recorded run above is a
-   clean re-run at the same commit, and the earlier attempt's 5 collection
-   errors left no failing test behind.)
+  (Runs of this command started from the assistant's Python execution kernel
+   record "6788 passed, 118 skipped, 5 errors": that kernel exports
+   PYTHONPATH=/home/luna/.hermes/cache/scratch/hermes_kernel_<id>:/home/luna/.hermes/hermes-agent,
+   which leaks into the pytest subprocess and makes five modules fail to import
+   (tests/test_documentation_verifier.py, test_iq_oq.py, test_threat_lab.py,
+   test_visualizer_app.py, test_wal_commit_span.py — 108 tests never collected).
+   Measured as a controlled pair: same command, same commit, PYTHONPATH unset ->
+   6896 passed, 118 skipped, exit 0; with the kernel PYTHONPATH injected ->
+   6788 passed, 118 skipped, 5 errors. The clean figure is the shell run, which
+   is what the battery convention uses. The contamination is in the harness,
+   not in the repository.)
 $ .venv/bin/bandit -r aegis/ aegis_server/ -c pyproject.toml -lll   -> Medium: 0, High: 0
 $ .venv/bin/python scripts/verify_import_reachability.py            -> PASS (no undeclared orphans, no stale roadmap entries)
 $ .venv/bin/python scripts/verify_release_contract.py --root .      -> 14 synchronized anchors at 5.0.0
@@ -74,3 +80,24 @@ GENERATED-ARTIFACT NOTE
   failed on the first post-sweep suite run. Regenerated with
   `python scripts/generate_ai_context_manifest.py`; the diff is exactly those
   three sha256/size pairs; the test passes again (11 passed).
+
+FOLLOW-UP AT CLOSURE (the sweep had to satisfy the strict doc gate)
+  With the sweep in place, `tools/docs/verify_documentation.py --root . --strict`
+  exited 1 on the corrected row itself:
+    docs/FAQ_TECHNICAL.md:118 — "unqualified v4 external publication or release
+    claim is prohibited in strict mode"
+  Cause: that rule's trigger is `\bv?4(?:\.0(?:\.0)?)?\b` within 100 characters
+  of `published|released`, and the bare `4` of "32.4 s" matched next to the
+  phrase "(as previously published)" in the same row. The prohibition is right;
+  the trigger is too wide, so the row was rephrased to "(as earlier reported)"
+  AND the false-positive class was registered instead of patched inside this
+  REG: `AUD-30` / `REG-D34` (the same discipline as `AUD-29` / `REG-D33`, opened
+  because this REG's work surfaced a gap outside its scope).
+
+FINAL GATES AT CLOSURE
+  $ .venv/bin/python tools/docs/verify_documentation.py --root . --strict  -> exit 0, PASS, warnings 0
+  $ .venv/bin/python scripts/verify_claims.py --root .                     -> PASS (102 claims, 0 findings)
+  $ bash scripts/verify_links.sh --root .                                  -> PASS (1357 links resolved)
+  $ .venv/bin/python scripts/verify_docs.py --root .                       -> PASS (0 findings)
+  $ .venv/bin/python -m pytest tests/ -n auto -q                           -> 6896 passed, 118 skipped in 87.76s (0:01:27), exit 0 (shell, PYTHONPATH unset)
+  $ .venv/bin/python -m pytest tests/test_ai_context.py -q                 -> 11 passed (manifest regenerated again after the rephrase)
