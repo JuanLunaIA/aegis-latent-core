@@ -4,7 +4,7 @@ These are **screenshot-ready** snapshots of the live dashboard
 (`tools/visualizer/static/index.html`), pre-populated with realistic mock data
 so the project can be shown as if it were running against a busy production
 deployment (>1B audit nodes, multi-provider traffic, live WAF blocks, sealed
-compliance bundles).
+evidence bundles for compliance programmes).
 
 Every file is the *exact same UI* as the live dashboard — it just boots from an
 embedded dataset instead of calling the API, so what you see is faithful to the
@@ -23,7 +23,7 @@ internet connection is used only to load the Chart.js / Mermaid CDNs).
 | `07-waf.html` | WAF & Limits — injection blocks, rate-limit pressure |
 | `08-audit.html` | Audit Chain — Merkle root, node explorer, growth |
 | `09-forensics.html` | Forensics — entropy / KL, static security scan |
-| `10-compliance.html` | Compliance — SOC2 / HIPAA sealed bundles |
+| `10-compliance.html` | Compliance inputs — sealed bundles an assessor may evaluate (no certification) |
 | `11-architecture.html` | Architecture — topology, lifecycle, data flow |
 | `12-code.html` | Code Map — Python / Rust symbol explorer |
 

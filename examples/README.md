@@ -32,7 +32,7 @@ each step:
 | 2 | Every request appends exactly one signed node | `chain length` grows 1 → 5, one per request |
 | 3 | The full chain verifies | `GET /v1/audit/integrity` → `valid=true` |
 | 4 | Tampering is detected | mutate one node field → `verify_integrity()` flags the exact index |
-| 5 | Compliance export is real and re-verifiable | seal a SOC2/HIPAA bundle, then `verify_bundle()` re-checks `chain_hash` + signature |
+| 5 | Compliance export is real and re-verifiable | seal an evidence bundle for a SOC 2 / HIPAA programme (technical inputs an assessor may evaluate, not a certification), then `verify_bundle()` re-checks `chain_hash` + signature |
 
 Expected final line:
 

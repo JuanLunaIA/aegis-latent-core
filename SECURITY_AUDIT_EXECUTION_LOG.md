@@ -127,7 +127,7 @@ The codebase is architecturally aligned with README v2.3.0 specifications. Prior
 | `/health` + `/ready` deep probes | `aegis/proxy/app.py` | ✅ IMPLEMENTED | |
 | mTLS server + upstream client certs | `app.main()`, `forwarder.start()` | ✅ IMPLEMENTED | FIX-BLOCKER-03 |
 | mTLS auth bypass when `mtls_required=False` | `aegis/proxy/dependencies.py` | ✅ BY DESIGN | Documented in SECURITY.md |
-| Compliance export SOC2/HIPAA | `aegis_server/compliance/exporter.py` | ✅ IMPLEMENTED | Enterprise layer only |
+| Compliance export (SOC 2 / HIPAA technical inputs an assessor may evaluate; no certification) | `aegis_server/compliance/exporter.py` | ✅ IMPLEMENTED | Enterprise layer only |
 | LSM advisory mode (no crash) | `aegis/core/lsm_guard.py`, `app.py` lifespan | ✅ IMPLEMENTED | FIX-BLOCKER-01 |
 | Forensics visualizer (local only) | `tools/visualizer/` | ✅ IMPLEMENTED | |
 | Zero forensic latency (background commit) | chat + completions endpoints | ✅ FIXED | completions was PARTIAL |

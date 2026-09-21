@@ -22,7 +22,7 @@ honestly when runtime telemetry is not connected.
 | **WAF & Limits** | Top injection patterns, recent blocked requests, rate-limit pressure per tenant |
 | **Audit Chain** | Merkle root, signature-scheme distribution, chain-growth chart, searchable node explorer |
 | **Forensics** | Token-level Shannon entropy, KL divergence, and the static security scan (`tools/forensic/report.json`) |
-| **Compliance** | SOC2 / HIPAA sealed export bundles with offline re-verification status |
+| **Compliance inputs** | Sealed export bundles built as technical inputs for SOC 2 / HIPAA programmes (no certification), with offline re-verification status |
 | **Architecture** | Topology, request lifecycle, and data-flow Mermaid diagrams + signed-node layout |
 | **Code Map** | Python / Rust symbol explorer derived live from the working tree |
 

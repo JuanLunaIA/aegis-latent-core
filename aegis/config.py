@@ -130,7 +130,8 @@ class AegisSettings(BaseSettings):
     api_key_scopes: str = Field(
         default="",
         description=(
-            "Semicolon-separated HIPAA minimum-necessary scope restrictions per API key. "
+            "Semicolon-separated HIPAA minimum-necessary scope restrictions per API key "
+            "(a scoping control, not a compliance determination). "
             "Format: 'key1:scope1,scope2;key2:scope3'. "
             "Valid scopes: proxy:completions, audit:read, audit:export, audit:analytics. "
             "With legacy unmapped-principal compatibility enabled, keys not listed here receive "
@@ -899,7 +900,7 @@ class AegisSettings(BaseSettings):
             "to request message content before forwarding to the upstream LLM, and to response "
             "content before returning to the client. Detects PANs (Luhn + IIN gate), "
             "CVV/CVC security codes (in context), and Track 1/2 magnetic-stripe data. "
-            "PANs are masked to last-4 per PCI-DSS §3.4; CVV and track data are fully redacted. "
+            "PANs are masked to last-4 following the PCI-DSS §3.4 masking requirement — a technical control, not a PCI certification; CVV and track data are fully redacted. "
             "Enable for PCI-DSS-scoped deployments (payments, e-commerce, financial services)."
         ),
     )

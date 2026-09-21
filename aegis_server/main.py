@@ -8,7 +8,7 @@ This module wires together every sub-system of the enterprise layer:
 
     StorageProvider  ──► audit node persistence (SQLite / PostgreSQL / DynamoDB)
     SignerProvider   ──► signing (HMAC-SHA256 / Vault Transit)
-    ComplianceExporter ─► SOC2/HIPAA sealed bundles
+    ComplianceExporter ─► sealed bundles of SOC 2 / HIPAA assessor inputs
     BackgroundTasks  ──► optional response enrichment only
 
 Request lifecycle (non-streaming)
@@ -240,7 +240,8 @@ def create_app(settings: EnterpriseSettings | None = None) -> FastAPI:
         description=(
             "High-performance, drop-in OpenAI-compatible LLM proxy with "
             "cryptographic audit chain, real-time entropy forensics, and "
-            "SOC2 / HIPAA compliance exports."
+            "SOC 2 / HIPAA evidence exports (assessor inputs; "
+            "no certification is claimed)."
         ),
         # MEDIUM-02 fix: OpenAPI schema hidden in production.
         # Set AEGIS_DEBUG_MODE=true only in local development.
@@ -723,8 +724,9 @@ def _enterprise_router():
             "Fetches the requested range of audit nodes, computes a canonical "
             "SHA-256 chain hash, signs it via the configured signer, and writes "
             "a sealed JSON bundle to the compliance export directory.  "
-            "The bundle satisfies SOC2 Type II CC6.1 / CC7.2 and HIPAA 45 CFR "
-            "§164.312(b) audit evidence requirements."
+            "The bundle contains audit evidence an assessor may evaluate against SOC 2 "
+            "Type II CC6.1 / CC7.2 and HIPAA 45 CFR §164.312(b). It establishes "
+            "no certification."
         ),
     )
     async def trigger_compliance_export(

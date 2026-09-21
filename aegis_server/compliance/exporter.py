@@ -2,9 +2,12 @@
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 """
-aegis_server.compliance.exporter — SOC2 Type II and HIPAA compliance export engine.
+aegis_server.compliance.exporter — SOC 2 Type II / HIPAA evidence export engine.
 
-Produces cryptographically sealed audit bundles that satisfy:
+Produces cryptographically sealed audit bundles whose contents are technical
+inputs an assessor may evaluate. It establishes no certification and no compliance
+result; the control mappings below say which evidence the bundle carries, not
+that an obligation is discharged:
 - SOC2 Type II CC6.1 / CC7.2 — audit trail completeness, tamper evidence.
 - HIPAA 45 CFR §164.312(b) — audit controls for systems handling PHI.
 - ISO 27001 A.12.4 — logging and monitoring evidence.

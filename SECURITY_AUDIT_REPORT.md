@@ -69,7 +69,7 @@ Notes for sensitive audiences
 -----------------------------
 
 - For governments / military / medical deployments, consider an HSM or KMS for `AEGIS_SIGNING_KEY` and strictly controlled key rotation and auditing.
-- For forensic and legal admissibility, record full chain of custody (timestamps, hashes, signer identity) and store signed SBOMs with release artifacts.
+- For forensic use and any later admissibility question — a judicial determination, not a property of this software — record full chain of custody (timestamps, hashes, signer identity) and store signed SBOMs with release artifacts.
 
 Actions taken in this run
 -------------------------

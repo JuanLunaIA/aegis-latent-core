@@ -171,6 +171,14 @@ INTERNAL_MARKER = "**INTERNAL DOCUMENT — NOT FOR EXTERNAL DISTRIBUTION**"
 
 #: Prohibited assurance and marketing language. Matched case-insensitively on
 #: prose only, and only when asserted (see ``_is_negated``).
+#:
+#: The hyphenated, adjectival and ``meets/satisfies X`` forms were added when
+#: AUD-22/REG-D26 found the class alive at surfaces that carried the claim as a
+#: *label* ("SOC2 / HIPAA bundle", "hipaa-ready") rather than as a sentence the
+#: original list would match. A bare "soc 2" is deliberately NOT a phrase: the
+#: corpora that legitimately discuss the standard are claim-control documents, and
+#: flagging the subject would punish them for naming it. What is forbidden is the
+#: assertion, including its compressed forms.
 PROHIBITED_PHRASES = (
     "fully compliant",
     "legally admissible",
@@ -185,11 +193,31 @@ PROHIBITED_PHRASES = (
     "market-leading",
     "top #1",
     "soc 2 certified",
-    "iso 27001 certified",
+    "soc2 certified",
+    "soc 2 compliant",
+    "soc2 compliant",
+    "soc 2 ready",
+    "soc2 ready",
+    "iso 27001 compliant",
     "hipaa compliant",
+    "hipaa certified",
+    "hipaa ready",
+    "hipaa-ready",
     "gdpr compliant",
+    "gdpr certified",
+    "gdpr-compliant",
     "fedramp authorized",
+    "fedramp compliant",
     "pci compliant",
+    "pci-dss compliant",
+    "court-admissible",
+    "admissible in court",
+    "satisfies hipaa",
+    "satisfies gdpr",
+    "satisfies soc 2",
+    "meets hipaa",
+    "meets soc 2",
+    "audit-proof",
     "guarantees prevention",
     "guaranteed prevention",
     "removes all pii",

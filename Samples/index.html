@@ -541,7 +541,7 @@
     { id:'alerts',       title:'Threat Examples', sub:'Illustrative blocked-event examples — static sample', icon:'bell',   sec:'Security' },
     { id:'audit',        title:'Audit Chain',     sub:'Merkle chain-of-custody & node explorer',   icon:'link', sec:'Forensics' },
     { id:'forensics',    title:'Forensics',       sub:'Entropy / KL analysis & security scan',     icon:'scan', sec:'Forensics' },
-    { id:'compliance',   title:'Compliance',      sub:'SOC2 / HIPAA sealed export bundles',        icon:'doc', sec:'Governance' },
+    { id:'compliance',   title:'Compliance',      sub:'Sealed export bundles — SOC 2 / HIPAA assessor inputs',        icon:'doc', sec:'Governance' },
     { id:'architecture', title:'Architecture',    sub:'System topology & request lifecycle',       icon:'flow', sec:'Governance' },
     { id:'code',         title:'Code Map',        sub:'Python / Rust symbol explorer',             icon:'code', sec:'Governance' },
   ];
@@ -976,7 +976,7 @@
         ${kpi('Sealed Bundles', fmt.int(bundles.length), { accent: COLORS.blue })}
         ${kpi('Nodes Exported', fmt.int(bundles.reduce((s,b)=>s+b.nodes,0) || null), { accent: COLORS.purple })}
         ${kpi('All Verified', bundles.length ? `<span style="color:var(--green)">${bundles.every(b=>b.integrity==='VALID')?'YES':'NO'}</span>` : '—', { accent: COLORS.green, delta: 're-verifiable offline' })}
-        ${kpi('Frameworks', 'SOC2 · HIPAA', { accent: COLORS.cyan })}
+        ${kpi('Frameworks', 'SOC 2 · HIPAA (inputs)', { accent: COLORS.cyan })}
       </div>
       <div style="height:16px"></div>
       ${bundles.length ? card('Export bundles', `<div class="tbl-wrap"><table class="tbl">
@@ -1419,7 +1419,7 @@
         Ent["Entropy / KL"] --> MMR["Merkle Mountain Range · Rust"]
         MMR --> Sign["ML-DSA signature"] --> WAL["Signed WAL"]
       end
-      WAL --> Store["Storage · sqlite/postgres/dynamo"] --> Comp["SOC2/HIPAA export"]
+      WAL --> Store["Storage · sqlite/postgres/dynamo"] --> Comp["SOC 2 / HIPAA evidence export"]
       style Proxy fill:#1e1b4b,stroke:#4338ca,color:#e0e7ff
       style Forensics fill:#042f2e,stroke:#0f766e,color:#ccfbf1
       style Up fill:#1c1917,stroke:#44403c,color:#f5f5f4
