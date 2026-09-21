@@ -1,0 +1,159 @@
+REG-D04 - DOCUMENTED: the `zk-spartan` feature's x86-64 build executes ADX
+instructions, so its circuit tests crash with SIGILL on a CPU that predates ADX.
+
+Found while running the seal battery's Rust legs (2026-09-21), not from a seed.
+The battery's Rust step is: `cargo test --release` (default features), the two
+`--features zk-spartan` legs, and
+`cargo clippy --locked --all-targets --all-features -- -D warnings`.
+
+=== 1. What was observed ===
+
+Step 1, default features (exit 0):
+
+=== cargo test --release (default features) [LD_LIBRARY_PATH set] ===
+    Finished `release` profile [optimized] target(s) in 14.84s
+     Running unittests src/lib.rs (target/release/deps/aegis_rust-04135bebab7844e0)
+running 67 tests
+     Running tests/block_buffer_panic_safety.rs (target/release/deps/block_buffer_panic_safety-d84394dd0da45bf8)
+running 3 tests
+     Running tests/zk_mmr_cost.rs (target/release/deps/zk_mmr_cost-e977f641665f3124)
+running 0 tests
+     Running tests/zk_mmr_end_to_end.rs (target/release/deps/zk_mmr_end_to_end-c1b7794e5f6f35a7)
+running 0 tests
+running 0 tests
+
+Step 2, the zk-spartan unit tests (exit 101):
+
+CARGO_TEST2_EXIT=0
+=== cargo test --release --features zk-spartan --lib zk_mmr ===
+    Finished `release` profile [optimized] target(s) in 3m 48s
+     Running unittests src/lib.rs (target/release/deps/aegis_rust-3c6abae0059acd0a)
+running 16 tests
+error: test failed, to rerun pass `--lib`
+Caused by:
+  process didn't exit successfully: `/home/luna/aegis-latent-core/aegis_rust_v2/target/release/deps/aegis_rust-3c6abae0059acd0a zk_mmr` (signal: 4, SIGILL: illegal instruction)
+CARGO_ZK_LIB2_EXIT=101
+=== cargo test --release --features zk-spartan --test zk_mmr_end_to_end ===
+
+Step 3, the zk-spartan end-to-end target (exit 101):
+
+=== cargo test --release --features zk-spartan --test zk_mmr_end_to_end ===
+    Finished `release` profile [optimized] target(s) in 4m 27s
+     Running tests/zk_mmr_end_to_end.rs (target/release/deps/zk_mmr_end_to_end-f17258e6ae4365f2)
+running 7 tests
+error: test failed, to rerun pass `--test zk_mmr_end_to_end`
+Caused by:
+  process didn't exit successfully: `/home/luna/aegis-latent-core/aegis_rust_v2/target/release/deps/zk_mmr_end_to_end-f17258e6ae4365f2` (signal: 4, SIGILL: illegal instruction)
+CARGO_ZK_E2E2_EXIT=101
+
+Clippy: exit 0 (all targets, all features, `-D warnings`).
+
+A first failure mode was ruled out before this one: the very first invocation exited
+127 with `libpython3.11.so.1.0: cannot open shared object file` because pyo3 links
+the uv-managed CPython, whose lib directory is not on the default loader path. With
+`LD_LIBRARY_PATH=/home/luna/.local/share/uv/python/cpython-3.11.11-linux-x86_64-gnu/lib`
+the default-feature step ran green and the SIGILL underneath became visible. The two
+are different failure modes and both are recorded; the LD_LIBRARY_PATH need is a
+property of this host's uv-managed interpreter, not of the repository.
+
+=== 2. Bisect: which tests crash ===
+
+$ for t in <the 16 zk_mmr unit tests>; do timeout 120 $BIN zk_mmr::tests::$t --exact; done
+
+a_blocked_leaf_cannot_be_proved_passed                                 SIGILL (128+4)
+a_flipped_direction_is_refused                                         SIGILL (128+4)
+a_leaf_outside_the_tree_is_refused                                     SIGILL (128+4)
+a_leaf_with_no_recorded_verdict_cannot_be_proved_passed                SIGILL (128+4)
+a_multi_peak_tree_verifies_without_disclosing_which_peak               SIGILL (128+4)
+a_substituted_peak_set_is_refused                                      SIGILL (128+4)
+a_tampered_sibling_is_refused                                          SIGILL (128+4)
+a_tree_the_prover_built_themselves_commits_to_a_different_root         SIGILL (128+4)
+a_witness_that_disagrees_with_the_shape_is_refused_before_synthesis    ok (rc=0)
+an_honest_witness_satisfies_the_circuit                                SIGILL (128+4)
+reordering_the_peaks_moves_the_root                                    ok (rc=0)
+root_packing_separates_digests_that_differ_anywhere                    ok (rc=0)
+the_circuit_commits_to_the_root_the_tree_actually_has                  ok (rc=0)
+the_leaf_the_circuit_commits_to_carries_the_verdict                    ok (rc=0)
+the_shape_is_carried_on_the_circuit                                    ok (rc=0)
+the_suffix_is_the_canonical_recorded_verdict                           ok (rc=0)
+
+Result: 9 of 16 crash with SIGILL (rc = 128+4); 7 pass. The discriminator is the test
+helper `is_satisfied(`: every crashing test calls it, and no test that avoids it
+crashes (checked against the test bodies in `aegis_rust_v2/src/zk_mmr.rs`).
+
+=== 3. Where the illegal instruction is ===
+
+$ gdb -batch -ex "handle SIGILL stop" -ex run -ex "bt 6" -ex "x/4i $pc-8" -- \
+      $BIN zk_mmr::tests::an_honest_witness_satisfies_the_circuit --exact
+
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <https://debuginfod.artixlinux.org>
+Enable debuginfod for this session? (y or [n]) [answered N; input not from terminal]
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+running 1 test
+[New Thread 0x7ffff61ff6c0 (LWP 6522)]
+Thread 2 "zk_mmr::tests::" received signal SIGILL, Illegal instruction.
+[Switching to Thread 0x7ffff61ff6c0 (LWP 6522)]
+0x00005555556722e1 in <halo2curves::pasta::fq::Fq as core::convert::From<u64>>::from ()
+#0  0x00005555556722e1 in <halo2curves::pasta::fq::Fq as core::convert::From<u64>>::from ()
+#1  0x00005555555cf99c in <bellpepper::gadgets::uint32::UInt32>::addmany::<halo2curves::pasta::fq::Fq, bellpepper_core::constraint_system::Namespace<halo2curves::pasta::fq::Fq, bellpepper_core::util_cs::test_cs::TestConstraintSystem<halo2curves::pasta::fq::Fq>>, bellpepper_core::constraint_system::Namespace<halo2curves::pasta::fq::Fq, bellpepper::gadgets::multieq::MultiEq<halo2curves::pasta::fq::Fq, bellpepper_core::constraint_system::Namespace<halo2curves::pasta::fq::Fq, bellpepper_core::util_cs::test_cs::TestConstraintSystem<halo2curves::pasta::fq::Fq>>>>> ()
+#2  0x00005555555dd9a6 in bellpepper::gadgets::sha256::sha256_compression_function::<halo2curves::pasta::fq::Fq, bellpepper_core::constraint_system::Namespace<halo2curves::pasta::fq::Fq, bellpepper_core::util_cs::test_cs::TestConstraintSystem<halo2curves::pasta::fq::Fq>>> ()
+#3  0x00005555555e2453 in bellpepper::gadgets::sha256::sha256::<halo2curves::pasta::fq::Fq, bellpepper_core::constraint_system::Namespace<halo2curves::pasta::fq::Fq, bellpepper_core::util_cs::test_cs::TestConstraintSystem<halo2curves::pasta::fq::Fq>>> ()
+#4  0x00005555556028bf in aegis_rust::zk_mmr::tests::is_satisfied ()
+#5  0x000055555560a434 in aegis_rust::zk_mmr::tests::an_honest_witness_satisfies_the_circuit ()
+   0x5555556722d9 <_RNvXsK_NtNtCsgGvdIGkgmJj_11halo2curves5pasta2fqNtB5_2FqINtNtCsgxBkk5gSRhY_4core7convert4FromyE4from+185>:	xor    %r15,%r15
+   0x5555556722dc <_RNvXsK_NtNtCsgGvdIGkgmJj_11halo2curves5pasta2fqNtB5_2FqINtNtCsgxBkk5gSRhY_4core7convert4FromyE4from+188>:	mulx   (%rcx),%r10,%r15
+=> 0x5555556722e1 <_RNvXsK_NtNtCsgGvdIGkgmJj_11halo2curves5pasta2fqNtB5_2FqINtNtCsgxBkk5gSRhY_4core7convert4FromyE4from+193>:	adcx   %r11,%r10
+   0x5555556722e7 <_RNvXsK_NtNtCsgGvdIGkgmJj_11halo2curves5pasta2fqNtB5_2FqINtNtCsgxBkk5gSRhY_4core7convert4FromyE4from+199>:	mov    %r15,%r11
+
+Faulting instruction: `adcx %r11,%r10`, inside
+`<halo2curves::pasta::fq::Fq as core::convert::From<u64>>::from`, reached from
+`bellpepper::gadgets::uint32::UInt32::addmany` <-
+`bellpepper::gadgets::sha256::sha256_compression_function` <- `sha256` <-
+`aegis_rust::zk_mmr::tests::is_satisfied` <- `an_honest_witness_satisfies_the_circuit`.
+`adcx` is ADX (multi-precision add-carry), introduced with Intel Broadwell (2014) and
+AMD Excavator; the sibling `mulx` (BMI2) immediately before it executed fine - this
+host has BMI2, not ADX.
+
+=== 4. Host ===
+
+--- cpu adx check ---
+model name	: Intel(R) Core(TM) i5-4300U CPU @ 1.90GHz
+adx: ABSENT (instruction set lacks ADX; introduced with Broadwell 2014)
+
+=== 5. Why the binary contains ADX code at all ===
+
+`aegis_rust_v2/Cargo.toml`'s `zk-spartan` -> `spartan2 v0.9.0`, whose
+`[target.'cfg(target_arch = "x86_64")'.dependencies.halo2curves]` declares
+`features = ["std", "bits", "derive_serde", "asm"]` - `asm` is hard-enabled on
+x86-64, non-optional, and nothing in that chain checks `is_x86_feature_detected!`.
+`halo2curves`' `asm = ["halo2derive/asm", "std"]` makes `halo2derive` emit
+`adcx`/`adox` limb-4 assembly for field arithmetic
+(`halo2derive-0.2.0/src/field/asm/limb4.rs`), reached from the `impl_field!` macro
+at `halo2curves-0.10.0/src/pasta/fq.rs:17`. Confirmed with
+`cargo tree --features zk-spartan -e features -i halo2curves`:
+`halo2curves feature "asm" <- spartan2 v0.9.0`.
+
+=== 6. Scope - what this does and does not affect ===
+
+- Default builds never compile it: `zk-spartan` is opt-in, is not in
+  `default = ["pqclean-pqc"]`, and nothing on the gateway request path reaches it.
+- CI runs these exact commands on ADX-capable runners and passes: the `Rust
+  Extension` job in `.github/workflows/ci.yml` is part of CI run #582 at `dc20a2c`
+  (workflow conclusion Success, job duration 8m 59s), read from the public Actions
+  page on 2026-09-21.
+- A user on a pre-ADX x86-64 CPU who enables `zk-spartan` gets a crash, not a
+  refusal. That is the boundary now published in `docs/BOUNDARIES.md` (Evidence
+  boundaries, "Zero-knowledge circuit build on x86-64").
+
+=== 7. Disposition ===
+
+DOCUMENTED. Not repaired here: the `asm` selection lives in `spartan2 0.9.0`'s own
+dependency declaration, so changing it means patching or re-vendoring a dependency
+whose lock entries are synchronized release anchors - a release-level act with its
+own readback (`REG-028`'s tool), not a bounded fix. Revisit path: upstream runtime
+dispatch in `spartan2`/`halo2curves`, or a documented CPU floor for the feature.
+
+This row was created at the seal (2026-09-21) because the battery surfaced it; it is
+terminal (`DOCUMENTED`) at creation because the boundary ships in the same change.
