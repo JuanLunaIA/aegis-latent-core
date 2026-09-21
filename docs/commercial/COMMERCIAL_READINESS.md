@@ -31,7 +31,7 @@ Two columns. The left is what can be sold today to a buyer who checks; the right
 | **Self-hosted custody** | Read the source. No telemetry, no vendor endpoint, no managed service | `LICENSE` |
 | **Open-source core** | Complete, AGPLv3, no feature withheld by a runtime check | `ENTERPRISE_PRICING_GUIDE.md` §What the free tier keeps |
 | **Embedded mode** | `aegis.wrap(client)` — same controls in-process, with its stated boundary | `CLM-061` |
-| **A governed claim surface** | 96 claims with locators; 42 published non-claims; CI rejects overclaiming prose | `CLAIMS_MATRIX.md`, `UNSUPPORTED_CLAIMS.md` |
+| **A governed claim surface** | 104 claims with locators (`verify_claims.py`: 104 claims, 0 findings, measured 2026-09-21); 67 published non-claims (`UC-001`…`UC-067`); CI rejects overclaiming prose | `CLAIMS_MATRIX.md`, `UNSUPPORTED_CLAIMS.md` |
 | **A paid pilot** | Fixed scope, written acceptance criteria, real failure tests | [Pilot Proposal](SALES_KIT/PILOT_PROPOSAL.md) |
 
 **That column is not small.** It is enough to run a real evaluation and a paid pilot, and it is more independently checkable than most vendors in this category offer. What it is not is enough to clear an enterprise procurement gate.

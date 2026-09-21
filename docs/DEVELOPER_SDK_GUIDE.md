@@ -2,7 +2,7 @@
 
 **Source version:** `5.0.0`
 **Package identities:** Python `aegis-latent-sdk` / import `aegis_sdk`; npm `aegis-latent-sdk`
-**Status:** the checked-out `v5.0.0` source baseline exists; no `5.0.0` artifact is published anywhere, so nothing in this guide is installable at `5.0.0` yet. The most recent published release is `4.1.2`, on PyPI (`aegis-latent-core` and `aegis-latent-sdk`) and npm (`aegis-latent-sdk`), read back on 2026-09-04. This guide does not establish trusted-publishing provenance, production fitness, or provider certification.
+**Status:** the checked-out `v5.0.0` source baseline exists, and the SDKs are published at `5.0.0`: PyPI `aegis-latent-sdk` `5.0.0` and npm `aegis-latent-sdk` `5.0.0`, read back 2026-09-16. **The gateway distribution `aegis-latent-core` is not on PyPI at `5.0.0`** — `4.1.2` is still what `pip install aegis-latent-core` gets — so a gateway installed from PyPI is `4.1.2` while this tree is `5.0.0`. Read back on 2026-09-04. This guide does not establish trusted-publishing provenance, production fitness, or provider certification.
 
 ## 1. Scope
 
@@ -33,7 +33,7 @@ that produces evidence is a different package, `aegis-latent-core`, which
 carries both the gateway CLIs and the embedded `aegis.wrap()` entry point; see
 [Developer quickstart](DEVELOPER_QUICKSTART.md).
 
-The npm version history for `aegis-latent-sdk` is `4.0.0` then `4.1.2` — the
+The npm version history for `aegis-latent-sdk` is `4.0.0`, `4.1.2`, then `5.0.0` — the
 `4.1.1` publish failed and was never rerun, so the gap is a publishing history
 rather than a yanked release.
 

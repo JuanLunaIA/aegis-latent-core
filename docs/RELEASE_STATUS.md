@@ -156,7 +156,7 @@ Retained as the record of what that version's surfaces actually carried, and sti
 
 Run these yourself. Do not accept this document's table as evidence of the current state — it records what was observed on the date above.
 
-These commands target `v4.1.2`, the most recent published release; nothing is published for the `5.0.0` source baseline, so there is nothing to read back for it. The `4.1.1` values in §1.2 and the `4.0.2` values in §1.4 came from the same commands run against those tags on 2026-09-03 and 2026-09-02; substitute the tag to reproduce them.
+These commands target the published surfaces. `v5.0.0` — the checked-out source baseline — was read back on 2026-09-16 on every surface except PyPI `aegis-latent-core`, and `v4.1.2` remains the most recent release served on *every* surface, including the gateway distribution on PyPI. The `4.1.1` values in §1.2 and the `4.0.2` values in §1.4 came from the same commands run against those tags on 2026-09-03 and 2026-09-02; substitute the tag to reproduce them.
 
 ### 2.1 Source baseline
 

@@ -156,3 +156,73 @@ def subprocess_listing() -> list[str]:
         ["git", "ls-files", "docs/"], cwd=REPO_ROOT, capture_output=True, text=True, check=True
     )
     return out.stdout.split()
+
+
+# The class REG-D23 was re-opened for: a survey of every tracked document found it
+# alive at ~30 sites outside the navigation artifacts the first pass fixed. The
+# rule that generalises is *framing*: `4.1.2` may appear anywhere as the release
+# that PyPI still serves for the gateway distribution, as the most recent version
+# published on every surface, or as history — it may not appear as the checked-out
+# / source / current baseline, because that is `5.0.0`.
+_FRAMED_WITH = re.compile(
+    r"published|read ?back|most recent|latest|historical|prior|remains|still|"
+    r"gateway distribution|PyPI|npm|registry|4\.0\.|version (?:list|history)|"
+    # Each of the following names a way the line makes its own meaning explicit:
+    # install behaviour that is true today, an upgrade span, a defect being
+    # reported, a re-verification, or a dated measurement row.
+    r"gets|install|serves|served|between|upgrad|migrat|stale|no longer describes|"
+    r"re-checked|not the checked-out baseline|20\d\d-\d\d-\d\d",
+    re.I,
+)
+_UNFRAMED_AS = re.compile(r"\bv?4\.1\.2\b", re.I)
+_PRESENTS_AS_BASELINE = re.compile(r"source|checked-out|current|baseline", re.I)
+
+CURRENCY_SCAN_EXEMPT = {
+    "docs/REGISTRY.md",  # the register itself, dated by its own rows
+    "docs/ROADMAP.md",  # ticket text quotes the audit's findings verbatim
+    "docs/CLAIMS_MATRIX.md",  # row text quotes the register's forbidden phrasing
+    "docs/RELEASE_STATUS.md",  # the document that owns publication history
+    "docs/commercial/CLAIM_LEDGER.md",  # its whole subject is cataloguing stale claim
+    # surfaces; every one of its rows quotes the
+    # stale text it reports as corrected
+    "AUDIT_REPORT_v5.0.1_PREP.md",
+}
+
+
+def _tracked_documents() -> list[str]:
+    import subprocess
+
+    out = subprocess.run(
+        ["git", "ls-files", "*.md"], cwd=REPO_ROOT, capture_output=True, text=True, check=True
+    )
+    return [
+        line
+        for line in out.stdout.split()
+        if not line.startswith("evidence/")
+        and not line.startswith("CHANGELOG")
+        and line not in CURRENCY_SCAN_EXEMPT
+    ]
+
+
+def test_repository_wide_no_document_presents_4_1_2_as_the_baseline() -> None:
+    offenders: list[str] = []
+    for relative in _tracked_documents():
+        for number, line in enumerate(_text(relative).splitlines(), start=1):
+            # Prose wraps: a paragraph that mentions a registry anywhere must not
+            # license an unframed baseline claim in one of its sentences. Judge by
+            # sentence, which is the unit a reader takes the claim from.
+            for sentence in re.split(r"(?<=[.;])\s+", line):
+                if not _UNFRAMED_AS.search(sentence) or not _PRESENTS_AS_BASELINE.search(sentence):
+                    continue
+                if _FRAMED_WITH.search(sentence):
+                    continue
+                offenders.append(f"{relative}:{number}: {sentence.strip()[:170]}")
+    assert not offenders, (
+        "documents present `4.1.2` as the checked-out/source/current baseline "
+        "without framing it as the published/historical release:\n  " + "\n  ".join(offenders[:15])
+    )
+
+
+def test_the_repository_wide_scan_is_not_vacuous() -> None:
+    documents = _tracked_documents()
+    assert len(documents) > 100, f"only {len(documents)} documents scanned"

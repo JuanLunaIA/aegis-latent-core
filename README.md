@@ -10,7 +10,7 @@ Aegis sits between your application and your model provider. For every governed 
 [![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
 
-**6,936 tests passing, 26 skipped** on the `5.0.0` source line — [check it yourself](#verified-metrics) with `pytest -n auto -q`, which is the only kind of badge worth having.
+**6,971 tests passing, 118 skipped** on the `5.0.0` source line (measured 2026-09-21) — [check it yourself](#verified-metrics) with `pytest -n auto -q`, which is the only kind of badge worth having.
 
 ## Why this matters, in three lines
 

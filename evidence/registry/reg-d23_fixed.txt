@@ -199,3 +199,66 @@ COMMANDS RUN FOR THIS ROW (all on this host, seal convention where applicable)
   .venv/bin/python tools/docs/verify_documentation.py --root . --strict
   .venv/bin/python scripts/verify_ai_context_manifest.py --root .
   git cat-file -t d1b229c31df34ca3a77ac0582cd6b1b72a94ae24
+
+
+================================================================================
+FOLLOW-UP, same day — the row was RE-OPENED and re-closed (second pass)
+
+WHY IT WAS RE-OPENED
+  A survey of every tracked document had been delegated before the first pass was
+  closed. Its report (1 subagent, 41 tool calls, 7m21s, delivered after the
+  closing commit) listed 58 hits. The first pass had fixed the sites the ticket
+  named; it had NOT fixed the class.
+
+THE FOUR SITES THAT WERE FALSE RATHER THAN MERELY OLD
+  DEPLOYMENT_GUIDE.md:3        "the current `4.1.2` source and published release"
+  docs/FAQ_SECURITY.md:1       "# Security FAQ — Aegis Latent Core v4.1.2 source"
+  docs/DEVELOPER_SDK_GUIDE.md:5 "no `5.0.0` artifact is published anywhere"
+  docs/RELEASE_STATUS.md:159   "nothing is published for the `5.0.0` source baseline"
+  Each contradicted AGENTS.md's readback record and the files' own neighbouring
+  lines. Corrected with the 2026-09-16 readback facts, keeping the true half each
+  time: `aegis-latent-core` is still `4.1.2` on PyPI, and that is now stated
+  wherever a reader would otherwise be misled (SDK READMEs, SDK guide, executive
+  summary, usage examples).
+
+THE OTHER THIRTEEN EDITS
+  docs/FAQ_SECURITY.md:16, docs/FAQ_TECHNICAL.md:13,
+  docs/DEVELOPER_INTEGRATIONS_GUIDE.md:22,:65, docs/DEVELOPER_SDK_GUIDE.md:36,
+  docs/USAGE_EXAMPLES.md:4,:114, docs/architecture/ARCHITECTURE.md:2,:9,
+  docs/corporate/EXECUTIVE_SUMMARY.md:77, sdk/python/README.md:17,
+  sdk/typescript/README.md:21, README.md:13, docs/commercial/COMMERCIAL_READINESS.md:34,
+  .claude/agents/codeql-finding-resolver.md:30.
+  Counts used, each measured on this host at this commit: 6,971 passed / 118
+  skipped; 104 claims / 0 findings; 207 mypy source files; UC rows UC-001…UC-067.
+
+THE GATE WAS GENERALISED — AND ITS FIRST VERSION WAS VACUOUS
+  The whole-corpus framing scan was first written per line. Its negative control
+  (reintroducing "refer to the `v4.1.2` source" in docs/FAQ_TECHNICAL.md) PASSED,
+  because that line's paragraph mentions "registry" sixty characters later, which
+  satisfied the framing test. That is the same defect class the row is about, one
+  level up: a check that reports green on what it exists to catch.
+  Fixed by judging per sentence, not per paragraph or line. Re-run: the same
+  negative control fails 1 test; restored, 17 pass. The sentence granularity then
+  found two sites the line-granular version had let through
+  (docs/architecture/ARCHITECTURE.md:9 and a belt-and-braces look at the correction
+  ledger), and the ledger is now exempt *by name with its reason in the file*.
+
+WHAT IS STILL OPEN, AND WHY IT IS TICKETED RATHER THAN DONE HERE
+  33 documents carry a `Last verified`/`Last reviewed` date between 2026-08-22 and
+  2026-09-08, i.e. before the 5.0.0 baseline existed. A stale date is not a false
+  statement the way a stale baseline is — it truthfully says when the review ran.
+  Rewriting 33 date lines to 2026-09-21 without reviewing 33 documents would
+  manufacture exactly the kind of claim this register exists to prevent, so the
+  work is AUD-37 and its instruction is explicit: content review, not date bump.
+  Inventory (25 at 2026-08-27, 3 at 2026-08-22, 1 each at 2026-09-01, 2026-09-02,
+  2026-09-04, 2026-09-08) is in the ticket, measured by a script over
+  `git ls-files '*.md'` on this host.
+
+SURVEY CROSS-CHECK
+  The delegated survey's 58 hits and this host's own sweep agree on every site
+  that was fixed. Two of its rows were judged false positives and left alone with
+  the reasoning recorded: docs/UPGRADING.md:3 ("anyone running `4.1.2` — the most
+  recent release on PyPI, npm and GHCR" — true), and README.md:327 (a dated
+  measurement row whose date column frames it). One of its rows was already fixed
+  before it ran: .aegis_ai_context/MANIFEST.json's `tag_kind` (the survey read the
+  pre-fix manifest).

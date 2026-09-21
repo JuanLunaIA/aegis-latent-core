@@ -10,7 +10,7 @@ This FAQ answers implementation and operating questions for developers and platf
 **Audience:** Developers, platform engineers and technical evaluators
 **Root document:** [`README.md`](../README.md)
 
-Answers about implementation behavior refer to the `v4.1.2` source unless they identify retained evidence. Publication status must be verified independently against the Git tag, GitHub Release, package registries, OCI registry, and their attestations. All retained numeric measurements in this FAQ belong to the published `v3.1.0` historical evidence baseline; they must not be promoted to v4 capacity, latency, availability, detection, security, or SLO claims without a v4 rerun and applicable target-environment acceptance evidence.
+Answers about implementation behavior refer to the `v5.0.0` source unless they identify retained evidence. Publication status must be verified independently against the Git tag, GitHub Release, package registries, OCI registry, and their attestations. All retained numeric measurements in this FAQ belong to the published `v3.1.0` historical evidence baseline; they must not be promoted to v4 capacity, latency, availability, detection, security, or SLO claims without a v4 rerun and applicable target-environment acceptance evidence.
 
 ## What does Aegis do?
 

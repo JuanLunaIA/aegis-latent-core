@@ -1,7 +1,7 @@
 # Usage Examples — Aegis Latent Core
 
 **Last verified:** 2026-09-04 UTC
-**Release baseline:** `v4.1.2`, published and read back on 2026-09-04; external release status always requires independent readback, recorded in [Release Status §1.0](RELEASE_STATUS.md)
+**Release baseline:** `v4.1.2` remains what PyPI serves for the gateway distribution (`aegis-latent-core`), read back 2026-09-04; the `5.0.0` source baseline is published on every other surface, recorded in [Release Status §1.0](RELEASE_STATUS.md)
 **Source baseline:** `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); source metadata alone does not establish publication
 **Audience:** developers integrating Aegis for the first time
 **Root document:** [`README.md`](../README.md)
@@ -111,7 +111,7 @@ $ node -e "const p=require('./node_modules/aegis-latent-sdk/package.json');
 . ./proof ./providers ./gateway ./openai ./anthropic ./verifier ./types
 ```
 
-The npm version list is `4.0.0` then `4.1.2`. `4.1.1` was never published
+The npm version list is `4.0.0`, `4.1.2`, then `5.0.0`. `4.1.1` was never published
 there — that publish step failed and was not rerun — so the gap is a
 publishing history, not a yanked release.
 

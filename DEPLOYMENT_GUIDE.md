@@ -1,6 +1,6 @@
 # Aegis Latent Core — Deployment Guide
 
-This guide distinguishes the current `4.1.2` source and published release from historical external baselines. It is for platform, SRE, security and procurement reviewers. It does not claim a v4 publication, grant regulatory certification, create a production SLO or replace an environment-specific review of kernel, storage, network, identity, secrets, backup and incident-response controls.
+This guide distinguishes the checked-out `5.0.0` source baseline — published 2026-09-16 on every surface except PyPI `aegis-latent-core` — and the `4.1.2` release still served for the gateway distribution on PyPI from historical external baselines. It is for platform, SRE, security and procurement reviewers. It does not claim a v4 publication, grant regulatory certification, create a production SLO or replace an environment-specific review of kernel, storage, network, identity, secrets, backup and incident-response controls.
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** current source/release candidate

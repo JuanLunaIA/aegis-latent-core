@@ -14,7 +14,7 @@
 pip install -e ./sdk/python
 ```
 
-> **Registry caution.** PyPI carries `aegis-latent-sdk` at `4.0.0`; this source tree is `4.1.2`. Installing from PyPI gets you different code from what this document describes. See [Release Status](../../docs/RELEASE_STATUS.md).
+> **Registry caution.** PyPI carries `aegis-latent-sdk` at `5.0.0`, matching this source tree's SDK. The *gateway* distribution on PyPI (`aegis-latent-core`) is still `4.1.2`, so a gateway installed from PyPI is not the code in this repository. See [Release Status](../../docs/RELEASE_STATUS.md).
 
 Requires Python 3.11 or newer.
 
