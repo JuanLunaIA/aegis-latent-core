@@ -18,6 +18,10 @@
 //!     concurrent appends cannot expose a later frame before an earlier frame.
 //!   - Atomic `write_pos` publishes only fully flushed contiguous prefixes.
 //!   - File permissions 0o600 set at open time.
+//!   - Single writer: `open` takes an exclusive advisory lock on the segment
+//!     file, so a second handle is refused with a clear error instead of
+//!     rescanning and overwriting already-committed frames (AUD-04). The lock
+//!     is released when the handle drops or the process exits.
 //!
 //! Performance is workload- and filesystem-dependent; use the repository's
 //! benchmark harness before making latency or throughput claims.
@@ -27,7 +31,7 @@ use memmap2::MmapMut;
 use parking_lot::Mutex;
 use pyo3::prelude::*;
 use std::{
-    fs::OpenOptions,
+    fs::{File, OpenOptions, TryLockError},
     ops::Range,
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -80,6 +84,13 @@ struct WalInner {
     /// Monotonically increasing byte offset; shared across threads.
     write_pos: AtomicU64,
     capacity: usize,
+    /// Exclusive advisory lock over the segment file, held for the life of the
+    /// handle. This is what enforces the single-writer invariant the `SAFETY`
+    /// note on the mmap below used to only assert: without it a second handle
+    /// rescanned the segment, computed the same offsets, and overwrote
+    /// committed frames through its own MAP_SHARED mapping (AUD-04). The lock
+    /// is released when this field drops (handle drop, GC, process exit).
+    _writer_lock: File,
 }
 
 // SAFETY: MmapMut is Send (the OS mapping is not thread-local).
@@ -115,6 +126,28 @@ impl RustWal {
                 ))
             })?;
 
+        // Single-writer guard (AUD-04).  ``try_lock`` takes the same POSIX
+        // ``flock`` the Python WAL already takes on its own descriptor
+        // (aegis/core/crypto_audit.py::_lock_wal_fd), fails immediately instead
+        // of waiting, and is released when this handle drops or the process
+        // exits.  Taken before any resize or mapping so a losing handle cannot
+        // touch the segment at all.  Advisory on POSIX, so a reader that never
+        // writes is not refused; on Windows ``try_lock`` maps to LockFileEx
+        // over the whole file, which is mandatory — the Python WAL routes
+        // around that with a lock region past end-of-file, and the Rust
+        // segment is only opened by the gateway on its Linux deployment.
+        // Requires Rust >= 1.89 for ``std::fs::File::try_lock``.
+        file.try_lock().map_err(|e| match e {
+            TryLockError::WouldBlock => PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "RustWal single-writer invariant: another handle already holds \"{path}\" \
+                 (advisory lock busy); close that handle before opening a second one on the \
+                 same segment"
+            )),
+            TryLockError::Error(io) => PyErr::new::<pyo3::exceptions::PyIOError, _>(format!(
+                "RustWal lock failed (path={path}): {io}"
+            )),
+        })?;
+
         // Owner-only read/write permissions (mirrors Python's 0o600 WAL)
         #[cfg(unix)]
         {
@@ -146,7 +179,8 @@ impl RustWal {
             PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("RustWal resize: {e}"))
         })?;
 
-        // SAFETY: we own the file and no other process writes to the region.
+        // SAFETY: exclusivity over this region is enforced by the writer lock
+        // taken above, so no second handle can map and write it (AUD-04).
         let mut mmap = unsafe { MmapMut::map_mut(&file) }.map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("RustWal mmap: {e}"))
         })?;
@@ -166,6 +200,7 @@ impl RustWal {
                 mmap: Mutex::new(mmap),
                 write_pos: AtomicU64::new(write_pos as u64),
                 capacity,
+                _writer_lock: file,
             }),
         })
     }
@@ -319,12 +354,17 @@ mod tests {
     use super::*;
     use tempfile::NamedTempFile;
 
-    fn tmp_wal() -> RustWal {
+    /// A temp path that survives handle drops: the file is leaked on purpose
+    /// so the same path can be reopened (the lock test depends on that).
+    fn tmp_wal_path() -> String {
         let f = NamedTempFile::new().unwrap();
         let path = f.path().to_str().unwrap().to_string();
-        // Keep file alive by leaking tempfile (test only)
         std::mem::forget(f);
-        RustWal::open(&path, Some(1024 * 1024)).unwrap()
+        path
+    }
+
+    fn tmp_wal() -> RustWal {
+        RustWal::open(&tmp_wal_path(), Some(1024 * 1024)).unwrap()
     }
 
     #[test]
@@ -335,6 +375,47 @@ mod tests {
         let records = wal.read_all().unwrap();
         assert_eq!(records.len(), 1);
         assert_eq!(records[0], payload);
+    }
+
+    #[test]
+    fn second_handle_is_refused_while_a_writer_holds_the_segment() {
+        // The refusal path builds a ``PyErr``, and this crate does not enable
+        // pyo3's ``auto-initialize`` feature, so the interpreter must be up.
+        pyo3::Python::initialize();
+        let path = tmp_wal_path();
+        let first = RustWal::open(&path, Some(1024 * 1024)).unwrap();
+
+        // A second handle on the same segment must fail closed instead of
+        // rescanning and overwriting the first handle's committed frames.
+        let second = RustWal::open(&path, Some(1024 * 1024));
+        match second {
+            Err(e) => {
+                let message = e.to_string();
+                assert!(
+                    message.contains("single-writer"),
+                    "unexpected error message: {message}"
+                );
+            }
+            Ok(_) => panic!("a second writer handle was allowed on the same segment"),
+        }
+
+        // Dropping the first handle releases the lock.
+        drop(first);
+        let third = RustWal::open(&path, Some(1024 * 1024));
+        assert!(third.is_ok(), "lock was not released on drop: {:?}", third.err());
+    }
+
+    #[test]
+    fn reopen_after_drop_preserves_committed_frames() {
+        let path = tmp_wal_path();
+        {
+            let first = RustWal::open(&path, Some(1024 * 1024)).unwrap();
+            first.append(r#"{"seq":1}"#).unwrap();
+            first.append(r#"{"seq":2}"#).unwrap();
+        }
+        let second = RustWal::open(&path, Some(1024 * 1024)).unwrap();
+        let records = second.read_all().unwrap();
+        assert_eq!(records, vec![r#"{"seq":1}"#.to_string(), r#"{"seq":2}"#.to_string()]);
     }
 
     #[test]
