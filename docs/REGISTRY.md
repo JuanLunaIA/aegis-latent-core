@@ -142,7 +142,7 @@ Scans 3, 6, 7, 8, 9 were **not executed this session** and are recorded as outst
 | REG-051 | `[AEG2:13.2]` | CODE | P1 | Missing harnesses | `SEED` | Homoglyph parity harness now exists (REG-001); postgres-race and OOM-saturation do not |
 | REG-053 | `[P2-7]` | CODE | P3 | Coverage badge stale | **VERIFIED** | Badge removed from `README.md` in PR #184 |
 | REG-054 | `[P2-2]` | DOC | P3 | `mmr.py:71` stale docstring | **FIXED** | The comment said `mmr_hash_scheme` was "still defaulting to v1" — true when written, false since a prior session's P1-2 work changed `auto` to start new chains on v2 (confirmed against source: `aegis/config.py:410-421`, `aegis/core/crypto_audit.py:792-794`). Rewrote the module-level comment block in `aegis/core/mmr.py` to state the actual current behavior (`auto` starts a new chain on v2, reopens an existing chain under whichever scheme its WAL recorded). Doc-only, no behavior change. `.venv/bin/python -m pytest tests/test_mmr_v2_migration.py tests/ -k "mmr" -q` → 378 passed. `evidence/registry/reg-054_fixed.txt` |
-| REG-055 | `[P2-4]` | CODE | P3 | Dual `httpx`+`requests`, numpy `isfinite` | `SEED` | |
+| REG-055 | `[P2-4]` | CODE | P3 | Dual `httpx`+`requests`, numpy `isfinite` | **FIXED — packaging half deferred to the owner** | **numpy `isfinite` removed from the ledger module:** `aegis/core/crypto_audit.py` had exactly three numpy references (`import numpy as np` at `:71`, `np.isfinite` at `:973` and `:1294`) and the two call sites take scalars, while every other scalar site in the tree already uses `math.isfinite` (22+ sites) — the array-appropriate uses are in `aegis/core/math_utils.py` and were left alone. Now `math.isfinite`, with `import math` added and the numpy import dropped, so the commit path no longer pulls a heavyweight import. Equivalence probed rather than assumed: `math.isfinite` and `np.isfinite` agree on `0.0`, `1`, `1.5`, `nan`, `inf`, `-inf`, and both reject `str`/`None` with `TypeError`. **Dual client resolved in-tree:** `tests/final_audit_suite.py` was the only file importing `requests` (`:8`, `:19`) and is not collected by pytest (`testpaths=['tests']`, default glob excludes it); it now uses `httpx`, which is already a runtime dependency. **Residual, deliberately not done:** `requests>=2.31.0` (`pyproject.toml:45`, `requirements.txt:13`) is still a declared *core* dependency with zero in-tree importers, and the `urllib3>=2.7.0` floor (`pyproject.toml:54`, `requirements.txt:19`) exists only to justify it — removing both changes the published wheel's install surface and requires regenerating the hash-locked `requirements.lock` through the reviewed `pip-compile` path named at `scripts/verify_release_contract.py:926-930`. That is a packaging/release decision, not a cleanup, and is recorded here rather than taken. Verified: `ruff` clean, `mypy --strict aegis` "Success: no issues found in 206 source files", `pytest tests/test_crypto_audit_rollover.py tests/test_coalesced_commit.py tests/test_core.py -q` → **78 passed**. `evidence/registry/reg-055_fixed.txt` |
 | REG-056 | `[P2-5]` | CODE | P3 | Checked-in protobuf codegen | `SEED` | |
 | REG-058 | `[P3-1]` | CODE | P3 | Samples/HTML + snapshots in repo | `SEED` | |
 | REG-059 | `[P3-2]` | DOC | P3 | Buyer-guide duplication | `SEED` | |
@@ -183,10 +183,10 @@ Their status is tracked in [Commercial Readiness](commercial/COMMERCIAL_READINES
 | Wave | Total | FIXED | VERIFIED | DOCUMENTED | BLOCKED | WONT-FIX | open (`SEED`) |
 |---|---|---|---|---|---|---|---|
 | W1 | 30 | 6 | 18 | 5 | 0 | 0 | **1** |
-| W2 | 23 | 3 | 5 | 0 | 0 | 0 | **15** |
+| W2 | 23 | 4 | 5 | 0 | 0 | 0 | **14** |
 | W3 | 9 | 1 | 2 | 5 | 0 | 0 | **1** |
 | `[DISC]` | 3 | 0 | 0 | 1 | 0 | 0 | **2** |
-| **Total** | **65** | **10** | **25** | **11** | **0** | **0** | **19** |
+| **Total** | **65** | **11** | **25** | **11** | **0** | **0** | **18** |
 
 Human class (9) is excluded from the burn-down by design.
 

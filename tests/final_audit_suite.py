@@ -5,7 +5,7 @@
 import logging
 import time
 
-import requests
+import httpx
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("FinalAudit")
@@ -16,7 +16,7 @@ BASE_URL = "http://127.0.0.1:8000"
 def test_case(name, payload, expected_status, description):
     print(f"Testing {name}...", end=" ")
     try:
-        response = requests.post(f"{BASE_URL}/v1/chat/completions", json=payload, timeout=2)
+        response = httpx.post(f"{BASE_URL}/v1/chat/completions", json=payload, timeout=2)
         status = response.status_code
         success = status == expected_status
         print(f"Result: {status} | {'PASS' if success else 'FAIL'} ({description})")

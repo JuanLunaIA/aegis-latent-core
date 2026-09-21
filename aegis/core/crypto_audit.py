@@ -46,6 +46,7 @@ import hashlib
 import hmac
 import json
 import logging
+import math
 import os
 import stat
 import sys
@@ -68,7 +69,6 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, Final, Literal, TextIO
 
-import numpy as np
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
@@ -970,7 +970,7 @@ class CryptographicAuditLedger:
         """
         if "\x00" in state_id:
             raise ValueError("state_id containing NULL byte is rejected")
-        if not np.isfinite(entropy):
+        if not math.isfinite(entropy):
             raise ValueError("entropy must be a finite number")
         if len(request_bytes) > MAX_PAYLOAD_BYTES:
             raise ValueError("request_bytes exceeds 1 MiB hard cap")
@@ -1291,7 +1291,7 @@ class CryptographicAuditLedger:
             raise ValueError("response_hash must be a lowercase SHA-256 hex digest")
         if response_size < 0 or token_count < 0:
             raise ValueError("response_size and token_count must be non-negative")
-        if not np.isfinite(elapsed_seconds) or elapsed_seconds < 0:
+        if not math.isfinite(elapsed_seconds) or elapsed_seconds < 0:
             raise ValueError("elapsed_seconds must be finite and non-negative")
         if len(response_preview) > self.max_forensic_bytes:
             raise ValueError("response_preview exceeds max_forensic_bytes")

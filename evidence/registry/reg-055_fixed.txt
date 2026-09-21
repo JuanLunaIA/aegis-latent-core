@@ -1,0 +1,45 @@
+REG-055 — after (ledger no longer imports numpy; requests has no in-tree consumer)
+===============================================================================
+
+Row: REG-055 [P2-4] CODE P3 'Dual httpx+requests, numpy isfinite' — SEED -> FIXED
+
+Half 1 — numpy in the commit path. Before (three references, all in one module):
+  $ grep -n '\bnp\.\|numpy' aegis/core/crypto_audit.py
+    71:import numpy as np
+    973:        if not np.isfinite(entropy):
+    1294:        if not np.isfinite(elapsed_seconds) or elapsed_seconds < 0:
+  After:
+    (no matches)
+
+  Behaviour equivalence probed, not assumed (both call sites take scalars):
+    math.isfinite == np.isfinite on 0.0, 1, 1.5, nan, inf, -inf; both reject str/None with TypeError
+  Array-level uses in aegis/core/math_utils.py:69,:80 (np.all(np.isfinite(...))) are untouched.
+
+Half 2 — the dual client. requests' only in-tree consumer:
+  $ grep -rn 'import requests' tests/final_audit_suite.py
+    8:import requests
+  and that file is not collected by pytest: pyproject testpaths=['tests'] with the default
+  test_*.py glob does not match final_audit_suite.py. Converted to httpx (:8, :19).
+  $ grep -rn 'import requests\|requests.post' --include=*.py . | grep -v '^./.venv'
+    (no in-tree importers remain)
+
+Residual recorded, not taken (owner-level packaging decision):
+  * pyproject.toml:45 'requests>=2.31.0' is still a declared core dependency.
+  * pyproject.toml:54 'urllib3>=2.7.0' exists only to justify it.
+  * Removing both changes the wheel's install surface and requires regenerating the
+    hash-locked requirements.lock through the reviewed pip-compile path named at
+    scripts/verify_release_contract.py:926-930.
+
+Executed after the change:
+  $ ruff check aegis/core/crypto_audit.py tests/final_audit_suite.py
+    All checks passed!
+  $ mypy --strict aegis
+    Success: no issues found in 206 source files
+  $ python -m pytest tests/test_crypto_audit_rollover.py tests/test_coalesced_commit.py tests/test_core.py -q
+    78 passed in 37.87s
+
+Documentation gates (registry + claims corpus touched):
+scripts/verify_docs.py: verify_docs: PASS (0 findings)
+scripts/verify_claims.py: verify_claims: PASS (102 claims, 0 findings)
+scripts/verify_links.sh: verify_links: PASS (1285 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0
