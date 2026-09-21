@@ -1,0 +1,48 @@
+REG-A04 — after (hash-pseudonymity boundary published; six blanket-confirmability clauses corrected)
+==============================================================================================
+
+Row: REG-A04 [AEG2:8.1][GDPR] ARCH HIGH 'Hash pseudonymity' — SEED -> DOCUMENTED
+Dependency: REG-012 (closed FIXED). UC-037's LEGAL-REVIEW-REQUIRED flag stays.
+
+Premise, re-verified against source rather than trusted:
+  $ sed -n '1807,1809p' aegis/core/crypto_audit.py
+    
+            if self._shredder is None or not subject_id:
+                return sha256_hex(data)
+  $ grep -n 'def digest' -A6 aegis/core/crypto_shredder.py | head -12
+    244:    def digest(self, subject_id: str, data: bytes) -> str:
+    245-        """Return a keyed digest of ``data`` that dies with ``subject_id``'s key.
+    246-
+    247-        Mechanism: the salt is ``HMAC(subject_key, "aegis-shred-digest-salt-v1")``
+    248-        and the digest is ``HMAC(salt, data)``. The salt is *derived*, never
+    249-        stored, so ``shred`` removing the one key row removes the salt with it.
+    250-        A second stored secret would be a second thing to forget to delete.
+
+  i.e. plain sha256_hex with shredding off (default) — confirmable; HMAC under a
+  derived salt under v2 — confirmability dies with the key.
+
+Six clauses asserted the old blanket claim. All corrected:
+  1. docs/CLAIMS_MATRIX.md:137  CLM-068 boundary cell
+     - 'still carries its request and response digests, so a guessed plaintext can
+       be confirmed against them' -> scheme split
+     - shredding_version enumeration named only v1 (contradicting CLM-098) -> v1 + v2
+  2. docs/architecture/DECISIONS.md:185  AD-14 cost
+  3. docs/institutional/DOC-02_CRYPTOGRAPHIC_FORENSIC_BLUEPRINT.md:200  (§6.2)
+  4. docs/institutional/DOC-05_REGULATORY_DOSSIER.md:175  (§5.8.1)
+  5. docs/FAQ_TECHNICAL.md:95
+  6. (was already correct, left alone) docs/privacy/DATA_RETENTION.md:90, UC-037
+
+New boundary row, in the destination the register's §1 requires:
+  docs/institutional/UNSUPPORTED_CLAIMS.md — UC-044 'Evidence digests are
+  anonymous data ...' with the blocked wording list and the LEGAL-REVIEW pointer.
+
+  $ grep -c 'UC-044' docs/institutional/UNSUPPORTED_CLAIMS.md
+    2
+
+Doc-only. No code change; no legal conclusion asserted.
+
+Gates re-run after the edits:
+verify_docs: verify_docs: PASS (0 findings)
+verify_claims: verify_claims: PASS (102 claims, 0 findings)
+verify_links: verify_links: PASS (1285 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0
