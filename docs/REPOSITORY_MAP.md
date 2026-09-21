@@ -1,6 +1,6 @@
 # Repository Map — Aegis Latent Core
 
-**Last verified:** 2026-09-21 UTC — the 22 source paths cited below were re-checked against the checked-out `5.0.0` tree
+**Last verified:** 2026-09-21 UTC (`REG-D29`) — this page's navigation-aids table was updated for `docs/MODULE_INVENTORY.md`, the generated per-file inventory. The 22 source paths cited below were last re-checked against the tree **as it stood before the 5.0.1 source bump**; re-checking them against the current target is content review, not a date bump, and is tracked by `AUD-37`. The stamp formerly read 2026-08-27 while the page described 2026-09-16 content (`AF-057`)
 **Release baseline:** four-layer truth model
 **Source baseline:** checked-out source metadata is synchronized at `v5.0.1`; nothing is published for it. The most recent published release `v5.0.0` was published 2026-09-16 on every surface except PyPI `aegis-latent-core`; `v4.1.2` remains the most recent version published on every surface
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` retains the historical `4.0.0` comparison anchors documented by [`evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md`](../evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md)
@@ -53,6 +53,7 @@ Read the root [`README.md`](../README.md) first. Paths below describe the checke
 |---|---|---|
 | `.aegis_ai_context/` | Advisory, progressively-disclosed repository-navigation index for coding agents — start at [`.aegis_ai_context/README.md`](../.aegis_ai_context/README.md) | Not authoritative and not a hidden instruction channel: it contains reproducible navigation aids and stop conditions, never concealed directives, private reasoning, or release evidence. Every material claim must still be verified against the named source and tests. Regenerate with `python scripts/generate_ai_context_manifest.py`, verify with `python scripts/verify_ai_context_manifest.py`. |
 | `llms.txt` | Compact top-level navigation aid, used when `.aegis_ai_context/` is unavailable to a given tool | Same non-authoritative boundary as `.aegis_ai_context/` — a concise pointer to the real sources, not a substitute for reading them. |
+| [`docs/MODULE_INVENTORY.md`](MODULE_INVENTORY.md) | Generated per-file inventory for the six source roots: kind, purpose, reachability status, the tests that import it, and the CODEOWNERS owner; also lists every open roadmap ticket with its owner and the ticket's own stated unblock path. | Generated, not written: regenerate with `python scripts/generate_module_inventory.py`. Currency, coverage of every file under the roots, the self-reported counts, and agreement with `docs/ROADMAP.md` about what is open are all enforced by `tests/test_module_inventory_current.py`. It reports status; it does not grant it. |
 
 ## Evidence and historical results
 

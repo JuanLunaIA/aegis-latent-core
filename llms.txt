@@ -14,6 +14,7 @@ Read first:
 - SECURITY.md and docs/security/THREAT_MODEL.md — security boundary and non-defenses
 - docs/architecture/ARCHITECTURE.md — architecture
 - docs/REPOSITORY_MAP.md — maintained source map
+- docs/MODULE_INVENTORY.md — generated per-file inventory: purpose, reachability status, tests, owner
 - CHANGELOG.md — published and unreleased history
 - .aegis_ai_context/07_SYSTEM_COMPACT_KERNEL.xml — compact advisory kernel
 
