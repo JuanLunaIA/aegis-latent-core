@@ -1,0 +1,55 @@
+REG-038 — after (aegis_server deprecated in place, boundary published)
+=======================================================================
+
+Row:        REG-038  [TRACK-B2]  CODE  P2  "Retire/migrate `aegis_server` dual surface"
+Transition: SEED -> DOCUMENTED  (accepted limitation; boundary written into
+            UNSUPPORTED_CLAIMS.md as UC-046)
+Owner decision 2026-09-21: keep it deprecated in place; retirement stays a
+release-level decision in ROADMAP.md:130.
+
+(1) The registry's own note was wrong, and the correction is in the row. It said
+    "Interacts with REG-026's residual 25 errors". The 25 errors are
+    aegis_server's own:
+
+$ mypy aegis_server/
+    aegis_server/main.py .............. 10 errors
+    aegis_server/storage/dynamodb_provider.py ... 9
+    aegis_server/storage/sqlite_provider.py ...... 4
+    aegis_server/crypto/vault_signer.py .......... 2
+    Found 25 errors in 4 files (checked 14 source files)
+
+$ mypy --strict aegis
+    Success: no issues found in 206 source files
+
+    STATE_MANIFEST.md:77's four-file attribution was right; the row's phrasing
+    was not. REG-026's own scope is the `aegis` package and is unaffected.
+
+(2) The surface is live and shipped, verified in the tree:
+
+$ grep -n 'uvicorn aegis_server' deploy/docker/docker-compose.enterprise.yml
+
+
+$ grep -n 'COPY aegis_server' deploy/docker/Dockerfile deploy/docker/Dockerfile.airgap
+
+
+$ grep -rln aegis_server --include=*.py aegis/ tests/ tools/ scripts/ aegis_server/ deploy/ | wc -l
+
+
+(3) What was published as the boundary (UC-046): a second HTTP surface with its
+    own contract and its own debt, deprecated in place; no document asserts parity
+    with the gateway's AEGIS_AUTH_*/tenant behaviour and none should be written
+    without an acceptance record for the deployment shape in question. Blocked
+    wording: "one product with two entry points", "the enterprise server adds
+    multi-tenant HA to the gateway", or any statement that deploying
+    aegis_server inherits the gateway's guarantees.
+
+(4) What is NOT claimed: acceptance, parity, or operational equivalence. The 25
+    type errors are recorded as accepted debt. Retirement or migration remains
+    open work in docs/ROADMAP.md:130, where it sits as a release-level decision
+    rather than clean-up.
+
+(5) Gates after the edit (same run as the commit):
+verify_docs: PASS (0 findings)
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1289 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0 required_files=27
