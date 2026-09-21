@@ -1,0 +1,70 @@
+REG-D02 / REG-D03 — after (both advisories recorded as accepted; the boundary is published)
+==============================================================================================
+
+Rows:       REG-D02  [DISC][RUSTSEC-2025-0141]  CODE  P2  bincode 1.3.3 unmaintained
+            REG-D03  [DISC]                     CODE  P2  chacha20 0.10.1 yanked
+Transition: SEED -> DOCUMENTED (both). Neither is FIXED, deliberately: both fixes
+            are release acts, and neither can be re-verified on this host.
+
+(1) Can the advisory database be consulted here? No — and that is the first fact,
+    because both rows' notes rest on a `cargo audit` run:
+
+$ cargo audit --version
+error: no such command: `audit`
+
+(2) bincode: the exposure is narrower than "unmaintained crate in the tree".
+
+$ grep -n 'zk-spartan\|bincode' aegis_rust_v2/Cargo.toml
+51:# and NOT for a `zk-spartan` build; an operator enabling this feature is choosing
+54:zk-spartan = ["dep:spartan2", "dep:bellpepper-core", "dep:bellpepper", "dep:ff", "dep:bincode"]
+126:# Zero-knowledge inclusion proofs, behind `zk-spartan`. Optional for the same
+130:# never turn on. See the `zk-spartan` feature above for the measurement and for
+144:# (`bellpepper-core`, `byteorder`, `ff`) are already in the `zk-spartan` graph
+153:# wire format. Both are already in the `zk-spartan` graph via `spartan2`, so
+155:# `cargo tree --edges normal --features zk-spartan` before and after.
+157:bincode = { version = "1.3", optional = true }
+164:# removal is scoped to the default build — the optional `zk-spartan` feature
+$ grep -n '^default = ' aegis_rust_v2/Cargo.toml
+25:default = ["pqclean-pqc"]
+    bincode is declared only as an optional dependency of the `zk-spartan` feature,
+    and zk-spartan is not in `default`, so a plain `cargo build` does not compile
+    it. The advisory therefore reaches builds that opt into Spartan proofs only.
+
+(3) chacha20: yanked, pinned, transitive, and unhandled by configuration.
+
+$ grep -n -A1 'name = "bincode"\|name = "chacha20"' aegis_rust_v2/Cargo.lock
+150:name = "bincode"
+151-version = "1.3.3"
+--
+255:name = "chacha20"
+256-version = "0.10.1"
+    chacha20 0.10.1 is pinned by the lock and arrives transitively (the lock
+    references it from name = "rand").
+
+$ grep -c 'yanked' aegis_rust_v2/.cargo/audit.toml
+0
+    No [yanked] section exists — so this class of alert is neither suppressed nor
+    cleared by the allowlist. The allowlist itself carries 9 RUSTSEC
+    references, each with a written rationale (hickory-dns, paste, pqcrypto).
+
+(4) Why neither row is closed FIXED here:
+    - the lock (`aegis_rust_v2/Cargo.lock`) is one of the release's 14 synchronized
+      anchors, so replacing a pinned crate version is a release act that carries its
+      own readback, not a clean-up;
+    - authoring a `[yanked]` section requires confirming its schema against
+      `cargo audit`, which is absent — guessing a suppression schema is exactly the
+      unverified edit the repository forbids;
+    - `cargo audit` is also the tool that would show whether RUSTSEC-2025-0141 is
+      still indexed at all.
+
+(5) What the next holder of the tool runs (recorded so it is a command, not a memory):
+
+    cargo audit --file aegis_rust_v2/Cargo.lock                     # current state
+    cargo update -p chacha20 --precise <newer> && cargo test --locked   # the upgrade path
+    cargo test --locked --features zk-spartan                        # what bincode exposure means
+
+(6) Gates after the edit (same run as the commit):
+verify_docs: PASS (0 findings)
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1289 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0 required_files=27

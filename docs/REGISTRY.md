@@ -167,7 +167,7 @@ Scans 3, 6, 7, 8, 9 were **not executed this session** and are recorded as outst
 | REG | Brands | Class | Sev | Mechanism | Status | Evidence |
 |---|---|---|---|---|---|---|
 | REG-D01 | `[DISC]` | CODE | P3 | `pip` 24.0 and `setuptools` 79.0.1 in the dev venv carry 14 advisories | **DOCUMENTED** | Neither is in `requirements.lock`; they are venv bootstrap tooling and **not shipped runtime**. The locked runtime is clean. Refresh on venv rebuild |
-| REG-D02 | `[DISC][RUSTSEC-2025-0141]` | CODE | P2 | `bincode` 1.3.3 unmaintained | `SEED` | `cargo audit` allowed-warning. Not a vulnerability; an unmaintained-crate warning |
+| REG-D02 | `[DISC][RUSTSEC-2025-0141]` | CODE | P2 | `bincode` 1.3.3 unmaintained | **DOCUMENTED** | The note is accurate as far as it goes, and the exposure is narrower than it sounds: `bincode` 1.3.3 (`RUSTSEC-2025-0141`) is declared **only** as an optional dependency of the `zk-spartan` feature (`aegis_rust_v2/Cargo.toml:54`, `:157`) and `zk-spartan` is **not** in the default feature set (`default = ["pqclean-pqc"]`), so an ordinary `cargo build` never compiles it — the advisory reaches only builds that opt into Spartan proofs. What the note could not say is whether the warning still stands: `cargo audit` is absent from this host (`error: no such command: 'audit'`), so the allowlist was **not** re-validated and no claim here rests on one. Recorded instead of guessed: the exact re-check command (`cargo audit --file aegis_rust_v2/Cargo.lock`), the fact that the advisory is a maintenance signal rather than a vulnerability, and the boundary published as `UC-049`. Closed as accepted, not fixed: dropping the dependency means changing an optional feature's graph, which is a release act, and regenerating the lock touches a synchronized anchor. `evidence/registry/reg-d02_d03_documented.txt` |
 | REG-D03 | `[DISC]` | CODE | P2 | `chacha20` 0.10.1 yanked | `SEED` | `cargo audit` allowed-warning |
 
 ### 4.5 Human class — never agent-executed
@@ -185,8 +185,8 @@ Their status is tracked in [Commercial Readiness](commercial/COMMERCIAL_READINES
 | W1 | 30 | 6 | 18 | 6 | 0 | 0 | **0** |
 | W2 | 23 | 10 | 6 | 2 | 3 | 1 | **1** |
 | W3 | 9 | 1 | 2 | 5 | 0 | 1 | **0** |
-| `[DISC]` | 3 | 0 | 0 | 1 | 0 | 0 | **2** |
-| **Total** | **65** | **17** | **26** | **14** | **3** | **2** | **3** |
+| `[DISC]` | 3 | 0 | 0 | 2 | 0 | 0 | **1** |
+| **Total** | **65** | **17** | **26** | **15** | **3** | **2** | **2** |
 
 Human class (9) is excluded from the burn-down by design.
 
