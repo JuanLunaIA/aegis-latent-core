@@ -462,6 +462,65 @@ def check_readme_shape(root: Path) -> list[Finding]:
     return findings
 
 
+
+BUYER_BASELINE_DOCS = (
+    "docs/BUYER_GUIDE_US.md",
+    "docs/PRODUCT_BRIEF_US.md",
+    "docs/COMMERCIAL_STRATEGY_US.md",
+    "docs/PROSPECTUS.md",
+    "docs/FAQ_PROCUREMENT.md",
+)
+
+_BUYER_FINGERPRINT_RE = re.compile(r"^\*\*(?:Source baseline|External baseline|Historical external baseline):\*\*")
+_READBACK_DIGEST_RE = re.compile(r"v4\.[0-9]+\.[0-9]+[^\n]{0,400}?\b[0-9a-f]{40}\b")
+
+
+def check_buyer_document_baselines(root: Path) -> list[Finding]:
+    """Release-state restatement in the buyer-facing set — REG-059.
+
+    Every one of these documents once carried its own copy of the release-state
+    block: a "release baseline" line, its own restatement of the same thing, and
+    then the external and historical readbacks with tag SHAs. Four copies of the
+    same facts drift independently, and one of them missing the PyPI caveat is
+    how a procurement reader comes to believe the gateway is installable from
+    pip. `docs/RELEASE_STATUS.md` is the document that establishes publication
+    state; these files may point at it and may state the boundary, but they may
+    not restate its table or re-derive its digests.
+    """
+    findings = []
+    for rel in BUYER_BASELINE_DOCS:
+        path = root / rel
+        if not path.is_file():
+            continue
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for line_no, text in _strip_code_blocks(lines):
+            if _BUYER_FINGERPRINT_RE.match(text):
+                findings.append(
+                    Finding(
+                        rel,
+                        line_no,
+                        "duplicate-baseline-restatement",
+                        "release-state block restated here; state the boundary and link "
+                        "docs/RELEASE_STATUS.md instead (REG-059)",
+                    )
+                )
+            elif _READBACK_DIGEST_RE.search(text):
+                findings.append(
+                    Finding(
+                        rel,
+                        line_no,
+                        "restated-readback-digest",
+                        "readback digest restated outside docs/RELEASE_STATUS.md; "
+                        "pointers cannot drift, copies do (REG-059)",
+                    )
+                )
+        if "RELEASE_STATUS.md" not in path.read_text(encoding="utf-8"):
+            findings.append(
+                Finding(rel, 1, "missing-status-pointer", "no pointer to docs/RELEASE_STATUS.md")
+            )
+    return findings
+
+
 def check_internal_markers(root: Path) -> list[Finding]:
     findings = []
     for rel in sorted(INTERNAL_FILES):
@@ -502,6 +561,7 @@ def run(root: Path) -> list[Finding]:
     findings: list[Finding] = []
     findings += check_required_files(root)
     findings += check_readme_shape(root)
+    findings += check_buyer_document_baselines(root)
     findings += check_internal_markers(root)
     findings += check_non_empty(root)
 
