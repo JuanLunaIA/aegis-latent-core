@@ -1,0 +1,76 @@
+REG-D10 / AUD-06 — FIXED   (retracted 10k / p99 1,189.89 ms pair presented as measured)
+docs/ + scripts/ + tests/ · evidence captured 2026-09-21 on this host
+
+FINDING (AUDIT_REPORT_v5.0.1_PREP.md §AF-007, AF-009, AF-010, AF-011)
+  The claims register retracts the v3.1.0 10,000-record / p99 1,189.89 ms
+  backpressure pair (`UC-018`: the committed artifact contains 2,500 records at
+  p99 836.3514210795984 ms), but buyer-facing and canonical documents still
+  presented it as the retained measurement. No artifact in this tree produces
+  the pair.
+
+SWEEP (fourteen sites; the audit named twelve)
+  replaced with the artifact-backed figures (read from the JSON, not restated):
+    2026-08-20 run  evidence/execution_2026-08-20/backpressure_stall_report.json
+                    2,500 offered / 2,500 durable, elapsed 6.630050110979937 s,
+                    p50 167.29020897764713, p95 504.7037289477885,
+                    p99 836.3514210795984, max 2290.622486965731 ms, 2,501 fsync calls
+    2026-09-16 runs evidence/execution_2026-09-16/backpressure_stall_report_run{1,2,3}.json
+                    2,500 offered / 2,500 durable, p99 52.317 / 51.875 / 47.531 ms
+  site list (all now carry the retraction marker or the in-tree figures):
+    DEPLOYMENT_GUIDE.md:138 · docs/BENCHMARKS.md:36,:37,:105,:107 ·
+    docs/FAQ_PROCUREMENT.md:64 · docs/FAQ_TECHNICAL.md:33,:118 ·
+    docs/PLATFORM_OPERATOR_GUIDE.md:163 (found by this sweep, not in the audit list) ·
+    docs/PRODUCT_BRIEF_US.md:43 · docs/PROSPECTUS.md:58 · docs/ROADMAP.md:80 ·
+    docs/benchmarks/BENCHMARK_METHOD.md:110 · docs/benchmarks/BENCHMARK_RESULTS.md:14,:15,:63-67 ·
+    docs/benchmarks/README.md:43 · docs/operations/BACKPRESSURE_RUNBOOK.md:53 ·
+    docs/performance/SCALING_GUIDE.md:38
+
+GATE (`scripts/verify_claims.py` check 9, CI-wired at .github/workflows/ci.yml:110)
+  A retracted token (`1,189.89` / `1189.89` / `10,000 offered requests` /
+  `10,000 durable`) must carry its retraction on the same line or — for wrapped
+  prose — the same paragraph; markdown table rows are checked individually so
+  one row's retraction cannot cover the next row's citation. The audit report is
+  exempt: it quotes the defective text as its evidence.
+  $ .venv/bin/python scripts/verify_claims.py --root .
+  verify_claims: PASS (102 claims, 0 findings)
+  Negative control (live, then reverted — the probe file is not in git status):
+  $ printf 'Live negative control: the run recorded p99 1,189.89 ms.\n' > docs/_tmp_gate_probe.md
+  $ .venv/bin/python scripts/verify_claims.py --root .
+  verify_claims: FAIL (102 claims, 1 findings)
+    [retracted-figure-cited] UC-018
+        docs/_tmp_gate_probe.md:1 cites '1,189.89' without its retraction (UC-018)
+        on the same line or paragraph
+  exit=1
+  $ rm docs/_tmp_gate_probe.md && .venv/bin/python scripts/verify_claims.py --root .
+  verify_claims: PASS (102 claims, 0 findings)
+
+TEST (`tests/test_retracted_figure_gate.py`, 7 tests)
+  $ .venv/bin/python -m pytest tests/test_retracted_figure_gate.py -q
+  7 passed in 0.21s
+  Covers: unmarked latency citation, unmarked 10,000-record claim, marked
+  retraction allowed, wrapped paragraph as one unit, table rows individual,
+  exempt audit report, artifact-backed figures not flagged.
+
+BATTERY ON THIS COMMIT'S CONTENT (recorded before the final amend; the amend changed only this file)
+$ AEGIS_SECURITY_ENFORCEMENT_MODE=development HERMES_SANDBOX=true .venv/bin/python -m pytest tests/ -n auto -q
+6896 passed, 118 skipped in 85.33s (0:01:25)   [recorded run, exit 0]
+  (An earlier attempt of the same command recorded "6788 passed, 118 skipped,
+   5 errors in 85.01s" while other heavy jobs were still finishing on this
+   4-core/3.7 GB host; it was not reproducible — the recorded run above is a
+   clean re-run at the same commit, and the earlier attempt's 5 collection
+   errors left no failing test behind.)
+$ .venv/bin/bandit -r aegis/ aegis_server/ -c pyproject.toml -lll   -> Medium: 0, High: 0
+$ .venv/bin/python scripts/verify_import_reachability.py            -> PASS (no undeclared orphans, no stale roadmap entries)
+$ .venv/bin/python scripts/verify_release_contract.py --root .      -> 14 synchronized anchors at 5.0.0
+$ .venv/bin/python tools/docs/verify_documentation.py --root . --strict -> "warnings": 0
+$ bash scripts/verify_links.sh --root .                             -> PASS (1355 links resolved)
+$ .venv/bin/python scripts/verify_docs.py --root .                  -> PASS (0 findings)
+$ .venv/bin/ruff check scripts/verify_claims.py tests/test_retracted_figure_gate.py -> All checks passed
+
+GENERATED-ARTIFACT NOTE
+  `.aegis_ai_context/MANIFEST.json` hashes three of the swept documents
+  (`DEPLOYMENT_GUIDE.md`, `docs/FAQ_TECHNICAL.md`, `docs/PLATFORM_OPERATOR_GUIDE.md`),
+  so `tests/test_ai_context.py::test_manifest_is_deterministic_explicit_and_non_circular`
+  failed on the first post-sweep suite run. Regenerated with
+  `python scripts/generate_ai_context_manifest.py`; the diff is exactly those
+  three sha256/size pairs; the test passes again (11 passed).

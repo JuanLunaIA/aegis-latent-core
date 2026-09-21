@@ -61,7 +61,7 @@ The release includes source, tests, claims matrix, dependency and supply-chain a
 
 ## Can procurement rely on the benchmark numbers?
 
-Procurement can use them as evaluation inputs, not universal promises. The backpressure artifact preserved 10,000 durable records under an injected seam but recorded p99 commit latency of 1,189.89 ms. The WAF corpus is small. The key-rotation run is local. The timing experiment is not a proof of constant-time behavior.
+Procurement can use them as evaluation inputs, not universal promises. The backpressure artifact preserved 2,500 durable records under an injected seam at 10,000 RPS offered and recorded p99 commit latency of 836.3514210795984 ms (`evidence/execution_2026-08-20/backpressure_stall_report.json`); the current baseline records 51.87 ms (`evidence/execution_2026-09-16/`). A previously published 10,000-record run with p99 1,189.89 ms is retracted (`UC-018`) — no artifact in this tree produces it. The WAF corpus is small. The key-rotation run is local. The timing experiment is not a proof of constant-time behavior.
 
 ## What source integration and evidence artifacts are available?
 

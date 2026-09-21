@@ -11,8 +11,8 @@ This document records the retained v3.1.0 market-hardening measurements. It is f
 
 | Scenario | Workload | Result | Interpretation | Status |
 |---|---|---|---|---|
-| Backpressure under injected I/O stall — retained `v3.1.0`, raw JSON **not in this tree** | 10,000 offered requests at 10,000 RPS; 2 ms injected `fsync` delay | 10,000 durable commits; 0 failures; 0 missing IDs; 0 duplicates; valid chain | Evidence integrity survived the injected seam while queueing increased latency | `PASS` for bounded gate |
-| Backpressure latency — same retained `v3.1.0` run | Same run | p50 202.136 ms; p95 614.083 ms; p99 1,189.891 ms; max 3,208.869 ms | The queue is not low latency under this stall | Measured, not an SLO |
+| Backpressure under injected I/O stall — **retracted `v3.1.0` figures**, raw JSON never in this tree | 10,000 offered requests at 10,000 RPS; 2 ms injected `fsync` delay (as previously published) | **Not citable:** the 10,000-commit count and the p99 1,189.891 ms figure are retracted (`UC-018`) — no artifact in this tree produces them | The retraction is the record; the two in-tree rows below are the citable runs | `RETRACTED` |
+| Backpressure latency (2026-08-20, `20fa011`) | 2,500 offered requests over 0.25 s at 10,000 RPS offered; 2 ms injected `fsync` delay | p50 167.290 ms; p95 504.704 ms; p99 836.351 ms; max 2,290.622 ms — `evidence/execution_2026-08-20/backpressure_stall_report.json` | The queue is not low latency under this stall | Measured, not an SLO |
 | Backpressure under injected I/O stall — **current in-tree baseline** (2026-09-16, `88e01f0`) | 2,500 offered requests over a 0.25 s window at 10,000 RPS offered; 2 ms injected `fsync` delay; 1.573 s to drain | 2,500 durable commits; 0 failures; 0 missing IDs; 0 duplicates; valid chain; p50 33.545 ms, p95 41.176 ms, p99 51.875 ms, max 59.726 ms; 200 `fsync` calls | The figure to cite for current source. Three runs gave p99 52.317 / 51.875 / 47.531 ms | `PASS` for bounded gate |
 | Backpressure under injected I/O stall — superseded pre-group-commit baseline (2026-08-20, `20fa011`) | Identical parameters; 6.630 s to drain | 2,500 durable commits; 0 failures; 0 missing IDs; 0 duplicates; valid chain; p50 167.290 ms, p95 504.704 ms, p99 836.351 ms, max 2,290.622 ms; 2,501 `fsync` calls | Correct for the tree it measured, which fsynced once per node. Superseded for current-state citation by the row above; not withdrawn | `PASS` for bounded gate |
 | WAF corpus | 15 malicious and 8 benign pinned local cases | 0 observed bypasses; 0 false positives; Wilson 95% upper bound approximately 20.39% for bypass rate | Regression signal for the pinned application-layer corpus | `PASS` for declared corpus |
@@ -59,12 +59,13 @@ The harness drives `BoundedStreamProxy` from a deterministic in-process async it
 
 The harness injects an `fsync_fn` delay at the WAL boundary. It offers requests at a configured rate and checks durable record count, request-ID uniqueness, missing IDs, duplicate IDs and chain integrity. The test observes application-level queueing and record preservation.
 
-The 10,000-record result is not equivalent to a block-device `dm-delay` experiment. It does not establish power-loss behavior, cloud-volume semantics, storage replication, accepted capacity, throughput under an upstream provider, or recovery after a real disk fault.
+The retracted 10,000-record result is not equivalent to a block-device `dm-delay` experiment, and the in-tree 2,500-record runs are not either. Neither establishes power-loss behavior, cloud-volume semantics, storage replication, accepted capacity, throughput under an upstream provider, or recovery after a real disk fault.
 
-**The raw JSON for this 10,000-request run is not committed to this tree.** The figures
-above come from the retained `v3.1.0` release evidence, so a reader cannot re-derive them
-from the repository alone. That is a limitation of this particular record, not a reason to
-restate it with another run's numbers.
+**The raw JSON for the 10,000-request run was never committed to this tree, and the claims
+register retracts it (`UC-018`).** A reader cannot re-derive the 10,000-commit count or the
+p99 1,189.89 ms figure from the repository, so neither is citable — restating them with
+another run's numbers would be the same defect in the other direction: the figures above are
+now labelled retracted, and the citable figures are the two in-tree runs below.
 
 A second, smaller injected-`fsync` run *is* committed and reproducible:
 [`evidence/execution_2026-08-20/backpressure_stall_report.json`](../../evidence/execution_2026-08-20/backpressure_stall_report.json)

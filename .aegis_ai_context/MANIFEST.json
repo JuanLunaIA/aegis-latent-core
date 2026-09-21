@@ -117,8 +117,8 @@
     {
       "category": "governed_input",
       "path": "DEPLOYMENT_GUIDE.md",
-      "sha256": "162e1f37a3604a7e93a68ce22ecdacfea96a435e86af5a7d5b73e71447a4774e",
-      "size": 15253
+      "sha256": "558b792e8bf3fbc2ceaabfb6ca1ec58d56bd5620e727ee21a69ece8aae21a812",
+      "size": 15574
     },
     {
       "category": "governed_input",
@@ -165,14 +165,14 @@
     {
       "category": "governed_input",
       "path": "docs/FAQ_TECHNICAL.md",
-      "sha256": "e2fd11762b5f277f3ffa9a5f39bc22119dbab64570a11bc8c28a8868c4ce71ce",
-      "size": 19223
+      "sha256": "c90b99f9723eca3d2a0fea5140dbc1a5107c31d9bee48ad69800e4861ae88345",
+      "size": 19500
     },
     {
       "category": "governed_input",
       "path": "docs/PLATFORM_OPERATOR_GUIDE.md",
-      "sha256": "5300f8f80734c932021d413d6bf7446f6bcc6170142f1934d922ef6cacdc038e",
-      "size": 19632
+      "sha256": "98ce0e6cf581b804e0cfb9452145bbad25105f9a3ec63d4bfed31e0c663f94de",
+      "size": 19762
     },
     {
       "category": "governed_input",

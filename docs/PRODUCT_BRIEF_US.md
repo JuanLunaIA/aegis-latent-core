@@ -40,7 +40,7 @@ The product is evaluated through concrete artifacts rather than broad category l
 
 ## Measured boundaries
 
-The published v3.1.0 release retained four market-hardening artifacts. The backpressure run preserved 10,000 durable records under a 2 ms injected `fsync` delay but recorded p99 commit latency of 1,189.89 ms. The WAF corpus contains 15 malicious and 8 benign cases. The key-rotation exercise covers three independent local signer instances. The ML-DSA timing experiment passed non-detection for `sign` but returned `p=0.0` for `verify`; no constant-time claim is approved.
+The published v3.1.0 release retained four market-hardening artifacts. The backpressure run committed to this tree preserved 2,500 durable records at 10,000 RPS offered under a 2 ms injected `fsync` delay and recorded p99 commit latency of 836.3514210795984 ms (`evidence/execution_2026-08-20/`); the current baseline records 51.87 ms (`evidence/execution_2026-09-16/`). A previously published 10,000-record run with p99 1,189.89 ms is retracted (`UC-018`) — no artifact in this tree produces it. The WAF corpus contains 15 malicious and 8 benign cases. The key-rotation exercise covers three independent local signer instances. The ML-DSA timing experiment passed non-detection for `sign` but returned `p=0.0` for `verify`; no constant-time claim is approved.
 
 The checked-out `v5.0.0` source separately retains a bounded in-process SSE benchmark of 7 rounds × 1,000 deterministic events. It excludes network, provider and durable-WAL latency and is not capacity or SLO evidence. The auxiliary native `RustWal` segment is likewise not the replay authority; the JSONL ledger remains authoritative.
 

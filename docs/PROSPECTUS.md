@@ -55,7 +55,7 @@ The ledger supports integrity verification through chain linkage, hashes, signat
 
 The release separates dispatch microbenchmarks, end-to-end proxy behavior, upstream latency, WAL durability, WAF corpus metrics and native crypto timing. The background dispatch measurement in [`docs/BENCHMARKS.md`](BENCHMARKS.md) is not end-to-end latency.
 
-The v3.1.0 backpressure run offered 10,000 requests at 10,000 RPS with a 2 ms injected `fsync` delay and observed 10,000 durable records, zero failures, zero missing IDs, zero duplicate IDs and valid chain integrity. It observed p99 commit latency of 1,189.89 ms. This demonstrates tested correlation under an injected seam; it is not accepted production capacity or an SLO.
+The in-tree backpressure run offered 2,500 requests at 10,000 RPS offered with a 2 ms injected `fsync` delay and observed 2,500 durable records, zero failures, zero missing IDs, zero duplicate IDs and valid chain integrity, at p99 commit latency of 836.3514210795984 ms (`evidence/execution_2026-08-20/backpressure_stall_report.json`); the current source baseline records p99 51.87 ms (`evidence/execution_2026-09-16/`). A previously published `v3.1.0` pair — 10,000 records at p99 1,189.89 ms — is retracted (`UC-018`): no artifact in this tree produces it. This demonstrates tested correlation under an injected seam; it is not accepted production capacity or an SLO.
 
 The checked-out `v5.0.0` source also retains an in-process bounded SSE benchmark (7 rounds × 1,000 deterministic events). It excludes network, provider and durable-WAL latency and is not capacity or SLO evidence. Its optional native `RustWal` stream segment is auxiliary; the JSONL ledger remains the replay authority.
 
