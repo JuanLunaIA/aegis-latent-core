@@ -1,0 +1,64 @@
+REG-051 — after (seed premise corrected; the remaining limit is published as CI scope)
+=========================================================================================
+
+Row:        REG-051  [AEG2:13.2]  CODE  P1  "Missing harnesses"
+Transition: SEED -> DOCUMENTED
+Note:       the row's own note was the only in-tree source naming the harnesses —
+            the [AEG2:13.2] brand points at an audit document that is not in the
+            tree — and it was half wrong.
+
+(1) Which harnesses exist, re-checked against the tree:
+
+    homoglyph parity   EXISTS   tests/test_waf_layer2_normalization.py (cited by REG-001)
+    postgres race      EXISTS   tests/test_postgres_concurrent_append_race.py — 3 tests,
+                                real server via AEGIS_TEST_POSTGRES_DSN, skip guard in
+                                tests/conftest.py (asyncpg stubbed into sys.modules)
+    dynamodb race      EXISTS   tests/test_dynamodb_concurrent_append_race.py — 3 tests
+    OOM saturation     ABSENT   no harness anywhere; nothing drives allocation failure
+
+$ grep -rn 'MemoryError' tests/ | wc -l
+0
+
+(2) The measurements that bound the memory claim, and their stated edge:
+
+$ sed -n '28,36p' docs/benchmarks/BENCHMARK_METHOD.md
+    | Steady-state memory | Same harness — RSS sampled across repeated commit batches |
+      Fragmentation over days, behaviour under memory pressure, every other allocator |
+    i.e. memory pressure is named in the column of what that measurement does NOT
+    cover — the row's remaining leg is excluded by the method document itself, not
+    merely unbuilt.
+
+(3) Why the race suites cannot execute in CI as configured:
+
+$ grep -rn 'services:' .github/workflows/ | wc -l
+0
+$ grep -n 'asyncpg\|^dev = \|^storage-postgres' pyproject.toml
+60:storage-postgres = ["asyncpg>=0.29.0"]
+98:dev = [
+    No workflow declares a `services:` block, and asyncpg lives in the
+    `storage-postgres` extra rather than the dev extra the CI job installs.
+
+(4) The suites themselves, run here (skip without a server, by design):
+
+$ pytest tests/test_postgres_concurrent_append_race.py tests/test_dynamodb_concurrent_append_race.py -q
+2 skipped in 0.21s          (exit 5)
+$ pytest tests/storage/test_chain_fork_prevention.py -q
+8 passed in 0.70s          (exit 0)
+    So the fork-prevention CLASS is covered on SQLite and skipped on the other two
+    backends — which is the fact a reader of a green CI run needs, and the reason
+    the boundary belongs in UC-048 rather than in a comment.
+
+(5) Two unblock paths, recorded rather than left implied:
+
+    - race legs: a `services:` block (postgres:16-alpine with a readiness check),
+      `pip install -e '.[dev,storage-postgres]'`, and AEGIS_TEST_POSTGRES_DSN
+      exported to the service;
+    - OOM leg: choose an allocation-failure contract first (propagate as 500 with no
+      durable record, convert to a bounded refusal, or record it as an accepted
+      boundary). An agent must not pin whatever the code happens to do — that is the
+      registry's own PD-R1 rule, and it is why this row is DOCUMENTED and not FIXED.
+
+(6) Gates after the edit (same run as the commit):
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1289 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0 required_files=27
