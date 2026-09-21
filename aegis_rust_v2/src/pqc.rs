@@ -70,7 +70,9 @@ impl Drop for PqcKeypair {
 #[pyfunction]
 #[pyo3(signature = ())]
 pub fn generate_pqc_keypair() -> PyResult<PqcKeypair> {
-    let (public_key, private_key) = ActiveBackend::keypair();
+    let (public_key, private_key) = ActiveBackend::keypair().map_err(|e| {
+        pyo3::exceptions::PyRuntimeError::new_err(format!("PQC key generation failed: {}", e.0))
+    })?;
     Ok(PqcKeypair {
         public_key,
         private_key,
@@ -214,7 +216,7 @@ mod tests {
 
     #[test]
     fn roundtrip_sign_verify() {
-        let (pk, sk) = ActiveBackend::keypair();
+        let (pk, sk) = ActiveBackend::keypair().unwrap();
         let msg = b"aegis-audit-node";
         let sig = ActiveBackend::sign_detached(msg, &sk).unwrap();
         assert!(ActiveBackend::verify_detached(msg, &sig, &pk).unwrap());
@@ -223,7 +225,7 @@ mod tests {
 
     #[test]
     fn keypair_from_bytes_rejects_wrong_sizes() {
-        let (pk, sk) = ActiveBackend::keypair();
+        let (pk, sk) = ActiveBackend::keypair().unwrap();
         assert!(keypair_from_bytes(&pk[..10], &sk).is_err());
         assert!(keypair_from_bytes(&pk, &sk[..10]).is_err());
         assert!(keypair_from_bytes(&pk, &sk).is_ok());
@@ -234,7 +236,7 @@ mod tests {
         // A persisted-then-reloaded identity must produce signatures that verify
         // under the public key stored beside it, or every node written after a
         // restart is stranded.
-        let (pk, sk) = ActiveBackend::keypair();
+        let (pk, sk) = ActiveBackend::keypair().unwrap();
         let reloaded = keypair_from_bytes(&pk, &sk).unwrap();
         let msg = b"after a restart";
         let sig = ActiveBackend::sign_detached(msg, &reloaded.private_key).unwrap();
@@ -243,7 +245,7 @@ mod tests {
 
     #[test]
     fn a_malformed_signature_length_is_an_error_not_a_false() {
-        let (pk, _sk) = ActiveBackend::keypair();
+        let (pk, _sk) = ActiveBackend::keypair().unwrap();
         assert!(verify_pqc_signature(b"m", &[0u8; 10], &pk).is_err());
     }
 }

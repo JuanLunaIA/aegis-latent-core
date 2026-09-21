@@ -34,10 +34,59 @@ use std::{
 use crate::HttpResponse;
 
 /// Global multi-threaded Tokio runtime, shared across all RustForwarder instances.
-static TOKIO_RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
+///
+/// The build is fallible — it spawns `workers` OS threads, and thread creation
+/// is a resource acquisition that fails under an RLIMIT_NPROC style limit (the
+/// audit measured this aborting the process). The outcome is cached as a
+/// `Result` so that a failure is reported once, to Python, as an exception
+/// instead of panicking into the release profile's `panic = "abort"`
+/// (AUD-05 / AF-015).
+static TOKIO_RT: OnceLock<Result<tokio::runtime::Runtime, String>> = OnceLock::new();
 
-fn rt() -> &'static tokio::runtime::Runtime {
-    TOKIO_RT.get_or_init(|| {
+/// Prove that the OS will actually give us `workers` threads, before tokio
+/// asks for them.
+///
+/// tokio spawns its worker threads *through* its blocking pool, and a failed
+/// `spawn_blocking` there is a `panic!("OS can't spawn worker thread: {e}")`
+/// (tokio 1.52 `runtime/blocking/pool.rs`), not a returned error — under the
+/// release profile's `panic = "abort"` that kills the process outright, and
+/// tokio additionally marks worker-side panics with an aborting drop guard.
+/// Thread creation is still a plain `io::Result` here, so the resource is
+/// acquired once, up front, where the failure can still be reported
+/// (AUD-05 / AF-015).
+fn preflight_threads(workers: usize) -> Result<(), String> {
+    let mut handles = Vec::with_capacity(workers);
+    for index in 0..workers {
+        match std::thread::Builder::new()
+            .name(format!("aegis-io-preflight-{index}"))
+            .spawn(|| {})
+        {
+            Ok(handle) => handles.push(handle),
+            Err(e) => {
+                for handle in handles {
+                    let _ = handle.join();
+                }
+                return Err(format!(
+                    "aegis-rust: Tokio runtime init failed: cannot spawn worker thread \
+                     {index}/{workers}: {e}"
+                ));
+            }
+        }
+    }
+    for handle in handles {
+        let _ = handle.join();
+    }
+    Ok(())
+}
+
+/// The shared runtime, or the cached initialization failure message.
+///
+/// Deliberately returns a plain `Result`, not `PyResult`: it is also called
+/// from inside `Python::detach` (GIL released), where constructing a `PyErr`
+/// would itself be a defect. PyO3-facing callers map the message to a
+/// `RuntimeError` while they still hold the interpreter.
+fn rt() -> Result<&'static tokio::runtime::Runtime, String> {
+    let init = TOKIO_RT.get_or_init(|| {
         let workers = std::thread::available_parallelism()
             .map(|n| n.get())
             .unwrap_or(4);
@@ -46,14 +95,19 @@ fn rt() -> &'static tokio::runtime::Runtime {
         // removes the usual per-request spawn_blocking calls; warming the
         // runtime before the seccomp filter is applied means no clone() is
         // needed at steady state. See seccomp_guard.py for the matching policy.
+        preflight_threads(workers)?;
         tokio::runtime::Builder::new_multi_thread()
             .worker_threads(workers)
             .max_blocking_threads(1)
             .enable_all()
             .thread_name("aegis-io")
             .build()
-            .expect("aegis-rust: Tokio runtime init failed")
-    })
+            .map_err(|e| format!("aegis-rust: Tokio runtime init failed: {e}"))
+    });
+    match init {
+        Ok(runtime) => Ok(runtime),
+        Err(message) => Err(message.clone()),
+    }
 }
 
 /// Force-initialize the global Tokio runtime (spawning all worker threads) and
@@ -61,15 +115,15 @@ fn rt() -> &'static tokio::runtime::Runtime {
 /// a seccomp filter that forbids clone()/clone3(), so that all thread creation
 /// happens while those syscalls are still permitted.
 #[pyfunction]
-pub fn warmup_runtime() -> usize {
-    let runtime = rt();
+pub fn warmup_runtime() -> PyResult<usize> {
+    let runtime = rt().map_err(pyo3::exceptions::PyRuntimeError::new_err)?;
     // Run a trivial async task so the reactor/timer drivers are fully started.
     runtime.block_on(async {
         tokio::time::sleep(Duration::from_millis(0)).await;
     });
-    std::thread::available_parallelism()
+    Ok(std::thread::available_parallelism()
         .map(|n| n.get())
-        .unwrap_or(4)
+        .unwrap_or(4))
 }
 
 const DEFAULT_TIMEOUT_SECS: u64 = 120;
@@ -99,8 +153,9 @@ impl RustForwarder {
         let connect_timeout =
             Duration::from_secs(connect_timeout_seconds.unwrap_or(DEFAULT_CONNECT_TIMEOUT_SECS));
 
-        // Ensure the global runtime exists before building the client.
-        let _ = rt();
+        // Ensure the global runtime exists before building the client; a failed
+        // runtime init is now raised, not aborting.
+        rt().map_err(pyo3::exceptions::PyRuntimeError::new_err)?;
 
         let client = Client::builder()
             .timeout(timeout)
@@ -140,8 +195,12 @@ impl RustForwarder {
         let client = self.client.clone();
         let timeout = self.timeout;
 
+        // Resolve the runtime while the GIL is still held: a failure must be an
+        // exception, and PyErr construction needs the interpreter.
+        let runtime = rt().map_err(pyo3::exceptions::PyRuntimeError::new_err)?;
+
         let result = py.detach(move || {
-            rt().block_on(async move {
+            runtime.block_on(async move {
                 let mut req = client
                     .post(&url)
                     .header(CONTENT_TYPE, "application/json")
@@ -257,5 +316,28 @@ fn normalize_path(path: &str) -> String {
         path.to_string()
     } else {
         format!("/{path}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // AUD-05 / AF-015: runtime init used `.expect()`, which aborts the process
+    // under `panic = "abort"` when thread creation fails (measured with
+    // RLIMIT_NPROC). It now returns the failure for the caller to raise.
+    /// The pre-flight must agree with the OS: on a host that can spawn threads
+    /// it succeeds, and it is what turns tokio's `NoThreads` panic into a
+    /// reportable error when the host cannot.
+    #[test]
+    fn preflight_threads_reports_creation_failures() {
+        assert!(preflight_threads(2).is_ok());
+    }
+
+    #[test]
+    fn runtime_initializes_once_and_is_cached() {
+        let first = rt().expect("runtime init");
+        let second = rt().expect("cached runtime");
+        assert!(std::ptr::eq(first, second));
     }
 }

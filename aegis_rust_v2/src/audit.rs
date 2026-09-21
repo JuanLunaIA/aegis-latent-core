@@ -26,6 +26,15 @@ use std::sync::{
 /// Default ring buffer capacity: 64k events (~50 MB at ~800 B/event).
 const DEFAULT_CAPACITY: usize = 65_536;
 
+/// Hard ceiling for a caller-supplied ring capacity.
+///
+/// The default above is only a default: the value arrives from Python (config
+/// or a caller) and used to reach `ArrayQueue::new` unvalidated, so `0` panicked
+/// inside crossbeam and a huge value died in the allocator — both abort the
+/// process under the release profile's `panic = "abort"` (AUD-05 / AF-014).
+/// 64 × the default keeps the worst case a bounded allocation.
+const MAX_CAPACITY: usize = 1 << 22;
+
 /// Lock-free MPSC audit ring buffer.
 #[pyclass]
 pub struct AuditRingBuffer {
@@ -39,13 +48,23 @@ pub struct AuditRingBuffer {
 impl AuditRingBuffer {
     #[new]
     #[pyo3(signature = (capacity = DEFAULT_CAPACITY))]
-    pub fn new(capacity: usize) -> Self {
-        AuditRingBuffer {
+    pub fn new(capacity: usize) -> PyResult<Self> {
+        if capacity == 0 {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "AuditRingBuffer capacity must be at least 1",
+            ));
+        }
+        if capacity > MAX_CAPACITY {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "AuditRingBuffer capacity {capacity} exceeds the supported ceiling {MAX_CAPACITY}"
+            )));
+        }
+        Ok(AuditRingBuffer {
             queue: Arc::new(ArrayQueue::new(capacity)),
             enqueue_count: Arc::new(AtomicU64::new(0)),
             drop_count: Arc::new(AtomicU64::new(0)),
             capacity,
-        }
+        })
     }
 
     /// Non-blocking enqueue. Returns `true` on success, `false` on overflow.
@@ -122,9 +141,38 @@ impl AuditRingBuffer {
 mod tests {
     use super::*;
 
+    // AUD-05 / AF-014: `capacity` arrives from Python (config or a caller) and
+    // used to reach `ArrayQueue::new` unvalidated — 0 panicked inside
+    // crossbeam and a huge value died in the allocator, both aborting the
+    // process under the release profile's `panic = "abort"`.
+    #[test]
+    fn zero_capacity_is_rejected() {
+        pyo3::Python::initialize();
+        let err = match AuditRingBuffer::new(0) {
+            Ok(_) => panic!("zero capacity was accepted"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("at least 1"), "{err}");
+    }
+
+    #[test]
+    fn capacity_above_the_ceiling_is_rejected() {
+        pyo3::Python::initialize();
+        let err = match AuditRingBuffer::new(MAX_CAPACITY + 1) {
+            Ok(_) => panic!("capacity above the ceiling was accepted"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("ceiling"), "{err}");
+    }
+
+    #[test]
+    fn capacity_within_range_is_accepted() {
+        assert!(AuditRingBuffer::new(16).is_ok());
+    }
+
     #[test]
     fn enqueue_drain_roundtrip() {
-        let buf = AuditRingBuffer::new(8);
+        let buf = AuditRingBuffer::new(8).unwrap();
         assert!(buf.enqueue(r#"{"id":"1"}"#));
         assert!(buf.enqueue(r#"{"id":"2"}"#));
         let drained = buf.drain(10);
@@ -134,7 +182,7 @@ mod tests {
 
     #[test]
     fn overflow_drops_oldest_keeps_newest() {
-        let buf = AuditRingBuffer::new(2);
+        let buf = AuditRingBuffer::new(2).unwrap();
         buf.enqueue("a");
         buf.enqueue("b");
         // Overflow: "a" (oldest) is evicted, "c" (newest) is enqueued.
@@ -148,7 +196,7 @@ mod tests {
 
     #[test]
     fn fill_ratio() {
-        let buf = AuditRingBuffer::new(4);
+        let buf = AuditRingBuffer::new(4).unwrap();
         buf.enqueue("x");
         buf.enqueue("x");
         assert!((buf.fill_ratio() - 0.5).abs() < 1e-9);
