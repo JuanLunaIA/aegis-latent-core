@@ -1,0 +1,82 @@
+REG-042 — after (ledger multi-pod total order declined by AD-16; six stale claims corrected)
+===========================================================================================
+
+Row:        REG-042  [AD-02 residual][MO-III:P1]  ARCH  FATAL  "Multi-pod total order"
+Transition: SEED -> WONT-FIX  (decision + rationale + claims updated)
+Owner decision recorded 2026-09-21: record the decline, keep the single-writer contract.
+
+(1) The seed's stale-document finding is real. The guard the documents said did
+    not exist, exists:
+
+    $ grep -rn "def write_node_atomic" --include=*.py aegis_server/
+    aegis_server/storage/base.py:245
+    aegis_server/storage/sqlite_provider.py:378
+    aegis_server/storage/postgres_provider.py:296
+    aegis_server/storage/dynamodb_provider.py:237
+
+    $ git log --oneline -1 835184b
+    835184b Fix the red gossip tests, and stop concurrent appends forking the storage chain (#156)
+
+    Semantics, read from source (base.py:245): "Append only if the chain tip is
+    still ``expected_prev_hash``." SQLite (sqlite_provider.py:378): ``BEGIN
+    IMMEDIATE`` takes the write lock before the tip is read and holds it through
+    the insert, "so the check and the append are one indivisible step"; a moved
+    tip raises ConcurrentChainMutationError and nothing is written. PostgreSQL
+    (:296) and DynamoDB (:237) implement the same contract.
+
+    It is already the append path in use:
+    $ grep -rn "write_node_atomic(" aegis_server/main.py
+    aegis_server/main.py:593:            await storage.write_node_atomic(
+
+    And it is covered: tests/storage/test_chain_fork_prevention.py (:114, :146,
+    :186-254), tests/test_postgres_concurrent_append_race.py:97,
+    tests/test_dynamodb_concurrent_append_race.py:130.
+
+(2) Six sites corrected rather than annotated (documents that described the
+    append as non-atomic read-then-write):
+      docs/institutional/DOC-01_ENTERPRISE_ARCHITECTURE.md
+        - §8.4 claim row  "A multi-worker PostgreSQL enterprise deployment has
+          an atomic chain append."
+        - §8.4 topology row "Enterprise app with shared SQLite"  (chain race
+          remains -> stale-tip append refused)
+        - §8.4 topology row "Enterprise app with PostgreSQL/DynamoDB"
+        - §8.4 topology row "Dedicated centralized writer" (-> declined by AD-16)
+        - DOC01-EXT-002  status ROADMAP -> IMPLEMENTED for one chain, falsification
+          test now covered by a passing suite
+        - DOC01-RISK-007 marked mitigated per chain, residual named
+      docs/institutional/UNSUPPORTED_CLAIMS.md
+        - UC-005 "storage providers use non-atomic read-then-write chain
+          operations" -> replaced with the guard, its scope (one chain in one
+          backend) and the fact that the gateway ledger does not use it
+
+(3) The decision itself:
+
+    docs/architecture/DECISIONS.md — AD-16 "Decline a ledger-level multi-pod
+    total order, and keep the single-writer contract":
+      Rejected: (a) centralized writer, (b) running the gateway ledger on an
+      external provider's compare-and-append, (c) a consensus round.
+      Why (b) is declined: the gateway's ledger is a local JSONL WAL whose
+      custody, signing and evidence semantics are the product's core claim;
+      adopting the provider path moves custody of the authoritative record onto
+      an external service, which is a different product rather than a fix in
+      this one. (a) and (c) were already declined for the accumulator (AD-03,
+      AD-13) on capacity/availability/failover/recovery/custody grounds.
+      Cost section states the sharding consequence, the maintained-but-untaken
+      guard, and the revisit condition.
+
+    What did NOT change: no global order exists; cross-pod ordering stays open
+    work in docs/ROADMAP.md; CLM-012 and UC-005 still block multi-pod ordering
+    claims.
+
+(4) Burn-down arithmetic re-derived from the file after the edit:
+    W1: total=30 sum(terminal+open)=30 OK open=0
+    W2: total=23 sum(terminal+open)=23 OK open=11
+    W3: total=9  sum(terminal+open)=9  OK open=0
+    [DISC]: total=3 sum(terminal+open)=3 OK open=2
+    open rows across waves: 13
+
+(5) Gates after the edits (same run as the commit):
+verify_docs: PASS (0 findings)
+verify_claims: PASS (102 claims, 0 findings)
+verify_links: PASS (1288 relative links and anchors resolved)
+verify_documentation --strict: status=PASS errors=0 warnings=0 required_files=27
