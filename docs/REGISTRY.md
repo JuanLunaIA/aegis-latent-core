@@ -208,7 +208,7 @@ A deep forensic audit (2026-09-21; full record in [`AUDIT_REPORT_v5.0.1_PREP.md`
 | REG-D08 | `[AUD]` | CODE | P1 | RustWal multi-handle frame overwrite (no single-writer guard) | **OPEN** — `AUD-04` | Audit finding(s) AF-016 verified on this host: [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md); ticket `AUD-04` in [Roadmap](ROADMAP.md) § Audit backlog. |
 | REG-D09 | `[AUD]` | CODE | P1 | release-profile aborts instead of exceptions (caller-controlled sizes) | **OPEN** — `AUD-05` | Audit finding(s) AF-014, AF-015, AF-040, AF-041 … verified on this host: [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md); ticket `AUD-05` in [Roadmap](ROADMAP.md) § Audit backlog. |
 | REG-D10 | `[AUD]` | CODE | P1 | retracted 10k/1,189.89 ms figures still presented in 12 docs | **OPEN** — `AUD-06` | Audit finding(s) AF-007, AF-009, AF-010, AF-011 … verified on this host: [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md); ticket `AUD-06` in [Roadmap](ROADMAP.md) § Audit backlog. |
-| REG-D11 | `[AUD]` | CODE | P1 | BOUNDARIES ZK cost numbers contradict CLM-089 | **OPEN** — `AUD-07` | Audit finding(s) AF-008 verified on this host: [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md); ticket `AUD-07` in [Roadmap](ROADMAP.md) § Audit backlog. |
+| REG-D11 | `[AUD]` | CODE | P1 | BOUNDARIES ZK cost numbers contradict CLM-089 | **FIXED** 2026-09-21 — `AUD-07` | Audit finding(s) AF-008 verified on this host: [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md); ticket `AUD-07` in [Roadmap](ROADMAP.md) § Audit backlog. **Fixed `8ccea5f`:** the measured setup/prove/verify clause is removed from the zk row and the boundary now states *'Circuit cost is linear in leaf length; a leaf built with a small or zero `max_forensic_bytes` proves and verifies (`CLM-089`: no setup, proving, verification or proof-size figure is claimed)'*; doc gates PASS. |
 | REG-D12 | `[AUD]` | CODE | P2 | audit reads iterate the live ledger deque without lock/snapshot | **OPEN** — `AUD-08` | Audit finding(s) AF-037 verified on this host: [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md); ticket `AUD-08` in [Roadmap](ROADMAP.md) § Audit backlog. |
 | REG-D13 | `[AUD]` | CODE | P2 | enterprise surface buffers request/response bodies unbounded | **OPEN** — `AUD-09` | Audit finding(s) AF-038, AF-066 verified on this host: [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md); ticket `AUD-09` in [Roadmap](ROADMAP.md) § Audit backlog. |
 | REG-D14 | `[AUD]` | CODE | P2 | Part 11 signer annotation unbound | **OPEN** — `AUD-10` | Audit finding(s) AF-020 verified on this host: [`AUDIT_REPORT_v5.0.1_PREP.md`](../AUDIT_REPORT_v5.0.1_PREP.md); ticket `AUD-10` in [Roadmap](ROADMAP.md) § Audit backlog. |
@@ -237,10 +237,10 @@ A deep forensic audit (2026-09-21; full record in [`AUDIT_REPORT_v5.0.1_PREP.md`
 | W2 | 23 | 11 | 6 | 2 | 3 | 1 | **0** |
 | W3 | 9 | 1 | 2 | 5 | 0 | 1 | **0** |
 | `[DISC]` | 4 | 0 | 0 | 4 | 0 | 0 | **0** |
-| `[AUDIT]` | 26 | 3 | 0 | 0 | 0 | 0 | **23** |
-| **Total** | **92** | **21** | **26** | **17** | **3** | **2** | **23** |
+| `[AUDIT]` | 26 | 4 | 0 | 0 | 0 | 0 | **22** |
+| **Total** | **92** | **22** | **26** | **17** | **3** | **2** | **22** |
 
-Human class (9) is excluded from the burn-down by design. **Sealed 2026-09-21: `SEED` = 0 across all 66 rows — see the closure attestation in §6.** **The `[AUDIT]` block (26 rows) is the v5.0.1-prep audit's addition — see §4.6; it does not reopen the 66 sealed rows, and its closure is tracked by roadmap tickets `AUD-01`–`AUD-26`. Three doc-wording rows (`REG-D19`–`REG-D21`) are now `FIXED` via the 2026-09-21 trivial-fix batch (`8ccea5f`); the remaining 23 are `OPEN`.**
+Human class (9) is excluded from the burn-down by design. **Sealed 2026-09-21: `SEED` = 0 across all 66 rows — see the closure attestation in §6.** **The `[AUDIT]` block (26 rows) is the v5.0.1-prep audit's addition — see §4.6; it does not reopen the 66 sealed rows, and its closure is tracked by roadmap tickets `AUD-01`–`AUD-26`. Three doc-wording rows (`REG-D19`–`REG-D21`) are now `FIXED` via the 2026-09-21 trivial-fix batch (`8ccea5f`), `REG-D11` with them; the remaining 22 are `OPEN`.**
 
 ---
 

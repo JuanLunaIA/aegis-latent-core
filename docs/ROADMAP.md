@@ -203,11 +203,12 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
   - **Root cause:** UC-018 declares the 10,000-record / p99 1,189.89 ms pair false and retracted (the committed artifact contains 2,500 records at p99 836.3514210795984 ms), but the sweep stopped at the canonical matrices; buyer-facing docs still carry the pair as the retained v3.1.0 measurement. Parent verified 13 files carry the pair (14 with CHANGELOG history); UC-017 also uses 'retained' for a different run, which is the naming mechanism that keeps the error propagating.
   - **Proposed solution:** Run a scripted sweep: replace every occurrence with the artifact-backed pair (2,500 / 836.3514210795984 ms) or an explicit retraction note, standardise the word 'retained' to name one run (the 2026-09-16 execution evidence), and add the sweep to the docs gate (a grep-based check that no md file cites the retracted pair outside the retraction rows themselves).
   - **Estimated effort:** S (1 day for the sweep; +0.5 day for a gate check)
-- [ ] **AUD-07 [P1] — BOUNDARIES.md publishes ZK cost numbers that CLM-089 forbids**
+- [x] **AUD-07 [P1] — BOUNDARIES.md publishes ZK cost numbers that CLM-089 forbids**
   - **Affected files:** docs/BOUNDARIES.md:30 vs docs/CLAIMS_MATRIX.md:115 (CLM-089)
   - **Root cause:** The ZK row states 'measured on one host at setup 2.5 s, prove 1.3 s, verify 0.19 s', while CLM-089 prohibits 'any setup, proving, verification or proof-size number' because the cost harness is #[ignore]d and not a reproducible artifact.
   - **Proposed solution:** Either remove the numbers from BOUNDARIES.md and restate the CLM-089 boundary, or promote the cost harness to a reproducible artifact (a committed, runnable command + output file) and update CLM-089 to name it. The two registers must not contradict.
   - **Estimated effort:** S (2-4 h either way)
+  - **Closed 2026-09-21** — `8ccea5f`: the measured setup/prove/verify numbers are removed from `docs/BOUNDARIES.md:30`; the row now states the CLM-089 boundary explicitly; doc gates PASS.
 - [ ] **AUD-08 [P2] — Audit read endpoints iterate the live ledger deque without a lock/snapshot**
   - **Affected files:** aegis/proxy/audit_api.py :133,:148,:153,:177,:215,:230,:254,:288,:297,:324; writer aegis/proxy/app.py:1382,1845; deque aegis/core/crypto_audit.py:806
   - **Root cause:** Commits append to the deque from asyncio worker threads while handlers iterate it; a landing mutation raises RuntimeError('deque mutated during iteration') -> 500 with no data. Ledger accessors elsewhere snapshot under self._lock, so this is an inconsistency.
