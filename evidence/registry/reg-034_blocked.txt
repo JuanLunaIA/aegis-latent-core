@@ -1,0 +1,62 @@
+REG-034 — blocked on two of three limbs (SHA256SUMS limb executed)
+====================================================================
+
+Row:        REG-034  [AEG2:1.4]  CODE  P1
+            "cosign verify + gh attestation verify + SHA256SUMS sweep"
+Transition: SEED -> BLOCKED  (two limbs blocked; one limb executed and passing)
+
+(1) SHA256SUMS sweep — EXECUTED, PASSING (2026-09-21):
+
+$ python scripts/verify_release_readback.py --tag v5.0.0 --verify-assets
+release readback for v5.0.0 (repository juanlunaia/aegis-latent-core)
+----------------------------------------------------------------------------------------------------
+GitHub Release v5.0.0               CHECKED       published, 31 assets uploaded
+asset SHA256SUMS                    CHECKED       present
+asset release-asset-manifest.json   CHECKED       present
+SHA256SUMS contents                 CHECKED       15 digests listed
+SHA256SUMS sweep                    CHECKED       15 verified, 0 mismatched, 0 listed-but-absent of 15
+PyPI aegis-latent-sdk               CHECKED       latest 5.0.0 == 5.0.0; releases: ['4.0.0', '4.1.1', '4.1.2', '5.0.0']
+PyPI aegis-latent-core              CHECKED       latest 4.1.2 != tag version 5.0.0; releases: ['4.1.2']
+npm aegis-latent-sdk                CHECKED       latest 5.0.0 == 5.0.0
+GHCR gateway 5.0.0                  CHECKED       manifest digest sha256:81d106c9d8d2fea0dedb29259532b9743f196168b7c762363e2dd83c9a33c15a
+GHCR dashboard 5.0.0                CHECKED       manifest digest sha256:ec73cba5858585eca554f5ef28658a641c59bf02968ad87f8df6a4edb9860ee5
+cosign verify gateway               NOT_EXECUTED  cosign is not installed on this host (no `cosign` on PATH)
+cosign verify dashboard             NOT_EXECUTED  cosign is not installed on this host (no `cosign` on PATH)
+gh attestation verify               NOT_EXECUTED  gh CLI is not installed on this host (no `gh` on PATH)
+----------------------------------------------------------------------------------------------------
+10 checked, 0 mismatched, 3 not executed
+NOT EXECUTED is not a pass: these observables are unverified from this host.
+downloaded assets kept in /home/luna/.hermes/cache/scratch/readback-5.0.0
+
+
+    Every artifact listed in the published SHA256SUMS was downloaded from the
+    release and hashed locally: 15 of 15 matched, none missing.
+
+(2) cosign verify — NOT EXECUTED, tool absent:
+
+$ command -v cosign
+    (no output; cosign is not installed on this host)
+    The readback tool prints:
+      cosign verify gateway     NOT_EXECUTED  cosign is not installed on this host
+      cosign verify dashboard   NOT_EXECUTED  cosign is not installed on this host
+
+(3) gh attestation verify — NOT EXECUTED, tool absent:
+
+$ command -v gh
+    (no output; the GitHub CLI is not installed on this host)
+      gh attestation verify     NOT_EXECUTED  gh CLI is not installed on this host
+
+(4) Why this is BLOCKED rather than VERIFIED or FIXED: no signature and no
+    attestation is claimed anywhere here. The signature *objects* exist in the
+    registry (they were observed when the release was published), but observing an
+    object is not verifying a signature, and this host has no verifier.
+
+(5) Owner and unblock path: release operator. On a host with cosign and gh,
+    `python scripts/verify_release_readback.py --tag v5.0.0` runs exactly the
+    commands below and the operator pastes back one output block:
+
+$ cosign verify --certificate-identity-regexp .* --certificate-oidc-issuer-regexp .* \
+      ghcr.io/juanlunaia/aegis-latent-core:5.0.0
+$ cosign verify --certificate-identity-regexp .* --certificate-oidc-issuer-regexp .* \
+      ghcr.io/juanlunaia/aegis-latent-core-dashboard:5.0.0
+$ gh attestation verify <artifact> --repo juanlunaia/aegis-latent-core

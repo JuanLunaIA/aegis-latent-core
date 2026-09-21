@@ -89,6 +89,21 @@ A passing verification establishes inclusion under the root you supplied — not
 
 Full worked transcript with the failing cases: **[docs/PROVE_IT.md](docs/PROVE_IT.md)**
 
+### Verify what you downloaded
+
+Release assets carry a digest, and checking one needs no checkout and no cooperation from this project:
+
+```
+curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.0/SHA256SUMS
+# then, for each artifact you downloaded:
+curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.0/<artifact-name>
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+Two things that snippet does not establish. It shows the bytes match the manifest; it does not show who built them — an OCI signature (`cosign verify`) and a build attestation (`gh attestation verify`) are separate checks against separate infrastructure. And it covers the **release assets only**: the PyPI wheels for `aegis-latent-core` are rebuilt from the same source on a different build host, so their bytes differ from the release assets of the same name, and `SHA256SUMS` does not cover them (see [docs/RELEASE_STATUS.md](docs/RELEASE_STATUS.md)).
+
+`python scripts/verify_release_readback.py --tag v5.0.0 --verify-assets` automates the whole readback — the GitHub Release, the `SHA256SUMS` sweep, the PyPI and npm versions, and the GHCR manifest digests — and prints `NOT_EXECUTED`, with the reason, for anything it could not check from where it ran.
+
 ---
 
 ## Two deployment shapes

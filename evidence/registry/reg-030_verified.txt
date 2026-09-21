@@ -1,0 +1,39 @@
+REG-030 — after (PyPI byte-difference, re-derived)
+==================================================
+
+Row:        REG-030  [TRACK-A3]  CODE  P1  "PyPI byte-difference"
+Transition: SEED -> VERIFIED
+
+Question the row records: the PyPI aegis-latent-core artifacts are byte-different
+from the release assets of the same name, so SHA256SUMS does not cover them. The
+row previously carried no evidence pointer; the difference was re-derived here
+instead of cited.
+
+Artifact compared: aegis_latent_core-4.1.2-py3-none-any.whl
+  (4.1.2 is the version present on both surfaces; the gateway distribution has no
+   5.0.0 on PyPI at all — REG-027.)
+
+Sources:
+  release asset  .../releases/download/v4.1.2/aegis_latent_core-4.1.2-py3-none-any.whl
+  PyPI wheel     https://files.pythonhosted.org/packages/16/dc/1005f74e17fc3eb590e82b4e6c444e9e33af7f5dc666749eee545f57c017/aegis_latent_core-4.1.2-py3-none-any.whl
+                 (digest as published by the PyPI JSON API)
+
+Bytes:
+  release asset  sha256 a38a4f9d34cd04be4db1d2b9838a70b71ecacb7d862c2a33e998ff714468df2a  713,410 bytes
+  PyPI wheel     sha256 8e2d7426cfc9dd60846081cb288b7f09803d63fffbf072970e18184fd7af92e4  713,410 bytes
+  -> byte-different, and the same size (consistent with a container-level
+     difference rather than a payload difference — checked, not assumed):
+
+Content, every inner zip entry hashed in both archives:
+  entries in release asset: 204
+  entries in PyPI wheel:    204
+  same set of names:        True
+  content-identical entries: 204
+  differing entries:          0
+
+So the payload is identical and the archives differ. What a digest cannot show is
+*why*; the recorded explanation (rebuilt on a different build host) is not
+re-verified here and is not claimed as such.
+
+Consequence, now stated where a consumer meets it (README.md, REG-029's section):
+SHA256SUMS does not cover the PyPI aegis-latent-core downloads.

@@ -1,0 +1,66 @@
+REG-028 — after (release readback automation)
+=============================================
+
+Row:        REG-028  [TRACK-A1]  CODE  P0  "Release readback automation"
+Transition: SEED -> FIXED
+Deliverable: scripts/verify_release_readback.py (new, 312 lines of code)
+
+The registry's release rows were closed with hand-run commands, re-typed per
+session and captured in prose. This tool runs the whole readback in one command.
+
+(1) Executed run, 2026-09-21, against the live surfaces:
+
+$ python scripts/verify_release_readback.py --tag v5.0.0 --verify-assets
+release readback for v5.0.0 (repository juanlunaia/aegis-latent-core)
+----------------------------------------------------------------------------------------------------
+GitHub Release v5.0.0               CHECKED       published, 31 assets uploaded
+asset SHA256SUMS                    CHECKED       present
+asset release-asset-manifest.json   CHECKED       present
+SHA256SUMS contents                 CHECKED       15 digests listed
+SHA256SUMS sweep                    CHECKED       15 verified, 0 mismatched, 0 listed-but-absent of 15
+PyPI aegis-latent-sdk               CHECKED       latest 5.0.0 == 5.0.0; releases: ['4.0.0', '4.1.1', '4.1.2', '5.0.0']
+PyPI aegis-latent-core              CHECKED       latest 4.1.2 != tag version 5.0.0; releases: ['4.1.2']
+npm aegis-latent-sdk                CHECKED       latest 5.0.0 == 5.0.0
+GHCR gateway 5.0.0                  CHECKED       manifest digest sha256:81d106c9d8d2fea0dedb29259532b9743f196168b7c762363e2dd83c9a33c15a
+GHCR dashboard 5.0.0                CHECKED       manifest digest sha256:ec73cba5858585eca554f5ef28658a641c59bf02968ad87f8df6a4edb9860ee5
+cosign verify gateway               NOT_EXECUTED  cosign is not installed on this host (no `cosign` on PATH)
+cosign verify dashboard             NOT_EXECUTED  cosign is not installed on this host (no `cosign` on PATH)
+gh attestation verify               NOT_EXECUTED  gh CLI is not installed on this host (no `gh` on PATH)
+----------------------------------------------------------------------------------------------------
+10 checked, 0 mismatched, 3 not executed
+NOT EXECUTED is not a pass: these observables are unverified from this host.
+downloaded assets kept in /home/luna/.hermes/cache/scratch/readback-5.0.0
+
+
+Exit code 0 (no mismatch).
+
+(2) Its own rules are pinned by a regression test rather than by convention:
+
+$ pytest tests/test_release_readback_script.py -q
+3 passed in 0.28s
+  - test_not_executed_is_not_a_pass_but_does_not_fail_the_run
+      an unrunnable observable must not be reported as verification, and must
+      not be reported as a mismatch either; a real mismatch must exit 1.
+  - test_sha256sums_parsing_follows_sha256sum_output
+  - test_readme_consumer_snippet_matches_what_the_tool_emits   (REG-029)
+
+(3) Lint and SAST on the new file:
+
+$ ruff check scripts/verify_release_readback.py tests/test_release_readback_script.py
+All checks passed!
+
+$ bandit -r scripts/verify_release_readback.py
+(no issues reported)
+
+    Note on scope honesty: the repository's CI bandit gate is
+    `bandit -r aegis/ aegis_server/ -c pyproject.toml -lll`
+    (.github/workflows/ci.yml:608), so scripts/ is outside it; the run above is
+    the stricter local check, and it is clean. The B404/B603/B607/B310 findings
+    this file produced before the annotations were addressed rather than
+    suppressed: subprocess runs only shutil.which-resolved absolute paths with a
+    fixed argv and shell=False, and every URL opened is an https constant or
+    built from the repository name and the tag.
+
+Digests re-read independently here, matching the values recorded for 5.0.0:
+  gateway   sha256:81d106c9d8d2fea0dedb29259532b9743f196168b7c762363e2dd83c9a33c15a
+  dashboard sha256:ec73cba5858585eca554f5ef28658a641c59bf02968ad87f8df6a4edb9860ee5

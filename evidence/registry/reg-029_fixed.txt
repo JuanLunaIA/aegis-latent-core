@@ -1,0 +1,29 @@
+REG-029 — after (consumer provenance one-liner)
+===============================================
+
+Row:        REG-029  [TRACK-A2]  CODE  P1  "Consumer provenance one-liner"
+Transition: SEED -> FIXED
+
+(1) The snippet is emitted by the tool, not written twice:
+
+$ python scripts/verify_release_readback.py --tag v5.0.0 --emit-consumer-snippet
+curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.0/SHA256SUMS
+# then, for each artifact you downloaded:
+curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.0/<artifact-name>
+sha256sum -c SHA256SUMS --ignore-missing
+
+(2) That exact text is quoted in README.md under "Prove it yourself" →
+    "Verify what you downloaded", and the two cannot drift:
+
+$ pytest tests/test_release_readback_script.py -q
+3 passed in 0.28s
+    test_readme_consumer_snippet_matches_what_the_tool_emits compares the README
+    fenced block against the function's output *and* against the CLI's stdout, so
+    changing either the URL construction or the documented commands fails a test.
+
+(3) The README section also states the two limits of the snippet, so a passing
+    check is not read as more than it is:
+      - it shows the bytes match the manifest, not who built them
+        (that is cosign/gh attestation — REG-034);
+      - it covers release assets only; the PyPI aegis-latent-core wheels are
+        rebuilt and are not covered by SHA256SUMS (REG-030).
