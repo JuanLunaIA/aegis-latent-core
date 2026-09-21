@@ -45,7 +45,7 @@ The Luhn-plus-IIN gate is a precision choice: it keeps a random long number from
 
 ### Where redaction applies
 
-`aegis/proxy/app.py` walks the payload and scrubs string values under the keys `content`, `system`, and `text`. Redaction runs **before** the evidence record is committed, so the record holds the scrubbed form.
+`aegis/proxy/app.py` walks the payload and scrubs string values under the keys `content`, `system`, and `text`. What the evidence record commits is **digests, not content** (`request_hash`, `response_hash`, `mmr_leaf_hash`): the response digest is taken over the scrubbed response when response redaction is on, while the request digest is taken over `raw_body` — the bytes as received — because the pre-forward scrub rewrites the parsed `body` and deliberately leaves `raw_body` alone (`aegis/proxy/app.py:1735`, the comment at `:1773-1777`, `request_bytes=raw_body` at `:1385`). So redaction changes what the record commits about the *response*, and — with the opt-in in §4 — what the *provider* receives, but the request digest always corresponds to what the caller sent.
 
 ## 3. What redaction does not catch
 
@@ -151,6 +151,8 @@ caller ──► gateway ──── request sent as received ────► p
 The request reaches the upstream provider before redaction touches anything. If a caller sends a Social Security number, the provider received that Social Security number. Redaction changes what is written to the WAL; it cannot change what has already crossed the network.
 
 If your privacy position depends on the provider not receiving personal data, redaction is the wrong control. You need input filtering before the gateway, or a provider agreement that covers it.
+
+**One opt-in changes the provider path — it does not change the section above.** With `AEGIS_PHI_DEIDENTIFY=true` (and/or `AEGIS_PCI_SCRUB=true`) the gateway scrubs the outbound body *before* forwarding, so what crosses the network is the scrubbed copy rather than the bytes as received; the diagram above describes the default, flag-off path. Both flags are **off by default**. Turning them on does not make the claim in the heading false: what crosses is text with matched patterns removed, produced by finite regexes over the fields the scrubber visits — not de-identification (`UC-009`, `UC-010`) — so a category the patterns do not cover still crosses. It also does not change what the record commits: the request digest is still taken over `raw_body`, so the flag moves the provider path only. Enabling it is a behavior change for every governed call (model inputs change), and it is a deployment decision rather than a default.
 
 ## 5. Consequences for a privacy assessment
 
