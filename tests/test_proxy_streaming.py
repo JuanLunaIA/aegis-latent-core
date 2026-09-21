@@ -468,15 +468,25 @@ async def test_large_logical_stream_retained_memory_is_bounded() -> None:
             yield _event("x")
         yield b"data: [DONE]", None
 
-    async def commit(_summary: StreamEvidenceSummary) -> None:
+    outcomes: list[str] = []
+
+    async def commit(summary: StreamEvidenceSummary) -> None:
         nonlocal calls
         calls += 1
+        outcomes.append(summary.terminal_outcome)
 
     proxy = BoundedStreamProxy(
         upstream(),
         terminal_commit=commit,
         max_response_bytes=32_000_000,
-        max_duration_seconds=30,
+        # The duration cap is not what this test measures, and at 30 s it made
+        # the byte assertion below depend on the machine: under full-suite
+        # contention the producer hit the cap, the stream ended early with
+        # outcome="timeout", and `observed` fell to roughly half. Raised so
+        # completion is gated only by the memory bound under test, and the
+        # outcome assertion turns a truncation into a failure rather than into
+        # a smaller number that still clears the bar.
+        max_duration_seconds=300,
         max_event_bytes=1024,
         queue_max_items=4,
         queue_max_bytes=4096,
@@ -486,6 +496,7 @@ async def test_large_logical_stream_retained_memory_is_bounded() -> None:
     async for part in proxy:
         observed += len(part)
         assert proxy.retained_bytes <= 1024 + 4096 + 512
+    assert outcomes == ["complete"], outcomes
     assert observed > 5_000_000
     assert proxy.peak_queue_items <= 4
     assert proxy.peak_queue_bytes <= 4096

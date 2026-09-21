@@ -191,8 +191,17 @@ async def test_read_endpoints_survive_concurrent_commits(tmp_path: Any) -> None:
     stop = threading.Event()
 
     def writer() -> None:
+        # Bounded on purpose: the forensic export endpoint refuses a window
+        # holding more than 1000 nodes, and this loop issues 48 reads plus six
+        # exports below. An unbounded writer makes the export assertion depend
+        # on how fast the machine drains those requests — under contention it
+        # commits past the limit and the endpoint refuses correctly, which
+        # reads as a failure of this test rather than of the workload. The
+        # property under test is that reads survive commits landing
+        # mid-iteration, so the writer stops well short of the documented limit
+        # while still committing throughout.
         number = 200
-        while not stop.is_set():
+        while not stop.is_set() and number < 900:
             number += 1
             _commit(ledger, number)
 

@@ -189,8 +189,8 @@
     {
       "category": "governed_input",
       "path": "pyproject.toml",
-      "sha256": "229320789a8996642aca8ca18cd0c4ecc4d0cae15907d2bda34145b32071db05",
-      "size": 11516
+      "sha256": "84fcda30e286a3939dc943bafa32daf16fa4d2aa4913686d7eb5add866044436",
+      "size": 11836
     },
     {
       "category": "governed_input",

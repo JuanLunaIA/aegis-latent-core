@@ -1,0 +1,81 @@
+REG-D36 — the mission order's 90% coverage floor: 88.67% → 90.07% (FIXED 2026-09-21)
+
+The floor was registered OPEN rather than papered over, and then worked. Both new
+defects in this batch were found *by* working it (REG-D37, REG-D38), which is the
+point of registering a measured gap instead of a conclusion.
+
+════ 1. THE MEASUREMENTS ════
+    before:  pytest -n auto -q --cov=aegis --cov-fail-under=90
+             FAIL Required test coverage of 90% not reached. Total coverage: 88.67%
+             TOTAL 20300 statements, 2300 missed, 3 failed / 7003-ish passed
+
+    interim (tests written, REG-D39 not yet fixed):
+             Required test coverage of 90% reached. Total coverage: 90.07%
+             TOTAL 20298 statements, 2016 missed, 2 failed, EXIT 1
+
+    final:   Required test coverage of 90% reached. Total coverage: 90.05%
+             TOTAL 20298 statements, 2,019 missed
+             7189 passed, 118 skipped, 0 failed, EXIT 0
+             (the two failures in the interim run were REG-D39, and are fixed)
+
+284 statements newly covered; the statement total moved by 2 because
+`aegis/core/safe_serialization.py` gained a docstring (no executable statements
+removed). The final invocation exits **0**, which is the point: the floor is met
+and nothing is red.
+
+The repository's own floor is unchanged at 65% (`Makefile:46`,
+`.github/workflows/ci.yml:306-309`). It was NOT raised to 90 in this commit: a
+floor belongs in a release act with its own CI observation, and CI cannot be
+executed on this host (`gh` absent). The 90% figure here is the mission order's
+requirement, met on this host, and the repo floor remains the repo's business.
+
+════ 2. WHERE THE 284 STATEMENTS CAME FROM ════
+Each addition is a behaviour test written against the module's own contract, not
+a line-toucher. Files added (all under `tests/`):
+
+  * `test_optional_backend_declarations.py` (+3 tests and a tree-wide sweep) — the
+    `dev`-extra fix that made the Parquet exporter execute at all: 0% → its module
+    is now imported and asserted by a run. Counted as REG-D38.
+  * `test_safe_serialization_failclosed.py` (13 tests) — key/signature/failure
+    branches, and the nested-allow-list class that found REG-D37.
+  * `test_forwarder_sse_framing.py` (26 tests) — every bound in
+    `_iter_bounded_lines` (zero budget, absent reader, terminator past the budget,
+    unterminated line, line-oriented fallback over-limit), CRLF split across
+    transport reads, blank-line event boundaries, `_native_sse_event` parsing, the
+    native Anthropic relay's provider/egress/circuit-breaker behaviour, and the
+    whole-event cap that a per-line cap cannot see.
+  * `test_rate_limiter_reservation.py` (35 tests) — the distributed backend's
+    refusals (empty URL, whitespace namespace, duplicate bucket, unreachable
+    backend, malformed reply, negative retry as infinite) and the reservation
+    arithmetic (incremental overage charged once, refused charge leaves the total
+    alone, single settlement, refund/finalize below observed usage refused).
+  * `test_dependencies_identity_helpers.py` (25 tests) — the role→scope mapping,
+    Bearer extraction, the tenant comparison that must be total over Unicode
+    (`hmac.compare_digest` raises `TypeError` on non-ASCII `str`), identity-object
+    validation, and domain-separated opaque credential ids.
+  * `test_config_validation_branches.py` (40 tests) — every startup refusal in
+    `aegis/config.py`: auth-disabled-without-debug-mode, mTLS trust paths, the
+    ordered byte budgets, archival/TSA/SIEM trust rules, and the strict-runtime
+    invariants including the principal-mapping rule, with the all-green strict
+    configuration as the positive control.
+  * `test_gossip_runtime_lifecycle.py` (16 tests) — TLS material checks by setting
+    name, the absent native accumulator, listener readiness (`server.started`),
+    shutdown ordering (daemon before listener) and the cancel path.
+
+Not attempted, and why: `aegis/proxy/app.py` (265 missed) and
+`aegis/core/crypto_audit.py` (124 missed) need route-level and ledger-level
+fixtures whose cost is a project, not a batch; `aegis/consensus/gossip.py` and
+`rust_integration.py` are gated on the native extension and multi-replica
+transport. Those remain the roadmap ticket's subject matter (`AUD-38`), which is
+now closed for the floor and open-ended as ordinary coverage debt.
+
+════ 3. RESIDUALS ════
+  * Two tests red the gate under full-suite contention for non-defect reasons;
+    both were diagnosed to mechanism and fixed with their assertions intact —
+    `REG-D39`. The final run above is green because of that fix.
+  * `tests/test_ai_context.py` failed in earlier runs only because
+    `.aegis_ai_context/MANIFEST.json` hashes governed inputs (including
+    `pyproject.toml`, which the `dev`-extra fix edited). Regenerated last, from
+    the generator's own serialiser: 83 files, test passes.
+  * `safe_serialization.py:117` remains uncovered: a redundant second bound after
+    the per-chunk check, unreachable by construction. Left as defence in depth.

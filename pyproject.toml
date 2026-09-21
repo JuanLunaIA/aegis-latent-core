@@ -115,6 +115,11 @@ dev = [
     "cachetools>=5.3.0",
     "ldap3>=2.9.1",
     "PyJWT[crypto]>=2.10.1,<3",
+    # The Parquet exporter's tests module-skip on this import (see
+    # tests/test_optional_backend_declarations.py). Declared here as well as in
+    # the lakehouse extra so the suite that CI runs actually executes them,
+    # rather than reporting the connector green while never importing it.
+    "pyarrow>=16.0.0",
 ]
 # ── Full install (all optional extras) ───────────────────────────────────────
 all = [

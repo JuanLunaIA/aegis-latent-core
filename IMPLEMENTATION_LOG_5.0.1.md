@@ -171,42 +171,85 @@ owner-or-blocker.
 | --- | --- | --- |
 | `tests/test_error_response_hygiene.py` | 3 | fixed `500` details; generic body for unexpected exceptions; leak-detector control |
 | `tests/test_no_defect_markers_in_shipped_code.py` | 3 | no `TODO`/`FIXME`/`HACK` in shipped code; non-empty walk; detector control |
+| `tests/test_safe_serialization_failclosed.py` | 13 | key/signature/failure branches of the guarded-pickle path — **and the nested-allow-list class that found `REG-D37`** |
+| `tests/test_forwarder_sse_framing.py` | 26 | every bound in `_iter_bounded_lines`; CRLF split across transport reads; event boundaries; `_native_sse_event`; the native Anthropic relay's provider/egress/circuit-breaker paths; the whole-event cap a per-line cap cannot see |
+| `tests/test_rate_limiter_reservation.py` | 35 | distributed-backend refusals (empty URL, whitespace namespace, duplicate bucket, unreachable backend, malformed reply, negative retry as infinite) and the reservation arithmetic (overage charged once, refused charge leaves the total alone, single settlement, refund/finalize below observed usage refused) |
+| `tests/test_dependencies_identity_helpers.py` | 25 | role→scope mapping; Bearer extraction; the tenant comparison that must be total over Unicode; identity-object validation; domain-separated opaque credential ids |
+| `tests/test_config_validation_branches.py` | 40 | every startup refusal in `aegis/config.py`, with the all-green strict configuration as the positive control |
+| `tests/test_gossip_runtime_lifecycle.py` | 16 | TLS-material checks by setting name; the absent native accumulator; listener readiness; shutdown ordering; the cancel path |
+| `tests/test_optional_backend_declarations.py` | +4 (23→27) | `REG-D38`: the `dev`-extra rule, the operator hint, and a tree-wide sweep over every `pytest.importorskip` |
 
-### 4.2 The order's coverage command — **NOT MET, registered**
+169 tests in the eight new files, plus 4 in the existing declarations file. Every one of them
+asserts the module's contract — this batch deliberately did not chase lines.
+
+### 4.2 The order's coverage command — **met at 90.05%, exit 0**
 
 ```
-$ pytest -n auto -q --cov=aegis --cov-fail-under=90
-TOTAL                                            20300   2300    89%
-FAIL Required test coverage of 90% not reached. Total coverage: 88.67%
+before:  pytest -n auto -q --cov=aegis --cov-fail-under=90
+         TOTAL   20300   2300    89%
+         FAIL Required test coverage of 90% not reached. Total coverage: 88.67%
+
+final:   pytest -n auto -q --cov=aegis --cov-fail-under=90
+         TOTAL   20298   2019    90%
+         Required test coverage of 90% reached. Total coverage: 90.05%
+         7189 passed, 118 skipped in 223.46s (0:03:43)
+         EXIT: 0
 ```
 
-- **Measured: 88.67%** (20,300 statements, 2,300 missed) — 1.33 points below the mission floor.
-- **The repository's own floor is 65%** (`Makefile:46`, `.github/workflows/ci.yml:306-309`), and
-  the measured value is 23.67 points above it. The 90% figure appears nowhere in this repository
-  before this log; it is the order's requirement, stricter than the project's own standard.
-- The floor was **not** raised in this commit: raising it to a value the suite does not meet would
-  break CI, and reaching 90% means writing tests for modules this release did not touch
-  (`aegis/storage/s3_worm.py` 80%, `aegis/storage/segment_manifest.py` 76%,
-  `aegis/proxy/forwarder.py` 76%, `aegis/proxy/egress_guard.py` 75%).
-- Registered as **`AUD-38`** (roadmap) and **`REG-D36`** (registry, **OPEN**) with the measured
-  number, the module list and an effort estimate.
-- **Two tests failed intermittently under CPU contention on this host** —
-  `test_audit_read_snapshot.py::test_read_endpoints_survive_concurrent_commits` and
-  `test_proxy_streaming.py::test_large_logical_stream_retained_memory_is_bounded`. Both assert
-  tight in-loop invariants: the first asserts `proxy.retained_bytes <= 5632` on every iteration of
-  a 100,000-event loop, the second runs a writer thread committing in a tight loop while seven
-  endpoints are served. They failed in the `--cov` run and in a second plain `-n auto` run that
-  competed with a `cargo` build; they passed in isolation (`2 passed in 24.37s`, and `33 passed in
-  22.65s` for the pair with their siblings) and in the first quiet `-n auto` run. Recorded as
-  **intermittent under load**, not dismissed as false positives and not hidden.
+- **284 statements newly covered** (2,300 missed → 2,019). The statement total moved by two because
+  `aegis/core/safe_serialization.py` gained a docstring and no executable statements left.
+- The floor was **not** raised, and this is deliberate: the repository enforces 65%
+  (`Makefile:46`, `.github/workflows/ci.yml:306-309`) and a floor belongs in a release act with its
+  own CI observation. CI cannot be executed on this host (`gh` absent). The 90% figure is the
+  order's requirement, met on this host; the repo's floor remains the repo's.
+- **Working the gap found two defects that reading had missed** — which is the argument for
+  registering a measured gap rather than a conclusion:
+  - **`REG-D37`** — the guarded-pickle allow-list was **inert for containers**: `_validate_allowed`
+    tested `isinstance(obj, allowed)` before its recursion, and `dict`/`list` are themselves in
+    `DEFAULT_ALLOWED`, so the recursion branches were unreachable and `{"k": <anything>}` passed.
+    `set` payloads reach the post-load check with no `GLOBAL` opcode (`EMPTY_SET`/`ADDITEMS`), so
+    that check was the only guard and it was not firing. Fixed by reordering; 7 tests fail with the
+    old order restored.
+  - **`REG-D38`** — the Parquet exporter's twelve tests **never ran anywhere**: nothing installs the
+    `lakehouse` extra (no CI job, not in `dev`, not in `all`), so the module sat at 0% and
+    `CLM-071`'s "locally tested" rested on a suite that module-level-skipped. Fixed the way the
+    repository's own `pqc` precedent does it — `pyarrow` into `dev`, plus a guard that fails on any
+    future silent skip.
+- **What is still uncovered, with the reason**: `aegis/proxy/app.py` (265 missed) and
+  `aegis/core/crypto_audit.py` (124) need route-level and ledger-level fixtures — a project, not a
+  batch; `aegis/consensus/gossip.py` (111) and `rust_integration.py` (92) are gated on the native
+  extension and multi-replica transport. `AUD-38` is closed for the floor and open-ended as
+  ordinary coverage debt.
 
-### 4.3 Rust
+### 4.3 The two tests that reded every full-suite run — diagnosed and fixed (`REG-D39`)
+
+Both reproduced **only** under full-suite contention on this 4-core host and passed together in
+33.86 s on a quiet machine. Neither was a product defect; both were assertions that depended on how
+fast the machine is:
+
+- `test_proxy_streaming.py::test_large_logical_stream_retained_memory_is_bounded` failed at
+  `assert observed > 5_000_000` (`assert 2511420 > 5000000`) while its in-loop memory bound
+  **passed on every iteration**. The proxy's own `max_duration_seconds=30` cap fired under load, the
+  stream ended with `outcome="timeout"`, and the test could not distinguish a truncated stream from a
+  completed one. Fixed by raising the cap (it is not what the test measures) and asserting the
+  terminal summary — `assert outcomes == ["complete"], outcomes`; control with the cap forced to
+  0.05 s makes the **new** assertion the one that fails.
+- `test_audit_read_snapshot.py::test_read_endpoints_survive_concurrent_commits` failed the export
+  assertion with `{"detail":"a forensic bundle is limited to 1000 nodes"}` — correct product
+  behaviour, wrong workload: an unbounded writer thread ran past the documented limit while 48 reads
+  and six exports executed. Fixed by bounding the writer to `number < 900` while still committing
+  throughout the loop.
+
+No bound was relaxed: `retained_bytes <= 1024+4096+512`, `peak_queue_items <= 4`,
+`peak_queue_bytes <= 4096`, `calls == 1`, every `status_code == 200` and the export check all stand.
+
+### 4.4 Rust
 
 | Command | Result |
 | --- | --- |
 | `cargo clippy --all-targets --all-features --locked -- -D warnings` | **exit 0** (compiled `aegis_rust v5.0.1`) |
 | `cargo test --all-features` | **not runnable by construction** — see below |
-| `cargo test --release --locked` (the repository's own CI invocation) | see §4.3.1 |
+| `cargo test --release --locked` (the repository's own CI invocation) | see §4.4.1 |
 
 `cargo test --all-features` cannot link on Linux in this repository, and the reason is documented
 in the repository itself: `Cargo.toml:12-20` explains that `extension-module` must not be a
@@ -218,7 +261,7 @@ enable exactly that. The failure reproduced here is that documented one
 (`:445-446`); `zk-spartan` is excluded from the default build and needs ADX, which is REG-D04's
 documented Haswell limitation.
 
-#### 4.3.1 Running the repository's own invocation on this host
+#### 4.4.1 Running the repository's own invocation on this host
 
 `cargo test --release --locked` builds and runs here, but a test that initialises an embedded
 interpreter needs the interpreter's real prefix: this host's Python is uv-managed, whose build-time
@@ -235,18 +278,38 @@ LD_LIBRARY_PATH=<uv base>/lib PYTHONHOME=<uv base> PYO3_PYTHON=<repo>/.venv/bin/
   EXIT: 0
 ```
 
-Note the contrast with §4.3: `--all-features` cannot link (documented `extension-module`
-constraint); the default-plus-`zk-spartan` invocations CI uses are the runnable surface.
+Note the contrast with §4.4: `--all-features` cannot link (documented `extension-module`
+constraint); the default-plus-`zk-spartan` invocations CI uses are the runnable surface. The
+native-extension-covered portions of `rust_integration.py` are counted in §4.2's uncovered list for
+the same reason.
+
+### 4.5 Battery on the changed tree (all re-run after the last edit)
+
+| Gate | Result |
+| --- | --- |
+| `pytest -n auto -q --cov=aegis --cov-fail-under=90` | **7,189 passed / 118 skipped / 0 failed, EXIT 0**, coverage 90.05% |
+| `ruff check .` | 0 findings (593 files) |
+| `ruff format --check .` | 593 files already formatted |
+| `mypy --strict aegis` | Success, 207 source files |
+| `bandit -r aegis/ aegis_server/ -lll` | 0 findings (Low 0 / Medium 0 / High 0) |
+| `verify_docs.py` | PASS, 0 findings |
+| `verify_claims.py` | PASS, 105 claims, 0 findings |
+| `verify_documentation.py --strict` | 0 errors, 0 warnings |
+| `verify_links.sh` | PASS, 1,404 relative links and anchors resolved |
+| `verify_import_reachability.py` | PASS (224 discovered / 113 reached / 34 roadmap / 77 allowlisted) |
+| `verify_release_contract.py` | **READY, 14/14 anchors at 5.0.1** |
+| `git diff --check` | clean |
+| Rust clippy / `cargo test --release --locked` | exit 0 / 83 + 3 passed |
 
 ---
 
 ## 5. Phase 5 — commit and tag preparation
 
-Files changed by this work: **48 modified, 3 added** (see `git diff --stat HEAD`). The commands
-below are prepared, **not executed**: tagging and pushing are release acts, and the standing
-directive holds the PR until every registry row is terminal. Push credentials are absent on this
-host (`git push --dry-run` → "could not read Username"), so the last two commands cannot succeed
-from here today regardless of intent.
+Two commits carry this work: `9dd4ab9` (the bump, the Phase-2 pinning, `REG-D35`/`REG-D36`) and the
+follow-up below (the coverage closure, `REG-D37`/`REG-D38`/`REG-D39`, the register and roadmap
+corrections). Tagging and pushing are **not** executed: they are release acts, the standing
+directive holds the PR until every registry row is terminal, and push credentials are absent on this
+host (`git push --dry-run` → "could not read Username").
 
 ```bash
 # 1. stage and inspect
@@ -254,32 +317,43 @@ git add -A
 git status --short
 git diff --cached --stat
 
-# 2. commit
+# 2. commit (the first commit, 9dd4ab9, is already made)
 git commit -F - <<'COMMIT'
-release(5.0.1): global version bump, error-hygiene and marker gates, register corrected
+test(5.0.1): close the mission coverage floor at 90.05%, and fix what working it found
 
-Source target 5.0.1 across the fourteen synchronized anchors and every deployment
-literal the release contract binds; contract READY at 14/14. Published nowhere —
-read back 2026-09-21 (GitHub Release 404, both GHCR tags 404, registries unchanged);
-see docs/RELEASE_STATUS.md §1.0a. Publication statements that coupled "target is
-v5.0.0" with "published 2026-09-16" were restructured rather than renumbered.
+Coverage: pytest -n auto -q --cov=aegis --cov-fail-under=90 -> "Required test
+coverage of 90% reached. Total coverage: 90.05%", 7189 passed / 118 skipped /
+0 failed, exit 0. Was 88.67%. 284 statements newly covered by eight test files
+(169 tests) written against each module's contract — the SSE framer's bounds,
+the rate-limiter's refusals and reservation arithmetic, the identity helpers, the
+startup-validation refusals, the gossip runtime lifecycle, the guarded-pickle
+failure branches, and the extra that makes the Parquet exporter's own tests run.
 
-Code: no fix was needed for the order's Phase-2 items — the Rust WAL already flushes
-before publishing write_pos, the ASGI body limit is unbypassable by construction, and
-non-finite floats are rejected before hashing rather than sanitised (documented
-divergence, with the cross-language check). What was missing was pinning, so:
-tests/test_error_response_hygiene.py (3) and
-tests/test_no_defect_markers_in_shipped_code.py (3), the latter after measuring that
-SECURITY_AUDIT_REPORT.md's "many FIXME/TODO markers" claim and its TODO_ISSUES.md
-referent were both false.
+The repository floor stays at 65%: raising it is a release act with its own CI
+observation and gh is absent here.
 
-Registry: burn-down wave table recomputed from the rows (it read 94 rows / 27 FIXED /
-19 open while the rows said 96 / 41 / 7 — parser validated against four known rows);
-REG-D34's row returned to §4.6; "Human class (9)" → (10); REG-D35 added (FIXED);
-REG-D36 added (OPEN — mission coverage floor 90% not met, measured 88.67% against the
-repository's own 65%, AUD-38).
+Two defects found by working the gap, not by reading it:
+- REG-D37: the guarded-pickle allow-list was inert for containers. _validate_allowed
+  tested isinstance(obj, allowed) before its recursion, and dict/list are in
+  DEFAULT_ALLOWED, so the recursion branches were unreachable and {"k": <anything>}
+  passed. set payloads carry no GLOBAL opcode (EMPTY_SET/ADDITEMS), so the
+  post-load check was the only guard and it never fired. Reordered; control: with
+  the old order restored, 7 tests fail.
+- REG-D38: the Parquet exporter's 12 tests ran nowhere — no job installs the
+  lakehouse extra, so the module sat at 0% while CLM-071 rested on a suite that
+  module-level-skipped. pyarrow into the dev extra (the repo's own pqc precedent),
+  plus a sweep that fails on any future silent skip.
 
-Battery: see the log's §4. Clippy --all-targets --all-features -D warnings exit 0.
+REG-D39: the two tests that reded every full-suite run here were assertions that
+depended on machine speed, not defects. The streaming test truncated silently when
+its own 30s duration cap fired under load (its in-loop memory bound held every
+iteration); the export test's unbounded writer crossed the endpoint's documented
+1000-node limit, which is correct product behaviour. Both fixed by removing the
+wall-clock dependency, with one added assertion that makes truncation loud. No
+bound relaxed.
+
+Registry: 101 rows, zero open [DISC], 7 open [AUDIT] (AUD-24..AUD-30). ROADMAP
+AUD-38 closed; the AUD-37 ticket's title, split by an earlier insertion, restored.
 COMMIT
 
 # 3. tag — ONLY after the registry is 100% terminal and the full battery is green
@@ -295,10 +369,15 @@ git push origin v5.0.1
 
 ## 6. What this log does not claim
 
-- That `5.0.1` is released, tagged, or published anywhere. It is not.
-- That the mission's 90% coverage floor is met. It is not (88.67%), and the row is open.
+- That `5.0.1` is released, tagged, or published anywhere. It is not, and the tag is still owed.
+- That CI runs at 90%. CI's floor is 65% and stays there; 90.05% is measured on this host, from this
+  checkout, with the coverage command the order specified.
 - That `cargo test --all-features` was run successfully. It cannot link in this repository by
-  design, and the documented one-feature cause is reproduced in §4.3.
+  design, and the documented one-feature cause is reproduced in §4.4.
 - That `cosign verify` or `gh attestation verify` ran. Neither tool is installed on this host.
-- That the two coverage-only test failures are defects. They pass in isolation; they are recorded
-  as harness sensitivity.
+- That `REG-D37`'s allow-list is a gateway-reachable control. `aegis.core.safe_serialization` is
+  allowlisted in the import-reachability gate — no production module imports it — so the exposure
+  was to library callers of `safe_pickle_load`/`safe_pickle_dump`, not to the request path.
+- That the seven `[AUDIT]` rows still open are unimplemented features. They are `OPEN` with their
+  own scope recorded; a terminal state for each is the standing directive's business, not this
+  release's.

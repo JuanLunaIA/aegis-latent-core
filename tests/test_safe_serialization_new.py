@@ -26,7 +26,7 @@ def test_validate_allowed_list_all_allowed():
 
 
 def test_validate_allowed_list_with_disallowed():
-    # Use an allowed tuple that doesn't include list, triggering the recursive branch
+    # A narrowed allow-list: the elements are checked against it either way.
     allowed = (str, int, float)
 
     class Custom:
@@ -36,12 +36,12 @@ def test_validate_allowed_list_with_disallowed():
 
 
 def test_validate_allowed_list_all_primitives_non_default_allowed():
-    allowed = (str, int)  # no list — forces recursive check
+    allowed = (str, int)  # a narrowed allow-list is still applied per element
     assert _validate_allowed([1, "two"], allowed) is True
 
 
 def test_validate_allowed_dict_all_allowed():
-    # Use an allowed that includes dict but not list to trigger dict recursion
+    # dict is in the allow-list and its values are still checked recursively
     allowed = (str, int, dict, type(None))
     assert _validate_allowed({"a": 1, "b": "two", "c": None}, allowed) is True
 
@@ -52,7 +52,7 @@ def test_validate_allowed_dict_int_key_allowed():
 
 
 def test_validate_allowed_dict_with_disallowed_value():
-    # allowed doesn't include dict, so triggers dict recursion branch
+    # A narrowed allow-list; the value, not the container, is what fails.
     allowed = (str, int)
 
     class Custom:
@@ -62,7 +62,7 @@ def test_validate_allowed_dict_with_disallowed_value():
 
 
 def test_validate_allowed_nested_list_in_dict():
-    # dict is not in allowed → triggers dict recursion
+    # a nested container is validated against the same allow-list
     allowed = (str, int, list)
     assert _validate_allowed({"items": [1, 2]}, allowed) is True
 

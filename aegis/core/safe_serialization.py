@@ -124,18 +124,24 @@ def safe_load_json(path: str | Path) -> Any:
 def _validate_allowed(obj: Any, allowed: tuple[type, ...]) -> bool:
     """Recursively validate that obj only contains allowed primitive types.
 
+    Containers are checked first, and that order is the whole point: `dict` and
+    `list` are themselves members of the allow-list, so testing membership
+    before dispatching on the container type answered True for *any* dict or
+    list — including one whose values were objects the caller meant to exclude —
+    and made the two recursion branches below unreachable for every payload
+    shape that occurs in practice. The allow-list still governs what may appear
+    as a leaf; it no longer decides whether the leaves are looked at.
+
     This is intentionally conservative. Complex objects should be serialized
     via JSON-compatible structures or explicitly whitelisted.
     """
-    if isinstance(obj, allowed):
-        return True
     if isinstance(obj, list):
         return all(_validate_allowed(i, allowed) for i in obj)
     if isinstance(obj, dict):
         return all(
             isinstance(k, (str, int)) and _validate_allowed(v, allowed) for k, v in obj.items()
         )
-    return False
+    return isinstance(obj, allowed)
 
 
 class RestrictedUnpickler(pickle.Unpickler):

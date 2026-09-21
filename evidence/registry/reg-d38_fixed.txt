@@ -1,0 +1,92 @@
+REG-D38 — an extra that gates tests nobody installs: the Parquet exporter was
+never imported by any run (FIXED 2026-09-21)
+
+Found by: reading a coverage report. `aegis/connectors/lakehouse/parquet_exporter.py`
+was at **0% — 78 of 78 statements missed**, the only whole-file zero in the tree,
+while `docs/CLAIMS_MATRIX.md` CLM-071 recorded the connectors as `LOCALLY TESTED`
+and `docs/commercial/CONNECTOR_ECOSYSTEM.md:19` counted "12 tests over segments
+produced by a real ledger".
+
+════ 1. THE MECHANISM ════
+`tests/connectors/test_parquet_exporter.py:26-27` opens with
+
+    pa = pytest.importorskip("pyarrow", reason="pyarrow is the optional 'lakehouse' extra")
+    pq = pytest.importorskip("pyarrow.parquet", ...)
+    from aegis.connectors.lakehouse.parquet_exporter import (...)
+
+so when pyarrow is absent the whole module — including the import of the subject —
+is skipped at collection. pyarrow was in **no** installed set:
+
+  * `pip install -e ".[dev]"` (the install line of every Python CI job: ci.yml:296,
+    :355, :371, and :150 for type-check) — the `dev` extra does not declare pyarrow;
+  * a grep for `lakehouse|pyarrow|asyncpg|aioboto3` across `.github/workflows/*.yml`
+    → **no matches**, so no job installs the extra either;
+  * `all = [storage-all, vault, oidc, gpu, metrics, otel, pqc, dev]` — the lakehouse
+    extra is not in `all` either.
+
+`tests/connectors` posted "39 passed, 1 skipped" — that single skip was this module,
+and it was the only test module in the tree skipped for a reason an ordinary install
+could fix.
+
+════ 2. THE REPOSITORY'S OWN RULE, WHICH THIS VIOLATED ════
+`tests/test_optional_backend_declarations.py` already existed for exactly this
+failure mode, from the `pqc` extra that declared `oqs-python` while the code
+imported `kyber_py`, and its docstring states the rule:
+
+    "the thirty-two tests covering those paths skipped rather than failed"
+    test_dev_extra_declares_it_too_so_ci_exercises_those_paths:
+    "the dev extra must declare kyber-py, or CI installs a tree in which
+     every ML-KEM test skips"
+
+The dev extra is the CI test environment; a package that gates test modules belongs
+in it.
+
+════ 3. THE FIX ════
+  * `pyproject.toml` — `pyarrow>=16.0.0` added to the `dev` extra, with the reason
+    in a comment. The `lakehouse` extra keeps its own declaration (unchanged).
+  * `tests/test_optional_backend_declarations.py` — `TestLakehouseExportTestsAreExercised`
+    (3 tests: the lakehouse extra declares what the exporter imports; the dev extra
+    declares it so the tests run; the exporter's operator hint names a declared
+    extra that carries pyarrow) and `TestOptionalSkipsAreDeliberate`
+    (`test_every_skippable_import_is_either_installed_or_explained`: every
+    module-level `pytest.importorskip` target in `tests/` must be satisfied by the
+    dev extra or be named with a recorded reason).
+
+════ 4. EVIDENCE ════
+  * The 12 tests, executed here for the first time with the extra installed:
+    `pytest tests/connectors/test_parquet_exporter.py -q` → **12 passed in 0.64 s**.
+  * `pip install -e ".[dev]"` after the edit resolves pyarrow → import ok
+    (pyarrow 25.0.1 in this venv).
+  * Full suite: **7,010 passed / 119 skipped** before → **7,022 passed / 118 skipped**
+    after. The twelve new passes are the export tests; the skip that disappeared is
+    the module-level one.
+  * The sweep's first run found `aegis_sdk.a2a` as well, which is why the module-root
+    lookup and the two documented exemption maps exist.
+
+════ 5. CONTROL ════
+With `pyarrow` removed from the dev extra:
+`pytest tests/test_optional_backend_declarations.py -q` → **2 failed, 25 passed** —
+`test_dev_extra_declares_it_too_so_the_export_tests_run` and the sweep, both naming
+pyarrow. Restored: **27 passed**.
+
+════ 6. WHAT THE SWEEP FOUND, AND WHAT WAS LEFT ALONE ════
+  * `tests/test_postgres_concurrent_append_race.py` (asyncpg) and
+    `tests/test_dynamodb_concurrent_append_race.py` (aioboto3) also module-skip, and
+    that is correct: they are real-server integration suites whose own docstrings say
+    so, and installing the library without a reachable endpoint would not make them
+    run. Both are named in `_REAL_SERVICE_SKIPS` with that reason — the difference
+    between "an install away" and "a service away" is now explicit in the test file
+    rather than implicit in a skip count.
+  * `aegis_rust` (built in-tree by the rust job) and `aegis_sdk` (the SDK package,
+    installed by the sdk-python job) are in `_NOT_A_DISTRIBUTION` for the same reason:
+    no extra can declare them, and each has a job that builds it.
+  * `docs/institutional/DOC-02_CRYPTOGRAPHIC_FORENSIC_BLUEPRINT.md:61, :244` still
+    state that the `pqc` extra "names `oqs-python`, not `kyber-py`" — true of the
+    revision they audit and false of the current tree. **Deliberately not rewritten:**
+    the document declares its own scope (`Repository audit revision: c1c1bb70…`,
+    `Review date: 2026-08-20`) and its statements are findings about that revision;
+    editing an audited artifact's findings would falsify the audit trail. Recorded
+    here so the next reader does not have to rediscover why.
+  * Residual, unchanged: `aegis.connectors.lakehouse.parquet_exporter` stays on the
+    import-reachability allowlist (no production importer) — these tests are the only
+    thing that executes it, which is exactly why they must keep running.
