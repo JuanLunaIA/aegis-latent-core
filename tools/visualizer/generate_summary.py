@@ -13,11 +13,12 @@ import ast
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 ROOT = Path.cwd()
 
 
-def analyze_python_file(path: Path):
+def analyze_python_file(path: Path) -> dict[str, Any]:
     try:
         src = path.read_text(encoding="utf-8")
         tree = ast.parse(src)
@@ -35,7 +36,7 @@ def analyze_python_file(path: Path):
     return {"functions": funcs, "classes": classes}
 
 
-def analyze_rust_file(path: Path):
+def analyze_rust_file(path: Path) -> dict[str, Any]:
     try:
         text = path.read_text(encoding="utf-8")
     except Exception as e:
@@ -45,7 +46,7 @@ def analyze_rust_file(path: Path):
     return {"functions": fns}
 
 
-def git_head(root: Path):
+def git_head(root: Path) -> str | None:
     try:
         import subprocess
 
@@ -57,8 +58,8 @@ def git_head(root: Path):
         return None
 
 
-def generate_summary_dict():
-    result = {"project": ROOT.name, "python": {}, "rust": {}, "counts": {}}
+def generate_summary_dict() -> dict[str, Any]:
+    result: dict[str, Any] = {"project": ROOT.name, "python": {}, "rust": {}, "counts": {}}
 
     py_files = [p for p in ROOT.rglob("*.py") if ".venv" not in p.parts and ".git" not in p.parts]
     rs_files = [p for p in ROOT.rglob("*.rs") if ".venv" not in p.parts and ".git" not in p.parts]
@@ -89,7 +90,7 @@ def generate_summary_dict():
     return result
 
 
-def main():
+def main() -> None:
     print(json.dumps(generate_summary_dict(), indent=2))
 
 

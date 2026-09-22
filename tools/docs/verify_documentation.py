@@ -70,6 +70,13 @@ STRICT_BOUNDARY_LANGUAGE = re.compile(
 )
 
 
+# "v4", "v4.x.y", "version 4", or an unprefixed "4.0" / three-part "4.x.y". A bare
+# "4", or the last digit of a decimal such as "32.4", is not a version: matching it
+# rejected ordinary measurements, and let "does not run on Python 3.4" disclaim a
+# genuine v4 publication claim on the same line.
+_V4_VERSION = r"(?:\bv4(?:\.\d+){0,2}\b|(?<![\w.])4\.(?:\d+\.\d+|0)\b|\bversion 4\b)"
+
+
 STRICT_CLAIM_RULES = (
     ClaimRule(
         "certification or compliance",
@@ -126,13 +133,13 @@ STRICT_CLAIM_RULES = (
     ClaimRule(
         "v4 external publication or release",
         re.compile(
-            r"(?:\b(?:v?4(?:\.0(?:\.0)?)?|version 4)\b.{0,100}\b(?:published|released)\b"
-            r"|\b(?:published|released)\b.{0,100}\b(?:v?4(?:\.0(?:\.0)?)?|version 4)\b)",
+            rf"(?:{_V4_VERSION}.{{0,100}}\b(?:published|released)\b"
+            rf"|\b(?:published|released)\b.{{0,100}}{_V4_VERSION})",
             re.IGNORECASE,
         ),
         re.compile(
             r"\b(?:not|never|no|unreleased|unpublished|does not|do not|cannot|must not)\b"
-            r".{0,160}\b(?:published|released|publication|release|v?4(?:\.0(?:\.0)?)?)\b",
+            rf".{{0,160}}(?:\b(?:published|released|publication|release)\b|{_V4_VERSION})",
             re.IGNORECASE,
         ),
     ),

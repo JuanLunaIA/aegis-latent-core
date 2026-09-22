@@ -36,8 +36,8 @@ PATTERNS = {
 }
 
 
-def search_files():
-    hits = {k: [] for k in PATTERNS}
+def search_files() -> dict[str, list[str]]:
+    hits: dict[str, list[str]] = {k: [] for k in PATTERNS}
     exclude_dirs = {".git", "target", ".venv", "__pycache__", ".pytest_cache"}
     for p in ROOT.rglob("*.*"):
         # Skip files inside excluded directories
@@ -54,8 +54,8 @@ def search_files():
     return hits
 
 
-def python_syntax_check():
-    errors = []
+def python_syntax_check() -> list[dict[str, str]]:
+    errors: list[dict[str, str]] = []
     for p in ROOT.rglob("*.py"):
         try:
             subprocess.check_output(  # noqa: S603 — trusted py_compile of repo files
@@ -68,7 +68,7 @@ def python_syntax_check():
     return errors
 
 
-def rust_build_attempt():
+def rust_build_attempt() -> dict[str, object]:
     """Attempt to build or test the Rust extension, but fail fast when toolchain is missing.
 
     This function prefers quick local diagnostics: it first checks for cargo and a
@@ -116,8 +116,8 @@ def rust_build_attempt():
         return {"status": "error", "detail": str(e)}
 
 
-def main():
-    report = {}
+def main() -> None:
+    report: dict[str, object] = {}
     report["patterns"] = search_files()
     report["python_syntax"] = python_syntax_check()
     report["rust_build"] = rust_build_attempt()

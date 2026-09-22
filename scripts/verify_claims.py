@@ -173,7 +173,9 @@ class Claim:
 
 def _split_row(body: str) -> list[str]:
     """Split a Markdown row body on unescaped pipes, ignoring pipes in code."""
-    cells, buf, in_code = [], [], False
+    cells: list[str] = []
+    buf: list[str] = []
+    in_code = False
     for char in body:
         if char == "`":
             in_code = not in_code

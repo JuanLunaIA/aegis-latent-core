@@ -13,7 +13,7 @@ import logging
 import time
 from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from aegis.core import observability
 from aegis.core.stream_bounds import UTF8_MAX_BYTES_PER_CHAR, StreamRetentionBounds
@@ -23,6 +23,9 @@ from aegis.core.stream_redactor import (
     build_stream_redactor,
 )
 from aegis.core.streaming_deidentifier import StreamingDeidentificationError
+
+if TYPE_CHECKING:
+    from aegis.proxy.terminal_outbox import TerminalOutbox, TerminalReplayContext
 
 logger = logging.getLogger(__name__)
 
@@ -101,11 +104,16 @@ class TerminalCommitHandoff:
             raise ValueError("max_pending must be positive")
         self._max_pending = max_pending
         self._queue: asyncio.Queue[
-            tuple[Callable[[StreamEvidenceSummary], Awaitable[None]], StreamEvidenceSummary]
+            tuple[
+                Callable[[StreamEvidenceSummary], Awaitable[None]],
+                StreamEvidenceSummary,
+                str | None,
+            ]
         ] = asyncio.Queue(maxsize=max_pending)
         self._task: asyncio.Task[None] | None = None
         self._committed = 0
         self._dropped = 0
+        self._outbox: TerminalOutbox | None = None
 
     @property
     def running(self) -> bool:
@@ -123,6 +131,11 @@ class TerminalCommitHandoff:
     def dropped(self) -> int:
         return self._dropped
 
+    def attach_outbox(self, outbox: TerminalOutbox | None) -> None:
+        """Spool every handoff that carries a replay context (REG-D32, opt-in)."""
+
+        self._outbox = outbox
+
     def start(self) -> None:
         """Start the worker.  Call from the app lifespan, outside any request."""
 
@@ -131,12 +144,14 @@ class TerminalCommitHandoff:
         self._task = asyncio.create_task(self._drain(), name="aegis-terminal-commit-handoff")
 
     def for_commit(
-        self, commit: Callable[[StreamEvidenceSummary], Awaitable[None]]
+        self,
+        commit: Callable[[StreamEvidenceSummary], Awaitable[None]],
+        replay: TerminalReplayContext | None = None,
     ) -> Callable[[StreamEvidenceSummary], None]:
         """Bind ``commit`` into the synchronous callback a stream hands off to."""
 
         def handoff(summary: StreamEvidenceSummary) -> None:
-            self.submit(commit, summary)
+            self.submit(commit, summary, replay=replay)
 
         return handoff
 
@@ -144,9 +159,20 @@ class TerminalCommitHandoff:
         self,
         commit: Callable[[StreamEvidenceSummary], Awaitable[None]],
         summary: StreamEvidenceSummary,
+        *,
+        replay: TerminalReplayContext | None = None,
     ) -> bool:
-        """Queue one commit.  Synchronous and non-blocking: it cannot be cancelled."""
+        """Queue one commit.  Synchronous and non-blocking: it cannot be cancelled.
 
+        With an outbox attached and a replay context given, the commit is first
+        spooled (one ``write``, no await), so it survives a crash before the
+        worker reaches it — and a full queue defers it to the next start
+        instead of losing it.
+        """
+
+        spool_id = None
+        if self._outbox is not None and replay is not None:
+            spool_id = self._outbox.record(replay, summary)
         if not self.running:
             # Fallback for a caller that never started the worker (a test or a
             # library user).  The lifespan start is still the right home: this
@@ -154,16 +180,17 @@ class TerminalCommitHandoff:
             logger.warning("terminal-evidence handoff worker was not running; starting it lazily")
             self.start()
         try:
-            self._queue.put_nowait((commit, summary))
+            self._queue.put_nowait((commit, summary, spool_id))
         except asyncio.QueueFull:
             self._dropped += 1
             observability.AUDIT_HANDOFF_DROPPED.inc()
             logger.error(
                 "terminal-evidence handoff queue full (max_pending=%d); commit dropped "
-                "(outcome=%s, dropped=%d)",
+                "(outcome=%s, dropped=%d, spooled for the next start=%s)",
                 self._max_pending,
                 summary.terminal_outcome,
                 self._dropped,
+                spool_id is not None,
             )
             return False
         return True
@@ -189,13 +216,19 @@ class TerminalCommitHandoff:
 
     async def _drain(self) -> None:
         while True:
-            commit, summary = await self._queue.get()
+            commit, summary, spool_id = await self._queue.get()
+            outbox = self._outbox if spool_id is not None else None
             try:
+                if outbox is not None:
+                    # Power-loss durability for the spooled record, before the
+                    # commit it stands in for is attempted.
+                    await outbox.sync()
                 await commit(summary)
             except asyncio.CancelledError:
                 self._queue.task_done()
                 raise
             except Exception:
+                # A spooled record stays pending and is replayed at the next start.
                 observability.AUDIT_COMMIT_ERRORS.inc()
                 logger.exception(
                     "handed-off terminal commit failed (outcome=%s)", summary.terminal_outcome
@@ -203,6 +236,8 @@ class TerminalCommitHandoff:
             else:
                 self._committed += 1
                 observability.AUDIT_HANDOFF_COMMITTED.inc()
+                if outbox is not None and spool_id is not None:
+                    outbox.mark_done(spool_id)
             finally:
                 self._queue.task_done()
 

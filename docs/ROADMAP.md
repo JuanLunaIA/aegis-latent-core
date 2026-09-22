@@ -365,23 +365,40 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
     Tests: `tests/test_signature_scheme_binding.py` (11, including the relabel-refused control and
     the pre-binding control) + 3 in `tests/test_hsm.py`; evidence
     `evidence/registry/reg-d31_fixed.txt`.
-- [ ] **AUD-28 [P3] — Durable outbox for terminal evidence torn down by cancellation**
+- [x] **AUD-28 [P3] — Durable outbox for terminal evidence torn down by cancellation**
   - **Affected files:** aegis/proxy/streaming.py (`TerminalCommitHandoff`), aegis/proxy/app.py (lifespan start/drain)
   - **Root cause:** `REG-D07` lands the terminal node through an in-process handoff. A crash or SIGKILL between teardown and the drained commit loses the frozen summary, and the bounded queue (64) drops-and-counts instead of blocking, so heavy teardown bursts can still lose evidence.
   - **Proposed solution:** Spool the frozen summary (a small append-only spool file next to the WAL) before the handoff acknowledges, and commit pending spool entries on the next startup before serving traffic; keep the in-memory path as the fast case and expose spool depth as a metric.
   - **Estimated effort:** M (2-3 days incl. startup recovery test)
 
-- [ ] **AUD-29 [P3] — Gate scripts sit outside every type-check scope; `mypy --strict` flags one at HEAD**
+  - **Closed 2026-09-22 (`REG-D32`):** built as proposed with two deliberate narrowings — opt-in (default off) and
+    content-free (the spool holds digests and counts, never a body or preview, so recovered nodes carry no previews).
+    Replay is fail-closed on a non-`healthy` ledger; spool depth is `aegis_terminal_outbox_pending`. `CLM-106`;
+    tests `tests/test_terminal_outbox.py` (19); evidence `evidence/registry/reg-d32_fixed.txt`.
+
+- [x] **AUD-29 [P3] — Gate scripts sit outside every type-check scope; `mypy --strict` flags one at HEAD**
   - **Affected files:** scripts/verify_claims.py:176 (`buf` in `_split_row`); .github/workflows/ci.yml:167-206 (mypy runs a fixed file list plus `mypy --strict aegis`; `scripts/` and `tools/` are absent); mypy-ci.ini
   - **Root cause:** The repository's doc/claim gates are Python programs, but no type-check job covers them, so `mypy --strict scripts/verify_claims.py` fails at HEAD on an un-annotated empty list (`cells, buf, in_code = [], [], False`) and nothing in CI can notice. Found while adding the retracted-figure check (`REG-D10`); the finding is the scope gap, not the annotation — fixing the one annotation would leave the class invisible.
   - **Proposed solution:** Decide the canonical type-check scope once: add `scripts/` and `tools/` to a mypy job (start with `--strict` on the two directories that already pass, and stage the remainder), annotate `_split_row`'s locals, and add the directory list to the same gate that `AUD-18` reconciles for the formatter.
   - **Estimated effort:** S (2-3 h; the annotation is one line, the scope decision is the work)
 
-- [ ] **AUD-30 [P3] — Doc gate false positive: a decimal's last digit reads as a `v4` token in the publication rule**
+  - **Closed 2026-09-22 (`REG-D33`):** scope decided as both directories whole, not a list, via
+    `mypy --strict --explicit-package-bases --follow-imports=silent scripts tools` in CI's typecheck job and
+    `make type` (41 files, 0 errors), pinned by `tests/test_gate_scope_parity.py`. The first run found a real
+    bug: `tools/forensic/diagnose_aegis.py` reported the PQC signer FAILED on every working install. Evidence
+    `evidence/registry/reg-d33_fixed.txt`.
+
+- [x] **AUD-30 [P3] — Doc gate false positive: a decimal's last digit reads as a `v4` token in the publication rule**
   - **Affected files:** tools/docs/verify_documentation.py:126-138 (`v4 external publication or release` rule); reproduced on docs/FAQ_TECHNICAL.md:118
   - **Root cause:** The rule's trigger is `\bv?4(?:\.0(?:\.0)?)?\b` within 100 characters of `published|released`. `\b4\b` matches the final digit of an ordinary measurement — "32.4 s", "12.4 ms" — so any sentence combining a decimal that ends in 4 with the word "published" is an ERROR in strict mode even when nothing about a release is claimed. Found while sweeping the retracted backpressure pair (`REG-D10`): the corrected row was rejected for "32.4 s, ... (as previously published)".
   - **Proposed solution:** Narrow the trigger to version-shaped tokens (`v4(?:\.[0-9]+)*`, `4\.0(?:\.0)?`, `version 4`) and keep a test for the intended catch (`tests/test_documentation_verifier.py:56` already asserts "Aegis v4.0.0 has been published and released." must fail). Do not relax the prohibition itself.
   - **Estimated effort:** S (1-2 h incl. the test)
+
+  - **Closed 2026-09-22 (`REG-D34`):** narrowed as proposed, with one extension the probe forced:
+    the disclaimer carried the same bare-4 token, so "does not run on Python 3.4" waived a real
+    v4 publication claim on the same line. Both halves now share `_V4_VERSION`; the prohibition
+    is not relaxed. Tests: `tests/test_documentation_verifier.py` (12 new cases, control → 6 failed);
+    evidence `evidence/registry/reg-d34_fixed.txt`.
 - [ ] **AUD-35 [P2] — Wire or remove the remaining inert settings found by the config-surface gate**
   - **Affected files:** aegis/config.py (`rate_limit_window`, `webhook_url`); aegis_server/config.py (`webhook_url`); the alert path that reads `siem_url`/`siem_*`; docs/operations/DEPLOYMENT_PROFILES.md; deploy/helm/templates/statefulset.yaml; deploy/docker/docker-compose.enterprise.yml; config/presets/*.env; plus the AUD-14 families if the wire-up route is chosen there (aegis/auth/ldap_auth.py, aegis/proxy/mtls.py `CACPIVAuth`).
   - **Root cause:** the settings surface offers controls no code path reads. `webhook_url` is the sharpest: an operator following the presets, Helm chart, compose file or deployment-profiles table sets `AEGIS_WEBHOOK_URL` and receives no alerts, because the sender reads `siem_url`. The limiter uses its own fixed window, not `rate_limit_window`. The LDAP and CAC/PIV settings are described in `UC-064`/`UC-065` and labelled in place.

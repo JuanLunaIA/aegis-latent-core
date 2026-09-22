@@ -1,0 +1,63 @@
+FINAL BATTERY — 2026-09-22, the registry-closure branch after every row reached
+a terminal state. Run on this host (4 CPU, CPython 3.11.15, uid 0) with the
+aegis_rust 5.0.1 extension built by CI's own command and installed, so the
+Forensic workflow's configuration is the one exercised.
+
+=== Python, docs and repository gates (at f60f45e) ===
+HEAD f60f45e176dc24997b6d30529d418184d96f90f4
+aegis_rust 5.0.1  uid 0
+== pytest -n auto (HERMES_SANDBOX=true, extension installed) ==
+........................................................................ [ 99%]
+........                                                                 [100%]
+7389 passed, 35 skipped in 91.48s (0:01:31)
+== mypy --strict aegis ==
+Success: no issues found in 208 source files
+== mypy --strict scripts tools ==
+Success: no issues found in 41 source files
+== mypy aegis_server (REG-038 accepted debt, plain) ==
+Found 25 errors in 4 files (checked 14 source files)
+== ruff ==
+All checks passed!
+601 files already formatted
+== bandit ==
+	No issues identified.
+	Total issues (by severity):
+		High: 0
+== doc gates ==
+verify_docs: PASS (0 findings)
+verify_claims: PASS (106 claims, 0 findings)
+verify_links: PASS (1405 relative links and anchors resolved)
+  "errors": 0,  "status": "PASS",  "warnings": 0
+== reachability ==
+modules discovered: 225  reached: 114  declared roadmap: 34  allowlisted: 77
+verify_import_reachability: PASS — no undeclared orphans, no stale roadmap entries
+== release contract ==
+release source contract: READY
+== ai context manifest ==
+AI context manifest verified: 83 files; source anchor fdace8844568eb788216740b2cb5daf187d99d3b
+== corpus audit ==
+status=PASS
+== git diff --check ==
+clean
+
+`mypy aegis_server` 25 errors in 4 files is REG-038's accepted, separately
+measured debt, reproduced at the same figure; it is not part of any strict gate.
+
+=== Rust (aegis_rust_v2; no Rust source changed on this branch) ===
+== cargo test --release (default features) ==
+test result: ok. 90 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.62s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+EXIT test: 0
+== cargo clippy --locked --all-targets --all-features -D warnings ==
+    Checking aegis_rust v5.0.1 (/home/user/aegis-latent-core/aegis_rust_v2)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 35.47s
+EXIT clippy: 0
+
+=== Not run here, stated rather than implied ===
+- The opt-in zk-spartan feature's tests: SIGILL on this pre-ADX CPU (REG-D04).
+- CI itself: nothing on this branch has been read back from GitHub Actions yet;
+  the Forensic workflow's return to green (REG-D42) is an inference until the
+  pull request's own run reports it.

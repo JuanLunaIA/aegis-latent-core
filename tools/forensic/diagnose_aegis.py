@@ -247,7 +247,7 @@ def check_imports() -> bool:
 
 def check_rust_extension() -> bool:
     try:
-        import aegis_rust  # type: ignore[import]
+        import aegis_rust
 
         ver = getattr(aegis_rust, "__version__", "unknown")
         _check("Rust extension (aegis_rust)", True, f"version={ver} — hardware acceleration ACTIVE")
@@ -323,7 +323,7 @@ def check_pqc_signer() -> bool:
             )
         msg = b"aegis-diagnostic-test-2026"
         sig = signer.sign(msg)
-        ok = signer.verify(msg, sig)
+        ok = PQCSigner.verify(msg, sig, signer.public_key)
         return _check(
             "PQC signer (ML-DSA-65)",
             ok,

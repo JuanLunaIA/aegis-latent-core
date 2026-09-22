@@ -83,9 +83,21 @@ def test_warmup_runtime_reports_workers() -> None:
 
 _RLIMIT_PROBE = textwrap.dedent(
     """
-    import resource, sys
+    import os, resource, sys
     sys.path.insert(0, sys.argv[1])
     import aegis_rust
+    if os.geteuid() == 0:
+        # The kernel does not enforce RLIMIT_NPROC on a task holding
+        # CAP_SYS_RESOURCE or CAP_SYS_ADMIN, so as root the limit below would
+        # exhaust nothing and the probe would measure nothing. Drop to
+        # `nobody` (the extension is already loaded) so the limit applies.
+        try:
+            os.setgroups([])
+            os.setgid(65534)
+            os.setuid(65534)
+        except OSError as exc:
+            print(f"CANNOT-DROP {exc}")
+            sys.exit(5)
     soft, hard = resource.getrlimit(resource.RLIMIT_NPROC)
     # RLIMIT_NPROC counts processes/threads of the whole uid, and this uid is
     # already far above 1 — so every *new* thread fails with EAGAIN while the
@@ -131,6 +143,8 @@ def test_runtime_init_raises_when_threads_cannot_be_spawned() -> None:
         env=env,
         timeout=300,
     )
+    if proc.returncode == 5:
+        pytest.skip(f"running as root and cannot drop privileges: {proc.stdout.strip()}")
     assert proc.returncode == 0, (
         f"warmup_runtime did not survive thread exhaustion: exit "
         f"{proc.returncode} (-6 = SIGABRT)\n{proc.stdout}\n{proc.stderr}"

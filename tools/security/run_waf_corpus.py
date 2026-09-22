@@ -45,8 +45,9 @@ def wilson_interval(
 
 
 def body_for_case(case: dict[str, Any]) -> dict[str, Any]:
-    if isinstance(case.get("body"), dict):
-        return case["body"]
+    body = case.get("body")
+    if isinstance(body, dict):
+        return body
     return {"messages": [{"role": "user", "content": str(case.get("text", ""))}]}
 
 
@@ -102,6 +103,7 @@ def main() -> int:
         )
     lower, upper = wilson_interval(bypasses, executable_malicious)
     bypass_rate = (bypasses / executable_malicious) if executable_malicious else 0.0
+    passed = critical_bypasses == 0 and bypass_rate < 0.05 and false_positives == 0
     report = {
         "schema": "aegis-waf-corpus-report-v1",
         "generated_at_utc": datetime.now(UTC)
@@ -133,7 +135,7 @@ def main() -> int:
         },
         "gate": {
             "threshold": "<5% observed bypass rate and 0 false positives for this pinned corpus only",
-            "passed": critical_bypasses == 0 and bypass_rate < 0.05 and false_positives == 0,
+            "passed": passed,
             "not_a_universal_guarantee": True,
             "http2_ingress_boundary": "NOT_EXECUTED by this application-layer corpus harness",
             "nuclei_templates": "NOT_EXECUTED; requires a pinned authorized local target and template revision",
@@ -145,7 +147,7 @@ def main() -> int:
     print(
         json.dumps(
             {
-                "passed": report["gate"]["passed"],
+                "passed": passed,
                 "bypasses": bypasses,
                 "malicious": executable_malicious,
                 "false_positives": false_positives,
@@ -154,7 +156,7 @@ def main() -> int:
             sort_keys=True,
         )
     )
-    return 0 if report["gate"]["passed"] else 1
+    return 0 if passed else 1
 
 
 if __name__ == "__main__":

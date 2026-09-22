@@ -2,7 +2,7 @@
 
 Every file under the six source roots, with what it is, what reaches it, what tests it, and who owns it. Generated — edit `scripts/generate_module_inventory.py`, not this file. Currency is enforced by `tests/test_module_inventory_current.py`.
 
-`python scripts/generate_module_inventory.py` — 300 files.
+`python scripts/generate_module_inventory.py` — 301 files.
 
 ## What the status column means
 
@@ -18,9 +18,9 @@ Every file under the six source roots, with what it is, what reaches it, what te
 
 ## Coverage and ownership
 
-- **Navigation coverage:** 68 of 300 files (23%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
-- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 128, `referenced` 43, `roadmap-omit` 34, `unreferenced` 17.
-- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 300 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
+- **Navigation coverage:** 68 of 301 files (23%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
+- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 129, `referenced` 44, `roadmap-omit` 34, `unreferenced` 16.
+- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 301 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
 
 Tests are the test files that import the module directly, capped at 4 per row; the count is exact, the list is not exhaustive.
 
@@ -30,9 +30,6 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 
 | Ticket | Priority | Owner | Unblock path |
 |---|---|---|---|
-| `AUD-28` | P3 | @JuanLunaIA | Spool the frozen summary (a small append-only spool file next to the WAL) before the handoff acknowledges, and commit pending spool entries on the next startup before serving traffic; keep the in-memory path as the fast case and expose spool depth as a metric. |
-| `AUD-29` | P3 | @JuanLunaIA | Decide the canonical type-check scope once: add `scripts/` and `tools/` to a mypy job (start with `--strict` on the two directories that already pass, and stage the remainder), annotate `_split_row`'s locals, and add the directory list to the same gate that `AUD-18` reconciles for the formatter. |
-| `AUD-30` | P3 | @JuanLunaIA | Narrow the trigger to version-shaped tokens (`v4(?:\.[0-9]+)*`, `4\.0(?:\.0)?`, `version 4`) and keep a test for the intended catch (`tests/test_documentation_verifier.py:56` already asserts "Aegis v4.0.0 has been published and released." must fail). Do not relax the prohibition itself. |
 | `AUD-35` | P2 | @JuanLunaIA | decide per control — either wire it (source `siem_url` from `webhook_url` when empty, feed `rate_limit_window` into the limiter, construct `LDAPAuthenticator`, construct `CACPIVAuth`) with a test per wired path, or delete the knob and its operator-facing copies. The gate (`tests/test_config_surface_inert_fields.py`) enforces that whichever is chosen, the section and the allowlist agree. |
 | `AUD-36` | P2 | @JuanLunaIA | decide per module. Wire: a governed admission-path hook for the detector with an explicit configuration flag, a documented verdict destination, and rewritten `CLM-103`/`CLM-104` rows with measured evidence; or retire: delete the module, its tests and its allowlist entry, and mark the corresponding claim row withdrawn. Either branch removes the allowlist entry, which is the point — an allowlisted compliance module is a liability in every audit it appears in. |
 | `AUD-37` | P3 | @JuanLunaIA | do these as **content reviews, not date bumps.** For each document: re-read it against the 5.0.0 tree, verify its cited paths resolve (the same check `REG-D23` ran on `REPOSITORY_MAP.md` and `docs/README.md`, 22 and 16 targets, 0 missing), correct what is stale, and date the line with what was checked. A date shortened without that pass is exactly the failure mode `REG-D23` closed on the other side of the corpus. The two claim-ledger rows should go first: they are already known to mislead. |
@@ -54,7 +51,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis/auth/rbac.py` | module | aegis.auth.rbac — Role-Based Access Control with NIST SP 800-207 Zero Trust. | allowlisted | `tests/test_rbac.py`, `tests/test_scim.py` | @JuanLunaIA |
 | `aegis/auth/scim.py` | module | aegis.auth.scim — SCIM 2.0 provisioning/deprovisioning lifecycle. | allowlisted | `tests/test_scim.py` | @JuanLunaIA |
 | `aegis/auth/scopes.py` | module | aegis.auth.scopes — HIPAA minimum-necessary API key scope enforcement. | reachable | `tests/test_api_key_scopes.py`, `tests/test_audit_api_new.py`, `tests/test_audit_read_snapshot.py`, `tests/test_dependencies_identity_helpers.py`, … (+3 more)` | @JuanLunaIA |
-| `aegis/config.py` | module | aegis.config — Centralized configuration via environment variables. | reachable | `tests/compat/test_public_api_compat.py`, `tests/security/test_enforcement_mode_metric.py`, `tests/security/test_stream_admission_metric.py`, `tests/test_apikey_new.py`, … (+36 more)` | @JuanLunaIA |
+| `aegis/config.py` | module | aegis.config — Centralized configuration via environment variables. | reachable | `tests/compat/test_public_api_compat.py`, `tests/security/test_enforcement_mode_metric.py`, `tests/security/test_stream_admission_metric.py`, `tests/test_apikey_new.py`, … (+37 more)` | @JuanLunaIA |
 | `aegis/connectors/__init__.py` | package | Connectors that carry Aegis evidence into systems an enterprise already runs. | allowlisted | — | @JuanLunaIA |
 | `aegis/connectors/lakehouse/__init__.py` | package | — | allowlisted | — | @JuanLunaIA |
 | `aegis/connectors/lakehouse/parquet_exporter.py` | module | Convert a finalized JSONL WAL segment into Parquet for a lakehouse. | allowlisted | `tests/connectors/test_parquet_exporter.py` | @JuanLunaIA |
@@ -98,7 +95,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis/core/cpu_affinity.py` | module | aegis.core.cpu_affinity — Domain 3.2 CPU pinning via sched_setaffinity. | allowlisted | `tests/test_cpu_affinity.py` | @JuanLunaIA |
 | `aegis/core/crdt_ordering.py` | module | aegis.core.crdt_ordering — Domain 3.3 CRDT for distributed audit node ordering. | allowlisted | `tests/test_crdt_ordering.py` | @JuanLunaIA |
 | `aegis/core/cross_session_correlator.py` | module | aegis.core.cross_session_correlator — Cross-session coordinated attack detection. | allowlisted | `tests/test_cross_session_correlator.py`, `tests/test_ioc_correlator.py`, `tests/test_semantic_sim_clustering.py` | @JuanLunaIA |
-| `aegis/core/crypto_audit.py` | module | aegis.core.crypto_audit — Cryptographic audit ledger with a Merkle-linked evidence chain. | reachable | `tests/connectors/test_parquet_exporter.py`, `tests/security/test_wal_single_writer.py`, `tests/storage/test_segment_manifest.py`, `tests/test_a2a_protocol.py`, … (+46 more)` | @JuanLunaIA |
+| `aegis/core/crypto_audit.py` | module | aegis.core.crypto_audit — Cryptographic audit ledger with a Merkle-linked evidence chain. | reachable | `tests/connectors/test_parquet_exporter.py`, `tests/security/test_wal_single_writer.py`, `tests/storage/test_segment_manifest.py`, `tests/test_a2a_protocol.py`, … (+47 more)` | @JuanLunaIA |
 | `aegis/core/crypto_shredder.py` | module | Cryptographic erasure for an append-only ledger. | reachable | `tests/engines/test_modular_engines.py`, `tests/test_crypto_shredder.py`, `tests/test_crypto_shredder_integration.py`, `tests/test_shredded_digest_confirmability.py` | @JuanLunaIA |
 | `aegis/core/custody_transfer.py` | module | aegis.core.custody_transfer — ISO/IEC 27037 custody transfer protocol. | allowlisted | `tests/test_custody_transfer.py` | @JuanLunaIA |
 | `aegis/core/decode_pipeline.py` | module | aegis.core.decode_pipeline — Iterative multi-layer decode pipeline for WAF evasion resistance. | allowlisted | `tests/test_decode_pipeline.py` | @JuanLunaIA |
@@ -229,7 +226,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis/providers/openai_provider.py` | module | aegis.providers.openai_provider — Passthrough adapter for OpenAI and any | reachable | `tests/test_forwarder_deep.py`, `tests/test_provider_contracts.py`, `tests/test_providers.py` | @JuanLunaIA |
 | `aegis/proxy/__init__.py` | package | FastAPI proxy, WAF, and audit REST endpoints. | reachable | `tests/test_analyzer_deep.py`, `tests/test_app_coverage.py`, `tests/test_app_coverage_extended.py`, `tests/test_forwarder_extra.py` | @JuanLunaIA |
 | `aegis/proxy/analyzer.py` | module | aegis.proxy.analyzer — Entropy analysis on OpenAI logprobs payloads. | reachable | `tests/test_analyzer_deep.py`, `tests/test_coverage_final.py`, `tests/test_misc_gaps.py`, `tests/test_observability.py` | @JuanLunaIA |
-| `aegis/proxy/app.py` | module | — | reachable | `tests/compat/test_public_api_compat.py`, `tests/security/test_enforcement_mode_metric.py`, `tests/security/test_stream_admission_metric.py`, `tests/test_app_coverage.py`, … (+21 more)` | @JuanLunaIA |
+| `aegis/proxy/app.py` | module | — | reachable | `tests/compat/test_public_api_compat.py`, `tests/security/test_enforcement_mode_metric.py`, `tests/security/test_stream_admission_metric.py`, `tests/test_app_coverage.py`, … (+22 more)` | @JuanLunaIA |
 | `aegis/proxy/attestation_api.py` | module | aegis.proxy.attestation_api — honest per-control capability reporting. | reachable | `tests/test_attestation_capabilities.py` | @JuanLunaIA |
 | `aegis/proxy/audit_api.py` | module | aegis.proxy.audit_api — Read-only REST endpoints for the Merkle audit chain. | reachable | `tests/test_audit_api_new.py`, `tests/test_audit_read_snapshot.py` | @JuanLunaIA |
 | `aegis/proxy/body_limits.py` | module | Streaming request-body limits, installed by both HTTP surfaces. | reachable | `tests/test_enterprise_body_limits.py` | @JuanLunaIA |
@@ -240,7 +237,8 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis/proxy/mtls.py` | module | aegis.proxy.mtls — Mutual TLS and SPIFFE Identity Validation. | roadmap-omit | `tests/test_cac_piv.py` | @JuanLunaIA |
 | `aegis/proxy/rate_limiter.py` | module | Tenant/credential-scoped request and generated-token rate limiting. | reachable | `tests/proxy/test_token_rate_limiter.py`, `tests/test_rate_limiter_reservation.py` | @JuanLunaIA |
 | `aegis/proxy/schemas.py` | module | aegis.proxy.schemas — OpenAI-compatible Pydantic v2 request/response models. | reachable | `tests/test_analyzer_deep.py`, `tests/test_app_unit.py`, `tests/test_misc_gaps.py` | @JuanLunaIA |
-| `aegis/proxy/streaming.py` | module | Bounded, cancellation-owned SSE proxy sessions. | reachable | `tests/engines/test_modular_engines.py`, `tests/security/test_stream_admission_metric.py`, `tests/test_forwarder_sse_framing.py`, `tests/test_proxy_streaming.py`, … (+3 more)` | @JuanLunaIA |
+| `aegis/proxy/streaming.py` | module | Bounded, cancellation-owned SSE proxy sessions. | reachable | `tests/engines/test_modular_engines.py`, `tests/security/test_stream_admission_metric.py`, `tests/test_forwarder_sse_framing.py`, `tests/test_proxy_streaming.py`, … (+4 more)` | @JuanLunaIA |
+| `aegis/proxy/terminal_outbox.py` | module | Durable outbox for terminal stream evidence handed off at teardown (REG-D32). | reachable | `tests/test_terminal_outbox.py` | @JuanLunaIA |
 | `aegis/proxy/waf.py` | module | aegis.proxy.waf — Web Application Firewall for LLM Payloads. | reachable | `tests/test_market_hardening_gates.py`, `tests/test_waf_hardening.py`, `tests/test_waf_hot_reload.py`, `tests/test_waf_hypothesis.py`, … (+2 more)` | @JuanLunaIA |
 | `aegis/storage/__init__.py` | package | Production storage integrations. | reachable | — | @JuanLunaIA |
 | `aegis/storage/s3_worm.py` | module | Durable asynchronous archival to an S3-compatible Object Lock provider. | reachable | `tests/storage/test_s3_worm.py`, `tests/storage/test_segment_manifest.py` | @JuanLunaIA |
@@ -323,7 +321,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `tools/benchmarks/run_key_rotation.py` | module | — | referenced | — | @JuanLunaIA |
 | `tools/benchmarks/run_pqc_timing.py` | module | — | referenced | — | @JuanLunaIA |
 | `tools/docs/verify_documentation.py` | module | Validate the Aegis documentation contract without external dependencies. | referenced | — | @JuanLunaIA |
-| `tools/forensic/diagnose_aegis.py` | module | diagnose_aegis.py — Self-service diagnostic tool for Aegis Latent Core. | unreferenced | — | @JuanLunaIA |
+| `tools/forensic/diagnose_aegis.py` | module | diagnose_aegis.py — Self-service diagnostic tool for Aegis Latent Core. | referenced | — | @JuanLunaIA |
 | `tools/forensic/forensic_checks.py` | module | Run repository forensic checks: pattern search, unsafe API usage, basic Python syntax checks | referenced | — | @JuanLunaIA |
 | `tools/forensic/report.json` | text/data | — | referenced | — | @JuanLunaIA |
 | `tools/forensic/triage_unsafe.py` | module | Triage unsafe API usage and generate remediation suggestions. | unreferenced | — | @JuanLunaIA |

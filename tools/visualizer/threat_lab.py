@@ -30,8 +30,9 @@ from __future__ import annotations
 import hashlib
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar
 
 # ── Severity ranking ──────────────────────────────────────────────────────────
 
@@ -185,15 +186,18 @@ def _regex_pass(
 # ── Per-engine adapters ───────────────────────────────────────────────────────
 
 
-def _safe(fn, default):
+_T = TypeVar("_T")
+
+
+def _safe(fn: Callable[[], _T], default: Callable[[str], _T]) -> _T:
     try:
         return fn()
     except Exception as exc:  # never let one engine break the whole scan
         return default(str(exc))
 
 
-def _waf_result(eng, text) -> EngineResult:
-    def run():
+def _waf_result(eng: dict[str, Any], text: str) -> EngineResult:
+    def run() -> EngineResult:
         r = eng["waf"].inspect_payload(text)
         flagged = not getattr(r, "allowed", True)
         score = float(getattr(r, "score", 0.0) or 0.0)
@@ -226,8 +230,8 @@ def _waf_result(eng, text) -> EngineResult:
     )
 
 
-def _yara_result(eng, text) -> EngineResult:
-    def run():
+def _yara_result(eng: dict[str, Any], text: str) -> EngineResult:
+    def run() -> EngineResult:
         d = eng["yara"].scan(text).to_dict()
         matches = d.get("matches", [])
         flagged = bool(matches)
@@ -251,8 +255,8 @@ def _yara_result(eng, text) -> EngineResult:
     )
 
 
-def _classified_result(eng, text) -> EngineResult:
-    def run():
+def _classified_result(eng: dict[str, Any], text: str) -> EngineResult:
+    def run() -> EngineResult:
         d = eng["classified"].scan(text).to_dict()
         flagged = bool(d.get("blocked"))
         markers = d.get("markers_found", []) or []
@@ -283,8 +287,8 @@ def _classified_result(eng, text) -> EngineResult:
     )
 
 
-def _suffix_result(eng, text) -> EngineResult:
-    def run():
+def _suffix_result(eng: dict[str, Any], text: str) -> EngineResult:
+    def run() -> EngineResult:
         d = eng["suffix"].scan(text).to_dict()
         flagged = bool(d.get("flagged"))
         sig = d.get("signals", []) or []
@@ -312,8 +316,8 @@ def _suffix_result(eng, text) -> EngineResult:
     )
 
 
-def _rag_result(eng, text) -> EngineResult:
-    def run():
+def _rag_result(eng: dict[str, Any], text: str) -> EngineResult:
+    def run() -> EngineResult:
         d = eng["rag"].scan_document(text).to_dict()
         flagged = not d.get("clean", True)
         sig = d.get("signals", []) or []
@@ -337,8 +341,8 @@ def _rag_result(eng, text) -> EngineResult:
     )
 
 
-def _manyshot_result(eng, text) -> EngineResult:
-    def run():
+def _manyshot_result(eng: dict[str, Any], text: str) -> EngineResult:
+    def run() -> EngineResult:
         d = eng["manyshot"].evaluate(text).to_dict()
         flagged = bool(d.get("exceeded"))
         sev = "high" if flagged else "clean"
@@ -361,8 +365,8 @@ def _manyshot_result(eng, text) -> EngineResult:
     )
 
 
-def _ot_result(eng, text) -> EngineResult:
-    def run():
+def _ot_result(eng: dict[str, Any], text: str) -> EngineResult:
+    def run() -> EngineResult:
         d = eng["ot"].scan(text).to_dict()
         flagged = bool(d.get("should_block") or not d.get("clean", True))
         score = float(d.get("risk_score", 0.0) or 0.0)
@@ -394,8 +398,8 @@ def _ot_result(eng, text) -> EngineResult:
     )
 
 
-def _ioc_result(eng, text) -> EngineResult:
-    def run():
+def _ioc_result(eng: dict[str, Any], text: str) -> EngineResult:
+    def run() -> EngineResult:
         d = eng["ioc"].match(text).to_dict()
         flagged = bool(d.get("matched"))
         matches = d.get("matches", []) or []

@@ -1,0 +1,150 @@
+REG-D42 — FIXED: two extension-bound tests assumed their environment instead
+of arranging it; one of them kept main's Forensic workflow red.
+
+Found by the 2026-09-22 re-anchor (evidence/registry/reanchor_2026-09-22.txt,
+§5). Host: 4 CPU, CPython 3.11.15, uid 0 (real root), aegis_rust 5.0.1 built
+with CI's command (maturin build --release --features extension-module).
+
+=== (a) gossip: the native-accumulator refusal test ===
+
+tests/test_gossip_runtime_lifecycle.py::TestStartRefusals::
+  test_an_absent_native_accumulator_is_refused_with_its_reason
+asserted GossipStartupError("requires the native CausalMmr accumulator")
+without making the accumulator absent. start_gossip()
+(aegis/consensus/runtime.py:152-158) calls _new_accumulator() first, which
+imports aegis_rust (aegis/engines/agentis.py:141-147). With the extension
+built, that succeeds and execution reaches HttpGossipTransport, whose
+ssl.create_default_context() rejects the test's one-line PEM:
+  ssl.SSLError: [X509] PEM lib
+CI evidence (Forensic workflow builds the extension, runs the full suite):
+  run 35622820892, main @ 0f6617d: 1 failed, 7354 passed ×3 (3.11/3.12/3.13).
+
+Fix: arrange the absence through the real code path —
+  monkeypatch.setitem(sys.modules, "aegis_rust", None)
+makes `import aegis_rust` inside new_causal_accumulator raise ImportError, so
+the production conversion to CausalMmrUnavailableError and then to
+GossipStartupError is what the test observes, on every host. Nothing in the
+product changed.
+
+=== (b) RLIMIT_NPROC: the thread-exhaustion test ===
+
+tests/test_rust_limits_are_validated.py::
+  test_runtime_init_raises_when_threads_cannot_be_spawned
+sets RLIMIT_NPROC=1 in a subprocess to make thread creation fail. Linux does
+not enforce RLIMIT_NPROC for a task holding CAP_SYS_RESOURCE/CAP_SYS_ADMIN,
+so on a root host nothing is exhausted and the probe prints
+"NO-ERROR workers=4" (exit 1). CI's runner is non-root, so CI was green here;
+any root host (this one) was red.
+
+Fix: when euid == 0 the probe drops to nobody (setgroups([]), setgid(65534),
+setuid(65534)) after the extension is loaded, then applies the limit. If the
+drop itself is refused (exit 5, "CANNOT-DROP …") the test skips with that
+reason rather than asserting on a probe that measured nothing.
+
+=== Diff ===
+diff --git a/tests/test_gossip_runtime_lifecycle.py b/tests/test_gossip_runtime_lifecycle.py
+index f0a5204..f875563 100644
+--- a/tests/test_gossip_runtime_lifecycle.py
++++ b/tests/test_gossip_runtime_lifecycle.py
+@@ -20,6 +20,7 @@ from __future__ import annotations
+ 
+ import asyncio
+ import contextlib
++import sys
+ from pathlib import Path
+ from types import SimpleNamespace
+ from typing import Any
+@@ -110,10 +111,14 @@ class TestStartRefusals:
+             await start_gossip(_config())
+ 
+     async def test_an_absent_native_accumulator_is_refused_with_its_reason(
+-        self, tmp_path: Path
++        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+     ) -> None:
+         """No Python stand-in: an accumulator whose roots peers cannot compute
+         would report converged rounds while agreeing with nobody."""
++        # Arrange the absence rather than assume it: where the extension is
++        # built (the Forensic workflow), start_gossip would otherwise get past
++        # the accumulator and fail on the placeholder PEM below instead.
++        monkeypatch.setitem(sys.modules, "aegis_rust", None)
+         material = tmp_path / "material.pem"
+         material.write_text("-----BEGIN CERTIFICATE-----\n", encoding="utf-8")
+         with pytest.raises(GossipStartupError, match="requires the native CausalMmr accumulator"):
+diff --git a/tests/test_rust_limits_are_validated.py b/tests/test_rust_limits_are_validated.py
+index 1740963..ab7863a 100644
+--- a/tests/test_rust_limits_are_validated.py
++++ b/tests/test_rust_limits_are_validated.py
+@@ -83,9 +83,21 @@ def test_warmup_runtime_reports_workers() -> None:
+ 
+ _RLIMIT_PROBE = textwrap.dedent(
+     """
+-    import resource, sys
++    import os, resource, sys
+     sys.path.insert(0, sys.argv[1])
+     import aegis_rust
++    if os.geteuid() == 0:
++        # The kernel does not enforce RLIMIT_NPROC on a task holding
++        # CAP_SYS_RESOURCE or CAP_SYS_ADMIN, so as root the limit below would
++        # exhaust nothing and the probe would measure nothing. Drop to
++        # `nobody` (the extension is already loaded) so the limit applies.
++        try:
++            os.setgroups([])
++            os.setgid(65534)
++            os.setuid(65534)
++        except OSError as exc:
++            print(f"CANNOT-DROP {exc}")
++            sys.exit(5)
+     soft, hard = resource.getrlimit(resource.RLIMIT_NPROC)
+     # RLIMIT_NPROC counts processes/threads of the whole uid, and this uid is
+     # already far above 1 — so every *new* thread fails with EAGAIN while the
+@@ -131,6 +143,8 @@ def test_runtime_init_raises_when_threads_cannot_be_spawned() -> None:
+         env=env,
+         timeout=300,
+     )
++    if proc.returncode == 5:
++        pytest.skip(f"running as root and cannot drop privileges: {proc.stdout.strip()}")
+     assert proc.returncode == 0, (
+         f"warmup_runtime did not survive thread exhaustion: exit "
+         f"{proc.returncode} (-6 = SIGABRT)\n{proc.stdout}\n{proc.stderr}"
+
+=== Runs ===
+A = fixed tests, extension installed (uid 0)
+B = control: the pre-fix test files (git stash), same environment
+C = fixed tests, extension uninstalled (pip uninstall aegis_rust), then reinstalled
+== A. fixed tests, extension 5.0.1 installed, uid 0 ==
+aegis_rust 5.0.1
+.........................                                                [100%]
+25 passed in 0.43s
+== B. control: pre-fix tests (git stash), extension installed ==
+FAILED tests/test_gossip_runtime_lifecycle.py::TestStartRefusals::test_an_absent_native_accumulator_is_refused_with_its_reason
+FAILED tests/test_rust_limits_are_validated.py::test_runtime_init_raises_when_threads_cannot_be_spawned
+2 failed, 23 passed in 0.47s
+== C. fixed tests, extension UNINSTALLED ==
+ModuleNotFoundError: No module named 'aegis_rust'
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_rust_limits_are_validated.py:28: could not import 'aegis_rust': No module named 'aegis_rust'
+16 passed, 1 skipped in 0.38s
+== reinstall ==
+
+aegis_rust 5.0.1
+tests/test_rust_limits_are_validated.py::test_runtime_init_raises_when_threads_cannot_be_spawned PASSED [ 50%]
+tests/test_gossip_runtime_lifecycle.py::TestStartRefusals::test_an_absent_native_accumulator_is_refused_with_its_reason PASSED [100%]
+============================== 2 passed in 0.35s ===============================
+
+=== Full suite, Forensic configuration (extension installed), this host ===
+$ HERMES_SANDBOX=true python -m pytest -n auto -q -p no:cacheprovider
+7367 passed, 35 skipped in 91.21s (0:01:31)
+EXIT: 0
+(At the anchor, same host before the environment repair: 12 failed / 7,340
+passed / 38 skipped. The working tree for this run also carried the REG-D34
+verifier change, which touches only tools/docs/verify_documentation.py and
+its test module.)
+
+=== Gates ===
+ruff check / ruff format --check on both test files: All checks passed;
+2 files already formatted.
+
+=== What this does not establish ===
+CI has not run this change yet; the claim that the Forensic workflow turns
+green is an inference from the log (the gossip test is the only failure on
+all three jobs) until the pull request's own run reads it back.

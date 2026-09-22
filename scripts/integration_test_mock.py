@@ -34,6 +34,7 @@ import signal
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -348,7 +349,7 @@ if _pytest_available():
         return httpserver
 
     @pytest.fixture(scope="module")
-    def aegis_process(mock_upstream: HTTPServer):
+    def aegis_process(mock_upstream: HTTPServer) -> Iterator[subprocess.Popen[bytes]]:
         """Start the Aegis proxy pointing at the mock upstream, yield, then kill."""
         env = {
             **os.environ,
@@ -401,11 +402,11 @@ if _pytest_available():
     class TestMockUpstreamErrors:
         """Verify proxy handles upstream error states correctly."""
 
-        def test_health(self, aegis_process: subprocess.Popen) -> None:
+        def test_health(self, aegis_process: subprocess.Popen[bytes]) -> None:
             resp = httpx.get(f"{PROXY_BASE}/health")
             assert resp.status_code == 200
 
-        def test_audit_health(self, aegis_process: subprocess.Popen) -> None:
+        def test_audit_health(self, aegis_process: subprocess.Popen[bytes]) -> None:
             resp = httpx.get(
                 f"{PROXY_BASE}/v1/audit/health",
                 headers={"Authorization": f"Bearer {AUDIT_KEY}"},
@@ -420,8 +421,8 @@ if _pytest_available():
         @pytest.mark.parametrize("case", PAYLOAD_MATRIX, ids=[c["id"] for c in PAYLOAD_MATRIX])
         def test_payload(
             self,
-            case: dict,
-            aegis_process: subprocess.Popen,
+            case: dict[str, Any],
+            aegis_process: subprocess.Popen[bytes],
             mock_upstream: HTTPServer,
         ) -> None:
             headers = {
@@ -447,7 +448,9 @@ if _pytest_available():
     class TestUpstreamErrorStates:
         """Verify Aegis handles upstream 429 / 503 gracefully."""
 
-        def test_upstream_429_returns_502_or_429(self, aegis_process: subprocess.Popen) -> None:
+        def test_upstream_429_returns_502_or_429(
+            self, aegis_process: subprocess.Popen[bytes]
+        ) -> None:
             # When upstream returns 429, Aegis should return 429 or 502 to client
             headers = {"Authorization": f"Bearer {PROXY_KEY}"}
             resp = httpx.post(
@@ -459,7 +462,9 @@ if _pytest_available():
             # Proxy converts upstream error to 4xx/5xx — accept both
             assert resp.status_code in (200, 429, 502, 503, 504)
 
-        def test_audit_chain_integrity_after_sweep(self, aegis_process: subprocess.Popen) -> None:
+        def test_audit_chain_integrity_after_sweep(
+            self, aegis_process: subprocess.Popen[bytes]
+        ) -> None:
             resp = httpx.get(
                 f"{PROXY_BASE}/v1/audit/integrity",
                 headers={"Authorization": f"Bearer {AUDIT_KEY}"},

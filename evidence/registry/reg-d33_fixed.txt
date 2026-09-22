@@ -1,0 +1,151 @@
+REG-D33 — FIXED (AUD-29): the gate programs sat outside every type-check scope.
+
+Host: 4 CPU, CPython 3.11.15, mypy per requirements (.venv). Base: d50ef85.
+
+=== Premise re-verified ===
+
+CI (.github/workflows/ci.yml, typecheck job) ran `mypy --config-file=mypy-ci.ini
+<fixed aegis file list>` and `mypy --strict aegis`; forensic.yml runs the same
+narrow profile on three aegis files; the Makefile's `type` target ran
+`mypy --strict aegis`. Nothing ran mypy over scripts/ or tools/.
+
+Measured over the whole of both directories (41 source files):
+  $ mypy --strict --explicit-package-bases scripts tools
+  Found 98 errors in 17 files
+  (plain `mypy --strict scripts/ tools/` stops earlier: "Source file found twice
+  under different module names: prepare_release_assets and
+  scripts.prepare_release_assets" — hence --explicit-package-bases)
+Two of the 98 were in aegis_server/crypto/vault_signer.py, reached by import.
+That package's errors are REG-038's accepted, separately measured debt; hiding
+them through a config override would falsify REG-038's own figure (the trap
+REG-026 recorded), so the scope uses --follow-imports=silent instead: `aegis`
+is already checked strictly by its own step, aegis_server by REG-038's.
+  $ mypy --strict --explicit-package-bases --follow-imports=silent scripts tools
+  Found 96 errors in 16 files
+         33 tools/visualizer/threat_lab.py
+         12 tools/visualizer/generate_summary.py
+         10 tools/forensic/forensic_checks.py
+          9 tools/visualizer/app.py
+          7 scripts/integration_test_mock.py
+          5 tools/benchmarks/run_pqc_timing.py
+          4 tools/visualizer/generate_samples.py
+          4 scripts/generate_module_inventory.py
+          3 tools/security/run_waf_corpus.py
+          3 scripts/create_github_release.py
+          2 tools/forensic/diagnose_aegis.py
+          2 tools/benchmarks/run_group_commit.py
+          1 tools/benchmarks/run_key_rotation.py
+          1 scripts/verify_claims.py
+          1 scripts/build_execution_manifest.py
+          1 scripts/audit_documentation_corpus.py
+
+=== Scope decision ===
+
+Both directories whole, not a file list: a list drifts the moment a new gate
+script is added, which is how scripts/ fell out in the first place. The
+harnesses under tools/benchmarks generate the numbers the performance claims
+cite (REG-D30), so they are in scope for the same reason as the doc gates.
+
+=== A real defect the first strict run found ===
+
+tools/forensic/diagnose_aegis.py:326 called `signer.verify(msg, sig)`.
+PQCSigner.verify is a @staticmethod taking (message, signature, public_key)
+(aegis/core/pqc_signer.py:219-220). The TypeError was swallowed by the check's
+broad `except`, so the diagnostic reported the PQC signer as FAILED on every
+install that has a working ML-DSA backend. Reproduced on the unmodified file
+(extension 5.0.1 installed):
+  {'check': 'PQC signer', 'status': 'FAIL', 'detail': "Exception:
+   PQCSigner.verify() missing 1 required positional argument: 'public_key'"}
+After `ok = PQCSigner.verify(msg, sig, signer.public_key)`:
+  {'check': 'PQC signer (ML-DSA-65)', 'status': 'OK',
+   'detail': 'backend=ml-dsa-65-rust | sign+verify round-trip: PASS'}
+This is the row's argument made concrete: the check that is supposed to
+confirm the signer works had been reporting it broken, and no gate could see
+the wrong call.
+
+=== Every other change is type-level and behaviour-preserving ===
+
+Gate programs (main session): typed locals/returns in forensic_checks.py,
+verify_claims.py (`_split_row`, the line AUD-29 named), run_pqc_timing.py
+(array[float]; `results` held as a typed local and placed in the report — the
+same object), run_waf_corpus.py (`passed` computed once and reused for the
+report, the printed summary and the exit code — the identical expression),
+run_group_commit.py (`delta` hoisted; the two post-build overrides now write
+through the locals to the same objects), audit_documentation_corpus.py
+(`counts` hoisted, same object), run_key_rotation.py (`keys` annotated),
+build_execution_manifest.py (prints `root_hash`, the value the envelope stores
+at integrity.merkle_root_sha256), generate_module_inventory.py and
+diagnose_aegis.py (unused `type: ignore` removed), create_github_release.py
+(`# type: ignore[no-redef]` on the standard try/except import fallback — the
+only suppression added anywhere).
+
+tools/visualizer/{threat_lab,generate_summary,app,generate_samples}.py and
+scripts/integration_test_mock.py: delegated to a codeql-finding-resolver
+subagent, bounded to those five files, annotation-only, no suppressions. Its
+diff was re-read here: every removed line is a signature or an annotated local;
+`_safe` became generic over its return type with an unchanged body.
+
+=== Guard ===
+
+.github/workflows/ci.yml, typecheck job, new step:
+  mypy --strict --explicit-package-bases --follow-imports=silent scripts tools
+Makefile `type` target: the same line, beside `mypy --strict aegis`.
+tests/test_gate_scope_parity.py::test_gate_programs_are_type_checked_by_both_make_and_ci
+  asserts both files carry that exact invocation.
+  Controls:
+    CI step reverted to `mypy --strict aegis`  -> 1 failed, 2 passed
+      ("ci.yml does not run `mypy --strict --explicit-package-bases …`")
+    Makefile line deleted                      -> 1 failed, 2 passed
+    restored                                   -> 3 passed
+
+=== After ===
+$ mypy --strict --explicit-package-bases --follow-imports=silent scripts tools
+Success: no issues found in 41 source files
+$ ruff check / ruff format --check <17 changed .py files>
+All checks passed!
+17 files already formatted
+$ pytest (every test module that references a changed program, + gate parity)
+  modules: tests/test_ai_context.py tests/test_compliance_wording_gate.py tests/test_documentation_verifiers.py tests/test_gate_scope_parity.py tests/test_module_inventory_current.py tests/test_no_defect_markers_in_shipped_code.py tests/test_regulatory_input_claims.py tests/test_release_contract_v4.py tests/test_retracted_figure_gate.py tests/test_sample_provenance.py tests/test_threat_lab.py tests/test_visualizer_app.py  tests/test_gate_scope_parity.py
+162 passed in 8.30s
+
+Smoke:
+== make type ==
+mypy --strict --explicit-package-bases --follow-imports=silent scripts tools
+Success: no issues found in 41 source files
+== run_waf_corpus ==
+usage: run_waf_corpus.py [-h] [--corpus CORPUS] --output OUTPUT
+
+Run the local, authorized Aegis WAF corpus.
+== run_group_commit (small) ==
+  "throughput_ratio": 1.243
+}
+fsync_calls_before 16 per_record 16
+== run_key_rotation ==
+usage: run_key_rotation.py [-h] [--duration-s DURATION_S] --output OUTPUT
+
+Exercise three independent keyring signers through an atomic rotation.
+== run_pqc_timing (small) ==
+usage: run_pqc_timing.py [-h] [--operation {sign,verify,both}]
+                         [--samples SAMPLES] [--warmup WARMUP] --output OUTPUT
+                         --raw-output RAW_OUTPUT
+
+Run an isolated ML-DSA timing leakage experiment.
+
+options:
+  -h, --help            show this help message and exit
+  --operation {sign,verify,both}
+  --samples SAMPLES
+  --warmup WARMUP
+  --output OUTPUT
+== audit_documentation_corpus ==
+{"all_files": 1258, "crlf_files": 0, "exact_duplicate_groups": 11, "institutional_files": 12, "institutional_placeholders": 1, "markdown_files": 255, "non_nfc_files": 0, "repeated_heading_groups": 18, "text_files": 1142, "utf8_failures": 0}
+status=FAIL
+CORPUS_AUDIT.md
+CORPUS_INVENTORY.json
+
+(run_waf_corpus / run_key_rotation / run_pqc_timing were exercised to argument
+parsing only — the full harnesses are measurement runs, and their bodies changed
+only by annotation plus the identical-expression hoists above.
+audit_documentation_corpus reports status=FAIL: pre-existing and unrelated —
+identical at 0f6617d in a clean worktree, one literal "..." in
+docs/institutional/DOC-03_THREAT_MODEL.md:134 — opened separately as REG-D43.)

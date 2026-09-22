@@ -1,0 +1,141 @@
+REG-D32 — FIXED (AUD-28): terminal evidence handed off at teardown now survives
+the process that handed it off — opt-in, content-free durable outbox.
+
+Host: 4 CPU, CPython 3.11.15, uid 0, aegis_rust 5.0.1 installed. Base: 92120a2.
+
+=== Premise re-verified before any code ===
+
+Delegated to a wal-durability-engineer subagent (read-only); its load-bearing
+citations re-checked here:
+  - The handoff is in-process: aegis/proxy/streaming.py TerminalCommitHandoff,
+    asyncio.Queue(maxsize=64); submit() drops and counts on QueueFull.
+  - The live closures commit with request_bytes=raw_body
+    (aegis/proxy/app.py, _commit_stream_terminal / _commit_anthropic_terminal),
+    and raw_body is the ORIGINAL, pre-scrub request (app.py: "raw_body (used for
+    audit) retains the original; body is the scrubbed copy").
+  - commit_forensic_summary derives request_hash and a request preview from
+    request_bytes (aegis/core/crypto_audit.py), and does not read _fault_state.
+Consequence: replaying the live call unchanged would need customer plaintext on
+disk — a new at-rest content surface the WAL itself does not hold unsealed, and
+one crypto-shredding would not reach. That is the invariant-relevant decision
+this row carried.
+
+=== Decision (PD-R5): no invariant relaxed, so no owner decision required ===
+
+  - OPT-IN, default off (AEGIS_TERMINAL_OUTBOX_ENABLED): the default path is
+    unchanged; the REG-049 preflight set the precedent for a default-off control.
+  - CONTENT-FREE spool: digests, sizes, counts, labels, flags. No body, no
+    preview. Nothing new at rest.
+  - Recovered nodes are distinguishable, in the signed payload:
+    signature_meaning "stream-terminal-evidence-recovered"; evidence_status
+    "recovered-terminal" (validated against a closed set of two).
+  - Fail-closed replay: nothing is appended unless the ledger's fault state is
+    "healthy", re-checked before every record; otherwise the spool is kept
+    byte-identical for the next start.
+  - The only new refusal is on the opt-in path: enabled + outbox cannot be
+    opened -> startup fails.
+
+=== Implementation ===
+
+aegis/proxy/terminal_outbox.py (new)
+  TerminalOutbox: JSON-lines spool, 0600, O_APPEND. record() (event-loop thread,
+  stream teardown) is one write, no await, never raises; sync() fsyncs via
+  to_thread; mark_done() appends a done marker; compact() rewrites the pending
+  set by tmp + fsync + rename + directory fsync. Bounded: max_bytes and 4,096
+  pending records, past which a handoff is in-memory only and counted.
+  replay_pending(): healthy-only, per-record re-check; dedupe by state_id
+  against terminal nodes in ledger.chain_snapshot(); failed replays stay pending.
+aegis/core/crypto_audit.py commit_forensic_summary
+  + request_digest=(sha256 hex, size) — exactly one of it or request_bytes;
+    64 lowercase hex; size in [0, 1 MiB]; request preview empty.
+  + evidence_status in {"durable-terminal", "recovered-terminal"}.
+  The request_bytes path is unchanged: same hash, same size, same preview, same
+  1 MiB error message.
+aegis/proxy/streaming.py TerminalCommitHandoff
+  attach_outbox(); for_commit(commit, replay=None); submit(..., replay=None)
+  spools before enqueueing (so a full queue defers rather than loses); the
+  worker syncs, commits, then marks done; a failed commit stays pending.
+  Without an outbox or a replay context, behaviour is exactly as before.
+aegis/proxy/app.py
+  lifespan: open, replay, attach, bind the pending gauge — before the handoff
+  worker starts and before traffic; shutdown: stop the handoff, then close.
+  Both streaming handlers build a TerminalReplayContext only when the outbox is
+  enabled (sha256 of raw_body computed only then).
+aegis/config.py: terminal_outbox_enabled / _path / _max_bytes.
+aegis/core/observability.py: aegis_terminal_outbox_pending (Gauge),
+  _recovered_total, _errors_total (Counters), with no-op fallbacks.
+
+=== Tests: tests/test_terminal_outbox.py ===
+test_the_spool_holds_no_content_and_is_owner_only PASSED [  5%]
+test_a_record_survives_sigkill_right_after_it_is_written PASSED [ 10%]
+test_a_torn_tail_is_skipped_and_counted_not_fatal PASSED [ 15%]
+test_replay_commits_a_pending_record_exactly_once_and_marks_it PASSED [ 21%]
+test_a_crash_between_commit_and_done_marker_is_not_committed_twice PASSED [ 26%]
+test_replay_refuses_a_ledger_that_is_not_healthy PASSED [ 31%]
+test_a_recovered_node_matches_the_live_one_but_for_previews_and_markers PASSED [ 36%]
+test_a_committed_handoff_leaves_nothing_pending PASSED [ 42%]
+test_a_failed_commit_stays_pending_for_the_next_start PASSED [ 47%]
+test_a_full_queue_defers_the_commit_to_the_next_start PASSED [ 52%]
+test_a_full_spool_costs_durability_not_the_in_memory_commit PASSED [ 57%]
+test_a_spool_write_failure_never_reaches_teardown PASSED [ 63%]
+test_the_digest_form_is_validated[kwargs0-exactly one] PASSED [ 68%]
+test_the_digest_form_is_validated[kwargs1-exactly one] PASSED [ 73%]
+test_the_digest_form_is_validated[kwargs2-lowercase SHA-256] PASSED [ 78%]
+test_the_digest_form_is_validated[kwargs3-size] PASSED [ 84%]
+test_the_digest_form_is_validated[kwargs4-evidence_status] PASSED [ 89%]
+test_the_app_replays_the_spool_before_serving PASSED [ 94%]
+test_the_outbox_is_off_by_default PASSED  [100%]
+============================== 19 passed in 2.31s ==============================
+
+The SIGKILL test is real process death: a subprocess writes one record and
+sends itself SIGKILL; the parent asserts returncode == -SIGKILL and reopens the
+spool to find the record.
+
+=== Controls — each mechanism disabled in turn, sources restored after ===
+CONTROL dedupe disabled: 1 failed, 18 passed in 1.43s
+   failed: test_a_crash_between_commit_and_done_marker_is_not_committed_twice
+CONTROL fault-state guard removed: 1 failed, 18 passed in 1.46s
+   failed: test_replay_refuses_a_ledger_that_is_not_healthy
+CONTROL submit does not spool: 5 failed, 14 passed in 1.45s
+   failed: test_a_committed_handoff_leaves_nothing_pending
+   failed: test_a_failed_commit_stays_pending_for_the_next_start
+   failed: test_a_full_queue_defers_the_commit_to_the_next_start
+   failed: test_a_full_spool_costs_durability_not_the_in_memory_commit
+   failed: test_a_spool_write_failure_never_reaches_teardown
+CONTROL worker never marks done: 2 failed, 17 passed in 1.47s
+   failed: test_a_committed_handoff_leaves_nothing_pending
+   failed: test_a_full_queue_defers_the_commit_to_the_next_start
+CONTROL record spools the response preview: 1 failed, 18 passed in 1.40s
+   failed: test_the_spool_holds_no_content_and_is_owner_only
+(sources compared with cmp after the run: byte-identical; 19 passed)
+
+=== Regression and gates ===
+Existing streaming tests with the new handoff code:
+  tests/test_streaming_teardown.py tests/test_proxy_streaming.py -> 34 passed
+Full suite, extension installed, HERMES_SANDBOX=true, -n auto:
+2 failed, 7387 passed, 35 skipped in 91.38s (0:01:31)
+  The two failures were docs/MODULE_INVENTORY.md not yet listing the new
+  module; regenerated -> tests/test_module_inventory_current.py 5 passed.
+mypy --strict aegis: Success, 208 source files.
+ruff check / ruff format --check on every changed file: clean.
+verify_import_reachability: PASS (225 discovered / 114 reached / 34 / 77).
+tests/test_config_surface_inert_fields.py: passes (the three settings are read).
+
+=== Residuals, published (CLM-106, UC-052, BOUNDARIES.md) ===
+  - Off by default: the default path keeps the in-process residual.
+  - Process death is covered once a record is written; power loss only after
+    the worker's fsync, which runs before each commit.
+  - Dedupe is exact only within the retained window (max_memory_nodes); a
+    record whose node has left the window would be replayed as a second,
+    recovered-marked node.
+  - Only the teardown handoff is spooled; an inline completion commit is not.
+  - A recovered node has empty previews and a replay-time timestamp.
+  - Single-process; relies on the WAL's single-writer discipline.
+
+=== Independent review ===
+A read-only ledger-commit-auditor review was commissioned on the change before
+this commit and had not returned when the branch was pushed (the registry's
+battery and closure conditions were met without it). Its findings, and what
+was done about each, are appended below by a follow-up commit on the pull
+request; until that section exists, this row's evidence is the tests, the
+controls and the battery recorded above.
