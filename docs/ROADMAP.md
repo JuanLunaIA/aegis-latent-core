@@ -377,11 +377,17 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
   - **Proposed solution:** Decide the canonical type-check scope once: add `scripts/` and `tools/` to a mypy job (start with `--strict` on the two directories that already pass, and stage the remainder), annotate `_split_row`'s locals, and add the directory list to the same gate that `AUD-18` reconciles for the formatter.
   - **Estimated effort:** S (2-3 h; the annotation is one line, the scope decision is the work)
 
-- [ ] **AUD-30 [P3] — Doc gate false positive: a decimal's last digit reads as a `v4` token in the publication rule**
+- [x] **AUD-30 [P3] — Doc gate false positive: a decimal's last digit reads as a `v4` token in the publication rule**
   - **Affected files:** tools/docs/verify_documentation.py:126-138 (`v4 external publication or release` rule); reproduced on docs/FAQ_TECHNICAL.md:118
   - **Root cause:** The rule's trigger is `\bv?4(?:\.0(?:\.0)?)?\b` within 100 characters of `published|released`. `\b4\b` matches the final digit of an ordinary measurement — "32.4 s", "12.4 ms" — so any sentence combining a decimal that ends in 4 with the word "published" is an ERROR in strict mode even when nothing about a release is claimed. Found while sweeping the retracted backpressure pair (`REG-D10`): the corrected row was rejected for "32.4 s, ... (as previously published)".
   - **Proposed solution:** Narrow the trigger to version-shaped tokens (`v4(?:\.[0-9]+)*`, `4\.0(?:\.0)?`, `version 4`) and keep a test for the intended catch (`tests/test_documentation_verifier.py:56` already asserts "Aegis v4.0.0 has been published and released." must fail). Do not relax the prohibition itself.
   - **Estimated effort:** S (1-2 h incl. the test)
+
+  - **Closed 2026-09-22 (`REG-D34`):** narrowed as proposed, with one extension the probe forced:
+    the disclaimer carried the same bare-4 token, so "does not run on Python 3.4" waived a real
+    v4 publication claim on the same line. Both halves now share `_V4_VERSION`; the prohibition
+    is not relaxed. Tests: `tests/test_documentation_verifier.py` (12 new cases, control → 6 failed);
+    evidence `evidence/registry/reg-d34_fixed.txt`.
 - [ ] **AUD-35 [P2] — Wire or remove the remaining inert settings found by the config-surface gate**
   - **Affected files:** aegis/config.py (`rate_limit_window`, `webhook_url`); aegis_server/config.py (`webhook_url`); the alert path that reads `siem_url`/`siem_*`; docs/operations/DEPLOYMENT_PROFILES.md; deploy/helm/templates/statefulset.yaml; deploy/docker/docker-compose.enterprise.yml; config/presets/*.env; plus the AUD-14 families if the wire-up route is chosen there (aegis/auth/ldap_auth.py, aegis/proxy/mtls.py `CACPIVAuth`).
   - **Root cause:** the settings surface offers controls no code path reads. `webhook_url` is the sharpest: an operator following the presets, Helm chart, compose file or deployment-profiles table sets `AEGIS_WEBHOOK_URL` and receives no alerts, because the sender reads `siem_url`. The limiter uses its own fixed window, not `rate_limit_window`. The LDAP and CAC/PIV settings are described in `UC-064`/`UC-065` and labelled in place.

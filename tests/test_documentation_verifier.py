@@ -86,6 +86,53 @@ def test_strict_mode_allows_explicit_scoped_disclaimers(tmp_path: Path, claim: s
     assert not [finding for finding in findings if finding.severity == "ERROR"]
 
 
+@pytest.mark.parametrize(  # type: ignore[untyped-decorator]
+    "claim",
+    [
+        # REG-D34: the exact FAQ row the rule rejected, then the same shape elsewhere.
+        "32.4 s, 2 ms injected `fsync` delay (as previously published)",
+        "The 1.4 GB image was released to the internal registry.",
+        "Observed 4.85 MB retained; the figure was published in the benchmark note.",
+        "Table 4 was published with the August revision.",
+        "Released builds use 4 worker threads.",
+    ],
+)
+def test_strict_mode_does_not_read_a_bare_or_decimal_four_as_a_version(
+    tmp_path: Path, claim: str
+) -> None:
+    path = tmp_path / "README.md"
+    _write_document(path, claim)
+
+    findings = verify_documentation.check_document(path, tmp_path, strict=True)
+
+    assert not [finding for finding in findings if "v4 external publication" in finding.message]
+
+
+@pytest.mark.parametrize(  # type: ignore[untyped-decorator]
+    "claim",
+    [
+        "Aegis 4.0.0 was published to PyPI.",
+        "v4 was released last week.",
+        "Version 4 is published.",
+        "The 4.0 line was released externally.",
+        "Aegis v4.1.2 was published.",
+        "Aegis 4.1.2 was published.",
+        # The disclaimer shares the version token: "not ... 3.4" must not waive the claim.
+        "Aegis v4.0.0 was published; it does not run on Python 3.4.",
+    ],
+)
+def test_strict_mode_still_rejects_every_version_four_spelling(tmp_path: Path, claim: str) -> None:
+    path = tmp_path / "README.md"
+    _write_document(path, claim)
+
+    findings = verify_documentation.check_document(path, tmp_path, strict=True)
+
+    assert any(
+        finding.severity == "ERROR" and "v4 external publication" in finding.message
+        for finding in findings
+    )
+
+
 def test_default_mode_preserves_warning_only_claim_compatibility(tmp_path: Path) -> None:
     path = tmp_path / "README.md"
     _write_document(path, "The ML-DSA implementation is constant-time.")

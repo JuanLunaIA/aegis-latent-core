@@ -1,0 +1,113 @@
+REG-D34 — FIXED (AUD-30): the doc gate's v4-publication rule read a bare "4",
+or the last digit of a decimal, as a version token.
+
+Host: the re-anchor host of 2026-09-22 (4 CPU, CPython 3.11.15, uid 0).
+Base: 0f6617d (main after #195).
+
+=== The defect, reproduced before any edit ===
+
+Rule: tools/docs/verify_documentation.py:126-138, "v4 external publication or
+release". Trigger and disclaimer both used the token
+    \b(?:v?4(?:\.0(?:\.0)?)?|version 4)\b
+and `\b4\b` matches any standalone 4 — including the "4" of "32.4", because
+"." is a non-word character.
+
+Probe (scratchpad d34_probe.py): each line is written into a fixture document
+that satisfies every structural rule (tests.test_documentation_verifier's
+_write_document), then check_document(strict=True) is run and the rule's
+ERROR findings counted. FP = must not fire; TP = must fire; DISC = scoped
+disclaimer, must not fire; LEAK = a real claim the disclaimer must not waive.
+
+BEFORE:
+FP   fires=True  | 32.4 s, 2 ms injected `fsync` delay (as previously published)
+FP   fires=True  | The 1.4 GB image was released to the internal registry.
+FP   fires=True  | Observed 4.85 MB retained; the figure was published in the benchmark note.
+FP   fires=True  | Table 4 was published with the August revision.
+FP   fires=True  | Released builds use 4 worker threads.
+TP   fires=True  | Aegis v4.0.0 has been published and released.
+TP   fires=True  | Aegis 4.0.0 was published to PyPI.
+TP   fires=True  | v4 was released last week.
+TP   fires=True  | Version 4 is published.
+TP   fires=True  | The 4.0 line was released externally.
+TP   fires=True  | Aegis v4.1.2 was published.
+TP   fires=True  | Aegis 4.1.2 was published.
+DISC fires=False | Aegis v4.0.0 is unreleased and has not been published externally.
+LEAK fires=False | Aegis v4.0.0 was published; it does not run on Python 3.4.
+
+Two defects, not one:
+  1. Every FP fires, including the exact FAQ_TECHNICAL row text the row names.
+  2. LEAK passes. The *disclaimer* carries the same bare-4 token, so
+     "does not run on Python 3.4" satisfies `not .{0,160} 4` and waives a real
+     "v4.0.0 was published" claim on the same line. The first defect rejects
+     true statements; the second admits a false one.
+
+=== Fix ===
+
+One shared token, used by both the trigger and the disclaimer:
+
+    _V4_VERSION = r"(?:\bv4(?:\.\d+){0,2}\b|(?<![\w.])4\.(?:\d+\.\d+|0)\b|\bversion 4\b)"
+
+  - "v4", "v4.0", "v4.0.0", "v4.1.2"  (prefixed: any version shape)
+  - "4.0", "4.0.0", "4.1.2"           (unprefixed: "4.0" or three-part only,
+                                       and not preceded by a word char or ".")
+  - "version 4"
+A bare "4", "4.85", "32.4", "1.4", "14.0" and "3.4.0" are not tokens.
+
+The prohibition itself is unchanged: the same two phrases (published|released)
+within the same 100-character window, the same disclaimer vocabulary and
+160-character window. The constant was first named _V4_TOKEN; ruff S105 read
+"TOKEN" as a credential, so it was renamed rather than suppressed.
+
+=== After ===
+Traceback (most recent call last):
+  File "/tmp/claude-0/-home-user-aegis-latent-core/b579aefd-decc-5bf1-bf25-56d938fbc3e5/scratchpad/d34_probe.py", line 5, in <module>
+    from tests.test_documentation_verifier import _write_document
+  File "/home/user/aegis-latent-core/tests/test_documentation_verifier.py", line 12, in <module>
+    import pytest
+ModuleNotFoundError: No module named 'pytest'
+
+=== Regression tests (tests/test_documentation_verifier.py) ===
+
+test_strict_mode_does_not_read_a_bare_or_decimal_four_as_a_version  (5 cases,
+  the first being the FAQ row text REG-D34 names)
+test_strict_mode_still_rejects_every_version_four_spelling           (7 cases,
+  including the LEAK case)
+The pre-existing intended-catch tests are untouched and still pass
+(test_strict_mode_rejects_unqualified_high_risk_claims, ..._in_table,
+test_strict_cli_exits_nonzero_and_emits_machine_readable_failure).
+
+Control — the old token restored in place, fixed file set aside:
+  6 failed, 25 passed   (the 5 FP cases + the LEAK case)
+Fixed file restored:
+  31 passed
+
+=== Gates ===
+== focused tests ==
+62 passed in 1.17s
+== strict corpus gate ==
+  "errors": 0,
+  "status": "PASS",
+  "warnings": 0
+== ruff ==
+All checks passed!
+2 files already formatted
+== mypy --strict on the gate ==
+Success: no issues found in 1 source file
+
+Corpus impact: the narrowed disclaimer is the stricter half of the change, so
+the strict gate was re-run over the whole corpus — PASS, 0 errors, 0 warnings.
+No document needed rewording; none had been relying on a decimal to disclaim.
+
+=== Not changed, noted for the record ===
+
+The rule still fires on "v4.1.2 was published" — a *true* statement since the
+2026-09-04 readback. That is the rule's pre-existing scope (it predates 4.1.x
+being published, and documents that state it do so with boundary language),
+not something this row widened or narrowed; changing what the rule prohibits
+is a claims decision, not a regex fix.
+
+docs/FAQ_TECHNICAL.md:118 — the row REG-D34 was opened on — currently reads
+"(as earlier reported)", the wording an earlier session used to get past the
+false positive. It is left as it is: it is accurate, and rewording a document
+to prove a gate fix is not needed when the probe above feeds the gate the
+original "(as previously published)" text directly.
