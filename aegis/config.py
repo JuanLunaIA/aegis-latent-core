@@ -458,6 +458,35 @@ class AegisSettings(BaseSettings):
             "private key and is written 0600; give it the custody any signing secret needs."
         ),
     )
+    terminal_outbox_enabled: bool = Field(
+        default=False,
+        description=(
+            "Spool every terminal commit a stream hands off at teardown to a durable, "
+            "content-free outbox beside the WAL, and replay what is still pending at the next "
+            "start, before traffic is served (REG-D32). Off, a crash or SIGKILL between "
+            "teardown and the handed-off commit loses that terminal node, and a full handoff "
+            "queue drops it. A recovered node is signed as stream-terminal-evidence-recovered "
+            "with evidence_status recovered-terminal, carries no request or response preview, "
+            "and is timestamped at replay. If enabled and the outbox cannot be opened, "
+            "startup fails."
+        ),
+    )
+    terminal_outbox_path: Path | None = Field(
+        default=None,
+        description=(
+            "Outbox spool file. Unset, it is <wal_path>.terminal-outbox.jsonl, beside the WAL "
+            "and so covered by the same volume and single-writer lock."
+        ),
+    )
+    terminal_outbox_max_bytes: int = Field(
+        default=16 * 1024 * 1024,
+        ge=64 * 1024,
+        description=(
+            "Size at which the outbox stops accepting new records (each is about 0.5 KiB); "
+            "past it a handoff is in-memory only and counted in "
+            "aegis_terminal_outbox_errors_total. Compaction reclaims done records."
+        ),
+    )
     max_concurrent_streams: int = Field(
         default=256,
         ge=0,

@@ -106,6 +106,21 @@ if _PROM:
         "aegis_audit_handoff_dropped_total",
         "Terminal evidence commits dropped because the teardown handoff queue was full",
     )
+    TERMINAL_OUTBOX_PENDING: Any = Gauge(
+        "aegis_terminal_outbox_pending",
+        "Handed-off terminal commits spooled to the durable outbox and not yet marked "
+        "done. Bound via set_function when the opt-in outbox is enabled; absent otherwise.",
+    )
+    TERMINAL_OUTBOX_RECOVERED: Any = Counter(
+        "aegis_terminal_outbox_recovered_total",
+        "Terminal evidence nodes committed at startup from the durable outbox "
+        "(signature_meaning stream-terminal-evidence-recovered)",
+    )
+    TERMINAL_OUTBOX_ERRORS: Any = Counter(
+        "aegis_terminal_outbox_errors_total",
+        "Durable-outbox failures: a spool write, sync or compaction error, or a record "
+        "that could not be parsed or replayed. The in-memory handoff still runs.",
+    )
     RATELIMIT_BACKEND_ERRORS: Any = Counter(
         "aegis_ratelimit_backend_errors_total",
         "Distributed rate-limit backend errors; affected requests are rejected",
@@ -245,6 +260,9 @@ else:
     STREAM_ADMISSION_REJECTED = _NoopMetric()
     AUDIT_HANDOFF_COMMITTED = _NoopMetric()
     AUDIT_HANDOFF_DROPPED = _NoopMetric()
+    TERMINAL_OUTBOX_PENDING = _NoopMetric()
+    TERMINAL_OUTBOX_RECOVERED = _NoopMetric()
+    TERMINAL_OUTBOX_ERRORS = _NoopMetric()
 
 
 def prometheus_available() -> bool:

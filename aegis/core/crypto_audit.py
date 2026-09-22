@@ -1601,7 +1601,7 @@ class CryptographicAuditLedger:
         self,
         *,
         state_id: str,
-        request_bytes: bytes,
+        request_bytes: bytes | None = None,
         response_hash: str,
         response_size: int,
         response_preview: bytes,
@@ -1617,11 +1617,17 @@ class CryptographicAuditLedger:
         scrub_method: str = "",
         signer_name: str = "",
         signature_meaning: str = "stream-terminal-evidence",
+        request_digest: tuple[str, int] | None = None,
+        evidence_status: str = "durable-terminal",
     ) -> AuditNode:
         """Commit one terminal record for an incrementally hashed response.
 
         The caller supplies the SHA-256 digest and bounded preview accumulated at
         the ASGI body-iterator boundary.  No full response is retained or reread.
+
+        Exactly one of ``request_bytes`` and ``request_digest`` is given. The
+        digest form — ``(sha256 hex, size)`` with no request preview — is for
+        replaying a record that was spooled without its content (REG-D32).
         """
         allowed_outcomes = {
             "complete",
@@ -1636,8 +1642,23 @@ class CryptographicAuditLedger:
         }
         if "\x00" in state_id:
             raise ValueError("state_id containing NULL byte is rejected")
-        if len(request_bytes) > MAX_PAYLOAD_BYTES:
-            raise ValueError("request_bytes exceeds 1 MiB hard cap")
+        if (request_bytes is None) == (request_digest is None):
+            raise ValueError("exactly one of request_bytes and request_digest is required")
+        if request_bytes is not None:
+            if len(request_bytes) > MAX_PAYLOAD_BYTES:
+                raise ValueError("request_bytes exceeds 1 MiB hard cap")
+            request_hash = sha256_hex(request_bytes)
+            request_size = len(request_bytes)
+            request_preview = request_bytes[: self.max_forensic_bytes]
+        elif request_digest is not None:
+            request_hash, request_size = request_digest
+            if len(request_hash) != 64 or any(ch not in "0123456789abcdef" for ch in request_hash):
+                raise ValueError("request_digest hash must be a lowercase SHA-256 hex digest")
+            if not 0 <= request_size <= MAX_PAYLOAD_BYTES:
+                raise ValueError("request_digest size must be within [0, 1 MiB]")
+            request_preview = b""
+        if evidence_status not in {"durable-terminal", "recovered-terminal"}:
+            raise ValueError("unsupported evidence_status")
         if len(response_hash) != 64 or any(ch not in "0123456789abcdef" for ch in response_hash):
             raise ValueError("response_hash must be a lowercase SHA-256 hex digest")
         if response_size < 0 or token_count < 0:
@@ -1652,13 +1673,11 @@ class CryptographicAuditLedger:
         if any(not key or not isinstance(value, int) or value < 0 for key, value in hits.items()):
             raise ValueError("redaction_hits must contain non-negative integer counts")
 
-        request_hash = sha256_hex(request_bytes)
-        request_preview = request_bytes[: self.max_forensic_bytes]
         leaf = build_stream_merkle_leaf(
             state_id=state_id,
             request_hash=request_hash,
             response_hash=response_hash,
-            request_size=len(request_bytes),
+            request_size=request_size,
             response_size=response_size,
             request_preview=request_preview,
             response_preview=response_preview,
@@ -1670,7 +1689,7 @@ class CryptographicAuditLedger:
             redaction_hits=hits,
         )
         params: dict[str, Any] = {
-            "evidence_status": "durable-terminal",
+            "evidence_status": evidence_status,
             "elapsed_seconds": elapsed_seconds,
             "final_marker_included": final_marker_included,
             "leaf_version": 2,

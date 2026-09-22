@@ -76,6 +76,7 @@ from aegis.proxy.streaming import (
     TerminalCommitHandoff,
     guarded_stream,
 )
+from aegis.proxy.terminal_outbox import TerminalOutbox, TerminalReplayContext, replay_pending
 from aegis.proxy.waf import AegisWAF
 from aegis.storage.s3_worm import Boto3S3WormProvider, ObjectLockMode, S3WormArchiver
 from aegis.storage.segment_manifest import archive_finalized_segment
@@ -337,6 +338,8 @@ class _AppState:
     # commit here synchronously, and the worker drains it outside the request
     # scope that Starlette cancels (AUD-03 / REG-D07).
     terminal_handoff: TerminalCommitHandoff
+    # Opt-in durable spool behind the handoff (REG-D32); None when disabled.
+    terminal_outbox: TerminalOutbox | None
     proxy_auth: ProxyKeyAuth
     audit_auth: AuditKeyAuth
     settings: AegisSettings
@@ -867,6 +870,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     state.analysis_queue = asyncio.Queue(maxsize=cfg.analysis_queue_size)
     state.analysis_workers = []
     state.terminal_handoff = TerminalCommitHandoff()
+    state.terminal_outbox = None
     state.proxy_auth = ProxyKeyAuth(cfg)
     state.audit_auth = AuditKeyAuth(cfg)
     state.waf = AegisWAF(strict_mode=cfg.waf_strict_mode)
@@ -1099,6 +1103,31 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 name="aegis-finalized-segment-archive",
             )
 
+        # REG-D32 (opt-in): open the durable outbox and replay what a previous
+        # process left pending, before the handoff starts and before traffic.
+        # Replay refuses to extend a ledger whose fault state is not healthy.
+        if cfg.terminal_outbox_enabled:
+            outbox_path = cfg.terminal_outbox_path or cfg.wal_path.with_name(
+                cfg.wal_path.name + ".terminal-outbox.jsonl"
+            )
+            outbox = TerminalOutbox.open(outbox_path, max_bytes=cfg.terminal_outbox_max_bytes)
+            report = await replay_pending(
+                outbox, ledger=state.ledger, commit=_commit_stream_evidence
+            )
+            if report.pending:
+                logger.warning(
+                    "terminal outbox replay: pending=%d recovered=%d deduplicated=%d "
+                    "failed=%d refused_fault_state=%s",
+                    report.pending,
+                    report.recovered,
+                    report.deduplicated,
+                    report.failed,
+                    report.refused_fault_state or "-",
+                )
+            state.terminal_outbox = outbox
+            state.terminal_handoff.attach_outbox(outbox)
+            observability.TERMINAL_OUTBOX_PENDING.set_function(lambda: outbox.pending_count)
+
         # The terminal-evidence handoff worker is started here, on purpose:
         # this context is not inside any request's task group, so commits it
         # runs for a torn-down stream survive the cancellation Starlette
@@ -1219,6 +1248,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         # First on the way down: a stream torn down by shutdown should land its
         # terminal evidence while the ledger is still open (AUD-03 / REG-D07).
         await state.terminal_handoff.stop(timeout=cfg.analysis_shutdown_timeout_seconds)
+        if state.terminal_outbox is not None:
+            state.terminal_handoff.attach_outbox(None)
+            state.terminal_outbox.close()
+            state.terminal_outbox = None
         if state.gossip is not None:
             # First on the way down: a peer's round against a listener that is
             # already gone logs a failure that reads like a fault and is only
@@ -1871,10 +1904,32 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     observability.AUDIT_COMMIT_ERRORS.inc()
                     raise
 
+            stream_replay = (
+                TerminalReplayContext(
+                    state_id=request_id,
+                    request_hash=hashlib.sha256(raw_body).hexdigest(),
+                    request_size=len(raw_body),
+                    tenant_id=(
+                        hashlib.sha256(tenant_id.encode()).hexdigest()[:16]
+                        if cfg.pii_redact_tenant_id
+                        else tenant_id
+                    ),
+                    model=body.get("model", "unknown"),
+                    endpoint="chat.completions",
+                    phi_scrubbed=_phi_scrubbed,
+                    scrub_method=_scrub_method,
+                    append_stream_window_method=True,
+                    signer_name=principal.subject,
+                )
+                if state.terminal_outbox is not None
+                else None
+            )
             bounded_stream = BoundedStreamProxy(
                 stream,
                 terminal_commit=_commit_stream_terminal,
-                terminal_handoff=state.terminal_handoff.for_commit(_commit_stream_terminal),
+                terminal_handoff=state.terminal_handoff.for_commit(
+                    _commit_stream_terminal, replay=stream_replay
+                ),
                 max_response_bytes=cfg.max_stream_response_bytes,
                 max_duration_seconds=cfg.max_stream_duration_seconds,
                 max_event_bytes=cfg.max_stream_event_bytes,
@@ -2159,10 +2214,32 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     duration_seconds=summary.elapsed_seconds,
                 )
 
+            anthropic_replay = (
+                TerminalReplayContext(
+                    state_id=request_id,
+                    request_hash=hashlib.sha256(raw_body).hexdigest(),
+                    request_size=len(raw_body),
+                    tenant_id=(
+                        hashlib.sha256(tenant_id.encode()).hexdigest()[:16]
+                        if cfg.pii_redact_tenant_id
+                        else tenant_id
+                    ),
+                    model=body["model"],
+                    endpoint="anthropic.messages",
+                    phi_scrubbed=request_scrubbed,
+                    scrub_method=scrub_method,
+                    append_stream_window_method=False,
+                    signer_name=principal.subject,
+                )
+                if state.terminal_outbox is not None
+                else None
+            )
             bounded = BoundedStreamProxy(
                 upstream_stream,
                 terminal_commit=_commit_anthropic_terminal,
-                terminal_handoff=state.terminal_handoff.for_commit(_commit_anthropic_terminal),
+                terminal_handoff=state.terminal_handoff.for_commit(
+                    _commit_anthropic_terminal, replay=anthropic_replay
+                ),
                 max_response_bytes=cfg.max_stream_response_bytes,
                 max_duration_seconds=cfg.max_stream_duration_seconds,
                 max_event_bytes=cfg.max_stream_event_bytes,

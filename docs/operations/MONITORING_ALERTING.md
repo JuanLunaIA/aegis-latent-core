@@ -66,6 +66,9 @@ Names as implemented. Do not alert on a metric not in this table; it does not ex
 | `aegis_stream_tokens_total` | Counter | Tokens emitted |
 | `aegis_stream_redactions_total` | Counter | Redactions applied in stream |
 | `aegis_stream_admission_active` | Gauge | Concurrent streams admitted right now, out of `AEGIS_MAX_CONCURRENT_STREAMS` on this process. Sustained proximity to the limit is the FD/memory-exhaustion warning signal a slow-drip client produces (`REG-050`); this process-local gauge is what closes that gap — a per-replica ceiling, not a cluster-wide one, matching `StreamAdmissionGate`'s own scope. |
+| `aegis_terminal_outbox_pending` | Gauge | Handed-off terminal commits spooled to the opt-in durable outbox and not yet marked done (`AEGIS_TERMINAL_OUTBOX_ENABLED`, `CLM-106`). Transiently non-zero while commits are in flight; a value that stays above zero means commits are failing and will be replayed at the next start. Absent when the outbox is disabled. |
+| `aegis_terminal_outbox_recovered_total` | Counter | Terminal nodes committed at startup from the outbox — each one is evidence a previous process died, or a queue filled, before its handoff landed. |
+| `aegis_terminal_outbox_errors_total` | Counter | Outbox write, sync, compaction, parse or replay failures, and handoffs past the spool cap. The in-memory handoff still runs; the affected commit has lost its crash protection. |
 | `aegis_stream_admission_rejected_total` | Gauge | Cumulative streaming requests refused since process start because the ceiling was already reached. A Gauge, not a Counter, mirroring `aegis_audit_chain_nodes_total`'s convention: it reads a count the gate already tracks rather than being independently incremented at the reject site. |
 | `aegis_analysis_queue_rejections_total` | Counter | Enrichment rejected by the bounded queue |
 | `aegis_analysis_errors_total` | Counter | Analysis worker errors |

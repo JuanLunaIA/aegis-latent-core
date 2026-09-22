@@ -365,11 +365,16 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
     Tests: `tests/test_signature_scheme_binding.py` (11, including the relabel-refused control and
     the pre-binding control) + 3 in `tests/test_hsm.py`; evidence
     `evidence/registry/reg-d31_fixed.txt`.
-- [ ] **AUD-28 [P3] — Durable outbox for terminal evidence torn down by cancellation**
+- [x] **AUD-28 [P3] — Durable outbox for terminal evidence torn down by cancellation**
   - **Affected files:** aegis/proxy/streaming.py (`TerminalCommitHandoff`), aegis/proxy/app.py (lifespan start/drain)
   - **Root cause:** `REG-D07` lands the terminal node through an in-process handoff. A crash or SIGKILL between teardown and the drained commit loses the frozen summary, and the bounded queue (64) drops-and-counts instead of blocking, so heavy teardown bursts can still lose evidence.
   - **Proposed solution:** Spool the frozen summary (a small append-only spool file next to the WAL) before the handoff acknowledges, and commit pending spool entries on the next startup before serving traffic; keep the in-memory path as the fast case and expose spool depth as a metric.
   - **Estimated effort:** M (2-3 days incl. startup recovery test)
+
+  - **Closed 2026-09-22 (`REG-D32`):** built as proposed with two deliberate narrowings — opt-in (default off) and
+    content-free (the spool holds digests and counts, never a body or preview, so recovered nodes carry no previews).
+    Replay is fail-closed on a non-`healthy` ledger; spool depth is `aegis_terminal_outbox_pending`. `CLM-106`;
+    tests `tests/test_terminal_outbox.py` (19); evidence `evidence/registry/reg-d32_fixed.txt`.
 
 - [x] **AUD-29 [P3] — Gate scripts sit outside every type-check scope; `mypy --strict` flags one at HEAD**
   - **Affected files:** scripts/verify_claims.py:176 (`buf` in `_split_row`); .github/workflows/ci.yml:167-206 (mypy runs a fixed file list plus `mypy --strict aegis`; `scripts/` and `tools/` are absent); mypy-ci.ini
