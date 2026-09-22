@@ -129,8 +129,8 @@
     {
       "category": "governed_input",
       "path": "Makefile",
-      "sha256": "4397025cfeac8e7ad6661d81fabf7fcecf9629e2e8e4ce1c2a3b8963f6a79943",
-      "size": 2380
+      "sha256": "2210517a582b6721aeed209c09e35f4abc024483b5b52e27d20554e8b6dd70ef",
+      "size": 2461
     },
     {
       "category": "governed_input",
@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "2a7b883d7473af344ecc06e3f7e7a8a4de8af72a538065d7e98aa515ee525992",
-      "size": 36217
+      "sha256": "4b3df0be07233c33d36c3883ea46cb614889e5561e71c80e4891bff493d5b2a8",
+      "size": 36720
     },
     {
       "category": "governed_input",
@@ -441,8 +441,8 @@
     {
       "category": "governed_input",
       "path": "scripts/create_github_release.py",
-      "sha256": "3b9bf18603157635854438738988fd2feb9bbcde2082027b438c23f38da5daf8",
-      "size": 6140
+      "sha256": "da5995c0d3cd33d1d0fdeeab6f41daf74ea218b084aa041457afee0615b80768",
+      "size": 6199
     },
     {
       "category": "governed_input",

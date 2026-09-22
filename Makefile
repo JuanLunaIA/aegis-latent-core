@@ -35,6 +35,7 @@ lint:
 
 type:
 	$(MYPY) --strict aegis
+	$(MYPY) --strict --explicit-package-bases --follow-imports=silent scripts tools
 
 security:
 	$(BANDIT) -r aegis/ aegis_server/ -c pyproject.toml -lll

@@ -164,23 +164,24 @@ def main() -> None:
     institutional_files = [
         record for record in files if str(record["path"]).startswith("docs/institutional/")
     ]
+    counts: dict[str, int] = {
+        "all_files": len(files),
+        "text_files": sum(bool(record["text"]) for record in files),
+        "markdown_files": sum(str(record["path"]).endswith(".md") for record in files),
+        "institutional_files": len(institutional_files),
+        "exact_duplicate_groups": len(exact_duplicates),
+        "repeated_heading_groups": len(repeated_headings),
+        "utf8_failures": len(utf8_failures),
+        "non_nfc_files": len(non_nfc_files),
+        "crlf_files": len(crlf_files),
+        "institutional_placeholders": len(institutional_placeholders),
+    }
     inventory = {
         "schema": "aegis-documentation-corpus-audit-v1",
         "source_commit": git_output("rev-parse", "HEAD"),
         "source_worktree_dirty": bool(git_output("status", "--porcelain")),
         "tracked_patch_sha256": sha256(git_bytes("diff", "HEAD", "--binary")),
-        "counts": {
-            "all_files": len(files),
-            "text_files": sum(bool(record["text"]) for record in files),
-            "markdown_files": sum(str(record["path"]).endswith(".md") for record in files),
-            "institutional_files": len(institutional_files),
-            "exact_duplicate_groups": len(exact_duplicates),
-            "repeated_heading_groups": len(repeated_headings),
-            "utf8_failures": len(utf8_failures),
-            "non_nfc_files": len(non_nfc_files),
-            "crlf_files": len(crlf_files),
-            "institutional_placeholders": len(institutional_placeholders),
-        },
+        "counts": counts,
         "exact_duplicates": exact_duplicates,
         "repeated_headings": repeated_headings,
         "utf8_failures": utf8_failures,
@@ -202,7 +203,6 @@ def main() -> None:
         if not (ROOT / str(record["path"])).is_file()
         or sha256((ROOT / str(record["path"])).read_bytes()) != record["sha256"]
     ]
-    counts = inventory["counts"]
     status = (
         "PASS"
         if not institutional_placeholders and not utf8_failures and not post_write_mismatches

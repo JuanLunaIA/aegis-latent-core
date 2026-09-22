@@ -19,7 +19,11 @@ from pathlib import Path
 try:
     from scripts.prepare_release_assets import CHECKSUMS_NAME, MANIFEST_NAME, PAYLOAD_SUFFIXES
 except ModuleNotFoundError:
-    from prepare_release_assets import CHECKSUMS_NAME, MANIFEST_NAME, PAYLOAD_SUFFIXES
+    from prepare_release_assets import (  # type: ignore[no-redef]
+        CHECKSUMS_NAME,
+        MANIFEST_NAME,
+        PAYLOAD_SUFFIXES,
+    )
 
 STABLE_VERSION = re.compile(r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")

@@ -10,6 +10,7 @@ import time
 from collections.abc import AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -35,7 +36,7 @@ _SSE_SUBSCRIBERS: list[asyncio.Queue[str]] = []
 _SSE_LOCK = asyncio.Lock()
 
 
-async def _broadcast_event(event_type: str, data: dict) -> None:
+async def _broadcast_event(event_type: str, data: dict[str, Any]) -> None:
     """Publish a JSON event to all active SSE subscribers."""
     payload = json.dumps({"type": event_type, "ts": time.time(), **data})
     msg = f"data: {payload}\n\n"
@@ -74,7 +75,7 @@ app.mount("/static", StaticFiles(directory=str(VIS_DIR / "static")), name="stati
 
 
 @app.get("/api/summary")
-async def summary():
+async def summary() -> JSONResponse:
     try:
         loop = asyncio.get_running_loop()
         with ThreadPoolExecutor() as pool:
@@ -87,7 +88,7 @@ async def summary():
 
 
 @app.get("/api/forensic_report")
-async def forensic_report():
+async def forensic_report() -> JSONResponse:
     path = PROJECT_DIR / "tools" / "forensic" / "report.json"
     if not path.exists():
         return JSONResponse(status_code=404, content={"error": "forensic report not found"})
@@ -101,7 +102,7 @@ async def forensic_report():
     return JSONResponse(content=data)
 
 
-def _build_metrics() -> dict:
+def _build_metrics() -> dict[str, Any]:
     """Repo-derived, honest metrics for the dashboard control plane.
 
     This endpoint reports only what can be measured from the working tree
@@ -197,7 +198,7 @@ def _build_metrics() -> dict:
 
 
 @app.get("/api/metrics")
-async def metrics():
+async def metrics() -> JSONResponse:
     try:
         loop = asyncio.get_running_loop()
         with ThreadPoolExecutor() as pool:
@@ -213,7 +214,7 @@ _MAX_SCAN_CHARS = 20000
 
 
 @app.post("/api/scan")
-async def scan(request: Request):
+async def scan(request: Request) -> JSONResponse:
     """Run submitted text through every real Aegis detection engine.
 
     This powers the Threat Lab page: paste a prompt injection, an EICAR test
@@ -287,7 +288,7 @@ async def events(request: Request) -> StreamingResponse:
 
 
 @app.get("/api/threat_samples")
-async def threat_samples():
+async def threat_samples() -> JSONResponse:
     """Curated, safe one-click test payloads for the Threat Lab."""
     try:
         from tools.visualizer.threat_lab import sample_payloads
@@ -300,5 +301,5 @@ async def threat_samples():
 
 
 @app.get("/")
-async def index():
+async def index() -> FileResponse:
     return FileResponse(str(VIS_DIR / "static" / "index.html"))

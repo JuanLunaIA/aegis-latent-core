@@ -27,8 +27,8 @@ def online_two_sided_p_value(t_statistic: float) -> float:
     return math.erfc(abs(t_statistic) / math.sqrt(2.0))
 
 
-def welch_statistic(first: array, second: array) -> tuple[float, int, float, float]:
-    def mean_variance(values: array) -> tuple[float, float]:
+def welch_statistic(first: array[float], second: array[float]) -> tuple[float, int, float, float]:
+    def mean_variance(values: array[float]) -> tuple[float, float]:
         count = 0
         mean = 0.0
         m2 = 0.0
@@ -73,7 +73,7 @@ def measure(
     sign: Callable[[bytes], bytes],
     verify: Callable[[bytes, bytes, bytes], bool],
     public_key: bytes,
-) -> tuple[array, array, bool]:
+) -> tuple[array[float], array[float], bool]:
     fixed = b"A" * 32
     variable_pool = [
         hashlib.sha256(f"aegis-pqc-timing-{index}".encode()).digest() for index in range(1024)
@@ -131,6 +131,7 @@ def main() -> int:
     if args.warmup < 0 or args.warmup > 1_000_000:
         raise ValueError("warmup must be between 0 and 1,000,000")
     root = Path(__file__).resolve().parents[2]
+    results: dict[str, dict[str, object]] = {}
     report: dict[str, object] = {
         "schema": "aegis-pqc-timing-report-v1",
         "generated_at_utc": datetime.now(UTC)
@@ -158,7 +159,7 @@ def main() -> int:
             "pid": os.getpid(),
         },
         "status": "UNVERIFIED",
-        "results": {},
+        "results": results,
         "limitations": [
             "The harness measures the exposed Python-to-native boundary, including key/signature decode work performed by the current Rust binding.",
             "Normal-tail p-values are an experiment statistic and do not prove constant-time execution, algorithm conformance, or FIPS 140 validation.",
@@ -210,7 +211,7 @@ def main() -> int:
                 first, second
             )
             p_value = online_two_sided_p_value(t_statistic)
-            report["results"][operation] = {
+            results[operation] = {
                 "validity": all_valid,
                 "fixed_mean_ns": fixed_mean,
                 "variable_mean_ns": variable_mean,
@@ -243,7 +244,6 @@ def main() -> int:
         "format": "JSONL with one timing per line after a metadata header",
         "sample_count_per_operation": args.samples,
     }
-    results = report["results"]
     passed = all(item["non_detection_threshold_met"] for item in results.values())
     report["status"] = "MEASURED"
     report["gate"] = {

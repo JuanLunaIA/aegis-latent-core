@@ -158,6 +158,13 @@ def main() -> int:
 
     before = results["per_record_fsync"]
     after = results["group_commit"]
+    delta: dict[str, Any] = {
+        "throughput_ratio": round(after["commits_per_second"] / before["commits_per_second"], 3),
+        "p99_ms_before": before["latency_ms"]["p99"],
+        "p99_ms_after": after["latency_ms"]["p99"],
+        "fsync_calls_before": before["fsync_calls"],
+        "fsync_calls_after": after["fsync_calls"],
+    }
     report = {
         "schema": "aegis-group-commit-report-v1",
         "generated_at_utc": datetime.now(UTC)
@@ -179,15 +186,7 @@ def main() -> int:
             "cpu_count": os.cpu_count(),
         },
         "results": results,
-        "delta": {
-            "throughput_ratio": round(
-                after["commits_per_second"] / before["commits_per_second"], 3
-            ),
-            "p99_ms_before": before["latency_ms"]["p99"],
-            "p99_ms_after": after["latency_ms"]["p99"],
-            "fsync_calls_before": before["fsync_calls"],
-            "fsync_calls_after": after["fsync_calls"],
-        },
+        "delta": delta,
         # Each entry is parenthesised rather than relying on implicit
         # concatenation. Inside a list the two are visually identical, so a
         # dropped comma silently merges two limitations into one and quietly
@@ -214,8 +213,8 @@ def main() -> int:
     # inline and published through note_external_sync, which the engine does not
     # count as a batch. The real count for that arm is one per record, by
     # construction.
-    report["results"]["per_record_fsync"]["fsync_calls"] = args.records
-    report["delta"]["fsync_calls_before"] = args.records
+    results["per_record_fsync"]["fsync_calls"] = args.records
+    delta["fsync_calls_before"] = args.records
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

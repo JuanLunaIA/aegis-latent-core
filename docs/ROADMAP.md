@@ -371,11 +371,17 @@ A deep audit of this baseline (forensic scan of the code surface, claims and qua
   - **Proposed solution:** Spool the frozen summary (a small append-only spool file next to the WAL) before the handoff acknowledges, and commit pending spool entries on the next startup before serving traffic; keep the in-memory path as the fast case and expose spool depth as a metric.
   - **Estimated effort:** M (2-3 days incl. startup recovery test)
 
-- [ ] **AUD-29 [P3] — Gate scripts sit outside every type-check scope; `mypy --strict` flags one at HEAD**
+- [x] **AUD-29 [P3] — Gate scripts sit outside every type-check scope; `mypy --strict` flags one at HEAD**
   - **Affected files:** scripts/verify_claims.py:176 (`buf` in `_split_row`); .github/workflows/ci.yml:167-206 (mypy runs a fixed file list plus `mypy --strict aegis`; `scripts/` and `tools/` are absent); mypy-ci.ini
   - **Root cause:** The repository's doc/claim gates are Python programs, but no type-check job covers them, so `mypy --strict scripts/verify_claims.py` fails at HEAD on an un-annotated empty list (`cells, buf, in_code = [], [], False`) and nothing in CI can notice. Found while adding the retracted-figure check (`REG-D10`); the finding is the scope gap, not the annotation — fixing the one annotation would leave the class invisible.
   - **Proposed solution:** Decide the canonical type-check scope once: add `scripts/` and `tools/` to a mypy job (start with `--strict` on the two directories that already pass, and stage the remainder), annotate `_split_row`'s locals, and add the directory list to the same gate that `AUD-18` reconciles for the formatter.
   - **Estimated effort:** S (2-3 h; the annotation is one line, the scope decision is the work)
+
+  - **Closed 2026-09-22 (`REG-D33`):** scope decided as both directories whole, not a list, via
+    `mypy --strict --explicit-package-bases --follow-imports=silent scripts tools` in CI's typecheck job and
+    `make type` (41 files, 0 errors), pinned by `tests/test_gate_scope_parity.py`. The first run found a real
+    bug: `tools/forensic/diagnose_aegis.py` reported the PQC signer FAILED on every working install. Evidence
+    `evidence/registry/reg-d33_fixed.txt`.
 
 - [x] **AUD-30 [P3] — Doc gate false positive: a decimal's last digit reads as a `v4` token in the publication rule**
   - **Affected files:** tools/docs/verify_documentation.py:126-138 (`v4 external publication or release` rule); reproduced on docs/FAQ_TECHNICAL.md:118

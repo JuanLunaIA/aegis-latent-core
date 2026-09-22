@@ -24,6 +24,7 @@ import json
 import math
 import random
 from pathlib import Path
+from typing import Any
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -55,8 +56,8 @@ def _series(
     lo: float,
     hi: float,
     nd: int = 0,
-):
-    out = []
+) -> list[int | float]:
+    out: list[int | float] = []
     cur = base
     for i in range(n):
         cur += (rnd.random() - 0.5) * noise
@@ -66,7 +67,7 @@ def _series(
     return out
 
 
-def build_bootstrap() -> dict:
+def build_bootstrap() -> dict[str, Any]:
     # Deterministic seed → stable, reproducible screenshots. Not cryptographic;
     # this only fabricates illustrative numbers for the sample gallery.
     rnd = random.Random(4242)  # noqa: S311
@@ -339,7 +340,7 @@ def build_bootstrap() -> dict:
     return bootstrap
 
 
-def _threat_presets() -> list[dict]:
+def _threat_presets() -> list[dict[str, str]]:
     """Curated test payloads for the offline Threat Lab gallery.
 
     Mirrors tools/visualizer/threat_lab.sample_payloads(); imported lazily so
@@ -356,7 +357,7 @@ def _threat_presets() -> list[dict]:
         return []
 
 
-def inject(template: str, bootstrap: dict, page: str) -> str:
+def inject(template: str, bootstrap: dict[str, Any], page: str) -> str:
     # Escape "</" so any embedded "</script>" (e.g. the XSS test payload) cannot
     # prematurely terminate the host <script> block. Valid inside JS strings.
     def _safe(obj: object) -> str:

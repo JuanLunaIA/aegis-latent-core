@@ -20,6 +20,11 @@ CI runs two profiles on purpose — a narrow `mypy --config-file=mypy-ci.ini`
 listing for proxy + core runtime, and `mypy --strict aegis` for the whole
 package — so "one canonical invocation" is not the right rule there. The
 Makefile's `type` target matches the strict job.
+
+One mypy invocation is pinned, because it is the one that had no home at all
+(AUD-29 / REG-D33): the strict check over `scripts/` and `tools/`, where the
+gate programs themselves live. Both files must carry it with identical
+arguments, so neither can quietly drop the directories back out of scope.
 """
 
 from __future__ import annotations
@@ -68,13 +73,13 @@ def _logical_lines(text: str) -> list[str]:
     return out
 
 
-def _tool_arg_strings(text: str) -> dict[str, set[str]]:
+def _tool_arg_strings(text: str, tools: tuple[str, ...] = TOOLS) -> dict[str, set[str]]:
     """Map tool name -> the set of argument strings it is invoked with."""
     found: dict[str, set[str]] = {}
     for line in _logical_lines(text):
         tokens = line.split()
         for index, token in enumerate(tokens):
-            if token not in TOOLS:
+            if token not in tools:
                 continue
             args = " ".join(tokens[index + 1 :]).strip()
             if args:
@@ -130,3 +135,26 @@ def test_ruff_format_is_not_scoped_narrower_in_ci_than_in_the_makefile() -> None
                 f"{label} runs `ruff {args}` — expected `ruff format --check .`, the "
                 "whole tree, which is what makes the two invocations unable to drift"
             )
+
+
+GATE_PROGRAM_SCOPE = "--strict --explicit-package-bases --follow-imports=silent scripts tools"
+
+
+def test_gate_programs_are_type_checked_by_both_make_and_ci() -> None:
+    """`scripts/` and `tools/` hold the programs that police every claim.
+
+    REG-D33 found them outside every type-check scope, and the first strict run
+    over them found a real defect — `tools/forensic/diagnose_aegis.py` called the
+    static `PQCSigner.verify` without its public key, so its round-trip check
+    reported FAIL on every healthy install. Both entry points must keep them in
+    scope, with the same arguments.
+    """
+    for label, text in (
+        ("Makefile", MAKEFILE.read_text(encoding="utf-8")),
+        ("ci.yml", CI_WORKFLOW.read_text(encoding="utf-8")),
+    ):
+        mypy_args = _tool_arg_strings(text, ("mypy",)).get("mypy", set())
+        assert GATE_PROGRAM_SCOPE in mypy_args, (
+            f"{label} does not run `mypy {GATE_PROGRAM_SCOPE}`; its mypy invocations "
+            f"are {sorted(mypy_args)}"
+        )

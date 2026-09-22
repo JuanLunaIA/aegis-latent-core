@@ -23,6 +23,7 @@ KEY_NEW = "n" * 64
 
 
 def write_snapshot(path: Path, *, active_key_id: str) -> None:
+    keys: list[dict[str, object]]
     if active_key_id == "key-old":
         keys = [{"key_id": "key-old", "secret": KEY_OLD, "state": "active"}]
     else:

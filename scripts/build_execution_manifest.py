@@ -167,7 +167,7 @@ def main() -> None:
     MANIFEST_CID.write_text(cid_v1_dag_cbor(manifest_cbor) + "\n", encoding="ascii")
 
     print(f"artifacts={len(records)}")
-    print(f"merkle_root={envelope['integrity']['merkle_root_sha256']}")
+    print(f"merkle_root={root_hash}")
     print(f"manifest_sha256={sha256_bytes(manifest_json)}")
     print(f"manifest_cid={cid_v1_dag_cbor(manifest_cbor)}")
 

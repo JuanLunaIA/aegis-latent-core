@@ -99,12 +99,10 @@ def _reachability() -> tuple[set[str], set[str], set[str]]:
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
-    modules = module._discover_modules(ROOT)  # type: ignore[attr-defined]
-    reachable, _findings = module._reachable_set(  # type: ignore[attr-defined]
-        modules, module.ENTRYPOINT_MODULES
-    )
-    roadmap: set[str] = set(module._roadmap_modules(ROOT))  # type: ignore[attr-defined]
-    allowlisted: set[str] = set(module._allowlisted_modules(ROOT))  # type: ignore[attr-defined]
+    modules = module._discover_modules(ROOT)
+    reachable, _findings = module._reachable_set(modules, module.ENTRYPOINT_MODULES)
+    roadmap: set[str] = set(module._roadmap_modules(ROOT))
+    allowlisted: set[str] = set(module._allowlisted_modules(ROOT))
     return set(reachable), roadmap, allowlisted
 
 

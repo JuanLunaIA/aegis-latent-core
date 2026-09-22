@@ -19,7 +19,7 @@ Every file under the six source roots, with what it is, what reaches it, what te
 ## Coverage and ownership
 
 - **Navigation coverage:** 68 of 300 files (23%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
-- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 128, `referenced` 43, `roadmap-omit` 34, `unreferenced` 17.
+- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 128, `referenced` 44, `roadmap-omit` 34, `unreferenced` 16.
 - **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 300 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
 
 Tests are the test files that import the module directly, capped at 4 per row; the count is exact, the list is not exhaustive.
@@ -31,7 +31,6 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | Ticket | Priority | Owner | Unblock path |
 |---|---|---|---|
 | `AUD-28` | P3 | @JuanLunaIA | Spool the frozen summary (a small append-only spool file next to the WAL) before the handoff acknowledges, and commit pending spool entries on the next startup before serving traffic; keep the in-memory path as the fast case and expose spool depth as a metric. |
-| `AUD-29` | P3 | @JuanLunaIA | Decide the canonical type-check scope once: add `scripts/` and `tools/` to a mypy job (start with `--strict` on the two directories that already pass, and stage the remainder), annotate `_split_row`'s locals, and add the directory list to the same gate that `AUD-18` reconciles for the formatter. |
 | `AUD-35` | P2 | @JuanLunaIA | decide per control — either wire it (source `siem_url` from `webhook_url` when empty, feed `rate_limit_window` into the limiter, construct `LDAPAuthenticator`, construct `CACPIVAuth`) with a test per wired path, or delete the knob and its operator-facing copies. The gate (`tests/test_config_surface_inert_fields.py`) enforces that whichever is chosen, the section and the allowlist agree. |
 | `AUD-36` | P2 | @JuanLunaIA | decide per module. Wire: a governed admission-path hook for the detector with an explicit configuration flag, a documented verdict destination, and rewritten `CLM-103`/`CLM-104` rows with measured evidence; or retire: delete the module, its tests and its allowlist entry, and mark the corresponding claim row withdrawn. Either branch removes the allowlist entry, which is the point — an allowlisted compliance module is a liability in every audit it appears in. |
 | `AUD-37` | P3 | @JuanLunaIA | do these as **content reviews, not date bumps.** For each document: re-read it against the 5.0.0 tree, verify its cited paths resolve (the same check `REG-D23` ran on `REPOSITORY_MAP.md` and `docs/README.md`, 22 and 16 targets, 0 missing), correct what is stale, and date the line with what was checked. A date shortened without that pass is exactly the failure mode `REG-D23` closed on the other side of the corpus. The two claim-ledger rows should go first: they are already known to mislead. |
@@ -322,7 +321,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `tools/benchmarks/run_key_rotation.py` | module | — | referenced | — | @JuanLunaIA |
 | `tools/benchmarks/run_pqc_timing.py` | module | — | referenced | — | @JuanLunaIA |
 | `tools/docs/verify_documentation.py` | module | Validate the Aegis documentation contract without external dependencies. | referenced | — | @JuanLunaIA |
-| `tools/forensic/diagnose_aegis.py` | module | diagnose_aegis.py — Self-service diagnostic tool for Aegis Latent Core. | unreferenced | — | @JuanLunaIA |
+| `tools/forensic/diagnose_aegis.py` | module | diagnose_aegis.py — Self-service diagnostic tool for Aegis Latent Core. | referenced | — | @JuanLunaIA |
 | `tools/forensic/forensic_checks.py` | module | Run repository forensic checks: pattern search, unsafe API usage, basic Python syntax checks | referenced | — | @JuanLunaIA |
 | `tools/forensic/report.json` | text/data | — | referenced | — | @JuanLunaIA |
 | `tools/forensic/triage_unsafe.py` | module | Triage unsafe API usage and generate remediation suggestions. | unreferenced | — | @JuanLunaIA |
