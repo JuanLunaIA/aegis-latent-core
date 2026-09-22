@@ -111,3 +111,16 @@ docs/FAQ_TECHNICAL.md:118 — the row REG-D34 was opened on — currently reads
 false positive. It is left as it is: it is accurate, and rewording a document
 to prove a gate fix is not needed when the probe above feeds the gate the
 original "(as previously published)" text directly.
+
+=== Correction, same day (found while working REG-D33) ===
+
+The REG-D34 commit (c7bf98b) closed AUD-30 in docs/ROADMAP.md without
+regenerating docs/MODULE_INVENTORY.md, whose open-ticket table mirrors the
+roadmap. At c7bf98b, in a clean worktree:
+  tests/test_module_inventory_current.py: 2 failed, 3 passed
+    - test_the_committed_inventory_is_what_the_generator_produces
+    - test_the_open_ticket_table_matches_the_roadmap  (inventory-only ['AUD-30'])
+The gates this file lists above were run; this test module was not, which is
+how it slipped. Regenerated with `python scripts/generate_module_inventory.py`
+from the clean HEAD tree (a one-line deletion: the AUD-30 open-ticket row) ->
+5 passed.
