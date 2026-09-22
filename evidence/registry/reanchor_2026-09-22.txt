@@ -1,0 +1,147 @@
+RE-ANCHOR 2026-09-22 — docs/REGISTRY.md against main at 0f6617d
+(main = #187 squash dc20a2c + #195 squash 0f6617d; the working branch was
+restarted from main because both of its pull requests had merged).
+
+Host: 4 CPU, 15 GiB, Linux 6.18 (Firecracker VM), CPython 3.11.15, uid 0 (real
+root), cargo 1.94.1.
+
+=== 1. Registry state read first ===
+
+awk over every `| REG-…` / `| AUD-…` table row, column 6 (Status):
+  every row terminal except REG-D32, REG-D33, REG-D34 (all `**OPEN**`, P3).
+  §5 arithmetic re-derived from the rows: [DISC] 11 = D01–D04 (4 DOCUMENTED)
+  + D35–D41 (7 FIXED); [AUDIT] 30 = D05–D34 (27 FIXED, 3 OPEN). Consistent.
+
+=== 2. Quick battery at 0f6617d ===
+== git ==
+0f6617d54518dc2dc7540f65f2589bca261fd4e4
+== ruff check ==
+All checks passed!
+== ruff format ==
+598 files already formatted
+== verify_docs ==
+verify_docs: PASS (0 findings)
+== verify_claims ==
+verify_claims: PASS (105 claims, 0 findings)
+== verify_links ==
+verify_links: PASS (1407 relative links and anchors resolved)
+== verify_documentation --strict ==
+  "strict": true,
+  "warnings": 0
+}
+== reachability ==
+modules discovered: 224  reached: 113  declared roadmap: 34  allowlisted: 77
+verify_import_reachability: PASS — no undeclared orphans, no stale roadmap entries
+== release contract ==
+release source contract: READY
+synchronized versions: {'core': '5.0.1', 'core-runtime': '5.0.1', 'python-sdk': '5.0.1', 'python-sdk-runtime': '5.0.1', 'typescript-sdk': '5.0.1', 'typescript-lock': '5.0.1', 'dashboard': '5.0.1', 'dashboard-lock': '5.0.1', 'rust-cargo': '5.0.1', 'rust-pyproject': '5.0.1', 'rust-lock': '5.0.1', 'helm-chart': '5.0.1', 'helm-app': '5.0.1', 'helm-image': '5.0.1'}
+== ai context manifest ==
+AI context manifest verified: 83 files; source anchor fdace8844568eb788216740b2cb5daf187d99d3b
+== bandit ==
+[manager]	WARNING	Test in comment: than is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: a is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: secret is not a test name or id, ignoring
+== diff check ==
+clean
+bandit (summary lines): No issues identified. High 0 / Medium 0 / Low 0.
+
+=== 3. Full suite at 0f6617d — NOT green ===
+
+$ HERMES_SANDBOX=true python -m pytest -n auto -q -p no:cacheprovider
+FAILED tests/test_crdt_mmr.py::TestWireCeilingThroughTheBinding::test_a_state_above_the_clock_ceiling_is_refused_not_encoded
+FAILED tests/test_gossip_runtime_lifecycle.py::TestStartRefusals::test_an_absent_native_accumulator_is_refused_with_its_reason
+FAILED tests/test_module_inventory_current.py::test_the_committed_inventory_is_what_the_generator_produces
+FAILED tests/test_module_inventory_current.py::test_every_file_under_the_six_roots_is_classified_exactly_once
+FAILED tests/test_rust_extension.py::TestAegisRustExtension::test_import_and_version
+FAILED tests/test_rust_limits_are_validated.py::test_ring_buffer_capacity_zero_is_rejected
+FAILED tests/test_rust_limits_are_validated.py::test_ring_buffer_capacity_above_ceiling_is_rejected
+FAILED tests/test_rust_limits_are_validated.py::test_session_store_zero_max_sessions_is_rejected
+FAILED tests/test_rust_limits_are_validated.py::test_session_store_above_ceiling_is_rejected
+FAILED tests/test_rust_limits_are_validated.py::test_evict_stale_survives_an_absurd_max_age
+FAILED tests/test_rust_limits_are_validated.py::test_runtime_init_raises_when_threads_cannot_be_spawned
+FAILED tests/test_rust_wal_single_writer.py::test_second_handle_is_refused_and_first_handle_intact
+12 failed, 7340 passed, 38 skipped in 110.75s (0:01:50)
+EXIT: 1
+
+=== 4. Triage — environment first, then defects ===
+
+4a. Stale native extension (10 of 12).
+    site-packages/aegis_rust-5.0.0.dist-info, built 2026-09-15, against 5.0.1
+    source (test_rust_extension: assert '5.0.0' == '5.0.1'). The REG-D09 and
+    REG-D28 validation tests (DID NOT RAISE ValueError …) ran against a binary
+    that predates their fixes. Also the venv lacked prometheus-client/pyarrow,
+    which REG-D38/REG-D40 put in `dev`.
+    Remedy (environment, not repository):
+      pip install -e ".[dev]"
+      cd aegis_rust_v2 && PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 \
+        maturin build --release --features extension-module   # CI's command
+      pip install --no-deps --force-reinstall aegis_rust-5.0.1-*.whl
+      python -c "import aegis_rust; print(aegis_rust.__version__)"  -> 5.0.1
+
+4b. Stray build artifact (the 2 module-inventory failures).
+    aegis/proxy/aegis_rust.so, 10,133,248 bytes, dated 2026-09-09, gitignored
+    (.gitignore:7 `*.so`), imported by nothing (grep over aegis/ tests/
+    scripts/ tools/ for proxy.aegis_rust / relative imports: no hits). The
+    inventory walks the filesystem, so it counted an untracked binary.
+    Archived out of the tree to the session scratchpad (kept, not deleted).
+    -> tests/test_module_inventory_current.py: 5 passed.
+
+4c. Re-run of every extension-bound failure after 4a:
+    $ pytest tests/test_rust_extension.py tests/test_rust_limits_are_validated.py \
+        tests/test_rust_wal_single_writer.py tests/test_crdt_mmr.py \
+        tests/test_gossip_runtime_lifecycle.py
+    2 failed, 50 passed
+      FAILED test_rust_limits_are_validated.py::test_runtime_init_raises_when_threads_cannot_be_spawned
+      FAILED test_gossip_runtime_lifecycle.py::TestStartRefusals::test_an_absent_native_accumulator_is_refused_with_its_reason
+
+=== 5. The two that remain are test defects -> REG-D42 ===
+
+5a. test_an_absent_native_accumulator_is_refused_with_its_reason
+    (added by REG-D36's coverage work; reg-d36_fixed.txt:61) assumes the
+    native CausalMmr is ABSENT and does not arrange that. start_gossip()
+    (aegis/consensus/runtime.py:152-158) builds the accumulator first; when
+    the extension provides it, execution continues to HttpGossipTransport,
+    whose ssl.create_default_context() rejects the test's one-line PEM:
+      ssl.SSLError: [X509] PEM lib
+    REG-D36 measured "0 failed" in a venv without the extension, which is
+    true there. The Forensic workflow builds the extension and runs the full
+    suite (.github/workflows/forensic.yml: "Build Rust extension" then
+    "Run full test suite"), so this test has been red on main since #195:
+
+      Forensic workflow, run 35622820892, main @ 0f6617d (push, 2026-09-21):
+        conclusion: failure — all three jobs, one identical failure each:
+        Forensic checks (Python 3.11): 1 failed, 7354 passed, 31 skipped
+        Forensic checks (Python 3.12): 1 failed, 7354 passed, 31 skipped
+        Forensic checks (Python 3.13): 1 failed, 7354 passed, 31 skipped
+        FAILED tests/test_gossip_runtime_lifecycle.py::TestStartRefusals::
+          test_an_absent_native_accumulator_is_refused_with_its_reason
+          - ssl.SSLError: [X509] PEM lib
+      The same workflow is red on PR #195's head (run 35622747734) and on
+      every dependabot PR opened since (runs 35567731891 … 35567896797).
+
+    This contradicts the registry's sealed statement that the battery is
+    green (its runs were local, extension absent). Registry updated first.
+
+5b. test_runtime_init_raises_when_threads_cannot_be_spawned passes in CI
+    (the runner is the non-root `runner` user) and fails on a root host:
+    Linux does not enforce RLIMIT_NPROC for a task with CAP_SYS_RESOURCE /
+    CAP_SYS_ADMIN, so setting it to 1 exhausts nothing. The product fix
+    (REG-D09) is not in question — measured here with privileges dropped:
+--- keep ---
+euid=0 drop=False
+NO-ERROR workers=4
+exit=1
+--- drop ---
+euid=65534 drop=True
+RAISED RuntimeError: aegis-rust: Tokio runtime init failed: cannot spawn worker thread 0/4: Resource temporarily unavailable (os error 11)
+exit=0
+    `keep` = the test's probe as written (root); `drop` = the same probe after
+    setgroups([]), setgid(65534), setuid(65534). REG-D09's recorded
+    "RAISED RuntimeError" reproduces exactly; REG-D09 is not re-opened.
+
+=== 6. Rows re-opened ===
+
+None. Every FIXED/VERIFIED row whose test failed here passes once the
+environment matches source, and REG-D09's probe reproduces with privileges
+dropped. One new row: REG-D42 (the two test defects above), P1 because leg
+5a keeps main's Forensic workflow red.
