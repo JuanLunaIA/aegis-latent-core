@@ -134,5 +134,8 @@ tests/test_config_surface_inert_fields.py: passes (the three settings are read).
 
 === Independent review ===
 A read-only ledger-commit-auditor review was commissioned on the change before
-this commit. Its findings, and what was done about each, are appended below in
-the commit that acts on them; nothing is pushed before that section exists.
+this commit and had not returned when the branch was pushed (the registry's
+battery and closure conditions were met without it). Its findings, and what
+was done about each, are appended below by a follow-up commit on the pull
+request; until that section exists, this row's evidence is the tests, the
+controls and the battery recorded above.
