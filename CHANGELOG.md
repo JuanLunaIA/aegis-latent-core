@@ -187,6 +187,40 @@ signing, when the key is missing, when the backend is unavailable, when the toke
 on EC keys), and the failure-injection seam `_sign` → `_sign_bound` in
 `tests/test_mmr_rollback.py`. Row `REG-D31`, ticket `AUD-27`.
 
+### Added — durable terminal-evidence outbox (opt-in)
+
+- **REG-D32** — `AEGIS_TERMINAL_OUTBOX_ENABLED` (default off) spools every terminal
+  commit a stream hands off at teardown to a content-free, `0600` spool beside the
+  WAL and replays whatever is still pending at the next start, before traffic.
+  Before this, a crash or SIGKILL between teardown and the handed-off commit lost
+  the node, and a full handoff queue dropped it. A recovered node is signed as
+  `stream-terminal-evidence-recovered` with `evidence_status` `recovered-terminal`,
+  carries no previews and is timestamped at replay; replay refuses a ledger whose
+  fault state is not `healthy` and skips a record already committed in the
+  retained window. `commit_forensic_summary` gains the matching `request_digest`
+  form. Three metrics: `aegis_terminal_outbox_pending`, `_recovered_total`,
+  `_errors_total`. `CLM-106`; `UC-052` amended; `CLM-046`'s stale "no durable
+  evidence record" sentence corrected.
+
+### Fixed — found by the 2026-09-22 re-anchor and the closure work
+
+- **REG-D42** — `main`'s Forensic workflow was red on 3.11/3.12/3.13: the gossip
+  native-accumulator refusal test presumed the Rust extension absent, and that
+  workflow builds it. The test now removes the module through `sys.modules`. The
+  `RLIMIT_NPROC` thread-exhaustion probe, which measured nothing as root, now drops
+  to `nobody` first. No product change.
+- **REG-D34** — the strict doc gate's v4-publication rule read the last digit of a
+  decimal (`32.4 s`) as a version, and its disclaimer let `Python 3.4` waive a real
+  `v4.0.0 was published`. One shared version token now serves both halves.
+- **REG-D33** — `scripts/` and `tools/` now pass `mypy --strict` (41 files) and CI's
+  typecheck job and `make type` both check them. The first strict run found
+  `tools/forensic/diagnose_aegis.py` calling the static `PQCSigner.verify` without
+  its public key, so the diagnostic reported the PQC signer FAILED on every
+  install where it works.
+- **REG-D43** — `scripts/audit_documentation_corpus.py` failed its own contract at
+  `main` on an elided payload in `DOC-03`; the document now quotes the real test
+  payload, and the placeholder rule runs in the suite.
+
 ## [5.0.0] — unreleased source target
 
 **Nothing is published for `5.0.0`.** There is no tag, GitHub Release, PyPI or
