@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -110,10 +111,14 @@ class TestStartRefusals:
             await start_gossip(_config())
 
     async def test_an_absent_native_accumulator_is_refused_with_its_reason(
-        self, tmp_path: Path
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """No Python stand-in: an accumulator whose roots peers cannot compute
         would report converged rounds while agreeing with nobody."""
+        # Arrange the absence rather than assume it: where the extension is
+        # built (the Forensic workflow), start_gossip would otherwise get past
+        # the accumulator and fail on the placeholder PEM below instead.
+        monkeypatch.setitem(sys.modules, "aegis_rust", None)
         material = tmp_path / "material.pem"
         material.write_text("-----BEGIN CERTIFICATE-----\n", encoding="utf-8")
         with pytest.raises(GossipStartupError, match="requires the native CausalMmr accumulator"):
