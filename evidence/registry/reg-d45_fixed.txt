@@ -1,0 +1,372 @@
+REG-D45..REG-D52 — post-merge findings on PR #196, fixed on main
+===================================================================
+
+PR #196 ("Registry closure: every REG row terminal; fixes main's red
+Forensic CI") merged at 2026-09-22T23:16:40Z (commit 4d409f6, main). Between
+push and merge, five bot findings arrived on the PR itself (CodeQL x4 alert
+groups, Codex x2) and the PR auto-merged before they were addressed. Once on
+the restarted branch (`git checkout -B claude/aegis-v4-comprehensive-audit-m2qyka
+origin/main`, per the merged-PR restart protocol), main's own post-merge
+push-triggered CI was also checked directly rather than assumed clean: two
+more jobs were red (CI's "Rust Extension" job, run 35796636676/35622820791;
+CI's "License Headers" job, same runs) and a third — Security's "OSV
+Scanner" job, run 35796636617/35622820041 — was investigated and found to
+be a real, separate advisory this session had not yet looked at. This file
+records what was done about all eight, on that branch, before a new PR.
+
+=== REG-D45 — cyclic import risk between streaming.py and terminal_outbox.py ===
+
+Finding (CodeQL, 3 alerts, PR #196 review comments):
+  aegis/proxy/streaming.py:28 imported TerminalOutbox and
+  TerminalReplayContext from aegis.proxy.terminal_outbox under
+  TYPE_CHECKING; aegis/proxy/terminal_outbox.py:56 imported
+  StreamEvidenceSummary from aegis.proxy.streaming, also under
+  TYPE_CHECKING. CodeQL: "TerminalOutbox may not be defined if module
+  terminal_outbox is imported before module streaming" (and the
+  TerminalReplayContext / StreamEvidenceSummary mirror alerts). Both
+  imports being TYPE_CHECKING-only meant this could never actually raise
+  at runtime, but it is a real design smell CodeQL is right to flag: the
+  two modules importing each other's types is a cycle waiting to bite the
+  first non-TYPE_CHECKING addition.
+
+Fix: aegis/proxy/terminal_outbox.py no longer imports anything from
+aegis.proxy.streaming. `record()` now takes a structural `TerminalSummary`
+Protocol (response_hash, response_size, terminal_outcome,
+final_marker_included, token_count, elapsed_seconds, redaction_hits) that
+streaming.StreamEvidenceSummary satisfies without either module knowing
+about the other. streaming.py's TYPE_CHECKING import of TerminalOutbox /
+TerminalReplayContext is unchanged (terminal_outbox.py has no reason to
+import streaming.py back).
+
+Verified:
+  mypy --strict aegis/proxy/terminal_outbox.py aegis/proxy/streaming.py
+    aegis/proxy/app.py -> Success: no issues found in 3 source files
+  ruff check aegis/proxy/terminal_outbox.py -> All checks passed
+  git grep -n "from aegis.proxy.streaming" aegis/proxy/terminal_outbox.py
+    -> no match (the import is gone, not just reordered)
+
+=== REG-D46 — request_size potentially used before initialization ===
+
+Finding (CodeQL, aegis/core/crypto_audit.py:1680):
+  "Local variable 'request_size' may be used before it is initialized."
+  commit_forensic_summary's request_bytes/request_digest branch set
+  request_size inside an `if request_bytes is not None: ... elif
+  request_digest is not None: ...` pair; CodeQL cannot see that the
+  earlier `if (request_bytes is None) == (request_digest is None): raise`
+  makes the two branches exhaustive, so it cannot prove one of them
+  always runs.
+
+Fix: the `elif` became `else` (the exhaustiveness check three lines above
+already guarantees exactly one of the two is not None; a plain
+if/else makes that visible to the reader and to static analysis, rather
+than relying on it being visible only to the raise a few lines up).
+Also moved the per-field str type-check loop (state_id, tenant_id,
+model, endpoint, scrub_method, signer_name, signature_meaning,
+terminal_outcome) ahead of the `"\x00" in state_id` check, since the
+latter assumes state_id is already a str -- a pure ordering fix with the
+same net effect, folded into this pass while touching the surrounding
+lines.
+
+Verified:
+  mypy --strict aegis/core/crypto_audit.py -> Success: no issues found
+  HERMES_SANDBOX=true pytest -q tests/test_terminal_outbox.py
+    tests/test_crypto_audit*.py tests/test_streaming_teardown.py
+    tests/test_proxy_streaming.py -> 121 passed in 34.42s
+
+=== REG-D47 — assert statements with side effects ===
+
+Finding (CodeQL, tests/test_terminal_outbox.py:284-285, both inside
+  test_a_recovered_node_matches_the_live_one_but_for_previews_and_markers):
+  "This 'assert' statement contains an expression which may have side
+  effects." -- `assert live_params.pop("evidence_status") ==
+  "durable-terminal"` and the `recovered_params.pop(...)` line beside it:
+  under `python -O`, the assert (and its side-effecting `.pop()`) is
+  compiled out, so `evidence_status` would never be removed from either
+  dict and the following `assert recovered_params == live_params` would
+  then compare dicts that still each carry their own (different)
+  evidence_status value -- silently changing what the test checks,
+  depending on how it is invoked.
+
+Fix: `.pop()` moved onto its own statement, the popped value bound to a
+name, and the equality checked in a separate assert -- in both places
+this pattern occurs: the original site CodeQL flagged, and the
+structurally identical block added by this same PR's real-app parity
+test (test_the_real_app_spools_exactly_what_its_live_commit_signs,
+lines 842-843), which a grep for the same pattern found.
+
+Verified:
+  git grep -nE "^\s*assert [^=]*\.(pop|record|append|popleft|write|commit[a-z_]*)\(" tests/
+    -> no match anywhere in tests/ (both sites fixed, no third site exists)
+  ruff check / ruff format --check tests/test_terminal_outbox.py -> clean
+  HERMES_SANDBOX=true pytest -q tests/test_terminal_outbox.py -> 36 passed
+
+=== REG-D48 — a failed outbox open left SIEM/S3 export started ===
+
+Finding (Codex, P2, aegis/proxy/app.py:1113):
+  "When terminal_outbox_enabled is set and this open fails (for example,
+  an unwritable configured path), it raises after the SIEM exporter and
+  S3 archiver/task have already started at lines 1097-1104 but before the
+  lifespan reaches yield. The post-yield shutdown block therefore never
+  runs..." -- correct, and worse than the "unwritable path" example
+  Codex gave: the far more likely trigger is REG-D32's own new check,
+  raising RuntimeError when AEGIS_TERMINAL_OUTBOX_ENABLED is set without
+  AEGIS_SIGNING_KEY. `lifespan` is `@asynccontextmanager`
+  (`aegis/proxy/app.py:1095`); when the wrapped generator raises before
+  `yield`, `__aenter__` propagates the exception and Starlette's
+  `async with lifespan(app):` never reaches `__aexit__`, so the
+  function's entire post-`yield` half (including
+  `state.siem_exporter.shutdown(...)` and `state.s3_archiver.close(...)`)
+  is skipped -- a leaked SIEMExporter thread and a leaked S3WormArchiver
+  worker/journal handle, on every failed startup that has either
+  configured.
+
+Fix: reordered so the outbox opens (the step that can raise) before
+SIEM export and the S3 archiver start, not after. Nothing before the
+outbox block in `lifespan` starts a resource that needs shutdown on this
+path (logging.basicConfig and observability.setup_otel do not), so a
+refusal here now has nothing above it to leak. The relative order of
+SIEM/S3 start versus terminal_handoff.start() is unchanged.
+
+Verified (new regression test,
+  test_a_refused_outbox_open_starts_no_other_service,
+  tests/test_terminal_outbox.py): enables the outbox with an empty
+  signing_key (forces the RuntimeError) together with a configured
+  siem_url; after the RuntimeError propagates out of `with TestClient(app)`,
+  asserts `state.siem_exporter is not None` (constructed outside the
+  lifespan, so its existence is unaffected) and
+  `state.siem_exporter._thread is None` (never started).
+  HERMES_SANDBOX=true pytest -q tests/test_terminal_outbox.py -> 36 passed
+    (35 from REG-D32 + this one)
+  mypy --strict aegis/proxy/app.py -> Success: no issues found
+  ruff check / ruff format --check aegis/proxy/app.py -> clean
+
+=== REG-D49 — trailing whitespace in a registry evidence file ===
+
+Finding (Codex, P1, evidence/registry/reg-d42_fixed.txt:50, also :59, :78):
+  three blank lines inside REG-D42's evidence file each carried one
+  trailing space. Codex characterized this as making "the required
+  `git diff --check` gate fail for the commit"; re-checked directly: the
+  CI "Whitespace" step (`.github/workflows/ci.yml:115`, `git diff
+  --check` with no ref) was green on this exact commit (4d409f6,
+  Documentation Gates job, run 35796636676) because a bare `git diff
+  --check` right after checkout compares the working tree against HEAD,
+  which is empty immediately after a fresh checkout -- so no CI job was
+  actually red on this. It is still a real defect against AGENTS.md's own
+  stated workflow, which lists `git diff --check` as a required
+  pre-commit step for documentation changes ("Documentation or
+  public-claim changes require: ... git diff --check"): the committing
+  session did not run it before committing REG-D42's evidence file.
+
+Fix: the trailing space stripped from all three lines (blank lines;
+no content lost). `git diff --check` (bare) -> clean;
+`grep -c ' $' evidence/registry/reg-d42_fixed.txt` -> 0.
+
+=== REG-D50 — "License Headers" CI job red on main ===
+
+Finding (CI, `main`, run 35796636676/35622820791, job "License Headers",
+  step "Verify AGPLv3 / Commercial headers", exit 1):
+  `python scripts/apply_license_headers.py` reported 9 files missing or
+  outdated headers: scripts/generate_module_inventory.py,
+  scripts/regenerate_protobuf.sh, scripts/verify_release_readback.py,
+  tests/test_audit_node_proto_freshness.py,
+  tests/test_benchmark_claim_labels.py,
+  tests/test_module_inventory_current.py,
+  tests/test_release_readback_script.py, tests/test_sample_provenance.py,
+  tests/test_signature_scheme_binding.py -- all nine added by the prior
+  session's "Registry closure 2026 09 21 (#195)" (commit 0f6617d), none
+  carrying the AGPLv3/Commercial header block the script enforces.
+
+  Gate-coverage gap: no `make` target and no pre-commit hook runs this
+  script locally -- `make lint`/`make type`/`make test` do not call it,
+  so a contributor's local `make` run gives no signal before pushing;
+  only the CI job catches it. (Left as observed; adding a local hook is
+  outside this fix's scope.)
+
+Fix: `python scripts/apply_license_headers.py` run at the repository
+root; it is idempotent (a second run after the first reports "Updated 0
+files") and additive-only per its own contract (`[copyright+]` inserts
+just the copyright line where a license block already exists;
+`[header+]` inserts the full block after any shebang/docstring) -- no
+line was rewritten or removed by hand.
+
+Verified:
+  python scripts/apply_license_headers.py -> "Updated 9 files" (first run,
+    listing all nine paths above), "Updated 0 files" (second run)
+  head -5 on a `[header+]` file (scripts/regenerate_protobuf.sh) and a
+    `[copyright+]` file (tests/test_sample_provenance.py) -> header lands
+    after the shebang and after the module docstring respectively, per
+    the script's own documented placement rule
+  ruff check / ruff format --check on all nine files -> clean
+
+=== REG-D51 — Rust Extension CI: zk verifier-key ceiling never measured ===
+
+Finding (CI, `main`, run 35796636676/35622820791, job "Rust Extension",
+  step "Cargo test (zero-knowledge circuit)", exit 101):
+  `cargo test --release --features zk-spartan --test zk_mmr_end_to_end`:
+    test a_proof_round_trips_and_verifies_against_the_true_root ... FAILED
+    thread '...' panicked at tests/zk_mmr_end_to_end.rs:114:57:
+    decode key: Decoding("verifier key is 44210256 bytes; the ceiling is 4194304")
+  6 of 7 tests in that binary passed; only the one exercising the wire
+  round trip through decode_verifier_key failed.
+
+Root cause: aegis_rust_v2/src/zk_mmr.rs's `MAX_VERIFIER_KEY_BYTES = 1 <<
+22` (4 MiB) was introduced by the same "Registry closure 2026 09 21
+(#195)" commit (0f6617d) that opened REG-D04, and its own doc comment
+said so plainly: "This is a policy bound rather than a measured maximum
+-- zk-spartan is off in the default build and its test legs SIGILL on
+this CPU (REG-D04) -- and it is deliberately far above any real proof
+for any supported shape." REG-D04 records that the authoring host
+(a pre-ADX Haswell i5-4300U) cannot run any zk-spartan test at all
+(SIGILL on the first `adcx` instruction `halo2curves` emits) -- so this
+ceiling was never checked against a real key on that host, only assumed.
+This GitHub Actions runner (ubuntu-22.04) has ADX, so this is the first
+time this exact test has actually executed end-to-end anywhere in this
+project's CI history, and it falsified the "far above" assumption by
+about 10.5x for the *smallest* non-trivial shape (4 leaves, path_depth
+2, one peak) built by the test's own `build()` helper.
+
+Confirmed not a dependency-bump regression: `git log --oneline --
+aegis_rust_v2/Cargo.lock aegis_rust_v2/src/zk_mmr.rs
+aegis_rust_v2/src/zk_bindings.rs` shows MAX_VERIFIER_KEY_BYTES was
+introduced once, at 0f6617d, and has no prior value to have regressed
+from; `git log -p -S"MAX_VERIFIER_KEY_BYTES"` shows one occurrence.
+
+Confirmed not a surprise the project's own documentation lacked:
+docs/institutional/DOC-08_ZERO_KNOWLEDGE_INCLUSION.md §6.5 already said,
+before this fix, "For the shapes measured, the verifier key is tens of
+megabytes and takes seconds to build, against a proof of roughly
+84-110 KB" -- so the true order of magnitude was already published;
+only the Rust-level DoS-backstop constant had not been set consistently
+with it.
+
+Fix: MAX_VERIFIER_KEY_BYTES raised from `1 << 22` (4 MiB) to `1 << 27`
+(128 MiB) -- roughly 3x the measured 44,210,256-byte key, in the "tens
+of megabytes" range DOC-08 §6.5 already documented. MAX_PROOF_BYTES
+(`1 << 20`, unrelated to this failure -- encode_proof/decode_proof at
+zk_mmr_end_to_end.rs:111-112 succeeded before the failure at :114) is
+untouched: DOC-08 §6.5 states proof size does not scale with path_depth
+the way key size does ("The asymmetry is the Hyrax commitment's, not
+this circuit's"), and the measured 84-110 KB stays far under 1 MiB.
+
+The doc comment above the constant is rewritten to state the measured
+number and its source, and to say plainly what BOUNDARIES.md's existing
+"Zero-knowledge inclusion proof feasibility" row already established:
+this remains a coarse wire-decode backstop, not a bound on every
+supported shape -- key size tracks path_depth, which nothing in this
+function bounds, so an honestly larger shape than the one this ceiling
+was set from can still be legitimately refused; that is the documented
+"a verifier ... must bound prefix_len, path_depth and peak_count ...
+themselves first" boundary, not a bug in this constant. No new
+CLM/UC/BOUNDARIES entry was needed -- CLM-089, DOC-08 §6.3/§6.5 and the
+BOUNDARIES.md row already cover this precisely.
+
+Verified (this host has ADX: `grep -o adx /proc/cpuinfo` -> `adx`):
+  cargo test --release --features zk-spartan --test zk_mmr_end_to_end
+    -> test result: ok. 7 passed; 0 failed (all seven, including the
+       previously-failing a_proof_round_trips_and_verifies_against_the_true_root)
+  cargo test --release (default features) -> 90 passed + 3 passed
+    (lib + audit_ring_buffer_fuzz_targets), 0 failed -- unaffected
+  PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 cargo clippy --locked
+    --all-targets --all-features -- -D warnings -> exit 0, no warnings
+  cargo fmt --check: pre-existing drift in crdt_mmr.rs, forwarder.rs,
+    wal.rs and unrelated lines of zk_mmr.rs (370, 414, 1021, 1074) and
+    tests/zk_mmr_end_to_end.rs:128 -- none on the lines this change
+    touched (666-693); no `cargo fmt`/`rustfmt` step exists in
+    .github/workflows/ci.yml or forensic.yml, so this is pre-existing,
+    ungated drift, left alone per "make the smallest authorized change".
+
+=== Combined regression run ===
+
+HERMES_SANDBOX=true pytest -q -n auto  (full suite, extension built,
+  after REG-D45..REG-D50): see final_battery file for this push.
+
+HERMES_SANDBOX=true pytest -q -n auto (extension installed, default
+  features, after REG-D45..REG-D51):
+  7406 passed, 35 skipped in 100.33s (0:01:40)
+
+Full gate battery after REG-D45..REG-D51 (this push):
+  ruff check .                                                clean (601 files)
+  ruff format --check .                                       clean (601 files)
+  mypy --strict aegis                                          Success, 208 files
+  mypy --strict --explicit-package-bases --follow-imports=silent scripts tools
+                                                                 Success, 41 files
+  bandit -r aegis/ aegis_server/ -c pyproject.toml -lll        0 issues
+  python tools/docs/verify_documentation.py --root . --strict  PASS, 27 files, 0/0
+  python scripts/verify_docs.py                                PASS, 0 findings
+  python scripts/verify_claims.py                              PASS, 106 claims, 0
+  bash scripts/verify_links.sh --root .                        PASS, 1405 links
+  git diff --check                                             clean
+  python scripts/audit_documentation_corpus.py --output-dir …  status=PASS
+  python scripts/verify_import_reachability.py                 PASS (225/114/34/77)
+  python scripts/verify_release_contract.py                    READY, 14 anchors @ 5.0.1
+  pytest tests/test_ai_context.py tests/test_module_inventory_current.py
+                                                                 16 passed
+  cargo test --release --features zk-spartan --test zk_mmr_end_to_end
+                                                                 7 passed, 0 failed
+  cargo test --release (default features)                      90 + 3 passed, 0 failed
+  PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 cargo clippy --locked
+    --all-targets --all-features -- -D warnings                exit 0
+
+=== REG-D52 — Security's "OSV Scanner" job red on main: anyio 4.9.0 ===
+
+Finding (CI, `main`, run 35796636617/35622820041, job "OSV Scanner",
+  step "Run OSV-Scanner over Python lockfile", exit 1): the step logs
+  showed only "Exit code: 1" with results going to a SARIF upload, not
+  stdout, so this needed direct reproduction rather than guessing from
+  the log. Downloaded osv-scanner v2.6.0 (the current public release;
+  CI pins the wrapper action at v2.3.8, which shells out to whatever
+  osv-scanner version its image bundles) and ran the job's exact
+  command:
+    osv-scanner --lockfile=requirements.txt
+  Reproduced:
+    Total 1 package affected by 2 known vulnerabilities (1 Critical, 1 Medium)
+    anyio 4.9.0: GHSA-5p39-cfhj-2xmp (CVSS 6.8) and
+                 GHSA-82r6-8w77-94w6 (CVSS 9.3, Critical), fixed in 4.14.2
+
+  What the two advisories are (fetched from https://api.osv.dev/v1/vulns/...):
+  - GHSA-82r6-8w77-94w6 (critical): AnyIO's TLSStream/connect_tcp() encodes
+    internationalized host names with IDNA 2003 before the TLS handshake;
+    an attacker who has already hijacked the connection to a malicious
+    server can present a certificate valid for the IDNA-2003 encoding of
+    the intended host name, and it validates.
+  - GHSA-5p39-cfhj-2xmp (medium): anyio's process-pool workers connect
+    stderr to a pipe but never drain it (only stdin/stdout are redirected
+    to /dev/null); code that writes enough to stderr can fill the pipe and
+    wedge the awaiting process-pool call.
+
+  Root cause: `anyio` is a transitive dependency (via fastapi/httpx/
+  starlette/uvicorn) with no floor line in requirements.txt, so
+  osv-scanner's resolution against that file alone lands on an old
+  version. `requirements.lock` already pinned `anyio==4.14.2` -- the
+  fixed version -- so the actually-installed runtime was never exposed;
+  only the unpinned-floor file the scanner reads was.
+
+Fix: `anyio>=4.14.2` added to requirements.txt under the existing
+"Security floors for transitive deps" comment, matching the repository's
+established pattern for this exact situation (`idna>=3.15`,
+`urllib3>=2.7.0`, both already there with the same rationale).
+`requirements.lock` regenerated with the CI job's own tools (`pip==25.2`,
+`pip-tools==7.5.2`, Python 3.12 -- installed locally via `python3.12 -m
+venv` to match `.github/workflows/ci.yml`'s "Lock File Integrity" job
+exactly, since this host's own venv is 3.11) and its own remediation
+command:
+    cp requirements.lock requirements.lock.new
+    pip-compile --generate-hashes --output-file=requirements.lock.new requirements.txt
+The only change was the expected one: anyio's `# via` comment gained
+`-r requirements.txt` alongside its existing transitive sources
+(httpx, starlette, watchfiles) -- the pinned hashes and version
+(`anyio==4.14.2`) were already correct and did not move.
+
+Verified:
+  osv-scanner --lockfile=requirements.txt (same v2.6.0 binary, after the
+    fix) -> "No package vulnerabilities found" (0 packages affected)
+  pip-audit -r requirements.txt --progress-spinner off -> "No known
+    vulnerabilities found" (was already clean before this fix too --
+    pip-audit's resolution did not surface these two advisories; CI's
+    Dependency Audit job stayed green throughout, and this finding was
+    OSV-Scanner-specific, not a discrepancy between the two tools)
+  Lock-file drift check, CI's exact commands, on the Python 3.12
+    toolchain: byte-identical after regeneration (confirmed twice: once
+    producing the change, once re-running against the now-updated lock
+    with zero further diff)
+  git diff --check -> clean

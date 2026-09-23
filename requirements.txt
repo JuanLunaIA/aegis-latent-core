@@ -17,3 +17,8 @@ cbor2>=5.9.0
 idna>=3.15
 # urllib3 (transitive via requests): PYSEC-2026-141 / PYSEC-2026-142
 urllib3>=2.7.0
+# anyio (transitive via fastapi/httpx/starlette): GHSA-82r6-8w77-94w6 (critical,
+# IDNA 2003 TLS hostname encoding enables certificate spoofing) and
+# GHSA-5p39-cfhj-2xmp (process-pool workers can block indefinitely on
+# undrained stderr) — both fixed in 4.14.2, already the pin in requirements.lock
+anyio>=4.14.2

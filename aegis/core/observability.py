@@ -109,7 +109,7 @@ if _PROM:
     TERMINAL_OUTBOX_PENDING: Any = Gauge(
         "aegis_terminal_outbox_pending",
         "Handed-off terminal commits spooled to the durable outbox and not yet marked "
-        "done. Bound via set_function when the opt-in outbox is enabled; absent otherwise.",
+        "done. Bound via set_function when the opt-in outbox is enabled; reads 0 otherwise.",
     )
     TERMINAL_OUTBOX_RECOVERED: Any = Counter(
         "aegis_terminal_outbox_recovered_total",

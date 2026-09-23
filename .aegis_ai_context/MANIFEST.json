@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "fc6874204968cd89842f5a04c316c8cb1a4dc510d2d34325d24660093108649f",
-      "size": 185805
+      "sha256": "9fc84f6fd526d895639c50ad7e3fee83928631ab11bb15c565e3361c8e526db1",
+      "size": 188983
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "90169d2a28f1fb7b976aebaecbad3901f7f82abac8ca29064ad815bccc242328",
-      "size": 142947
+      "sha256": "70f5c412a435e8bada6dde22a468e3b10168a4146ccdc7a78be6f672b36c7a9f",
+      "size": 143256
     },
     {
       "category": "governed_input",
@@ -195,14 +195,14 @@
     {
       "category": "governed_input",
       "path": "requirements.txt",
-      "sha256": "8b1015b7881accd0bc1c30deba13a9aa45353357a505ca158524b94eb340a6df",
-      "size": 542
+      "sha256": "86d7e1768ebe74dd77e445aec7fb7136c5bfdee0b86b1c4deaee1c1b6f727035",
+      "size": 858
     },
     {
       "category": "governed_input",
       "path": "requirements.lock",
-      "sha256": "c2c17b98550fbb7bd354e4515e05d163e1a31b8b3d2afb8a8f697e82b489eb48",
-      "size": 90258
+      "sha256": "effcf8f565e8af3dcf4e308ebdc556029f78bdf6420aa7964b45e9a7f50b7b7f",
+      "size": 90286
     },
     {
       "category": "governed_input",

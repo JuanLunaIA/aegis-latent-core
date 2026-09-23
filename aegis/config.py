@@ -467,8 +467,10 @@ class AegisSettings(BaseSettings):
             "teardown and the handed-off commit loses that terminal node, and a full handoff "
             "queue drops it. A recovered node is signed as stream-terminal-evidence-recovered "
             "with evidence_status recovered-terminal, carries no request or response preview, "
-            "and is timestamped at replay. If enabled and the outbox cannot be opened, "
-            "startup fails."
+            "and is timestamped at replay. Requires AEGIS_SIGNING_KEY: every spool line is "
+            "authenticated with a key derived from it, and a line that fails is quarantined, "
+            "never replayed. If enabled without a signing key, or if the outbox cannot be "
+            "opened, startup fails."
         ),
     )
     terminal_outbox_path: Path | None = Field(

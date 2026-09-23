@@ -665,9 +665,25 @@ pub fn verify(
 /// is deliberately far above any real proof for any supported shape.
 pub const MAX_PROOF_BYTES: usize = 1 << 20;
 
-/// Ceiling on a serialised verifier key, in bytes. Same reasoning as
-/// [`MAX_PROOF_BYTES`]; a key is larger than a proof and still small.
-pub const MAX_VERIFIER_KEY_BYTES: usize = 1 << 22;
+/// Ceiling on a serialised verifier key, in bytes.
+///
+/// Same threat model as [`MAX_PROOF_BYTES`] — a coarse backstop at the
+/// bincode-parsing boundary, not a claim that every supported shape's key
+/// fits under it. It is **not** "still small": unlike a proof, key size
+/// tracks `path_depth` (DOC-08 §6.5), which nothing here bounds, so an
+/// honestly larger shape than the one this ceiling was set from can still be
+/// refused — that is `BOUNDARIES.md`'s "a verifier ... must bound
+/// `prefix_len`, `path_depth` and `peak_count` ... themselves first", not a
+/// bug in this constant.
+///
+/// The previous `1 << 22` (4 MiB) was never measured: `zk-spartan` SIGILLs on
+/// a non-ADX host (`REG-D04`), so nothing here had run end-to-end before an
+/// ADX-capable CI runner did. It decoded a real key at 44,210,256 bytes for
+/// the smallest non-trivial shape (4 leaves, `path_depth` 2, one peak) —
+/// consistent with DOC-08 §6.5's already-published "tens of megabytes" for
+/// the shapes it measured, and about 10.5× the old ceiling. `1 << 27`
+/// (128 MiB) gives that measurement roughly 3× headroom.
+pub const MAX_VERIFIER_KEY_BYTES: usize = 1 << 27;
 
 /// Serialise a proof for transport.
 pub fn encode_proof(proof: &Snark) -> Result<Vec<u8>, ZkError> {

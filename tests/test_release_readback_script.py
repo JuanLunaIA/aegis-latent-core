@@ -15,6 +15,10 @@ this module pins them so a later edit cannot quietly relax either.
    documented commands pointing at a URL shape the tool no longer uses.
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+
 from __future__ import annotations
 
 import importlib.util

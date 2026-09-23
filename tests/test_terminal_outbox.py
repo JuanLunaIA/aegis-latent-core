@@ -19,6 +19,8 @@ node matches the live one in everything but its previews and its two markers.
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import gc
 import hashlib
 import json
 import os
@@ -37,18 +39,22 @@ from aegis.proxy.terminal_outbox import (
     RECOVERED_MEANING,
     TerminalOutbox,
     TerminalReplayContext,
+    derive_mac_key,
+    has_terminal_node,
     replay_pending,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REQUEST = b'{"model":"m","stream":true,"messages":[{"role":"user","content":"hello"}]}'
 RESPONSE = b"data: sanitized\n\ndata: [DONE]\n\n"
+SIGNING_KEY = "test-signing-key"
+MAC_KEY = derive_mac_key(SIGNING_KEY)
 
 
 def _ledger(tmp_path: Path, name: str = "chain.wal") -> CryptographicAuditLedger:
     return CryptographicAuditLedger(
         persistence_path=str(tmp_path / name),
-        signing_key="test-signing-key",
+        signing_key=SIGNING_KEY,
         require_strong_signing=True,
     )
 
@@ -84,7 +90,36 @@ def _summary(
 
 
 def _open(path: Path, **kwargs: Any) -> TerminalOutbox:
-    return TerminalOutbox.open(path, max_bytes=kwargs.pop("max_bytes", 1 << 20), **kwargs)
+    kwargs.setdefault("mac_key", MAC_KEY)
+    kwargs.setdefault("max_bytes", 1 << 20)
+    return TerminalOutbox.open(path, **kwargs)
+
+
+def _signed_line(payload: dict[str, Any], key: bytes = MAC_KEY) -> bytes:
+    import hmac
+
+    body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    mac = hmac.new(key, body, hashlib.sha256).hexdigest()
+    return json.dumps({**payload, "mac": mac}, sort_keys=True, separators=(",", ":")).encode()
+
+
+def _pending_payload(state_id: str, **ctx_overrides: Any) -> dict[str, Any]:
+    from dataclasses import asdict
+
+    from aegis.proxy.terminal_outbox import SpooledSummary
+
+    summary = _summary()
+    ctx = {**asdict(_context(state_id)), **ctx_overrides}
+    spooled = SpooledSummary(
+        response_hash=summary.response_hash,
+        response_size=summary.response_size,
+        terminal_outcome=summary.terminal_outcome,
+        final_marker_included=summary.final_marker_included,
+        token_count=summary.token_count,
+        elapsed_seconds=summary.elapsed_seconds,
+        redaction_hits={},
+    )
+    return {"v": 1, "op": "pending", "id": state_id + "-id", "ctx": ctx, "summary": asdict(spooled)}
 
 
 def _nodes_for(ledger: CryptographicAuditLedger, state_id: str) -> list[Any]:
@@ -98,7 +133,8 @@ def test_the_spool_holds_no_content_and_is_owner_only(tmp_path: Path) -> None:
     sentinel = b"SENTINEL-RESPONSE-CONTENT-7f3a"
     path = tmp_path / "outbox.jsonl"
     outbox = _open(path)
-    assert outbox.record(_context(), _summary(preview=RESPONSE + sentinel)) is not None
+    spooled = outbox.record(_context(), _summary(preview=RESPONSE + sentinel))
+    assert spooled is not None
     outbox.close()
 
     raw = path.read_bytes()
@@ -119,7 +155,8 @@ def test_a_record_survives_sigkill_right_after_it_is_written(tmp_path: Path) -> 
         sys.path.insert(0, {str(REPO_ROOT)!r})
         from tests.test_terminal_outbox import _context, _summary, _open
         outbox = _open(Path(sys.argv[1]))
-        assert outbox.record(_context("killed-1"), _summary()) is not None
+        spooled = outbox.record(_context("killed-1"), _summary())
+        assert spooled is not None
         os.kill(os.getpid(), signal.SIGKILL)
         """
     )
@@ -137,20 +174,125 @@ def test_a_record_survives_sigkill_right_after_it_is_written(tmp_path: Path) -> 
         reopened.close()
 
 
-def test_a_torn_tail_is_skipped_and_counted_not_fatal(tmp_path: Path) -> None:
+def test_a_torn_tail_is_quarantined_and_the_next_record_is_not_lost(tmp_path: Path) -> None:
+    """Review finding 2: the record written after a torn tail used to be lost with it."""
+
     path = tmp_path / "outbox.jsonl"
     outbox = _open(path)
     outbox.record(_context("whole"), _summary())
     outbox.close()
+    torn = b'{"v":1,"op":"pending","id":"torn","ctx":{"state_'
     with path.open("ab") as handle:
-        handle.write(b'{"v":1,"op":"pending","id":"torn","ctx":{"state_')
+        handle.write(torn)  # power lost mid-write: no newline
+
+    after_torn = _open(path)
+    after_torn.record(_context("after-torn"), _summary())
+    after_torn.close()
 
     reopened = _open(path)
     try:
-        assert [e.context.state_id for e in reopened.pending_entries()] == ["whole"]
-        assert reopened.corrupt_lines == 1
+        assert sorted(e.context.state_id for e in reopened.pending_entries()) == [
+            "after-torn",
+            "whole",
+        ]
+        assert torn in (tmp_path / "outbox.jsonl.quarantine").read_bytes()
     finally:
         reopened.close()
+
+
+def test_a_torn_tail_is_newline_isolated_even_if_compaction_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Opening normally also compacts the fragment away; this pins the newline guard
+    on its own, for the case where that compaction cannot run."""
+
+    path = tmp_path / "outbox.jsonl"
+    path.write_bytes(b'{"v":1,"op":"pending","id":"torn","ctx":{"state_')
+    monkeypatch.setattr(TerminalOutbox, "compact", lambda self: None)
+    outbox = _open(path)
+    outbox.record(_context("after-torn"), _summary())
+    outbox.close()
+    monkeypatch.undo()
+
+    reopened = _open(path)
+    try:
+        assert [e.context.state_id for e in reopened.pending_entries()] == ["after-torn"]
+    finally:
+        reopened.close()
+
+
+def test_a_forged_or_foreign_line_is_quarantined_never_replayed(tmp_path: Path) -> None:
+    """Review finding 1: replay signs what it reads, so it reads only what it wrote."""
+
+    path = tmp_path / "outbox.jsonl"
+    forged = _signed_line(_pending_payload("forged"), key=derive_mac_key("attacker-guess"))
+    unsigned = json.dumps(_pending_payload("unsigned"), sort_keys=True).encode()
+    path.write_bytes(forged + b"\n" + unsigned + b"\n")
+
+    outbox = _open(path)
+    try:
+        assert outbox.pending_count == 0
+        assert outbox.corrupt_lines == 2
+        quarantined = (tmp_path / "outbox.jsonl.quarantine").read_bytes()
+        assert forged in quarantined
+        assert unsigned in quarantined
+        assert path.read_bytes() == b""  # compacted; the lines live on in quarantine
+    finally:
+        outbox.close()
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"request_hash": list("0" * 64)},
+        {"request_size": True},
+        {"signer_name": ["svc"]},
+        {"phi_scrubbed": "yes"},
+    ],
+)
+def test_an_authenticated_line_with_wrong_types_is_quarantined(
+    tmp_path: Path, override: dict[str, Any]
+) -> None:
+    """A malformed record must be refused at load, never reach the ledger lock."""
+
+    path = tmp_path / "outbox.jsonl"
+    path.write_bytes(_signed_line(_pending_payload("typed", **override)) + b"\n")
+    outbox = _open(path)
+    try:
+        assert outbox.pending_count == 0
+        assert outbox.corrupt_lines == 1
+    finally:
+        outbox.close()
+
+
+def test_another_record_version_survives_compaction_in_quarantine(tmp_path: Path) -> None:
+    """Review finding 3: compaction used to erase lines it could not read."""
+
+    path = tmp_path / "outbox.jsonl"
+    newer = _signed_line({**_pending_payload("v2"), "v": 2})
+    path.write_bytes(newer + b"\n")
+    outbox = _open(path)
+    outbox.record(_context("kept"), _summary())
+    outbox.compact()
+    outbox.close()
+
+    assert newer in (tmp_path / "outbox.jsonl.quarantine").read_bytes()
+    assert newer not in path.read_bytes()
+
+
+def test_a_small_spool_keeps_accepting_records(tmp_path: Path) -> None:
+    """Review finding 4: below 1 MiB the outbox used to fill once and stay full."""
+
+    outbox = _open(tmp_path / "outbox.jsonl", max_bytes=64 * 1024)
+    try:
+        for index in range(600):  # ~0.6 MiB of pending+done lines through a 64 KiB cap
+            entry_id = outbox.record(_context(f"s-{index}"), _summary())
+            assert entry_id is not None, f"refused at record {index}"
+            outbox.mark_done(entry_id)
+        assert outbox.skipped == 0
+        assert (tmp_path / "outbox.jsonl").stat().st_size < 64 * 1024
+    finally:
+        outbox.close()
 
 
 # ── replay against a real ledger ─────────────────────────────────────────────
@@ -281,8 +423,10 @@ async def test_a_recovered_node_matches_the_live_one_but_for_previews_and_marker
         assert getattr(recovered, field) == getattr(live, field), field
     live_params = dict(live.sampling_params)
     recovered_params = dict(recovered.sampling_params)
-    assert live_params.pop("evidence_status") == "durable-terminal"
-    assert recovered_params.pop("evidence_status") == "recovered-terminal"
+    live_status = live_params.pop("evidence_status")
+    recovered_status = recovered_params.pop("evidence_status")
+    assert live_status == "durable-terminal"
+    assert recovered_status == "recovered-terminal"
     assert recovered_params == live_params
     assert (live.signature_meaning, recovered.signature_meaning) == (
         "stream-terminal-evidence",
@@ -330,6 +474,39 @@ async def test_a_failed_commit_stays_pending_for_the_next_start(tmp_path: Path) 
     assert handoff.committed == 0
     assert [e.context.state_id for e in outbox.pending_entries()] == ["fails-1"]
     outbox.close()
+
+
+async def test_a_node_that_landed_is_done_even_if_a_later_step_fails(tmp_path: Path) -> None:
+    """Review finding 5: rate-limit settlement failing after the commit used to leave
+    a landed node pending, to be replayed as a duplicate past the retained window."""
+
+    ledger = _ledger(tmp_path)
+    outbox = _open(tmp_path / "outbox.jsonl")
+    handoff = TerminalCommitHandoff()
+    handoff.attach_outbox(outbox, landed=lambda sid: has_terminal_node(ledger, sid))
+    handoff.start()
+
+    async def commit_then_fail(summary: StreamEvidenceSummary) -> None:
+        ledger.commit_forensic_summary(
+            state_id="landed-then-failed",
+            request_bytes=REQUEST,
+            response_hash=summary.response_hash,
+            response_size=summary.response_size,
+            response_preview=b"",
+            terminal_outcome=summary.terminal_outcome,
+            final_marker_included=False,
+            token_count=0,
+            elapsed_seconds=0.0,
+        )
+        raise RuntimeError("reservation.finalize failed after the commit")
+
+    handoff.submit(commit_then_fail, _summary(), replay=_context("landed-then-failed"))
+    await handoff.stop(timeout=5.0)
+
+    assert outbox.pending_count == 0
+    assert len(_nodes_for(ledger, "landed-then-failed")) == 1
+    outbox.close()
+    ledger.close()
 
 
 async def test_a_full_queue_defers_the_commit_to_the_next_start(tmp_path: Path) -> None:
@@ -410,17 +587,35 @@ async def test_a_spool_write_failure_never_reaches_teardown(
 # ── the ledger's digest form ─────────────────────────────────────────────────
 
 
+_DIGEST = hashlib.sha256(REQUEST).hexdigest()
+
+
 @pytest.mark.parametrize(
     ("kwargs", "message"),
     [
-        ({"request_bytes": REQUEST, "request_digest": ("0" * 64, 1)}, "exactly one"),
+        ({"request_bytes": REQUEST, "request_digest": (_DIGEST, 1)}, "exactly one"),
         ({}, "exactly one"),
-        ({"request_digest": ("Z" * 64, 1)}, "lowercase SHA-256"),
-        ({"request_digest": ("0" * 64, (1 << 20) + 1)}, "size"),
-        ({"request_bytes": REQUEST, "evidence_status": "made-up"}, "evidence_status"),
+        ({"request_digest": ("Z" * 64, 1), "signature_meaning": RECOVERED_MEANING}, "SHA-256"),
+        (
+            {"request_digest": (list("0" * 64), 1), "signature_meaning": RECOVERED_MEANING},
+            "SHA-256",
+        ),
+        (
+            {"request_digest": (_DIGEST, (1 << 20) + 1), "signature_meaning": RECOVERED_MEANING},
+            "size",
+        ),
+        ({"request_digest": (_DIGEST, True), "signature_meaning": RECOVERED_MEANING}, "size"),
+        ({"request_digest": (_DIGEST, 1)}, "recovery-only"),
+        ({"request_bytes": REQUEST, "signature_meaning": RECOVERED_MEANING}, "reserved"),
+        ({"request_bytes": REQUEST, "signer_name": ["svc"]}, "signer_name"),
     ],
 )
-def test_the_digest_form_is_validated(tmp_path: Path, kwargs: dict[str, Any], message: str) -> None:
+def test_the_digest_form_is_validated_before_the_lock(
+    tmp_path: Path, kwargs: dict[str, Any], message: str
+) -> None:
+    """A malformed value is refused up front; it must not fail inside signing and
+    latch the ledger's fault state (the reviewer's probe latched signing_failed)."""
+
     ledger = _ledger(tmp_path)
     with pytest.raises(ValueError, match=message):
         ledger.commit_forensic_summary(
@@ -434,6 +629,7 @@ def test_the_digest_form_is_validated(tmp_path: Path, kwargs: dict[str, Any], me
             elapsed_seconds=0.0,
             **kwargs,
         )
+    assert ledger._fault_state == "healthy"
     ledger.close()
 
 
@@ -443,12 +639,14 @@ def test_the_digest_form_is_validated(tmp_path: Path, kwargs: dict[str, Any], me
 def _settings(tmp_path: Path, **overrides: Any) -> Any:
     from aegis.config import AegisSettings
 
-    return AegisSettings(
-        security_enforcement_mode="development",
-        wal_path=str(tmp_path / "app.wal.jsonl"),
-        backend_api_key="k",
-        **overrides,
-    )
+    base: dict[str, Any] = {
+        "security_enforcement_mode": "development",
+        "wal_path": str(tmp_path / "app.wal.jsonl"),
+        "backend_api_key": "k",
+        "signing_key": SIGNING_KEY,
+    }
+    base.update(overrides)
+    return AegisSettings(**base)
 
 
 def test_the_app_replays_the_spool_before_serving(tmp_path: Path) -> None:
@@ -482,3 +680,198 @@ def test_the_outbox_is_off_by_default(tmp_path: Path) -> None:
     with TestClient(app):
         assert app.state.aegis.terminal_outbox is None
     assert not (tmp_path / "app.wal.jsonl.terminal-outbox.jsonl").exists()
+
+
+def test_enabling_the_outbox_without_a_signing_key_refuses_startup(tmp_path: Path) -> None:
+    from fastapi.testclient import TestClient
+
+    from aegis.proxy.app import create_app
+
+    app = create_app(_settings(tmp_path, terminal_outbox_enabled=True, signing_key=""))
+    with pytest.raises(RuntimeError, match="AEGIS_SIGNING_KEY"), TestClient(app):
+        pass
+
+
+def test_a_refused_outbox_open_starts_no_other_service(tmp_path: Path) -> None:
+    """Review finding: ``lifespan`` is ``@asynccontextmanager``, so a startup step
+    that raises skips this function's entire post-``yield`` shutdown half — a
+    service already started above the raising line would leak. The outbox open
+    (which can raise: a bad path, a missing signing key) now runs before SIEM
+    export starts, not after, so a refusal here has nothing above it to leak.
+    """
+    from fastapi.testclient import TestClient
+
+    from aegis.proxy.app import create_app
+
+    app = create_app(
+        _settings(
+            tmp_path,
+            terminal_outbox_enabled=True,
+            signing_key="",
+            siem_url="https://siem.example/collector",
+            siem_spool_path=tmp_path / "siem.sqlite3",
+        )
+    )
+    with pytest.raises(RuntimeError, match="AEGIS_SIGNING_KEY"), TestClient(app):
+        pass
+    state = app.state.aegis
+    assert state.siem_exporter is not None  # constructed outside the lifespan
+    assert state.siem_exporter._thread is None  # never started
+
+
+@pytest.mark.parametrize("provider", ["openai", "anthropic"])
+async def test_the_real_app_spools_exactly_what_its_live_commit_signs(
+    tmp_path: Path, provider: str
+) -> None:
+    """Review note 9: the parity test above builds both sides from helpers. This one
+    drives the real /v1/chat/completions closure through a client disconnect and
+    replays the record the app itself spooled into a second ledger: the two nodes
+    must agree on everything but previews, markers and timestamp."""
+
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock
+
+    from aegis.proxy.app import create_app
+
+    app = create_app(
+        _settings(
+            tmp_path,
+            api_keys="sk-valid",
+            auth_disabled=False,
+            waf_strict_mode=False,
+            provider=provider,
+        )
+    )
+    state = app.state.aegis
+    spool = tmp_path / "spool.jsonl"
+    outbox = _open(spool)
+    state.terminal_outbox = outbox
+    state.terminal_handoff.attach_outbox(
+        outbox, landed=lambda sid: has_terminal_node(state.ledger, sid)
+    )
+
+    async def fake_openai(_path: str, _body: Any, extra_headers: Any = None) -> Any:
+        for _ in range(200):
+            yield b'data: {"choices":[{"delta":{"content":"x"}}]}\n', {"choices": [{}]}
+            await asyncio.sleep(0)
+
+    async def fake_anthropic(_body: Any, extra_headers: Any = None) -> Any:
+        delta = {"type": "content_block_delta", "delta": {"type": "text_delta", "text": "x"}}
+        for _ in range(200):
+            yield (
+                b"event: content_block_delta\ndata: " + json.dumps(delta).encode() + b"\n\n",
+                delta,
+            )
+            await asyncio.sleep(0)
+
+    forwarder = MagicMock()
+    forwarder.stream_sse = MagicMock(side_effect=fake_openai)
+    forwarder.stream_native_anthropic = MagicMock(side_effect=fake_anthropic)
+    forwarder.provider = SimpleNamespace(name=provider, supports_logprobs=False)
+    state.forwarder = forwarder
+
+    # A raw ASGI call whose send fails after the first body chunk: a client that
+    # went away mid-stream, delivered the way the server stack delivers it (the
+    # REG-D07 reproduction). httpx's ASGITransport buffers the whole response, so
+    # it cannot produce a teardown at all.
+    path = "/v1/chat/completions" if provider == "openai" else "/v1/messages"
+    request = {"model": "m", "messages": [{"role": "user", "content": "hi"}], "stream": True}
+    if provider == "anthropic":
+        request["max_tokens"] = 16
+    body = json.dumps(request).encode()
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "http",
+        "path": path,
+        "raw_path": path.encode(),
+        "query_string": b"",
+        "root_path": "",
+        "headers": [
+            (b"host", b"test"),
+            (b"content-type", b"application/json"),
+            (b"authorization", b"Bearer sk-valid"),
+            (b"content-length", str(len(body)).encode()),
+        ],
+        "client": ("127.0.0.1", 50000),
+        "server": ("test", 80),
+    }
+    delivered = False
+    statuses: list[int] = []
+
+    async def receive() -> dict[str, Any]:
+        nonlocal delivered
+        if not delivered:
+            delivered = True
+            return {"type": "http.request", "body": body, "more_body": False}
+        await asyncio.sleep(3600)
+        return {"type": "http.disconnect"}
+
+    async def send(message: dict[str, Any]) -> None:
+        if message["type"] == "http.response.start":
+            statuses.append(message["status"])
+        if message["type"] == "http.response.body" and message.get("body"):
+            raise OSError("client went away")
+
+    try:
+        with contextlib.suppress(Exception):
+            await app(scope, receive, send)
+        assert statuses == [200]
+        # The response generator the failed send abandoned is closed by asyncio's
+        # async-generator finalizer when it is collected — that aclose() is the
+        # teardown the handoff exists for. Collect it here, inside the test.
+        for _ in range(100):
+            gc.collect()
+            await asyncio.sleep(0.05)
+            if outbox.spooled == 1 and outbox.pending_count == 0:
+                break
+
+        assert outbox.spooled == 1, "the disconnect did not go through the spooling handoff"
+        [live] = [
+            n
+            for n in state.ledger.chain_snapshot()
+            if n.signature_meaning == "stream-terminal-evidence"
+        ]
+        pending = [
+            json.loads(line)
+            for line in spool.read_bytes().splitlines()
+            if b'"op":"pending"' in line
+        ]
+        assert len(pending) == 1
+        from aegis.proxy.terminal_outbox import OutboxEntry, _context_from, _summary_from
+
+        entry = OutboxEntry(
+            entry_id=pending[0]["id"],
+            context=_context_from(pending[0]["ctx"]),
+            summary=_summary_from(pending[0]["summary"]),
+        )
+        assert entry.context.state_id == live.state_id
+
+        replay_ledger = _ledger(tmp_path, "replay.wal")
+        replay_ledger.commit_forensic_summary(**entry.commit_kwargs())
+        [recovered] = _nodes_for(replay_ledger, live.state_id)
+        for field in (
+            "tenant_id",
+            "request_hash",
+            "response_hash",
+            "model",
+            "endpoint",
+            "token_trail_count",
+            "phi_scrubbed",
+            "scrub_method",
+            "signer_name",
+        ):
+            assert getattr(recovered, field) == getattr(live, field), field
+        live_params = dict(live.sampling_params)
+        recovered_params = dict(recovered.sampling_params)
+        live_status = live_params.pop("evidence_status")
+        recovered_status = recovered_params.pop("evidence_status")
+        assert live_status == "durable-terminal"
+        assert recovered_status == "recovered-terminal"
+        assert recovered_params == live_params
+        replay_ledger.close()
+    finally:
+        outbox.close()
+        state.ledger.close()

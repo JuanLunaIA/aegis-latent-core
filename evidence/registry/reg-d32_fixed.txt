@@ -133,9 +133,130 @@ tests/test_config_surface_inert_fields.py: passes (the three settings are read).
   - Single-process; relies on the WAL's single-writer discipline.
 
 === Independent review ===
-A read-only ledger-commit-auditor review was commissioned on the change before
-this commit and had not returned when the branch was pushed (the registry's
-battery and closure conditions were met without it). Its findings, and what
-was done about each, are appended below by a follow-up commit on the pull
-request; until that section exists, this row's evidence is the tests, the
-controls and the battery recorded above.
+A read-only ledger-commit-auditor review was commissioned before the REG-D32
+commit. It returned after 0b68a31 and f60f45e had landed, so what it reviewed
+is the committed code (the registry row said "before this commit"; that is
+corrected in the row). It ran the outbox, crypto_audit and shredding tests
+(78 passed), ruff (clean) and mypy --strict aegis (clean), and probed the real
+code from the scratchpad. Verdict: no blockers, five SHOULD-FIX defects, four
+of them reproduced by probes, plus four notes. Every SHOULD-FIX is fixed in
+the follow-up commit; what was done with each note is stated below.
+
+--- Findings and what was done ---
+1. SHOULD-FIX — the spool was unauthenticated and replay signed whatever it
+   held: write access to the WAL volume became the ability to have the gateway
+   key sign an arbitrary record. Separately, a mistyped record (probe P6: the
+   hash as a list) raised TypeError inside the ledger lock, latched
+   signing_failed, stayed pending, and so 503'd every start.
+   FIXED:
+   - Every spool line carries an HMAC-SHA256 over its canonical JSON
+     (sort_keys, compact separators, allow_nan=False) under
+     HMAC(signing_key, b"aegis-terminal-outbox-mac-v1") (derive_mac_key).
+     AEGIS_TERMINAL_OUTBOX_ENABLED now refuses to start without
+     AEGIS_SIGNING_KEY.
+   - A line that fails the MAC, the strict per-field typing (_context_from,
+     _summary_from) or the record version is quarantined, never replayed.
+   - commit_forensic_summary type-checks every string field, the digest pair
+     (str, 64 lowercase hex; non-bool int in [0, 1 MiB]) and response_hash
+     before the lock; a malformed value is a ValueError and the fault state
+     stays "healthy" (asserted).
+   Tests: test_a_forged_or_foreign_line_is_quarantined_never_replayed,
+   test_an_authenticated_line_with_wrong_types_is_quarantined[4 params],
+   test_the_digest_form_is_validated_before_the_lock[9 params],
+   test_enabling_the_outbox_without_a_signing_key_refuses_startup.
+2. SHOULD-FIX — after a torn tail the next record was lost (probe P1: spooled,
+   then pending [] after reopen). FIXED: open() appends a newline when the file
+   does not end with one, before anything else, and the torn fragment is
+   quarantined. Tests: test_a_torn_tail_is_quarantined_and_the_next_record_is_not_lost,
+   test_a_torn_tail_is_newline_isolated_even_if_compaction_fails.
+3. SHOULD-FIX — compaction silently erased lines it could not parse, including
+   another record version after a downgrade (probe P7). FIXED: rejected lines
+   are appended to <spool>.quarantine (0600) on open, and only then may the
+   spool be compacted. Test:
+   test_another_record_version_survives_compaction_in_quarantine.
+4. SHOULD-FIX — terminal_outbox_max_bytes below 1 MiB switched the outbox off
+   for good (probe P2: 103 accepted, then every one refused, across restarts).
+   FIXED: compaction triggers at max(1, min(1 MiB, max_bytes // 2)), at open,
+   in mark_done, and in record() before the size check. Test:
+   test_a_small_spool_keeps_accepting_records.
+5. SHOULD-FIX — a failure after the ledger commit (e.g. reservation.finalize())
+   left a landed node pending, so a restart past the retained window could
+   commit it twice (probes P3/P4). FIXED: on failure, the worker asks the
+   ledger (has_terminal_node, wired as attach_outbox(..., landed=...)) and
+   marks the record done when its node is already there. Test:
+   test_a_node_that_landed_is_done_even_if_a_later_step_fails.
+6. NOTE — the "recovered" label was caller-chosen and unbound. DONE in code:
+   the evidence_status parameter is gone; the ledger derives it from the
+   request form, and RECOVERED_TERMINAL_MEANING is reserved to the digest form
+   (and required by it). DOCUMENTED as a residual in CLM-106: evidence_status
+   sits in sampling_params, outside the signature; the signed marker is
+   signature_meaning, which AuditNodeOut does not expose. Exposing it changes
+   the /audit JSON contract and is left to its owner.
+7. NOTE — the module docstring's shredding sentence was wrong. CORRECTED: the
+   docstring, CLM-106 and BOUNDARIES.md now say the spool keeps plain request
+   and response digests, tenant labels and signer names until compaction, and
+   that crypto_shred does not reach it. The reviewer's related pre-existing
+   point — stream-terminal nodes keep a plain SHA-256 under shredding (P5) —
+   is outside REG-D32 and is registered separately as REG-D44.
+8. NOTE — event-loop and shutdown behaviour. The shutdown race is FIXED: sync()
+   fsyncs a dup()'d descriptor owned and closed by the worker thread, so
+   close() cannot close the descriptor under an in-flight fsync or let its
+   number be reused. RESIDUAL, recorded here: compact() still performs two
+   synchronous fsyncs (temp file, directory) on the event-loop thread, once
+   per compaction threshold, and _load's quarantine append is synchronous at
+   startup (before traffic).
+9. NOTE — what the tests did not prove. ADDED:
+   - test_the_real_app_spools_exactly_what_its_live_commit_signs[openai|anthropic]
+     drives the real app to a teardown handoff (raw ASGI send failure, then
+     the async-generator finalizer) and checks that the spooled record, replayed,
+     matches the node the live closure committed, for both providers (this
+     also pins the Anthropic handler's append_stream_window_method=False).
+   - The torn-tail, corrupt-through-compaction, small max_bytes and
+     non-string digest cases are the tests named under 1-4.
+   - "Off by default" now also asserts, inside the running app, that no outbox
+     was opened (app.state.aegis.terminal_outbox is None), not just that no
+     file exists. Separately, the pending gauge's help text and
+     MONITORING_ALERTING.md now say it reads 0 when disabled (the reviewer
+     found "absent otherwise" while it exported 0); that wording is not tested.
+   Not added: duplicates beyond the retained window (the documented residual,
+   not a defect) and replay with shredding on (REG-D44's scope).
+
+--- Controls after the fixes (scratchpad d32_controls_v2.txt) ---
+Each control mutates one mechanism in a copy of the source, runs
+tests/test_terminal_outbox.py, and restores the file (cmp byte-identical).
+CONTROL dedupe disabled: 1 failed, 33 passed
+   failed: test_a_crash_between_commit_and_done_marker_is_not_committed_twice
+CONTROL fault-state guard removed: 1 failed, 33 passed
+   failed: test_replay_refuses_a_ledger_that_is_not_healthy
+CONTROL submit does not spool: 7 failed, 27 passed
+   (5 handoff tests + the real-app parity test for both providers)
+CONTROL worker never marks done: 2 failed, 32 passed
+CONTROL MAC not verified: 1 failed, 33 passed
+   failed: test_a_forged_or_foreign_line_is_quarantined_never_replayed
+CONTROL rejected lines not quarantined: 3 failed, 31 passed
+CONTROL landed check ignored: 1 failed, 33 passed
+   failed: test_a_node_that_landed_is_done_even_if_a_later_step_fails
+CONTROL ledger string check removed: 1 failed, 33 passed
+   failed: test_the_digest_form_is_validated_before_the_lock[kwargs8-signer_name]
+CONTROL recovered meaning not reserved: 1 failed, 33 passed
+   failed: test_the_digest_form_is_validated_before_the_lock[kwargs7-reserved]
+CONTROL torn tail not isolated (with the newline-guard test): 1 failed, 34 passed
+   failed: test_a_torn_tail_is_newline_isolated_even_if_compaction_fails
+CONTROL record-time compaction removed AND threshold fixed at 1 MiB:
+   1 failed, 34 passed — failed: test_a_small_spool_keeps_accepting_records
+Honest negatives, kept on the record:
+  - "torn tail not isolated" alone, against the 34-test file, did not fail:
+    open-time compaction rewrote the file and masked the missing newline guard.
+    That is why the newline-guard test (compaction disabled) was added; with it
+    the control fails, as shown above.
+  - "record-time compaction removed" alone (35 passed) and "threshold fixed at
+    1 MiB" alone (34 passed) do not fail: each guard covers the other's case.
+    Only removing both makes the small-spool test fail. Both stay, as
+    defence in depth; neither is claimed as independently tested.
+
+--- Regression after the fixes ---
+tests/test_terminal_outbox.py: 35 passed.
+tests/test_terminal_outbox.py + test_crypto_audit*.py + test_streaming_teardown.py
++ test_proxy_streaming.py: 121 passed in 34.42s.
+mypy --strict aegis and ruff on the changed files: clean (the full battery for
+the follow-up commit is recorded in the registry session log).

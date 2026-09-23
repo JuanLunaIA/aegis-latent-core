@@ -17,6 +17,7 @@ These tests check the surfaces, and the retained artifacts the docs now cite:
 Run: ``pytest tests/test_benchmark_claim_labels.py``.
 """
 
+# Copyright (c) 2026 Juan Luna. All rights reserved.
 # Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 # Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
