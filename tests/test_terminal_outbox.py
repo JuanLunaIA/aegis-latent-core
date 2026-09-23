@@ -650,6 +650,10 @@ def test_the_digest_form_is_validated_before_the_lock(
         ({"redaction_hits": {1: 5}}, "redaction_hits"),
         ({"redaction_hits": {"pii": True}}, "redaction_hits"),
         ({"redaction_hits": {"pii": -1}}, "redaction_hits"),
+        ({"redaction_hits": []}, "redaction_hits"),
+        ({"redaction_hits": [("pii", 1)]}, "redaction_hits"),
+        ({"redaction_hits": "not-a-dict"}, "redaction_hits"),
+        ({"redaction_hits": 5}, "redaction_hits"),
     ],
 )
 def test_a_malformed_scalar_or_redaction_field_raises_value_error(
@@ -661,7 +665,14 @@ def test_a_malformed_scalar_or_redaction_field_raises_value_error(
     ``TypeError`` instead of the ``ValueError`` the docstring promises every
     field gets; ``final_marker_included`` had no check at all; and
     ``redaction_hits``' ``isinstance(value, int)`` let a ``bool`` through and
-    never checked that a key was a ``str``. Mirrors
+    never checked that a key was a ``str``. A second Sourcery round on the
+    fix for this same PR found ``redaction_hits`` itself was never checked to
+    be a ``dict`` before ``dict(redaction_hits or {})``: a falsy non-dict
+    (``[]``, ``0``) silently became ``{}``, an iterable of pairs
+    (``[("pii", 1)]``) was silently accepted despite violating the annotated
+    ``dict[str, int]``, and any other non-dict raised whatever ``TypeError``
+    or ``ValueError`` the built-in ``dict()`` call happened to raise instead
+    of the documented one. Mirrors
     ``test_the_digest_form_is_validated_before_the_lock``'s shape."""
 
     ledger = _ledger(tmp_path)
@@ -780,8 +791,10 @@ def test_a_later_startup_failure_still_closes_the_outbox(
     leaves an already-open outbox fd with nothing to close it, for the same
     underlying reason: Starlette skips this function's whole post-``yield``
     half when startup raises. ``lifespan`` now wraps that whole span in an
-    ``ExitStack`` that closes the outbox on any exception, not just the open()
-    call. This simulates the handoff worker's own (unconditional, config-free)
+    ``AsyncExitStack`` that stops every resource it started on any exception,
+    not just the outbox (see ``test_a_much_later_startup_failure_stops_the_
+    handoff_worker_too`` below for a resource started after the outbox).
+    This simulates the handoff worker's own (unconditional, config-free)
     start raising, since it is the very next statement after the outbox is
     wired into ``state``.
     """
@@ -799,7 +812,46 @@ def test_a_later_startup_failure_still_closes_the_outbox(
         pass
     state = app.state.aegis
     assert state.terminal_outbox is not None  # wired into state before the failure
-    assert state.terminal_outbox._fd is None  # ExitStack closed it on the way out
+    assert state.terminal_outbox._fd is None  # AsyncExitStack closed it on the way out
+
+
+def test_a_much_later_startup_failure_stops_the_handoff_worker_too(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sourcery review on this PR: the fix above only registered a cleanup
+    callback for the outbox. Once ``state.terminal_handoff.start()`` succeeds,
+    several more steps still run before ``yield`` (LSM, vault, the forwarder,
+    gossip, seccomp); any of those raising left the handoff worker — and
+    whatever else had already started — running with nothing to stop it, for
+    the same reason: Starlette skips this function's whole post-``yield``
+    shutdown when startup raises. ``lifespan`` now registers a stop callback
+    for every resource right after it starts, not just the outbox. Simulates
+    the forwarder's own ``start()`` raising, well after the handoff worker is
+    already running, and asserts the worker was stopped anyway.
+    """
+    from fastapi.testclient import TestClient
+
+    from aegis.proxy.app import create_app
+    from aegis.proxy.forwarder import LLMForwarder
+
+    stopped = False
+    real_stop = TerminalCommitHandoff.stop
+
+    async def _spy_stop(self: TerminalCommitHandoff, *, timeout: float) -> None:
+        nonlocal stopped
+        stopped = True
+        await real_stop(self, timeout=timeout)
+
+    def _boom(self: LLMForwarder) -> None:
+        raise RuntimeError("simulated forwarder startup failure")
+
+    monkeypatch.setattr(TerminalCommitHandoff, "stop", _spy_stop)
+    monkeypatch.setattr(LLMForwarder, "start", _boom)
+
+    app = create_app(_settings(tmp_path, terminal_outbox_enabled=True))
+    with pytest.raises(RuntimeError, match="simulated forwarder startup failure"), TestClient(app):
+        pass
+    assert stopped  # the handoff worker, started long before the forwarder, was stopped too
 
 
 @pytest.mark.parametrize("provider", ["openai", "anthropic"])

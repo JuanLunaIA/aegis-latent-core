@@ -16,7 +16,7 @@ import time
 import uuid
 from collections import OrderedDict
 from collections.abc import AsyncIterator
-from contextlib import ExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass
 from datetime import timedelta
 from secrets import randbelow
@@ -1101,20 +1101,61 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
         observability.setup_otel(service_name="aegis-proxy")
 
+        async def _stop_siem_exporter_on_startup_failure() -> None:
+            # Only ever registered from the `if state.siem_exporter is not None:`
+            # block below, right after `.start()` — the assert restates that for
+            # the type checker, which cannot see the registration site.
+            assert state.siem_exporter is not None
+            try:
+                await asyncio.to_thread(state.siem_exporter.shutdown, 5.0, drain=False)
+            except TimeoutError:
+                logger.error("SIEM exporter did not stop before startup-failure cleanup deadline")
+
+        async def _stop_s3_archiver_on_startup_failure() -> None:
+            # Only ever registered from the `if state.s3_archiver is not None:`
+            # block below, right after `.start()`; see the assert above.
+            assert state.s3_archiver is not None
+            if state.archive_task is not None:
+                state.archive_task.cancel()
+                await asyncio.gather(state.archive_task, return_exceptions=True)
+            await state.s3_archiver.close(drain=True)
+
+        async def _stop_analysis_workers_on_startup_failure() -> None:
+            for worker in state.analysis_workers:
+                worker.cancel()
+            if not state.analysis_workers:
+                return
+            try:
+                async with asyncio.timeout(cfg.analysis_shutdown_timeout_seconds):
+                    await asyncio.gather(*state.analysis_workers, return_exceptions=True)
+            except TimeoutError:
+                pending_workers = [
+                    worker.get_name() for worker in state.analysis_workers if not worker.done()
+                ]
+                logger.error(
+                    "analysis worker shutdown exceeded %.3fs; pending=%s",
+                    cfg.analysis_shutdown_timeout_seconds,
+                    pending_workers,
+                )
+
         # REG-D32 (opt-in): open the durable outbox and replay what a previous
         # process left pending, before the handoff starts and before traffic.
         # Replay refuses to extend a ledger whose fault state is not healthy.
         #
-        # `startup_cleanup` closes the outbox if ANYTHING from here through
-        # `app.state.aegis = state` raises — not just this block. A raise
-        # anywhere before `yield` makes `__aenter__` fail, and Starlette then
-        # never runs this function's post-``yield`` shutdown half, so an
-        # already-open outbox fd would otherwise leak silently (an earlier fix,
-        # REG-D48, only covered `TerminalOutbox.open()` itself raising).
-        # `pop_all()` below disarms the callback once startup has fully
-        # succeeded; ordinary shutdown then owns closing the outbox, in the
+        # `startup_cleanup` stops every resource started below if ANYTHING from
+        # here through `app.state.aegis = state` raises — not just the outbox.
+        # A raise anywhere before `yield` makes `__aenter__` fail, and Starlette
+        # then never runs this function's post-``yield`` shutdown half, so a
+        # resource already started above the raising line would otherwise stay
+        # live with nothing to stop it (REG-D48 covered only the outbox's own
+        # `open()` raising; REG-D55 covered only the outbox itself for anything
+        # raising after that). Each resource below registers its own stop
+        # callback right after it starts, so the ``AsyncExitStack`` unwinds
+        # every one of them, in reverse start order, before the exception
+        # propagates. `pop_all()` disarms every callback once startup has fully
+        # succeeded; ordinary shutdown then owns stopping everything, in the
         # post-``yield`` half.
-        with ExitStack() as startup_cleanup:
+        async with AsyncExitStack() as startup_cleanup:
             if cfg.terminal_outbox_enabled:
                 outbox_path = cfg.terminal_outbox_path or cfg.wal_path.with_name(
                     cfg.wal_path.name + ".terminal-outbox.jsonl"
@@ -1150,22 +1191,28 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 state.terminal_handoff.attach_outbox(
                     outbox, landed=lambda state_id: has_terminal_node(state.ledger, state_id)
                 )
+                startup_cleanup.callback(state.terminal_handoff.attach_outbox, None)
                 observability.TERMINAL_OUTBOX_PENDING.set_function(lambda: outbox.pending_count)
 
             if state.siem_exporter is not None:
                 state.siem_exporter.start()
+                startup_cleanup.push_async_callback(_stop_siem_exporter_on_startup_failure)
             if state.s3_archiver is not None:
                 await state.s3_archiver.start()
                 state.archive_task = asyncio.create_task(
                     _archive_finalized_segments_worker(),
                     name="aegis-finalized-segment-archive",
                 )
+                startup_cleanup.push_async_callback(_stop_s3_archiver_on_startup_failure)
 
             # The terminal-evidence handoff worker is started here, on purpose:
             # this context is not inside any request's task group, so commits it
             # runs for a torn-down stream survive the cancellation Starlette
             # delivers to the response (AUD-03 / REG-D07).
             state.terminal_handoff.start()
+            startup_cleanup.push_async_callback(
+                state.terminal_handoff.stop, timeout=cfg.analysis_shutdown_timeout_seconds
+            )
 
             # NOTE: the seccomp filter is applied LAST in this startup sequence
             # (just before `yield`), NOT here.  The async Rust forwarder's Tokio
@@ -1227,11 +1274,13 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 forwarder_cfg, provider=provider, egress_guard=egress_guard
             )
             await state.forwarder.start()
+            startup_cleanup.push_async_callback(state.forwarder.stop)
             state.sessions = SessionLifecycleManager(max_sessions=4_096)
             state.analysis_workers = [
                 asyncio.create_task(_analysis_worker(state), name=f"aegis-analysis-{index}")
                 for index in range(cfg.analysis_worker_count)
             ]
+            startup_cleanup.push_async_callback(_stop_analysis_workers_on_startup_failure)
 
             # Legacy SPIFFE header authentication is intentionally not activated.
             # Principal-first mTLS accepts direct TLS state or headers from an
@@ -1254,6 +1303,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     "gossip was enabled but could not start; continuing without it: %s", exc
                 )
                 state.gossip = None
+            if state.gossip is not None:
+                startup_cleanup.push_async_callback(state.gossip.aclose)
 
             # ── Seccomp lockdown (applied LAST, after all subsystems init) ──────
             # Warm the Rust async runtime so its worker pool exists before we forbid

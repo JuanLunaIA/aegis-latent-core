@@ -1723,6 +1723,8 @@ class CryptographicAuditLedger:
             raise ValueError("response_preview exceeds max_forensic_bytes")
         if terminal_outcome not in allowed_outcomes:
             raise ValueError("unsupported terminal_outcome")
+        if redaction_hits is not None and not isinstance(redaction_hits, dict):
+            raise ValueError("redaction_hits must be a dictionary")
         hits = dict(redaction_hits or {})
         if any(
             not isinstance(key, str)

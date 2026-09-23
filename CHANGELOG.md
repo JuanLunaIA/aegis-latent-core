@@ -286,6 +286,9 @@ addressed. Fixed on the branch restarted from `main` afterward.
   check at all; `redaction_hits` never confirmed its keys were strings and
   let a `bool` value through as a count. All five now get an explicit
   `isinstance` check, following the file's own existing `request_size` idiom.
+  A second review round on the same PR found `redaction_hits` itself was
+  never checked to be a `dict` before conversion; fixed with one more
+  `isinstance` check ahead of it.
 - **REG-D55** — `REG-D48` closed the leak for the terminal outbox's own
   `open()` call raising, but not for anything raising *after* a successful
   open — `replay_pending`, SIEM/S3 startup, the handoff worker, LSM, vault,
@@ -293,7 +296,12 @@ addressed. Fixed on the branch restarted from `main` afterward.
   entire post-`yield` shutdown half by the same `@asynccontextmanager`
   mechanics. `lifespan` now wraps that whole startup span in a
   `contextlib.ExitStack` that closes the outbox on any exception, disarmed
-  only once startup fully succeeds.
+  only once startup fully succeeds. A second review round on the same PR
+  found the same gap one layer further out — once the handoff worker itself
+  started, nothing stopped *it* (or the forwarder, SIEM exporter, S3
+  archiver, analysis workers, or gossip mesh) if a later step then raised.
+  `ExitStack` became `contextlib.AsyncExitStack`, with a stop callback
+  registered for every one of those resources right after it starts.
 
 ## [5.0.0] — unreleased source target
 

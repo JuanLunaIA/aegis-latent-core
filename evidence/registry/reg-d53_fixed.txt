@@ -121,6 +121,37 @@ Verified:
     tests/test_proxy_streaming.py tests/test_signature_scheme_binding.py
     -> 144 passed
 
+--- Second Sourcery round on the same still-open PR (now #198) ---
+
+Finding (Sourcery, blocking, aegis/core/crypto_audit.py:1726):
+  `redaction_hits` itself was never checked to be a dict before
+  `dict(redaction_hits or {})`. A falsy non-dict (`[]`, `0`, `False`)
+  silently became `{}` and was accepted; an iterable of (key, value)
+  pairs (`[("pii", 1)]`) was silently converted by `dict()` and accepted
+  despite violating the annotated `dict[str, int]`; any other non-dict
+  raised whatever TypeError/ValueError the built-in `dict()` call
+  happened to raise, not the documented one.
+
+Fix: one check ahead of the conversion --
+
+    if redaction_hits is not None and not isinstance(redaction_hits, dict):
+        raise ValueError("redaction_hits must be a dictionary")
+    hits = dict(redaction_hits or {})
+
+Four more parametrized cases added to
+test_a_malformed_scalar_or_redaction_field_raises_value_error: `[]`,
+`[("pii", 1)]`, `"not-a-dict"`, `5` (all matching "redaction_hits").
+
+Verified:
+  mypy --strict aegis -> Success: no issues found in 208 source files
+  ruff check aegis/core/crypto_audit.py -> All checks passed
+  ruff format --check aegis/core/crypto_audit.py -> already formatted
+  HERMES_SANDBOX=true pytest -q tests/test_terminal_outbox.py
+    tests/test_crypto_audit_branch.py tests/test_crypto_audit_rollover.py
+    tests/test_crypto_audit_scheme_binding.py tests/test_crypto_audit_wal_json.py
+    tests/test_proxy_streaming.py tests/test_signature_scheme_binding.py
+    -> 149 passed
+
 === REG-D55 — terminal-outbox fd leak survives REG-D48's own fix ===
 
 Finding (Sourcery, blocking, aegis/proxy/app.py:1129):
@@ -189,9 +220,114 @@ Verified:
     line-length limit; `ruff format` rewrapped them, no logic touched)
   HERMES_SANDBOX=true pytest -q tests/test_terminal_outbox.py -> 51 passed
 
+--- Second Sourcery round on the same still-open PR (now #198) ---
+
+Finding (Sourcery, blocking, aegis/proxy/app.py:1135-1285):
+  The ExitStack fix above only registered a cleanup callback for the
+  outbox. Once state.terminal_handoff.start() succeeded, several more
+  startup steps still followed before `yield` (LSM, vault, the forwarder,
+  gossip, seccomp); any of those raising left the already-running handoff
+  worker -- and whatever else had already started (SIEM exporter thread,
+  S3 archiver worker plus its archive task, forwarder, analysis worker
+  tasks, gossip mesh) -- with nothing to stop them, for the same
+  underlying reason one layer further out: Starlette still never runs
+  lifespan's post-`yield` shutdown half.
+
+Fix (aegis/proxy/app.py, lifespan): switched `ExitStack` to
+`contextlib.AsyncExitStack` (import changed to `from contextlib import
+AsyncExitStack, asynccontextmanager`; the `with` became `async with`) and
+registered a stop callback for every resource right after it starts, not
+just the outbox:
+
+  - outbox: `startup_cleanup.callback(outbox.close)` (unchanged, right
+    after open()); a second callback,
+    `startup_cleanup.callback(state.terminal_handoff.attach_outbox,
+    None)`, added right after attach_outbox() succeeds.
+  - SIEM exporter: `startup_cleanup.push_async_callback(
+    _stop_siem_exporter_on_startup_failure)` right after `.start()` -- a
+    small async helper mirroring the post-`yield` shutdown's
+    `asyncio.to_thread(state.siem_exporter.shutdown, 5.0, drain=False)`
+    with the same TimeoutError handling.
+  - S3 archiver + its archive task: one
+    `push_async_callback(_stop_s3_archiver_on_startup_failure)` after
+    both are created -- cancels+gathers the archive task, then closes
+    the archiver with drain=True, mirroring the post-`yield` order.
+  - terminal_handoff worker:
+    `push_async_callback(state.terminal_handoff.stop,
+    timeout=cfg.analysis_shutdown_timeout_seconds)` right after
+    `.start()`.
+  - forwarder: `push_async_callback(state.forwarder.stop)` right after
+    `await state.forwarder.start()`.
+  - analysis workers: `push_async_callback(
+    _stop_analysis_workers_on_startup_failure)` right after they are
+    created -- cancels each, then gathers with the same timeout-and-log
+    behaviour as the post-`yield` shutdown.
+  - gossip: `if state.gossip is not None:
+    push_async_callback(state.gossip.aclose)`, guarded the same way the
+    post-`yield` shutdown already guards it.
+
+Each helper is a plain async closure defined at the top of `lifespan`
+(so it can reach `state`/`cfg`/`logger` without arguments); the two that
+read a plain-Optional attribute (`state.siem_exporter`,
+`state.s3_archiver`) open with an `assert ... is not None` restating,
+for the type checker, that they are only ever registered from the
+`if ... is not None:` block right above them -- mypy cannot see that
+invariant across the closure boundary on its own.
+
+`AsyncExitStack` unwinds every registered callback -- sync via
+`.callback()`, async via `.push_async_callback()` -- in one LIFO
+sequence: since each resource registers its stop callback in the same
+order it starts, the unwind order is the reverse of the start order
+(gossip stops first, the outbox last), which also happens to keep
+terminal_handoff.stop() running before outbox.close() (handoff was
+registered after the outbox, so it unwinds first) -- the worker that
+might still be flushing a queued commit through the outbox is stopped
+before the outbox it writes to is closed. `startup_cleanup.pop_all()`
+(unchanged call, now on an AsyncExitStack) still disarms every
+registered callback once startup fully succeeds.
+
+New test: tests/test_terminal_outbox.py::
+  test_a_much_later_startup_failure_stops_the_handoff_worker_too --
+  monkeypatches LLMForwarder.start to raise (well after the handoff
+  worker is already running) and TerminalCommitHandoff.stop to a spy
+  that still calls through to the real implementation; asserts the spy
+  was called.
+
+Verified:
+  python3 -c "import ast; ast.parse(open('aegis/proxy/app.py').read())"
+    -> no error
+  mypy --strict aegis -> Success: no issues found in 208 source files
+    (two union-attr errors surfaced first on the two closures reading
+    Optional attributes; fixed by the asserts described above)
+  ruff check aegis/proxy/app.py -> All checks passed
+  ruff format --check aegis/proxy/app.py -> already formatted
+  HERMES_SANDBOX=true pytest -q tests/test_terminal_outbox.py -> 56 passed
+
 === Full-suite confirmation ===
 
   HERMES_SANDBOX=true pytest -q -n auto (this branch, restarted from
-    origin/main 9d67efa plus these three fixes)
-    -> 7,417 passed, 39 skipped, 0 failed
+    origin/main 9d67efa plus these three fixes, then the second Sourcery
+    round on top)
+    -> first run: 3 failed, 7419 passed, 39 skipped. Two of the three
+       (test_compliance_wording_gate.py::test_the_documentation_surfaces_
+       pass_the_gate_after_the_wording_fix,
+       test_documentation_verifiers.py::
+       test_repository_corpus_passes_every_structural_check) were local
+       contamination, not a defect in this diff: both assertions named
+       the exact path
+       `.claude/worktrees/agent-ad7a51df34d88ccd1/docs/STYLE_GUIDE.md` —
+       a full nested checkout the corpus walker picked up from an
+       unrelated, still-running background audit agent's isolated
+       worktree (launched from this same session, gitignored the same
+       day this PR started, in a commit already on `main`). Not present
+       in a clean CI checkout. The third, real:
+       docs/MODULE_INVENTORY.md was stale (the new test's
+       `from aegis.proxy.forwarder import LLMForwarder` import added a
+       reachability edge); fixed by running
+       `python scripts/generate_module_inventory.py` (one line changed:
+       forwarder.py's test count, "+7 more" -> "+8 more").
+    -> after the module-inventory fix: targeted re-run of all three
+       -> test_module_inventory_current.py: 5 passed. The other two:
+          left red locally (same contamination); CI's clean checkout is
+          the authoritative confirmation for this pair.
   git diff --check -> clean
