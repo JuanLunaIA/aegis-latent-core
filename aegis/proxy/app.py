@@ -76,7 +76,13 @@ from aegis.proxy.streaming import (
     TerminalCommitHandoff,
     guarded_stream,
 )
-from aegis.proxy.terminal_outbox import TerminalOutbox, TerminalReplayContext, replay_pending
+from aegis.proxy.terminal_outbox import (
+    TerminalOutbox,
+    TerminalReplayContext,
+    has_terminal_node,
+    replay_pending,
+)
+from aegis.proxy.terminal_outbox import derive_mac_key as derive_outbox_mac_key
 from aegis.proxy.waf import AegisWAF
 from aegis.storage.s3_worm import Boto3S3WormProvider, ObjectLockMode, S3WormArchiver
 from aegis.storage.segment_manifest import archive_finalized_segment
@@ -1094,23 +1100,31 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             format="%(asctime)s %(levelname)s %(name)s — %(message)s",
         )
         observability.setup_otel(service_name="aegis-proxy")
-        if state.siem_exporter is not None:
-            state.siem_exporter.start()
-        if state.s3_archiver is not None:
-            await state.s3_archiver.start()
-            state.archive_task = asyncio.create_task(
-                _archive_finalized_segments_worker(),
-                name="aegis-finalized-segment-archive",
-            )
 
         # REG-D32 (opt-in): open the durable outbox and replay what a previous
         # process left pending, before the handoff starts and before traffic.
         # Replay refuses to extend a ledger whose fault state is not healthy.
+        # Deliberately BEFORE the SIEM/S3 startup below: this step can raise
+        # (a bad path, a missing signing key), and __aenter__ raising means
+        # Starlette never runs this function's post-``yield`` shutdown half —
+        # nothing started above this point needs cleanup on that failure.
         if cfg.terminal_outbox_enabled:
             outbox_path = cfg.terminal_outbox_path or cfg.wal_path.with_name(
                 cfg.wal_path.name + ".terminal-outbox.jsonl"
             )
-            outbox = TerminalOutbox.open(outbox_path, max_bytes=cfg.terminal_outbox_max_bytes)
+            if not cfg.signing_key:
+                # The spool is authenticated with a key derived from the signing
+                # key; one nobody can authenticate must never be replayed, since
+                # replay signs what it reads.
+                raise RuntimeError(
+                    "AEGIS_TERMINAL_OUTBOX_ENABLED requires AEGIS_SIGNING_KEY: the outbox "
+                    "spool is authenticated with a key derived from it"
+                )
+            outbox = TerminalOutbox.open(
+                outbox_path,
+                mac_key=derive_outbox_mac_key(cfg.signing_key),
+                max_bytes=cfg.terminal_outbox_max_bytes,
+            )
             report = await replay_pending(
                 outbox, ledger=state.ledger, commit=_commit_stream_evidence
             )
@@ -1125,8 +1139,19 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     report.refused_fault_state or "-",
                 )
             state.terminal_outbox = outbox
-            state.terminal_handoff.attach_outbox(outbox)
+            state.terminal_handoff.attach_outbox(
+                outbox, landed=lambda state_id: has_terminal_node(state.ledger, state_id)
+            )
             observability.TERMINAL_OUTBOX_PENDING.set_function(lambda: outbox.pending_count)
+
+        if state.siem_exporter is not None:
+            state.siem_exporter.start()
+        if state.s3_archiver is not None:
+            await state.s3_archiver.start()
+            state.archive_task = asyncio.create_task(
+                _archive_finalized_segments_worker(),
+                name="aegis-finalized-segment-archive",
+            )
 
         # The terminal-evidence handoff worker is started here, on purpose:
         # this context is not inside any request's task group, so commits it

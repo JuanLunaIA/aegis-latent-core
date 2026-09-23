@@ -141,6 +141,9 @@ logger = logging.getLogger(__name__)
 msvcrt: Any = _msvcrt_module
 
 MAX_PAYLOAD_BYTES: int = 1_048_576  # 1 MiB hard cap
+# Reserved for a stream-terminal node replayed from the durable outbox (REG-D32);
+# only commit_forensic_summary's digest form may carry it.
+RECOVERED_TERMINAL_MEANING = "stream-terminal-evidence-recovered"
 
 # Schema version of the ``<wal>.mmr.state`` peak-set checkpoint. Bump only for
 # an incompatible field change: an unrecognised version is ignored and the WAL
@@ -1618,7 +1621,6 @@ class CryptographicAuditLedger:
         signer_name: str = "",
         signature_meaning: str = "stream-terminal-evidence",
         request_digest: tuple[str, int] | None = None,
-        evidence_status: str = "durable-terminal",
     ) -> AuditNode:
         """Commit one terminal record for an incrementally hashed response.
 
@@ -1627,7 +1629,12 @@ class CryptographicAuditLedger:
 
         Exactly one of ``request_bytes`` and ``request_digest`` is given. The
         digest form — ``(sha256 hex, size)`` with no request preview — is for
-        replaying a record that was spooled without its content (REG-D32).
+        replaying a record that was spooled without its content (REG-D32). The
+        form decides the labels: the digest form must be signed as
+        ``RECOVERED_TERMINAL_MEANING`` and is stored as ``recovered-terminal``;
+        the byte form may not use that meaning and is ``durable-terminal``.
+        Every field is type-checked here, before the lock, so a malformed value
+        is refused rather than failing inside signing and latching a fault.
         """
         allowed_outcomes = {
             "complete",
@@ -1640,26 +1647,60 @@ class CryptographicAuditLedger:
             "privacy_failure",
             "shutdown_cancelled",
         }
+        for name, value in (
+            ("state_id", state_id),
+            ("tenant_id", tenant_id),
+            ("model", model),
+            ("endpoint", endpoint),
+            ("scrub_method", scrub_method),
+            ("signer_name", signer_name),
+            ("signature_meaning", signature_meaning),
+            ("terminal_outcome", terminal_outcome),
+        ):
+            if not isinstance(value, str):
+                raise ValueError(f"{name} must be a string")
         if "\x00" in state_id:
             raise ValueError("state_id containing NULL byte is rejected")
         if (request_bytes is None) == (request_digest is None):
             raise ValueError("exactly one of request_bytes and request_digest is required")
         if request_bytes is not None:
+            if signature_meaning == RECOVERED_TERMINAL_MEANING:
+                raise ValueError("the recovered signature meaning is reserved for request_digest")
             if len(request_bytes) > MAX_PAYLOAD_BYTES:
                 raise ValueError("request_bytes exceeds 1 MiB hard cap")
             request_hash = sha256_hex(request_bytes)
             request_size = len(request_bytes)
             request_preview = request_bytes[: self.max_forensic_bytes]
-        elif request_digest is not None:
+            evidence_status = "durable-terminal"
+        else:
+            # request_digest is not None: exactly one of the two was checked above.
+            if signature_meaning != RECOVERED_TERMINAL_MEANING:
+                raise ValueError(
+                    "request_digest is recovery-only and must be signed as "
+                    f"{RECOVERED_TERMINAL_MEANING!r}"
+                )
+            if not isinstance(request_digest, tuple) or len(request_digest) != 2:
+                raise ValueError("request_digest must be a (hash, size) pair")
             request_hash, request_size = request_digest
-            if len(request_hash) != 64 or any(ch not in "0123456789abcdef" for ch in request_hash):
+            if (
+                not isinstance(request_hash, str)
+                or len(request_hash) != 64
+                or any(ch not in "0123456789abcdef" for ch in request_hash)
+            ):
                 raise ValueError("request_digest hash must be a lowercase SHA-256 hex digest")
-            if not 0 <= request_size <= MAX_PAYLOAD_BYTES:
-                raise ValueError("request_digest size must be within [0, 1 MiB]")
+            if (
+                isinstance(request_size, bool)
+                or not isinstance(request_size, int)
+                or not 0 <= request_size <= MAX_PAYLOAD_BYTES
+            ):
+                raise ValueError("request_digest size must be an integer within [0, 1 MiB]")
             request_preview = b""
-        if evidence_status not in {"durable-terminal", "recovered-terminal"}:
-            raise ValueError("unsupported evidence_status")
-        if len(response_hash) != 64 or any(ch not in "0123456789abcdef" for ch in response_hash):
+            evidence_status = "recovered-terminal"
+        if (
+            not isinstance(response_hash, str)
+            or len(response_hash) != 64
+            or any(ch not in "0123456789abcdef" for ch in response_hash)
+        ):
             raise ValueError("response_hash must be a lowercase SHA-256 hex digest")
         if response_size < 0 or token_count < 0:
             raise ValueError("response_size and token_count must be non-negative")

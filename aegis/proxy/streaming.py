@@ -114,6 +114,7 @@ class TerminalCommitHandoff:
         self._committed = 0
         self._dropped = 0
         self._outbox: TerminalOutbox | None = None
+        self._landed: Callable[[str], bool] | None = None
 
     @property
     def running(self) -> bool:
@@ -131,10 +132,24 @@ class TerminalCommitHandoff:
     def dropped(self) -> int:
         return self._dropped
 
-    def attach_outbox(self, outbox: TerminalOutbox | None) -> None:
-        """Spool every handoff that carries a replay context (REG-D32, opt-in)."""
+    def attach_outbox(
+        self,
+        outbox: TerminalOutbox | None,
+        *,
+        landed: Callable[[str], bool] | None = None,
+    ) -> None:
+        """Spool every handoff that carries a replay context (REG-D32, opt-in).
+
+        ``landed(state_id)`` reports whether the ledger already holds the node.
+        A commit callable does more than the ledger commit (metrics, rate-limit
+        settlement, a security event); when one of those later steps raises, the
+        node is already durable and its record must not be replayed as a second
+        one, so the record is marked done on the ledger's word, not the
+        callable's.
+        """
 
         self._outbox = outbox
+        self._landed = landed
 
     def start(self) -> None:
         """Start the worker.  Call from the app lifespan, outside any request."""
@@ -214,6 +229,18 @@ class TerminalCommitHandoff:
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
 
+    def _settle_after_failure(self, outbox: TerminalOutbox, spool_id: str) -> None:
+        entry = outbox.entry(spool_id)
+        if entry is None or self._landed is None:
+            return
+        try:
+            landed = self._landed(entry.context.state_id)
+        except Exception:
+            logger.exception("terminal outbox: could not check whether the node landed")
+            return
+        if landed:
+            outbox.mark_done(spool_id)
+
     async def _drain(self) -> None:
         while True:
             commit, summary, spool_id = await self._queue.get()
@@ -228,11 +255,14 @@ class TerminalCommitHandoff:
                 self._queue.task_done()
                 raise
             except Exception:
-                # A spooled record stays pending and is replayed at the next start.
                 observability.AUDIT_COMMIT_ERRORS.inc()
                 logger.exception(
                     "handed-off terminal commit failed (outcome=%s)", summary.terminal_outcome
                 )
+                # A spooled record stays pending for the next start — unless the
+                # ledger already holds its node and a later step failed.
+                if outbox is not None and spool_id is not None:
+                    self._settle_after_failure(outbox, spool_id)
             else:
                 self._committed += 1
                 observability.AUDIT_HANDOFF_COMMITTED.inc()

@@ -193,7 +193,9 @@ on EC keys), and the failure-injection seam `_sign` → `_sign_bound` in
   commit a stream hands off at teardown to a content-free, `0600` spool beside the
   WAL and replays whatever is still pending at the next start, before traffic.
   Before this, a crash or SIGKILL between teardown and the handed-off commit lost
-  the node, and a full handoff queue dropped it. A recovered node is signed as
+  the node, and a full handoff queue dropped it. Every spool line is HMAC-authenticated
+  under a key derived from `AEGIS_SIGNING_KEY` (required when enabled); a line that
+  fails, is torn, or is mistyped is quarantined, never replayed. A recovered node is signed as
   `stream-terminal-evidence-recovered` with `evidence_status` `recovered-terminal`,
   carries no previews and is timestamped at replay; replay refuses a ledger whose
   fault state is not `healthy` and skips a record already committed in the
@@ -220,6 +222,50 @@ on EC keys), and the failure-injection seam `_sign` → `_sign_bound` in
 - **REG-D43** — `scripts/audit_documentation_corpus.py` failed its own contract at
   `main` on an elided payload in `DOC-03`; the document now quotes the real test
   payload, and the placeholder rule runs in the suite.
+
+### Fixed — found on PR #196 after it merged
+
+CodeQL, Codex and three of `main`'s own post-merge CI jobs raised these on
+the PR that closed the registry to 100%; it auto-merged before the five bot
+findings were addressed, and the three CI jobs were only found by reading
+`main`'s post-merge runs directly rather than assuming them green. Fixed on
+the branch restarted from `main` afterward.
+
+- **REG-D45** — `streaming.py` and `terminal_outbox.py` imported each other's
+  types (`TYPE_CHECKING`-only, so never reachable, but a real cyclic-import
+  smell). `terminal_outbox.record()` now takes a structural `TerminalSummary`
+  `Protocol` instead of importing `streaming.StreamEvidenceSummary`.
+- **REG-D46** — `commit_forensic_summary`'s `request_size` was assigned inside an
+  `if`/`elif` pair CodeQL could not prove exhaustive. It is a plain `if`/`else`
+  now; the exhaustiveness was already guaranteed three lines above.
+- **REG-D47** — two `assert x.pop(...) == ...` statements in
+  `tests/test_terminal_outbox.py` compile out under `python -O`, silently
+  dropping the side effect the next assert depends on. Fixed at the flagged
+  site and at a structurally identical one this same PR had also added.
+- **REG-D48** — a terminal-outbox open refused (missing `AEGIS_SIGNING_KEY`, or
+  a bad path) after the SIEM exporter and S3 archiver had already started;
+  `lifespan`'s `@asynccontextmanager` means a pre-`yield` exception skips the
+  entire post-`yield` shutdown half, so both leaked on every such refusal with
+  either configured. The outbox now opens before either starts.
+- **REG-D49** — three blank lines in `reg-d42_fixed.txt` carried trailing
+  whitespace, against `AGENTS.md`'s own `git diff --check` pre-commit rule.
+- **REG-D50** — CI's "License Headers" job was red: nine files added by the
+  prior closure commit carried no license block, and no local target runs the
+  checker that would have caught it before push.
+- **REG-D51** — CI's "Rust Extension" job was red: the zk verifier-key
+  wire-decode ceiling (`MAX_VERIFIER_KEY_BYTES`, `zk_mmr.rs`) was a guess made
+  on a host where `zk-spartan` cannot run at all (`REG-D04`), and on the first
+  ADX-capable CI run to actually exercise it, the real key was ~10.5× over.
+  Raised to `1 << 27`, consistent with `DOC-08` §6.5's already-published "tens
+  of megabytes" for the shapes it measured.
+- **REG-D52** — Security's "OSV Scanner" job was red: `anyio`, transitive via
+  `fastapi`/`httpx`/`starlette`/`uvicorn`, had no floor in `requirements.txt`,
+  so the scanner's resolution landed on 4.9.0 — carrying a critical TLS
+  IDNA-2003 host-name-spoofing advisory (`GHSA-82r6-8w77-94w6`) and a
+  process-pool undrained-`stderr` deadlock (`GHSA-5p39-cfhj-2xmp`), both fixed
+  in 4.14.2, already the pin in `requirements.lock`. `anyio>=4.14.2` added to
+  `requirements.txt` beside the existing `idna`/`urllib3` security floors;
+  `requirements.lock` regenerated (one line: `anyio`'s `# via` comment).
 
 ## [5.0.0] — unreleased source target
 

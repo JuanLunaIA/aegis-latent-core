@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 # Regenerate aegis/core/audit_node_pb2.py from aegis/core/audit_node.proto.
 #
 # REG-056: the generated module is tracked in the tree and nothing in the
