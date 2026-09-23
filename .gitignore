@@ -57,6 +57,7 @@ connectors/envoy-wasm/target/
 
 # IDE and agent-local files
 CLAUDE.local.md
+.claude/worktrees/
 .vscode/
 .idea/
 *.swp
