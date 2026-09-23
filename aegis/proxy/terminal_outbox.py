@@ -99,19 +99,32 @@ class TerminalSummary(Protocol):
     """
 
     @property
-    def response_hash(self) -> str: ...
+    def response_hash(self) -> str:
+        pass
+
     @property
-    def response_size(self) -> int: ...
+    def response_size(self) -> int:
+        pass
+
     @property
-    def terminal_outcome(self) -> str: ...
+    def terminal_outcome(self) -> str:
+        pass
+
     @property
-    def final_marker_included(self) -> bool: ...
+    def final_marker_included(self) -> bool:
+        pass
+
     @property
-    def token_count(self) -> int: ...
+    def token_count(self) -> int:
+        pass
+
     @property
-    def elapsed_seconds(self) -> float: ...
+    def elapsed_seconds(self) -> float:
+        pass
+
     @property
-    def redaction_hits(self) -> Mapping[str, int]: ...
+    def redaction_hits(self) -> Mapping[str, int]:
+        pass
 
 
 @dataclass(frozen=True)

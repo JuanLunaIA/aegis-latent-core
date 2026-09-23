@@ -633,6 +633,56 @@ def test_the_digest_form_is_validated_before_the_lock(
     ledger.close()
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"response_size": "5"}, "response_size"),
+        ({"response_size": -1}, "response_size"),
+        ({"response_size": True}, "response_size"),
+        ({"token_count": "5"}, "token_count"),
+        ({"token_count": -1}, "token_count"),
+        ({"token_count": True}, "token_count"),
+        ({"final_marker_included": 1}, "final_marker_included"),
+        ({"final_marker_included": "yes"}, "final_marker_included"),
+        ({"elapsed_seconds": "0.5"}, "elapsed_seconds"),
+        ({"elapsed_seconds": True}, "elapsed_seconds"),
+        ({"elapsed_seconds": -0.1}, "elapsed_seconds"),
+        ({"redaction_hits": {1: 5}}, "redaction_hits"),
+        ({"redaction_hits": {"pii": True}}, "redaction_hits"),
+        ({"redaction_hits": {"pii": -1}}, "redaction_hits"),
+    ],
+)
+def test_a_malformed_scalar_or_redaction_field_raises_value_error(
+    tmp_path: Path, kwargs: dict[str, Any], message: str
+) -> None:
+    """Sourcery review on PR #197: ``response_size``/``token_count`` reached a
+    bare ``< 0`` and ``elapsed_seconds`` reached ``math.isfinite`` before being
+    type-checked, so a non-comparable value (a string) raised an incidental
+    ``TypeError`` instead of the ``ValueError`` the docstring promises every
+    field gets; ``final_marker_included`` had no check at all; and
+    ``redaction_hits``' ``isinstance(value, int)`` let a ``bool`` through and
+    never checked that a key was a ``str``. Mirrors
+    ``test_the_digest_form_is_validated_before_the_lock``'s shape."""
+
+    ledger = _ledger(tmp_path)
+    base: dict[str, Any] = {
+        "state_id": "bad-scalar",
+        "request_bytes": REQUEST,
+        "response_hash": "0" * 64,
+        "response_size": 0,
+        "response_preview": b"",
+        "terminal_outcome": "complete",
+        "final_marker_included": True,
+        "token_count": 0,
+        "elapsed_seconds": 0.0,
+    }
+    base.update(kwargs)
+    with pytest.raises(ValueError, match=message):
+        ledger.commit_forensic_summary(**base)
+    assert ledger._fault_state == "healthy"
+    ledger.close()
+
+
 # ── the app ──────────────────────────────────────────────────────────────────
 
 
@@ -717,6 +767,39 @@ def test_a_refused_outbox_open_starts_no_other_service(tmp_path: Path) -> None:
     state = app.state.aegis
     assert state.siem_exporter is not None  # constructed outside the lifespan
     assert state.siem_exporter._thread is None  # never started
+
+
+def test_a_later_startup_failure_still_closes_the_outbox(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review finding on this PR: the fix above (``test_a_refused_outbox_open_
+    starts_no_other_service``) only closed the gap for the outbox's own
+    ``open()`` call raising. Once that succeeds, ``lifespan`` still runs
+    several more steps before ``yield`` — SIEM/S3 startup, the handoff worker,
+    LSM, vault, the forwarder, gossip, seccomp — and any of those raising
+    leaves an already-open outbox fd with nothing to close it, for the same
+    underlying reason: Starlette skips this function's whole post-``yield``
+    half when startup raises. ``lifespan`` now wraps that whole span in an
+    ``ExitStack`` that closes the outbox on any exception, not just the open()
+    call. This simulates the handoff worker's own (unconditional, config-free)
+    start raising, since it is the very next statement after the outbox is
+    wired into ``state``.
+    """
+    from fastapi.testclient import TestClient
+
+    from aegis.proxy.app import create_app
+
+    def _boom(self: TerminalCommitHandoff) -> None:
+        raise RuntimeError("simulated later-startup failure")
+
+    monkeypatch.setattr(TerminalCommitHandoff, "start", _boom)
+
+    app = create_app(_settings(tmp_path, terminal_outbox_enabled=True))
+    with pytest.raises(RuntimeError, match="simulated later-startup failure"), TestClient(app):
+        pass
+    state = app.state.aegis
+    assert state.terminal_outbox is not None  # wired into state before the failure
+    assert state.terminal_outbox._fd is None  # ExitStack closed it on the way out
 
 
 @pytest.mark.parametrize("provider", ["openai", "anthropic"])
