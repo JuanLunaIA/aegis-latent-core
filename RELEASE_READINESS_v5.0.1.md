@@ -1,6 +1,6 @@
 # Aegis Latent Core `v5.0.1` — Release Readiness After Remediation
 
-**Verdict: source ready for professional review and for the owner's release steps; not released.** Every defect that halted `v5.0.1` is fixed in source. Every row in the [Defect Registry](docs/REGISTRY.md) is terminal (`SEED` = 0). The checks in §3 pass locally. PR #205's CI on the final commit, the owner's dismissal of one verified CodeQL false positive, and the publication steps in §6 remain.
+**Verdict: source ready for professional review and for the owner's release steps; not released.** Every defect that halted `v5.0.1` is fixed in source. Every row in the [Defect Registry](docs/REGISTRY.md) is terminal (`SEED` = 0). The checks in §3 pass locally. PR #205's CI on the last code commit, `626c790`, passed every job except CodeQL. CodeQL's one alert is a verified false positive that only the owner can dismiss. That dismissal and the publication steps in §6 remain.
 **Date:** 2026-09-24 UTC
 **Branch:** `claude/aegis-v4-comprehensive-audit-m2qyka` (PR #205), on top of `origin/main` at `1bda9f9`.
 **Supersedes:** [RELEASE_HALTED_CRITICAL_ERRORS.md](RELEASE_HALTED_CRITICAL_ERRORS.md), which is kept unchanged below its banner as the record of the halt.
@@ -49,7 +49,7 @@ The lower-severity findings of the halt are also fixed: `REG-D73`, `REG-D74`, `R
 | Check | Result |
 |---|---|
 | Full test suite (`pytest -q -n auto`) on the final tree | **[PASS]** 7,550 passed, 41 skipped, 0 failed |
-| HA suite against real Redis 7.4 and PostgreSQL 16 | **[PASS]** 43 passed, plus 4 helm-rendering tests passed with helm |
+| HA suite against real Redis 7.4 and PostgreSQL 16 | **[PASS]** Locally on the final tree: 45 passed. The 4 helm-rendering tests were skipped because this host has no `helm`; they passed in an earlier local run with helm. In CI's HA Integration job on `626c790`: 49 passed, helm included |
 | Evidence-collector tests | **[PASS]** 12 passed |
 | Container smoke test, shipped image, kill-mode filter, `--ha` | **[PASS]** every step in `CLM-109`, including SIGKILL failover (4.2–5.2 s with a 5 s lease) and `verify` inside the image |
 | Seccomp LOG-mode discovery over the whole smoke flow (scratch overlay) | **[PASS]** 0 syscalls outside the allowlist, with the positive control logged in the same boot |
@@ -60,7 +60,7 @@ The lower-severity findings of the halt are also fixed: `REG-D73`, `REG-D74`, `R
 | Lock regenerated with CI's toolchain | **[PASS]** the only change is `prometheus-client==0.26.0` |
 | `verify_docs`, `verify_claims` (111), `verify_links`, `verify_documentation --strict`, `git diff --check` | **[PASS]** |
 | Import reachability, AI-context manifest, module inventory | **[PASS]** |
-| PR #205 CI on the final commit | **[PENDING]** Watched until green |
+| PR #205 CI on `626c790`, the last code commit | **[PASS]** Every job succeeded, including Test 3.11/3.12/3.13, Forensic checks 3.11/3.12/3.13, HA Integration, Container Smoke Test (AppArmor loaded), Type Check, Lock File Integrity, Documentation Gates, Rust, Kani, Miri, Formal Verification, the Windows WAL job, Trivy, OSV, Bandit and Socket. `Docker Build & Push` was skipped (it runs only on a push to `main` or a release). The one exception is CodeQL, in the next row. Later commits change documentation only, and their CI is on the PR |
 | CodeQL | **[OWNER ACTION]** One high alert (`py/clear-text-logging-sensitive-data`, the principal tool's printed HMAC digests) is a verified false positive, explained on PR #205. Only the owner can dismiss it |
 
 ## 4. Not established

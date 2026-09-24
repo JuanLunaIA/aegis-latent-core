@@ -1,5 +1,7 @@
-REG-D67..REG-D86 — closure record for the 2026-09-24 remediation branch
+REG-D67..REG-D87 — closure record for the 2026-09-24 remediation branch
 ======================================================================
+
+(The file name predates REG-D87, which was added to this record.)
 
 Branch claude/aegis-v4-comprehensive-audit-m2qyka (PR #205). Each item lists
 the commit that fixed it, what was observed before, and what was observed after.
@@ -117,7 +119,7 @@ REG-D85 (P2) — tests leaked SCHED_FIFO 50 + CPU-0 pin, livelocking the run FIX
   after:  autouse fixtures restore scheduling policy/param and affinity per
           test. Same sequence + test_seccomp_extended: 163 passed in 3.70 s.
 
-REG-D86 (P1) — the shipped image served no /metrics                        FIXED (this commit)
+REG-D86 (P1) — the shipped image served no /metrics                        FIXED 0fd1418, 05dd6d4
   before: import prometheus_client in the image -> ModuleNotFoundError. The
           container smoke's evidence-collector step found no
           enforcement_mode, so the aegis_security_enforcement_mode alert in
@@ -139,7 +141,7 @@ REG-D86 (P1) — the shipped image served no /metrics                        FIX
   runner's Python 3.10 (datetime.UTC is 3.11+). It now uses timezone.utc and
   runs to exit 0 under /usr/bin/python3.10 against a stub gateway.
 
-REG-D87 (P2) — SQLite sequence store: open() lost the WAL race, then hung at exit
+REG-D87 (P2) — SQLite sequence store: open() lost the WAL race, then hung at exit  FIXED 626c790
   before: CI (05dd6d4), HA Integration and Forensic jobs:
           test_replicas_in_separate_processes_interleave_without_forking:
           TimeoutExpired after 120 s. The hung writer's stderr ended in
@@ -172,3 +174,15 @@ Final tree (REG-D86, collector, audit-readiness docs added):
   full pytest -n auto: 7548 passed, 41 skipped; mypy --strict aegis 210 / aegis_server 14 / scripts+tools 45 clean;
   ruff clean; verify_docs, verify_claims (111), verify_links, verify_documentation --strict PASS;
   pip-audit --require-hashes -r requirements.lock: no known vulnerabilities (37 packages)
+
+After REG-D87 (626c790):
+  tests/ha against real Redis + PostgreSQL 16, local: 45 passed, 4 skipped
+  (the helm-rendering tests; no helm on this host at that run).
+  PR #205 CI readback on 626c790: every job succeeded except CodeQL, including
+  HA Integration (49 passed, helm included), Test and Forensic checks on
+  3.11/3.12/3.13, and Container Smoke Test with the AppArmor profile loaded.
+  "Docker Build & Push" was skipped; it runs only on a push to main or a
+  release. CodeQL's one open alert is py/clear-text-logging-sensitive-data on
+  aegis/auth/principal.py. It is the operator tool printing HMAC-SHA256
+  digests, a verified false positive explained on PR #205, and only the owner
+  can dismiss it.
