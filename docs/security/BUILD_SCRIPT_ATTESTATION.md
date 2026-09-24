@@ -138,12 +138,14 @@ Generated with `cyclonedx-py requirements` (`--output-reproducible`),
 
 The Python SBOM is built from `requirements.lock` rather than from the ambient
 virtual environment, so it describes the hash-pinned runtime set rather than
-what a developer happens to have. **It does not describe what the released
-gateway image installs** (corrected 2026-09-24, `REG-D69`, `UC-069`):
-`deploy/docker/Dockerfile` runs `pip install ".[storage-sqlite]"`, which resolves
-the `pyproject.toml` ranges against the index at build time rather than
-installing the lock, and pulls `cachetools` and `aiosqlite`, which the lock
-does not contain (`REG-D70`).
+what a developer happens to have. Since `REG-D69`/`REG-D70` (2026-09-24) that set
+is also exactly what the gateway images install: `deploy/docker/Dockerfile` and
+`deploy/docker/Dockerfile.airgap` run `pip install --require-hashes -r
+requirements.lock`, then install the package itself with `--no-deps`, then
+`pip check`, which fails the build if the lock is missing anything the package
+declares. Before that fix the image resolved `pyproject.toml` ranges at build
+time and the lock lacked `cachetools` and `aiosqlite`. The build backend
+(`hatchling==1.28.0`) is version-pinned in `pyproject.toml` but not hash-pinned.
 
 ### What is not produced
 

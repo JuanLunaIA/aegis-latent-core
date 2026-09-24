@@ -13,7 +13,8 @@
 #   ./scripts/vendor_wheels.sh /custom/path # downloads to /custom/path/
 #
 # Output:
-#   vendor/wheels/  — all .whl files required by aegis-latent-core[storage-sqlite]
+#   vendor/wheels/  — the wheels pinned in requirements.lock (with hashes), plus the
+#                     hatchling build backend for the local package
 #   vendor/wheels/SHA256SUMS — sha256 digests for integrity verification
 #   vendor/python-3.11-slim-digest.txt — pinned base image digest
 #
@@ -36,36 +37,37 @@ fi
 echo "[vendor_wheels] Downloading wheels to: ${WHEELS_ABS}"
 mkdir -p "${WHEELS_ABS}"
 
-# ── Download wheels (runtime deps + build deps) ───────────────────────────────
+# ── Download wheels: exactly the hash-locked runtime set (REG-D69) ────────────
+# requirements.lock pins every runtime package with its sha256 hashes, so the
+# air-gapped image installs the reviewed set and nothing else. The target
+# platform (CPython 3.11, manylinux x86_64) matches Dockerfile.airgap's base.
+# Any download failure stops the script: a partial wheel set would only fail
+# later, offline, where it is harder to diagnose.
 pip download \
     --dest "${WHEELS_ABS}" \
+    --require-hashes \
+    --only-binary=:all: \
+    --implementation cp \
     --python-version 3.11 \
     --platform manylinux_2_28_x86_64 \
+    --platform manylinux_2_17_x86_64 \
+    --platform manylinux2014_x86_64 \
+    --platform manylinux_2_5_x86_64 \
+    --platform manylinux1_x86_64 \
+    --platform any \
+    -r "${REPO_ROOT}/requirements.lock"
+
+# ── Build backend for the local package ───────────────────────────────────────
+# pyproject.toml pins the backend exactly (hatchling==1.28.0); its own
+# dependencies are resolved at download time, not hash-pinned.
+pip download \
+    --dest "${WHEELS_ABS}" \
     --only-binary=:all: \
-    "aegis-latent-core[storage-sqlite]==5.0.1" 2>/dev/null || \
-pip download \
-    --dest "${WHEELS_ABS}" \
-    ".[storage-sqlite]" \
-    --find-links "${WHEELS_ABS}" \
-    -r "${REPO_ROOT}/requirements.txt" 2>/dev/null || true
-
-# Fallback: install from source tree and download all transitive deps
-pip download \
-    --dest "${WHEELS_ABS}" \
-    --no-build-isolation \
-    "${REPO_ROOT}[storage-sqlite]"
-
-# ── Build-time deps (pip, setuptools, wheel, hatchling) ───────────────────────
-pip download \
-    --dest "${WHEELS_ABS}" \
-    "pip>=24.0" \
-    "setuptools>=70.0" \
-    "wheel>=0.43" \
-    "hatchling>=1.24"
+    "hatchling==1.28.0"
 
 # ── Generate SHA256 manifest for air-gap integrity verification ───────────────
 echo "[vendor_wheels] Computing SHA256 digests..."
-(cd "${WHEELS_ABS}" && sha256sum ./*.whl > SHA256SUMS 2>/dev/null) || true
+(cd "${WHEELS_ABS}" && sha256sum ./*.whl > SHA256SUMS)
 
 WHEEL_COUNT=$(find "${WHEELS_ABS}" -name "*.whl" | wc -l)
 echo "[vendor_wheels] Done — ${WHEEL_COUNT} wheels in ${WHEELS_ABS}"

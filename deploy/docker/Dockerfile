@@ -36,14 +36,20 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy only what pip needs to resolve dependencies
+# Runtime dependencies come exclusively from the hash-pinned lock (REG-D69):
+# every package and every file is the reviewed one, and nothing is resolved
+# against the index at build time. The lock already carries the SQLite storage
+# backend (aiosqlite) this image uses.
+COPY requirements.lock ./
+RUN pip install --no-cache-dir --require-hashes -r requirements.lock
+
+# The package itself, without re-resolving dependencies. `pip check` then fails
+# the build if the lock is missing anything the package declares (REG-D70).
 COPY pyproject.toml README.md ./
 COPY aegis ./aegis
 COPY aegis_server ./aegis_server
 COPY integrations ./integrations
-
-# Install the package (SQLite backend included; add extras as needed)
-RUN pip install --no-cache-dir ".[storage-sqlite]"
+RUN pip install --no-cache-dir --no-deps . && pip check
 
 # ── Stage 2: minimal runtime image ───────────────────────────────────────────
 FROM ${PYTHON_IMAGE}
