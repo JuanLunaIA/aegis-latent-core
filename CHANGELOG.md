@@ -30,7 +30,7 @@ fixed. Every check and its result is in
 [`RELEASE_HALTED_CRITICAL_ERRORS.md`](RELEASE_HALTED_CRITICAL_ERRORS.md).
 
 **Remediation (2026-09-24, PR #205): the halt is resolved in source.** Every
-blocker and every open finding above was fixed, and nine more were found and
+blocker and every open finding above was fixed, and ten more were found and
 fixed along the way. The current state is
 [`RELEASE_READINESS_v5.0.1.md`](RELEASE_READINESS_v5.0.1.md), and the
 per-item evidence is `evidence/registry/reg-d67_d86_closure.txt`. Nothing new is
@@ -107,6 +107,10 @@ published; publication remains the owner's step and must be read back.
   - `REG-D03`: `chacha20` 0.10.2.
   - `REG-D85`: two test modules leaked real-time scheduling into the rest of
     the run.
+  - `REG-D87`: the SQLite sequence store could lose the race to convert a new
+    file to WAL (`database is locked`), and then hang its process at exit on
+    the unclosed connection. It now retries within the busy timeout and always
+    closes the connection on failure.
 - **Citation** (`REG-D77`): MiFID record-keeping is now cited as Directive
   2014/65/EU Art. 16(6)/(7) and MiFIR Art. 25(1), checked against the adopted
   texts. Counsel's confirmation is still recommended.

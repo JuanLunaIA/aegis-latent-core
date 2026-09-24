@@ -618,10 +618,37 @@ class SQLiteSequenceStore:
     async def open(self) -> None:
         import aiosqlite
 
-        self._db = await aiosqlite.connect(self._path, timeout=self._timeout, isolation_level=None)
-        await self._db.execute("PRAGMA journal_mode=WAL")
-        await self._db.execute("PRAGMA synchronous=FULL")
-        await self._db.execute(_SQLITE_CREATE)
+        db = await aiosqlite.connect(self._path, timeout=self._timeout, isolation_level=None)
+        try:
+            for statement in ("PRAGMA journal_mode=WAL", "PRAGMA synchronous=FULL", _SQLITE_CREATE):
+                await self._execute_when_unlocked(db, statement)
+        except BaseException:
+            # An unclosed aiosqlite connection keeps a non-daemon thread alive, so
+            # a failed open would otherwise hang the process at exit.
+            await db.close()
+            raise
+        self._db = db
+
+    async def _execute_when_unlocked(self, db: Any, statement: str) -> None:
+        """Run *statement*, retrying "database is locked" until the busy timeout.
+
+        Replicas opening a new file together race to convert it to WAL, and SQLite
+        can answer that race with SQLITE_BUSY at once, without consulting the busy
+        handler the connection's timeout installs.
+        """
+        import sqlite3
+
+        deadline = time.monotonic() + self._timeout
+        delay = 0.01
+        while True:
+            try:
+                await db.execute(statement)
+                return
+            except sqlite3.OperationalError as exc:
+                if "locked" not in str(exc) or time.monotonic() >= deadline:
+                    raise
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, 0.25)
 
     async def close(self) -> None:
         if self._db is not None:

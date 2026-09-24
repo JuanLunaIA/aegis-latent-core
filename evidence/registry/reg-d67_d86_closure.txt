@@ -139,6 +139,28 @@ REG-D86 (P1) — the shipped image served no /metrics                        FIX
   runner's Python 3.10 (datetime.UTC is 3.11+). It now uses timezone.utc and
   runs to exit 0 under /usr/bin/python3.10 against a stub gateway.
 
+REG-D87 (P2) — SQLite sequence store: open() lost the WAL race, then hung at exit
+  before: CI (05dd6d4), HA Integration and Forensic jobs:
+          test_replicas_in_separate_processes_interleave_without_forking:
+          TimeoutExpired after 120 s. The hung writer's stderr ended in
+          ha.py open(): await self._db.execute("PRAGMA journal_mode=WAL")
+          -> sqlite3.OperationalError: database is locked.
+          Local synchronized-start stress (scratch script; 12 processes open
+          a fresh file at one instant): 25 rounds -> 4 hung; 60 rounds -> 2
+          hung, each "database is locked".
+          An aiosqlite connection left open after an exception: `timeout 20`
+          exit 124, a hang at interpreter exit.
+          A held EXCLUSIVE lock by contrast made journal_mode=WAL wait the
+          full busy timeout (5.02 s). The race is SQLite's other SQLITE_BUSY
+          path, which skips the busy handler.
+  after:  open() retries "locked" within busy_timeout_seconds and closes the
+          connection on any failure. Stress: 80 rounds x 12 -> 0 locked,
+          0 hung.
+          New test test_a_failed_open_releases_its_connection_so_the_process_can_exit:
+          FAILED (TimeoutExpired) with the old ha.py, PASSED with the fix.
+          New test test_replicas_opening_a_new_sequence_file_together_all_succeed:
+          4 rounds x 10 synchronized openers, passes.
+
 Branch-wide verification at 5f54f35 (before REG-D86):
 - full pytest: 7536 passed, 41 skipped
 - tests/ha against real Redis + PostgreSQL: 43 passed; 4 helm-gated tests passed with helm

@@ -20,7 +20,7 @@ This report records what was run, on one machine, on one date. It is not a certi
 
 ## 2. What the fixes found
 
-Running the shipped image as deployed, which nothing had done before, found nine more defects. Each is fixed with before/after evidence in `evidence/registry/reg-d67_d86_closure.txt`:
+Running the shipped image as deployed, which nothing had done before, and PR #205's CI found ten more defects. Each is fixed with before/after evidence in `evidence/registry/reg-d67_d86_closure.txt`:
 
 | Registry | Sev | Defect |
 |---|---|---|
@@ -33,6 +33,7 @@ Running the shipped image as deployed, which nothing had done before, found nine
 | `REG-D84` | P1 | Every graceful stop ended in `SIGSYS` |
 | `REG-D86` | P1 | The image served no `/metrics`, so the posture alert could never fire |
 | `REG-D85` | P2 | Two test modules left the test process on real-time scheduling pinned to one CPU, livelocking the run as root |
+| `REG-D87` | P2 | The SQLite sequence store lost the race to convert a new file to WAL, then hung its process at exit on the unclosed connection |
 
 The lower-severity findings of the halt are also fixed: `REG-D73`, `REG-D74`, `REG-D75`, `REG-D77` (legal confirmation still recommended), `REG-D60`, `REG-026` and `REG-D03`.
 
@@ -47,7 +48,7 @@ The lower-severity findings of the halt are also fixed: `REG-D73`, `REG-D74`, `R
 
 | Check | Result |
 |---|---|
-| Full test suite (`pytest -q -n auto`) on the final tree | **[PASS]** 7,548 passed, 41 skipped, 0 failed (7,536 at `5f54f35`, plus the collector's 12) |
+| Full test suite (`pytest -q -n auto`) on the final tree | **[PASS]** 7,550 passed, 41 skipped, 0 failed |
 | HA suite against real Redis 7.4 and PostgreSQL 16 | **[PASS]** 43 passed, plus 4 helm-rendering tests passed with helm |
 | Evidence-collector tests | **[PASS]** 12 passed |
 | Container smoke test, shipped image, kill-mode filter, `--ha` | **[PASS]** every step in `CLM-109`, including SIGKILL failover (4.2–5.2 s with a 5 s lease) and `verify` inside the image |

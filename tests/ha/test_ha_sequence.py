@@ -26,6 +26,7 @@ import os
 import subprocess
 import sys
 import textwrap
+import time
 from pathlib import Path
 
 import pytest
@@ -215,6 +216,73 @@ def test_replicas_in_separate_processes_interleave_without_forking(tmp_path: Pat
     assert (
         len({tuple(owners[i : i + 60]) for i in range(0, 240, 60)}) > 1 or len(set(owners[:60])) > 1
     ), "the writers never actually interleaved; the test proved nothing"
+
+
+OPENER = textwrap.dedent(
+    """
+    import asyncio, sys, time
+    from aegis.core.ha import SQLiteSequenceStore
+
+    path, start = sys.argv[1], float(sys.argv[2])
+    while time.time() < start:
+        pass
+
+    async def main():
+        store = SQLiteSequenceStore(path)
+        await store.open()
+        await store.close()
+
+    asyncio.run(main())
+    """
+)
+
+
+def test_replicas_opening_a_new_sequence_file_together_all_succeed(tmp_path: Path) -> None:
+    """Converting a fresh file to WAL is a race SQLite can answer with SQLITE_BUSY
+    at once, skipping the busy handler. CI saw one of four writers fail there;
+    a synchronized start makes the race likely rather than rare."""
+    env = {**os.environ, "PYTHONPATH": str(ROOT)}
+    for round_ in range(4):
+        db = tmp_path / f"fresh-{round_}.db"
+        start = time.time() + 1.0
+        openers = [
+            subprocess.Popen(  # noqa: S603 - fixed argv
+                [sys.executable, "-c", OPENER, str(db), str(start)],
+                env=env,
+                stderr=subprocess.PIPE,
+            )
+            for _ in range(10)
+        ]
+        results = [o.communicate(timeout=60) for o in openers]
+        failures = [
+            err.decode(errors="replace")[-300:]
+            for o, (_, err) in zip(openers, results, strict=True)
+            if o.returncode
+        ]
+        assert not failures, failures
+
+
+def test_a_failed_open_releases_its_connection_so_the_process_can_exit(tmp_path: Path) -> None:
+    """An aiosqlite connection left open keeps a non-daemon thread alive: before the
+    fix, an open() that raised hung its process at exit instead of failing it."""
+    not_a_db = tmp_path / "garbage.db"
+    not_a_db.write_bytes(b"this is not an SQLite database" * 64)
+    opener = textwrap.dedent(
+        """
+        import asyncio, sys
+        from aegis.core.ha import SQLiteSequenceStore
+        asyncio.run(SQLiteSequenceStore(sys.argv[1]).open())
+        """
+    )
+    proc = subprocess.run(  # noqa: S603 - fixed argv
+        [sys.executable, "-c", opener, str(not_a_db)],
+        env={**os.environ, "PYTHONPATH": str(ROOT)},
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert proc.returncode != 0
+    assert b"not a database" in proc.stderr
 
 
 # ── real concurrency: PostgreSQL across connection pools ────────────────────
