@@ -135,3 +135,23 @@ lesson applied, never hand-edited); the AI-context manifest was regenerated.
 
 Re-verified: verify_docs 0; verify_claims 107/0; verify_documentation --strict
 0/0; verify_links 0 unresolved; doc suite 132 passed; corpus audit PASS.
+
+
+Follow-up (2026-09-24, after PR #202 was opened): anchor regression CI caught
+----------------------------------------------------------------------------
+CI's "Documentation Gates" job failed in 8 s on the first push of #202:
+
+  docs/RUST_BUILD.md:35: '../README.md#verified-metrics' resolves, but anchor
+  '#verified-metrics' has no matching heading in that file
+
+The README restructure renamed the "Verified metrics" section, and one document
+in the tree links to that anchor. Fixed without reverting the requested section
+title: a "### Verified metrics" subheading above the metrics table restores the
+slug (verify_links: PASS, 1,387 relative links and anchors resolved, exit 0).
+
+Methodology correction, recorded because it cost one red CI job:
+verify_links.sh has two distinct failure modes -- a relative target that "does
+not resolve", and a target that resolves but whose "#anchor" has no matching
+heading. The local pre-push sweep counted only the first message shape with
+grep and therefore reported "0" while the second mode was failing. Read the
+script's own FAIL summary line and its exit code; never a substring count.
