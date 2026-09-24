@@ -90,7 +90,7 @@ def test_sha256sums_parsing_follows_sha256sum_output():
 def test_readme_consumer_snippet_matches_what_the_tool_emits():
     """The documented one-liner cannot drift from the tool's own URL construction."""
     mod = _load_script()
-    emitted = mod.consumer_snippet("v5.0.0")
+    emitted = mod.consumer_snippet("v5.0.1")
 
     readme = README.read_text(encoding="utf-8")
     blocks = [b for b in readme.split("```") if "curl -fsSL -O" in b]
@@ -106,7 +106,7 @@ def test_readme_consumer_snippet_matches_what_the_tool_emits():
     # and the same text must come out of the CLI, so the flag is wired to the function.
     # sys.executable and a path inside this repository; shell=False, fixed argv.
     proc = subprocess.run(  # noqa: S603
-        [sys.executable, str(SCRIPT), "--tag", "v5.0.0", "--emit-consumer-snippet"],
+        [sys.executable, str(SCRIPT), "--tag", "v5.0.1", "--emit-consumer-snippet"],
         capture_output=True,
         text=True,
         timeout=60,

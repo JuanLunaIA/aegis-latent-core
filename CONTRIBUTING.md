@@ -9,8 +9,8 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 This document defines the contribution workflow, DCO sign-off, forward-looking CLA language, test expectations and public-claim review for Aegis. It is for prospective contributors, maintainers and organizations evaluating contribution rights. It is not legal advice.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** current source/release candidate
-**Source baseline:** `5.0.1` with fourteen synchronized anchors — **published nowhere**, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a). The most recent published release is `v5.0.0`, **published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)**; `v4.1.2` remains the most recent version published on every surface, whose publication was read back on 2026-09-04 and is recorded in `docs/RELEASE_STATUS.md` §1.1
+**Release baseline:** current release (`5.0.1`)
+**Source baseline:** `5.0.1` with fourteen synchronized anchors — **published 2026-09-24 on every surface except PyPI `aegis-latent-core`**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` remains the most recent version published on every surface, whose publication was read back on 2026-09-04 and is recorded in `docs/RELEASE_STATUS.md` §1.1
 **Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 
 Thank you for your interest in contributing. This project is maintained by its

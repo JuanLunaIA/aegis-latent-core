@@ -9,7 +9,7 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 This document is the public benchmark and measurement record for the `v5.0.1` source baseline and for the retained `v3.1.0` release measurements. It routes readers to detailed methods and retained artifacts while preserving workload, environment and interpretation boundaries. The numbers below are named measurements, not production capacity, availability SLOs, universal WAF rates or cryptographic proofs.
 
 **Last verified:** 2026-09-24 UTC
-**Release baseline:** checked-out source baseline `v5.0.1` with fourteen synchronized anchors — **published nowhere**, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a); the most recent published release is `v5.0.0` (2026-09-16, every surface except PyPI `aegis-latent-core`).
+**Release baseline:** checked-out source baseline `v5.0.1` with fourteen synchronized anchors — **published 2026-09-24 on every surface except PyPI `aegis-latent-core`**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a); the previous release is `v5.0.0` (2026-09-16, every surface except PyPI `aegis-latent-core`).
 **Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical and are not `v5.0.1` results.
 **Detailed methods and results:** [`docs/benchmarks/BENCHMARK_RESULTS.md`](benchmarks/BENCHMARK_RESULTS.md)
 

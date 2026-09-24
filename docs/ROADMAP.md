@@ -6,10 +6,10 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 # Aegis Latent Core — Engineering and Market Roadmap
 
-**Status:** checked-out source baseline `v5.0.1` has 14 synchronized anchors and is published nowhere (read back 2026-09-21, `docs/RELEASE_STATUS.md` §1.0a); the most recent published release `v5.0.0` was published 2026-09-16 on every surface except PyPI `aegis-latent-core`; source metadata does not establish external lifecycle or target-acceptance state
+**Status:** checked-out source baseline `v5.0.1` has 14 synchronized anchors and was published 2026-09-24 on every surface except PyPI `aegis-latent-core` (read back the same day, `docs/RELEASE_STATUS.md` §1.0a); the previous release `v5.0.0` was published 2026-09-16 on every surface except PyPI `aegis-latent-core`; source metadata does not establish external lifecycle or target-acceptance state
 **Last verified:** 2026-09-15 UTC (register reviewed against the `5.0.0` source tree; external readback values are unchanged from their recorded dates)
-**Release baseline:** checked-out source baseline `v5.0.1` with 14 synchronized anchors, published nowhere (`docs/RELEASE_STATUS.md` §1.0a); the most recent published release `v5.0.0` is 2026-09-16 except PyPI `aegis-latent-core` (§1.0), plus historical external observations
-**Source baseline:** fourteen synchronized `5.0.1` anchors, published nowhere (`docs/RELEASE_STATUS.md` §1.0a); immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
+**Release baseline:** checked-out source baseline `v5.0.1` with 14 synchronized anchors, published 2026-09-24 on every surface except PyPI `aegis-latent-core` (`docs/RELEASE_STATUS.md` §1.0a); the previous release `v5.0.0` is 2026-09-16 except PyPI `aegis-latent-core` (§1.0), plus historical external observations
+**Source baseline:** fourteen synchronized `5.0.1` anchors, published 2026-09-24 on every surface except PyPI `aegis-latent-core` (`docs/RELEASE_STATUS.md` §1.0a); immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
 **External baseline:** `v4.1.2` published and read back 2026-09-04 — signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release, PyPI `aegis-latent-core` and `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway/dashboard images. Prior lightweight `v4.0.1` tag at `6469904380218584ae0b5221334bc9a46500f5ba` had failed tag workflows, and the `4.0.0` registry objects carry no attributed provenance from them
 **Purpose:** Single source of truth for work that is implemented, measured, deployment-dependent, or still open.
 
@@ -168,7 +168,7 @@ The historical v3.1.0 distribution passed its declared publication gate, but it 
 
 **The registry blockage recorded here previously is closed, and this entry no longer claims otherwise.** At `4.0.2` both SDK publish jobs were skipped, so neither registry received it; that was true of `4.0.2` and is not true now. `4.1.2` published to PyPI (`aegis-latent-core` and `aegis-latent-sdk`) and to npm (`aegis-latent-sdk`), read back on 2026-09-04 — see [Release Status §1.1](RELEASE_STATUS.md). What replaces it is narrower: the publication workflows are dispatch-only and are not verified by readback as part of the release, so a partial publication reports success and is discovered afterwards by reading the registry.
 
-Nothing is published for the current `5.0.0` source baseline. Deployment acceptance remains open until the affected source and tests, target-environment controls, architecture smoke/rollback evidence, SBOM/dependency review, and qualified residual-risk review are complete.
+`5.0.1` is published on every surface except PyPI `aegis-latent-core` (`docs/RELEASE_STATUS.md` §1.0a); publication is not deployment acceptance. Deployment acceptance remains open until the affected source and tests, target-environment controls, architecture smoke/rollback evidence, SBOM/dependency review, and qualified residual-risk review are complete.
 
 ## Audit backlog — v5.0.1-prep (2026-09-21)
 

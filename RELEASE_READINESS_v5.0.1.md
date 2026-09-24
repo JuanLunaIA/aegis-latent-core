@@ -1,5 +1,7 @@
 # Aegis Latent Core `v5.0.1` — Release Readiness After Remediation
 
+> **Released 2026-09-24.** After PR #205 merged, the owner kept the version at `5.0.1` (§5) and authorized the release. It was published from `main` at `46db6c0` on every surface except PyPI `aegis-latent-core`, and every surface was read back the same day. The tag signature, the image signatures and the build-provenance attestations were verified against the exact publishing workflow identities ([Release Status](docs/RELEASE_STATUS.md) §1.0a). The report below is unchanged: it records the pre-release state, and its "not released" statements (the verdict, §3, §4 "No publication") describe that state.
+
 **Verdict: source ready for professional review and for the owner's release steps; not released.** Every defect that halted `v5.0.1` is fixed in source. Every row in the [Defect Registry](docs/REGISTRY.md) is terminal (`SEED` = 0). The checks in §3 pass locally. PR #205's CI on the last code commit, `626c790`, passed every job except CodeQL. CodeQL's one alert is a verified false positive that only the owner can dismiss. That dismissal and the publication steps in §6 remain.
 **Date:** 2026-09-24 UTC
 **Branch:** `claude/aegis-v4-comprehensive-audit-m2qyka` (PR #205), on top of `origin/main` at `1bda9f9`.

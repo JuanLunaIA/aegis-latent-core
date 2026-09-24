@@ -49,14 +49,14 @@ Run these at the released commit and against the deployed digest. Keep the outpu
 ```bash
 scripts/verify_release_tag.sh vX.Y.Z <commit-sha>       # gitsign verify-tag: Sigstore-signed tag
 cosign verify ghcr.io/juanlunaia/aegis-latent-core@sha256:<digest> \
-  --certificate-identity-regexp 'https://github.com/JuanLunaIA/aegis-latent-core/' \
+  --certificate-identity https://github.com/JuanLunaIA/aegis-latent-core/.github/workflows/publish_oci.yml@refs/heads/main \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 gh attestation verify oci://ghcr.io/juanlunaia/aegis-latent-core@sha256:<digest> \
   --repo JuanLunaIA/aegis-latent-core
 sha256sum -c SHA256SUMS                                # release assets
 ```
 
-The image installs only the hash-pinned `requirements.lock` (`REG-D69`). The SBOM comes from `scripts/generate_sbom.sh`; the licence inventory is `LICENSE-THIRD-PARTY.md`. Publication status is whatever [Release Status](../RELEASE_STATUS.md) records from readback. **`cosign verify` and `gh attestation verify` have not been run for any release to date**, and running them is part of this procedure.
+The image installs only the hash-pinned `requirements.lock` (`REG-D69`). The SBOM comes from `scripts/generate_sbom.sh`; the licence inventory is `LICENSE-THIRD-PARTY.md`. Publication status is whatever [Release Status](../RELEASE_STATUS.md) records from readback. For `5.0.1` (2026-09-24), the tag, both image signatures and the build-provenance attestations of both images and all 15 release files were verified against the exact workflow identities (§1.0a there, `CLM-112`). Where `gh` is unavailable, the same Sigstore bundles can be fetched from the GitHub attestations API and checked with `cosign verify-blob-attestation --new-bundle-format`; §1.0a records how. `gh attestation verify` itself has not been run for any release, and an assessor should repeat the checks for the artifact they are assessing rather than rely on that record.
 
 ### 3.2 The image in its hardened posture
 
@@ -199,7 +199,7 @@ See [MiFID II inputs](MIFID_II_TECHNICAL_INPUTS.md): the Article 16(6)/(7) and M
 | `/metrics` is unauthenticated | Standard for Prometheus scraping | Source-IP admission and `NetworkPolicy` |
 | HA is untested on real storage classes, under partitions and with Redis/PostgreSQL failover | Only local and container-level tests exist | Target acceptance testing |
 | No independent penetration test or external code audit | None has been commissioned | Commission one against the deployed configuration |
-| Source `5.0.1` is not published anywhere | [Release Status](../RELEASE_STATUS.md) | Publish, then run §3.1 |
+| `5.0.1` is published on every surface except PyPI `aegis-latent-core` (read back 2026-09-24); `pip install aegis-latent-core` still gets `4.1.2` | [Release Status](../RELEASE_STATUS.md) §1.0a | Take the gateway from GHCR or the Release assets; re-run §3.1 against the artifact you deploy |
 
 ## 6. What the deploying organisation supplies
 

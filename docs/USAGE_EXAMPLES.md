@@ -1,8 +1,8 @@
 # Usage Examples — Aegis Latent Core
 
 **Last verified:** 2026-09-04 UTC
-**Release baseline:** `v4.1.2` remains what PyPI serves for the gateway distribution (`aegis-latent-core`), read back 2026-09-04; `5.0.0` — the most recent published release — reached every other surface, recorded in [Release Status §1.0](RELEASE_STATUS.md); the checked-out `5.0.1` source baseline is published nowhere (§1.0a)
-**Source baseline:** `v5.0.1` — **published nowhere**, read back 2026-09-21 (see `docs/RELEASE_STATUS.md` §1.0a). The most recent published release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); source metadata alone does not establish publication
+**Release baseline:** `v4.1.2` remains what PyPI serves for the gateway distribution (`aegis-latent-core`), read back 2026-09-04; `5.0.1` — the checked-out source baseline and the most recent published release — reached every other surface on 2026-09-24, recorded in [Release Status §1.0a](RELEASE_STATUS.md), as did `5.0.0` on 2026-09-16 (§1.0)
+**Source baseline:** `v5.0.1` — **published 2026-09-24 on every surface except PyPI `aegis-latent-core`**, read back the same day (see `docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); source metadata alone does not establish publication
 **Audience:** developers integrating Aegis for the first time
 **Root document:** [`README.md`](../README.md)
 
@@ -33,7 +33,7 @@ disable controls that make records meaningful in production; see
 | --- | --- | --- |
 | Govern calls your code makes | `pip install aegis-latent-core` | `aegis.wrap()` — in-process WAF, redaction, signed ledger |
 | Run a gateway other services call | `pip install aegis-latent-core` | the `aegis` / `aegis-server` console scripts |
-| Run the gateway as a container | `docker pull ghcr.io/juanlunaia/aegis-latent-core:5.0.0` | the same gateway, packaged. GHCR is the current gateway channel — PyPI `aegis-latent-core` still resolves to `4.1.2` |
+| Run the gateway as a container | `docker pull ghcr.io/juanlunaia/aegis-latent-core:5.0.1` | the same gateway, packaged. GHCR is the current gateway channel — PyPI `aegis-latent-core` still resolves to `4.1.2` |
 | Check a proof someone handed you | `pip install aegis-latent-sdk` | verifiers only — no key, no enforcement |
 | Check a proof from TypeScript | `npm install aegis-latent-sdk` | the same verifiers, Web Crypto |
 

@@ -2,7 +2,7 @@
 
 **Source version:** `5.0.1`
 **Package identities:** Python `aegis-latent-sdk` / import `aegis_sdk`; npm `aegis-latent-sdk`
-**Status:** the checked-out source baseline is `v5.0.1` — published nowhere, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a) — and the SDKs are published at `5.0.0`: PyPI `aegis-latent-sdk` `5.0.0` and npm `aegis-latent-sdk` `5.0.0`, read back 2026-09-16. **The gateway distribution `aegis-latent-core` is not on PyPI at `5.0.0`** — `4.1.2` is still what `pip install aegis-latent-core` gets — so a gateway installed from PyPI is `4.1.2` while this tree is `5.0.1`. Read back on 2026-09-04. This guide does not establish trusted-publishing provenance, production fitness, or provider certification.
+**Status:** the checked-out source baseline is `v5.0.1` — published 2026-09-24 on every surface except PyPI `aegis-latent-core`, read back the same day (`docs/RELEASE_STATUS.md` §1.0a) — and the SDKs are published at `5.0.1`: PyPI `aegis-latent-sdk` `5.0.1` and npm `aegis-latent-sdk` `5.0.1`, read back 2026-09-24. **The gateway distribution `aegis-latent-core` is not on PyPI at `5.0.1`** — `4.1.2` is still what `pip install aegis-latent-core` gets — so a gateway installed from PyPI is `4.1.2` while this tree is `5.0.1`. This guide does not establish trusted-publishing provenance, production fitness, or provider certification.
 
 ## 1. Scope
 
@@ -338,7 +338,7 @@ For mTLS behind an allowlisted proxy, the gateway accepts `X-Forwarded-Client-Ce
 
 ## 5. Release and provenance boundaries
 
-The synchronized source version is `5.0.1` (published nowhere — `docs/RELEASE_STATUS.md` §1.0a). The canonical package identities are `aegis-latent-sdk` for both Python and npm. Similar names such as `aegis-sdk` or `@aegis-latent/sdk` are different registry identities and must not be substituted.
+The synchronized source version is `5.0.1` (published 2026-09-24 on every surface except PyPI `aegis-latent-core` — `docs/RELEASE_STATUS.md` §1.0a). The canonical package identities are `aegis-latent-sdk` for both Python and npm. Similar names such as `aegis-sdk` or `@aegis-latent/sdk` are different registry identities and must not be substituted.
 
 A valid source gate does not prove registry provenance. Release workflows require an annotated signed tag whose semantic version exactly matches all package anchors and whose commit is reachable from `origin/main`. Publication additionally depends on protected environments, registry-side trusted-publisher configuration, and successful workflow execution.
 

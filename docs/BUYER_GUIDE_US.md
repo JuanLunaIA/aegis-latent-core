@@ -3,13 +3,13 @@
 This guide is for CISO and AppSec reviewers, platform leaders, AI/ML engineering, privacy/compliance, procurement and executive sponsors evaluating Aegis. It describes the product boundary, verification questions, pilot acceptance criteria and procurement blockers. It is not a certification, legal opinion, production SLO, or binding offer.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** checked-out source baseline `v5.0.1` with fourteen synchronized anchors — **published nowhere**, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a); the most recent published release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` — per-surface readbacks, the latest published release and the historical baselines are stated once, and only, in [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1, which is the only document that establishes publication state
+**Release baseline:** checked-out source baseline `v5.0.1` with fourteen synchronized anchors — **published 2026-09-24 on every surface except PyPI `aegis-latent-core`**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a); the previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` — per-surface readbacks, the latest published release and the historical baselines are stated once, and only, in [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1, which is the only document that establishes publication state
 **Audience:** US enterprise buyer committee
 **Commercial context:** [`docs/COMMERCIAL_STRATEGY_US.md`](COMMERCIAL_STRATEGY_US.md)
 
 ## Baseline to request
 
-The checked-out source baseline is **5.0.1** with 14 synchronized anchors — published nowhere (see `docs/RELEASE_STATUS.md` §1.0a); **5.0.0** is the most recent published release. Its bounded SSE `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python and TypeScript SDKs, MMR proofs, forensic dashboard and bounded forensic ZIP export are checked-out-source capabilities. They do not establish external lifecycle or production-acceptance state; verify the `v4.1.1` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback. A buyer should require the quote, SBOM, test evidence and acceptance plan to identify the same baseline.
+The checked-out source baseline is **5.0.1** with 14 synchronized anchors — published 2026-09-24 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0a); **5.0.0** is the previous release. Its bounded SSE `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python and TypeScript SDKs, MMR proofs, forensic dashboard and bounded forensic ZIP export are checked-out-source capabilities. They do not establish external lifecycle or production-acceptance state; verify the `v4.1.1` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback. A buyer should require the quote, SBOM, test evidence and acceptance plan to identify the same baseline.
 
 ## Executive answer
 

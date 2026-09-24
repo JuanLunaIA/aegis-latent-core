@@ -2,12 +2,13 @@
 
 All notable changes to **Aegis Latent Core** are documented in this file.
 
-**Last verified:** 2026-09-15 UTC
-**Published release (2026-09-16):** `v5.0.0`, fourteen synchronized anchors, **published on every surface except PyPI `aegis-latent-core`** — signed tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk`, and both GHCR images were read back; the gateway distribution on PyPI remains `4.1.2`. Source metadata does not establish external lifecycle state, which requires independent readback; see `docs/RELEASE_STATUS.md` §1.0 for what was and was not verified. There is no `4.2.0` or `4.4.0`; both numbers were skipped deliberately and no artifact was ever published under either.
+**Last verified:** 2026-09-24 UTC
+**Published release (2026-09-24):** `v5.0.1`, fourteen synchronized anchors, **published on every surface except PyPI `aegis-latent-core`** — the signed tag (`gitsign verify-tag` passed), the GitHub Release with 31 assets (`SHA256SUMS` sweep 15 of 15), PyPI `aegis-latent-sdk` `5.0.1`, npm `aegis-latent-sdk` `5.0.1`, and both GHCR images (`cosign verify` and provenance attestations verified against the exact workflow identity) were read back; see `docs/RELEASE_STATUS.md` §1.0a.
+**Previous release (2026-09-16):** `v5.0.0`, fourteen synchronized anchors, **published on every surface except PyPI `aegis-latent-core`** — signed tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk`, and both GHCR images were read back; the gateway distribution on PyPI remains `4.1.2`. Source metadata does not establish external lifecycle state, which requires independent readback; see `docs/RELEASE_STATUS.md` §1.0 for what was and was not verified. There is no `4.2.0` or `4.4.0`; both numbers were skipped deliberately and no artifact was ever published under either.
 **Most recent published release on every surface (readback 2026-09-04):** `v4.1.2` signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway image `sha256:b3f6aadc…f80710` and dashboard image `sha256:27e1bbc2…d92398`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
-**Release baseline:** source release target `v5.0.1` (fourteen synchronized `5.0.1` anchors). **Published nowhere** — read back 2026-09-21: GitHub Release 404, both OCI tags 404, registries still at `5.0.0`/`4.1.2`; recorded in `docs/RELEASE_STATUS.md` §1.0a. `v5.0.0` remains the most recent published release (every surface except PyPI `aegis-latent-core`)
+**Release baseline:** `v5.0.1` (fourteen synchronized `5.0.1` anchors), published 2026-09-24 on every surface except PyPI `aegis-latent-core`, whose latest remains `4.1.2`; recorded in `docs/RELEASE_STATUS.md` §1.0a
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
@@ -15,13 +16,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [5.0.1] — unreleased source target
+### Documentation
 
-**Nothing is published for `5.0.1`.** Source metadata only: fourteen anchors were
-moved from `5.0.0` to `5.0.1` and the release contract reports `READY`; the
-2026-09-21 readback found no tag, no GitHub Release, no OCI tag and no registry
-version for it (`docs/RELEASE_STATUS.md` §1.0a). This section is not a release
-announcement and sets no release date.
+- The verified `5.0.1` publication is recorded: `docs/RELEASE_STATUS.md` §1.0a,
+  `CLM-112`, and the readback transcript
+  `evidence/v5_0_1_release_readback_2026-09-24.md`. The README, `AGENTS.md` and
+  every document that said `5.0.1` was published nowhere now state what the
+  readback found.
+
+## [5.0.1] — 2026-09-24
+
+**Published 2026-09-24 on every surface except PyPI `aegis-latent-core`,** from
+`main` at `46db6c0` under the Sigstore-signed tag `v5.0.1`. Read back the same
+day: the GitHub Release (31 assets, `SHA256SUMS` sweep 15 of 15), PyPI and npm
+`aegis-latent-sdk` `5.0.1` (byte-identical to the release assets), and the GHCR
+gateway and dashboard images. The tag, image signatures and build-provenance
+attestations were verified against the exact publishing workflow identities
+(`docs/RELEASE_STATUS.md` §1.0a). The gateway distribution is still not on PyPI:
+`pip install aegis-latent-core` gets `4.1.2`. Before the release, on 2026-09-21,
+the same surfaces showed nothing for `5.0.1`.
 
 **Release gatekeeper verdict (2026-09-24): HALTED.** A full pre-release
 verification pass found two release-blocking defects in the gateway's in-process
@@ -33,8 +46,8 @@ fixed. Every check and its result is in
 blocker and every open finding above was fixed, and ten more were found and
 fixed along the way. The current state is
 [`RELEASE_READINESS_v5.0.1.md`](RELEASE_READINESS_v5.0.1.md), and the
-per-item evidence is `evidence/registry/reg-d67_d86_closure.txt`. Nothing new is
-published; publication remains the owner's step and must be read back.
+per-item evidence is `evidence/registry/reg-d67_d86_closure.txt`. The owner
+then merged it and authorized the release recorded above.
 
 ### Added — multi-replica operation (`AD-17`, `CLM-108`)
 
