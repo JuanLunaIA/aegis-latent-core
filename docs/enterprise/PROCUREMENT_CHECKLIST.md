@@ -26,7 +26,7 @@ Version ambiguity invalidates everything downstream. Pin it before anything else
 - [ ] **Exact commit SHA or tag.** Not "latest", not "main".
 - [ ] **Note that `v4.0.2` targets `a6eb58d`, and the default branch has moved past it.** Evaluating the branch head is evaluating different source.
 - [ ] **If evaluating a container, pin the digest**, not the tag.
-- [ ] **If evaluating an SDK from a registry, confirm the version.** PyPI and npm both carry `aegis-latent-sdk` `5.0.0` (readback 2026-09-16). **The gateway distribution is different:** PyPI `aegis-latent-core` was not published at `5.0.0` and still resolves to `4.1.2`, so a `pip install aegis-latent-core` gets `4.1.2` code — the pre-rename `legal_admissibility` API field, not `5.0.0`'s `signature_assurance`. Take the gateway from the GitHub Release assets or GHCR instead.
+- [ ] **If evaluating an SDK from a registry, confirm the version.** PyPI and npm both carry `aegis-latent-sdk` `5.0.1` (readback 2026-09-24). **The gateway distribution is different:** PyPI `aegis-latent-core` was not published at `5.0.0` or `5.0.1` and still resolves to `4.1.2`, so a `pip install aegis-latent-core` gets `4.1.2` code — the pre-rename `legal_admissibility` API field, not `5.0.0`'s `signature_assurance`. Take the gateway from the GitHub Release assets or GHCR instead.
 
 Verify yourself with the readback commands in [Release Status §2](../RELEASE_STATUS.md#2-readback-commands). Do not accept the table in that document as evidence; run the commands.
 

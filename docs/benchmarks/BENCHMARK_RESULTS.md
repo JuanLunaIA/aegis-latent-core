@@ -3,7 +3,7 @@
 This document records the retained `v3.1.0` market-hardening measurements and the measurements taken on the `v5.0.1` source baseline (2026-09-24). It is for engineers, security reviewers, and procurement evaluators who need reproducible numbers and explicit boundaries. These measurements are evidence for named workloads; they are not production capacity, availability SLOs, universal detection rates, or cryptographic proofs.
 
 **Last verified:** 2026-09-24 UTC
-**Release baseline:** checked-out source baseline `v5.0.1` with fourteen synchronized anchors — **published nowhere**, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a); the most recent published release is `v5.0.0` (2026-09-16, every surface except PyPI `aegis-latent-core`).
+**Release baseline:** checked-out source baseline `v5.0.1` with fourteen synchronized anchors — **published 2026-09-24 on every surface except PyPI `aegis-latent-core`**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a); the previous release is `v5.0.0` (2026-09-16, every surface except PyPI `aegis-latent-core`).
 **Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical and are not `v5.0.1` results.
 **Canonical methodology:** [`docs/benchmarks/README.md`](README.md)
 **Artifact locations:** retained release evidence plus repository-scoped artifacts under [`evidence/`](../../evidence/)

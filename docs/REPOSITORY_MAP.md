@@ -2,7 +2,7 @@
 
 **Last verified:** 2026-09-21 UTC (`REG-D29`) — this page's navigation-aids table was updated for `docs/MODULE_INVENTORY.md`, the generated per-file inventory. The 22 source paths cited below were last re-checked against the tree **as it stood before the 5.0.1 source bump**; re-checking them against the current target is content review, not a date bump, and is tracked by `AUD-37`. The stamp formerly read 2026-08-27 while the page described 2026-09-16 content (`AF-057`)
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out source metadata is synchronized at `v5.0.1`; nothing is published for it. The most recent published release `v5.0.0` was published 2026-09-16 on every surface except PyPI `aegis-latent-core`; `v4.1.2` remains the most recent version published on every surface
+**Source baseline:** checked-out source metadata is synchronized at `v5.0.1`; it was published 2026-09-24 on every surface except PyPI `aegis-latent-core`. The previous release `v5.0.0` was published 2026-09-16 on every surface except PyPI `aegis-latent-core`; `v4.1.2` remains the most recent version published on every surface
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` retains the historical `4.0.0` comparison anchors documented by [`evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md`](../evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md)
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** previously published `v3.1.0` artifacts and retained measurements remain historical

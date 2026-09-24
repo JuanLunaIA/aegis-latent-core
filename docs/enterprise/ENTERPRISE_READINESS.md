@@ -26,7 +26,7 @@
 | Model | Available | Notes |
 | --- | --- | --- |
 | Self-hosted from source | Yes | The supported path. See [Deployment Profiles](../operations/DEPLOYMENT_PROFILES.md). |
-| Self-hosted container | Yes | `ghcr.io/juanlunaia/aegis-latent-core:5.0.0` — index digest `sha256:81d106c9…a33c15a`, with a cosign signature object present, read back 2026-09-16. Digest-pinnable. `4.1.2` also remains available at `sha256:b3f6aadc…f80710` (read back 2026-09-04). **A signature object resolving is not verification** — `cosign verify` was not run. |
+| Self-hosted container | Yes | `ghcr.io/juanlunaia/aegis-latent-core:5.0.1` — index digest `sha256:2d22023e…090f3e`, read back 2026-09-24; `cosign verify` against the `publish_oci.yml` workflow identity passed, and its build-provenance attestation verified (`docs/RELEASE_STATUS.md` §1.0a). Digest-pinnable. `5.0.0` (`sha256:81d106c9…a33c15a`, read back 2026-09-16) and `4.1.2` (`sha256:b3f6aadc…f80710`, read back 2026-09-04) remain available; for those two, only the signature object's presence was read back, and `cosign verify` was not run. |
 | Kubernetes via Helm | Yes | `StatefulSet`, per-replica WAL volumes, default-deny NetworkPolicy. |
 | Air-gapped | Yes | With documented capability loss; no external anchoring. |
 | Vendor-hosted SaaS | No | Does not exist and is not on the roadmap. |

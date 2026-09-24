@@ -23,7 +23,7 @@ Read `AGENTS.md` for the authoritative text before writing anything, and treat i
 as the source of truth over your own memory. The shape of it:
 
 - The checked-out source baseline is **5.0.1** with fourteen synchronized
-  anchors — **published nowhere** (read back 2026-09-21). The most recent
+  anchors — **published 2026-09-24 on every surface except PyPI `aegis-latent-core`** (read back 2026-09-21). The most recent
   published release is **5.0.0**, published on 2026-09-16 to every surface
   **except** PyPI `aegis-latent-core`.
 - Readback established: the signed annotated tag, a GitHub Release with its

@@ -4,7 +4,7 @@
 
 **Aegis Latent Core commits signed, hash-linked evidence of every governed AI call — before the response reaches the caller — and issues a portable proof that a third party verifies without trusting the gateway, us, or you.**
 
-[![source](https://img.shields.io/badge/source-v5.0.1-blue)](docs/RELEASE_STATUS.md)
+[![release](https://img.shields.io/badge/release-v5.0.1-blue)](docs/RELEASE_STATUS.md)
 [![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
 [![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
 [![coverage](https://img.shields.io/badge/coverage-91.30%25_(2026--09--24)-green)](#real-world-benchmarks)
@@ -12,10 +12,9 @@
 
 Every load-bearing claim in this file carries a locator and a stated boundary; the gates that enforce that discipline run in CI.
 
-> **Current release:** `v5.0.0` — published 2026-09-16 on every surface except PyPI `aegis-latent-core`; the signed tag, the GitHub Release and its 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk` and both GHCR images were read back ([Release Status](docs/RELEASE_STATUS.md) §1.0).
-> **Current release candidate:** `v5.0.1`, fourteen synchronized anchors — **published nowhere**: read back 2026-09-21, no tag, no GitHub Release, no OCI tag and no registry version exists for it ([Release Status](docs/RELEASE_STATUS.md) §1.0a). **The gateway distribution `aegis-latent-core` was not published at `5.0.0`** — `pip install aegis-latent-core` still gets `4.1.2`. There is no `4.2.0`; the number was skipped.
+> **Current release:** `v5.0.1` — published 2026-09-24 on every surface except PyPI `aegis-latent-core`, read back the same day ([Release Status](docs/RELEASE_STATUS.md) §1.0a). The Sigstore-signed tag passes `gitsign verify-tag`; the GitHub Release carries 31 assets and all 15 files listed in its `SHA256SUMS` re-hash to their digests; PyPI `aegis-latent-sdk` `5.0.1` and npm `aegis-latent-sdk` `5.0.1` are byte-identical to the release assets of the same name; and the GHCR gateway and dashboard images pass `cosign verify` and their build-provenance attestations verify, each against the exact publishing workflow identity. **The gateway distribution `aegis-latent-core` is not on PyPI at `5.0.1`** — `pip install aegis-latent-core` still gets `4.1.2`; take the gateway from GHCR, the Release assets or this repository. The previous release, `v5.0.0`, was published 2026-09-16 on the same surfaces (§1.0). There is no `4.2.0`; the number was skipped.
 >
-> **Most recent published release:** `v4.1.2`, read back on 2026-09-04 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images. **`4.1.2` is the first version installable from PyPI as `aegis-latent-core`**; before it the gateway came from source or GHCR only. The npm version list skips `4.1.1`, whose publish step failed. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The two PyPI gateway artifacts are byte-different from the release assets of the same name — same content, different build host — so `SHA256SUMS` does not cover the PyPI downloads. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
+> **Last version with the gateway on PyPI:** `v4.1.2`, read back on 2026-09-04 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images. **`4.1.2` is the first version installable from PyPI as `aegis-latent-core`**; before it the gateway came from source or GHCR only. The npm version list skips `4.1.1`, whose publish step failed. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The two PyPI gateway artifacts are byte-different from the release assets of the same name — same content, different build host — so `SHA256SUMS` does not cover the PyPI downloads. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
 ---
 
@@ -93,7 +92,7 @@ Measured suite (dated records; counts move as tests are added — run `pytest -q
 
 ## Quickstart
 
-Three steps, copy-pasteable. Honest channel note first: **`pip install aegis-latent-core` currently installs `4.1.2`** — the gateway distribution was not published at `5.0.0` (`UC-047`). For the gateway use this repository or the GHCR image `ghcr.io/juanlunaia/aegis-latent-core:5.0.0`.
+Three steps, copy-pasteable. Honest channel note first: **`pip install aegis-latent-core` currently installs `4.1.2`** — the gateway distribution was not published to PyPI at `5.0.0` or `5.0.1` (`UC-047`). For the gateway use this repository, the GHCR image `ghcr.io/juanlunaia/aegis-latent-core:5.0.1`, or the wheel attached to the `v5.0.1` GitHub Release.
 
 **Step 1 — get the source:**
 
@@ -170,15 +169,15 @@ The third case is the one to understand first: **a root supplied by the same gat
 Release assets carry a digest, and checking one needs no checkout and no cooperation from this project:
 
 ```
-curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.0/SHA256SUMS
+curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.1/SHA256SUMS
 # then, for each artifact you downloaded:
-curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.0/<artifact-name>
+curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.1/<artifact-name>
 sha256sum -c SHA256SUMS --ignore-missing
 ```
 
 Two things that snippet does not establish. It shows the bytes match the manifest; it does not show who built them — an OCI signature (`cosign verify`) and a build attestation (`gh attestation verify`) are separate checks against separate infrastructure. And it covers the **release assets only**: the PyPI wheels for `aegis-latent-core` are rebuilt from the same source on a different build host, so their bytes differ from the release assets of the same name and `SHA256SUMS` does not cover them (see [docs/RELEASE_STATUS.md](docs/RELEASE_STATUS.md)).
 
-`python scripts/verify_release_readback.py --tag v5.0.0 --verify-assets` automates the whole readback — the GitHub Release, the `SHA256SUMS` sweep, the PyPI and npm versions, and the GHCR manifest digests — and prints `NOT_EXECUTED`, with the reason, for anything it could not check from where it ran. This block is emitted by that same tool, so the documented commands cannot drift from it.
+`python scripts/verify_release_readback.py --tag v5.0.1 --verify-assets` automates the whole readback — the GitHub Release, the `SHA256SUMS` sweep, the PyPI and npm versions, and the GHCR manifest digests — and prints `NOT_EXECUTED`, with the reason, for anything it could not check from where it ran. This block is emitted by that same tool, so the documented commands cannot drift from it.
 
 ---
 

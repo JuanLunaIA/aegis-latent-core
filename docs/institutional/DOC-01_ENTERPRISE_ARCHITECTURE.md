@@ -3,7 +3,7 @@
 **Document ID:** DOC-01
 **Title:** Enterprise Architecture and Mechanistic Lifecycle Specification
 **Canonical language:** US English
-**Source baseline:** checked-out source metadata is synchronized at `v5.0.1` — **published nowhere**, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a). The most recent published release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` remains the most recent version published on every surface, whose tag, release, registry and OCI state were read back on 2026-09-04 (`docs/RELEASE_STATUS.md` §1.1), while deployment and acceptance claims still require target-environment evidence
+**Source baseline:** checked-out source metadata is synchronized at `v5.0.1` — **published 2026-09-24 on every surface except PyPI `aegis-latent-core`**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` remains the most recent version published on every surface, whose tag, release, registry and OCI state were read back on 2026-09-04 (`docs/RELEASE_STATUS.md` §1.1), while deployment and acceptance claims still require target-environment evidence
 **Historical inspection scope:** findings and evidence dated 2026-08-20 UTC remain a `v3.1.0`-era review record unless a claim is explicitly revalidated against the current source
 **Status:** Architecture review record with bounded claims
 **Normative claim control:** [`docs/CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)

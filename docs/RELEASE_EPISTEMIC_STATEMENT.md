@@ -1,7 +1,7 @@
 # Release Epistemic Statement
 
 **Review date:** 2026-09-15 UTC
-**Source baseline:** `5.0.1`, fourteen synchronized anchors — **published nowhere**, read back 2026-09-21 ([RELEASE_STATUS.md](RELEASE_STATUS.md) §1.0a). The most recent published release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see [RELEASE_STATUS.md](RELEASE_STATUS.md) §1.0)
+**Source baseline:** `5.0.1`, fourteen synchronized anchors — **published 2026-09-24 on every surface except PyPI `aegis-latent-core`**, read back the same day ([RELEASE_STATUS.md](RELEASE_STATUS.md) §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see [RELEASE_STATUS.md](RELEASE_STATUS.md) §1.0)
 **Purpose:** a single index of what this release's evidence actually establishes, organized by epistemic status rather than by subsystem. This document adds no new claims; every row links to the document that carries the underlying evidence. Where this document and a linked one disagree, the linked one is authoritative — this is an index, not a second ledger.
 
 ## 1. What IS verified, with evidence locators
