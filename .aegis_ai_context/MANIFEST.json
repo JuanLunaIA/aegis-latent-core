@@ -297,8 +297,8 @@
     {
       "category": "governed_input",
       "path": "deploy/docker/docker-compose.yml",
-      "sha256": "9ee44d49193cc6d92102c340c77d7f5b17ebda6fb561dd7f60795dccad2faeff",
-      "size": 2154
+      "sha256": "427d429e51580b6b6c89cdefedb755f5c6b10e52dbbc2bedd97d631f40c8aa85",
+      "size": 3906
     },
     {
       "category": "governed_input",
@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "5879b6e9e51cb335fdab8521ca8380da4c579cac5f30ea9fbc3fa87747426ba4",
-      "size": 36891
+      "sha256": "12bc83b207db9b5563d1c7a8d295aee4f994dfb12868f1b8250b1a017eebf59e",
+      "size": 38352
     },
     {
       "category": "governed_input",
@@ -357,8 +357,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/publish_oci.yml",
-      "sha256": "36f24d0ecf646f1b32fb4b78ce570cf3289518372810f7759ed91cf9fd6f4efe",
-      "size": 4479
+      "sha256": "8c8fa44350362a7284ced75c5b352fe5f31256461aee14031601781928f9050f",
+      "size": 5649
     },
     {
       "category": "governed_input",

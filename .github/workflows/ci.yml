@@ -652,6 +652,32 @@ jobs:
           version: v3.14.4
       - run: helm lint deploy/helm/
 
+  # ── Container smoke test: the shipped image, in its shipped posture ────────
+  # Builds deploy/docker/Dockerfile and runs it the way deploy/docker/
+  # docker-compose.yml does — strict mode, its own seccomp filter (kill on any
+  # unlisted syscall), the repository AppArmor profile, read-only root, all
+  # capabilities dropped, a real Redis, an HTTPS upstream reached by hostname —
+  # then drives completions, refusals, a WAF block, a stream, the evidence
+  # chain and a restart. REG-D67/D68/D69/D70/D78/D80/D81 were all invisible to
+  # every other job because nothing ever started the image.
+  container-smoke:
+    name: Container Smoke Test
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Load the repository AppArmor profile
+        run: |
+          sudo apparmor_parser -r -W deploy/apparmor/aegis.profile
+          sudo aa-status | grep -F aegis-latent-core
+      - name: Build the gateway image
+        run: docker build -f deploy/docker/Dockerfile -t aegis-latent-core:smoke .
+      - name: Run the image in the hardened compose posture
+        run: python3 scripts/container_smoke_test.py --image aegis-latent-core:smoke --apparmor aegis-latent-core
+      - name: Kernel denials (on failure)
+        if: failure()
+        run: sudo dmesg | grep -E 'apparmor="DENIED"|type=1326' | tail -n 100 || true
+
   # ── SBOM and attestation (main + release) ─────────────────────────────────
   sbom:
     name: Generate SBOM
@@ -723,7 +749,7 @@ jobs:
   docker:
     name: Docker Build & Push
     runs-on: ubuntu-22.04
-    needs: [lint, typecheck, test, security, rust, helm-lint, market-hardening]
+    needs: [lint, typecheck, test, security, rust, helm-lint, market-hardening, container-smoke]
     if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     permissions:
       contents: read

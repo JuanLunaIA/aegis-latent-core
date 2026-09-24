@@ -36,6 +36,7 @@ import time
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -165,6 +166,21 @@ class LLMForwarder:
     def provider(self) -> ProviderAdapter:
         return self._provider
 
+    def upstream_path(self, path: str) -> str:
+        """Return the request path to send relative to the configured upstream base URL.
+
+        Client paths carry the OpenAI-style version root (``/v1/chat/completions``).
+        A base URL that is a bare origin (``https://api.openai.com``) takes that
+        path as is. A base URL with a path is the API root itself, the way an
+        OpenAI SDK's ``base_url`` is (``https://llm.example/v1``,
+        ``https://openrouter.ai/api/v1``, Gemini's ``…/v1beta/openai``), so the
+        client's leading ``/v1`` is dropped rather than doubled (REG-D79).
+        """
+        base = self._provider.base_url_override or self._settings.backend_url_str
+        if urlsplit(base).path.strip("/") and (path == "/v1" or path.startswith("/v1/")):
+            return path[len("/v1") :] or "/"
+        return path
+
     # ── lifecycle ─────────────────────────────────────────────────────────
 
     async def start(self) -> None:
@@ -271,6 +287,7 @@ class LLMForwarder:
             body,
             model_override=self._settings.provider_model or None,
         )
+        provider_path = self.upstream_path(provider_path)
 
         if HAS_RUST and self._rust_forwarder and self._provider.name == "openai":
             loop = asyncio.get_running_loop()
@@ -379,7 +396,9 @@ class LLMForwarder:
             self._egress_guard.check(self._settings.backend_url_str)
         self._circuit_breaker.check()
         try:
-            response = await self._client.post("/v1/messages", json=body, headers=extra_headers)
+            response = await self._client.post(
+                self.upstream_path("/v1/messages"), json=body, headers=extra_headers
+            )
         except (httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError):
             self._circuit_breaker.record_failure()
             raise
@@ -400,7 +419,7 @@ class LLMForwarder:
         assert self._client is not None, "LLMForwarder.start() was not called"
         self._circuit_breaker.check()
         async with self._client.stream(
-            "POST", "/v1/messages", json=body, headers=extra_headers
+            "POST", self.upstream_path("/v1/messages"), json=body, headers=extra_headers
         ) as response:
             response.raise_for_status()
             self._circuit_breaker.record_success()
@@ -452,6 +471,7 @@ class LLMForwarder:
             body,
             model_override=self._settings.provider_model or None,
         )
+        provider_path = self.upstream_path(provider_path)
 
         if self._provider.requires_stream_translation:
             async for item in self._stream_with_translation(

@@ -51,9 +51,33 @@ jobs:
         run: |
           python scripts/verify_release_contract.py --root . --tag "${RELEASE_TAG}"
 
+  # The exact signed commit's gateway image must serve under its own seccomp
+  # filter and the repository AppArmor profile before anything is pushed
+  # (scripts/container_smoke_test.py; same job as ci.yml's container-smoke).
+  gateway-smoke:
+    name: Smoke-test the gateway image before publishing
+    needs: provenance
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.EXPECTED_TAG_TARGET }}
+      - name: Load the repository AppArmor profile
+        run: |
+          sudo apparmor_parser -r -W deploy/apparmor/aegis.profile
+          sudo aa-status | grep -F aegis-latent-core
+      - name: Build the gateway image
+        run: docker build -f deploy/docker/Dockerfile -t aegis-latent-core:smoke .
+      - name: Run the image in the hardened compose posture
+        run: python3 scripts/container_smoke_test.py --image aegis-latent-core:smoke --apparmor aegis-latent-core
+      - name: Kernel denials (on failure)
+        if: failure()
+        run: sudo dmesg | grep -E 'apparmor="DENIED"|type=1326' | tail -n 100 || true
+
   publish-images:
     name: Publish and sign ${{ matrix.component }} OCI image
-    needs: provenance
+    needs: [provenance, gateway-smoke]
     runs-on: ubuntu-22.04
     timeout-minutes: 90
     environment:

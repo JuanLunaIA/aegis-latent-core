@@ -158,6 +158,13 @@ class SeccompGuard:
             "shutdown",  # HTTP connection close
             "tgkill",  # thread-directed signal during shutdown
             "exit",  # a single thread ending (exit_group ends the process)
+            # ── Hostname resolution (REG-D78). The list above came from a
+            # loopback-only run, so no name was ever resolved; the shipped image
+            # talking to a named upstream or Redis was killed on its first request.
+            # Found by running the image's whole request flow under SCMP_ACT_LOG
+            # (scripts/container_smoke_test.py): these two were the only misses.
+            "uname",  # glibc res_init -> gethostname() for the resolver's default domain
+            "sendmmsg",  # glibc getaddrinfo sends the A and AAAA queries in one call
             # clone is added separately and only with CLONE_THREAD: the ASGI
             # threadpool (sync endpoints, to_thread) spawns threads per request;
             # process creation stays impossible.

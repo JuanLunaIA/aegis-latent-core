@@ -42,7 +42,9 @@ class TestRetentionPolicies:
         assert "Dodd-Frank Section 727" in DODD_FRANK_SWAP.citations
 
     def test_mifid_full_citations(self):
-        assert "MiFIR (Regulation (EU) No 600/2014) Article 25(1)" in MIFID_ARTICLE_25_FULL.citations
+        assert (
+            "MiFIR (Regulation (EU) No 600/2014) Article 25(1)" in MIFID_ARTICLE_25_FULL.citations
+        )
         assert any("Article 16(7)" in c for c in MIFID_ARTICLE_25_FULL.citations)
         assert "MiFID II RTS 6 / RTS 7 (order records)" in MIFID_ARTICLE_25_FULL.citations
 

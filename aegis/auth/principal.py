@@ -80,6 +80,73 @@ class Principal:
             raise PermissionError(f"principal lacks required role {str(role)!r}")
 
 
+def build_api_key_principals(
+    identity_key: str, grants: Mapping[str, Mapping[str, object]]
+) -> dict[str, dict[str, object]]:
+    """Return the ``AEGIS_API_KEY_PRINCIPALS_JSON`` object for *grants*.
+
+    *grants* maps each API key to ``{"tenant_id", "roles", "scopes"}``. Keys are
+    replaced by the digest the gateway looks them up by
+    (``AegisSettings.api_key_principal_digest``), and every entry is checked with
+    the same role, scope and role-grant rules the gateway applies at request
+    time, so a mapping that would be refused in production is refused here.
+    Strict mode requires one entry per configured key (``validate_runtime_invariants``).
+    """
+    from aegis.config import AegisSettings
+    from aegis.proxy.dependencies import _roles, _scopes, permissions_for_roles
+
+    if len(identity_key.encode("utf-8")) < 32:
+        raise ValueError("AEGIS_AUTH_IDENTITY_HMAC_KEY must be at least 32 bytes")
+    digester = AegisSettings.model_construct(auth_identity_hmac_key=identity_key)
+    mapping: dict[str, dict[str, object]] = {}
+    for position, (api_key, grant) in enumerate(grants.items(), start=1):
+        label = f"entry {position}"  # never echo the key itself
+        if not api_key.strip():
+            raise ValueError(f"{label}: API key must not be empty")
+        tenant_id = grant.get("tenant_id")
+        if not isinstance(tenant_id, str) or not tenant_id.strip():
+            raise ValueError(f"{label}: tenant_id must be a non-empty string")
+        roles = _roles(grant.get("roles", []))
+        scopes = _scopes(grant.get("scopes", []))
+        if not scopes.issubset(permissions_for_roles(roles)):
+            raise ValueError(f"{label}: scopes exceed what the roles grant")
+        mapping[digester.api_key_principal_digest(api_key)] = {
+            "tenant_id": tenant_id,
+            "roles": sorted(roles),
+            "scopes": sorted(scopes),
+        }
+    return mapping
+
+
+def main(argv: list[str] | None = None) -> int:
+    """``python -m aegis.auth.principal``: print a principal mapping for strict mode.
+
+    Reads ``{"<api-key>": {"tenant_id": ..., "roles": [...], "scopes": [...]}}``
+    on standard input and the identity key from ``AEGIS_AUTH_IDENTITY_HMAC_KEY``,
+    so neither appears in a process listing or shell history. Writes the JSON
+    object to set as ``AEGIS_API_KEY_PRINCIPALS_JSON``; it contains digests,
+    never the keys.
+    """
+    import json
+    import os
+    import sys
+
+    del argv
+    identity_key = os.environ.get("AEGIS_AUTH_IDENTITY_HMAC_KEY", "")
+    try:
+        grants = json.loads(sys.stdin.read())
+        if not isinstance(grants, dict) or not all(
+            isinstance(key, str) and isinstance(value, dict) for key, value in grants.items()
+        ):
+            raise ValueError('input must be a JSON object: {"<api-key>": {...}, ...}')
+        mapping = build_api_key_principals(identity_key, grants)
+    except (ValueError, json.JSONDecodeError) as exc:
+        print(f"principal mapping refused: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(mapping, sort_keys=True, separators=(",", ":")))
+    return 0
+
+
 __all__ = [
     "ALL_ROLES",
     "ROLE_ADMIN",
@@ -88,4 +155,9 @@ __all__ = [
     "ROLE_PROXY_USER",
     "Principal",
     "Role",
+    "build_api_key_principals",
 ]
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

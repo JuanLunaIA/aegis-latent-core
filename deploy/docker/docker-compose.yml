@@ -4,7 +4,30 @@
 #
 # Required before startup:
 #   AEGIS_BACKEND_URL, AEGIS_BACKEND_API_KEY, AEGIS_API_KEYS,
-#   AEGIS_AUDIT_API_KEYS, AEGIS_SIGNING_KEY, AEGIS_REDIS_URL.
+#   AEGIS_AUDIT_API_KEYS, AEGIS_SIGNING_KEY, AEGIS_REDIS_URL,
+#   AEGIS_AUTH_IDENTITY_HMAC_KEY, AEGIS_API_KEY_PRINCIPALS_JSON.
+#
+# AEGIS_BACKEND_URL is either a bare origin (https://api.openai.com) or the
+# provider's API root including its version (https://llm.internal.example/v1),
+# as you would give an OpenAI SDK's base_url.
+#
+# Strict mode requires an explicit principal (tenant, roles, scopes) for every
+# API key, keyed by an HMAC digest of the key. Generate the mapping with the
+# image itself; keys go on stdin, never on the command line:
+#
+#   export AEGIS_AUTH_IDENTITY_HMAC_KEY="$(openssl rand -hex 32)"
+#   export AEGIS_API_KEY_PRINCIPALS_JSON="$(printf '%s' '{
+#     "<client key>": {"tenant_id": "team-a", "roles": ["proxy_user"],   "scopes": ["proxy:completions"]},
+#     "<audit key>":  {"tenant_id": "team-a", "roles": ["audit_reader"], "scopes": ["audit:read"]}
+#   }' | docker run --rm -i --network none -e AEGIS_AUTH_IDENTITY_HMAC_KEY \
+#       --entrypoint python ghcr.io/juanlunaia/aegis-latent-core:5.0.1 -m aegis.auth.principal)"
+#
+# Load the AppArmor profile on the host first:
+#   sudo apparmor_parser -r -W deploy/apparmor/aegis.profile
+#
+# CI starts this image in this posture on every change
+# (scripts/container_smoke_test.py; tests/test_hardened_compose_is_startable.py
+# keeps the two in step).
 
 services:
   aegis:
@@ -38,6 +61,8 @@ services:
       AEGIS_AUDIT_API_KEYS: ${AEGIS_AUDIT_API_KEYS:?set AEGIS_AUDIT_API_KEYS}
       AEGIS_SIGNING_KEY: ${AEGIS_SIGNING_KEY:?set AEGIS_SIGNING_KEY}
       AEGIS_REDIS_URL: ${AEGIS_REDIS_URL:?set AEGIS_REDIS_URL}
+      AEGIS_AUTH_IDENTITY_HMAC_KEY: ${AEGIS_AUTH_IDENTITY_HMAC_KEY:?set AEGIS_AUTH_IDENTITY_HMAC_KEY}
+      AEGIS_API_KEY_PRINCIPALS_JSON: ${AEGIS_API_KEY_PRINCIPALS_JSON:?set AEGIS_API_KEY_PRINCIPALS_JSON}
       AEGIS_RATE_LIMIT_BACKEND: redis
       AEGIS_WAL_PATH: /data/aegis.wal.jsonl
       AEGIS_LOG_LEVEL: ${AEGIS_LOG_LEVEL:-INFO}
@@ -62,7 +87,10 @@ volumes:
   aegis-wal:
     driver: local
 
+# Not `internal: true`: a Docker internal network has no route out and does
+# not publish ports, so the gateway could reach neither its upstream nor Redis
+# and no client could reach it (REG-D81). Restrict egress with the host
+# firewall or AEGIS_AIRGAP_MODE / AEGIS_AIRGAP_ALLOWED_HOSTS instead.
 networks:
   aegis-net:
     driver: bridge
-    internal: true

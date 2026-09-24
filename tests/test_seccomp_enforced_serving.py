@@ -385,3 +385,47 @@ def test_open_io_uring_fds_sees_a_real_ring() -> None:
     finally:
         os.close(fd)
     assert fd not in open_io_uring_fds()
+
+
+RESOLVE_CHILD = textwrap.dedent(
+    """
+    import socket, sys
+    from aegis.core.seccomp_guard import SeccompGuard
+
+    guard = SeccompGuard()
+    guard._is_sandbox = False  # force the production path regardless of markers
+    if not guard.apply_filter():
+        sys.exit(3)
+    # A name that is in no hosts file, so glibc takes its DNS path: res_init ->
+    # gethostname() (uname) and one sendmmsg() for the A and AAAA queries. The
+    # lookup is expected to fail; the process is expected to survive it.
+    try:
+        socket.getaddrinfo("reg-d78-resolver-path.invalid", 443, type=socket.SOCK_STREAM)
+    except OSError:
+        pass
+    print("survived")
+    """
+)
+
+
+def test_hostname_resolution_under_the_filter_does_not_kill_the_process() -> None:
+    """REG-D78: the shipped image died on its first request to a named upstream.
+
+    The allowlist had been derived from a loopback-only run, so glibc's resolver
+    path (``uname``, ``sendmmsg``) had never executed under the filter. The
+    container smoke test found it: exit 159 (SIGSYS), audit ``syscall=63``.
+    """
+    if not Path("/etc/resolv.conf").exists():
+        pytest.skip("no resolver configuration on this host; glibc would not take the DNS path")
+    env = {**os.environ, "PYTHONPATH": str(ROOT)}
+    env.pop("HERMES_SANDBOX", None)
+    proc = subprocess.run(  # noqa: S603 - fixed argv
+        [sys.executable, "-c", RESOLVE_CHILD],
+        env=env,
+        capture_output=True,
+        timeout=60,
+        check=False,
+    )
+    assert proc.returncode != -signal.SIGSYS, "killed by the seccomp filter while resolving a name"
+    assert proc.returncode == 0, proc.stderr.decode()[-2000:]
+    assert proc.stdout.strip() == b"survived"
