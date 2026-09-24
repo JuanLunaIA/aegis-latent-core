@@ -1,0 +1,67 @@
+REG-D58 — docs/MODULE_INVENTORY.md left stale on main by PR #199
+=================================================================
+
+PR #199 (626c226, main) merged with its three "Test" jobs red (Python 3.11,
+3.12, 3.13; workflow run 35961532172, jobs 107511239236, 107511239167,
+107511239163). PR #200's first push (e804ff3) failed the same two tests in
+its own "Test" jobs (run 35962371619, e.g. job 107513507597):
+
+  FAILED tests/test_module_inventory_current.py::
+    test_the_committed_inventory_is_what_the_generator_produces
+    - docs/MODULE_INVENTORY.md is stale — run scripts/generate_module_inventory.py
+  FAILED tests/test_module_inventory_current.py::
+    test_the_open_ticket_table_matches_the_roadmap
+    - inventory-only [], roadmap-only ['AUD-39']
+  2 failed, 7300 passed, 119 skipped   (py3.13 job, PR #200)
+
+Reproduced on main itself
+-------------------------
+
+Clean worktree of origin/main (626c226):
+
+  python scripts/generate_module_inventory.py --check
+    -> "docs/MODULE_INVENTORY.md is stale", exit 1
+  HERMES_SANDBOX=true pytest -q -p no:xdist tests/test_module_inventory_current.py
+    -> 2 failed, 3 passed
+
+Regenerating on main changes exactly two things:
+  - adds the `AUD-39` row to the open-ticket table (PR #199 filed AUD-39 in
+    docs/ROADMAP.md);
+  - adds tests/test_config_surface_inert_fields.py to the aegis/__init__.py
+    test list (PR #199 added an `import aegis` assertion there).
+
+Root cause
+----------
+
+PR #199 changed two inputs of scripts/generate_module_inventory.py (the
+roadmap's open tickets and a test's import set) without re-running the
+generator. The gate that would have caught it before merge did catch it —
+the PR's own Test jobs went red — and the PR merged anyway.
+
+Fix
+---
+
+Regenerated with the repository's generator, not by hand:
+
+  python scripts/generate_module_inventory.py
+
+On this branch the regenerated file also carries one row caused by REG-D57's
+test edit: aegis/proxy/forwarder.py drops from twelve importing tests to
+eleven ("… (+8 more)" -> "… (+7 more)"), because tests/test_terminal_outbox.py
+now resolves LLMForwarder through aegis.proxy.app instead of importing
+aegis.proxy.forwarder.
+
+Verified
+--------
+
+  python scripts/generate_module_inventory.py --check -> current, exit 0
+  HERMES_SANDBOX=true pytest -q -p no:xdist \
+    tests/test_module_inventory_current.py tests/test_terminal_outbox.py
+    -> 61 passed
+
+What this does not establish
+----------------------------
+
+It does not add a pre-merge block: the Test jobs were already red on PR #199
+and it merged. Whether red required checks should block merge is a branch
+protection setting, outside this repository's files.

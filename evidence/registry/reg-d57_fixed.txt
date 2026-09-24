@@ -79,10 +79,17 @@ Verified
   ruff check / ruff format --check tests/test_terminal_outbox.py -> clean
   git diff --check -> clean
   minimal reproduction above -> 1 failed before, 4 passed after
-  full suite, serial, CI's exact command:
-    running at the time of this commit; its result is recorded in a
-    follow-up commit on the same PR (CI's own serial Forensic job on this
-    PR is the independent confirmation)
+  full suite, serial, CI's exact command, after the fix:
+    2 failed, 7421 passed, 39 skipped in 338.36s
+    the target test passed; both failures were
+    tests/test_module_inventory_current.py — docs/MODULE_INVENTORY.md stale
+    on main since PR #199 (AUD-39 row, aegis/__init__.py test list) plus
+    this fix's own one-row change to aegis/proxy/forwarder.py. Recorded
+    and fixed as REG-D58 (evidence/registry/reg-d58_fixed.txt).
+  after regeneration:
+    HERMES_SANDBOX=true pytest -q -p no:xdist \
+      tests/test_module_inventory_current.py tests/test_terminal_outbox.py
+      -> 61 passed
 
 Process note
 ------------
