@@ -27,10 +27,20 @@ Homepage = "https://github.com/JuanLunaIA/aegis-latent-core"
 Repository = "https://github.com/JuanLunaIA/aegis-latent-core/tree/main/sdk/python"
 Issues = "https://github.com/JuanLunaIA/aegis-latent-core/issues"
 
+[project.scripts]
+# Not `aegis`: the gateway distribution already installs `aegis` and
+# `aegis-server`, and one must not shadow the other.
+aegis-sdk = "aegis_sdk.cli:main"
+
 [project.optional-dependencies]
 openai = ["openai>=2.52,<3", "httpx>=0.27,<1"]
 anthropic = ["anthropic>=1,<2"]
-all = ["aegis-latent-sdk[openai,anthropic]"]
+# Only the manifest-signature step of `aegis-sdk verify` needs this; digests,
+# CIDs and MMR proofs are checked with the standard library. Without it the
+# signature is reported unchecked and the result is never "verified". The floor
+# is the version requirements.lock audits for the gateway.
+verify = ["cryptography>=50.0.1,<51"]
+all = ["aegis-latent-sdk[openai,anthropic,verify]"]
 dev = [
   "aegis-latent-sdk[all]",
   "mypy>=1.10,<2",

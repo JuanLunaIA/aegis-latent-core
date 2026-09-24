@@ -340,6 +340,20 @@ class AegisSettings(BaseSettings):
             "audit chain is never truncated."
         ),
     )
+    max_forensic_bytes: int = Field(
+        default=65_536,
+        ge=0,
+        le=65_536,
+        description=(
+            "Cap, in bytes, on each of the request and response previews an audit "
+            "leaf embeds (hex-encoded, so up to 4x this many leaf bytes). Digests "
+            "and sizes are always recorded; 0 keeps no preview. Lowering it is "
+            "the precondition for zero-knowledge inclusion proofs (DOC-08 §6.3) "
+            "and costs the preview evidence those bytes carry. Safe to lower on "
+            "an existing chain: verification never rebuilds a leaf. The default "
+            "is also the ceiling."
+        ),
+    )
     s3_archive_enabled: bool = Field(default=False)
     s3_archive_bucket: str = Field(default="")
     s3_archive_prefix: str = Field(default="aegis/wal")

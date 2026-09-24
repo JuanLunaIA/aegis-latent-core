@@ -53,6 +53,7 @@ from aegis.core.ratelimiter import RateLimitBackendUnavailable as LegacyRateLimi
 from aegis.core.secrets import VaultManager
 from aegis.core.session_manager import SessionLifecycleManager
 from aegis.core.waf_session import WAFSessionTracker
+from aegis.core.zk_native import forensic_preview_warning
 from aegis.proxy.analyzer import ResponseAnalyzer
 from aegis.proxy.attestation_api import build_attestation_router
 from aegis.proxy.audit_api import build_audit_router
@@ -940,6 +941,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         signing_key=_signing_key,
         max_memory_nodes=cfg.max_memory_nodes,
         max_wal_bytes=cfg.max_wal_bytes,
+        max_forensic_bytes=cfg.max_forensic_bytes,
         hsm_backend=_hsm_backend,
         require_strong_signing=cfg.security_enforcement_mode == "strict",
         mmr_hash_scheme=cfg.mmr_hash_scheme,
@@ -947,6 +949,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         enable_cryptographic_shredding=cfg.enable_cryptographic_shredding,
         shredder_vault_path=cfg.shredder_vault_path or None,
     )
+    zk_preview_warning = forensic_preview_warning(cfg.max_forensic_bytes)
+    if zk_preview_warning is not None:
+        logger.warning(zk_preview_warning)
     state.native_stream_wal = None
     try:
         import aegis_rust  # type: ignore[import]
@@ -2026,6 +2031,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 max_event_bytes=cfg.max_stream_event_bytes,
                 queue_max_items=cfg.stream_queue_max_items,
                 queue_max_bytes=cfg.stream_queue_max_bytes,
+                preview_bytes=cfg.max_forensic_bytes,
                 deidentifier_window_chars=cfg.stream_deidentifier_window_chars,
                 enable_phi=state._phi_scrubber is not None,
                 enable_pci=state._pci_scrubber is not None,
@@ -2336,6 +2342,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 max_event_bytes=cfg.max_stream_event_bytes,
                 queue_max_items=cfg.stream_queue_max_items,
                 queue_max_bytes=cfg.stream_queue_max_bytes,
+                preview_bytes=cfg.max_forensic_bytes,
                 deidentifier_window_chars=cfg.stream_deidentifier_window_chars,
                 enable_phi=state._phi_scrubber is not None,
                 enable_pci=state._pci_scrubber is not None,

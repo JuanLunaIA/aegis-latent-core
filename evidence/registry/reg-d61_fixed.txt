@@ -1,0 +1,32 @@
+REG-D61 — CodeQL "Module is imported with 'import' and 'import from'" on REG-D57's test
+=========================================================================================
+
+Found by: github-advanced-security[bot] (CodeQL, py/import-and-import-from) as a
+review comment on PR #200 at tests/test_terminal_outbox.py:835, code-scanning
+alert 735. PR #200 merged (9d65929) before it was addressed, so the alert is on
+main.
+
+  "Module 'aegis.proxy.app' is imported with both 'import' and 'import from'."
+
+Cause: REG-D57's fix wrote `import aegis.proxy.app as app_module` inside
+test_a_much_later_startup_failure_stops_the_handoff_worker_too, while every
+other test in the module uses `from aegis.proxy.app import create_app`.
+
+Fix: `from aegis.proxy.app import LLMForwarder, create_app`. Reading the name
+from aegis.proxy.app's namespace yields the binding lifespan looks up — the
+property REG-D57 needs — so the plain module import was never required. The
+comment above it now says so.
+
+Verified
+--------
+
+  ruff check / ruff format --check tests/test_terminal_outbox.py -> clean
+  REG-D57's serial reload reproduction, same four ids, same order:
+    HERMES_SANDBOX=true pytest -q -p no:xdist \
+      tests/test_terminal_outbox.py::test_the_outbox_is_off_by_default \
+      tests/test_coverage_final.py::test_forwarder_handles_missing_rust_extension \
+      tests/test_terminal_outbox.py::test_a_much_later_startup_failure_stops_the_handoff_worker_too \
+      tests/test_terminal_outbox.py::test_a_later_startup_failure_still_closes_the_outbox
+    -> 4 passed
+  The alert itself closes only when CodeQL re-scans main after merge; that is
+  not observable from this branch.

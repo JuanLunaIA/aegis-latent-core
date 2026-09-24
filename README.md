@@ -10,7 +10,7 @@ Aegis sits between your application and your model provider. For every governed 
 [![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
 
-**6,971 tests passing, 118 skipped** on the `5.0.0` source line (measured 2026-09-21) — [check it yourself](#verified-metrics) with `pytest -n auto -q`, which is the only kind of badge worth having.
+**7,444 tests passing, 39 skipped, 0 failed** on the checked-out `5.0.1` source tree (measured 2026-09-24, `pytest -n auto -q`) — [check it yourself](#verified-metrics), which is the only kind of badge worth having.
 
 ## Why this matters, in three lines
 
@@ -89,6 +89,17 @@ The verifier is 313 lines of pure Python, exists in TypeScript with the same sem
 A passing verification establishes inclusion under the root you supplied — not that the response was correct, not who produced the record, and not that nothing was omitted.
 
 Full worked transcript with the failing cases: **[docs/PROVE_IT.md](docs/PROVE_IT.md)**
+
+### Verify an exported bundle, offline
+
+A forensic export (`/v1/audit/export`) is a ZIP: `manifest.json`, the evidence files, MMR proofs, and — when the operator configured a signing key — an Ed25519 signature over the manifest. `aegis-sdk`, the Python SDK's command line, checks all of it without a network call and without trusting the archive's own `VERIFY.sh`:
+
+```bash
+pip install "aegis-latent-sdk[verify]"
+aegis-sdk verify export.zip --public-key operator-ed25519.pub.pem
+```
+
+Exit `0` only when nothing failed **and** the manifest signature verified against a key you supplied out of band. Exit `3` (`INCOMPLETE`) means the digests are internally consistent but the signature was not checked — no key given, no key in the archive (there never is one), or the bundle was never signed. `docs/CLAIMS_MATRIX.md` `CLM-107` has the full check list and boundary.
 
 ### Verify what you downloaded
 
@@ -261,7 +272,9 @@ cd sdk/typescript && npm ci && npm run build
 
 **Proof verification caution.** A proof verified against a root supplied by the same gateway that produced it establishes internal consistency only. Obtain the trusted root through an independent channel, or the verification is circular.
 
-[Integrations Guide](docs/DEVELOPER_INTEGRATIONS_GUIDE.md) · [SDK Guide](docs/DEVELOPER_SDK_GUIDE.md) · [MMR Proof v1](docs/api/MMR_PROOF_V1.md)
+**Python SDK also ships `aegis-sdk`**, a zero-runtime-dependency command line: `aegis-sdk verify <bundle.zip>` checks a forensic export offline (see [Prove it yourself](#prove-it-yourself)), and `aegis-sdk audit <gateway_url>` prints a running gateway's own `/v1/audit/health` and `/integrity` as JSON — its own report about itself, not independent evidence.
+
+[Integrations Guide](docs/DEVELOPER_INTEGRATIONS_GUIDE.md) · [SDK Guide](docs/DEVELOPER_SDK_GUIDE.md) · [MMR Proof v1](docs/api/MMR_PROOF_V1.md) · [Python SDK README](sdk/python/README.md)
 
 ---
 
@@ -326,15 +339,21 @@ Separately, Kani 0.67.0 model-checks the native WAL's frame-bounds arithmetic ov
 | Python suite | 5,974 passed, 52 skipped, 0 failed | `4.1.2` source baseline | 2026-09-03 |
 | Python suite | 6,179 passed, 52 skipped, 0 failed | `4.3.0` source baseline | 2026-09-08 |
 | Python suite | **6,936 passed, 26 skipped, 0 failed** | `5.0.0` source baseline | 2026-09-16 |
-| Python suite | **6,948 passed, 119 skipped, 0 failed** | `5.0.0` source baseline (registry-closure branch) | 2026-09-21 |
+| Python suite | 6,948 passed, 119 skipped, 0 failed | `5.0.0` source baseline (registry-closure branch) | 2026-09-21 |
+| Python suite | **7,444 passed, 39 skipped, 0 failed** (`pytest -n auto -q`) · **7,449 passed, 34 skipped, 0 failed** (CI's exact serial Forensic command) | Checked-out `5.0.1` source tree | 2026-09-24 |
 | Rust extension | 31 tests passed; Clippy `-D warnings`; abi3 wheel built | CI | Per run |
-| Static analysis | `mypy --strict aegis` 0 errors over 207 files; `bandit -r aegis/ aegis_server/ -lll` 0 findings at every severity | CI | Per run |
+| Static analysis | `mypy --strict aegis` 0 errors over 208 files; `bandit -r aegis/ aegis_server/ -lll` 0 findings at every severity | CI | Per run |
 | Model checking | 5 Kani harnesses verified, 0 failures, over the whole `usize` domain | CI | Per run |
 | Per-commit cost vs chain length | At 2,000 prior leaves: 30,153.9 → 361.7 µs/commit. Normalised, the prior curve rises `1.00× → 17.65×` with chain length; the current one is flat within noise | [`commit_scaling_measurement`](evidence/commit_scaling_measurement_2026-09-03.md) | 2026-09-03 |
 | MMR append, Rust vs Python | At 100,000 leaves: 775.76k vs 156.90k leaves/s (4.94×) | [`evidence_path_measurements`](evidence/evidence_path_measurements_2026-09-03.md) | 2026-09-03 |
 | WAF corpus | Zero observed bypasses, zero false positives over 15 malicious and 8 benign cases | Corpus report | Per corpus |
 | Backpressure (**current**) | 2,500 offered → 2,500 durable, zero missing or duplicate IDs; p50 33.545 ms, p99 51.875 ms, 200 `fsync` calls under 2 ms injected delay | [`backpressure_group_commit_remeasurement`](evidence/backpressure_group_commit_remeasurement_2026-09-16.md) | 2026-09-16 |
 | Backpressure (superseded) | Same harness before coalesced group commit: p99 836.35 ms, 2,501 `fsync` calls | Stall report | 2026-08-20 |
+| `commit_forensic` latency (n=1,000) | P50 0.62 ms · P95 1.00 ms · P99 1.22 ms · max 4.18 ms — one real WAL `fsync` per commit | [`benchmarks_5.0.1_2026-09-24.json`](evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json) | 2026-09-24 |
+| Concurrent commit throughput | 10 threads 1,727/s · 50 threads 1,630/s · 100 threads 1,482/s — one process, one WAL, one writer lock; **does not scale with threads, by design** (`AD-16`) | Same artifact | 2026-09-24 |
+| Streaming ingestion memory | +20.1 MB RSS for 1,000 concurrent in-process SSE streams (20 events each) | Same artifact | 2026-09-24 |
+| Ed25519 sign / verify | 40.5 µs/op · 128.6 µs/op (`cryptography`, RFC 8032) | Same artifact | 2026-09-24 |
+| ML-DSA-65 sign / verify | 173.0 µs/op · 62.4 µs/op (`aegis_rust`, FIPS 204) — a latency sample only; not a constant-time claim | Same artifact | 2026-09-24 |
 
 Two coverage figures appear because two runs measured differently on different dates; both are recorded rather than one being selected. Suite counts move as tests are added — run `pytest -q` on the commit you are evaluating.
 
@@ -378,7 +397,7 @@ Not built. No dates.
 | --- | --- |
 | **"One maintainer — bus factor one."** | True, and every audit flags it `CRITICAL`. What mitigates it today: the source is AGPLv3 and complete, the build is reproducible, and you can pin and vendor. What does not: having the source is not having a maintainer. Escrow (`CR-03`) and a second engineer (`CR-06`) are both `NOT STARTED` |
 | **"No SOC 2, no penetration test."** | Correct, and neither is in progress. If that is a hard procurement gate we fail it today. What exists instead: complete source, a claims register with locators, 42 published non-claims, SBOMs, signed tags and images |
-| **"Why not build it ourselves?"** | You could. The parts that take time are not the obvious ones — commit ordering on the streaming path, a failed `fsync` failing the request, rollback that stays O(1) as the chain grows, a proof format stable across a hash-scheme change. Read the 3,348 lines in `aegis/core/crypto_audit.py` and `aegis/core/mmr.py` and decide. **No replacement-cost figure is offered** — `UC-032` blocks it, and any number would be invented |
+| **"Why not build it ourselves?"** | You could. The parts that take time are not the obvious ones — commit ordering on the streaming path, a failed `fsync` failing the request, rollback that stays O(1) as the chain grows, a proof format stable across a hash-scheme change. Read the 3,918 lines in `aegis/core/crypto_audit.py` and `aegis/core/mmr.py` and decide. **No replacement-cost figure is offered** — `UC-032` blocks it, and any number would be invented |
 | **"Our legal team refuses AGPL."** | Reasonable. The commercial licence is the intended resolution and **its text does not yet exist** (`CR-04`). Whether your deployment triggers §13 is your counsel's determination; nothing here is legal advice |
 | **"How do we know you didn't forge the evidence?"** | The best question asked. With the default HMAC chain, any key holder can forge — it authenticates the key, not a party (`UC-041`). What the proof still gives you is that a discloser cannot alter a record and have it verify against a root you hold. For attribution, configure the HSM or PQC path |
 | **"You have no customers."** | Correct. None to cite, and none will be invented (`CR-05`) |
@@ -409,6 +428,7 @@ Support is community best-effort with no SLA. This is a single-maintainer projec
 - **No legal admissibility.** Admissibility is a judicial determination, and no chain of custody is created.
 - **Not immutable.** Tampering is detected, not prevented; an operator with root can alter records.
 - **No universal PII removal.** Deterministic pattern matching over specific fields; it does not protect data already sent upstream.
+- **No output validation.** The gateway records what the model returned; it does not check whether it was true. Two narrow, unwired detectors exist for one clinical vertical (`UC-068`) — neither is on any request path.
 - **No production SLO or capacity claim.** Benchmarks are local measurements.
 - **No cross-replica global ordering.** Each replica is an independent chain.
 - **No guaranteed prompt-injection prevention.** Bounded heuristic detection; the record is the product.

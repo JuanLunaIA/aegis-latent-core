@@ -1,7 +1,7 @@
 # Aegis Python SDK
 
 **Audience:** developers integrating an application with an Aegis gateway.
-**Scope:** installation, gateway configuration, provider clients, and inclusion-proof verification.
+**Scope:** installation, gateway configuration, provider clients, inclusion-proof verification, and the `aegis-sdk` command line (offline bundle verification, gateway audit status).
 **Boundary:** the SDK talks to a gateway and verifies proofs. It establishes nothing about the gateway's trustworthiness — see [§ Proof verification](#proof-verification), which is the section that matters most.
 
 ---
@@ -79,6 +79,35 @@ Lower-level entry points, when you hold the proof rather than the headers:
 
 Schema and semantics: [MMR Proof v1](../../docs/api/MMR_PROOF_V1.md).
 
+## Command line: `aegis-sdk`
+
+Installed with the package. It is called `aegis-sdk`, not `aegis`, because the gateway distribution already installs `aegis` and `aegis-server`. `python -m aegis_sdk` works too.
+
+### `aegis-sdk verify <bundle.zip>` — offline
+
+Checks a forensic bundle exported by the gateway without contacting it: every member is one the format defines, `manifest.json` is canonical and its self-seal matches, each evidence file matches its size and SHA-256, the ledger slice matches its CID, and every MMR inclusion proof verifies against the root recorded with it. Digests, CIDs and proofs use only the standard library.
+
+```bash
+pip install -e "./sdk/python[verify]"     # adds `cryptography`, for the signature step only
+aegis-sdk verify bundle.zip --public-key operator-ed25519.pub.pem
+aegis-sdk verify bundle.zip --public-key operator-ed25519.pub.pem --trusted-root <64-hex> --json
+```
+
+| Exit | Result | Meaning |
+| --- | --- | --- |
+| `0` | `VERIFIED` | Nothing failed **and** `manifest.json`'s Ed25519 signature verifies against the key you supplied |
+| `3` | `INCOMPLETE` | Nothing failed, but the signature was not checked — unsigned bundle, no `--public-key`, or `cryptography` not installed |
+| `1` | `FAILED` | A check failed; the output names it |
+| `2` | — | Unusable input: missing file, malformed key or root |
+
+> **`INCOMPLETE` is not a pass.** Without the signature, the digests detect corruption, not tampering: whoever can rewrite a record can rewrite the manifest beside it. The public key must reach you **out of band** — the bundle deliberately does not carry it, since a key read from the archive being checked authenticates nothing. Supplying a key to a bundle that has no signature fails, so a stripped signature cannot pass.
+
+Not checked: per-node signatures, the CBOR slice and PDF beyond their digests, and whether a root is one you should trust — `--trusted-root` compares the terminal root with one you already hold.
+
+### `aegis-sdk audit <gateway_url>`
+
+Prints `/v1/audit/health` (and `/v1/audit/integrity` with `--integrity`) as sorted JSON; exits `0` when the gateway reports `status: ok` (and `valid: true`), `1` otherwise, `2` if it cannot be queried. This is the gateway's report about itself, not independent evidence. The audit key is read from `AEGIS_AUDIT_API_KEY` (or `--api-key-env NAME`), never from the command line. It refuses to send a key over plain HTTP to a non-loopback host, never follows redirects (which would re-send the key), and caps the response at 1 MiB.
+
 ## Streaming
 
 A stream reports evidence as `pending-terminal` until its terminal summary commits, and no inclusion proof exists before then.
@@ -91,6 +120,8 @@ A stream reports evidence as `pending-terminal` until its terminal summary commi
 | --- | --- |
 | `AegisProofError` | A proof is malformed, fails schema validation, or does not verify against the supplied root |
 | `ValueError` | A gateway URL or header input is rejected as malformed |
+| `aegis_sdk.bundle.BundleInputError` | `verify_bundle` cannot read the bundle, or a key or root argument is malformed (a bundle that fails a check is a `failed` report, not an exception) |
+| `aegis_sdk.audit.GatewayAuditError` | `fetch_audit_status` refused to send, was redirected, or got an error, oversized or non-JSON answer |
 
 `AegisProofError` on a well-formed proof means the proof did not verify. Treat that as a security event, not a retryable failure.
 
