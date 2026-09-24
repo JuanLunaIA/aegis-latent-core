@@ -4,12 +4,13 @@ Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
 Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 -->
 
-# Aegis Latent Core — Benchmark and Measurement Record v3.1.0
+# Aegis Latent Core — Benchmark and Measurement Record
 
-This document is the public benchmark record for the published v3.1.0 release. It routes readers to detailed methods and retained artifacts while preserving workload, environment and interpretation boundaries. The numbers below are named measurements, not production capacity, availability SLOs, universal WAF rates or cryptographic proofs.
+This document is the public benchmark and measurement record for the `v5.0.1` source baseline and for the retained `v3.1.0` release measurements. It routes readers to detailed methods and retained artifacts while preserving workload, environment and interpretation boundaries. The numbers below are named measurements, not production capacity, availability SLOs, universal WAF rates or cryptographic proofs.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
+**Last verified:** 2026-09-24 UTC
+**Release baseline:** checked-out source baseline `v5.0.1` with fourteen synchronized anchors — **published nowhere**, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a); the most recent published release is `v5.0.0` (2026-09-16, every surface except PyPI `aegis-latent-core`).
+**Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical and are not `v5.0.1` results.
 **Detailed methods and results:** [`docs/benchmarks/BENCHMARK_RESULTS.md`](benchmarks/BENCHMARK_RESULTS.md)
 
 ## Measurement contract
@@ -138,6 +139,25 @@ CPUs**. The full record, including every boundary, is
 responsible. Quote the median with the tail, never the mean alone. No ratio against provider
 round-trip time appears here: this repository has measured no provider RTT, so any such ratio
 would be a claim about someone else's network.
+
+## Documentation-pass benchmarks on the `v5.0.1` source baseline (2026-09-24)
+
+Executed by [`scripts/run_benchmarks_5.0.1.py`](../scripts/run_benchmarks_5.0.1.py) on one shared,
+unpinned four-CPU `x86_64` container (`Linux`, CPython 3.11.15), against real backends — a real
+WAL `fsync` per commit. Full record:
+[`evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json`](../evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json);
+method in [Benchmark Method §8](benchmarks/BENCHMARK_METHOD.md).
+
+| Experiment | Observed result | What it establishes | What remains unproven |
+|---|---|---|---|
+| `commit_forensic` latency (n = 1,000) | p50 0.62 ms, p95 1.00 ms, p99 1.22 ms, max 4.18 ms — MMR append + HMAC sign + one real WAL `fsync` per commit | Per-commit latency on this host for a real ledger write | Accepted capacity; other storage devices; behaviour under queueing |
+| Concurrent commit throughput | 10 threads 1,727/s · 50 threads 1,630/s · 100 threads 1,482/s | One process, one WAL, one writer: throughput **does not scale with thread count, by design** (`AD-16`) | Multi-process or multi-replica behaviour |
+| Streaming ingestion memory | +20.1 MB RSS for 1,000 concurrent in-process SSE streams (20 events each) | Bounded in-process memory for the named workload | Network sockets, durable-WAL cost, provider behaviour |
+| Ed25519 sign / verify | 40.5 µs/op / 128.6 µs/op (`cryptography`, RFC 8032; 64-byte signature) | Order of magnitude on this host | HSM-backed paths; other machines |
+| ML-DSA-65 sign / verify | 173.0 µs/op / 62.4 µs/op (`aegis_rust`, FIPS 204; 3,309-byte signature) | A latency sample on this host | Constant-time behaviour — the claim remains blocked (`REG-041`, `UC-012`) |
+
+None of these rows is a capacity, SLO or production-readiness figure. The artifact's own
+provenance note applies: cite the retained artifact, not this summary.
 
 ## Release language controls
 

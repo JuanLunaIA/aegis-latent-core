@@ -252,3 +252,35 @@ def test_repository_wide_no_document_presents_a_superseded_version_as_the_baseli
 def test_the_repository_wide_scan_is_not_vacuous() -> None:
     documents = _tracked_documents()
     assert len(documents) > 100, f"only {len(documents)} documents scanned"
+
+
+# ── baseline-carrying documents must name the current source baseline (REG-D64) ──
+#
+# The 2026-09-24 documentation sweep found six documents that either omitted the
+# checked-out baseline or presented a superseded one as their headline: the three
+# benchmark records still said "Release baseline: v3.1.0", the changelog header
+# called v5.0.0 a "Release baseline", and the prospectus pair carried a stale
+# baseline line (the Spanish edition contradicting its own English-parity clause).
+# These pins are narrow on purpose: they fix the *specific* stale forms removed.
+_BASELINE_DOCS = (
+    "CHANGELOG.md",
+    "docs/BENCHMARKS.md",
+    "docs/benchmarks/BENCHMARK_RESULTS.md",
+    "docs/benchmarks/README.md",
+    "docs/PROSPECTUS.md",
+    "docs/PROSPECTUS_ES.md",
+)
+_STALE_BASELINE_FORMS = (
+    "Release baseline:** `v3.1.0`",
+    "Release baseline:** `v5.0.0`",
+    "Línea base de código:** `5.0.0`",
+)
+
+
+def test_baseline_carrying_documents_name_the_current_source_baseline() -> None:
+    version = _anchor_version()
+    for relative in _BASELINE_DOCS:
+        text = _text(relative)
+        assert version in text, f"{relative} never names the {version} source baseline"
+        for form in _STALE_BASELINE_FORMS:
+            assert form not in text, f"{relative} presents a superseded baseline: {form!r}"

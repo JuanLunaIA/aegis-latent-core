@@ -1,0 +1,137 @@
+REG-D64 — documentation sweep: stale baselines and stale measurement forms
+================================================================================
+
+Found and fixed by the user-directed sweep (2026-09-24, session
+session_20260924_031716_1f4a41): "iterate through EVERY .md and .txt file in
+docs/, sdk/, and the root directory — replace all outdated performance numbers,
+version references (ensure all say 5.0.1) and architectural descriptions with the
+verified, up-to-date facts from the codebase and the new benchmark results; fix
+all broken internal Markdown links; ensure regulatory claims (MiFID II, EU AI
+Act) reference exact articles and explain how the code fulfils them."
+
+Scope measured, not remembered
+------------------------------
+135 tracked .md/.txt files across docs/, sdk/ and the repository root (evidence/
+excluded; `git ls-files`), scanned with /home/luna/.hermes/cache/scratch/
+corpus_sweep2_scan_2026-09-24.py (read-only) whose report.json classified every
+version token (5.0.1 / 5.0.0 / 4.x / 3.x, unframed vs framed), every
+performance figure co-occurrence and every MiFID/EU-AI-Act line. Every candidate
+was then read before editing; most were already correct and were left untouched.
+
+Drift found and fixed
+---------------------
+1. docs/BENCHMARKS.md, docs/benchmarks/BENCHMARK_RESULTS.md,
+   docs/benchmarks/README.md — all three still designated `v3.1.0` as their
+   release baseline and lacked the 2026-09-24 measurements. Each now carries the
+   two-fact header (source baseline `v5.0.1`, published nowhere, RELEASE_STATUS
+   §1.0a; `v5.0.0` the most recent published release) plus a "historical
+   evidence baseline" line, and the five new rows
+   (commit_forensic latency p50 0.62 / p95 1.00 / p99 1.22 ms; concurrent commit
+   throughput 1,727/1,630/1,482 per second at 10/50/100 threads; +20.1 MB RSS for
+   1,000 concurrent in-process SSE streams; Ed25519 40.5/128.6 µs; ML-DSA-65
+   173.0/62.4 µs, constant-time claim still blocked), citing
+   evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json and
+   scripts/run_benchmarks_5.0.1.py. The benchmark index gained the harness row
+   and the reproduction command.
+2. CHANGELOG.md header — "**Release baseline:** `v5.0.0`" was itself the stale
+   form the rest of the corpus had already retired; now "**Published release
+   (2026-09-16):**" plus "**Most recent published release on every surface**"
+   for v4.1.2, matching the canonical two-fact phrasing.
+3. docs/PROSPECTUS.md — quoted the key-rotation figure "2,239 signatures" with
+   no qualification; that artifact is NOT in this tree. Now states the in-tree
+   run first (2,033 signatures, evidence/execution_2026-08-20/...json) and marks
+   the 2,239 as the retained `v3.1.0`-era run whose raw JSON is not in this tree.
+4. docs/PROSPECTUS_ES.md — declared "La línea de código actual es 5.0.0" while
+   its own parity clause says the English governs and a discrepancy "es un
+   defecto a corregir". Now 5.0.1 (published nowhere) with 5.0.0 as most recent
+   published release; the "Línea base externa histórica" line relabelled and
+   pointed at RELEASE_STATUS §1.0-§1.1.
+5. docs/institutional/DOC-04_OPERATIONS_PLAYBOOK.md — the WAL-stall evidence
+   row and `DOC04-CLM-004` cited only the pre-group-commit 836.3514 ms run; both
+   now carry the current figure (p99 51.87 ms, evidence/execution_2026-09-16/,
+   `CLM-034`).
+6. Regulatory precision (framing preserved; no "fulfils Art. 12" claim is made —
+   the registry's own discipline is "evidence in service of compliance framing",
+   and CLM-039 is LEGAL-REVIEW-REQUIRED):
+   - README.md compliance table: EU AI Act row now names the mechanism (WAL
+     commit-before-response, hash-linked and signed, tamper detection,
+     third-party-verifiable MMR inclusion proofs); MiFID II row now names
+     Article 16(6)/25(1) and the RTS 24 / RTS 25 boundaries.
+   - docs/compliance/EU_AI_ACT_TECHNICAL_INPUTS.md §2 gained the explicit
+     mechanism paragraph (crypto_audit commit path; `aegis-mmr-inclusion-v2`
+     domain-separated scheme for new chains, CLM-064; verify_integrity; offline
+     inclusion against a separately trusted root; RFC 3161 optional time).
+   - docs/compliance/MIFID_II_TECHNICAL_INPUTS.md §2 gained the instruments
+     paragraph (Art. 16(6)/25(1), five-year floor extended to seven by competent
+     authority) and states the module `mifid_record_keeper.py` is wired to no
+     request path (CLM-104, UC-056).
+   - docs/commercial/POSITIONING.md and docs/institutional/CLAIM_EVIDENCE_GRAPH.md
+     (CEG-021): articles named (16(6)/25(1); Arts 12, 13/14).
+
+Reviewed and deliberately left as-is (with reasons)
+---------------------------------------------------
+- docs/RELEASE_STATUS.md, docs/CLAIMS_MATRIX.md, docs/ROADMAP.md, CHANGELOG
+  history, docs/institutional/UNSUPPORTED_CLAIMS.md — historical rows and
+  claim-provenance statements ("IMPLEMENTED in the v4 source baseline",
+  "post-dates `v3.1.0`") are provenance, not baseline assertions.
+- INTEGRITY_SEAL.md, STATE_MANIFEST.md, docs/commercial/ARTIFACT_INVENTORY.md —
+  dated records by their own framing ("pre-change snapshot… its STALE markers
+  read in the past tense"); the currency gate exempts them precisely so their
+  past-tense markers stay honest.
+- PR_FINAL_ENTERPRISE_HARDENING.md — self-described non-durable artifact of an
+  already-merged PR; superseded by IMPLEMENTATION_LOG_5.0.1.md.
+- docs/compliance/COMPLIANCE_MAPPING.md, docs/institutional/DOC-05 — already
+  carried the precise article language and boundaries (4.3.0-era fixes intact).
+- README/docs benchmark figures in FAQ_PROCUREMENT.md, SCALING_GUIDE.md,
+  BACKPRESSURE_RUNBOOK.md — already two-fact (both runs dated, retraction
+  stated); left untouched.
+
+Verification (all re-run after the edits)
+-----------------------------------------
+- pytest: tests/test_documentation_currency.py, test_ai_context.py,
+  test_module_inventory_current.py, test_regulatory_input_claims.py,
+  test_retracted_figure_gate.py, test_mifid_record_keeper.py, and the new
+  test_baseline_carrying_documents_name_the_current_source_baseline -> green.
+- scripts/verify_docs.py -> PASS (0 findings); scripts/verify_claims.py -> PASS
+  (107 claims, 0 findings); scripts/verify_links.sh -> 0 unresolved (1,411
+  links); tools/docs/verify_documentation.py --strict -> 0 errors, 0 warnings;
+  scripts/verify_release_contract.py -> READY 14/14.
+- .aegis_ai_context/MANIFEST.json regenerated via
+  scripts/generate_ai_context_manifest.py; test_ai_context.py green.
+- Three regressions introduced by this pass's own new text were caught by the
+  gates before completion and fixed: two relative links in docs/BENCHMARKS.md
+  (verify_docs/verify_links), and the loss of the literal "Release baseline:"
+  metadata token from the four files that are both edited here and listed in
+  tools/docs/verify_documentation.py's REQUIRED_FILES (CHANGELOG.md,
+  docs/benchmarks/BENCHMARK_RESULTS.md, docs/benchmarks/README.md). The label
+  was restored with a true value ("checked-out source baseline `v5.0.1` —
+  published nowhere"), not by weakening the checker.
+
+Boundary: this pass changed documentation, one test module, the registry rows
+and the AI-context manifest. No code, config, spec or workflow changed; no
+measurement was produced (the 2026-09-24 benchmark artifact predates this pass).
+
+
+Subsequent order (2026-09-24): README restructured
+--------------------------------------------------
+The user then ordered a full README restructure into fixed sections: hero with
+badges (v5.0.1, license, CI, coverage), the problem, the solution, an ASCII
+architecture diagram, a real-benchmarks table, a 3-step quickstart, an offline
+verification snippet, compliance & security, and a links section. Done in one
+pass, reusing the gate-tested sentences for status/boundaries/benchmarks so the
+claims discipline survived the restructure. Requested phrasings were adapted to
+that discipline: "Immutable MMR" was written as "append-only, tamper-evident
+MMR" and "Regulatory Alignment" as "Regulatory inputs ... technical inputs, not
+compliance" (CLM-039; tampering is detected, not prevented; no certification).
+The quickstart states the UC-047 channel boundary (pip core = 4.1.2) instead of
+pretending a 5.0.1 wheel exists; benchmark rows cite the retained 2026-09-24
+artifact only.
+
+Three gates caught three regressions the rewrite introduced, all fixed before
+close: the currency scan flagged "source tree ... :5.0.0" as an unframed
+superseded token (reworded); docs/MODULE_INVENTORY.md went stale again after the
+new pin test (regenerated with scripts/generate_module_inventory.py — REG-D58's
+lesson applied, never hand-edited); the AI-context manifest was regenerated.
+
+Re-verified: verify_docs 0; verify_claims 107/0; verify_documentation --strict
+0/0; verify_links 0 unresolved; doc suite 132 passed; corpus audit PASS.

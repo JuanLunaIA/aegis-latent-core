@@ -2,23 +2,15 @@
 
 **AI Governance and Cryptographic Evidence Gateway**
 
-**Your AI decisions are logged to a database your administrators can edit.** When someone asks what the model was told six months ago, you answer from records the interested party could have changed.
+**Aegis Latent Core commits signed, hash-linked evidence of every governed AI call — before the response reaches the caller — and issues a portable proof that a third party verifies without trusting the gateway, us, or you.**
 
-Aegis sits between your application and your model provider. For every governed call it commits a signed, hash-linked evidence record **before the response reaches your caller**, and issues a portable proof that a third party verifies **without trusting the gateway, us, or you**. Self-hosted: you hold the evidence, the keys and the data.
-
+[![source](https://img.shields.io/badge/source-v5.0.1-blue)](docs/RELEASE_STATUS.md)
 [![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
 [![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
+[![coverage](https://img.shields.io/badge/coverage-91.30%25_(2026--09--24)-green)](#real-world-benchmarks)
 [![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
 
-**7,444 tests passing, 39 skipped, 0 failed** on the checked-out `5.0.1` source tree (measured 2026-09-24, `pytest -n auto -q`) — [check it yourself](#verified-metrics), which is the only kind of badge worth having.
-
-## Why this matters, in three lines
-
-1. **A record the interested party could have altered is not evidence** — it only reads as evidence until someone with a reason to doubt it asks one question.
-2. **You already owe someone a record you can stand behind** — EU AI Act Art. 12, HIPAA audit controls, SEC 17a-4's audit-trail alternative, MiFID II. Those are your obligations; this software is an input to them, never a discharge of them.
-3. **The fix has to be checkable by someone who distrusts you**, or it is the same problem wearing better clothes.
-
-> **→ [Prove it yourself](docs/PROVE_IT.md)** — twelve lines of Python, no call to our servers, three cases of which two must fail.
+Every load-bearing claim in this file carries a locator and a stated boundary; the gates that enforce that discipline run in CI.
 
 > **Current release:** `v5.0.0` — published 2026-09-16 on every surface except PyPI `aegis-latent-core`; the signed tag, the GitHub Release and its 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk` and both GHCR images were read back ([Release Status](docs/RELEASE_STATUS.md) §1.0).
 > **Current release candidate:** `v5.0.1`, fourteen synchronized anchors — **published nowhere**: read back 2026-09-21, no tag, no GitHub Release, no OCI tag and no registry version exists for it ([Release Status](docs/RELEASE_STATUS.md) §1.0a). **The gateway distribution `aegis-latent-core` was not published at `5.0.0`** — `pip install aegis-latent-core` still gets `4.1.2`. There is no `4.2.0`; the number was skipped.
@@ -27,49 +19,134 @@ Aegis sits between your application and your model provider. For every governed 
 
 ---
 
-## Why Aegis
+## The problem
 
-- **Evidence before emission.** For an admitted non-streaming call the record is durable before your caller can observe the response. A record that might not exist is not evidence.
-- **Verifiable without trusting us.** Each record is a leaf in a Merkle Mountain Range. A portable inclusion proof lets a third party verify a disclosed record against a root they obtained independently.
-- **You keep custody.** Self-hosted. The licensor holds no evidence, no keys, no payloads, and has no access to your deployment.
-- **Provider independence.** An OpenAI-compatible surface; your upstream is a configured endpoint, not a lock-in.
-- **Fail-closed by default.** No signer, no distributed limiter, no durable storage means no service — rather than quietly serving unevidenced traffic.
-- **A broken chain stops traffic.** If WAL replay cannot read the ledger back, governed endpoints refuse with `503` before forwarding or committing. Appending onto a prefix you failed to replay produces records that each verify individually while the chain as a whole is unrecoverable — the failure the evidence contract exists to prevent.
-- **Claims you can check.** Every public claim carries an evidence locator and a stated boundary in [Claims Matrix](docs/CLAIMS_MATRIX.md), and CI rejects unsupported assurance language.
+Your AI decisions are logged to a database your administrators can edit. When someone asks what the model was told six months ago, you answer from records the interested party could have changed.
+
+In a regulated industry that is not a paperwork problem — it is an existential one. The regulator, the court and the auditor each ask the same question, and "our logs are probably fine" is not an answer they accept:
+
+1. **A record the interested party could have altered is not evidence** — it only reads as evidence until someone with a reason to doubt it asks one question.
+2. **You already owe someone a record you can stand behind** — EU AI Act Art. 12, HIPAA audit controls, SEC 17a-4's audit-trail alternative, MiFID II. Those are your obligations; this software is an input to them, never a discharge of them.
+3. **The fix has to be checkable by someone who distrusts you**, or it is the same problem wearing better clothes.
+
+## The Aegis solution
+
+- **Append-only, tamper-evident MMR.** Every record is a leaf in a Merkle Mountain Range. A portable inclusion proof (O(log n), no zero-knowledge claim) lets a third party verify a disclosed record against a root they obtained independently. `verify_integrity()` detects tampering on read; tampering is *detected, not prevented* — see the boundaries below.
+- **Cryptographic sealing.** Each record is hashed into a chain link and signed — HMAC by default, Ed25519 (RFC 8032) or ML-DSA-65 (FIPS 204) where configured, with an HSM path in the enterprise server. Optional per-subject shredding (AES-256-GCM key destruction) erases plaintext from a ciphertext holder's view *without changing the MMR root or previously issued proofs*.
+- **Zero-trust verification.** Proofs verify offline: a 313-line pure-Python verifier, a TypeScript twin with the same semantics, and zero network calls. No trust in the gateway, the vendor, or the operator who discloses the record — only in a root you obtained through a channel the discloser does not control.
+- **Regulatory inputs.** MiFID II Art. 16(6)/25(1) record-keeping framing (durable, ordered-within-process records; no orders — RTS 24 — and no clock traceability — RTS 25); EU AI Act Art. 12 logging inputs (commit-before-response, tamper detection, verifiable inclusion); HIPAA Safe-Harbor-style pattern redaction; ISO/IEC 27037-style extracts. **These are technical inputs, not compliance.** No certification exists, none is in progress, and whether any obligation is met is a determination for you and your assessor (`CLM-039` is LEGAL-REVIEW-REQUIRED).
+
+> **→ [Prove it yourself](docs/PROVE_IT.md)** — twelve lines of Python, no call to our servers, three cases of which two must fail.
 
 ---
 
-## How it works
+## Architecture at a glance
 
 ```
- client                    Aegis                         provider
-   │                         │                               │
-   │─ request ──────────────►│                               │
-   │                    admission: auth, scope, bounds,       │
-   │                    WAF, rate limit                       │
-   │                         │── forward ───────────────────►│
-   │                         │◄──────────────── response ────│
-   │                    redact → sign → write → fsync         │
-   │◄─ response ─────────────│  (only after the commit)      │
+ caller ──────────►  Aegis gateway  ──────────────────────────►  upstream provider
+                        │  admission: auth · scope · bounds
+                        │  WAF · rate limiting · session checks
+                        │
+                        │  (policy passed) forward
+                        │  ◄─────────────── response ─────────
+                        │
+                        │  redact → hash → sign → WAL append + fsync → MMR leaf
+                        │  (refused requests: the refusal is committed to the
+                        │   same signed chain before the error returns)
+                        │
+ caller ◄──────────  response + X-Aegis-Evidence-Status
+                        + X-Aegis-Request-ID + X-Aegis-MMR-* proof headers
 ```
 
-**Non-streaming.** The evidence record is committed before the response is observable. The response carries `X-Aegis-Evidence-Status`, `X-Aegis-Request-ID` and the MMR proof headers.
+**Non-streaming.** The evidence record is committed **before** the response is observable by the caller.
 
-**Streaming.** Sanitized events are emitted incrementally through a bounded, byte-accounted queue while evidence status reads `pending-terminal`. One exact-byte terminal summary is committed, and only then is the terminal marker emitted. If that commit fails, the marker is withheld — a client that treats connection close as success will accept an unevidenced stream, so check for the marker.
+**Streaming.** Sanitized events are emitted incrementally through a bounded, byte-accounted queue while evidence status reads `pending-terminal`. One exact-byte terminal summary is committed, and only then is the terminal marker emitted. If that commit fails, the marker is withheld.
 
-**Refused requests are evidence too.** When the WAF blocks or a quota is exceeded, the refusal is committed to the same signed chain before the error is returned, and the response carries `X-Aegis-Rejection-ID` and `X-Aegis-Evidence-Status: durable-rejection`. The request body is hashed, never stored. A refusal is never conditional on the commit succeeding: if evidence cannot be written the request is still refused, and the header reads `rejection-uncommitted` rather than implying a durability that was not achieved.
+**Fail-closed.** No signer, no distributed limiter, or a ledger that fails to replay means no service — rather than quietly serving unevidenced traffic.
 
 Details: [Architecture](docs/architecture/ARCHITECTURE.md) · [Failure Semantics](docs/architecture/FAILURE_SEMANTICS.md)
 
 ---
 
-## Prove it yourself
+## Real-world benchmarks
 
-Every vendor in this category says their logs are secure. The question that separates them is whether **someone who distrusts you can check a record without your cooperation**.
+Real measurements from the retained 2026-09-24 artifact ([`evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json`](evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json)), taken against real backends — a real WAL `fsync` per commit — on one shared, unpinned four-CPU `x86_64` container (Linux, CPython 3.11.15). Reproduce with `scripts/run_benchmarks_5.0.1.py --json`.
+
+| Metric | Result (2026-09-24) | What it measures |
+| --- | --- | --- |
+| Commit latency (P99) | **1.22 ms** (p50 0.62 · p95 1.00 · max 4.18 ms, n = 1,000) | MMR append + HMAC sign + one real WAL `fsync`, per commit |
+| Throughput | **1,727 commits/s** at 10 threads · 1,630/s at 50 · 1,482/s at 100 | One process, one WAL, one writer — does not scale with threads, by design (`AD-16`) |
+| Memory | **+20.1 MB** RSS for 1,000 concurrent in-process SSE streams (20 events each) | Bounded stream ingestion, not network or durable-WAL cost |
+| Backpressure (current) | p50 33.545 ms · p99 51.875 ms; 2,500 offered → 2,500 durable, zero failures | 2 ms *injected* `fsync` delay; superseded pre-group-commit run was p99 836.35 ms; the earlier 10,000-record run at p99 1,189.89 ms is retracted (`UC-018`) — no artifact in this tree produces it |
+| Ed25519 sign / verify | 40.5 µs/op · 128.6 µs/op (`cryptography`, RFC 8032) | Device-order-of-magnitude timing on the recorded host |
+| ML-DSA-65 sign / verify | 173.0 µs/op · 62.4 µs/op (`aegis_rust`, FIPS 204) | A latency sample only — the constant-time claim remains blocked (`REG-041`, `UC-012`) |
+
+Measured suite (dated records; counts move as tests are added — run `pytest -q` on the commit you evaluate): 7,444 passed / 39 skipped / 0 failed (`pytest -n auto -q`) and 7,449 passed / 34 skipped / 0 failed (CI's exact serial Forensic command), both 2026-09-24 on the checked-out `5.0.1` tree. Statement coverage gate: **91.30%** (2026-09-24), floor 90% enforced.
+
+**None of this is a capacity claim.** Offered load is not accepted throughput. The absolute latencies are properties of one shared container; what transfers is the *shape* — per-commit cost stopped growing with chain length — not the numbers. Re-run the harnesses in your own environment before planning against any of them.
+
+[Evidence Index](evidence/INDEX.md) · [Benchmark Method](docs/benchmarks/BENCHMARK_METHOD.md) · [Benchmark Record](docs/BENCHMARKS.md)
+
+---
+
+## Quickstart
+
+Three steps, copy-pasteable. Honest channel note first: **`pip install aegis-latent-core` currently installs `4.1.2`** — the gateway distribution was not published at `5.0.0` (`UC-047`). For the gateway use this repository or the GHCR image `ghcr.io/juanlunaia/aegis-latent-core:5.0.0`.
+
+**Step 1 — get the source:**
+
+```bash
+git clone https://github.com/JuanLunaIA/aegis-latent-core.git && cd aegis-latent-core
+python3 -m venv .venv && . .venv/bin/activate
+python -m pip install --require-hashes -r requirements.lock
+python -m pip install --no-deps -e .
+```
+
+**Step 2 — run it** (isolated local evaluation, against a mock upstream on `127.0.0.1:9999`):
+
+```bash
+export AEGIS_SECURITY_ENFORCEMENT_MODE=development
+export AEGIS_DEBUG_MODE=true
+export AEGIS_AUTH_DISABLED=true
+export AEGIS_BACKEND_URL=http://127.0.0.1:9999
+aegis
+```
+
+Development mode disables the controls that make records meaningful — it is for reading the API, not for evaluating security. For a hardened single node see [Deployment Profiles](docs/operations/DEPLOYMENT_PROFILES.md). Container alternative: `docker compose up --build` (evaluation profile, bound to `127.0.0.1`).
+
+**Step 3 — make a governed call and read the evidence headers:**
+
+```bash
+curl -sS http://127.0.0.1:8080/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -H 'x-session-id: demo-session' \
+  -d '{"messages":[{"role":"user","content":"Hello, Aegis."}]}'
+
+curl -sS -D - -o /dev/null http://127.0.0.1:8080/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -H 'x-session-id: demo-session' \
+  -d '{"messages":[{"role":"user","content":"Hello, Aegis."}]}' \
+  | grep -i '^x-aegis'
+```
+
+Expect `X-Aegis-Evidence-Status`, `X-Aegis-Request-ID`, `X-Aegis-Proof-Status` and the `X-Aegis-MMR-*` proof headers.
+
+More: [Developer Quickstart](docs/DEVELOPER_QUICKSTART.md) · [Usage Examples](docs/USAGE_EXAMPLES.md)
+
+---
+
+## Verification
+
+A third party verifies a log entry **without trusting the Aegis server** — offline, from the exported bundle, against a key and root obtained out of band:
+
+```bash
+pip install "aegis-latent-sdk[verify]"
+aegis-sdk verify export.zip --public-key operator-ed25519.pub.pem
+```
+
+Exit `0` only when nothing failed **and** the manifest signature verified against a key you supplied. Exit `3` (`INCOMPLETE`) means the digests are internally consistent but the signature was not checked. The same check in library form:
 
 ```python
-pip install aegis-latent-sdk
-
 from aegis_sdk.proof import InclusionProof, verify_inclusion_hash
 
 proof = InclusionProof.from_mapping(record["mmr_proof"])
@@ -84,22 +161,7 @@ Three cases, and two of them must fail:
 | **One altered byte in the record**, same proof and root | `NOT INCLUDED` |
 | **Genuine record against a root you did not obtain independently** | `NOT INCLUDED` |
 
-The verifier is 313 lines of pure Python, exists in TypeScript with the same semantics, and makes no network call. The third case is the one to understand first: **a root supplied by the same gateway that produced the proof establishes internal consistency and nothing more** (`CLM-044`). Getting the root by a path the discloser does not control is your design problem, and no software solves it for you.
-
-A passing verification establishes inclusion under the root you supplied — not that the response was correct, not who produced the record, and not that nothing was omitted.
-
-Full worked transcript with the failing cases: **[docs/PROVE_IT.md](docs/PROVE_IT.md)**
-
-### Verify an exported bundle, offline
-
-A forensic export (`/v1/audit/export`) is a ZIP: `manifest.json`, the evidence files, MMR proofs, and — when the operator configured a signing key — an Ed25519 signature over the manifest. `aegis-sdk`, the Python SDK's command line, checks all of it without a network call and without trusting the archive's own `VERIFY.sh`:
-
-```bash
-pip install "aegis-latent-sdk[verify]"
-aegis-sdk verify export.zip --public-key operator-ed25519.pub.pem
-```
-
-Exit `0` only when nothing failed **and** the manifest signature verified against a key you supplied out of band. Exit `3` (`INCOMPLETE`) means the digests are internally consistent but the signature was not checked — no key given, no key in the archive (there never is one), or the bundle was never signed. `docs/CLAIMS_MATRIX.md` `CLM-107` has the full check list and boundary.
+The third case is the one to understand first: **a root supplied by the same gateway that produced the proof establishes internal consistency and nothing more** (`CLM-044`). Getting the root by a path the discloser does not control is your design problem, and no software solves it for you. A passing verification establishes inclusion under the root you supplied — not that the response was correct, not who produced the record, and not that nothing was omitted. Full worked transcript with the failing cases: [docs/PROVE_IT.md](docs/PROVE_IT.md)
 
 ### Verify what you downloaded
 
@@ -112,328 +174,30 @@ curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/
 sha256sum -c SHA256SUMS --ignore-missing
 ```
 
-Two things that snippet does not establish. It shows the bytes match the manifest; it does not show who built them — an OCI signature (`cosign verify`) and a build attestation (`gh attestation verify`) are separate checks against separate infrastructure. And it covers the **release assets only**: the PyPI wheels for `aegis-latent-core` are rebuilt from the same source on a different build host, so their bytes differ from the release assets of the same name, and `SHA256SUMS` does not cover them (see [docs/RELEASE_STATUS.md](docs/RELEASE_STATUS.md)).
+Two things that snippet does not establish. It shows the bytes match the manifest; it does not show who built them — an OCI signature (`cosign verify`) and a build attestation (`gh attestation verify`) are separate checks against separate infrastructure. And it covers the **release assets only**: the PyPI wheels for `aegis-latent-core` are rebuilt from the same source on a different build host, so their bytes differ from the release assets of the same name and `SHA256SUMS` does not cover them (see [docs/RELEASE_STATUS.md](docs/RELEASE_STATUS.md)).
 
-`python scripts/verify_release_readback.py --tag v5.0.0 --verify-assets` automates the whole readback — the GitHub Release, the `SHA256SUMS` sweep, the PyPI and npm versions, and the GHCR manifest digests — and prints `NOT_EXECUTED`, with the reason, for anything it could not check from where it ran.
-
----
-
-## Two deployment shapes
-
-The same controls — WAF, redaction, signed Merkle ledger, portable proofs — run in either of two places. Records from both verify with the same tooling.
-
-**Gateway.** A separate process the application cannot bypass. This is the right shape when the boundary is organisational: several teams or languages, one enforcement point.
-
-```bash
-aegis     # or aegis-server
-```
-
-**Embedded.** The same controls inside a process that already holds a provider client and cannot add a network hop — a Lambda handler, a batch job:
-
-```python
-import aegis, openai
-
-client = aegis.wrap(openai.OpenAI())          # or anthropic.Anthropic(), sync or async
-reply = client.chat.completions.create(model="gpt-4o", messages=[...])
-reply._aegis_evidence.node_hash               # signed, chained, proof-carrying
-```
-
-`wrap` recognises a client by shape, so neither provider SDK is a dependency of this package. Blocked prompts raise `AegisBlockedError` and are never dispatched. Streaming is redacted within a bounded holdback, and the terminal record is committed before the final chunk is yielded.
-
-**The difference that matters for a threat model.** The gateway is a process the application cannot bypass. The embedded engine runs *inside* the application, so it constrains calls made through the client it wrapped and nothing else — code in the same process can call the provider directly, hold a second unwrapped client, or edit the WAL. It is an evidence and policy layer for cooperative code, not a containment boundary against the process it runs in. Where the application is itself the thing being constrained, use the gateway.
-
-Details: [`aegis/embedded.py`](aegis/embedded.py)
+`python scripts/verify_release_readback.py --tag v5.0.0 --verify-assets` automates the whole readback — the GitHub Release, the `SHA256SUMS` sweep, the PyPI and npm versions, and the GHCR manifest digests — and prints `NOT_EXECUTED`, with the reason, for anything it could not check from where it ran. This block is emitted by that same tool, so the documented commands cannot drift from it.
 
 ---
 
-## Agent-to-agent receipts
+## Compliance & security
 
-When one agent calls another's tool, a receipt lets the caller show a third party that the execution was recorded — without either side disclosing the arguments or the result, which travel only as SHA-256 digests.
+- **JCS determinism.** Forensic exports are canonicalized with JSON Canonicalization Scheme (RFC 8785): a `manifest.json` over DAG-CBOR, content-addressed with CIDv1, plus a technical PDF and an embedded `VERIFY.sh`. Non-finite numbers are rejected fail-closed rather than silently normalized.
+- **Domain-separated hashing.** New chains record leaves under the `aegis-mmr-inclusion-v2` scheme — RFC 6962-style domain separation, so a leaf payload cannot hash to an interior node (`CLM-064`). Existing `v1` chains keep verifying unchanged; a scheme mismatch faults instead of replaying to a different root.
+- **Audit inputs.** Every claim in this repository carries an evidence locator and a stated boundary; the [Claims Matrix](docs/CLAIMS_MATRIX.md), the [Defect Registry](docs/REGISTRY.md), SBOMs, signed tags and signed images exist to serve an audit — they are inputs to audits, never a certification: **no SOC 2, no ISO 27001, no HIPAA attestation, no FedRAMP, and none in progress**.
+- **Boundaries, stated once:** tampering is detected, not prevented — an operator with filesystem access can alter records. No universal PII removal; redaction protects the record, not your provider. No output validation — the gateway records what the model returned, it does not check whether it was true (`UC-068`). No cross-replica global ordering. No guaranteed prompt-injection prevention.
 
-```python
-from aegis.core.a2a import generate_receipt, verify_receipt
-
-receipt = generate_receipt(ledger, caller_agent_id="planner", target_agent_id="research",
-                           tool_name="web.query", input_bytes=args, output_bytes=result)
-verify_receipt(receipt, trusted_root)   # also in both SDKs
-```
-
-A valid receipt establishes that the execution's canonical envelope is included under the root you supplied — and nothing else. It does not establish that the tool ran, that either agent identifier is authentic, that the caller was authorised, or that the timestamp is accurate; that is the issuer's unattested clock. The root must be obtained independently of whoever handed you the receipt.
-
-Details: [`aegis/core/a2a.py`](aegis/core/a2a.py)
+[SECURITY.md](SECURITY.md) · [Threat Model](docs/security/THREAT_MODEL.md) · [Compliance Mapping](docs/compliance/COMPLIANCE_MAPPING.md) · [Boundaries](docs/BOUNDARIES.md)
 
 ---
 
-## Quickstart
-
-### Install
-
-Three channels, because they install different things:
-
-```bash
-pip install aegis-latent-core     # the engine: aegis.wrap(), plus the aegis / aegis-server CLIs
-pip install aegis-latent-sdk      # the verifier: check a proof you were handed
-npm  install aegis-latent-sdk     # the same verifier, in TypeScript
-```
-
-`aegis-latent-core` carries both deployment shapes — importing `aegis.wrap` for
-embedded use and the `aegis` / `aegis-server` console scripts for the gateway —
-so the choice between them is a deployment decision, not a different package.
-For the gateway as a container, see [Deployment Profiles](docs/operations/DEPLOYMENT_PROFILES.md):
-
-```bash
-docker pull ghcr.io/juanlunaia/aegis-latent-core:5.0.0
-```
-
-The published wheel is `py3-none-any`: **the complete feature set runs on pure
-Python**, with no compiler and no native dependency. The `aegis_rust` extension
-is an optional accelerator, is not part of this wheel, and is not on any
-registry — it is built from source or taken from the platform wheels attached to
-the [GitHub Release](https://github.com/JuanLunaIA/aegis-latent-core/releases).
-What it buys, measured rather than estimated, is in [Verified metrics](#verified-metrics)
-and [Rust build](docs/RUST_BUILD.md); evidence produced with and without it
-verifies identically, because both paths agree on the MMR root.
-
-Verify what you installed before relying on it — a version on a registry is not
-provenance. [Release Status §2](docs/RELEASE_STATUS.md) has the readback
-commands and the digests observed on 2026-09-04.
-
-Worked examples for every mode, with the output they actually produce, are in
-[Usage Examples](docs/USAGE_EXAMPLES.md).
-
-### From source
-
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install --require-hashes -r requirements.lock
-python -m pip install --no-deps -e .
-pytest -q
-```
-
-For isolated local evaluation, against a mock upstream:
-
-```bash
-export AEGIS_SECURITY_ENFORCEMENT_MODE=development
-export AEGIS_DEBUG_MODE=true
-export AEGIS_AUTH_DISABLED=true
-export AEGIS_BACKEND_URL=http://127.0.0.1:9999
-aegis
-```
-
-Development mode disables the controls that make records meaningful. It is for reading the API, not for evaluating security. Use [single-node hardened](docs/operations/DEPLOYMENT_PROFILES.md#2-single-node-hardened) for anything you intend to conclude from.
-
-### With Docker Compose
-
-```bash
-docker compose up --build
-```
-
-The root `docker-compose.yml` runs an evaluation profile bound to `127.0.0.1` with in-memory rate limiting. It is not a governed deployment; see [Deployment Profiles](docs/operations/DEPLOYMENT_PROFILES.md).
-
-### A governed call
-
-```bash
-curl -sS http://127.0.0.1:8080/v1/chat/completions \
-  -H 'Content-Type: application/json' \
-  -H 'x-session-id: demo-session' \
-  -d '{"messages":[{"role":"user","content":"Hello, Aegis."}]}'
-```
-
-### Inspect the evidence headers
-
-```bash
-curl -sS -D - -o /dev/null http://127.0.0.1:8080/v1/chat/completions \
-  -H 'Content-Type: application/json' \
-  -H 'x-session-id: demo-session' \
-  -d '{"messages":[{"role":"user","content":"Hello, Aegis."}]}' \
-  | grep -i '^x-aegis'
-```
-
-Expect `X-Aegis-Evidence-Status`, `X-Aegis-Request-ID`, `X-Aegis-Proof-Status`, and the `X-Aegis-MMR-*` proof headers.
-
-More: [Developer Quickstart](docs/DEVELOPER_QUICKSTART.md)
-
----
-
-## SDKs
-
-Python and TypeScript SDKs provide gateway configuration, OpenAI and Anthropic integration, and portable-proof verification.
-
-```bash
-# Python, from the source tree
-pip install -e ./sdk/python
-
-# TypeScript, from the source tree
-cd sdk/typescript && npm ci && npm run build
-```
-
-**Registry state.** Both registries carry `aegis-latent-sdk` at `5.0.0`, the version matching the published `5.0.0` release — this source tree's SDK is `5.0.1`, published nowhere yet ([Release Status](docs/RELEASE_STATUS.md) §1.0a): the 2026-09-16 readback recorded in [Release Status](docs/RELEASE_STATUS.md) §1.0 found PyPI `aegis-latent-sdk` `5.0.0` and npm `aegis-latent-sdk` `5.0.0`. **The gateway distribution is the exception:** PyPI `aegis-latent-core` was not published at `5.0.0` and still resolves to `4.1.2`, so `pip install aegis-latent-core` gets `4.1.2` code — not what this tree documents. Take the gateway from the GitHub Release assets or GHCR (`ghcr.io/juanlunaia/aegis-latent-core:5.0.0`) instead. The npm version list skips `4.1.1`, whose publish step failed.
-
-**Proof verification caution.** A proof verified against a root supplied by the same gateway that produced it establishes internal consistency only. Obtain the trusted root through an independent channel, or the verification is circular.
-
-**Python SDK also ships `aegis-sdk`**, a zero-runtime-dependency command line: `aegis-sdk verify <bundle.zip>` checks a forensic export offline (see [Prove it yourself](#prove-it-yourself)), and `aegis-sdk audit <gateway_url>` prints a running gateway's own `/v1/audit/health` and `/integrity` as JSON — its own report about itself, not independent evidence.
-
-[Integrations Guide](docs/DEVELOPER_INTEGRATIONS_GUIDE.md) · [SDK Guide](docs/DEVELOPER_SDK_GUIDE.md) · [MMR Proof v1](docs/api/MMR_PROOF_V1.md) · [Python SDK README](sdk/python/README.md)
-
----
-
-## Dashboard
-
-A Next.js read-only forensic view over the audit API: ledger window, integrity, MMR proof verification in the browser, current metrics, and bounded evidence export. It renders explicit empty and unavailable states rather than synthesising records.
-
-There is no hosted dashboard. You run it, and browser-facing authentication is your responsibility.
-
-[Setup and boundaries](dashboard/README.md)
-
----
-
-## Security and evidence model
-
-- Authenticated principals derived from the credential, never from a client-supplied header; scopes gate audit reads and exports separately.
-- Hash-linked, signed records with tamper detection on read; one writer per WAL path, enforced by an advisory lock.
-- A ledger that failed to replay refuses governed traffic at ingress; `/health` and `/metrics` stay reachable so the fault is diagnosable rather than silent.
-- Bounded requests and streams; deterministic pattern-based redaction before the record is written.
-- **Tampering is detected, not prevented.** An operator with filesystem access can alter or delete records. Every integrity claim terminates at that boundary.
-- **Redaction protects the record, not your provider.** The request reaches them as sent.
-
-[SECURITY.md](SECURITY.md) · [Threat Model](docs/security/THREAT_MODEL.md) · [Security Controls](docs/security/SECURITY_CONTROLS.md) · [Storage Requirements](docs/operations/STORAGE_REQUIREMENTS.md) · [Boundaries](docs/BOUNDARIES.md)
-
----
-
-## Formal verification
-
-Bounded models under `specs/` check core invariants in CI: commit-before-emission, append-only ledger prefixes, session-to-ledger binding, and per-stream retained-byte arithmetic. The toolchain is Z3, Lean 4, and TLA+/TLC, gated by `scripts/verify_formal_artifacts.sh`.
-
-**These are abstractions, not runtimes.** Nothing mechanically connects a model to the Python or Rust that executes, and the state spaces are bounded. The models can be correct while the implementation is wrong.
-
-Separately, Kani 0.67.0 model-checks the native WAL's frame-bounds arithmetic over the whole `usize` domain. Those five harnesses run against the **real functions** rather than an abstraction, so the refinement gap above does not apply to them — but they cover two functions, not a system. Kani models no `mmap`, no filesystem and no concurrency, so nothing there establishes durability or crash safety.
-
-[Formal Verification](docs/formal/FORMAL_VERIFICATION.md) · [Limits](docs/formal/FORMAL_VERIFICATION_LIMITS.md)
-
----
-
-## Compliance contributions
-
-| Framework | Technical contribution |
-| --- | --- |
-| EU AI Act, Article 12 | Per-call records with tamper detection and third-party-verifiable proofs, as an input to a record-keeping assessment |
-| HIPAA | Deterministic pattern-based redaction targeting textual forms associated with Safe Harbor identifier categories |
-| MiFID II | Durable, ordered-within-process records of governed AI interactions, as a record-keeping helper |
-| ISO/IEC 27037 | Bounded, integrity-verifiable extracts a practitioner may handle as digital evidence |
-
-**These are technical inputs, not compliance.** No certification exists, none is in progress, and whether any obligation is met is a determination for you and your assessor.
-
-[Compliance Mapping](docs/compliance/COMPLIANCE_MAPPING.md)
-
----
-
-## Verified metrics
-
-| Measure | Value | Artifact | Date |
-| --- | --- | --- | --- |
-| Statement coverage | 93.9096% (11,765 / 12,528) | `coverage.json` | 2026-08-18 |
-| Statement coverage | 89.7169% | Candidate gate record | 2026-08-24 |
-| Python suite | 5,707 passed, 37 skipped | Candidate gate record | 2026-08-24 |
-| Python suite | 5,661 passed, 81 skipped, 0 failed | Clean-container reproduction | 2026-09-01 |
-| Python suite | 5,974 passed, 52 skipped, 0 failed | `4.1.2` source baseline | 2026-09-03 |
-| Python suite | 6,179 passed, 52 skipped, 0 failed | `4.3.0` source baseline | 2026-09-08 |
-| Python suite | **6,936 passed, 26 skipped, 0 failed** | `5.0.0` source baseline | 2026-09-16 |
-| Python suite | 6,948 passed, 119 skipped, 0 failed | `5.0.0` source baseline (registry-closure branch) | 2026-09-21 |
-| Python suite | **7,444 passed, 39 skipped, 0 failed** (`pytest -n auto -q`) · **7,449 passed, 34 skipped, 0 failed** (CI's exact serial Forensic command) | Checked-out `5.0.1` source tree | 2026-09-24 |
-| Rust extension | 31 tests passed; Clippy `-D warnings`; abi3 wheel built | CI | Per run |
-| Static analysis | `mypy --strict aegis` 0 errors over 208 files; `bandit -r aegis/ aegis_server/ -lll` 0 findings at every severity | CI | Per run |
-| Model checking | 5 Kani harnesses verified, 0 failures, over the whole `usize` domain | CI | Per run |
-| Per-commit cost vs chain length | At 2,000 prior leaves: 30,153.9 → 361.7 µs/commit. Normalised, the prior curve rises `1.00× → 17.65×` with chain length; the current one is flat within noise | [`commit_scaling_measurement`](evidence/commit_scaling_measurement_2026-09-03.md) | 2026-09-03 |
-| MMR append, Rust vs Python | At 100,000 leaves: 775.76k vs 156.90k leaves/s (4.94×) | [`evidence_path_measurements`](evidence/evidence_path_measurements_2026-09-03.md) | 2026-09-03 |
-| WAF corpus | Zero observed bypasses, zero false positives over 15 malicious and 8 benign cases | Corpus report | Per corpus |
-| Backpressure (**current**) | 2,500 offered → 2,500 durable, zero missing or duplicate IDs; p50 33.545 ms, p99 51.875 ms, 200 `fsync` calls under 2 ms injected delay | [`backpressure_group_commit_remeasurement`](evidence/backpressure_group_commit_remeasurement_2026-09-16.md) | 2026-09-16 |
-| Backpressure (superseded) | Same harness before coalesced group commit: p99 836.35 ms, 2,501 `fsync` calls | Stall report | 2026-08-20 |
-| `commit_forensic` latency (n=1,000) | P50 0.62 ms · P95 1.00 ms · P99 1.22 ms · max 4.18 ms — one real WAL `fsync` per commit | [`benchmarks_5.0.1_2026-09-24.json`](evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json) | 2026-09-24 |
-| Concurrent commit throughput | 10 threads 1,727/s · 50 threads 1,630/s · 100 threads 1,482/s — one process, one WAL, one writer lock; **does not scale with threads, by design** (`AD-16`) | Same artifact | 2026-09-24 |
-| Streaming ingestion memory | +20.1 MB RSS for 1,000 concurrent in-process SSE streams (20 events each) | Same artifact | 2026-09-24 |
-| Ed25519 sign / verify | 40.5 µs/op · 128.6 µs/op (`cryptography`, RFC 8032) | Same artifact | 2026-09-24 |
-| ML-DSA-65 sign / verify | 173.0 µs/op · 62.4 µs/op (`aegis_rust`, FIPS 204) — a latency sample only; not a constant-time claim | Same artifact | 2026-09-24 |
-
-Two coverage figures appear because two runs measured differently on different dates; both are recorded rather than one being selected. Suite counts move as tests are added — run `pytest -q` on the commit you are evaluating.
-
-**None of this is a capacity claim.** Offered load is not accepted throughput. The absolute latencies above are properties of one shared, unpinned four-CPU container; what transfers is the *shape* — that per-commit cost stopped growing with chain length — not the numbers. Re-run the harnesses in your own environment before planning against any of them.
-
-**A clean static-analysis run is not a correctness result.** `mypy --strict` and Bandit reporting zero says those two checkers found nothing on this source, which is weaker than an absence of defects or of vulnerabilities.
-
-[Evidence Index](evidence/INDEX.md) · [Benchmark Method](docs/benchmarks/BENCHMARK_METHOD.md)
-
----
-
-## Roadmap
-
-Not built. No dates.
-
-- Registry publication automation, so a release either publishes and confirms or fails
-- Durable WAL backend options, and MMR continuity across replicas rather than only across restarts
-- Wider OCI attestation coverage and a documented consumer verification path
-- Framework integrations beyond the current provider surfaces
-- OpenTelemetry span model across the evidence lifecycle
-- Published benchmarks for a representative target deployment
-- An enterprise assurance evidence pack
-
-[ROADMAP.md](ROADMAP.md)
-
----
-
-## Commercial status
-
-| | |
-| --- | --- |
-| **Core** | **Free**, AGPLv3, complete. Every engine is importable and fully functional; licence enforcement is off by default. No feature is withheld by a runtime check |
-| **Commercial licence** | `[FRAMEWORK-ONLY]` — intended to supersede AGPLv3 §13 for a covered deployment. **The template has not been drafted** (`CR-04`, `NOT STARTED`). A buyer asking to see it today will find there is nothing to send |
-| **Pricing** | `[HYPOTHESIS-UNVALIDATED]` — published so a conversation starts from a number, not validated by any executed contract. [Pricing Guide](docs/commercial/ENTERPRISE_PRICING_GUIDE.md) |
-| **Support** | Community best-effort, no SLA. Commercial terms per agreement (`[FRAMEWORK-ONLY]`) |
-| **Certification** | `[NOT-CERTIFIED]` — no SOC 2, ISO 27001, HIPAA attestation or FedRAMP, and none in progress |
-
-## The objections, answered before you ask
-
-| Objection | The short answer |
-| --- | --- |
-| **"One maintainer — bus factor one."** | True, and every audit flags it `CRITICAL`. What mitigates it today: the source is AGPLv3 and complete, the build is reproducible, and you can pin and vendor. What does not: having the source is not having a maintainer. Escrow (`CR-03`) and a second engineer (`CR-06`) are both `NOT STARTED` |
-| **"No SOC 2, no penetration test."** | Correct, and neither is in progress. If that is a hard procurement gate we fail it today. What exists instead: complete source, a claims register with locators, 42 published non-claims, SBOMs, signed tags and images |
-| **"Why not build it ourselves?"** | You could. The parts that take time are not the obvious ones — commit ordering on the streaming path, a failed `fsync` failing the request, rollback that stays O(1) as the chain grows, a proof format stable across a hash-scheme change. Read the 3,918 lines in `aegis/core/crypto_audit.py` and `aegis/core/mmr.py` and decide. **No replacement-cost figure is offered** — `UC-032` blocks it, and any number would be invented |
-| **"Our legal team refuses AGPL."** | Reasonable. The commercial licence is the intended resolution and **its text does not yet exist** (`CR-04`). Whether your deployment triggers §13 is your counsel's determination; nothing here is legal advice |
-| **"How do we know you didn't forge the evidence?"** | The best question asked. With the default HMAC chain, any key holder can forge — it authenticates the key, not a party (`UC-041`). What the proof still gives you is that a discloser cannot alter a record and have it verify against a root you hold. For attribution, configure the HSM or PQC path |
-| **"You have no customers."** | Correct. None to cite, and none will be invented (`CR-05`) |
-
-Longer answers, with timelines: [Objection Handling](docs/commercial/SALES_KIT/OBJECTION_HANDLING.md) · [Commercial Readiness](docs/commercial/COMMERCIAL_READINESS.md)
-
----
-
-## Community and governance
-
-| | |
-| --- | --- |
-| Issues and questions | [Issues](https://github.com/JuanLunaIA/aegis-latent-core/issues) · [Discussions](https://github.com/JuanLunaIA/aegis-latent-core/discussions) · [SUPPORT.md](SUPPORT.md) |
-| Security reports | Privately, never in an issue — [SECURITY.md](SECURITY.md) |
-| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) · [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) |
-| How decisions are made | [GOVERNANCE.md](GOVERNANCE.md) |
-| Licence | AGPLv3 **or** commercial — [LICENSE](LICENSE) · [COMMERCIAL.md](COMMERCIAL.md) |
-
-Support is community best-effort with no SLA. This is a single-maintainer project; weigh that in any adoption decision. See [Support Model](docs/enterprise/SUPPORT_MODEL.md).
-
----
-
-## Boundaries and limitations
-
-- **No certification.** No SOC 2, ISO 27001, HIPAA attestation, or FedRAMP. None in progress.
-- **No independent assurance.** No third-party audit or penetration test exists.
-- **No compliance determination.** The system produces technical inputs; you and your assessor decide.
-- **No legal admissibility.** Admissibility is a judicial determination, and no chain of custody is created.
-- **Not immutable.** Tampering is detected, not prevented; an operator with root can alter records.
-- **No universal PII removal.** Deterministic pattern matching over specific fields; it does not protect data already sent upstream.
-- **No output validation.** The gateway records what the model returned; it does not check whether it was true. Two narrow, unwired detectors exist for one clinical vertical (`UC-068`) — neither is on any request path.
-- **No production SLO or capacity claim.** Benchmarks are local measurements.
-- **No cross-replica global ordering.** Each replica is an independent chain.
-- **No guaranteed prompt-injection prevention.** Bounded heuristic detection; the record is the product.
-
-Full statements: [Boundaries](docs/BOUNDARIES.md) · [Claims Matrix](docs/CLAIMS_MATRIX.md) · [Unsupported Claims](docs/institutional/UNSUPPORTED_CLAIMS.md)
+## Links
+
+- [ROADMAP.md](docs/ROADMAP.md) — what is built, what is not, and the ticket ledger behind it.
+- [REGISTRY.md](docs/REGISTRY.md) — master defect and debt registry: every finding, its state and its evidence file.
+- [UNSUPPORTED_CLAIMS.md](docs/institutional/UNSUPPORTED_CLAIMS.md) — the register of what this software does **not** claim, and the phrases CI rejects.
+- [RELEASE_STATUS.md](docs/RELEASE_STATUS.md) — per-surface publication state and readback commands (single source of truth).
+- [CLAIMS_MATRIX.md](docs/CLAIMS_MATRIX.md) · [docs/BOUNDARIES.md](docs/BOUNDARIES.md) · [docs/INDEX.md](docs/INDEX.md)
 
 ---
 
