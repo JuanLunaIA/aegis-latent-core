@@ -32,7 +32,7 @@ this source tree, or taken from the seven platform wheels attached to the
 GitHub Release. Building it is a deliberate act, not a missing step.
 
 What it changes, measured rather than estimated, is throughput on the hashing
-and matching hot paths — see [Verified metrics](../README.md#verified-metrics)
+and matching hot paths — see [Evidence-path measurements](BENCHMARKS.md#evidence-path-measurements-on-the-current-source-baseline)
 for the figures and the harness that produced them, each attributed to a dated
 run rather than quoted as a headline. What it does **not** change is any
 evidence value: the Python and Rust MMR implementations agree on the root, a

@@ -1,0 +1,61 @@
+REG-D65 — CodeQL "Should use a 'with' statement" on scripts/generate_sdk_bundle_fixture.py
+REG-D66 — main's Documentation Gates job red: docs/RUST_BUILD.md links a README anchor PR #202 removed
+===========================================================================================================
+
+Recorded 2026-09-24 by the release gatekeeper pass, on the designated branch
+restarted from origin/main at 1bda9f9 (PR #202's squash).
+
+REG-D65
+-------
+Found by: github-advanced-security[bot] (CodeQL) on PR #201, code-scanning alert
+736, scripts/generate_sdk_bundle_fixture.py:73. PR #201 merged (9fb7556) before it
+was addressed, so the alert is on main.
+
+  "Instance of context-manager class CryptographicAuditLedger is closed in a
+   finally block. Consider using 'with' statement."
+
+Checked before changing: CryptographicAuditLedger implements __enter__ (re-uses
+the WAL handle __init__ already opened; _open_wal is idempotent) and __exit__
+(calls close()), aegis/core/crypto_audit.py:2054-2062. So `with` is the same
+lifetime as the try/finally it replaces.
+
+Fix: `with CryptographicAuditLedger(...) as ledger:` around the three
+commit_forensic calls; the explicit finally/close() is gone.
+
+Verified (same tree, change stashed vs applied):
+  ruff check scripts/generate_sdk_bundle_fixture.py            -> All checks passed!
+  ruff format --check scripts/generate_sdk_bundle_fixture.py   -> 1 file already formatted
+  mypy --strict --explicit-package-bases --follow-imports=silent scripts/generate_sdk_bundle_fixture.py
+                                                               -> Success: no issues found in 1 source file
+  pytest -q tests/test_sdk_bundle_contract.py   before: 4 passed   after: 4 passed
+The fixture is not regenerated: node timestamps are wall-clock, so regenerating
+would change committed bytes for no reason. The contract test compares shape.
+
+REG-D66
+-------
+Found by: running the repository's own link gate at the new main head.
+
+  $ bash scripts/verify_links.sh --root .
+  verify_links: FAIL (1 of 1387 relative links broken)
+    docs/RUST_BUILD.md:35: '../README.md#verified-metrics' resolves, but anchor
+    '#verified-metrics' has no matching heading in that file
+
+Confirmed on main's own CI: run 35971846398 (push of 1bda9f9), job
+"Documentation Gates", step "Relative links and heading anchors" -> failure;
+the following steps (prose boundary language, whitespace) were skipped.
+
+Cause: PR #202 restructured README.md and removed the "## Verified metrics"
+section (present at 9fb7556:README.md:331). The sentence in RUST_BUILD.md is
+about "throughput on the hashing and matching hot paths"; the old section's
+Rust figure was "MMR append, Rust vs Python … 775.76k vs 156.90k leaves/s".
+The new README's "## Real-world benchmarks" table does not carry that figure,
+so pointing the link there would have been a working link to the wrong
+content. docs/BENCHMARKS.md:131 carries it, under
+"## Evidence-path measurements on the current source baseline".
+
+Fix: docs/RUST_BUILD.md:34 now links
+  BENCHMARKS.md#evidence-path-measurements-on-the-current-source-baseline
+
+Verified:
+  $ bash scripts/verify_links.sh --root .
+  verify_links: PASS (1387 relative links and anchors resolved)

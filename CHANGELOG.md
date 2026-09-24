@@ -23,6 +23,99 @@ moved from `5.0.0` to `5.0.1` and the release contract reports `READY`; the
 version for it (`docs/RELEASE_STATUS.md` §1.0a). This section is not a release
 announcement and sets no release date.
 
+**Release gatekeeper verdict (2026-09-24): HALTED.** A full pre-release
+verification pass found two release-blocking defects in the gateway's in-process
+seccomp control and two supply-chain consistency defects; they are flagged, not
+fixed. Every check and its result is in
+[`RELEASE_HALTED_CRITICAL_ERRORS.md`](RELEASE_HALTED_CRITICAL_ERRORS.md).
+
+### Fixed — found by the 2026-09-24 release gatekeeper pass
+
+- **`main`'s Documentation Gates job was red** (`REG-D66`). PR #202's README
+  restructure removed the `## Verified metrics` heading that
+  `docs/RUST_BUILD.md:35` linked to, so `verify_links.sh` failed 1 of 1,387 links
+  on `main` (CI run `35971846398`, job "Documentation Gates"). The link now
+  targets the Rust-versus-Python MMR measurements in `docs/BENCHMARKS.md`,
+  which are what the sentence describes.
+- **CodeQL alert 736** (`REG-D65`) on `scripts/generate_sdk_bundle_fixture.py`:
+  the fixture ledger was closed in a `finally` block; it is now a `with` block,
+  which `CryptographicAuditLedger.__exit__` already supports. Behaviour is
+  unchanged: `tests/test_sdk_bundle_contract.py` passes 4/4 before and after.
+- **Two false README statements** (`REG-D72`): "floor 90% enforced" (CI and the
+  `Makefile` enforce `--cov-fail-under=65`; 90% was a one-off mission floor,
+  `REG-D36`), and a quickstart line promising `X-Aegis-Proof-Status` on a
+  non-streaming call (that header is streaming-only). The quickstart now also
+  discloses `REG-D67` and its workaround.
+- **This changelog was not exhaustive** (`REG-D71`): six PRs merged after the
+  `v5.0.0` tagged commit (`b2e4335`) had no entry here — recorded below. The
+  `[5.0.0]` heading still read "unreleased source target" eight days after
+  `5.0.0` was published and read back; it now carries the publication date.
+- **Two security documents said `requirements.lock` is what the released image
+  installs** (`REG-D69`, `UC-069`) — it is not; corrected in
+  `docs/security/BUILD_SCRIPT_ATTESTATION.md` and
+  `docs/security/DEPENDENCY_RISK_REGISTER.md`. The build defect itself is open.
+
+### Flagged, not fixed — release-blocking (see the halt report)
+
+- `REG-D67` — on a Linux host with `libseccomp`, outside Docker, the gateway's
+  own `SCMP_ACT_KILL_PROCESS` filter kills it on `io_uring_enter` (libuv via
+  `uvloop`) about two seconds after startup, before any request. Workaround:
+  `UV_USE_IO_URING=0`.
+- `REG-D68` — `SeccompGuard` treats `/.dockerenv` as a sandbox and skips the
+  filter, so the image's baked-in strict mode with `AEGIS_REQUIRE_SECCOMP=true`
+  refuses to start under Docker (code path demonstrated; not run on a Docker
+  engine).
+- `REG-D69` — `deploy/docker/Dockerfile` and the air-gapped build resolve
+  dependency ranges at build time instead of installing `requirements.lock`.
+- `REG-D70` — `requirements.txt` (and so the lock and the SBOM) omits
+  `cachetools`, a core dependency; lock-based installs run the in-memory rate
+  limiter with an unbounded bucket map.
+- Lower severity, also open: `REG-D73` (unhandled exceptions return a
+  `text/plain` 500, no traceback), `REG-D74` (the `[all]` extra installs the dev
+  toolchain), `REG-D75` (default bind `0.0.0.0` even with authentication
+  disabled). `REG-D76` records that `cargo audit` now runs (0 vulnerabilities)
+  and that two allowlist entries are stale.
+
+### Recorded retroactively — PRs merged after the `v5.0.0` tag with no entry here
+
+- **#182 — AKS strict-mode deployment.** `LSMGuard` reads AppArmor confinement
+  from `/proc/self/attr/{apparmor/,}current` before probing securityfs, which
+  pods do not mount; the seccomp allowlist gained the syscalls the event loop
+  and WAL use after lockdown (`epoll_pwait`, `ioctl`, `newfstatat`, `openat`,
+  `fsync`, `flock`, …) with `SCMP_ACT_KILL_PROCESS` as the default action, and
+  `tests/test_seccomp_enforced_serving.py` serves HTTP behind the real filter;
+  the Helm chart wires `AEGIS_AUTH_IDENTITY_HMAC_KEY` and
+  `AEGIS_API_KEY_PRINCIPALS_JSON` and accepts extra volumes; `deploy/azure/aks/`
+  adds a values overlay, cluster resources, a Key Vault CSI sync and a bootstrap
+  script.
+- **#184 — commercial corpus reconciled; master defect registry seeded.**
+  One price book (`docs/commercial/ENTERPRISE_PRICING_GUIDE.md`, every figure
+  `[HYPOTHESIS-UNVALIDATED]`); new `ARTIFACT_INVENTORY.md`, `CLAIM_LEDGER.md`,
+  `POSITIONING.md`, `SALES_KIT/` and `docs/PROVE_IT.md` (a recorded end-to-end
+  verification transcript); `docs/REGISTRY.md` and `REGISTRY_HUMAN_PACK.md`
+  created.
+- **#185 — Registry Wave 1.** `REG-010`: `RAGInjectionScanner` now runs on tool,
+  function and declared retrieval content at all three governed admission sites,
+  after the WAF and before the forwarder (`CLM-097`,
+  `AEGIS_RAG_INJECTION_SCANNING`, `AEGIS_RAG_INJECTION_BLOCK_THRESHOLD`).
+  `REG-012`: payload digests are keyed to the subject so erasure erases.
+  `REG-017`: `tools/wal_repair.py`, a dry-run-by-default repair for a torn WAL
+  tail that refuses (exit 2) a bad line anywhere but the end and writes a backup
+  first.
+- **#186 — a 75-agent specialist roster** under `.claude/agents/`, each
+  definition restating the `AGENTS.md` evidence rules.
+- **#187 — Registry Wave 2.** `REG-049`: optional WAL free-space preflight
+  before dispatch (`AEGIS_WAL_MIN_FREE_BYTES`, default off; `CLM-100`).
+  `REG-011`: concurrent-append races tested against live Postgres and DynamoDB
+  Local. `REG-013`: the traceparent propagator is wired. `REG-050`: stream
+  admission gauges (`CLM-102`). `REG-054`: a stale `mmr.py` comment. Plus
+  `VERIFIED`/`DOCUMENTED` dispositions for `REG-014`–`REG-016`, `REG-018`–`REG-020`,
+  `REG-022`, `REG-025`, `REG-026`, `REG-040`, `REG-047` and `REG-060`.
+- **#202 — documentation sweep and README restructure** (`REG-D64`): benchmark
+  documents re-baselined to `v5.0.1` with the 2026-09-24 measurements,
+  prospectus and changelog header drift corrected, and a currency regression pin
+  added (`tests/test_documentation_currency.py`).
+
 ### Changed
 
 - **Global version bump to `5.0.1`** across the fourteen synchronized anchors and
@@ -388,7 +481,13 @@ addressed. Fixed on the branch restarted from `main` afterward.
   the test patched a class the app never calls. Both lifespan tests now patch
   the classes `lifespan` actually resolves.
 
-## [5.0.0] — unreleased source target
+## [5.0.0] — 2026-09-16
+
+**Published 2026-09-16** on every surface except PyPI `aegis-latent-core`: signed
+annotated tag `c34d412` at commit `b2e4335`, a GitHub Release with 31 assets, PyPI
+and npm `aegis-latent-sdk` `5.0.0`, and both GHCR images, each read back
+(`docs/RELEASE_STATUS.md` §1.0). *(Heading and this note added 2026-09-24,
+`REG-D71`; the paragraph below is the pre-publication text, kept as written.)*
 
 **Nothing is published for `5.0.0`.** There is no tag, GitHub Release, PyPI or
 npm artifact, and no OCI image. This section records what the source tree

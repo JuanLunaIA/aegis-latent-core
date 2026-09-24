@@ -1,0 +1,79 @@
+REG-D73..REG-D77 — lower-severity findings of the 2026-09-24 release gatekeeper pass
+=====================================================================================
+
+Recorded at 1bda9f9. None of these was fixed in the pass: D73–D75 change runtime
+or packaging behaviour and are owner decisions; D77 is a legal-citation question
+the claims discipline reserves for legal review (CLM-039 LEGAL-REVIEW-REQUIRED).
+D76 is DOCUMENTED (UC-049 currency note).
+
+REG-D73 — unhandled exceptions return text/plain, not structured JSON (no leak)
+------------------------------------------------------------------------------
+Neither app registers an exception handler (grep for exception_handler /
+add_exception_handler in aegis/proxy and aegis_server: none). FastAPI's default
+debug=False applies, so Starlette's ServerErrorMiddleware answers.
+
+Probe: a route that raises RuntimeError("PROBE-SECRET /internal/path token=abc")
+mounted on the real app, strict-shaped config (API-key auth, AEGIS_DEBUG_MODE=false),
+TestClient(raise_server_exceptions=False):
+  gateway   (aegis.proxy.app.create_app)   GET /__probe_raise -> 500 text/plain "Internal Server Error"
+  enterprise (aegis_server.main.create_app) GET /__probe_raise -> 500 text/plain "Internal Server Error"
+  traceback in body: False     probe secret in body: False
+Other error paths observed are JSON: 404 {"detail":"Not Found"}; 403
+{"detail":"Authenticated principal lacks required scope proxy:completions"}.
+Two audit endpoints return a ForensicBundleError message in a 422 JSON detail
+(aegis/proxy/audit_api.py:250, :361): typed domain errors behind audit-scope
+auth, not tracebacks.
+Verdict: no stack trace or exception text reaches a client; the 500 body is not
+JSON. Adding a JSON 500 handler changes the public error contract — owner call.
+
+REG-D74 — the [all] extra installs the development toolchain
+------------------------------------------------------------
+pyproject.toml: all = ["aegis-latent-core[storage-all,vault,oidc,gpu,metrics,otel,pqc,dev]"].
+Built wheel (pip wheel . --no-deps) METADATA: Requires-Dist lines with
+extra == 'all' include pytest, pytest-asyncio, pytest-cov, pytest-httpserver,
+pytest-xdist, hypothesis, ruff, mypy, bandit, pip-audit (and torch via gpu).
+Not a leak into the default artifact: the wheel contains only aegis/,
+aegis_server/, integrations/ and dist-info (no tests, tools or scripts); core
+Requires-Dist has 16 runtime entries and no dev tool; the image installs
+".[storage-sqlite]" only. No document tells users to install [all] (grep: 0).
+Fix direction: drop `dev` from `all`, or rename it.
+
+REG-D75 — default bind 0.0.0.0 even with authentication disabled
+------------------------------------------------------------------
+aegis/config.py:817 host: str = Field(default="0.0.0.0"). The README quickstart
+(AEGIS_AUTH_DISABLED=true, "isolated local evaluation") therefore logs
+"Uvicorn running on http://0.0.0.0:8080" — an unauthenticated forwarder on every
+interface. Fail-closed today only in the sense that auth_disabled requires
+debug_mode. Fix direction: default to 127.0.0.1 when auth_disabled, or set
+AEGIS_HOST=127.0.0.1 in the quickstart.
+
+REG-D76 — cargo audit now runs here; two allowlist entries are stale (DOCUMENTED)
+-------------------------------------------------------------------------------
+UC-049 recorded "cargo audit is not installed here". It is now (cargo-audit on
+PATH; advisory DB fetched to ~/.cargo/advisory-db).
+  aegis_rust_v2:        cargo audit --json -> vulnerabilities 0; warnings:
+                        unmaintained RUSTSEC-2025-0141 bincode 1.3.3; yanked chacha20 0.10.1
+                        (= REG-D02, REG-D03); 327 dependencies
+  connectors/envoy-wasm: vulnerabilities 0; 7 dependencies
+Allowlist aegis_rust_v2/.cargo/audit.toml vs the advisory DB and Cargo.lock:
+  RUSTSEC-2026-0118 hickory-proto  unaffected >= 0.26.0-beta.1; locked 0.26.1 -> stale
+  RUSTSEC-2026-0119 hickory-proto  patched >= 0.26.1;           locked 0.26.1 -> stale
+  RUSTSEC-2024-0436 paste 1.0.15, RUSTSEC-2026-0162/0163/0166 pqcrypto-* — no patched version; still apply
+The stale two suppress nothing today. UC-049 amended with a dated currency note.
+
+REG-D77 — probable mis-citation: "MiFID II Art. 25(1)" as a record-keeping article
+----------------------------------------------------------------------------------
+Cited 13 times across the corpus, including README.md:37,
+docs/compliance/MIFID_II_TECHNICAL_INPUTS.md:27, CLM-104, and
+aegis/core/mifid_record_keeper.py:10, :75, :86, :319, as a five-year
+record-retention obligation paired with Art. 16(6).
+To the gatekeeper's reading: in Directive 2014/65/EU (MiFID II), Art. 25(1)
+concerns the knowledge and competence of staff giving advice or information;
+the five-year obligation to keep order and transaction data at the competent
+authority's disposal is Art. 25(1) of Regulation (EU) No 600/2014 (MiFIR).
+The 2026-09-21 audit (AUDIT_REPORT_v5.0.1_PREP.md, citation table) marked
+"MiFID II 25(1) — suitability records — correct", so the two readings conflict.
+Not changed: regulatory wording is LEGAL-REVIEW-REQUIRED (CLM-039), and neither
+reading was checked against EUR-Lex from this environment.
+Next step: legal review against EUR-Lex; if confirmed, cite "MiFID II Art. 16(6)
+and MiFIR Art. 25(1)" everywhere, including the module's record labels.

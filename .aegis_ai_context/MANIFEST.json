@@ -99,14 +99,14 @@
     {
       "category": "governed_input",
       "path": "README.md",
-      "sha256": "f05d2ef03a91a8653ea803e9b98842b4707c95960b028988b8e0f561f5469360",
-      "size": 16702
+      "sha256": "b7db86288fc4f7a271bc1e2c0908caae7fd77669f551acd4e1c49a5bcdb9ce77",
+      "size": 17354
     },
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "51bc9f36b9610f533e9ecb7713d0ecbf936bf6fa24d0e59b1e3ba34c632f0c16",
-      "size": 197821
+      "sha256": "0d9b75a3f797ef16d99c9eb056df99d57663d67c130c7a1255f8e1ce5de84c7e",
+      "size": 204204
     },
     {
       "category": "governed_input",
