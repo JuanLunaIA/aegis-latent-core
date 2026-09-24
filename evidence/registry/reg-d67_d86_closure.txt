@@ -131,6 +131,13 @@ REG-D86 (P1) — the shipped image served no /metrics                        FIX
           "the auditor's evidence collector reads strict mode and a valid chain".
           LOG-mode pass over the full smoke --ha on the rebuilt image: 0
           type=1326 lines since boot, with the positive control logged.
+  CI (0fd1418, AppArmor loaded): one denial, apparmor="DENIED" operation="open"
+          name="/proc/1/limits" comm="aegis-server". prometheus_client's
+          process collector reads the process's own fd limit. The profile
+          now grants @{PROC}/@{pid}/limits r.
+  The same CI run found the evidence collector raising AttributeError on the
+  runner's Python 3.10 (datetime.UTC is 3.11+). It now uses timezone.utc and
+  runs to exit 0 under /usr/bin/python3.10 against a stub gateway.
 
 Branch-wide verification at 5f54f35 (before REG-D86):
 - full pytest: 7536 passed, 41 skipped

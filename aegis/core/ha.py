@@ -356,6 +356,7 @@ class StandbyResponder:
         server = ThreadingHTTPServer((self._host, self._port), Handler)
         if self._ssl is not None:
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
             context.load_cert_chain(*self._ssl)
             server.socket = context.wrap_socket(server.socket, server_side=True)
         self._server = server
@@ -583,13 +584,24 @@ def _entry_from_row(row: Sequence[Any]) -> SequenceEntry:
 
 
 class SequenceStore(Protocol):
-    async def open(self) -> None: ...
-    async def close(self) -> None: ...
-    async def last_for_chain(self, chain_id: str) -> SequenceEntry | None: ...
+    """What the sequencer needs from a store: open, read, and compare-and-append."""
+
+    async def open(self) -> None:
+        """Connect, and create the sequence table if it does not exist."""
+
+    async def close(self) -> None:
+        """Release the connection."""
+
+    async def last_for_chain(self, chain_id: str) -> SequenceEntry | None:
+        """The chain's most recent entry, or None if it has none."""
+
     async def append(
         self, chain_id: str, epoch: int, items: Sequence[PendingNode]
-    ) -> list[SequenceEntry]: ...
-    async def entries(self, after_seq: int = 0, limit: int = 1000) -> list[SequenceEntry]: ...
+    ) -> list[SequenceEntry]:
+        """Append *items* after the tip in one transaction, or raise SequenceDivergedError."""
+
+    async def entries(self, after_seq: int = 0, limit: int = 1000) -> list[SequenceEntry]:
+        """Entries with ``seq > after_seq``, in order, at most *limit*."""
 
 
 class SQLiteSequenceStore:
@@ -885,7 +897,7 @@ class GlobalSequencer:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass
+                pass  # we cancelled it: this is the expected way for the task to end
             self._task = None
         await self._store.close()
 
@@ -974,7 +986,7 @@ class GlobalSequencer:
             try:
                 await asyncio.wait_for(self._wake.wait(), timeout=0.5)
             except TimeoutError:
-                pass
+                pass  # no wake-up: look anyway, so a missed notify cannot stall sequencing
             self._wake.clear()
             while await self._sequence_ready():
                 pass

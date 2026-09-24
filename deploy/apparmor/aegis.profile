@@ -65,6 +65,8 @@ profile aegis-latent-core flags=(attach_disconnected,mediate_deleted) {
   @{PROC}/@{pid}/mountinfo r,
   @{PROC}/@{pid}/cgroup r,
   @{PROC}/@{pid}/stat r,
+  # prometheus_client's process collector reads the fd limit (REG-D86).
+  @{PROC}/@{pid}/limits r,
   /sys/fs/cgroup/ r,
   /sys/fs/cgroup/** r,
   /sys/module/apparmor/parameters/enabled r,

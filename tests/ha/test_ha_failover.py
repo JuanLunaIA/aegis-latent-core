@@ -131,14 +131,15 @@ def _replica(
     env.pop("HERMES_SANDBOX", None)  # the production filter, as deployed
     # A file, not a pipe: nobody drains a pipe while the test waits, and a full
     # one blocks the replica mid-log.
-    log = open(wal.with_suffix(f".{port}.log"), "wb")  # noqa: SIM115 - closed with the process
-    proc = subprocess.Popen(  # noqa: S603 - fixed argv
-        [sys.executable, "-c", "from aegis.proxy.app import main; main()"],
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=log,
-    )
-    proc.log_path = log.name  # type: ignore[attr-defined]
+    log_path = wal.with_suffix(f".{port}.log")
+    with open(log_path, "wb") as log:  # the child keeps its own descriptor
+        proc = subprocess.Popen(  # noqa: S603 - fixed argv
+            [sys.executable, "-c", "from aegis.proxy.app import main; main()"],
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=log,
+        )
+    proc.log_path = str(log_path)  # type: ignore[attr-defined]
     return proc
 
 
@@ -152,7 +153,7 @@ def _until(predicate: Any, proc: subprocess.Popen[bytes], seconds: float, what: 
             if predicate():
                 return
         except (urllib.error.URLError, ConnectionError, TimeoutError, json.JSONDecodeError):
-            pass
+            pass  # not answering yet; the deadline above bounds the wait
         time.sleep(0.2)
     pytest.fail(f"timed out waiting for {what}")
 

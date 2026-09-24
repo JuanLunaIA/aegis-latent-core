@@ -200,7 +200,8 @@ def collect(
     responses = out / "responses"
     responses.mkdir(parents=True, exist_ok=True)
     context = _context(ca_file)
-    collected_at = datetime.datetime.now(datetime.UTC).isoformat()
+    # timezone.utc, not datetime.UTC (3.11+): assessors run this on whatever host they have.
+    collected_at = datetime.datetime.now(datetime.timezone.utc).isoformat()  # noqa: UP017
     results: dict[str, dict[str, object]] = {}
     bodies: dict[str, bytes] = {}
     transport_failures = 0

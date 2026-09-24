@@ -89,8 +89,10 @@ published; publication remains the owner's step and must be read back.
 - **Supply chain:**
   - `REG-D69`: the images install exactly the hash-pinned lock.
   - `REG-D70`: `cachetools` added to the lock.
-  - `REG-D86`: `prometheus-client` added to the lock. Without it the shipped
-    image served no `/metrics`, and the posture alert could not fire.
+  - `REG-D86`: `prometheus-client` added to the lock, and the AppArmor
+    profile now lets its process collector read the gateway's own fd limit.
+    Without it the shipped image served no `/metrics`, and the posture alert
+    could not fire.
 - **Deployment:**
   - `REG-D79`: a `…/v1` backend URL produced `/v1/v1/…`.
   - `REG-D80`: the AppArmor profile blocked the WAL and the interpreter.

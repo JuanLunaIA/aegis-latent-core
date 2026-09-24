@@ -106,7 +106,8 @@ HELM = shutil.which("helm")
     [
         (["--set", "ha.mode=active_passive"], "needs ha.sharedClaim"),
         (["--set", "ha.mode=active_active"], "needs ha.sequencerUrlSecret"),
-        (["--set", "ha.mode=bogus"], "must be one of the following"),
+        # helm 3.x: "must be one of the following"; newer: "value must be one of 'single', …"
+        (["--set", "ha.mode=bogus"], "must be one of"),
     ],
 )
 def test_helm_refuses_to_render_an_unsafe_shape(args: list[str], expect: str) -> None:
