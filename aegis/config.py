@@ -192,7 +192,7 @@ class AegisSettings(BaseSettings):
     ldap_url: str = Field(
         default="",
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
             "LDAP server URL for multi-factor identity assertion. "
             "Use 'ldaps://' for direct TLS (recommended) or 'ldap://' with "
             "AEGIS_LDAP_USE_START_TLS=true for StartTLS. "
@@ -203,7 +203,7 @@ class AegisSettings(BaseSettings):
     ldap_base_dn: str = Field(
         default="",
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
             "LDAP base Distinguished Name for user and group searches. "
             "Example: DC=corp,DC=example,DC=com"
         ),
@@ -211,7 +211,7 @@ class AegisSettings(BaseSettings):
     ldap_bind_dn: str = Field(
         default="",
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
             "Service-account DN for the initial directory search bind (least-privilege read). "
             "Example: CN=svc-aegis,OU=ServiceAccounts,DC=corp,DC=example,DC=com. "
             "Provide via AEGIS_LDAP_BIND_DN environment variable or Vault."
@@ -220,7 +220,7 @@ class AegisSettings(BaseSettings):
     ldap_bind_password: str = Field(
         default="",
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
             "Password for the LDAP service account. "
             "Provide via AEGIS_LDAP_BIND_PASSWORD or Vault; never hard-code."
         ),
@@ -228,7 +228,7 @@ class AegisSettings(BaseSettings):
     ldap_user_search_filter: str = Field(
         default="(|(sAMAccountName={username})(userPrincipalName={username}))",
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
             "LDAP search filter template for user lookup. {username} is substituted "
             "with the RFC 4515-escaped login name. "
             "AD default covers sAMAccountName and UPN formats. "
@@ -238,7 +238,7 @@ class AegisSettings(BaseSettings):
     ldap_user_search_base: str = Field(
         default="",
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
             "DN subtree for user searches. Defaults to ldap_base_dn when empty. "
             "Example: OU=Users,DC=corp,DC=example,DC=com"
         ),
@@ -246,7 +246,7 @@ class AegisSettings(BaseSettings):
     ldap_required_groups: str = Field(
         default="",
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
             "Comma-separated CN or DN values of LDAP groups the authenticated user "
             "must belong to (at least one). Empty string disables group check. "
             "Example: AegisUsers,AegisAdmins"
@@ -255,7 +255,7 @@ class AegisSettings(BaseSettings):
     ldap_ad_mode: bool = Field(
         default=True,
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
             "Enable Active Directory extensions: nested group OID "
             "(1.2.840.113556.1.4.1941), memberOf enumeration, sAMAccountName lookup. "
             "Set False for plain RFC 4519 LDAP directories."
@@ -264,14 +264,14 @@ class AegisSettings(BaseSettings):
     ldap_use_start_tls: bool = Field(
         default=False,
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
             "Upgrade plain ldap:// to TLS via StartTLS before bind."
         ),
     )
     ldap_ca_certs_file: str = Field(
         default="",
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
             "Path to PEM CA bundle for LDAP TLS peer verification. "
             "Empty string uses the system default trust store."
         ),
@@ -281,7 +281,7 @@ class AegisSettings(BaseSettings):
         ge=1.0,
         le=60.0,
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
             "Socket-level timeout (seconds) for LDAP connect and operations."
         ),
     )
@@ -311,7 +311,7 @@ class AegisSettings(BaseSettings):
     cac_piv_required: bool = Field(
         default=False,
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-064).]** "
             "When True, mTLS client certificates must carry a recognized DoD CAC or GSA PIV "
             "certificate policy OID (DoDI 8520.02 / NIST SP 800-73-4 / GSA FPKI) and the "
             "Client Authentication EKU.  EDIPI (CAC) or UUID (PIV-I) is extracted and logged. "
@@ -690,7 +690,7 @@ class AegisSettings(BaseSettings):
         ge=1,
         le=3600,
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-066).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-066).]** "
             "Rate limit window in seconds. "
             "The active limiter uses its own fixed window (rate_limit_requests_per_minute, "
             "rate_limit_burst, rate_limit_token_capacity); this value is read by no code path."
@@ -950,7 +950,7 @@ class AegisSettings(BaseSettings):
     webhook_url: str = Field(
         default="",
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-066).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-066).]** "
             "HTTP(S) URL to POST alert payloads to (Slack, Teams, custom SIEM). "
             "The alert sender reads siem_url / siem_* instead, so setting only this "
             "variable delivers nothing; see AUD-35 in ROADMAP.md."

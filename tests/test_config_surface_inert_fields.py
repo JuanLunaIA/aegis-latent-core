@@ -144,5 +144,30 @@ def test_the_audited_families_are_still_inert(field: str) -> None:
     )
 
 
+def test_inert_warnings_name_the_checked_out_release() -> None:
+    """The user-facing 'not wired' warnings must name the release operators run.
+
+    Found while re-verifying 5.0.1 (REG-D56): the warning strings and preset
+    comments still named `5.0.0`, the previous source target, in present tense.
+    """
+    import aegis
+
+    version = aegis.__version__
+    named = set(re.findall(r"not wired in (\d+\.\d+\.\d+)", _production_text(), re.I))
+    for path in sorted((REPO_ROOT / "config" / "presets").glob("*.env")):
+        named |= set(
+            re.findall(
+                r"not read by any code path in (\d+\.\d+\.\d+)",
+                path.read_text(encoding="utf-8"),
+                re.I,
+            )
+        )
+    assert named, "no 'not wired in <version>' warnings found; the scan looks wrong"
+    assert named == {version}, (
+        f"inert-field warnings name {sorted(named)} but the checked-out release is "
+        f"{version} — update the warning strings with the release bump"
+    )
+
+
 def _probe_dump() -> Any:  # pragma: no cover - helper for manual inspection
     return _inert_fields()

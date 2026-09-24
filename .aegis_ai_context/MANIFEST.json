@@ -93,38 +93,38 @@
     {
       "category": "governed_input",
       "path": ".github/copilot-instructions.md",
-      "sha256": "bc1e71379a2e26a67740955b1a03c360852c37d873a16db0c0d9dbce8313abb3",
-      "size": 2902
+      "sha256": "811254d10280fd56c56b066ab2f2d4195bfeda5b0f7a7c882a13879afb285804",
+      "size": 3029
     },
     {
       "category": "governed_input",
       "path": "README.md",
-      "sha256": "f6177d9edc5f38c966e720d38cb92f3c22d7aa9b7f7818b82349d7dd7e5e11de",
-      "size": 28869
+      "sha256": "5a6797932c04a76de3dc0c74ddea1aab55cf687c0081f308c86a719bc0051db2",
+      "size": 29005
     },
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "f7ad76c00b2946d958f70eaca620b20b6698abd86093db1862a839e39a91c603",
-      "size": 191313
+      "sha256": "d7f336653cc5f57359eac84fd6867dfa1cbdd0c9ff617922b5f506074469cc15",
+      "size": 192600
     },
     {
       "category": "governed_input",
       "path": "SECURITY.md",
-      "sha256": "46c1549cd1deff2d966e2fe6cc07983fd59c4f6f7011c6f057fe645f9c531128",
-      "size": 12514
+      "sha256": "03f954d49df89916361f4fd51422b76e1990f8ef753ec921baa007a4523b07de",
+      "size": 12802
     },
     {
       "category": "governed_input",
       "path": "DEPLOYMENT_GUIDE.md",
-      "sha256": "f5dffb1504ae5c63d18ff95d6cc1e633f32991f8230fa5922f34406f355e8eee",
-      "size": 15717
+      "sha256": "afc93e5f1d2524601379a1248115e264fd38c86c9ec2d5d2ac232e6e63f5e5b2",
+      "size": 15846
     },
     {
       "category": "governed_input",
       "path": "CONTRIBUTING.md",
-      "sha256": "a6a307be60371ff007a9ce34c0685b90c17d54cfc9c1d1c26d18b91e9478e50d",
-      "size": 12201
+      "sha256": "f10f31257e9a283cc2eef32d035f0a325610522cdfda7319789e2864a6686b0a",
+      "size": 12330
     },
     {
       "category": "governed_input",
@@ -135,49 +135,49 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "70f5c412a435e8bada6dde22a468e3b10168a4146ccdc7a78be6f672b36c7a9f",
+      "sha256": "461e9f2398b779a989f58e3d4eac7b2163423f46add08617b7d0bdd3bd5408c5",
       "size": 143256
     },
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_INTEGRATIONS_GUIDE.md",
-      "sha256": "ac7e571a93246bc187c0b1f9379840e7daf94fadebbd5495206553043c8df20d",
-      "size": 10657
+      "sha256": "bb4d8957f92659f0d7de2321dc2ec2489702b9223de8c3f43a0cf9df89440aee",
+      "size": 10768
     },
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_QUICKSTART.md",
-      "sha256": "096356a9de42f879da7400f83f7085987bfe3a4381c02ce7bbb868e94d659852",
-      "size": 8870
+      "sha256": "7cc586122a8344b3cc2eb5f7040f03ae943efcb3e90f6a99404515ecb8184d49",
+      "size": 9136
     },
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_SDK_GUIDE.md",
-      "sha256": "c73aad4deb16878317bbf7478f8737ff8bc8d9492cc7f8095867b68dcd909a0c",
-      "size": 17548
+      "sha256": "32327c7219e4dd3883338b7f89245a3c2c8801b8996052259c5d4efd343daac6",
+      "size": 17681
     },
     {
       "category": "governed_input",
       "path": "docs/FAQ_SECURITY.md",
-      "sha256": "718bb134c0a575867e97abaa5e74ae13b10dc0bada009327e4400345fc652e58",
-      "size": 7730
+      "sha256": "917af29addea49266ea24b037e32826bcf1ac2e766305b2621da2df299cec244",
+      "size": 7996
     },
     {
       "category": "governed_input",
       "path": "docs/FAQ_TECHNICAL.md",
-      "sha256": "7fc5cdb65b86c6fc491e41d50faa029ba115aebdce9d9fd68fd3040f7f353eef",
-      "size": 19496
+      "sha256": "3f87923356c0255e236345ad6e0484257deb5c8026cc8cae3f9f586ea717588a",
+      "size": 19754
     },
     {
       "category": "governed_input",
       "path": "docs/PLATFORM_OPERATOR_GUIDE.md",
-      "sha256": "98ce0e6cf581b804e0cfb9452145bbad25105f9a3ec63d4bfed31e0c663f94de",
-      "size": 19762
+      "sha256": "ed4e3cc8280bd739ccf16110eea9b78bb213d88033585c64b624743274efc8c1",
+      "size": 20028
     },
     {
       "category": "governed_input",
       "path": "docs/REPOSITORY_MAP.md",
-      "sha256": "d4dc22d2230ecdc8281586c640af44862acc7d08220bae8d2b23d1857ede8e74",
+      "sha256": "e59624018a908d6ec5b468011ae4abd8d1c5cd89b13d6ac44754b68010a89743",
       "size": 7970
     },
     {
@@ -243,7 +243,7 @@
     {
       "category": "governed_input",
       "path": "dashboard/package-lock.json",
-      "sha256": "8515f5551b4ce688450b35233b1840d29cf57bbbedbbe1e26167e38cb06c297a",
+      "sha256": "4a9f7c476398a1f3248b3e78eeb8fd8e588f229b07e2db4977fcb1a8e4ef4174",
       "size": 123609
     },
     {

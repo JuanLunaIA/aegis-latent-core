@@ -40,7 +40,7 @@ That sentence carries the three things that matter: **ordering**, **verifiabilit
 
 **Do not lead with:** compliance, cryptography theory, or enterprise framing.
 
-**Be honest early about:** `pending-terminal` semantics, one worker per WAL path, and the gateway registry gap — a developer who runs `pip install aegis-latent-core` gets `4.1.2` while this documentation describes `5.0.0`, and will hit a mismatch and lose trust. The SDKs are current at `5.0.0` on both registries; it is the gateway distribution that lags.
+**Be honest early about:** `pending-terminal` semantics, one worker per WAL path, and the gateway registry gap — a developer who runs `pip install aegis-latent-core` gets `4.1.2` while this documentation describes `5.0.1` (and the registries carry the published `5.0.0` SDKs), and will hit a mismatch and lose trust. The SDKs are the published registry versions at `5.0.0` on both registries; it is the gateway distribution that lags.
 
 ### Security reviewers
 

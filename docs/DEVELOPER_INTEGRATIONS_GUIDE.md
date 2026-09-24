@@ -1,6 +1,6 @@
 # Aegis Enterprise Integrations Guide
 
-**Status:** `v5.0.0` source baseline with fourteen synchronized anchors, **published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)**. The most recent published release is `v4.1.2`, read back on 2026-09-04 — signed tag, GitHub Release asset envelope, PyPI `aegis-latent-core` and `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway/dashboard objects; npm still observed at `4.0.0`
+**Status:** `v5.0.1` source baseline with fourteen synchronized anchors — **published nowhere**, read back 2026-09-21 (see `docs/RELEASE_STATUS.md` §1.0a). The most recent published release is `v5.0.0` (2026-09-16 on every surface except PyPI `aegis-latent-core`, §1.0); the most recent version published on **every** surface is `v4.1.2`, read back on 2026-09-04 — signed tag, GitHub Release asset envelope, PyPI `aegis-latent-core` and `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway/dashboard objects; npm still observed at `4.0.0`
 
 **Claim boundary:** Source support and tests do not prove target-environment availability, regulatory retention, identity-provider correctness, legal admissibility, trusted publishing, or production readiness.
 
@@ -19,7 +19,7 @@ Built-in roles grant only the following scopes: `admin` grants all declared scop
 
 ## 2. Distributed request and token quotas
 
-The `v5.0.0` source uses atomic request and generated-token buckets keyed by a SHA-256 pseudonym of authenticated tenant and credential identity. Session and tenant headers cannot reset these buckets. Redis mode executes one Lua transaction over both buckets and uses Redis `TIME`, avoiding host-clock disagreement. Memory mode is process-local and is not a distributed enforcement claim.
+The `v5.0.1` source uses atomic request and generated-token buckets keyed by a SHA-256 pseudonym of authenticated tenant and credential identity. Session and tenant headers cannot reset these buckets. Redis mode executes one Lua transaction over both buckets and uses Redis `TIME`, avoiding host-clock disagreement. Memory mode is process-local and is not a distributed enforcement claim.
 
 The gateway reserves the configured output maximum before forwarding. Non-streaming responses refund only when the authenticated upstream returns a valid provider usage count. Streaming retains the reservation because terminal event counting is not treated as authoritative billing telemetry. Responses expose generic request-bucket fields (`X-RateLimit-Limit`, `X-RateLimit-Remaining`) plus request/token dimension-specific fields; 429 responses add finite `Retry-After` when a reset can be computed.
 

@@ -1,0 +1,179 @@
+BASELINE-CURRENCY RE-VERIFICATION AND SWEEP — 2026-09-24
+=========================================================
+Repository : JuanLunaIA/aegis-latent-core
+Base commit: 9df5fd3 (main == origin/main) — working tree, uncommitted by instruction
+Session    : 20260924_031716_1f4a41
+Mission    : "CODE REMEDIATION, OPTIMIZATION & GLOBAL v5.0.1 VERSION BUMP" (re-issued;
+             executed as verification plus one real closure — REG-D56)
+
+WHY THIS FILE EXISTS
+-------------------
+The order's phases were executed on 2026-09-21 (#195, `9dd4ab9`): version anchors,
+CHANGELOG, IMPLEMENTATION_LOG_5.0.1.md, the 90% coverage floor (REG-D36), the
+no-marker rule (REG-D35). Re-verification at 9df5fd3 found one class of work the
+bump's scope did not cover and this pass closed it: the baseline-currency
+recurrence (REG-D56). Nothing else in the order was outstanding.
+
+1. WHAT WAS FOUND
+-----------------
+- `tests/test_documentation_currency.py`'s repository-wide rule judged only the
+  token `4.1.2`; its comment still said "because that is `5.0.0`". At the next
+  bump the class it exists for (a superseded version presented as the checked-out
+  baseline) moved to `5.0.0` — and became invisible to the gate.
+- 47 sentences in 31 files carried unframed "checked-out ... `5.0.0`" phrasing;
+  the publication-framed family (`synchronized at v5.0.0, published 2026-09-16`…)
+  added ~50 more lines in ~25 more files. Total: 53 tracked files.
+- One lockfile copy: `dashboard/package-lock.json:36` (the file-linked SDK's
+  version field — the contract reads the lock's root entry, so it passed).
+- The non-markdown straggler sweep (`git grep -n '5\.0\.0' -- ':!*.md'`) found the
+  user-facing warning family: 15 strings "**[Not wired in 5.0.0 — no code path reads
+  this field; setting it enforces nothing (UC-064/UC-066).]**" (`aegis/config.py` x14,
+  `aegis_server/config.py` x1), 4 preset comments "# NOT READ by any code path in
+  5.0.0 (AUD-35)" (`config/presets/*.env`), one doc row
+  (`docs/operations/DEPLOYMENT_PROFILES.md:119`) and one test docstring
+  (`tests/compat/test_public_api_compat.py:21`, "the release tests run in is 5.0.0").
+  Historical references kept: `aegis/core/phi_encryption.py:11`,
+  `docs/UPGRADING.md:81`, `docs/institutional/UNSUPPORTED_CLAIMS.md:64` ("in 5.0.0"
+  as the release that did the work — true as history).
+- Two agent-facing files: `.github/copilot-instructions.md` (source baseline
+  5.0.0; "most recent published release is 4.1.2") and
+  `.claude/agents/release-truth-auditor.md` (same block).
+
+2. THE GATE CHANGE (tests/test_documentation_currency.py)
+---------------------------------------------------------
+- `_UNFRAMED_AS` is now `\bv?(?:4\.1\.2|5\.0\.0)\b`; the rationale comment states
+  the two superseded versions and the "extend at each bump" maintenance rule.
+- Framing vocabulary: `registry` -> `registr(?:y|ies)`.
+- Three dated-record exemptions added with rationale: `IMPLEMENTATION_LOG_5.0.1.md`
+  (dated release-process record), `STATE_MANIFEST.md` (dated measurement snapshot,
+  every value bound to its commit and time), `docs/commercial/ARTIFACT_INVENTORY.md`
+  (self-declared pre-change snapshot, past tense).
+- Test renamed: `..._no_document_presents_a_superseded_version_as_the_baseline`.
+
+3. THE SWEEP
+------------
+- Method: the same treatment REG-D23 established and the bump itself used —
+  restructure into two facts (target `5.0.1` — published nowhere, §1.0a;
+  `v5.0.0` — most recent published release, §1.0/readback 2026-09-16) instead of
+  renumbering. Every publication fact, readback date and review stamp preserved;
+  line counts unchanged (no citation drift; registry rows cite doc:line).
+- 115 line-scoped edits applied by an exact-match script (validate-all, refuse on
+  any non-single match; manifest printed). One follow-up caught by the extended
+  gate itself: `docs/api/MMR_PROOF_V1.md:5`. Total 116 restructures / 53 files.
+- Warning-string family: version token swapped to `5.0.1` in the 15 config
+  warnings, 4 presets, `DEPLOYMENT_PROFILES.md:119` and the compat docstring, with
+  a new regression assertion in `tests/test_config_surface_inert_fields.py`
+  (`test_inert_warnings_name_the_checked_out_release` — names must equal
+  `aegis.__version__`; red before the swap, green after) and a new
+  `_STALE_WIRING` sentence rule in the doc-currency gate.
+- Review stamps and content reviews untouched by design: AUD-37 (33 documents)
+  remains open exactly as specified; a dated note was appended to it.
+
+4. VERIFICATION MATRIX (all at the working tree)
+------------------------------------------------
+- tests/test_documentation_currency.py + tests/test_ai_context.py: 28 passed.
+- verify_docs PASS (0 findings); verify_claims PASS (106 claims, 0 findings);
+  verify_links PASS (1,408 ); verify_documentation --strict PASS (27 files, 0/0);
+  corpus audit PASS (1,268 files, 0 placeholders, 0 CRLF, 0 non-NFC);
+  module inventory: current; release contract: READY, fourteen anchors at 5.0.1
+  (`--tag v5.0.1`; `--tag v5.0.0` correctly BLOCKED — tag-version-mismatch).
+- AI-context manifest regenerated (83 files; anchor fdace884…), verified.
+- ruff check on the modified test file: clean. git diff --check: clean.
+- Coverage command (mission Phase 4): 7,425 passed, 32 skipped, 0 failed, TOTAL 91.30%,
+  exit 0 (first attempt exit 1 on the teardown flake — see section 6).
+- Gate-class scan after the sweep: 0 offenders.
+
+5. REVIEWED AND DELIBERATELY KEPT
+---------------------------------
+- README.md:13 badge and :326-329 table rows (dated suite measurements; the
+  claim-ledger policy keeps historical rows dated).
+- sdk/python/README.md + sdk/typescript/README.md "Registry caution" notes
+  (correct: registry versions vs this tree).
+- DEPLOYMENT_GUIDE.md:8 `External baseline: v4.1.2` (readback 2026-09-04, dated).
+- `STATE_MANIFEST.md`, `INTEGRITY_SEAL.md`, `evidence/**`, `CHANGELOG.md`,
+  `docs/REGISTRY.md`, `docs/ROADMAP.md` ticket text, `AUDIT_REPORT_*.md`
+  (dated records; quote the pre-bump state).
+
+6. THE TEARDOWN OBSERVATION
+---------------------------
+- Coverage run 1 (concurrent with a `cargo test --all-features` build):
+  `tests/test_streaming_teardown.py::test_asyncio_cancel_teardown_hands_off_terminal_evidence`
+  failed once with `DID NOT RAISE CancelledError` at line 138 (`await task` after
+  `task.cancel()`), while the coverage total still printed 91.30% (floor reached).
+- Isolation: 8 passed in 0.62 s. Repro-1 (bash syntax error in the harness) was
+  VOID — no results. Repro-2: 25 coverage-instrumented standalone reruns under two
+  CPU hogs — iterations 1-21 (before any other load) all passed; iterations 22 and
+  24 FAILED (15.33 s / 15.28 s, against ~1.2 s passes), both inside the window in
+  which the full coverage suite was running concurrently (started 05:22:58Z);
+  iterations 23 and 25 (also concurrent) and the coverage re-run itself passed.
+  The failure is therefore load-sensitive and reproducible under stacked load —
+  NOT a one-off. The earlier claim of "25/25 passed" was corrected here after the
+  background batch completed and the full log was read.
+- Static reading of `aegis/proxy/streaming.py` shows every CancelledError path
+  re-raising (570-584; `TerminalCommitHandoff._drain` re-raises; 3.11 makes it a
+  BaseException so `except Exception` cannot swallow); the exact interleaving is
+  NOT yet identified. Repro-2 logged only per-iteration summaries, so no
+  traceback was captured; repro-3 (full capture on failure, three hogs) launched
+  2026-09-24 ~05:24Z. Final repro tally: repro-3 5 failures / 20
+  (iters 5, 6, 11, 13, 20; all DID-NOT-RAISE, 13-19 s against 2-4 s passes);
+  standalone instrumented harness 0/15; same harness under `coverage run` 0/15;
+  in-pytest instrumented copy (fixed passthrough wrappers) 0/15; a first in-pytest
+  attempt was void (harness wrapper signature bug - invalidated, not counted).
+  The unmodified test under coverage+load is the ONLY reproducer. Classification
+  of the exact interleaving remains OPEN - filed as AUD-39 with the repro recipe
+  (3x `yes` hogs + `.venv/bin/python -m pytest -q -p no:cacheprovider --cov=aegis
+  --cov-report= tests/test_streaming_teardown.py::test_asyncio_cancel_teardown_hands_off_terminal_evidence`),
+  and the assertion was deliberately NOT weakened to mask it. Leading shape: the
+  failing run completes the whole stream and returns normally. The test's wall-clock coupling
+  (`sleep(0.05)` racing a finite 1000-chunk stream) is the identified race
+  surface — REG-D39 class; hardening decision follows the traceback.
+- Coverage re-run (this pass, unloaded): 7,425 passed, 32 skipped, 0 failed in
+  344.79 s — TOTAL 91.30%, "Required test coverage of 90% reached", exit 0.
+
+7. `cargo test --all-features` (order Phase 4)
+----------------------------------------------
+Exit 101 — `rust-lld: undefined reference: PyEval_…/PyGILState_…`: the documented
+pyo3 `extension-module` link constraint (IMPLEMENTATION_LOG §4.4: "cannot link in
+this repository by design"). CI runs per-feature configurations instead; the
+runnable surfaces at this HEAD: `cargo test --release` (90+3), `cargo test --lib`
+debug (90), `cargo clippy --all-targets --all-features -- -D warnings` (exit 0).
+
+8. BOUNDARIES
+-------------
+- This pass changed version identifiers and the gate; it did NOT re-read any
+  document's content (AUD-37), did NOT touch review dates, did NOT restate any
+  publication fact, and asserts nothing new about external lifecycle state.
+- Everything above is working-tree state; nothing is committed, tagged, or pushed
+  by this session.
+
+
+APPENDIX A — CANONICAL FAILURE TRACEBACK (repro-3, iteration 5)
+---------------------------------------------------------------
+F                                                                        [100%]
+=================================== FAILURES ===================================
+___________ test_asyncio_cancel_teardown_hands_off_terminal_evidence ___________
+
+    async def test_asyncio_cancel_teardown_hands_off_terminal_evidence():
+        commits: list[StreamEvidenceSummary] = []
+        handed: list[StreamEvidenceSummary] = []
+        proxy = _build(commits, handed=handed)
+
+        async def consume() -> None:
+            async for _chunk in proxy:
+                pass
+
+        task = asyncio.create_task(consume())
+        await asyncio.sleep(0.05)
+        task.cancel()
+>       with pytest.raises(asyncio.CancelledError):
+E       Failed: DID NOT RAISE CancelledError
+
+tests/test_streaming_teardown.py:138: Failed
+=========================== short test summary info ============================
+FAILED tests/test_streaming_teardown.py::test_asyncio_cancel_teardown_hands_off_terminal_evidence
+1 failed in 13.48s
+
+Iterations 6, 11, 13 and 20 failed identically ("DID NOT RAISE CancelledError",
+tests/test_streaming_teardown.py:138; durations 15-19 s against 2-4 s passes).
+Raw captures: scratch teardown_repro3_failures/fail_iter_{5,6,11,13,20}.txt
+(72 h retention; this appendix is the durable record).
