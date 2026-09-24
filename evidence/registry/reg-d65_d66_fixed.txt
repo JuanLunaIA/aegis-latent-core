@@ -59,3 +59,17 @@ Fix: docs/RUST_BUILD.md:34 now links
 Verified:
   $ bash scripts/verify_links.sh --root .
   verify_links: PASS (1387 relative links and anchors resolved)
+
+Update, same day: the owner merged PR #203 (6603ed8) into main, which fixes the
+same failure from the other side — a "### Verified metrics" subheading above the
+README's benchmark table restores the anchor — and merged main into this branch
+(1d4241e). Both links now resolve. This branch's retarget is kept: the README
+table still does not carry the Rust-versus-Python MMR figure the sentence in
+docs/RUST_BUILD.md describes; docs/BENCHMARKS.md does.
+
+The merge kept this branch's .aegis_ai_context/MANIFEST.json, whose README hash
+predated #203's two added lines, so CI's Forensic job failed
+tests/test_ai_context.py::test_manifest_is_deterministic_explicit_and_non_circular
+(run 35975336718). Reproduced locally (verify_ai_context_manifest.py:
+"manifest content differs"; the test fails 1/11), fixed by regenerating the
+manifest with scripts/generate_ai_context_manifest.py after the merge.

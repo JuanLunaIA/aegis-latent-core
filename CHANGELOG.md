@@ -36,7 +36,8 @@ fixed. Every check and its result is in
   `docs/RUST_BUILD.md:35` linked to, so `verify_links.sh` failed 1 of 1,387 links
   on `main` (CI run `35971846398`, job "Documentation Gates"). The link now
   targets the Rust-versus-Python MMR measurements in `docs/BENCHMARKS.md`,
-  which are what the sentence describes.
+  which are what the sentence describes. (#203 separately restored the README
+  anchor on `main`; both now resolve.)
 - **CodeQL alert 736** (`REG-D65`) on `scripts/generate_sdk_bundle_fixture.py`:
   the fixture ledger was closed in a `finally` block; it is now a `with` block,
   which `CryptographicAuditLedger.__exit__` already supports. Behaviour is

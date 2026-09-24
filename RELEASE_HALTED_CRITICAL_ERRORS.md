@@ -96,7 +96,7 @@ A report like this records what was run, on one machine, on one date. It is not 
 
 | Registry | Sev | Finding | State |
 |---|---|---|---|
-| `REG-D66` | P2 | `main`'s CI "Documentation Gates" red since #202 (run `35971846398`): `docs/RUST_BUILD.md:35` → removed `README.md#verified-metrics` | **FIXED** |
+| `REG-D66` | P2 | `main`'s CI "Documentation Gates" red since #202 (run `35971846398`): `docs/RUST_BUILD.md:35` → removed `README.md#verified-metrics` | **FIXED** (also fixed on `main` by #203; both links resolve) |
 | `REG-D65` | P3 | CodeQL alert 736, `scripts/generate_sdk_bundle_fixture.py:73`: ledger closed in `finally` instead of `with` | **FIXED** |
 | `REG-D71` | P2 | `CHANGELOG.md` `[5.0.1]` lacked #182, #184, #185, #186, #187, #202; `[5.0.0]` still "unreleased" | **FIXED** |
 | `REG-D72` | P2 | README "floor 90% enforced" (CI enforces 65%); `X-Aegis-Proof-Status` promised on a non-streaming call | **FIXED** |
