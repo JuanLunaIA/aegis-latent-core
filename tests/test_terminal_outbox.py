@@ -832,16 +832,16 @@ def test_a_much_later_startup_failure_stops_the_handoff_worker_too(
     """
     from fastapi.testclient import TestClient
 
-    import aegis.proxy.app as app_module
+    # LLMForwarder is read from aegis.proxy.app's namespace, the binding
+    # lifespan looks up — not from aegis.proxy.forwarder:
+    # tests/test_coverage_final.py reloads that module, after which its
+    # LLMForwarder is a new class object app.py never calls. Patching that one
+    # made this test pass under xdist and fail in CI's serial run (REG-D57).
+    from aegis.proxy.app import LLMForwarder, create_app
 
-    # Both classes are taken from where lifespan resolves them, not imported
-    # here: tests/test_coverage_final.py reloads aegis.proxy.forwarder, after
-    # which `from aegis.proxy.forwarder import LLMForwarder` is a new class
-    # object that app.py never calls — patching it made this test pass under
-    # xdist and fail in CI's serial run.
-    app = app_module.create_app(_settings(tmp_path, terminal_outbox_enabled=True))
+    app = create_app(_settings(tmp_path, terminal_outbox_enabled=True))
     handoff_cls = type(app.state.aegis.terminal_handoff)
-    forwarder_cls = app_module.LLMForwarder
+    forwarder_cls = LLMForwarder
 
     stopped = False
     real_stop = handoff_cls.stop

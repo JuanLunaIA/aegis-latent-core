@@ -138,14 +138,16 @@ The construction is therefore usable only where `max_forensic_bytes` is small or
 zero. This is a configuration boundary, not a tuning note: an operator who wants
 zero-knowledge inclusion proofs must decide to shrink or drop forensic previews,
 and that trades away the preview evidence those bytes exist to carry. Nothing in
-the gateway currently makes that trade automatically, and nothing warns when a
-configuration puts proofs out of reach.
+the gateway makes that trade automatically.
 
-That cap is not reachable from gateway configuration: `aegis/proxy/app.py`
-constructs the ledger without `max_forensic_bytes` and `aegis/config.py` defines
-no setting or environment variable for it, so the trade described above is
-available only to an in-process caller that constructs `CryptographicAuditLedger`
-itself, not to an operator running the gateway as deployed.
+The cap is gateway configuration: `AEGIS_MAX_FORENSIC_BYTES` (`0`–`65,536`,
+default `65,536`) reaches both the ledger and the streaming path's preview
+limit (`REG-D59`). Where proving is compiled in, startup logs a warning when the
+cap exceeds `256` — the largest cap `aegis_rust_v2/tests/zk_mmr_cost.rs`
+measures a leaf for (0, 64 and 256 give prefixes of 351, 607 and 1,375 bytes).
+Above it a leaf is unmeasured, not proven infeasible; the warning says so and
+changes nothing. A lowered cap applies to new leaves only; existing leaves keep
+the previews they were committed with.
 
 ### 6.4 The proving system does not refuse an unsatisfiable witness
 

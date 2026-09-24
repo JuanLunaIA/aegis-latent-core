@@ -1,0 +1,36 @@
+REG-D60 — example deployment variables that nothing reads (SEED: owner decision)
+=================================================================================
+
+Found while working REG-D59 (whose AEGIS_MAX_FORENSIC_BYTES line was one of
+these until that fix). Method: every AEGIS_* assignment in .env.example was
+compared with AegisSettings.model_fields (aegis/config.py, env_prefix AEGIS_),
+then each unmatched name was searched for in aegis/, aegis_server/,
+dashboard/src/, deploy/ and scripts/ (Python, Rust, TypeScript, YAML, shell).
+
+Read elsewhere, so NOT part of this row:
+  AEGIS_STORAGE_PROVIDER, AEGIS_POSTGRES_DSN, AEGIS_POSTGRES_MIN_POOL_SIZE,
+  AEGIS_POSTGRES_MAX_POOL_SIZE   -> aegis_server/config.py
+  AEGIS_PRIMARY_BASE_URL, AEGIS_DASHBOARD_API_KEY
+                                 -> dashboard/src/lib/aegis-client.server.ts
+
+Read by nothing:
+  AEGIS_REQUIRE_DISTRIBUTED_LIMITER=true   .env.example:9, also
+      deploy/docker/Dockerfile:81 and deploy/docker/docker-compose.yml:31.
+      The property it names holds anyway: strict mode refuses any
+      rate_limit_backend other than 'redis' (aegis/config.py, "strict runtime
+      requires rate_limit_backend='redis'").
+  AEGIS_WAL_FSYNC=true                     .env.example:46 — no setting; an
+      operator setting it to false does not disable fsync (safe direction).
+  AEGIS_SECCOMP_PROFILE=/etc/aegis/seccomp.json   .env.example:49
+  AEGIS_LSM_PROFILE=/etc/aegis/apparmor.profile   .env.example:50
+      No setting selects a profile path; an operator pointing these at a
+      profile has not selected it.
+  AEGIS_ANALYSIS_WORKERS=4                 .env.example:58 — the setting is
+      analysis_worker_count (AEGIS_ANALYSIS_WORKER_COUNT); this name is inert.
+
+Why SEED and not fixed here: each needs a per-variable decision — wire it,
+rename it, or delete it — the same shape as AUD-35 for settings fields, and
+some change runtime behaviour for anyone who copied the example (e.g. renaming
+ANALYSIS_WORKERS would start applying 4). tests/test_config_surface_inert_fields.py
+covers settings fields with no reader; it does not cover example variables
+with no setting, which is how these survived.

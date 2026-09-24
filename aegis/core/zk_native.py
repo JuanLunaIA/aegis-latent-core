@@ -33,8 +33,10 @@ from typing import Any
 from aegis.core.forensic import WAF_VERDICT_PASSED
 
 __all__ = [
+    "LARGEST_MEASURED_FORENSIC_BYTES",
     "PASSED_SUFFIX",
     "ZKNativeUnavailableError",
+    "forensic_preview_warning",
     "generate_zk_proof",
     "has_zk_native",
     "verify_zk_proof",
@@ -48,6 +50,14 @@ __all__ = [
 #: Derived from the vocabulary rather than typed twice, so a change to the
 #: verdict spelling cannot leave this behind.
 PASSED_SUFFIX = b',"waf_verdict":"' + WAF_VERDICT_PASSED.encode() + b'"}'
+
+
+#: The largest ``max_forensic_bytes`` any proof has been measured for.
+#: ``aegis_rust_v2/tests/zk_mmr_cost.rs::cost_curve`` measures the leaves of
+#: gateways configured with 0, 64 and 256 (prefixes of 351, 607 and 1375 bytes).
+#: Above it a leaf lies outside every measured shape — unmeasured, not proven
+#: infeasible — and `DOC-08 §6.3` puts the 65_536 default at ~10⁸ constraints.
+LARGEST_MEASURED_FORENSIC_BYTES = 256
 
 
 class ZKNativeUnavailableError(RuntimeError):
@@ -85,6 +95,29 @@ def has_zk_native() -> bool:
         return bool(_extension().has_zk_native())
     except ZKNativeUnavailableError:
         return False
+
+
+def forensic_preview_warning(max_forensic_bytes: int) -> str | None:
+    """Why this preview cap puts inclusion proofs out of reach, or ``None``.
+
+    ``None`` when the cap is within the measured range, and also when proving
+    is not compiled in — there is then no proof to put out of reach. The
+    gateway logs the message at startup; it changes nothing on its own,
+    because shrinking previews trades away evidence and that trade is the
+    operator's (`DOC-08 §6.3`).
+    """
+    if max_forensic_bytes <= LARGEST_MEASURED_FORENSIC_BYTES or not has_zk_native():
+        return None
+    return (
+        f"Zero-knowledge proving is compiled into this build, but "
+        f"AEGIS_MAX_FORENSIC_BYTES={max_forensic_bytes} lets one leaf carry up to "
+        f"{4 * max_forensic_bytes} bytes of hex preview: beyond every leaf any proof has "
+        f"been measured for (max_forensic_bytes <= {LARGEST_MEASURED_FORENSIC_BYTES}, "
+        "aegis_rust_v2/tests/zk_mmr_cost.rs). Inclusion proofs over such leaves are not "
+        "expected to be practical (DOC-08 §6.3). To keep leaves provable, set "
+        f"AEGIS_MAX_FORENSIC_BYTES to {LARGEST_MEASURED_FORENSIC_BYTES} or less, which "
+        "records correspondingly less preview evidence."
+    )
 
 
 def zk_verifier_key(prefix_len: int, path_depth: int, peak_count: int) -> bytes:

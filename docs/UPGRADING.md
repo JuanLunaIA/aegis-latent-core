@@ -82,6 +82,12 @@ The extra previously declared `oqs-python`, which nothing in the tree imported, 
 
 The asymmetry to plan around is the reverse: nothing retroactively seals records already committed as plain digests, so enabling the flag does not make existing history erasable. See `CLM-068` for the full boundary, and note that no regulatory conclusion follows from the mechanism.
 
+## 8. `AEGIS_MAX_FORENSIC_BYTES` now takes effect — and refuses values above 65,536 (`5.0.1` target)
+
+`.env.example` has set `AEGIS_MAX_FORENSIC_BYTES=1048576` since `3.0.1`, but no setting read it: every gateway used a 65,536-byte preview cap whatever the variable said. From the `5.0.1` source target a setting reads it (`REG-D59`), with a range of `0`–`65,536`. **If your environment still carries `1048576` from the old example, startup now refuses with a validation error** rather than silently growing every leaf sixteen-fold. Remove the variable to keep today's behaviour, or set a value in range.
+
+Lowering the cap shrinks request and response previews in new leaves only; existing leaves, signatures and proofs are untouched. It is the precondition for zero-knowledge inclusion proofs (`DOC-08` §6.3), and it costs the preview evidence those bytes carry.
+
 ## Upgrade order
 
 1. Read §1 and §2 and change your API reads and proxy configuration **first**.

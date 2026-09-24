@@ -304,6 +304,42 @@ addressed. Fixed on the branch restarted from `main` afterward.
   `ExitStack` became `contextlib.AsyncExitStack`, with a stop callback
   registered for every one of those resources right after it starts.
 
+### Added — `aegis-sdk`: offline bundle verification and gateway audit status
+
+- **`aegis-sdk verify <bundle.zip>`** (`CLM-107`) checks a forensic bundle
+  without contacting any gateway: member set, canonical manifest and its
+  self-seal, each evidence file's size and SHA-256, the ledger slice's CID, every
+  MMR inclusion proof, an optional `--trusted-root`, and the Ed25519 manifest
+  signature against a public key supplied out of band. Exit `0` only when the
+  signature verified; `3` (`INCOMPLETE`) when nothing failed but it was not
+  checked — unsigned, no key, or `cryptography` absent. Digests, CIDs and proofs
+  are stdlib-only; the signature step needs the new `[verify]` extra.
+- **`aegis-sdk audit <gateway_url>`** prints `/v1/audit/health` (and
+  `/integrity`) as sorted JSON. The key comes from `AEGIS_AUDIT_API_KEY`, is
+  never sent over plain HTTP to a non-loopback host, and never follows a
+  redirect.
+- Named `aegis-sdk` because the gateway already installs `aegis`.
+  `sdk/shared/forensic-bundle-v1.zip` is a gateway-issued signed fixture
+  (`scripts/generate_sdk_bundle_fixture.py`); `tests/test_sdk_bundle_contract.py`
+  fails if a freshly built bundle's shape drifts from it.
+
+### Fixed — the forensic preview cap is configuration, and guarded
+
+- **REG-D59** — `AEGIS_MAX_FORENSIC_BYTES` (`0`–`65,536`, default unchanged)
+  now reaches the ledger and the streaming path; before, the gateway had no
+  such setting, `.env.example`'s `1048576` was read by nothing, and the stream
+  proxies hard-coded 65,536, so a lowered ledger cap alone would have failed
+  every long stream's terminal commit. Where zero-knowledge proving is compiled
+  in, startup warns when the cap exceeds `256`, the largest measured
+  (`DOC-08` §6.3); it never lowers the cap itself. **Upgrade note:** an
+  environment still carrying the old example's `1048576` now refuses to start
+  (`docs/UPGRADING.md` §8).
+- **REG-D60** (recorded, open) — five other example variables are read by
+  nothing; each awaits a wire/rename/delete decision.
+- **REG-D61** — CodeQL flagged `REG-D57`'s test for importing
+  `aegis.proxy.app` both ways (PR #200 merged first); it now uses one
+  `from aegis.proxy.app import …`, which reads the same binding `lifespan` uses.
+
 ### Fixed — two red test jobs PRs #198 and #199 merged with
 
 - **REG-D58** — PR #199 filed `AUD-39` and added an `import aegis` edge to a

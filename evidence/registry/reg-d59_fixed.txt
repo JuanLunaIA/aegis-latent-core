@@ -1,0 +1,77 @@
+REG-D59 — the forensic preview cap: unreachable, silently ignored, and unguarded
+================================================================================
+
+DOC-08 §6.3 and docs/BOUNDARIES.md recorded the gap: zero-knowledge inclusion
+proofs are practical only over short leaves, a leaf's length is dominated by
+its hex previews, and
+
+  - aegis/proxy/app.py constructed CryptographicAuditLedger without
+    max_forensic_bytes, and aegis/config.py had no setting for it, so every
+    gateway leaf used the 65,536-byte default (~262 KB of hex, ~10^8
+    constraints) and the trade DOC-08 tells an operator to make could only be
+    made in-process;
+  - nothing warned when a configuration put proofs out of reach.
+
+Working it found two more defects on the same path:
+
+  - .env.example has carried AEGIS_MAX_FORENSIC_BYTES=1048576 since 3.0.1
+    (2d19b66), read by no setting — an inert line in the strict-runtime
+    example;
+  - both BoundedStreamProxy constructions in app.py used the class default
+    preview_bytes=65_536. Wiring the setting into the ledger alone would have
+    made every stream whose response exceeded a lowered cap fail its terminal
+    commit:
+
+      ValueError: response_preview exceeds max_forensic_bytes
+      ERROR aegis.proxy.streaming: handed-off terminal commit failed (outcome=complete)
+
+    reproduced by tests/test_zk_preview_guard.py::
+      test_a_long_stream_commits_its_terminal_evidence_under_a_small_cap
+    with the two preview_bytes lines removed: 1 failed, 15 passed.
+
+Fix
+---
+
+  aegis/config.py        max_forensic_bytes: 0..65_536, default 65_536
+                         (AEGIS_MAX_FORENSIC_BYTES). The default is also the
+                         ceiling: 1048576 from the old example is refused at
+                         startup rather than growing every leaf 16x.
+  aegis/proxy/app.py     ledger max_forensic_bytes=cfg.max_forensic_bytes;
+                         both BoundedStreamProxy(preview_bytes=...) follow it;
+                         after the ledger is built, logs
+                         forensic_preview_warning(cfg.max_forensic_bytes).
+  aegis/core/zk_native.py
+                         LARGEST_MEASURED_FORENSIC_BYTES = 256 — the largest cap
+                         aegis_rust_v2/tests/zk_mmr_cost.rs::cost_curve measures
+                         (0, 64, 256 -> prefixes 351, 607, 1375);
+                         forensic_preview_warning(cap) returns a message only
+                         when cap > 256 AND has_zk_native(). It changes nothing:
+                         smaller previews are less evidence, the operator's call.
+  .env.example           AEGIS_MAX_FORENSIC_BYTES=65536, with the range and the
+                         DOC-08 trade stated.
+  docs                   DOC-08 §6.3, BOUNDARIES.md (ZK row), CLM-089,
+                         UPGRADING.md §8 (the 1048576 refusal), CHANGELOG.
+
+Verified
+--------
+
+  HERMES_SANDBOX=true pytest -q -p no:xdist tests/test_zk_preview_guard.py
+    -> 17 passed
+  covers: default unchanged; env var sets it; -1 and 65537 refused; the ledger
+  gets the cap; a committed non-streaming leaf hash equals the v2 leaf hash of
+  build_merkle_leaf(max_bytes=8) and differs from the 65,536 one; a 50-chunk
+  stream under a 64-byte cap commits exactly one stream-terminal-evidence node
+  (terminal_outcome=complete) — fails without the preview_bytes wiring; the
+  threshold constant matches the harness's printed cost_curve text; no
+  warning without native proving or at 0/64/256; a warning above 256 naming
+  the variable and the way back; the gateway logs it at startup and keeps the
+  cap; .env.example's value validates.
+
+What this does not establish
+----------------------------
+
+No proof was generated or timed for this change; the default build has no
+prover (has_zk_native() is False in every published wheel), so the startup
+warning is exercised with has_zk_native patched to True. "Above 256" means
+outside every measured shape, not proven infeasible. A lowered cap applies to
+new leaves only.
