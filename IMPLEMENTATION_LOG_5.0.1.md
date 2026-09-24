@@ -474,3 +474,36 @@ remains the most recent published release):
     git commit -m "docs: close the baseline-currency recurrence (REG-D56); extend the currency gate"
     git tag -a v5.0.1 -m "aegis-latent-core 5.0.1"    # release act — only on authorization
     git push origin main --follow-tags                 # publication — only on authorization
+
+
+---
+
+## 8. PR record — 2026-09-24
+
+The commit prepared in §7's closing block above was executed after this log was
+written, and the shape changed from "commit on `main`" to a reviewable branch:
+
+- branch `fix/reg-d56-baseline-currency`; commit
+  `f7dd42f58b0a11aba6e985d2a3c3e76769d85ab3` (70 files changed, +671/−164), the
+  message carrying the full change inventory;
+- pushed to `origin`; the remote head was read back equal to the local commit;
+- opened as **PR #199** — `https://github.com/JuanLunaIA/aegis-latent-core/pull/199`,
+  base `main`, not a draft — with the verification table (full suite
+  7,425/32/0 at 91.30%, gates green, contract READY 14/14) and the
+  nothing-published boundary in the body; CI checks were pending at open time.
+
+This subsumes the earlier credential statements in this log (§5: "push
+credentials are absent on this host"; §7: "the single PR (no push credentials on
+this host)"): both were true when written and are not true now — GitHub
+credentials are configured on this host and the push was verified by readback.
+
+The tag and every release act remain **unexecuted and unauthorized**: `5.0.1` is
+still unpublished, and `v5.0.0` remains the most recent published release. The
+commands actually used (superseding §7's first two lines; the tag/merge lines
+wait for release authorization):
+
+    git switch -c fix/reg-d56-baseline-currency
+    git add -A
+    git commit -F <message-file>
+    git push -u origin fix/reg-d56-baseline-currency
+    # merge PR #199; then, only on release authorization: git tag -a v5.0.1
