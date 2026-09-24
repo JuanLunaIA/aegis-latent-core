@@ -32,7 +32,7 @@ The components below are licensed under weak-copyleft terms (LGPL, MPL or EPL). 
 
 ## Full component inventory
 
-383 components are distributed with an Aegis artifact. A further 257 are build-time only (test runners, type checkers, packaging tools); they are inventoried in `docs/compliance/LICENSE_AUDIT.md` but create no distribution obligation and are not listed here.
+384 components are distributed with an Aegis artifact. A further 257 are build-time only (test runners, type checkers, packaging tools); they are inventoried in `docs/compliance/LICENSE_AUDIT.md` but create no distribution obligation and are not listed here.
 
 ### crates.io (254)
 
@@ -391,7 +391,7 @@ The components below are licensed under weak-copyleft terms (LGPL, MPL or EPL). 
 | victory-vendor | 37.3.6 | MIT AND ISC | dashboard |
 | zod | 4.5.4 | MIT | dashboard |
 
-### pypi (36)
+### pypi (37)
 
 | component | version | licence | distributed with |
 | --- | --- | --- | --- |
@@ -414,6 +414,7 @@ The components below are licensed under weak-copyleft terms (LGPL, MPL or EPL). 
 | httpx | 0.28.1 | BSD-3-Clause | gateway (Python runtime) |
 | idna | 3.19 | BSD-3-Clause | gateway (Python runtime) |
 | numpy | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | gateway (Python runtime) |
+| prometheus-client | 0.26.0 | Apache-2.0 AND BSD-2-Clause | gateway (Python runtime) |
 | protobuf | 7.36.0 | 3-Clause BSD License | gateway (Python runtime) |
 | pycparser | 3.0 | BSD-3-Clause | gateway (Python runtime) |
 | pydantic | 2.13.4 | MIT | gateway (Python runtime) |

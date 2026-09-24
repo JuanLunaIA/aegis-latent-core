@@ -404,6 +404,34 @@ def _stream(run: Run, token: str) -> tuple[int, str]:
         return int(exc.code), exc.read().decode("utf-8", "replace")
 
 
+def _collect_evidence(run: Run, audit_key: str) -> dict[str, object]:
+    """Run docs/compliance/AUDIT_READINESS.md's collector against the live image."""
+    import tempfile
+
+    collector = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "collect_audit_evidence.py"
+    )
+    with tempfile.TemporaryDirectory() as scratch:
+        out = os.path.join(scratch, "snapshot")
+        result = subprocess.run(  # noqa: S603 - fixed argv, this interpreter
+            [sys.executable, collector, "--url", f"http://127.0.0.1:{run.port}", "--out", out],
+            check=False,
+            capture_output=True,
+            text=True,
+            env={**os.environ, "AEGIS_AUDIT_KEY": audit_key},
+        )
+        if result.returncode != 0:
+            raise SmokeError(f"evidence collector failed ({result.returncode}): {result.stderr}")
+        with open(os.path.join(out, "manifest.json"), encoding="utf-8") as handle:
+            manifest: dict[str, object] = json.load(handle)
+        for folder, _, names in os.walk(out):
+            for name in names:
+                with open(os.path.join(folder, name), "rb") as handle:
+                    if audit_key.encode() in handle.read():
+                        raise SmokeError(f"the audit key reached the evidence snapshot ({name})")
+    return manifest
+
+
 def smoke(run: Run) -> None:
     proxy_key = f"sk-smoke-proxy-{secrets.token_hex(16)}"
     audit_key = f"sk-smoke-audit-{secrets.token_hex(16)}"
@@ -484,6 +512,13 @@ def smoke(run: Run) -> None:
         f"the capability report sees the syscall filter as REAL: {seccomp}",
     )
     _check(_state(run)[0] == "running", "the gateway survived the capability probes")
+    snapshot = _collect_evidence(run, audit_key)
+    observed = snapshot.get("observations")
+    observed = observed if isinstance(observed, dict) else {}
+    _check(
+        observed.get("enforcement_mode") == "strict" and observed.get("integrity_valid") is True,
+        f"the auditor's evidence collector reads strict mode and a valid chain: {observed}",
+    )
 
     print("[5] durability across a restart")
     _docker("restart", "-t", "20", run.gateway)

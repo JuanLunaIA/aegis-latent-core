@@ -2,7 +2,7 @@
 
 Every file under the six source roots, with what it is, what reaches it, what tests it, and who owns it. Generated — edit `scripts/generate_module_inventory.py`, not this file. Currency is enforced by `tests/test_module_inventory_current.py`.
 
-`python scripts/generate_module_inventory.py` — 306 files.
+`python scripts/generate_module_inventory.py` — 307 files.
 
 ## What the status column means
 
@@ -18,9 +18,9 @@ Every file under the six source roots, with what it is, what reaches it, what te
 
 ## Coverage and ownership
 
-- **Navigation coverage:** 67 of 306 files (22%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
-- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 47, `roadmap-omit` 34, `unreferenced` 16.
-- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 306 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
+- **Navigation coverage:** 67 of 307 files (22%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
+- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 50, `roadmap-omit` 34, `unreferenced` 14.
+- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 307 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
 
 Tests are the test files that import the module directly, capped at 4 per row; the count is exact, the list is not exhaustive.
 
@@ -288,16 +288,17 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `scripts/build_execution_manifest.py` | module | Build the 2026-08-20 execution provenance envelope. | unreferenced | — | @JuanLunaIA |
 | `scripts/build_remediation_manifest.py` | module | Build the 2026-08-21 remediation provenance envelope. | unreferenced | — | @JuanLunaIA |
 | `scripts/build_rust.sh` | shell script | Reproducible helper to build aegis_rust_v2 using maturin in an isolated venv. | unreferenced | — | @JuanLunaIA |
+| `scripts/collect_audit_evidence.py` | module | Collect a point-in-time technical evidence snapshot from a running gateway. | referenced | — | @JuanLunaIA |
 | `scripts/collect_github_security_status.sh` | shell script | — | unreferenced | — | @JuanLunaIA |
 | `scripts/container_smoke_test.py` | module | Run the built gateway image the way the hardened deployment does, and prove it serves. | referenced | — | @JuanLunaIA |
 | `scripts/create_github_release.py` | module | Create one GitHub Release through a create-only, integrity-checked gh CLI surface. | referenced | — | @JuanLunaIA |
 | `scripts/extract_release_notes.py` | module | Extract one exact, non-empty stable-version section from CHANGELOG.md. | referenced | — | @JuanLunaIA |
 | `scripts/generate_ai_context_manifest.py` | module | Generate the deterministic manifest for the advisory AI context pack. | referenced | — | @JuanLunaIA |
 | `scripts/generate_commercial_license.py` | module | Vendor tool: mint and sign a commercial license token. | referenced | — | @JuanLunaIA |
-| `scripts/generate_license_key.py` | module | generate_license_key.py — HMAC-SHA256 license key generator for Aegis v4.1.0. | unreferenced | — | @JuanLunaIA |
+| `scripts/generate_license_key.py` | module | generate_license_key.py — HMAC-SHA256 license key generator for Aegis v4.1.0. | referenced | — | @JuanLunaIA |
 | `scripts/generate_mmr_vectors.py` | module | — | referenced | — | @JuanLunaIA |
 | `scripts/generate_module_inventory.py` | module | Generate ``docs/MODULE_INVENTORY.md`` — the per-file inventory AUD-25 asked for. | referenced | — | @JuanLunaIA |
-| `scripts/generate_sbom.sh` | shell script | Aegis Latent Core — SBOM Generation Script | unreferenced | — | @JuanLunaIA |
+| `scripts/generate_sbom.sh` | shell script | Aegis Latent Core — SBOM Generation Script | referenced | — | @JuanLunaIA |
 | `scripts/generate_sdk_bundle_fixture.py` | module | Write the gateway-issued forensic bundle the Python SDK's tests verify. | referenced | — | @JuanLunaIA |
 | `scripts/import_reachability_allowlist.txt` | text/data | — | referenced | — | @JuanLunaIA |
 | `scripts/install_aegis.sh` | shell script | install_aegis.sh — Zero-touch POSIX installer for Aegis Latent Core v5.0.1 | unreferenced | — | @JuanLunaIA |

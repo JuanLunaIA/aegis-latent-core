@@ -1,0 +1,145 @@
+REG-D67..REG-D86 — closure record for the 2026-09-24 remediation branch
+======================================================================
+
+Branch claude/aegis-v4-comprehensive-audit-m2qyka (PR #205). Each item lists
+the commit that fixed it, what was observed before, and what was observed after.
+The "open" records for REG-D67..D70 and REG-D73..D77
+(reg-d67_d68_seccomp_open.txt, reg-d69_d70_supply_chain_open.txt,
+reg-d73_d77_gatekeeper_findings.txt) are kept as written. This file records
+their closure; it does not rewrite them.
+
+Environment for every "after" below: Linux 6.18 x86_64 container with root,
+Docker 29.3.1, Python 3.11 venv for the test suite, and the gateway image built
+from deploy/docker/Dockerfile. For local builds only, a scratch copy of the
+Dockerfile added the sandbox proxy's CA so pip could reach PyPI; that copy was
+never committed. The host has no AppArmor, so --no-require-lsm was used
+locally, and the AppArmor leg runs in CI's container-smoke job.
+
+Seccomp discovery method, used for D78, D83, D84 and D86:
+- A scratch overlay of aegis/core/seccomp_guard.py, mounted over the image's
+  site-packages copy and never committed, loads the same allowlist with
+  default action SCMP_ACT_LOG (0x7FFC0000) instead of KILL_PROCESS.
+- The whole smoke flow is run under that overlay.
+- Kernel audit records (type=1326) then name every syscall outside the allowlist.
+Positive control, run in the same boot: sched_get_priority_max (146) is logged
+with code=0x7ffc0000 and the process survives.
+
+REG-D67 (P0) — gateway killed by its own filter on io_uring_enter      FIXED 249a435
+  before: see reg-d67_d68_seccomp_open.txt (2/2 runs killed, syscall 426)
+  after:  tests/test_seccomp_enforced_serving.py — real gateway through main()
+          serves a durable-evidence completion behind a loaded filter
+          (Seccomp: 2) and is alive 4 s later; lockdown over a live ring is
+          refused with IoUringActiveError.
+
+REG-D68 (P0) — filter skipped inside Docker (/.dockerenv marker)         FIXED 249a435
+  before: see reg-d67_d68_seccomp_open.txt (code path, not run on a Docker engine)
+  after:  on a Docker engine, container smoke step [2] reads /proc/1/status of
+          the shipped image: "Seccomp: 2", "NoNewPrivs: 1".
+
+REG-D69 (P1) — image resolved pyproject ranges at build time             FIXED 6c34191
+REG-D70 (P1) — requirements.lock omitted cachetools                       FIXED 6c34191
+  before: see reg-d69_d70_supply_chain_open.txt
+  after:  the Dockerfile installs --require-hashes -r requirements.lock, then
+          --no-deps, then pip check. Images built on a Docker engine
+          2026-09-24; pip check passed inside the build.
+
+REG-D73 (P3) JSON 500; REG-D74 (P3) [all] without dev; REG-D75 (P3) loopback
+bind when auth is disabled; REG-D77 (P2) MiFID citation; REG-026 (P2) mypy
+strict aegis_server; REG-D60 (P3) unread example variables; REG-D03 (P2)
+chacha20 yanked                                                            FIXED d598e36
+  REG-026 before: mypy --strict aegis_server -> 25 errors in 4 files; after: 0 (14 files); CI step added
+  REG-D60 before: .env.example set AEGIS_ANALYSIS_WORKERS, AEGIS_LSM_PROFILE,
+          AEGIS_SECCOMP_PROFILE, AEGIS_WAL_FSYNC, which nothing reads; after:
+          tests/test_example_deployment_variables_are_read.py passes
+  REG-D03 after: chacha20 0.10.2; cargo clippy -D warnings exit 0; cargo test --release 90+3 passed
+  REG-D77 after: checked against the adopted texts (legislation.gov.uk copies;
+          EUR-Lex returned an HTTP 202 challenge):
+          - Directive 2014/65/EU Art. 16(6) requires records of all services,
+            activities and transactions.
+          - Art. 16(7) requires recording of communications, kept for five
+            years and up to seven where the competent authority requests it.
+          - Art. 25(1) concerns staff knowledge and competence, not
+            record-keeping.
+          - Regulation (EU) No 600/2014 Art. 25(1) requires five-year order and
+            transaction data.
+          Citations are corrected in the module, CLM-104, README and the
+          compliance docs. Counsel's confirmation is still recommended (CLM-039).
+
+REG-D78 (P0) — shipped image killed (SIGSYS) on first named-host request  FIXED 863de29
+  before: first completion to an HTTPS upstream by hostname -> "Remote end
+          closed connection"; container exit 159 (128+SIGSYS); kernel
+          type=1326 syscall=63 (uname) code=0x80000000.
+          LOG-mode discovery over the whole flow: only syscall 63 (x1) and
+          307 sendmmsg (x3).
+  after:  allowlist + uname, sendmmsg. Host test: a child resolving a .invalid
+          name under the filter returned -31 before and survives after. Smoke
+          PASSED.
+
+REG-D79 (P1) — AEGIS_BACKEND_URL=.../v1 produced /v1/v1/chat/completions   FIXED 863de29
+  before: 7 failed, 2 passed (tests/test_upstream_url_join.py); smoke httpx log
+          "POST https://<upstream>:8443/v1/v1/chat/completions"
+  after:  9 passed; smoke relays the upstream's answer
+
+REG-D80 (P1) — AppArmor profile granted no /data write, no interpreter exec FIXED 863de29
+REG-D81 (P1) — hardened compose missing identity key/principals; internal-only network  FIXED 863de29
+  before: tests/test_hardened_compose_is_startable.py 3 failed; after: 4 passed
+  after:  python -m aegis.auth.principal generates the mapping with the
+          gateway's own digest (tests/test_principal_mapping_generator.py)
+
+REG-D82 (P1) — filter did not cover threads started before lockdown       FIXED 5f54f35
+  before: a thread started before apply_filter reported Seccomp: 0
+  after:  loaded with SCMP_FLTATR_CTL_TSYNC; the same thread reports Seccomp: 2
+          (tests/test_seccomp_enforced_serving.py)
+
+REG-D83 (P0) — ctypes.util.find_library executes ldconfig                  FIXED 5f54f35
+  before, in CI (AppArmor profile loaded): exec of /usr/sbin/ldconfig
+          denied, so strict startup could not load libc for the filter.
+  before, locally: GET /v1/attestation/capabilities with the audit key ->
+          gateway exited 159; kernel type=1326 syscall=293 (pipe2), from the
+          subprocess find_library starts.
+  after:  aegis/core/libc.py loads libc via dlopen(NULL) in all seven callers.
+          Smoke: capabilities 200, seccomp_syscall_filter REAL, gateway
+          survives.
+
+REG-D84 (P1) — every graceful stop ended in SIGSYS                         FIXED 5f54f35
+  before: exit 159 on docker stop. Kernel syscall=53 (socketpair), stack
+          asyncio.Runner.close -> uvloop run_until_complete -> socketpair.
+  after:  socketpair allowlisted. Smoke: "a graceful stop exits 0
+          (state=exited, exit=0)".
+
+REG-D85 (P2) — tests leaked SCHED_FIFO 50 + CPU-0 pin, livelocking the run FIXED 5f54f35
+  before (HEAD 863de29, root container, 4 CPUs): six-module sequence hung
+          at test_live_deque_iteration_can_be_torn_by_a_writer_thread
+          (timeout 280 s, exit 124; without a memory limit, SIGKILL exit 137
+          after 251 s).
+          /proc/<pid>/status Cpus_allowed_list: 0; chrt: SCHED_FIFO priority 50.
+          Each module paired alone with the snapshot test: exit 0.
+  after:  autouse fixtures restore scheduling policy/param and affinity per
+          test. Same sequence + test_seccomp_extended: 163 passed in 3.70 s.
+
+REG-D86 (P1) — the shipped image served no /metrics                        FIXED (this commit)
+  before: import prometheus_client in the image -> ModuleNotFoundError. The
+          container smoke's evidence-collector step found no
+          enforcement_mode, so the aegis_security_enforcement_mode alert in
+          docs/operations/MONITORING_ALERTING.md could not fire for any
+          deployment of the image.
+  after:  prometheus-client>=0.20.0 added to requirements.txt. The lock was
+          regenerated exactly as CI does (pip 25.2, pip-tools 7.5.2, seeded);
+          the only change is prometheus-client==0.26.0. It is recorded in
+          LICENSE-THIRD-PARTY.md (Apache-2.0 AND BSD-2-Clause).
+          Rebuilt image: metadata version 0.26.0. Smoke --ha PASSED, including
+          "the auditor's evidence collector reads strict mode and a valid chain".
+          LOG-mode pass over the full smoke --ha on the rebuilt image: 0
+          type=1326 lines since boot, with the positive control logged.
+
+Branch-wide verification at 5f54f35 (before REG-D86):
+- full pytest: 7536 passed, 41 skipped
+- tests/ha against real Redis + PostgreSQL: 43 passed; 4 helm-gated tests passed with helm
+- ruff, mypy --strict (aegis, aegis_server, scripts+tools)
+- verify_docs, verify_claims (108), verify_links, verify_documentation --strict
+- import reachability, manifest and inventory checks
+
+Final tree (REG-D86, collector, audit-readiness docs added):
+  full pytest -n auto: 7548 passed, 41 skipped; mypy --strict aegis 210 / aegis_server 14 / scripts+tools 45 clean;
+  ruff clean; verify_docs, verify_claims (111), verify_links, verify_documentation --strict PASS;
+  pip-audit --require-hashes -r requirements.lock: no known vulnerabilities (37 packages)

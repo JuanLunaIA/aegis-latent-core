@@ -15,8 +15,9 @@
 | Reviewing its security | [Security Policy](../SECURITY.md) → [Threat Model](security/THREAT_MODEL.md) → [Security Controls](security/SECURITY_CONTROLS.md) → [Security Architecture](security/SECURITY_ARCHITECTURE.md) |
 | Deploying it | [Deployment Guide](../DEPLOYMENT_GUIDE.md) → [Deployment Profiles](operations/DEPLOYMENT_PROFILES.md) → [Storage Requirements](operations/STORAGE_REQUIREMENTS.md) → [Monitoring and Alerting](operations/MONITORING_ALERTING.md) |
 | Running procurement | [Executive Summary](corporate/EXECUTIVE_SUMMARY.md) → [Procurement Checklist](enterprise/PROCUREMENT_CHECKLIST.md) → [Vendor Security Questionnaire](enterprise/VENDOR_SECURITY_QUESTIONNAIRE.md) → [Claims Matrix](CLAIMS_MATRIX.md) |
-| Assessing regulatory fit | [Compliance Mapping](compliance/COMPLIANCE_MAPPING.md) → the relevant technical-input document → [Boundaries](BOUNDARIES.md) |
+| Assessing regulatory fit | [Audit Readiness](compliance/AUDIT_READINESS.md) → [Compliance Mapping](compliance/COMPLIANCE_MAPPING.md) → the relevant technical-input document → [Boundaries](BOUNDARIES.md) |
 | Contributing | [Contributing](../CONTRIBUTING.md) → [Governance](../GOVERNANCE.md) → [Style Guide](STYLE_GUIDE.md) → [Documentation Governance](DOCUMENTATION_GOVERNANCE.md) |
+| Maintaining or succeeding the maintainer | [Maintainer Handbook](MAINTAINER_HANDBOOK.md) → [Registry](REGISTRY.md) → [Release Status](RELEASE_STATUS.md) |
 
 **Read [Boundaries](BOUNDARIES.md) before quoting anything from this corpus in an external document.**
 
@@ -113,6 +114,7 @@ The documents that decide what may be said, and on what evidence.
 
 | Document | Purpose |
 | --- | --- |
+| [Audit Readiness](compliance/AUDIT_READINESS.md) | Assessor procedure and control matrices: SOC 2, HIPAA §164.312, ISO/IEC 27001 Annex A, EU AI Act, MiFID II; the evidence collector. |
 | [Compliance Mapping](compliance/COMPLIANCE_MAPPING.md) | Framework-by-framework technical contribution and prohibited claim. |
 | [EU AI Act Technical Inputs](compliance/EU_AI_ACT_TECHNICAL_INPUTS.md) | Article 12 record-keeping contribution. |
 | [HIPAA Technical Inputs](compliance/HIPAA_TECHNICAL_INPUTS.md) | Safe Harbor-inspired redaction contribution. |

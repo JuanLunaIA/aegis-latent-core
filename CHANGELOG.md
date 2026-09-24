@@ -29,6 +29,92 @@ seccomp control and two supply-chain consistency defects; they are flagged, not
 fixed. Every check and its result is in
 [`RELEASE_HALTED_CRITICAL_ERRORS.md`](RELEASE_HALTED_CRITICAL_ERRORS.md).
 
+**Remediation (2026-09-24, PR #205): the halt is resolved in source.** Every
+blocker and every open finding above was fixed, and nine more were found and
+fixed along the way. The current state is
+[`RELEASE_READINESS_v5.0.1.md`](RELEASE_READINESS_v5.0.1.md), and the
+per-item evidence is `evidence/registry/reg-d67_d86_closure.txt`. Nothing new is
+published; publication remains the owner's step and must be read back.
+
+### Added — multi-replica operation (`AD-17`, `CLM-108`)
+
+- `AEGIS_HA_MODE` (`single`, the default, is unchanged):
+  - **`active_passive`:** replicas on one chain compete for a Redis writer lease
+    carrying a monotonic epoch. Only the holder admits governed requests; a
+    standby answers `/health` and refuses the rest; every handover is recorded
+    in the chain as a signed node.
+  - **`active_active`:** each replica writes its own chain under its own lease,
+    and every durable node is appended to one hash-linked global sequence in
+    PostgreSQL. Appends are compare-and-append, with a per-chain continuity
+    check and an epoch fence in the same transaction. Admission is refused
+    while sequencing lags beyond `AEGIS_HA_MAX_SEQUENCING_LAG_SECONDS`.
+  - `python -m aegis.core.ha verify` re-derives the sequence and checks each
+    WAL against it.
+  - Startup and the Helm chart refuse shapes that would fork evidence.
+  - Operator guide: `docs/operations/HIGH_AVAILABILITY.md`.
+- **Container smoke test** (`scripts/container_smoke_test.py`). It runs the
+  shipped image in its hardened posture: strict mode, its own kill-mode seccomp
+  filter, the AppArmor profile, a read-only root, no capabilities, and an HTTPS
+  upstream reached by hostname. It covers auth and scope refusals, a WAF block,
+  streaming, the evidence chain, a restart, a graceful stop, SIGKILL failover,
+  two active replicas and `verify`. CI runs it on every change, and
+  `publish_oci.yml` runs it on the signed commit before any image is pushed.
+- **Audit readiness** (`docs/compliance/AUDIT_READINESS.md`). It gives the
+  assessor procedure and control matrices for SOC 2, HIPAA §164.312, ISO/IEC
+  27001:2022 Annex A, the EU AI Act and MiFID II/MiFIR. It is technical evidence
+  only; no certification or compliance is claimed.
+- **Evidence collector** (`scripts/collect_audit_evidence.py`, standard library
+  only). It snapshots a live gateway's health, readiness, `/metrics`, audit
+  integrity and capability reports, with `SHA256SUMS` over every file. The
+  audit key comes from `AEGIS_AUDIT_KEY` and never from argv, output or a
+  redirect.
+- `python -m aegis.auth.principal` generates `AEGIS_API_KEY_PRINCIPALS_JSON`
+  from keys on stdin.
+- `docs/MAINTAINER_HANDBOOK.md` covers access to transfer, build, gates, the
+  release order and an escrow deposit.
+
+### Fixed — remediation of the gatekeeper findings (PR #205)
+
+- **Seccomp, P0:**
+  - `REG-D67`: the gateway killed itself on `io_uring_enter` on a bare host.
+  - `REG-D68`: the filter was skipped inside Docker.
+  - `REG-D78`: the shipped image was killed on its first request to any named
+    host (`uname`, `sendmmsg`).
+  - `REG-D83`: `ctypes.util.find_library` ran `ldconfig`; AppArmor denied it
+    at startup, and an authenticated capability probe killed the gateway.
+- **Seccomp, P1:**
+  - `REG-D82`: the filter did not cover threads started before lockdown; it is
+    now loaded with thread synchronization.
+  - `REG-D84`: every graceful stop ended in SIGSYS.
+- **Supply chain:**
+  - `REG-D69`: the images install exactly the hash-pinned lock.
+  - `REG-D70`: `cachetools` added to the lock.
+  - `REG-D86`: `prometheus-client` added to the lock. Without it the shipped
+    image served no `/metrics`, and the posture alert could not fire.
+- **Deployment:**
+  - `REG-D79`: a `…/v1` backend URL produced `/v1/v1/…`.
+  - `REG-D80`: the AppArmor profile blocked the WAL and the interpreter.
+  - `REG-D81`: the hardened compose could not start strict.
+- **Lower severity:**
+  - `REG-D73`: unhandled exceptions now return a JSON 500.
+  - `REG-D74`: `[all]` no longer installs the dev toolchain.
+  - `REG-D75`: an unauthenticated gateway binds loopback by default.
+  - `REG-D60`: example variables that nothing read were removed, with a guard
+    test.
+  - `REG-026`: `mypy --strict aegis_server` is clean, and CI runs it.
+  - `REG-D03`: `chacha20` 0.10.2.
+  - `REG-D85`: two test modules leaked real-time scheduling into the rest of
+    the run.
+- **Citation** (`REG-D77`): MiFID record-keeping is now cited as Directive
+  2014/65/EU Art. 16(6)/(7) and MiFIR Art. 25(1), checked against the adopted
+  texts. Counsel's confirmation is still recommended.
+
+### Security
+
+- `prometheus-client` 0.26.0 (Apache-2.0 AND BSD-2-Clause) joins the runtime
+  lock. `pip-audit --require-hashes` reports no known vulnerabilities in the 37
+  locked packages.
+
 ### Fixed — found by the 2026-09-24 release gatekeeper pass
 
 - **`main`'s Documentation Gates job was red** (`REG-D66`). PR #202's README
@@ -57,6 +143,8 @@ fixed. Every check and its result is in
   `docs/security/DEPENDENCY_RISK_REGISTER.md`. The build defect itself is open.
 
 ### Flagged, not fixed — release-blocking (see the halt report)
+
+*All fixed on PR #205 — see the Remediation entries above. Kept as recorded at the halt.*
 
 - `REG-D67` — on a Linux host with `libseccomp`, outside Docker, the gateway's
   own `SCMP_ACT_KILL_PROCESS` filter kills it on `io_uring_enter` (libuv via

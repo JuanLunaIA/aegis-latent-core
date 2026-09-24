@@ -133,8 +133,6 @@ curl -sS -D - -o /dev/null http://127.0.0.1:8080/v1/chat/completions \
 
 Expect `X-Aegis-Evidence-Status`, `X-Aegis-Request-ID` and the `X-Aegis-MMR-*` proof headers; `X-Aegis-Proof-Status` is sent on streaming responses only (`pending-terminal`).
 
-> **Known defect (`REG-D67`, open):** on a Linux host with `libseccomp` installed and outside Docker, step 2 exits with `Bad system call` about two seconds after startup — the gateway's own seccomp filter kills it when libuv calls `io_uring_enter`. Until it is fixed, `export UV_USE_IO_URING=0` before `aegis` avoids it. See [RELEASE_HALTED_CRITICAL_ERRORS.md](RELEASE_HALTED_CRITICAL_ERRORS.md).
-
 More: [Developer Quickstart](docs/DEVELOPER_QUICKSTART.md) · [Usage Examples](docs/USAGE_EXAMPLES.md)
 
 ---
