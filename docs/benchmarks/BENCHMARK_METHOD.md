@@ -34,6 +34,42 @@ A number without these four things is not a measurement:
 | Backpressure under injected `fsync` delay | Local harness with a seam | Real storage behaviour, real network, real provider |
 | WAF corpus | Pinned corpus replay | Traffic outside the corpus |
 | PQC signing timing | Sample-based timing | Constant-time behaviour, which is not established |
+| Commit latency distribution, concurrent-thread commit throughput, in-process streaming RSS, Ed25519/ML-DSA-65 sign+verify | `scripts/run_benchmarks_5.0.1.py` — see §8 | Network, provider, request handling, multi-process/multi-replica scaling, constant-time behaviour |
+
+## 8. The v5.0.1 documentation-pass benchmark (`run_benchmarks_5.0.1.py`)
+
+Written to answer four specific questions with real numbers rather than invented
+ones, for the v5.0.1 README and CLAIMS_MATRIX pass. Retained artifact:
+[`evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json`](../../evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json)
+(host `vm`, 4 CPUs, Linux x86_64, Python 3.11.15, git `ce58c58723e15…`, 2026-09-24).
+Reproduce with `python scripts/run_benchmarks_5.0.1.py --json`.
+
+| Measurement | Method | This run |
+| --- | --- | --- |
+| `commit_forensic` latency (n=1000) | `perf_counter()` around each commit against a real temp-dir WAL with real `fsync` | P50 0.62 ms · P95 1.00 ms · P99 1.22 ms · max 4.18 ms |
+| Concurrent commit throughput | `ThreadPoolExecutor` at 10/50/100 threads sharing one ledger's single-writer WAL lock, 200 ops/thread | 10 threads: 1,727/s · 50 threads: 1,630/s · 100 threads: 1,482/s |
+| Streaming ingestion memory | `resource.getrusage().ru_maxrss` delta around 1,000 concurrent in-process `BoundedStreamProxy` streams (20 events each) after an 8-stream warmup | +20.1 MB (52,648 KB → 73,256 KB) |
+| Ed25519 sign / verify | Best-of-5 over 500 ops, `cryptography` (RFC 8032) | sign 40.5 µs/op · verify 128.6 µs/op |
+| ML-DSA-65 sign / verify | Best-of-5 over 500 ops, `aegis_rust` (pqcrypto-mldsa, FIPS 204) | sign 173.0 µs/op · verify 62.4 µs/op |
+
+Read the throughput row carefully: **it does not scale with thread count, and that
+is the correct result, not noise.** All three columns measure one process writing
+to one WAL file through one lock (`AD-16`: this source tree does not implement a
+distributed WAL); more threads add contention on that lock, not more writers.
+Confusing this row for a multi-replica capacity figure would misstate the
+architecture, not just round the number wrong.
+
+Also read the memory row's ordering dependency: `ru_maxrss` is a whole-process
+high-water mark that Linux never lowers within a process's lifetime, so the
+harness runs the streaming-memory phase **before** the thread-heavy commit
+phases in the same process — reversing that order silently zeroes the delta
+by letting an unrelated, larger phase set the mark first. The script's own
+comments state this; a caller extending it must preserve the ordering or
+measure streaming memory in a fresh process.
+
+None of these five numbers is a capacity claim, an SLO, or a statement about a
+target deployment — see the boundary text atop this document and inside the
+script's own module docstring.
 
 ## 3. What is not measured, at all
 

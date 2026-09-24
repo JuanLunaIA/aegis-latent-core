@@ -160,6 +160,8 @@ The weakness being addressed is real and was demonstrated before being fixed: v1
 
 **Cost.** Two schemes to maintain, test and explain, in three implementations. The weakness stays reachable in the default path until v2 is wired into the ledger, which is blocked on the `aegis_rust` accumulator implementing v1 only and on there being no recorded scheme transition for an existing chain. Both are tracked as open work in [docs/ROADMAP.md](../ROADMAP.md). Documented in [MMR Proof v1](../api/MMR_PROOF_V1.md) and governed by `CLM-064`.
 
+**Amended.** v2 is now wired into `CryptographicAuditLedger`: `mmr_hash_scheme` (default `auto`) starts every *new* chain on v2, and reopens an existing chain under whichever scheme its WAL already recorded — so v1 chains in the field stay v1, and there is no in-place upgrade for one. The `aegis_rust` accumulator implements v2 as well as v1 (`aegis_rust_v2/src/mmr.rs`), so that blocker is also gone. What remains exactly as this ADR describes it: an existing v1 chain still cannot change scheme, for the reason given above — a root cannot be recomputed under a new construction without rewriting the history it already committed to.
+
 ---
 
 ## AD-13 — Converge without a leader, and sort by a total order rather than the causal one

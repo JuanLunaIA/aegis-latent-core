@@ -1,0 +1,77 @@
+{
+  "commit_latency": {
+    "max_ms": 4.175335999661911,
+    "n": 1000,
+    "operation": "commit_forensic (MMR append + HMAC sign + WAL fsync)",
+    "p50_ms": 0.617073999819695,
+    "p95_ms": 0.9974600002351508,
+    "p99_ms": 1.2162289999650966
+  },
+  "concurrent_throughput": [
+    {
+      "commits_per_second": 1726.5859679728562,
+      "elapsed_seconds": 1.1583552959996268,
+      "threads": 10,
+      "total_commits": 2000
+    },
+    {
+      "commits_per_second": 1630.3573782909489,
+      "elapsed_seconds": 6.133624524999959,
+      "threads": 50,
+      "total_commits": 10000
+    },
+    {
+      "commits_per_second": 1482.3666381779342,
+      "elapsed_seconds": 13.491938826000023,
+      "threads": 100,
+      "total_commits": 20000
+    }
+  ],
+  "cpus": 4,
+  "ed25519": {
+    "algorithm": "Ed25519",
+    "backend": "cryptography (RFC 8032)",
+    "sign": {
+      "best_ops_per_second": 24694.176209545247,
+      "best_us_per_op": 40.49537799983227
+    },
+    "signature_bytes": 64,
+    "verify": {
+      "best_ops_per_second": 7777.024737142809,
+      "best_us_per_op": 128.58387799951743
+    }
+  },
+  "generated_at": "2026-09-24T06:45:35+00:00",
+  "git_head": "ce58c58723e157c5f2f7182532d21ba625a2677e",
+  "harness": "scripts/run_benchmarks_5.0.1.py",
+  "host": "vm",
+  "machine": "x86_64",
+  "ml_dsa_65": {
+    "algorithm": "ml-dsa-65",
+    "backend": "aegis_rust (pqcrypto-mldsa, FIPS 204)",
+    "private_key_bytes": 4032,
+    "public_key_bytes": 1952,
+    "sign": {
+      "best_ops_per_second": 5779.44222117969,
+      "best_us_per_op": 173.02707799990458
+    },
+    "signature_bytes": 3309,
+    "timing_boundary": "single-sample latency only; establishes nothing about constant-time behaviour \u2014 see REG-041/UC-012 and aegis/core/timing_defense.py",
+    "verify": {
+      "best_ops_per_second": 16028.606831634823,
+      "best_us_per_op": 62.388454000029014
+    }
+  },
+  "provenance_note": "Observations on this host and date. Not a capacity, latency or production-readiness claim for any environment. docs/benchmarks/BENCHMARK_METHOD.md: \"No RPS figure is claimed for any environment.\" Cite the retained artifact, not this output.",
+  "python_version": "3.11.15",
+  "streaming_memory": {
+    "concurrency": 1000,
+    "events_per_stream": 20,
+    "operation": "concurrent in-process BoundedStreamProxy ingestion",
+    "rss_after_kb": 73256,
+    "rss_before_kb": 52648,
+    "rss_delta_kb": 20608,
+    "rss_delta_mb": 20.125
+  },
+  "system": "Linux"
+}

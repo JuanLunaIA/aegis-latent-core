@@ -1,0 +1,67 @@
+REG-D63 — two hallucination-adjacent detectors exist with no CLM/ROADMAP/UNSUPPORTED_CLAIMS entry
+=====================================================================================================
+
+Found while researching UC-068 (the general hallucination/output-correctness
+boundary the v5.0.1 documentation-pass mission asked UNSUPPORTED_CLAIMS.md to
+state explicitly). Before writing "Aegis does not detect hallucinations", a
+repo search for the word turned up two real, tested, implemented modules that
+a blanket claim would have made false:
+
+  aegis/core/dosage_hallucination.py     (501 lines) — flags drug-dosage
+                                          figures outside a reference range
+                                          for a fixed substance set.
+                                          tests/test_dosage_hallucination.py
+  aegis/core/clinical_claim_detector.py  (346 lines) — pattern-matches a
+                                          fixed set of clinical-claim
+                                          phrasings.
+                                          tests/test_clinical_claim_detector.py
+
+Both are in scripts/import_reachability_allowlist.txt (lines 41 and 51) —
+confirmed no production path constructs either:
+
+  grep -rn "dosage_hallucination\|clinical_claim_detector" aegis/proxy/app.py \
+    aegis/proxy/dependencies.py
+    -> no hits
+
+Neither module had any row anywhere in docs/CLAIMS_MATRIX.md,
+docs/institutional/UNSUPPORTED_CLAIMS.md, or docs/ROADMAP.md before this pass:
+
+  grep -n "dosage_hallucination\|clinical_claim_detector" docs/CLAIMS_MATRIX.md \
+    docs/institutional/UNSUPPORTED_CLAIMS.md docs/ROADMAP.md
+    -> no hits (before)
+
+This is the same "built, tested, unwired, and not carrying a claims-register
+row" shape UC-064/UC-065/UC-066 already document for other modules (AUD-35),
+just not yet noticed for these two.
+
+Fix (this pass)
+----------------
+
+Added UC-068 to docs/institutional/UNSUPPORTED_CLAIMS.md: states the general
+boundary precisely (no code path validates a response against ground truth)
+without overclaiming that no hallucination-adjacent code exists, names both
+modules, their allowlist status and their test files, and blocks the wording
+a marketing pass would otherwise reach for ("prevents hallucination",
+"detects hallucinated content", "validates the response", "fact-checks the
+model"). Mirrored as one line in README.md's Boundaries and limitations list.
+
+Not fixed here, and left open
+-------------------------------
+
+Whether to wire, rename, or delete either module is an AUD-35-shaped decision
+(per-module: give it a governed admission-path hook with a documented verdict
+destination and a CLAIMS_MATRIX row, or retire it) that this documentation
+pass did not make — it is out of scope for a docs-and-benchmarks pass and
+belongs to whoever owns the clinical-detection roadmap item, if one is opened.
+No ROADMAP.md ticket exists for these two specifically as of this commit;
+UC-068 is the only registered pointer to them today.
+
+Verified
+--------
+  ls tests/test_dosage_hallucination.py tests/test_clinical_claim_detector.py
+    -> both exist
+  wc -l aegis/core/dosage_hallucination.py aegis/core/clinical_claim_detector.py
+    -> 501, 346
+  python scripts/verify_claims.py -> PASS (UC rows are not scanned by this
+    gate the same way CLM rows are; UC-068 follows the file's own established
+    row format and amendment-header convention)

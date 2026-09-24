@@ -1,0 +1,72 @@
+REG-D62 — stale "MMR v2 not wired in / v1 remains the default" claims across three docs
+==========================================================================================
+
+Found while cross-checking docs/ROADMAP.md, docs/architecture/DECISIONS.md and
+docs/institutional/DOC-02_CRYPTOGRAPHIC_FORENSIC_BLUEPRINT.md against
+aegis/config.py during the v5.0.1 documentation pass (user mission: "verify
+claims... fix stale performance numbers, version references and architectural
+descriptions"). All three described MMR v2 as unwired and v1 as the ledger's
+default; neither has been true since P1-2 (this session's own earlier work,
+predating this pass) shipped `mmr_hash_scheme: Literal[...] = Field(default="auto",
+...)`, which starts every *new* chain on v2 and only reopens an *existing* chain
+under whichever scheme its own WAL recorded.
+
+The blocking reasons each document cited were also stale: `aegis_rust_v2/src/mmr.rs`
+now implements `HashScheme::V2BinaryDomainSeparated` (`leaf_hash`, `combine_hashes`
+both handle it), so "the aegis_rust accumulator implements v1 only" is false.
+
+Meanwhile docs/CLAIMS_MATRIX.md's own CLM-064 wording-control row already stated
+the correct, current fact: '"auto" starts a new chain on v2 and reopens an
+existing one under the scheme its WAL recorded, so v1 chains in the field stay
+v1 and there is no in-place upgrade' — the three documents fixed here directly
+contradicted a row already correct elsewhere in the same corpus.
+
+What remains true, and is what all three documents now say: an *existing* v1
+chain has no in-place upgrade to v2, because a root cannot be recomputed under
+a new construction without rewriting the history it already committed to.
+
+Fix
+---
+
+  docs/ROADMAP.md                          rewrote the "Domain-separated MMR
+                                            in the ledger" entry to state only
+                                            the genuinely open part (no v1->v2
+                                            transition for an existing chain).
+  docs/architecture/DECISIONS.md (AD-12)   added an **Amended.** paragraph
+                                            (the file's own convention, see
+                                            AD-08's Windows amendment) rather
+                                            than rewriting the original
+                                            Decision/Cost prose, which is
+                                            accurate as a historical record of
+                                            what AD-12 decided.
+  docs/institutional/DOC-02_...md          corrected the MMR boundary table
+                                            row's "in scope" / "outside"
+                                            columns to the current wiring.
+
+Also corrected in the same pass, as ordinary doc-currency drift, not separately
+registered: README.md's stale "3,348 lines" (crypto_audit.py + mmr.py; actual
+3,918), "207 files" (mypy --strict aegis; actual 208), and the 2026-09-21
+"6,971 tests / 118 skipped" hero figure superseded by a fresh 2026-09-24 run
+(see evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json and the serial-suite
+log cited in the same commit).
+
+Verified
+--------
+
+  grep -rn "still writes v1\|remains the default.*v1\|v1.*remains the default" *.md
+    -> three hits before the fix (the ones above), zero current-state hits after
+       (CHANGELOG.md's own hit is a dated [4.3.0] historical entry, correctly
+       left untouched per AGENTS.md "preserve historical claims in scope")
+  python tools/docs/verify_documentation.py --root . --strict  -> 0 errors, 0 warnings
+  python scripts/verify_docs.py                                -> PASS (0 findings)
+  python scripts/verify_claims.py                              -> PASS (107 claims, 0 findings)
+  bash scripts/verify_links.sh                                 -> PASS (1411 resolved)
+  python scripts/audit_documentation_corpus.py --output-dir ... -> status=PASS
+
+What this does not establish
+-----------------------------
+This pass fact-checked a prioritized subset of the corpus (README, CLAIMS_MATRIX,
+REGISTRY, ROADMAP, UNSUPPORTED_CLAIMS, SDK docs, and files the new benchmark
+numbers touch), not all ~255 markdown files in the tree. Other stale claims may
+remain outside that subset; an exhaustive pass was explicitly declined in favor
+of this prioritized one (session record).
