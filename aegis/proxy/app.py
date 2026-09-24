@@ -16,7 +16,7 @@ import time
 import uuid
 from collections import OrderedDict
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass
 from datetime import timedelta
 from secrets import randbelow
@@ -1101,173 +1101,239 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
         observability.setup_otel(service_name="aegis-proxy")
 
+        async def _stop_siem_exporter_on_startup_failure() -> None:
+            # Only ever registered from the `if state.siem_exporter is not None:`
+            # block below, right after `.start()` — the assert restates that for
+            # the type checker, which cannot see the registration site.
+            assert state.siem_exporter is not None
+            try:
+                await asyncio.to_thread(state.siem_exporter.shutdown, 5.0, drain=False)
+            except TimeoutError:
+                logger.error("SIEM exporter did not stop before startup-failure cleanup deadline")
+
+        async def _stop_s3_archiver_on_startup_failure() -> None:
+            # Only ever registered from the `if state.s3_archiver is not None:`
+            # block below, right after `.start()`; see the assert above.
+            assert state.s3_archiver is not None
+            if state.archive_task is not None:
+                state.archive_task.cancel()
+                await asyncio.gather(state.archive_task, return_exceptions=True)
+            await state.s3_archiver.close(drain=True)
+
+        async def _stop_analysis_workers_on_startup_failure() -> None:
+            for worker in state.analysis_workers:
+                worker.cancel()
+            if not state.analysis_workers:
+                return
+            try:
+                async with asyncio.timeout(cfg.analysis_shutdown_timeout_seconds):
+                    await asyncio.gather(*state.analysis_workers, return_exceptions=True)
+            except TimeoutError:
+                pending_workers = [
+                    worker.get_name() for worker in state.analysis_workers if not worker.done()
+                ]
+                logger.error(
+                    "analysis worker shutdown exceeded %.3fs; pending=%s",
+                    cfg.analysis_shutdown_timeout_seconds,
+                    pending_workers,
+                )
+
         # REG-D32 (opt-in): open the durable outbox and replay what a previous
         # process left pending, before the handoff starts and before traffic.
         # Replay refuses to extend a ledger whose fault state is not healthy.
-        # Deliberately BEFORE the SIEM/S3 startup below: this step can raise
-        # (a bad path, a missing signing key), and __aenter__ raising means
-        # Starlette never runs this function's post-``yield`` shutdown half —
-        # nothing started above this point needs cleanup on that failure.
-        if cfg.terminal_outbox_enabled:
-            outbox_path = cfg.terminal_outbox_path or cfg.wal_path.with_name(
-                cfg.wal_path.name + ".terminal-outbox.jsonl"
-            )
-            if not cfg.signing_key:
-                # The spool is authenticated with a key derived from the signing
-                # key; one nobody can authenticate must never be replayed, since
-                # replay signs what it reads.
-                raise RuntimeError(
-                    "AEGIS_TERMINAL_OUTBOX_ENABLED requires AEGIS_SIGNING_KEY: the outbox "
-                    "spool is authenticated with a key derived from it"
+        #
+        # `startup_cleanup` stops every resource started below if ANYTHING from
+        # here through `app.state.aegis = state` raises — not just the outbox.
+        # A raise anywhere before `yield` makes `__aenter__` fail, and Starlette
+        # then never runs this function's post-``yield`` shutdown half, so a
+        # resource already started above the raising line would otherwise stay
+        # live with nothing to stop it (REG-D48 covered only the outbox's own
+        # `open()` raising; REG-D55 covered only the outbox itself for anything
+        # raising after that). Each resource below registers its own stop
+        # callback right after it starts, so the ``AsyncExitStack`` unwinds
+        # every one of them, in reverse start order, before the exception
+        # propagates. `pop_all()` disarms every callback once startup has fully
+        # succeeded; ordinary shutdown then owns stopping everything, in the
+        # post-``yield`` half.
+        async with AsyncExitStack() as startup_cleanup:
+            if cfg.terminal_outbox_enabled:
+                outbox_path = cfg.terminal_outbox_path or cfg.wal_path.with_name(
+                    cfg.wal_path.name + ".terminal-outbox.jsonl"
                 )
-            outbox = TerminalOutbox.open(
-                outbox_path,
-                mac_key=derive_outbox_mac_key(cfg.signing_key),
-                max_bytes=cfg.terminal_outbox_max_bytes,
-            )
-            report = await replay_pending(
-                outbox, ledger=state.ledger, commit=_commit_stream_evidence
-            )
-            if report.pending:
-                logger.warning(
-                    "terminal outbox replay: pending=%d recovered=%d deduplicated=%d "
-                    "failed=%d refused_fault_state=%s",
-                    report.pending,
-                    report.recovered,
-                    report.deduplicated,
-                    report.failed,
-                    report.refused_fault_state or "-",
-                )
-            state.terminal_outbox = outbox
-            state.terminal_handoff.attach_outbox(
-                outbox, landed=lambda state_id: has_terminal_node(state.ledger, state_id)
-            )
-            observability.TERMINAL_OUTBOX_PENDING.set_function(lambda: outbox.pending_count)
-
-        if state.siem_exporter is not None:
-            state.siem_exporter.start()
-        if state.s3_archiver is not None:
-            await state.s3_archiver.start()
-            state.archive_task = asyncio.create_task(
-                _archive_finalized_segments_worker(),
-                name="aegis-finalized-segment-archive",
-            )
-
-        # The terminal-evidence handoff worker is started here, on purpose:
-        # this context is not inside any request's task group, so commits it
-        # runs for a torn-down stream survive the cancellation Starlette
-        # delivers to the response (AUD-03 / REG-D07).
-        state.terminal_handoff.start()
-
-        # NOTE: the seccomp filter is applied LAST in this startup sequence
-        # (just before `yield`), NOT here.  The async Rust forwarder's Tokio
-        # runtime must spawn its worker threads and load the TLS trust store
-        # while clone()/openat() are still permitted; once every subsystem has
-        # initialised its threads and file descriptors we lock the process down.
-        # See the "Seccomp lockdown" block below and seccomp_guard.py.
-
-        lsm = None
-        try:
-            from aegis.core.lsm_guard import LSMGuard
-
-            lsm = LSMGuard()
-            if cfg.security_enforcement_mode == "strict" and cfg.require_lsm:
-                lsm.assert_enforcing()
-            if not lsm.verify_confinement():
-                if cfg.security_enforcement_mode == "strict" and cfg.require_lsm:
+                if not cfg.signing_key:
+                    # The spool is authenticated with a key derived from the signing
+                    # key; one nobody can authenticate must never be replayed, since
+                    # replay signs what it reads.
                     raise RuntimeError(
-                        "strict runtime requires active AppArmor/SELinux confinement"
+                        "AEGIS_TERMINAL_OUTBOX_ENABLED requires AEGIS_SIGNING_KEY: the outbox "
+                        "spool is authenticated with a key derived from it"
                     )
-                logger.warning("LSM confinement unavailable; development runtime continues")
-            else:
-                logger.info("LSM confinement verified — AppArmor/SELinux profile active.")
-        except Exception as exc:
-            if cfg.security_enforcement_mode == "strict" and cfg.require_lsm:
-                raise RuntimeError(f"LSM enforcement required but unavailable: {exc}") from exc
-            logger.warning("LSM module unavailable in development runtime: %s", exc)
+                outbox = TerminalOutbox.open(
+                    outbox_path,
+                    mac_key=derive_outbox_mac_key(cfg.signing_key),
+                    max_bytes=cfg.terminal_outbox_max_bytes,
+                )
+                startup_cleanup.callback(outbox.close)
+                report = await replay_pending(
+                    outbox, ledger=state.ledger, commit=_commit_stream_evidence
+                )
+                if report.pending:
+                    logger.warning(
+                        "terminal outbox replay: pending=%d recovered=%d deduplicated=%d "
+                        "failed=%d refused_fault_state=%s",
+                        report.pending,
+                        report.recovered,
+                        report.deduplicated,
+                        report.failed,
+                        report.refused_fault_state or "-",
+                    )
+                state.terminal_outbox = outbox
+                state.terminal_handoff.attach_outbox(
+                    outbox, landed=lambda state_id: has_terminal_node(state.ledger, state_id)
+                )
+                startup_cleanup.callback(state.terminal_handoff.attach_outbox, None)
+                observability.TERMINAL_OUTBOX_PENDING.set_function(lambda: outbox.pending_count)
 
-        cfg.wal_path.parent.mkdir(parents=True, exist_ok=True)
+            if state.siem_exporter is not None:
+                state.siem_exporter.start()
+                startup_cleanup.push_async_callback(_stop_siem_exporter_on_startup_failure)
+            if state.s3_archiver is not None:
+                await state.s3_archiver.start()
+                state.archive_task = asyncio.create_task(
+                    _archive_finalized_segments_worker(),
+                    name="aegis-finalized-segment-archive",
+                )
+                startup_cleanup.push_async_callback(_stop_s3_archiver_on_startup_failure)
 
-        state.vault = None
-        if cfg.vault_url:
-            state.vault = VaultManager(
-                vault_url=cfg.vault_url,
-                role_id=cfg.vault_role_id,
-                secret_id=cfg.vault_secret_id,
+            # The terminal-evidence handoff worker is started here, on purpose:
+            # this context is not inside any request's task group, so commits it
+            # runs for a torn-down stream survive the cancellation Starlette
+            # delivers to the response (AUD-03 / REG-D07).
+            state.terminal_handoff.start()
+            startup_cleanup.push_async_callback(
+                state.terminal_handoff.stop, timeout=cfg.analysis_shutdown_timeout_seconds
             )
-            await state.vault.authenticate()
 
-        backend_key = cfg.backend_api_key
-        if state.vault and not backend_key:
-            backend_key = (
-                await state.vault.get_secret(cfg.vault_backend_secret_path, "api_key") or ""
+            # NOTE: the seccomp filter is applied LAST in this startup sequence
+            # (just before `yield`), NOT here.  The async Rust forwarder's Tokio
+            # runtime must spawn its worker threads and load the TLS trust store
+            # while clone()/openat() are still permitted; once every subsystem has
+            # initialised its threads and file descriptors we lock the process down.
+            # See the "Seccomp lockdown" block below and seccomp_guard.py.
+
+            lsm = None
+            try:
+                from aegis.core.lsm_guard import LSMGuard
+
+                lsm = LSMGuard()
+                if cfg.security_enforcement_mode == "strict" and cfg.require_lsm:
+                    lsm.assert_enforcing()
+                if not lsm.verify_confinement():
+                    if cfg.security_enforcement_mode == "strict" and cfg.require_lsm:
+                        raise RuntimeError(
+                            "strict runtime requires active AppArmor/SELinux confinement"
+                        )
+                    logger.warning("LSM confinement unavailable; development runtime continues")
+                else:
+                    logger.info("LSM confinement verified — AppArmor/SELinux profile active.")
+            except Exception as exc:
+                if cfg.security_enforcement_mode == "strict" and cfg.require_lsm:
+                    raise RuntimeError(f"LSM enforcement required but unavailable: {exc}") from exc
+                logger.warning("LSM module unavailable in development runtime: %s", exc)
+
+            cfg.wal_path.parent.mkdir(parents=True, exist_ok=True)
+
+            state.vault = None
+            if cfg.vault_url:
+                state.vault = VaultManager(
+                    vault_url=cfg.vault_url,
+                    role_id=cfg.vault_role_id,
+                    secret_id=cfg.vault_secret_id,
+                )
+                await state.vault.authenticate()
+
+            backend_key = cfg.backend_api_key
+            if state.vault and not backend_key:
+                backend_key = (
+                    await state.vault.get_secret(cfg.vault_backend_secret_path, "api_key") or ""
+                )
+
+            forwarder_cfg = cfg.model_copy(update={"backend_api_key": backend_key})
+
+            from aegis.providers import build_provider
+
+            provider = build_provider(
+                cfg.provider,
+                openrouter_site_url=cfg.openrouter_site_url,
+                openrouter_site_name=cfg.openrouter_site_name,
+                anthropic_api_version=cfg.anthropic_api_version,
             )
 
-        forwarder_cfg = cfg.model_copy(update={"backend_api_key": backend_key})
+            egress_guard = cfg.get_egress_guard()
+            state.forwarder = LLMForwarder(
+                forwarder_cfg, provider=provider, egress_guard=egress_guard
+            )
+            await state.forwarder.start()
+            startup_cleanup.push_async_callback(state.forwarder.stop)
+            state.sessions = SessionLifecycleManager(max_sessions=4_096)
+            state.analysis_workers = [
+                asyncio.create_task(_analysis_worker(state), name=f"aegis-analysis-{index}")
+                for index in range(cfg.analysis_worker_count)
+            ]
+            startup_cleanup.push_async_callback(_stop_analysis_workers_on_startup_failure)
 
-        from aegis.providers import build_provider
+            # Legacy SPIFFE header authentication is intentionally not activated.
+            # Principal-first mTLS accepts direct TLS state or headers from an
+            # explicitly allowlisted immediate proxy only.
 
-        provider = build_provider(
-            cfg.provider,
-            openrouter_site_url=cfg.openrouter_site_url,
-            openrouter_site_name=cfg.openrouter_site_name,
-            anthropic_api_version=cfg.anthropic_api_version,
-        )
+            # ── Cross-replica gossip (before seccomp, and for a reason) ─────────
+            # Starting the mesh reads three PEM files and binds a listener. Both
+            # need syscalls the filter below is about to forbid, and doing it
+            # afterwards fails looking like a TLS fault. Off by default.
+            try:
+                from aegis.consensus.runtime import start_gossip
 
-        egress_guard = cfg.get_egress_guard()
-        state.forwarder = LLMForwarder(forwarder_cfg, provider=provider, egress_guard=egress_guard)
-        await state.forwarder.start()
-        state.sessions = SessionLifecycleManager(max_sessions=4_096)
-        state.analysis_workers = [
-            asyncio.create_task(_analysis_worker(state), name=f"aegis-analysis-{index}")
-            for index in range(cfg.analysis_worker_count)
-        ]
+                state.gossip = await start_gossip(cfg)
+            except Exception as exc:
+                if cfg.security_enforcement_mode == "strict":
+                    raise RuntimeError(f"gossip was enabled but could not start: {exc}") from exc
+                # Not silently skipped: a replica asked to join a mesh that did not
+                # join looks healthy while diverging from every peer.
+                logger.error(
+                    "gossip was enabled but could not start; continuing without it: %s", exc
+                )
+                state.gossip = None
+            if state.gossip is not None:
+                startup_cleanup.push_async_callback(state.gossip.aclose)
 
-        # Legacy SPIFFE header authentication is intentionally not activated.
-        # Principal-first mTLS accepts direct TLS state or headers from an
-        # explicitly allowlisted immediate proxy only.
+            # ── Seccomp lockdown (applied LAST, after all subsystems init) ──────
+            # Warm the Rust async runtime so its worker pool exists before we forbid
+            # clone()/clone3(); then apply the strict syscall filter.  At this point
+            # the forwarder's threads, the WAL file descriptors, and the TLS trust
+            # store are all initialised, so the steady-state request path needs no
+            # thread/process creation or new file opens.
+            from aegis.core.rust_integration import warmup_rust_runtime
 
-        # ── Cross-replica gossip (before seccomp, and for a reason) ─────────
-        # Starting the mesh reads three PEM files and binds a listener. Both
-        # need syscalls the filter below is about to forbid, and doing it
-        # afterwards fails looking like a TLS fault. Off by default.
-        try:
-            from aegis.consensus.runtime import start_gossip
+            warmup_rust_runtime()
 
-            state.gossip = await start_gossip(cfg)
-        except Exception as exc:
-            if cfg.security_enforcement_mode == "strict":
-                raise RuntimeError(f"gossip was enabled but could not start: {exc}") from exc
-            # Not silently skipped: a replica asked to join a mesh that did not
-            # join looks healthy while diverging from every peer.
-            logger.error("gossip was enabled but could not start; continuing without it: %s", exc)
-            state.gossip = None
+            guard = None
+            try:
+                from aegis.core.seccomp_guard import SeccompGuard
 
-        # ── Seccomp lockdown (applied LAST, after all subsystems init) ──────
-        # Warm the Rust async runtime so its worker pool exists before we forbid
-        # clone()/clone3(); then apply the strict syscall filter.  At this point
-        # the forwarder's threads, the WAL file descriptors, and the TLS trust
-        # store are all initialised, so the steady-state request path needs no
-        # thread/process creation or new file opens.
-        from aegis.core.rust_integration import warmup_rust_runtime
-
-        warmup_rust_runtime()
-
-        guard = None
-        try:
-            from aegis.core.seccomp_guard import SeccompGuard
-
-            guard = SeccompGuard()
-            if not guard.apply_filter():
+                guard = SeccompGuard()
+                if not guard.apply_filter():
+                    if cfg.security_enforcement_mode == "strict" and cfg.require_seccomp:
+                        raise RuntimeError("strict runtime requires an active seccomp filter")
+                    logger.warning("Seccomp unavailable; development runtime continues")
+            except Exception as exc:
                 if cfg.security_enforcement_mode == "strict" and cfg.require_seccomp:
-                    raise RuntimeError("strict runtime requires an active seccomp filter")
-                logger.warning("Seccomp unavailable; development runtime continues")
-        except Exception as exc:
-            if cfg.security_enforcement_mode == "strict" and cfg.require_seccomp:
-                raise RuntimeError(f"Seccomp enforcement required but unavailable: {exc}") from exc
-            logger.warning("Seccomp unavailable in development runtime: %s", exc)
+                    raise RuntimeError(
+                        f"Seccomp enforcement required but unavailable: {exc}"
+                    ) from exc
+                logger.warning("Seccomp unavailable in development runtime: %s", exc)
 
-        app.state.aegis = state
+            app.state.aegis = state
+            startup_cleanup.pop_all()
         yield
 
         # First on the way down: a stream torn down by shutdown should land its

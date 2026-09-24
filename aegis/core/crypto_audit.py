@@ -1702,16 +1702,38 @@ class CryptographicAuditLedger:
             or any(ch not in "0123456789abcdef" for ch in response_hash)
         ):
             raise ValueError("response_hash must be a lowercase SHA-256 hex digest")
-        if response_size < 0 or token_count < 0:
-            raise ValueError("response_size and token_count must be non-negative")
-        if not math.isfinite(elapsed_seconds) or elapsed_seconds < 0:
+        if (
+            isinstance(response_size, bool)
+            or not isinstance(response_size, int)
+            or response_size < 0
+        ):
+            raise ValueError("response_size must be a non-negative integer")
+        if isinstance(token_count, bool) or not isinstance(token_count, int) or token_count < 0:
+            raise ValueError("token_count must be a non-negative integer")
+        if not isinstance(final_marker_included, bool):
+            raise ValueError("final_marker_included must be a bool")
+        if (
+            isinstance(elapsed_seconds, bool)
+            or not isinstance(elapsed_seconds, (int, float))
+            or not math.isfinite(elapsed_seconds)
+            or elapsed_seconds < 0
+        ):
             raise ValueError("elapsed_seconds must be finite and non-negative")
         if len(response_preview) > self.max_forensic_bytes:
             raise ValueError("response_preview exceeds max_forensic_bytes")
         if terminal_outcome not in allowed_outcomes:
             raise ValueError("unsupported terminal_outcome")
+        if redaction_hits is not None and not isinstance(redaction_hits, dict):
+            raise ValueError("redaction_hits must be a dictionary")
         hits = dict(redaction_hits or {})
-        if any(not key or not isinstance(value, int) or value < 0 for key, value in hits.items()):
+        if any(
+            not isinstance(key, str)
+            or not key
+            or isinstance(value, bool)
+            or not isinstance(value, int)
+            or value < 0
+            for key, value in hits.items()
+        ):
             raise ValueError("redaction_hits must contain non-negative integer counts")
 
         leaf = build_stream_merkle_leaf(

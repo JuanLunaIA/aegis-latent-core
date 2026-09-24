@@ -267,6 +267,42 @@ the branch restarted from `main` afterward.
   `requirements.txt` beside the existing `idna`/`urllib3` security floors;
   `requirements.lock` regenerated (one line: `anyio`'s `# via` comment).
 
+### Fixed — found on PR #197 after it merged
+
+The same pattern one more time: the PR that fixed the eight findings above
+auto-merged before its own review round — CodeQL and Sourcery — was
+addressed. Fixed on the branch restarted from `main` afterward.
+
+- **REG-D53** — CodeQL flagged all seven `...` stub bodies on the
+  `TerminalSummary` `Protocol` `REG-D45` added as "Statement has no effect".
+  `...` is the standard `Protocol`-stub idiom and never executes, but this
+  rule flags any bare Ellipsis statement regardless. Replaced with `pass`,
+  semantically identical and not matched by the rule.
+- **REG-D54** — `commit_forensic_summary`'s docstring promises every field is
+  type-checked before the lock; `response_size`, `token_count` and
+  `elapsed_seconds` instead compared/inspected a value with no `isinstance`
+  check first, so a non-comparable input raised an incidental `TypeError`
+  rather than the documented `ValueError`; `final_marker_included` had no
+  check at all; `redaction_hits` never confirmed its keys were strings and
+  let a `bool` value through as a count. All five now get an explicit
+  `isinstance` check, following the file's own existing `request_size` idiom.
+  A second review round on the same PR found `redaction_hits` itself was
+  never checked to be a `dict` before conversion; fixed with one more
+  `isinstance` check ahead of it.
+- **REG-D55** — `REG-D48` closed the leak for the terminal outbox's own
+  `open()` call raising, but not for anything raising *after* a successful
+  open — `replay_pending`, SIEM/S3 startup, the handoff worker, LSM, vault,
+  the forwarder, gossip or seccomp — each of which still skips `lifespan`'s
+  entire post-`yield` shutdown half by the same `@asynccontextmanager`
+  mechanics. `lifespan` now wraps that whole startup span in a
+  `contextlib.ExitStack` that closes the outbox on any exception, disarmed
+  only once startup fully succeeds. A second review round on the same PR
+  found the same gap one layer further out — once the handoff worker itself
+  started, nothing stopped *it* (or the forwarder, SIEM exporter, S3
+  archiver, analysis workers, or gossip mesh) if a later step then raised.
+  `ExitStack` became `contextlib.AsyncExitStack`, with a stop callback
+  registered for every one of those resources right after it starts.
+
 ## [5.0.0] — unreleased source target
 
 **Nothing is published for `5.0.0`.** There is no tag, GitHub Release, PyPI or
