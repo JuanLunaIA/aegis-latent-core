@@ -53,11 +53,10 @@ def fixture_public_key_hex() -> bytes:
 
 def build_fixture_bundle(workdir: Path, *, signed: bool = True) -> bytes:
     """Three committed nodes, exported exactly as the export endpoint would."""
-    ledger = CryptographicAuditLedger(
+    with CryptographicAuditLedger(
         persistence_path=str(workdir / "audit.jsonl"),
         signing_key="sdk-bundle-fixture-hmac-key",
-    )
-    try:
+    ) as ledger:
         nodes = [
             ledger.commit_forensic(
                 state_id=f"fixture-{index}",
@@ -69,8 +68,6 @@ def build_fixture_bundle(workdir: Path, *, signed: bool = True) -> bytes:
             )
             for index in range(3)
         ]
-    finally:
-        ledger.close()
     return build_forensic_bundle(
         nodes,
         operator="sdk-fixture",

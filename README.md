@@ -83,7 +83,7 @@ Real measurements from the retained 2026-09-24 artifact ([`evidence/benchmarks/b
 | Ed25519 sign / verify | 40.5 µs/op · 128.6 µs/op (`cryptography`, RFC 8032) | Device-order-of-magnitude timing on the recorded host |
 | ML-DSA-65 sign / verify | 173.0 µs/op · 62.4 µs/op (`aegis_rust`, FIPS 204) | A latency sample only — the constant-time claim remains blocked (`REG-041`, `UC-012`) |
 
-Measured suite (dated records; counts move as tests are added — run `pytest -q` on the commit you evaluate): 7,444 passed / 39 skipped / 0 failed (`pytest -n auto -q`) and 7,449 passed / 34 skipped / 0 failed (CI's exact serial Forensic command), both 2026-09-24 on the checked-out `5.0.1` tree. Statement coverage gate: **91.30%** (2026-09-24), floor 90% enforced.
+Measured suite (dated records; counts move as tests are added — run `pytest -q` on the commit you evaluate): 7,444 passed / 39 skipped / 0 failed (`pytest -n auto -q`) and 7,449 passed / 34 skipped / 0 failed (CI's exact serial Forensic command), both 2026-09-24 on the checked-out `5.0.1` tree. Statement coverage: **91.30%** (2026-09-24; 91.25% on a later same-day run). The floor CI enforces is **65%** (`--cov-fail-under=65`, `.github/workflows/ci.yml`); the 90% figure was a one-off mission floor, met at 90.07% on 2026-09-21 (`REG-D36`) and not enforced.
 
 **None of this is a capacity claim.** Offered load is not accepted throughput. The absolute latencies are properties of one shared container; what transfers is the *shape* — per-commit cost stopped growing with chain length — not the numbers. Re-run the harnesses in your own environment before planning against any of them.
 
@@ -131,7 +131,9 @@ curl -sS -D - -o /dev/null http://127.0.0.1:8080/v1/chat/completions \
   | grep -i '^x-aegis'
 ```
 
-Expect `X-Aegis-Evidence-Status`, `X-Aegis-Request-ID`, `X-Aegis-Proof-Status` and the `X-Aegis-MMR-*` proof headers.
+Expect `X-Aegis-Evidence-Status`, `X-Aegis-Request-ID` and the `X-Aegis-MMR-*` proof headers; `X-Aegis-Proof-Status` is sent on streaming responses only (`pending-terminal`).
+
+> **Known defect (`REG-D67`, open):** on a Linux host with `libseccomp` installed and outside Docker, step 2 exits with `Bad system call` about two seconds after startup — the gateway's own seccomp filter kills it when libuv calls `io_uring_enter`. Until it is fixed, `export UV_USE_IO_URING=0` before `aegis` avoids it. See [RELEASE_HALTED_CRITICAL_ERRORS.md](RELEASE_HALTED_CRITICAL_ERRORS.md).
 
 More: [Developer Quickstart](docs/DEVELOPER_QUICKSTART.md) · [Usage Examples](docs/USAGE_EXAMPLES.md)
 

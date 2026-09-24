@@ -1,0 +1,63 @@
+REG-D71 — CHANGELOG [5.0.1] missing six post-v5.0.0 PRs; [5.0.0] heading stale
+REG-D72 — two false README statements (coverage floor; X-Aegis-Proof-Status on a non-streaming call)
+======================================================================================================
+
+Recorded 2026-09-24 by the release gatekeeper pass at 1bda9f9.
+
+REG-D71
+-------
+v5.0.0 = signed tag object c34d41280ec4a5acb38aa74220eac8f20a9d0aab at commit
+b2e4335409377442e9dde70ea579c3df08a0c1be (docs/RELEASE_STATUS.md §1.0);
+`git merge-base --is-ancestor b2e4335 origin/main` -> true.
+
+  $ git log --format=%s b2e4335..origin/main | grep -oE '\(#[0-9]+\)$'
+  PRs: 182 183 184 185 186 187 195 196 197 198 199 200 201 202   (14 commits, all squash merges)
+
+  $ git log --format=%s b2e4335..origin/main -- CHANGELOG.md
+  touched CHANGELOG.md: #183 #195 #196 #197 #198 #199 #200 #201 #202
+  never touched it:     #182 #184 #185 #186 #187
+  #202 changed only the header (6 lines) — no entry for REG-D64 / the README restructure.
+
+Content check in the [5.0.1] section (grep counts before the fix): REG-010 0,
+wal_repair 0, REG-012|REG-017 0, PROVE_IT 0, AKS 0, /proc/self/attr 0,
+epoll_pwait 0, REG-049|REG-025|REG-026|REG-040|REG-011 0, REG-D64 0.
+None of them appeared in the [5.0.0] section either.
+
+Also: "## [5.0.0] — unreleased source target" and a first paragraph "Nothing is
+published for 5.0.0", eight days after 5.0.0 was published and read back.
+
+Fix: a "Recorded retroactively" subsection in [5.0.1] with one entry per missing
+PR, written from each squash commit's message and file list; the [5.0.0] heading
+now carries 2026-09-16 and a dated publication note, and the original
+pre-publication paragraph is kept as written.
+
+REG-D72
+-------
+1. README.md:84 "Statement coverage gate: 91.30% (2026-09-24), floor 90% enforced."
+     .github/workflows/ci.yml:316   --cov-fail-under=65
+     Makefile:47                    --cov-fail-under=65
+     docs/REGISTRY.md (REG-D36 session row): "the repository's own 65% floor was
+     deliberately left alone" — 90% was a one-off mission floor, met at 90.07%.
+   Introduced by #202 (git blame README.md:84 -> 1bda9f9).
+   Re-measured with CI's exact command on this tree:
+     python -X faulthandler -m pytest tests/ -n auto -o faulthandler_timeout=60 \
+       --cov=aegis --cov-report=term --cov-fail-under=65
+     -> TOTAL 20843 1823 91.25% ; Required test coverage of 65% reached ;
+        7450 passed, 34 skipped
+   Fix: the sentence now states the 65% enforced floor and names 90% as the
+   REG-D36 one-off.
+
+2. README.md:132 "Expect X-Aegis-Evidence-Status, X-Aegis-Request-ID,
+   X-Aegis-Proof-Status and the X-Aegis-MMR-* proof headers." after a
+   non-streaming curl. aegis/proxy/app.py sets X-Aegis-Proof-Status only at
+   :2069 and :2384, both streaming responses ("pending-terminal"); :1421 is the
+   CORS expose list. Observed on the non-streaming step-3 call (with
+   UV_USE_IO_URING=0, see REG-D67): x-aegis-request-id, -session-id,
+   -alert-count, -evidence-status, -analysis-status, -mmr-format, -mmr-leaf,
+   -mmr-leaf-index, -mmr-leaf-count, -mmr-proof, -mmr-root — no proof-status.
+   Fix: the line now says proof-status is streaming-only, and the quickstart
+   discloses REG-D67 with its workaround.
+
+Verified after both fixes: verify_docs PASS, verify_claims PASS,
+verify_documentation --strict 0 errors / 0 warnings, verify_links PASS
+(see the halt report's gate table for the exact final-tree output).

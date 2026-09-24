@@ -71,10 +71,15 @@ asks for is already the state of the tree:
 | `vllm` | present | declared only under the `vllm` extra at `>=0.4.0`; absent from `requirements.lock` |
 | `sentencepiece` | transitive, native, 0.2.2 | absent from `requirements.lock` entirely |
 
-`requirements.lock` is the hash-pinned set installed into a released image, so
-absence from it means the primitives in question — `torch`'s `pickle.loads` and
-`exec` paths, `transformers`' `trust_remote_code`, `vllm`'s multiprocess RPC —
-are not reachable from a default gateway install at all.
+`requirements.lock` is the hash-pinned runtime set, and none of these packages is
+a core dependency of the gateway distribution, so the primitives in question —
+`torch`'s `pickle.loads` and `exec` paths, `transformers`' `trust_remote_code`,
+`vllm`'s multiprocess RPC — are not reachable from a default gateway install at
+all. *(Corrected 2026-09-24, `REG-D69`/`UC-069`: this sentence used to say the
+lock is what a released image installs. It is not — `deploy/docker/Dockerfile`
+resolves `".[storage-sqlite]"` from `pyproject.toml` at build time. The
+conclusion still holds, because none of the four packages is reachable from the
+core dependencies or from `storage-sqlite`.)*
 
 **Disposition: EXCLUDE-FROM-CORE, enforced.**
 `tests/security/test_dependency_containment.py` fails the build if any of these

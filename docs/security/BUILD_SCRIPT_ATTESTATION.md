@@ -137,8 +137,13 @@ Generated with `cyclonedx-py requirements` (`--output-reproducible`),
 `cargo-cyclonedx`, and `npm sbom --sbom-format cyclonedx`.
 
 The Python SBOM is built from `requirements.lock` rather than from the ambient
-virtual environment, so it describes what a released image installs rather than
-what a developer happens to have.
+virtual environment, so it describes the hash-pinned runtime set rather than
+what a developer happens to have. **It does not describe what the released
+gateway image installs** (corrected 2026-09-24, `REG-D69`, `UC-069`):
+`deploy/docker/Dockerfile` runs `pip install ".[storage-sqlite]"`, which resolves
+the `pyproject.toml` ranges against the index at build time rather than
+installing the lock, and pulls `cachetools` and `aiosqlite`, which the lock
+does not contain (`REG-D70`).
 
 ### What is not produced
 

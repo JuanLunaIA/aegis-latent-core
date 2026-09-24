@@ -1,0 +1,115 @@
+REG-D67 — the in-process seccomp filter kills the gateway on io_uring_enter (bare Linux host)
+REG-D68 — the in-process seccomp filter is skipped inside Docker, so strict mode refuses to start
+===================================================================================================
+
+Status: OPEN (SEED). Diagnosed and reproduced by the 2026-09-24 release
+gatekeeper pass; deliberately NOT fixed there — the mission order said to flag
+critical architectural flaws rather than auto-fix them. Nothing below contains a
+real credential: every key in these commands is a throwaway test value.
+
+Host: Linux 6.18.44-fc-v37 x86_64, CPython 3.11.15, libseccomp.so.2 present
+(/lib/x86_64-linux-gnu/libseccomp.so.2), uvicorn 0.52.4, uvloop 0.22.1
+(uvloop is pulled in by uvicorn[standard], which requirements.lock pins).
+Tree: 1bda9f9 (main) — no code change on this branch touches seccomp.
+
+REG-D67 — reproduction (the README quickstart, verbatim)
+--------------------------------------------------------
+Mock upstream: a 20-line http.server on 127.0.0.1:9999 returning an OpenAI-shaped
+chat.completion.
+
+  export AEGIS_SECURITY_ENFORCEMENT_MODE=development
+  export AEGIS_DEBUG_MODE=true
+  export AEGIS_AUTH_DISABLED=true
+  export AEGIS_BACKEND_URL=http://127.0.0.1:9999
+  aegis
+
+Gateway log (run 3):
+  INFO aegis.core.seccomp_guard — SeccompGuard initialized. Sandbox detected: False
+  INFO aegis.core.sandbox_l1 — SeccompSandbox: libseccomp.so.2 loaded.
+  WARNING aegis.core.sandbox_l1 — SeccompSandbox: 1 syscall(s) not resolved on this kernel/arch: ['sigreturn']
+  INFO aegis.core.sandbox_l1 — SeccompSandbox: seccomp-BPF filter loaded. 78 syscalls allowed (+clone for threads only); any other syscall: kill the process.
+  INFO:     Application startup complete.
+  INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+  bash: ... Bad system call   ... aegis
+
+Timing (run 3): "startup complete=1", then after 2 s with no request sent:
+"died before any request". Every curl afterwards: "Couldn't connect to server".
+
+Kernel audit records (dmesg), one per killed run — both name the same syscall:
+  audit: type=1326 ... pid=9238  comm="aegis" exe="/usr/bin/python3.11" sig=31 arch=c000003e syscall=426 compat=0 ip=0x7fd61df2728d code=0x80000000
+  audit: type=1326 ... pid=18300 comm="aegis" exe="/usr/bin/python3.11" sig=31 arch=c000003e syscall=426 compat=0 ip=0x7f26f5f2728d code=0x80000000
+sig=31 is SIGSYS; code=0x80000000 is SECCOMP_RET_KILL_PROCESS; arch c000003e is
+x86_64, where syscall 426 is io_uring_enter.
+
+Control — identical command with libuv's io_uring disabled:
+  UV_USE_IO_URING=0 aegis   (same four exports)
+  step 3a -> 200, the mock's chat.completion body
+  step 3b headers:
+    x-aegis-evidence-status: durable
+    x-aegis-mmr-format: aegis-mmr-inclusion-v2
+    x-aegis-mmr-leaf-index: 2 / x-aegis-mmr-leaf-count: 3
+    x-aegis-mmr-root / x-aegis-mmr-proof / x-aegis-request-id present
+  "aegis still alive" after both calls; the mock saw /v1/chat/completions twice.
+So the kill is the io_uring path, and the rest of the gateway is sound.
+
+Why no test sees it:
+  - aegis/core/seccomp_guard.py:155-172 _detect_sandbox() returns True when
+    HERMES_SANDBOX=true, when pytest is imported, or when /.dockerenv or
+    /.hermes_sandbox_marker exists; apply_filter() then skips the filter.
+    .github/workflows/ci.yml:23 and forensic.yml:24 set HERMES_SANDBOX=true.
+  - tests/test_seccomp_enforced_serving.py (added by #182) forces
+    guard._is_sandbox = False and loads the real filter — but in front of a
+    trivial ASGI app, not the gateway, so the gateway's own post-lockdown work
+    that drives libuv into io_uring never runs under it.
+  - PR #182 built the allowlist from `strace -f` on AKS nodes and chose
+    SCMP_ACT_KILL_PROCESS "so a miss exits with SIGSYS". Any syscall the
+    recording host did not exercise — here io_uring_enter — is fatal elsewhere.
+
+Blast radius: every enforcement mode (the filter is applied in development
+too, aegis/proxy/app.py:1313-1337), on any non-Docker Linux host where
+libseccomp is installed and libuv chooses io_uring. strict mode additionally
+needs Redis etc., but reaches the same lockdown.
+
+Fix direction (not taken): allow the io_uring_* family or answer it with
+SCMP_ACT_ERRNO(EPERM) so libuv falls back to its thread pool (what
+deploy/seccomp/aegis.json already does: defaultAction SCMP_ACT_ERRNO, no
+io_uring entry); consider ERRNO rather than KILL_PROCESS as the default for
+syscalls outside the list; and run the real gateway, not a stub app, behind the
+real filter in CI.
+
+REG-D68 — reproduction (code path; not executed on a Docker engine)
+-------------------------------------------------------------------
+No Docker engine is available in this environment, so the container could not
+be started. What was executed is the identical branch of the guard: with
+HERMES_SANDBOX=true, _detect_sandbox() returns True exactly as it does when
+/.dockerenv exists (both are checked in the same function and lead to the same
+`return True`). Every other strict prerequisite was satisfied so that the
+seccomp check is the one reached: a local redis-server on 127.0.0.1:56379,
+AEGIS_RATE_LIMIT_BACKEND=redis, a 36-byte AEGIS_AUTH_IDENTITY_HMAC_KEY, one API
+key with its AEGIS_API_KEY_PRINCIPALS_JSON mapping, a 36-byte signing key, and
+AEGIS_REQUIRE_LSM=false (only to isolate the seccomp check).
+
+  HERMES_SANDBOX=true AEGIS_SECURITY_ENFORCEMENT_MODE=strict AEGIS_REQUIRE_SECCOMP=true ... create_app(); TestClient(app)
+  -> REFUSED TO START: RuntimeError Seccomp enforcement required but unavailable:
+     strict runtime requires an active seccomp filter
+
+The image sets exactly that configuration: deploy/docker/Dockerfile:79-83 bakes
+AEGIS_SECURITY_ENFORCEMENT_MODE=strict and AEGIS_REQUIRE_SECCOMP=true, as do
+deploy/docker/docker-compose.yml:29-33 and .env.example:5-8. Docker Engine
+creates /.dockerenv in the containers it runs; that is Docker's behaviour, stated
+here from knowledge of the engine, not observed in this environment.
+
+No workflow runs the built image (publish_oci.yml builds and pushes; ci.yml has
+no container smoke test), so nothing in CI would have caught it.
+
+Kubernetes (Helm, deploy/azure/aks): no /.dockerenv under containerd, so the
+filter IS applied there — which is REG-D67's exposure instead, conditional on
+whether the runtime's RuntimeDefault profile lets io_uring_setup succeed. Not
+executed.
+
+Fix direction (not taken): container detection must not disable the control
+it gates — a marker file is not evidence that an outer seccomp profile is
+active. Either apply the in-process filter inside containers too (it layers
+with the outer profile; the most restrictive action wins), or verify an outer
+filter is active (/proc/self/status "Seccomp:" field) before accepting it as a
+substitute.

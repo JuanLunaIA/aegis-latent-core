@@ -1,0 +1,59 @@
+REG-D69 — the released gateway image does not install the hash-pinned requirements.lock
+REG-D70 — requirements.txt (and so the lock and the SBOM) omits cachetools, a core dependency
+=============================================================================================
+
+Status: OPEN (SEED) for the build defects. The two documentation sentences that
+claimed otherwise were corrected on this branch (UC-069 carries the boundary).
+Recorded 2026-09-24 by the release gatekeeper pass at 1bda9f9.
+
+REG-D69
+-------
+  deploy/docker/Dockerfile:46       RUN pip install --no-cache-dir ".[storage-sqlite]"
+  .github/workflows/publish_oci.yml:72   dockerfile: deploy/docker/Dockerfile   (the GHCR gateway image)
+  deploy/docker/Dockerfile.airgap:57-61  pip install --no-index --find-links /wheels ".[storage-sqlite]"
+  scripts/vendor_wheels.sh:40-56    pip download ... "aegis-latent-core[storage-sqlite]==5.0.1" 2>/dev/null || \
+                                     pip download ... ".[storage-sqlite]" ... 2>/dev/null || true
+                                     pip download ... "${REPO_ROOT}[storage-sqlite]"
+
+None of these passes --require-hashes or reads requirements.lock. The image's
+Python set is whatever the index serves for the pyproject.toml ranges on the
+day it is built (e.g. fastapi>=0.111.0, uvicorn[standard]>=0.29.0,
+cryptography>=50.0.0,<51.0.0). The air-gapped path downloads the same way and
+discards download errors.
+
+Documents that said the opposite (corrected on this branch):
+  docs/security/BUILD_SCRIPT_ATTESTATION.md:139-141
+    "...so it describes what a released image installs"
+  docs/security/DEPENDENCY_RISK_REGISTER.md:74
+    "requirements.lock is the hash-pinned set installed into a released image"
+
+What does hold (executed):
+  requirements.lock: 34 packages, every one `==`-pinned with --hash lines.
+  pip-audit -r requirements.lock --require-hashes --disable-pip  -> No known vulnerabilities found
+  pip-audit -r requirements.txt                                  -> No known vulnerabilities found
+
+REG-D70
+-------
+  pyproject.toml:50        "cachetools>=5.3.0",   (core [project.dependencies])
+  requirements.txt         16 lines; no cachetools
+  requirements.lock        no cachetools entry
+  built wheel METADATA     Requires-Dist: cachetools>=5.3.0 (core, no extra marker)
+
+Consequence 1 — the documented lock-based install lacks a core dependency.
+README "Step 1" and AGENTS.md both install with
+  pip install --require-hashes -r requirements.lock
+  pip install --no-deps -e .
+so cachetools is absent, and aegis/core/ratelimiter.py:65-79 takes its
+ImportError branch: logs "cachetools not installed — InMemoryRateLimiter will
+grow unbounded under high client-ID cardinality" and uses a plain dict.
+
+Consequence 2 — the SBOM built from the lock omits a package the image
+installs (and aiosqlite, from the storage-sqlite extra the Dockerfile selects).
+
+Fix direction (not taken — regenerating the lock is a release act with its own
+reviewed path, scripts/verify_release_contract.py and CI's "Lock File
+Integrity" job): add cachetools>=5.3.0 to requirements.txt, regenerate
+requirements.lock with CI's toolchain (Python 3.12, pip 25.2, pip-tools 7.5.2),
+and build the image from the lock (pip install --require-hashes -r
+requirements.lock plus the storage-sqlite extra's own locked entry, then
+pip install --no-deps .).
