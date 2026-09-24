@@ -127,17 +127,21 @@ def test_handled_storage_errors_return_fixed_details_only() -> None:
 
 
 def test_unexpected_exception_is_answered_generically() -> None:
-    """An exception no handler expects yields the ASGI stack's generic 500.
+    """An exception no handler expects yields a generic JSON 500.
 
     ``ValueError`` is not caught by the route (it catches ``RuntimeError``), so
-    this exercises the unhandled path rather than the handled one.
+    this exercises the unhandled path rather than the handled one. Before
+    REG-D73 the answer was Starlette's text/plain "Internal Server Error"; it is
+    now the same ``{"detail": ...}`` shape as every other error, and still names
+    no exception, message or traceback.
     """
     storage = _storage()
     storage.get_node = AsyncMock(side_effect=ValueError(SECRET))
     with _client(storage, raise_server_exceptions=False) as client:
         response = client.get("/v1/enterprise/audit/nodes/" + "c" * 64)
     assert response.status_code == 500, response.status_code
-    assert response.text.strip() == "Internal Server Error", response.text
+    assert response.headers["content-type"] == "application/json", response.headers
+    assert response.json() == {"detail": "Internal server error"}, response.text
     _assert_no_internals(response.text, context="unhandled")
 
 

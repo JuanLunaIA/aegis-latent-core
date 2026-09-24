@@ -13,6 +13,7 @@ Security properties:
 from __future__ import annotations
 
 import hmac
+from collections.abc import Collection
 
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -23,12 +24,12 @@ from aegis.config import AegisSettings, get_settings
 _bearer = HTTPBearer(auto_error=False)
 
 
-def constant_time_key_in(key: str, valid_keys: frozenset[str]) -> bool:
+def constant_time_key_in(key: str, valid_keys: Collection[str]) -> bool:
     """Public wrapper for timing-safe key membership checks."""
     return _constant_time_in(key, valid_keys)
 
 
-def _constant_time_in(key: str, valid_keys: frozenset[str]) -> bool:
+def _constant_time_in(key: str, valid_keys: Collection[str]) -> bool:
     """Return True iff *key* is in *valid_keys* using constant-time comparisons.
 
     Iterates all keys to prevent early-exit timing attacks.  The overhead is

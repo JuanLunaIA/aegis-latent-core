@@ -188,11 +188,14 @@ jobs:
       # its own pinned dependencies.
       - name: Mypy (strict — whole aegis package)
         run: mypy --strict aegis
+      # REG-026: the enterprise server's 25 strict errors were cleared on
+      # 2026-09-24; this step keeps them from coming back.
+      - name: Mypy (strict — aegis_server package)
+        run: mypy --strict aegis_server
       # The gate programs (doc, claim, reachability, release, inventory) and the
       # measurement harnesses are Python too, and were outside every type-check
-      # scope until REG-D33. Imports are followed silently: `aegis` is checked
-      # strictly above, and aegis_server's accepted debt (REG-038) is measured
-      # on its own, not re-reported here.
+      # scope until REG-D33. Imports are followed silently: `aegis` and
+      # `aegis_server` are checked strictly above, not re-reported here.
       - name: Mypy (strict — scripts/ and tools/)
         run: mypy --strict --explicit-package-bases --follow-imports=silent scripts tools
 

@@ -7,12 +7,16 @@ Implements communication and transaction record-keeping for LLM-mediated
 financial services interactions. It contributes technical inputs toward the
 obligations below; it does not, by itself, establish compliance:
 
-- **MiFID II Article 16(6) / Article 25(1)**: retain records of all services,
-  transactions, and communication (phone, email, electronic messaging) related
-  to orders and advice for at least 5 years (MiFID II sets the five-year
-  minimum, extendable to seven at a competent authority's request;
-  jurisdictional overlays such as UK SMCR are outside this module's scope and
-  need counsel review).
+- **MiFID II (Directive 2014/65/EU) Article 16(6) and 16(7); MiFIR
+  (Regulation (EU) No 600/2014) Article 25(1)**: Art. 16(6) requires records
+  of all services, activities and transactions; Art. 16(7) requires recording
+  of telephone conversations and electronic communications relating to
+  transactions and orders, kept for five years and, where the competent
+  authority requests, up to seven; MiFIR Art. 25(1) keeps order and
+  transaction data at the competent authority's disposal for five years.
+  (Directive Art. 25(1) is staff knowledge and competence, not record-keeping
+  — REG-D77.) Jurisdictional overlays such as UK SMCR are outside this
+  module's scope and need counsel review.
 - **Dodd-Frank Section 727 / CFTC Rule 45.2**: swap transaction and
   communication records for 5 years (or the term of the trade plus 5 years
   for long-dated instruments).
@@ -65,14 +69,19 @@ from typing import Literal
 from aegis.core.worm_ledger import RetentionPolicy
 
 # ── MiFID / Dodd-Frank retention policies ─────────────────────────────────────
+#
+# The ``ARTICLE_25`` constant names and ``MIFID_ART25_*`` policy names are kept
+# for API and stored-record compatibility; the "25" is MiFIR Art. 25(1), not
+# Directive 2014/65/EU Art. 25(1) (REG-D77).
 
 MIFID_ARTICLE_25_STANDARD = RetentionPolicy(
     name="MIFID_ART25_5Y",
     accessible_years=5.0,
     total_years=5.0,
     citations=(
-        "MiFID II Article 16(6)",
-        "MiFID II Article 25(1)",
+        "MiFID II (Directive 2014/65/EU) Article 16(6)",
+        "MiFID II (Directive 2014/65/EU) Article 16(7)",
+        "MiFIR (Regulation (EU) No 600/2014) Article 25(1)",
         "ESMA MiFID II Q&A on investor protection",
     ),
 )
@@ -82,8 +91,9 @@ MIFID_ARTICLE_25_FULL = RetentionPolicy(
     accessible_years=7.0,
     total_years=7.0,
     citations=(
-        "MiFID II Article 16(6)",
-        "MiFID II Article 25(1)",
+        "MiFID II (Directive 2014/65/EU) Article 16(6)",
+        "MiFID II (Directive 2014/65/EU) Article 16(7) (up to seven years on request)",
+        "MiFIR (Regulation (EU) No 600/2014) Article 25(1)",
         "MiFID II RTS 6 / RTS 7 (order records)",
         "FCA COBS 11.8 (SMCR scope)",
     ),
@@ -316,7 +326,8 @@ class MiFIDRecordKeeper:
             Financial instruments in scope.  May be empty for non-trade
             interactions.
         advice_type:
-            Nature of the communication per MiFID II Article 25(1).
+            Nature of the communication (information, advice, order or
+            execution; cf. MiFID II Article 16(7)).
         policy:
             Override the instance default retention policy.
         signing_key:

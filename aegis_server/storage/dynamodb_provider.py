@@ -540,14 +540,14 @@ class DynamoDBStorageProvider(StorageProvider):
         if not self._initialized or self._session is None:
             raise RuntimeError("DynamoDBStorageProvider.initialize() was not called")
 
-    def _get_client(self):
+    def _get_client(self) -> Any:
         """Async context manager for a low-level DynamoDB client."""
         kwargs: dict[str, Any] = {"region_name": self._region}
         if self._endpoint_url:
             kwargs["endpoint_url"] = self._endpoint_url
         return self._session.client("dynamodb", **kwargs)  # type: ignore[union-attr]
 
-    def _get_resource(self):
+    def _get_resource(self) -> Any:
         """Async context manager for the DynamoDB resource (Table API)."""
         kwargs: dict[str, Any] = {"region_name": self._region}
         if self._endpoint_url:

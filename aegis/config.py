@@ -724,6 +724,14 @@ class AegisSettings(BaseSettings):
         default="memory",
         description="Rate limiter backend: 'memory' (default, no Redis) or 'redis'.",
     )
+    require_distributed_limiter: bool = Field(
+        default=False,
+        description=(
+            "Refuse startup, in any enforcement mode, unless rate_limit_backend is "
+            "'redis'. Strict mode already requires Redis; this makes the example "
+            "deployment variable an enforced control rather than an inert one (REG-D60)."
+        ),
+    )
     rate_limit_token_capacity: int = Field(default=100_000, ge=1)
     rate_limit_tokens_per_minute: int = Field(default=100_000, ge=1)
     rate_limit_default_output_tokens: int = Field(default=4_096, ge=1)
@@ -1037,6 +1045,13 @@ class AegisSettings(BaseSettings):
                 "AEGIS_DEBUG_MODE=true for local development, or remove "
                 "AEGIS_AUTH_DISABLED and configure AEGIS_API_KEYS for production."
             )
+        if self.auth_disabled and "host" not in self.model_fields_set and self.host == "0.0.0.0":
+            # REG-D75: an unauthenticated gateway holding the operator's backend
+            # key used to listen on every interface by default. With auth
+            # disabled and no explicit host, it now binds loopback only; an
+            # explicit AEGIS_HOST (the evaluation compose file sets 0.0.0.0 inside
+            # its container and publishes on host loopback) is respected.
+            self.host = "127.0.0.1"
         if self.max_stream_event_bytes > self.stream_queue_max_bytes:
             raise ValueError("max_stream_event_bytes must not exceed stream_queue_max_bytes")
         if self.rate_limit_default_output_tokens > self.rate_limit_max_output_tokens:
@@ -1073,6 +1088,8 @@ class AegisSettings(BaseSettings):
 
     def validate_runtime_invariants(self) -> None:
         """Raise before binding sockets when strict runtime invariants are absent."""
+        if self.require_distributed_limiter and self.rate_limit_backend != "redis":
+            raise ValueError("require_distributed_limiter=True requires rate_limit_backend='redis'")
         if self.security_enforcement_mode != "strict":
             return
         if self.debug_mode:

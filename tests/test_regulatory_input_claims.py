@@ -14,7 +14,8 @@ These tests pin the four things that make the rows honest rather than decorative
 * each boundary says **not wired** and names the reason it can never be read as
   compliance on its own (hash-only records; text classification over one request);
 * the citations are the right instruments — MAR Art. 12(1)(a)(ii) for spoofing,
-  MiFID II Art. 16(6)/25(1) with the five-year floor for retention;
+  MiFID II Art. 16(7) and MiFIR Art. 25(1) with the five-year floor for retention
+  (REG-D77 corrected the earlier Directive "Art. 25(1)" citation);
 * the modules are still *unwired*, measured by the repository's own reachability
   tool's input (the allowlist), so a future wiring change fails here instead of
   silently ageing the rows.
@@ -85,6 +86,11 @@ def test_citations_name_the_right_instruments() -> None:
         "the retention statement must keep the five-year floor and the "
         "competent-authority extension distinct"
     )
+    # REG-D77: Directive 2014/65/EU Art. 25(1) is staff competence; the order and
+    # transaction record duty is MiFIR Art. 25(1), communications are Art. 16(7).
+    assert "MiFIR Art. 25(1)" in keeper
+    assert "Art. 16(7)" in keeper
+    assert "16(6)/25(1)" not in keeper
 
 
 def test_unsupported_claims_register_carries_uc_056() -> None:

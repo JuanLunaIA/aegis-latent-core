@@ -1400,6 +1400,17 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     )
     app.state.aegis = state
 
+    # REG-D73: an unhandled exception used to reach Starlette's default, which
+    # answers 500 with a text/plain "Internal Server Error". No traceback or
+    # exception text ever reached the client, but every other error this API
+    # returns is JSON, so clients had to special-case the one error they can
+    # least predict. The body stays generic on purpose: exception text can carry
+    # paths, identifiers or payload fragments. The traceback is logged here.
+    @app.exception_handler(Exception)
+    async def _unhandled_error(request: Request, exc: Exception) -> JSONResponse:
+        logger.error("unhandled error on %s %s", request.method, request.url.path, exc_info=exc)
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
     cors_origins = cfg.get_cors_origins()
     if cors_origins:
         app.add_middleware(
