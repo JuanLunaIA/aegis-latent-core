@@ -9,15 +9,15 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 **Audiencia:** equipos de plataforma, AppSec, AI engineering, compliance, legal y procurement
 **Estado:** prospecto de producto. No es certificación, dictamen legal, SLO ni oferta comercial vinculante.
-**Last verified:** 2026-09-16 UTC
-**Línea base de código:** `5.0.0` con catorce anclas sincronizadas, **publicada el 2026-09-16 en todas las superficies excepto PyPI `aegis-latent-core`**
-**Línea base externa histórica:** tag anotado firmado `v4.0.2` en `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`; antes, tag ligero `v4.0.1` en `6469904380218584ae0b5221334bc9a46500f5ba` con workflows fallidos
+**Last verified:** 2026-09-24 UTC
+**Línea base de código:** `5.0.1` con catorce anclas sincronizadas — **sin publicar en ninguna superficie** (`docs/RELEASE_STATUS.md` §1.0a); `5.0.0` es la release publicada más reciente (2026-09-16, todas las superficies excepto PyPI `aegis-latent-core`)
+**Líneas base externas históricas:** tags anotado firmado `v4.0.2` (`a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`) y ligero `v4.0.1` (`6469904380218584ae0b5221334bc9a46500f5ba`, workflows fallidos); las lecturas por superficie y las líneas base vigentes se declaran una sola vez en [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1
 
 > **Paridad con la versión en inglés.** Este documento debe coincidir con [`docs/PROSPECTUS.md`](PROSPECTUS.md) en toda afirmación de hecho. Donde difiera, la versión en inglés gobierna y la discrepancia es un defecto a corregir, no una variante local.
 
 ## Baselines
 
-La línea de código actual es **5.0.0** con catorce anclas sincronizadas. Incluye streaming SSE acotado con evidencia `pending-terminal`, Anthropic nativo `POST /v1/messages`, SDKs Python y TypeScript, proofs MMR portables, dashboard forense, export ZIP JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` y el segmento auxiliar `RustWal`.
+La línea de código actual es **5.0.1** con catorce anclas sincronizadas y **sin publicar en ninguna superficie**; `5.0.0` es la release publicada más reciente (2026-09-16, todas las superficies excepto PyPI `aegis-latent-core`). Incluye streaming SSE acotado con evidencia `pending-terminal`, Anthropic nativo `POST /v1/messages`, SDKs Python y TypeScript, proofs MMR portables, dashboard forense, export ZIP JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` y el segmento auxiliar `RustWal`.
 
 **La publicación se afirma únicamente a partir de lectura posterior (readback), nunca a partir de metadatos de versión.** El 2026-09-16 se leyeron: el tag anotado firmado `v5.0.0`, el GitHub Release con 31 assets cargados, PyPI `aegis-latent-sdk` `5.0.0`, npm `aegis-latent-sdk` `5.0.0`, y ambas imágenes GHCR con objetos de firma cosign presentes. **No se ejecutaron `cosign verify` ni `gh attestation verify`**, y que un objeto de firma resuelva no es verificación: establece que se subió un objeto, no que valide ni quién lo firmó.
 

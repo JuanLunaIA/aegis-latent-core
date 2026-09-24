@@ -1,11 +1,12 @@
-# Benchmark Methodology and Index — Aegis Latent Core v3.1.0
+# Benchmark Methodology and Index — Aegis Latent Core
 
-This document defines how Aegis benchmark results must be interpreted and routes readers to the retained v3.1.0 results. It is for engineers, security reviewers, release owners and procurement evaluators. A benchmark is evidence only for its declared workload, environment, code boundary, sample method and artifact.
+This document defines how Aegis benchmark results must be interpreted and routes readers to the retained results, including the `v5.0.1` documentation-pass suite. It is for engineers, security reviewers, release owners and procurement evaluators. A benchmark is evidence only for its declared workload, environment, code boundary, sample method and artifact.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
+**Last verified:** 2026-09-24 UTC
+**Release baseline:** checked-out source baseline `v5.0.1` with fourteen synchronized anchors — **published nowhere**, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a); the most recent published release is `v5.0.0` (2026-09-16, every surface except PyPI `aegis-latent-core`).
+**Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical and are not `v5.0.1` results.
 **Detailed results:** [`BENCHMARK_RESULTS.md`](BENCHMARK_RESULTS.md)
-**Historical interpretation:** [`../BENCHMARKS.md`](../BENCHMARKS.md)
+**Companion record:** [`../BENCHMARKS.md`](../BENCHMARKS.md)
 
 ## Measurement contract
 
@@ -44,10 +45,15 @@ The **Artifact** column distinguishes two things a reader must not conflate: a p
 | Key rotation | `tools/benchmarks/run_key_rotation.py` | **In tree:** [`evidence/execution_2026-08-20/key_rotation_report.json`](../../evidence/execution_2026-08-20/key_rotation_report.json) — 2,033 records. **Retained `v3.1.0`, not in tree:** the 2,239-record run | Three independent local signer instances; no real orchestrator/secret-manager acceptance |
 | ML-DSA timing | `tools/benchmarks/run_pqc_timing.py` | **Retained `v3.1.0`-era, not in tree.** The harness writes `evidence/pqc_timing_report.json` when rerun | 1M samples per operation; `sign` non-detection, `verify` failure; no constant-time claim |
 | Bounded SSE transformation | `benchmarks/bench_streaming_sse.py` | **In tree:** [`evidence/commercial_phase2_streaming_benchmark.json`](../../evidence/commercial_phase2_streaming_benchmark.json) | Seven local rounds of 1,000 events; excludes network and WAL durability latency |
+| v5.0.1 documentation-pass suite (`commit_forensic` latency, concurrent commit throughput, streaming RSS, Ed25519 / ML-DSA-65 timing) | `scripts/run_benchmarks_5.0.1.py` | **In tree:** [`evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json`](../../evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json) | One shared 4-CPU container, real WAL `fsync` per commit; no capacity claim; ML-DSA timing is a sample only — the constant-time claim remains blocked |
 
 ## Reproduction commands
 
 ```bash
+# v5.0.1 documentation-pass suite (commit latency percentiles, throughput, RSS, device-key timing)
+PYTHONPATH=. .venv/bin/python scripts/run_benchmarks_5.0.1.py --json \
+  > evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json
+
 PYTHONPATH=. .venv/bin/python tools/security/run_waf_corpus.py \
   --corpus tests/data/waf_corpus_v1.json \
   --output evidence/waf_corpus_report.json

@@ -24,6 +24,8 @@ Article 12 concerns automatic recording of events (logs) over the lifetime of a 
 
 **The gateway can contribute to the record-keeping element.** It contributes nothing to risk management, data governance, human oversight design, accuracy specification, robustness, or conformity assessment — those are properties of your system and your organisation.
 
+**The mechanism, concretely.** Every governed call is committed to the append-only WAL — hash-linked to its predecessor and signed — **before** the response returns (`aegis/core/crypto_audit.py`). New chains record leaves under the domain-separated `aegis-mmr-inclusion-v2` scheme (`aegis/core/mmr.py`, `CLM-064`); a pre-existing chain reopens under the scheme its WAL recorded, so `v1` proofs keep verifying unchanged. Tampering is detected on read by `verify_integrity()`, and a disclosed record's inclusion is verifiable offline against a root the verifier obtained independently. Record timestamps come from the host clock; independent time evidence exists only when the optional RFC 3161 anchoring is configured (§5). That chain of mechanisms is the contribution — whether it meets your Article 12 obligation in scope, granularity and retention remains your assessment.
+
 ## 3. What the gateway can technically contribute
 
 | Capability | What it produces | Evidence locator |

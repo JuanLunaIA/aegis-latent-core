@@ -1,9 +1,10 @@
-# Benchmark Results — Aegis Latent Core v3.1.0
+# Benchmark Results — Aegis Latent Core
 
-This document records the retained v3.1.0 market-hardening measurements. It is for engineers, security reviewers, and procurement evaluators who need reproducible numbers and explicit boundaries. These measurements are evidence for named workloads; they are not production capacity, availability SLOs, universal detection rates, or cryptographic proofs.
+This document records the retained `v3.1.0` market-hardening measurements and the measurements taken on the `v5.0.1` source baseline (2026-09-24). It is for engineers, security reviewers, and procurement evaluators who need reproducible numbers and explicit boundaries. These measurements are evidence for named workloads; they are not production capacity, availability SLOs, universal detection rates, or cryptographic proofs.
 
-**Last verified:** 2026-08-22 UTC
-**Release baseline:** `v3.1.0`
+**Last verified:** 2026-09-24 UTC
+**Release baseline:** checked-out source baseline `v5.0.1` with fourteen synchronized anchors — **published nowhere**, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a); the most recent published release is `v5.0.0` (2026-09-16, every surface except PyPI `aegis-latent-core`).
+**Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical and are not `v5.0.1` results.
 **Canonical methodology:** [`docs/benchmarks/README.md`](README.md)
 **Artifact locations:** retained release evidence plus repository-scoped artifacts under [`evidence/`](../../evidence/)
 
@@ -21,6 +22,11 @@ This document records the retained v3.1.0 market-hardening measurements. It is f
 | ML-DSA `sign` timing — retained `v3.1.0`-era, raw JSON **not in this tree** | 1,000,000 interleaved samples | `p=0.8521504207157158` | No statistically significant difference detected under the named experiment | Measured; not a proof |
 | ML-DSA `verify` timing — same retained artifact | 1,000,000 interleaved samples | `p=0.0`; mean class difference approximately 540.526 ns | The experiment detected a class-dependent timing difference at this boundary | `FAIL`; claim blocked |
 | Bounded SSE transformation | 7 rounds × 1,000 deterministic events on the recorded sandbox host | first-byte p50 2.030 ms, p95 2.295 ms; duration p50 316.892 ms; 3,155.654 events/s p50; queue high-water 664 bytes / 8 items; `tracemalloc` peak 141,338 bytes | In-process transform only; excludes network, provider and durable-WAL latency | Measured, not an SLO |
+| v5.0.1 documentation-pass — `commit_forensic` latency (n = 1,000) | One process, real WAL `fsync` per commit (MMR append + HMAC sign) | p50 0.62 ms; p95 1.00 ms; p99 1.22 ms; max 4.18 ms — `evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json` | Per-commit latency on the recorded host | Accepted capacity, other storage, queueing behaviour | `MEASURED` |
+| v5.0.1 documentation-pass — concurrent commit throughput | 10 / 50 / 100 threads against one WAL | 1,727 / 1,630 / 1,482 commits per second | The single-writer design does not scale with threads (`AD-16`) | Multi-process / replica behaviour | `MEASURED` |
+| v5.0.1 documentation-pass — streaming ingestion memory | 1,000 concurrent in-process SSE streams × 20 events | +20.1 MB RSS | Bounded in-process memory for the named workload | Network, durable WAL, providers | `MEASURED` |
+| v5.0.1 documentation-pass — Ed25519 sign / verify | `cryptography`, RFC 8032 | 40.5 / 128.6 µs per op | Order of magnitude on the recorded host | HSM paths, other machines | `MEASURED` |
+| v5.0.1 documentation-pass — ML-DSA-65 sign / verify | `aegis_rust`, FIPS 204 | 173.0 / 62.4 µs per op | A latency sample only | Constant-time behaviour remains blocked (`REG-041`) | `MEASURED` |
 
 ## Reproduction commands
 
@@ -47,6 +53,10 @@ PYTHONPATH=. .venv/bin/python tools/benchmarks/run_pqc_timing.py \
 PYTHONPATH=. .venv/bin/python benchmarks/bench_streaming_sse.py \
   --events 1000 --rounds 7 \
   > evidence/commercial_phase2_streaming_benchmark.json
+
+# v5.0.1 documentation-pass suite (commit latency percentiles, throughput, RSS, device-key timing)
+PYTHONPATH=. .venv/bin/python scripts/run_benchmarks_5.0.1.py --json \
+  > evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json
 ```
 
 The commands require the corresponding local environment and may produce different timings. Preserve the raw report, environment manifest, tool version, CPU information, source commit and UTC timestamp with every rerun.

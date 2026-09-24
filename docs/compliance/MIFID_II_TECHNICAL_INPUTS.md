@@ -24,6 +24,8 @@ If your concern is order record-keeping, RTS 24 is the relevant instrument, and 
 
 Getting this distinction right in an assessment matters more than any capability listed below.
 
+**The instruments this contribution is scoped to.** MiFID II Article 16(6) and Article 25(1) require firms to retain records of services, transactions and communications for at least five years — a floor extendable to seven at a competent authority's request. The repository's dedicated record-keeping module, `aegis/core/mifid_record_keeper.py`, builds communication and transaction record objects under that framing; it is **wired to no request path** (`CLM-104`, `UC-056`), so it is available to library callers only and the contribution described below does not rest on it. Nothing here determines whether those obligations apply to you or whether they are met.
+
 ## 3. What the gateway can technically contribute
 
 Where an investment firm uses an AI system in a process subject to record-keeping, the gateway can produce durable records **of the AI interaction**:

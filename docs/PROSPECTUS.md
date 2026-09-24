@@ -3,7 +3,7 @@
 
 This prospectus is for US enterprise platform, AppSec, AI engineering, compliance, legal and procurement teams evaluating Aegis. It explains the product category, evidence wedge, measured boundaries and recommended evaluation path. It is not a certification, legal opinion, production SLO, warranty or binding commercial offer.
 
-**Last verified:** 2026-08-27 UTC
+**Last verified:** 2026-09-24 UTC
 
 ## Baseline note
 
@@ -61,7 +61,7 @@ The checked-out `v5.0.1` source also retains an in-process bounded SSE benchmark
 
 The local WAF corpus contains 15 malicious and 8 benign cases. The run observed zero bypasses and zero false positives for that pinned corpus, with a wide confidence interval because the corpus is small. HTTP/2 fragmentation and `nuclei-templates/waf-bypass` are not represented by that application-layer result.
 
-The local key-rotation exercise recorded 2,239 signatures across three independent signer instances with zero failed commits and zero unverifiable records. Secret-manager propagation and real orchestrator acceptance remain unverified. The ML-DSA timing experiment used 1,000,000 samples per operation; `sign` returned `p=0.8521504207157158`, while `verify` returned `p=0.0`. No constant-time verification claim is approved.
+The in-tree key-rotation exercise recorded 2,033 signatures across three independent local signer instances over 0.5 s, with zero failed commits and zero unverifiable records (`evidence/execution_2026-08-20/key_rotation_report.json`); the retained `v3.1.0`-era run recorded 2,239 signatures across three instances, and its raw JSON is not in this tree. Secret-manager propagation and real orchestrator acceptance remain unverified. The ML-DSA timing experiment used 1,000,000 samples per operation; `sign` returned `p=0.8521504207157158`, while `verify` returned `p=0.0`. No constant-time verification claim is approved.
 
 ## Assurance status
 
