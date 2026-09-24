@@ -23,8 +23,9 @@ nothing ever started the shipped image in its shipped posture. This script does:
   upstream's answer; unauthenticated and wrong-scope requests are refused; a
   prompt-injection payload is refused by the WAF; a streamed completion is
   relayed to ``[DONE]``; ``/v1/audit/integrity`` is valid with the evidence present;
-  after a restart the chain is still valid and still holds that evidence; the
-  container never died.
+  the audit key's capability report runs (and reports the filter REAL) without
+  killing the process; after a restart the chain is still valid and still holds
+  that evidence; the container never died; a graceful stop exits 0.
 
 It needs only the Docker CLI and the Python standard library. It prints every
 container's logs on failure. Exit status 0 means every assertion held.
@@ -41,12 +42,16 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 REDIS_IMAGE_DEFAULT = (
     "redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499"
 )
+POSTGRES_IMAGE_DEFAULT = (
+    "postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea"
+)
+
 
 # An OpenAI-shaped upstream over TLS (private CA, as production upstreams are
 # reached over HTTPS), run inside the gateway image itself so the smoke test
@@ -155,8 +160,11 @@ class Run:
     require_lsm: bool
     port: int
     extra_gateway_args: list[str] = field(default_factory=list)
+    ha: bool = False
+    postgres_image: str = POSTGRES_IMAGE_DEFAULT
     prefix: str = field(default_factory=lambda: f"aegis-smoke-{secrets.token_hex(4)}")
     containers: list[str] = field(default_factory=list)
+    volumes: list[str] = field(default_factory=list)
 
     @property
     def network(self) -> str:
@@ -209,12 +217,13 @@ def _http(
     *,
     token: str | None = None,
     body: bytes | None = None,
+    port: int | None = None,
 ) -> tuple[int, dict[str, object]]:
     headers = {"content-type": "application/json", "x-session-id": "container-smoke"}
     if token is not None:
         headers["authorization"] = f"Bearer {token}"
     request = urllib.request.Request(  # noqa: S310 - fixed http://127.0.0.1 URL
-        f"http://127.0.0.1:{run.port}{path}", data=body, headers=headers, method=method
+        f"http://127.0.0.1:{port or run.port}{path}", data=body, headers=headers, method=method
     )
     try:
         with urllib.request.urlopen(request, timeout=20) as response:  # noqa: S310
@@ -280,48 +289,71 @@ def _gateway_env(run: Run, proxy_key: str, audit_key: str) -> dict[str, str]:
     }
 
 
-def _start_gateway(run: Run, env: dict[str, str]) -> None:
+def _start_gateway(
+    run: Run,
+    env: dict[str, str],
+    *,
+    name: str | None = None,
+    port: int | None = None,
+    volume: str | None = None,
+) -> None:
+    name = name or run.gateway
     args = [
-        "run", "-d", "--name", run.gateway, "--network", run.network,
+        "run", "-d", "--name", name, "--network", run.network,
         "--read-only", "--cap-drop", "ALL",
         "--security-opt", "no-new-privileges:true",
         "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",  # noqa: S108 - the container's own tmpfs, as in compose
-        "-v", f"{run.volume}:/data",
+        "-v", f"{volume or run.volume}:/data",
         "-v", f"{run.certs}:/etc/aegis/tls:ro",
-        "-p", f"127.0.0.1:{run.port}:8080",
+        "-p", f"127.0.0.1:{port or run.port}:8080",
         *run.extra_gateway_args,
     ]  # fmt: skip
     if run.apparmor:
         args += ["--security-opt", f"apparmor={run.apparmor}"]
-    for name, value in sorted(env.items()):
-        args += ["-e", f"{name}={value}"]
+    for key, value in sorted(env.items()):
+        args += ["-e", f"{key}={value}"]
     _docker(*args, run.image)
-    if run.gateway not in run.containers:
-        run.containers.append(run.gateway)
+    if name not in run.containers:
+        run.containers.append(name)
 
 
-def _state(run: Run) -> tuple[str, int]:
-    raw = _docker("inspect", "-f", "{{.State.Status}} {{.State.ExitCode}}", run.gateway)
+def _state(run: Run, name: str | None = None) -> tuple[str, int]:
+    raw = _docker("inspect", "-f", "{{.State.Status}} {{.State.ExitCode}}", name or run.gateway)
     status, code = raw.split()
     return status, int(code)
 
 
-def _wait_healthy(run: Run, seconds: float = 120) -> dict[str, object]:
+def _wait_for(
+    run: Run,
+    predicate: Callable[[int, dict[str, object]], bool],
+    *,
+    path: str = "/health",
+    name: str | None = None,
+    port: int | None = None,
+    seconds: float = 120,
+    what: str = "healthy",
+) -> dict[str, object]:
     deadline = time.monotonic() + seconds
     last: object = None
     while time.monotonic() < deadline:
-        status, code = _state(run)
+        status, code = _state(run, name)
         if status != "running":
-            raise SmokeError(f"gateway container is {status} (exit {code}) before /health")
+            raise SmokeError(f"{name or run.gateway} is {status} (exit {code}) before {what}")
         try:
-            http_status, body = _http(run, "GET", "/health")
-            if http_status == 200 and body.get("status") == "healthy":
+            http_status, body = _http(run, "GET", path, port=port)
+            if predicate(http_status, body):
                 return body
             last = (http_status, body)
         except (urllib.error.URLError, ConnectionError, TimeoutError) as exc:
             last = exc
         time.sleep(1)
-    raise SmokeError(f"gateway never became healthy; last answer: {last!r}")
+    raise SmokeError(f"{name or run.gateway} never became {what}; last answer: {last!r}")
+
+
+def _wait_healthy(run: Run, seconds: float = 120) -> dict[str, object]:
+    return _wait_for(
+        run, lambda code, body: code == 200 and body.get("status") == "healthy", seconds=seconds
+    )
 
 
 def _process_status(run: Run) -> dict[str, str]:
@@ -344,9 +376,11 @@ def _check(condition: bool, message: str) -> None:
     print(f"  ok  {message}")
 
 
-def _completion(run: Run, token: str | None, content: str = "hi") -> tuple[int, dict[str, object]]:
+def _completion(
+    run: Run, token: str | None, content: str = "hi", *, port: int | None = None
+) -> tuple[int, dict[str, object]]:
     body = json.dumps({"model": "smoke-model", "messages": [{"role": "user", "content": content}]})
-    return _http(run, "POST", "/v1/chat/completions", token=token, body=body.encode())
+    return _http(run, "POST", "/v1/chat/completions", token=token, body=body.encode(), port=port)
 
 
 def _stream(run: Run, token: str) -> tuple[int, str]:
@@ -377,6 +411,7 @@ def smoke(run: Run) -> None:
     _docker("network", "create", run.network)
     _docker("volume", "create", run.volume)
     _docker("volume", "create", run.certs)
+    run.volumes += [run.volume, run.certs]
     _docker(
         "run", "--rm", "--user", "0", "-v", f"{run.certs}:/certs",
         "--entrypoint", "python", run.image, "-c", MAKE_CERTS, run.upstream,
@@ -434,6 +469,21 @@ def smoke(run: Run) -> None:
     _check(isinstance(nodes_before, int) and nodes_before >= 1, f"evidence nodes: {nodes_before}")
     code, _ = _http(run, "GET", "/v1/audit/integrity", token=proxy_key)
     _check(code == 403, f"a proxy-only key cannot read audit evidence (403), saw {code}")
+    # REG-D83: this handler once ran ldconfig (ctypes.util.find_library) after
+    # lockdown, and the filter killed the gateway on the pipe2 it needed.
+    code, report = _http(run, "GET", "/v1/attestation/capabilities", token=audit_key)
+    controls = report.get("controls")
+    seccomp = [
+        c
+        for c in (controls if isinstance(controls, list) else [])
+        if isinstance(c, dict) and c.get("name") == "seccomp_syscall_filter"
+    ]
+    _check(code == 200, f"/v1/attestation/capabilities answers the audit key, saw {code}")
+    _check(
+        bool(seccomp) and seccomp[0].get("status") == "REAL",
+        f"the capability report sees the syscall filter as REAL: {seccomp}",
+    )
+    _check(_state(run)[0] == "running", "the gateway survived the capability probes")
 
     print("[5] durability across a restart")
     _docker("restart", "-t", "20", run.gateway)
@@ -457,6 +507,130 @@ def smoke(run: Run) -> None:
     _check(state == "running", f"gateway still running (state={state}, exit={exit_code})")
     logs = _docker("logs", run.gateway)
     _check("SIGSYS" not in logs and "Bad system call" not in logs, "no seccomp kill in the logs")
+    # REG-D84: every graceful stop used to end in a seccomp kill (exit 159) when
+    # the event loop's shutdown opened a socketpair; `docker restart` above hid it.
+    _docker("stop", "-t", "20", run.gateway)
+    state, exit_code = _state(run)
+    _check(exit_code == 0, f"a graceful stop exits 0 (state={state}, exit={exit_code})")
+    _docker("start", run.gateway)
+    _wait_healthy(run)
+
+    if run.ha:
+        smoke_ha(run, env, proxy_key)
+
+
+def _replica_ready(code: int, body: dict[str, object]) -> bool:
+    return code == 200 and body.get("status") == "ready"
+
+
+def smoke_ha(run: Run, base_env: dict[str, str], proxy_key: str) -> None:
+    """Strict replicas under the same hardening: failover, then a shared sequence."""
+    pg = f"{run.prefix}-pg"
+    password = secrets.token_hex(16)
+    _docker(
+        "run", "-d", "--name", pg, "--network", run.network,
+        "-e", "POSTGRES_USER=aegis", "-e", f"POSTGRES_PASSWORD={password}",
+        "-e", "POSTGRES_DB=aegis", run.postgres_image,
+    )  # fmt: skip
+    run.containers.append(pg)
+    deadline = time.monotonic() + 90
+    while _docker("exec", pg, "pg_isready", "-U", "aegis", check=False).find("accepting") < 0:
+        if time.monotonic() > deadline:
+            raise SmokeError("PostgreSQL never became ready")
+        time.sleep(1)
+    dsn = f"postgresql://aegis:{password}@{pg}:5432/aegis"
+    ha_env = {
+        **base_env,
+        "AEGIS_HA_SEQUENCER_URL": dsn,
+        "AEGIS_HA_LEASE_TTL_SECONDS": "5",
+        "AEGIS_HA_STANDBY_POLL_SECONDS": "0.5",
+    }
+
+    print("[7] active-passive: one chain, one writer, failover on SIGKILL")
+    shared = f"{run.prefix}-ap-wal"
+    _docker("volume", "create", shared)
+    run.volumes.append(shared)
+    ap_env = {**ha_env, "AEGIS_HA_MODE": "active_passive", "AEGIS_HA_CHAIN_ID": "smoke-ap"}
+    a, b = f"{run.prefix}-ap-a", f"{run.prefix}-ap-b"
+    port_a, port_b = run.port + 1, run.port + 2
+    _start_gateway(run, ap_env, name=a, port=port_a, volume=shared)
+    _wait_for(run, _replica_ready, path="/ready", name=a, port=port_a, what="ready")
+    _start_gateway(run, ap_env, name=b, port=port_b, volume=shared)
+    _wait_for(
+        run,
+        lambda code, body: code == 200 and body.get("status") == "standby",
+        name=b,
+        port=port_b,
+        what="standby",
+    )
+    _check(_http(run, "GET", "/ready", port=port_b)[0] == 503, "the standby is not ready")
+    _check(
+        _completion(run, proxy_key, port=port_b)[0] == 503, "the standby refuses governed traffic"
+    )
+    _check(_completion(run, proxy_key, port=port_a)[0] == 200, "the lease holder serves")
+    _docker("kill", "--signal", "KILL", a)
+    killed = time.monotonic()
+    _wait_for(run, _replica_ready, path="/ready", name=b, port=port_b, what="takeover")
+    _check(True, f"the standby took the chain over {time.monotonic() - killed:.1f}s after SIGKILL")
+    _check(_completion(run, proxy_key, port=port_b)[0] == 200, "the new holder serves")
+
+    print("[8] active-active: two chains, one global sequence")
+    replicas = []
+    for n in range(2):
+        volume = f"{run.prefix}-aa{n}-wal"
+        _docker("volume", "create", volume)
+        run.volumes.append(volume)
+        name, port = f"{run.prefix}-aa{n}", run.port + 3 + n
+        env = {**ha_env, "AEGIS_HA_MODE": "active_active", "AEGIS_HA_CHAIN_ID": f"smoke-aa-{n}"}
+        _start_gateway(run, env, name=name, port=port, volume=volume)
+        replicas.append((name, port, volume))
+    for name, port, _ in replicas:
+        _wait_for(run, _replica_ready, path="/ready", name=name, port=port, what="ready")
+    for _ in range(3):
+        for _, port, _ in replicas:
+            _check(_completion(run, proxy_key, port=port)[0] == 200, f"replica on {port} serves")
+    for name, port, _ in [(b, port_b, shared), *replicas]:
+
+        def drained(code: int, body: dict[str, object]) -> bool:
+            ha = body.get("ha")
+            sequence = ha.get("sequence") if isinstance(ha, dict) else None
+            return isinstance(sequence, dict) and sequence.get("backlog") == 0
+
+        _wait_for(run, drained, name=name, port=port, seconds=60, what="fully sequenced")
+
+    print("[9] verification, as an auditor would run it")
+    # The shipped auditor command, run from the image against the live store and
+    # every replica's WAL mounted read-only.
+    mounts: list[str] = []
+    wal_args: list[str] = []
+    wals: dict[str, str] = {}
+    for chain_id, volume in [
+        ("smoke-ap", shared),
+        *[(f"smoke-aa-{n}", replicas[n][2]) for n in range(2)],
+    ]:
+        mounts += ["-v", f"{volume}:/verify/{chain_id}:ro"]
+        wals[chain_id] = f"/verify/{chain_id}/aegis.wal.jsonl"
+        wal_args += ["--wal", f"{chain_id}={wals[chain_id]}"]
+    raw = _docker(
+        "run", "--rm", "--network", run.network, *mounts, "--entrypoint", "python",
+        run.image, "-m", "aegis.core.ha", "verify", "--sequencer", dsn, *wal_args,
+    )  # fmt: skip
+    result = json.loads(raw)
+    _check(result["valid"] is True, f"the global sequence verifies: {result['reason'] or 'ok'}")
+    _check(
+        set(result["chains"]) == set(wals), f"it holds all three chains: {sorted(result['chains'])}"
+    )
+    for chain_id, facts in result["wal"].items():
+        _check(facts["linked"], f"{chain_id}: the WAL is one linked chain ({facts['nodes']} nodes)")
+        _check(facts["references"], f"{chain_id}: {facts['detail']}")
+        _check(facts["fully_sequenced"], f"{chain_id}: every node is sequenced ({facts['nodes']})")
+    epochs = result["wal"]["smoke-ap"]["writer_epochs"]
+    _check(
+        len(epochs) == 2 and epochs[0] < epochs[1],
+        f"the shared chain records both writers, newer epoch last: {epochs}",
+    )
+    for name, _, _ in replicas:
+        _check(_state(run, name)[0] == "running", f"{name} still running")
 
 
 def _dump_logs(run: Run) -> None:
@@ -474,7 +648,7 @@ def _dump_logs(run: Run) -> None:
 def _cleanup(run: Run) -> None:
     for name in reversed(run.containers):
         _docker("rm", "-f", "-v", name, check=False)
-    _docker("volume", "rm", "-f", run.volume, run.certs, check=False)
+    _docker("volume", "rm", "-f", *run.volumes, check=False)
     _docker("network", "rm", run.network, check=False)
 
 
@@ -498,6 +672,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=[],
         help="extra `docker run` argument for the gateway container (repeatable)",
     )
+    parser.add_argument(
+        "--ha",
+        action="store_true",
+        help="also run strict replicas: active-passive failover and an active-active sequence",
+    )
+    parser.add_argument("--postgres-image", default=POSTGRES_IMAGE_DEFAULT)
     parser.add_argument("--port", type=int, default=18080)
     parser.add_argument("--keep", action="store_true", help="leave the containers for inspection")
     args = parser.parse_args(argv)
@@ -509,6 +689,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         require_lsm=not args.no_require_lsm,
         port=args.port,
         extra_gateway_args=list(args.gateway_docker_arg),
+        ha=args.ha,
+        postgres_image=args.postgres_image,
     )
     try:
         smoke(run)

@@ -388,6 +388,9 @@ class _AppState:
     # the default. It reconciles an accumulator that is separate from the audit
     # ledger, so nothing on the evidence path reads this.
     gossip: Any
+    # Multi-replica writer lease and global sequence (aegis.core.ha). None for
+    # ha_mode='single'. When set, _require_intact_ledger consults it.
+    ha: Any
 
     def get_analyzer(self, session_id: str) -> ResponseAnalyzer:
         return self.analyzers.get(session_id)
@@ -443,6 +446,64 @@ def _outbound_trace_headers(request: Request) -> dict[str, str]:
 
 
 _WAL_SPACE_TTL_SECONDS = 5.0
+
+
+def _take_writer_lease(cfg: AegisSettings) -> Any:
+    """Return the HA controller holding this chain's writer lease; None for 'single'.
+
+    ``main()`` normally takes the lease first, answering probes as a standby
+    while it waits. A gateway started any other way (``uvicorn …:app``, a test,
+    an embedding) gets one attempt here and refuses to start without the lease:
+    opening a WAL another replica is writing is the failure this exists to stop.
+    """
+    from aegis.core import ha
+
+    cfg.validate_ha()
+    if cfg.ha_mode == ha.HA_MODE_SINGLE:
+        return None
+    controller = ha.active_controller()
+    if controller is None:
+        controller = ha.controller_from_settings(cfg)
+        if controller is None or controller.lease is None:
+            raise RuntimeError("ha_mode is set but no writer lease could be configured")
+        if controller.lease.acquire() is None:
+            raise ha.LeaseUnavailableError(
+                f"the writer lease for chain {controller.chain_id} is held by another replica"
+            )
+        controller.start_keeper()
+        ha.activate(controller)
+    return controller
+
+
+def _record_writer_handover(state: _AppState) -> None:
+    """Record, as a signed node in the chain itself, which holder and epoch now write it."""
+    from aegis.core import ha
+
+    controller = state.ha
+    if controller.sequencer is not None:
+        state.ledger.add_commit_listener(controller.sequencer.notify)
+    if controller.lease is not None:
+        state.ledger.commit_state(
+            state_id=f"ha-lease-{controller.chain_id}-{controller.lease.epoch}",
+            entropy=0.0,
+            payload=ha.handover_record(controller),
+            tenant_id="aegis-system",
+            sampling_params={"model": "aegis-ha", "endpoint": "ha.writer_lease"},
+        )
+
+
+def _require_ha_admission(state: _AppState) -> None:
+    """Refuse governed traffic unless this replica may write its chain right now."""
+    if state.ha is None:
+        return
+    reason = state.ha.admission_error()
+    if reason is None:
+        return
+    logger.error("governed request rejected by the high-availability guard: %s", reason)
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=f"This replica may not write evidence right now: {reason}",
+    )
 
 
 def _require_wal_headroom(state: _AppState) -> None:
@@ -936,6 +997,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             "The audit chain will use an empty signing key — signatures are NOT cryptographically valid. "
             "Generate one with: python -c 'import secrets; print(secrets.token_hex(32))'"
         )
+    # Multi-replica: the chain's writer lease is taken before the WAL is opened,
+    # so a second writer never replays, locks or appends to it (aegis.core.ha).
+    state.ha = _take_writer_lease(cfg)
     state.ledger = CryptographicAuditLedger(
         persistence_path=str(cfg.wal_path),
         signing_key=_signing_key,
@@ -949,6 +1013,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         enable_cryptographic_shredding=cfg.enable_cryptographic_shredding,
         shredder_vault_path=cfg.shredder_vault_path or None,
     )
+    if state.ha is not None:
+        _record_writer_handover(state)
     zk_preview_warning = forensic_preview_warning(cfg.max_forensic_bytes)
     if zk_preview_warning is not None:
         logger.warning(zk_preview_warning)
@@ -1291,6 +1357,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             # Principal-first mTLS accepts direct TLS state or headers from an
             # explicitly allowlisted immediate proxy only.
 
+            # ── Global evidence sequence (before seccomp: it opens a DB connection)
+            if state.ha is not None and state.ha.sequencer is not None:
+                await state.ha.sequencer.start(state.ledger.iter_wal_nodes)
+                startup_cleanup.push_async_callback(state.ha.sequencer.stop)
+
             # ── Cross-replica gossip (before seccomp, and for a reason) ─────────
             # Starting the mesh reads three PEM files and binds a listener. Both
             # need syscalls the filter below is about to forbid, and doing it
@@ -1323,9 +1394,17 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
             guard = None
             try:
-                from aegis.core.seccomp_guard import SeccompGuard
+                from aegis.core.seccomp_guard import (
+                    SQLITE_SEQUENCE_STORE_SYSCALLS,
+                    SeccompGuard,
+                    profile_with,
+                )
 
-                guard = SeccompGuard()
+                guard = (
+                    SeccompGuard(profile_with(SQLITE_SEQUENCE_STORE_SYSCALLS))
+                    if cfg.ha_sequencer_url.startswith("sqlite")
+                    else SeccompGuard()
+                )
                 if not guard.apply_filter():
                     if cfg.security_enforcement_mode == "strict" and cfg.require_seccomp:
                         raise RuntimeError("strict runtime requires an active seccomp filter")
@@ -1382,7 +1461,13 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             await state.s3_archiver.close(drain=True)
         await state.ratelimiter.close()
         state.sessions.close()
+        if state.ha is not None and state.ha.sequencer is not None:
+            await state.ha.sequencer.stop()
         state.ledger.close()
+        if state.ha is not None:
+            # Last: the lease is released only once this replica can no longer
+            # append, so the next holder never shares the WAL with it.
+            state.ha.stop()
         if _hsm_backend is not None:
             _hsm_backend.close()
 
@@ -1558,6 +1643,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         fault and the depth of the surviving chain.
         """
         _require_wal_headroom(state)
+        _require_ha_admission(state)
         fault = getattr(state.ledger, "_fault_state", "healthy")
         if fault == "healthy":
             return
@@ -1807,10 +1893,14 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         status_code = 200 if (ledger_healthy and cache_healthy) else 503
         overall = "healthy" if status_code == 200 else "degraded"
+        # Liveness is not affected by HA state: a replica that may not write
+        # right now is still a healthy process (readiness says the rest).
+        ha_section = {"ha": state.ha.status()} if state.ha is not None else {}
 
         return JSONResponse(
             status_code=status_code,
             content={
+                **ha_section,
                 "status": overall,
                 "ledger": {
                     "nodes": ledger_nodes,
@@ -1839,6 +1929,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         forwarder_ready = (
             getattr(state, "forwarder", None) is not None and state.forwarder._client is not None
         )
+        ha_reason = state.ha.admission_error() if state.ha is not None else None
+        if forwarder_ready and ha_reason is not None:
+            return JSONResponse(status_code=503, content={"status": "not-ready", "ha": ha_reason})
         status_code = 200 if forwarder_ready else 503
         return JSONResponse(
             status_code=status_code,
@@ -2667,6 +2760,30 @@ def main() -> None:
     os.environ.setdefault("UV_USE_IO_URING", "0")
 
     cfg = get_settings()
+
+    # Multi-replica (aegis.core.ha): take this chain's writer lease before the
+    # app — and with it the WAL — exists. Until then this replica is a standby:
+    # /health answers 200 so liveness probes leave it alone, everything else
+    # answers 503 so no traffic is routed to it.
+    from aegis.core import ha
+
+    cfg.validate_ha()
+    controller = ha.controller_from_settings(cfg)
+    if controller is not None and controller.lease is not None:
+        responder = ha.StandbyResponder(
+            cfg.host,
+            cfg.port,
+            controller.chain_id,
+            ssl_certfile=str(cfg.ssl_certfile) if cfg.ssl_certfile else None,
+            ssl_keyfile=str(cfg.ssl_keyfile) if cfg.ssl_keyfile else None,
+        )
+        responder.start()
+        try:
+            ha.wait_for_lease(controller.lease, cfg.ha_standby_poll_seconds)
+        finally:
+            responder.stop()
+        controller.start_keeper()
+        ha.activate(controller)
 
     # FIX-BLOCKER-03 (server side): pass SSL/mTLS config to uvicorn.
     # ssl_certfile + ssl_keyfile: TLS for the Aegis server itself.

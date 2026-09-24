@@ -16,7 +16,9 @@ from fastapi import Depends, HTTPException, Request, status
 from aegis.auth.apikey import constant_time_key_in
 from aegis.auth.mtls import MTLSVerificationError
 from aegis.auth.oidc import OIDCAuthenticationError, OIDCDependencyError
-from aegis.auth.principal import Principal, Role
+from aegis.auth.principal import Principal, Role, permissions_for_roles
+from aegis.auth.principal import parse_roles as _roles
+from aegis.auth.principal import parse_scopes as _scopes
 from aegis.auth.scopes import (
     ALL_SCOPES,
     SCOPE_AUDIT_ANALYTICS,
@@ -25,20 +27,6 @@ from aegis.auth.scopes import (
     SCOPE_PROXY_COMPLETIONS,
     parse_scope_config,
 )
-
-_ROLE_SCOPES: dict[Role, frozenset[str]] = {
-    Role.ADMIN: ALL_SCOPES,
-    Role.PROXY_USER: frozenset({SCOPE_PROXY_COMPLETIONS}),
-    Role.AUDITOR: frozenset({SCOPE_AUDIT_READ, SCOPE_AUDIT_EXPORT, SCOPE_AUDIT_ANALYTICS}),
-    Role.AUDIT_READER: frozenset({SCOPE_AUDIT_READ}),
-}
-
-
-def permissions_for_roles(roles: frozenset[Role]) -> frozenset[str]:
-    permissions: set[str] = set()
-    for role in roles:
-        permissions.update(_ROLE_SCOPES[role])
-    return frozenset(permissions)
 
 
 def _bearer(request: Request) -> str:
@@ -78,22 +66,6 @@ def _same_tenant(left: str, right: str) -> bool:
     """
 
     return hmac.compare_digest(left.encode("utf-8"), right.encode("utf-8"))
-
-
-def _roles(value: object) -> frozenset[Role]:
-    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-        raise ValueError("roles must be a JSON string array")
-    return frozenset(Role(item) for item in value)
-
-
-def _scopes(value: object) -> frozenset[str]:
-    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-        raise ValueError("scopes must be a JSON string array")
-    scopes = frozenset(value)
-    unknown = scopes - ALL_SCOPES
-    if unknown:
-        raise ValueError(f"unsupported scopes: {sorted(unknown)}")
-    return scopes
 
 
 def _api_key_principal(request: Request, key: str) -> Principal:

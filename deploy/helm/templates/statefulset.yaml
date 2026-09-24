@@ -12,6 +12,16 @@ rather than corrupting evidence. aegis.workers is pinned to "1" for the same
 reason — AEGIS_WORKERS forks that many uvicorn processes inside one pod, all
 of them sharing this pod's WAL path.
 */ -}}
+{{- $haMode := .Values.ha.mode | default "single" -}}
+{{- if and (eq $haMode "active_passive") (not .Values.ha.sharedClaim) -}}
+{{- fail "ha.mode=active_passive needs ha.sharedClaim: a ReadWriteMany PVC every replica mounts (one chain, one WAL)" -}}
+{{- end -}}
+{{- if and (eq $haMode "active_passive") (not .Values.ha.chainId) -}}
+{{- fail "ha.mode=active_passive needs ha.chainId: the one chain the replicas share" -}}
+{{- end -}}
+{{- if and (eq $haMode "active_active") (not .Values.ha.sequencerUrlSecret.name) -}}
+{{- fail "ha.mode=active_active needs ha.sequencerUrlSecret (the postgresql:// global sequence DSN)" -}}
+{{- end }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -23,11 +33,19 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
+  {{- if eq $haMode "active_passive" }}
+  # A standby is never Ready by design, so an ordered rollout would wait on it
+  # forever. The writer lease, not pod ordering, keeps two writers off the WAL.
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: OnDelete
+  {{- else }}
   # Ordered rollout: a replica's successor starts only once the predecessor is
   # Ready, so a stuck WAL never has two pods contending for one volume.
   podManagementPolicy: OrderedReady
   updateStrategy:
     type: RollingUpdate
+  {{- end }}
   selector:
     matchLabels:
       {{- include "aegis-latent-core.selectorLabels" . | nindent 6 }}
@@ -65,6 +83,35 @@ spec:
               protocol: TCP
             {{- end }}
           env:
+            {{- if ne $haMode "single" }}
+            - name: AEGIS_HA_MODE
+              value: {{ $haMode | quote }}
+            - name: AEGIS_HA_CHAIN_ID
+              {{- if .Values.ha.chainId }}
+              value: {{ .Values.ha.chainId | quote }}
+              {{- else }}
+              # The pod name: stable across restarts under a StatefulSet, unique
+              # per replica, and the thing this replica's WAL claim is keyed by.
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+              {{- end }}
+            - name: AEGIS_HA_LEASE_TTL_SECONDS
+              value: {{ .Values.ha.leaseTtlSeconds | quote }}
+            - name: AEGIS_HA_STANDBY_POLL_SECONDS
+              value: {{ .Values.ha.standbyPollSeconds | quote }}
+            - name: AEGIS_HA_MAX_SEQUENCING_LAG_SECONDS
+              value: {{ .Values.ha.maxSequencingLagSeconds | quote }}
+            {{- with .Values.ha.sequencerUrlSecret }}
+            {{- if .name }}
+            - name: AEGIS_HA_SEQUENCER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .name }}
+                  key: {{ .key }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
             {{- if .Values.gossip.enabled }}
             - name: AEGIS_GOSSIP_ENABLED
               value: "true"
@@ -231,7 +278,13 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
       volumes:
-        {{- if not .Values.persistence.enabled }}
+        {{- if eq $haMode "active_passive" }}
+        # One chain, one WAL: every replica mounts the same ReadWriteMany claim;
+        # the writer lease decides which of them may open it.
+        - name: wal-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.ha.sharedClaim }}
+        {{- else if not .Values.persistence.enabled }}
         # Evidence is lost on pod restart. Evaluation only — a governed
         # deployment must set persistence.enabled=true.
         - name: wal-data
@@ -265,7 +318,7 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-  {{- if .Values.persistence.enabled }}
+  {{- if and .Values.persistence.enabled (ne $haMode "active_passive") }}
   volumeClaimTemplates:
     - metadata:
         name: wal-data

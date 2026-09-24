@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "b7aa81d1fc055b4ecd71f37fe9663b74b0ac2918939e6e5cdae60e3c3a3c2d22",
-      "size": 146889
+      "sha256": "1029265a299436cbff288a14713bba8c3b32b11ec2a8b3623977460370925f47",
+      "size": 150241
     },
     {
       "category": "governed_input",
@@ -195,14 +195,14 @@
     {
       "category": "governed_input",
       "path": "requirements.txt",
-      "sha256": "d82a09052cdecdef0ead18a377de52ccfc4ac92bc5b3bcf8cd4c1693d961df08",
-      "size": 1163
+      "sha256": "b0ffb33fc4129196e75770c0a37c4e8f13ebf88f8fe42127bfc07e4a7cbecb49",
+      "size": 1339
     },
     {
       "category": "governed_input",
       "path": "requirements.lock",
-      "sha256": "79c1a9b71c13ebc449cdcb23b776fa02e49936844f3c9eeb909a02c552771799",
-      "size": 90722
+      "sha256": "4e486fb252912dd6de4894ddfb9a5f33eaa6ecc9741232d82b00db92ee88e323",
+      "size": 95613
     },
     {
       "category": "governed_input",
@@ -279,8 +279,8 @@
     {
       "category": "governed_input",
       "path": "deploy/helm/values.yaml",
-      "sha256": "7fc2bd5ed074cdc99a6dad1ceb4fd16a7a9b0ba1259536f5883235857e09543a",
-      "size": 11220
+      "sha256": "df9d862cebcdfa401b62d7f8bcc7774a18b52e47028ac3a57ae5f685b48f6b18",
+      "size": 12739
     },
     {
       "category": "governed_input",
@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "12bc83b207db9b5563d1c7a8d295aee4f994dfb12868f1b8250b1a017eebf59e",
-      "size": 38352
+      "sha256": "89ca42c4fc56419576dc4df00e4d67c172f5dd9543a1430d93c54160e1827546",
+      "size": 40962
     },
     {
       "category": "governed_input",
@@ -357,8 +357,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/publish_oci.yml",
-      "sha256": "8c8fa44350362a7284ced75c5b352fe5f31256461aee14031601781928f9050f",
-      "size": 5649
+      "sha256": "a5fd608dfd20e69c700048dae2c1c2232c666eab3cbf9b5a6918506a14a277d3",
+      "size": 5654
     },
     {
       "category": "governed_input",

@@ -238,7 +238,7 @@ def _wait_for_health(proc: subprocess.Popen[bytes], port: int, seconds: float = 
             if _get(port, "/health") == 200:
                 return
         except (urllib.error.URLError, ConnectionError, TimeoutError):
-            pass
+            pass  # not listening yet; the deadline above bounds the wait
         time.sleep(0.25)
     proc.kill()
     pytest.fail("gateway never answered /health")
@@ -429,3 +429,49 @@ def test_hostname_resolution_under_the_filter_does_not_kill_the_process() -> Non
     assert proc.returncode != -signal.SIGSYS, "killed by the seccomp filter while resolving a name"
     assert proc.returncode == 0, proc.stderr.decode()[-2000:]
     assert proc.stdout.strip() == b"survived"
+
+
+TSYNC_CHILD = textwrap.dedent(
+    """
+    import threading, sys
+    from aegis.core.seccomp_guard import SeccompGuard
+
+    ready, locked, done = threading.Event(), threading.Event(), threading.Event()
+    seen = {}
+
+    def early_thread():
+        ready.set()
+        locked.wait()
+        with open("/proc/thread-self/status") as fh:
+            for line in fh:
+                if line.startswith("Seccomp:"):
+                    seen["seccomp"] = line.split()[1]
+        done.set()
+
+    threading.Thread(target=early_thread, daemon=True).start()
+    ready.wait()
+    guard = SeccompGuard()
+    guard._is_sandbox = False
+    if not guard.apply_filter():
+        sys.exit(3)
+    locked.set()
+    done.wait(10)
+    print(seen.get("seccomp", "missing"))
+    """
+)
+
+
+def test_a_thread_running_before_lockdown_is_filtered_too() -> None:
+    """REG-D82: without TSYNC the filter binds only the locking thread and its
+    later children; a thread already running at lockdown kept Seccomp: 0."""
+    env = {**os.environ, "PYTHONPATH": str(ROOT)}
+    env.pop("HERMES_SANDBOX", None)
+    proc = subprocess.run(  # noqa: S603 - fixed argv
+        [sys.executable, "-c", TSYNC_CHILD],
+        env=env,
+        capture_output=True,
+        timeout=60,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr.decode()[-2000:]
+    assert proc.stdout.strip() == b"2", "the pre-existing thread is not under the filter"

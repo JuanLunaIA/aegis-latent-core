@@ -11,6 +11,14 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from types import MappingProxyType
 
+from aegis.auth.scopes import (
+    ALL_SCOPES,
+    SCOPE_AUDIT_ANALYTICS,
+    SCOPE_AUDIT_EXPORT,
+    SCOPE_AUDIT_READ,
+    SCOPE_PROXY_COMPLETIONS,
+)
+
 
 class Role(StrEnum):
     """The four supported platform roles."""
@@ -26,6 +34,41 @@ ROLE_PROXY_USER = Role.PROXY_USER
 ROLE_AUDITOR = Role.AUDITOR
 ROLE_AUDIT_READER = Role.AUDIT_READER
 ALL_ROLES: frozenset[Role] = frozenset(Role)
+
+# What each role may be granted. Lives with the principal model (not with the
+# FastAPI dependencies) so the mapping generator below and the request path
+# apply one rule without importing each other.
+_ROLE_SCOPES: dict[Role, frozenset[str]] = {
+    Role.ADMIN: ALL_SCOPES,
+    Role.PROXY_USER: frozenset({SCOPE_PROXY_COMPLETIONS}),
+    Role.AUDITOR: frozenset({SCOPE_AUDIT_READ, SCOPE_AUDIT_EXPORT, SCOPE_AUDIT_ANALYTICS}),
+    Role.AUDIT_READER: frozenset({SCOPE_AUDIT_READ}),
+}
+
+
+def permissions_for_roles(roles: frozenset[Role]) -> frozenset[str]:
+    permissions: set[str] = set()
+    for role in roles:
+        permissions.update(_ROLE_SCOPES[role])
+    return frozenset(permissions)
+
+
+def parse_roles(value: object) -> frozenset[Role]:
+    """Roles from a principal mapping entry: a JSON string array of role names."""
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ValueError("roles must be a JSON string array")
+    return frozenset(Role(item) for item in value)
+
+
+def parse_scopes(value: object) -> frozenset[str]:
+    """Scopes from a principal mapping entry: a JSON string array of known scopes."""
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ValueError("scopes must be a JSON string array")
+    scopes = frozenset(value)
+    unknown = scopes - ALL_SCOPES
+    if unknown:
+        raise ValueError(f"unsupported scopes: {sorted(unknown)}")
+    return scopes
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,7 +136,6 @@ def build_api_key_principals(
     Strict mode requires one entry per configured key (``validate_runtime_invariants``).
     """
     from aegis.config import AegisSettings
-    from aegis.proxy.dependencies import _roles, _scopes, permissions_for_roles
 
     if len(identity_key.encode("utf-8")) < 32:
         raise ValueError("AEGIS_AUTH_IDENTITY_HMAC_KEY must be at least 32 bytes")
@@ -106,8 +148,8 @@ def build_api_key_principals(
         tenant_id = grant.get("tenant_id")
         if not isinstance(tenant_id, str) or not tenant_id.strip():
             raise ValueError(f"{label}: tenant_id must be a non-empty string")
-        roles = _roles(grant.get("roles", []))
-        scopes = _scopes(grant.get("scopes", []))
+        roles = parse_roles(grant.get("roles", []))
+        scopes = parse_scopes(grant.get("scopes", []))
         if not scopes.issubset(permissions_for_roles(roles)):
             raise ValueError(f"{label}: scopes exceed what the roles grant")
         mapping[digester.api_key_principal_digest(api_key)] = {
@@ -156,6 +198,9 @@ __all__ = [
     "Principal",
     "Role",
     "build_api_key_principals",
+    "parse_roles",
+    "parse_scopes",
+    "permissions_for_roles",
 ]
 
 

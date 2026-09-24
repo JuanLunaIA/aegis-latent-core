@@ -19,6 +19,9 @@ cachetools>=5.3.0
 # The image installs the SQLite storage backend (`.[storage-sqlite]`). Locked here so
 # the image installs exclusively from this hash-pinned set (REG-D69).
 aiosqlite>=0.20.0
+# PostgreSQL global evidence sequence for multi-replica deployments (aegis.core.ha,
+# AEGIS_HA_SEQUENCER_URL=postgresql://...). Locked so the image can use it.
+asyncpg>=0.29.0
 # Security floors for transitive deps (Dependabot / PYSEC advisories)
 idna>=3.15
 # urllib3 (transitive via requests): PYSEC-2026-141 / PYSEC-2026-142

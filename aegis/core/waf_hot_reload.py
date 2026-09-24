@@ -56,7 +56,6 @@ Usage::
 from __future__ import annotations
 
 import ctypes
-import ctypes.util
 import json
 import logging
 import os
@@ -66,6 +65,8 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+
+from aegis.core.libc import load_libc
 
 logger = logging.getLogger(__name__)
 
@@ -83,13 +84,8 @@ _PATTERN_FLAGS = re.IGNORECASE | re.DOTALL
 
 
 def _load_libc() -> ctypes.CDLL | None:
-    libc_name = ctypes.util.find_library("c")
-    if libc_name is None:
-        return None
-    try:
-        return ctypes.CDLL(libc_name, use_errno=True)
-    except OSError:
-        return None
+    # Never ctypes.util.find_library: it executes ldconfig (REG-D83).
+    return load_libc()
 
 
 def _inotify_available() -> bool:

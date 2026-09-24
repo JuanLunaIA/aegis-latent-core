@@ -33,11 +33,12 @@ Usage::
 from __future__ import annotations
 
 import ctypes
-import ctypes.util
 import logging
 import os
 import sys
 from dataclasses import dataclass, field
+
+from aegis.core.libc import load_libc
 
 logger = logging.getLogger(__name__)
 
@@ -135,11 +136,11 @@ class ProcessHardening:
 
     @staticmethod
     def _load_libc() -> ctypes.CDLL | None:
-        path = ctypes.util.find_library("c")
-        if not path:
+        # Never ctypes.util.find_library: it executes ldconfig (REG-D83).
+        lib = load_libc()
+        if lib is None:
             return None
         try:
-            lib = ctypes.CDLL(path, use_errno=True)
             lib.prctl.restype = ctypes.c_int
             lib.prctl.argtypes = [
                 ctypes.c_int,

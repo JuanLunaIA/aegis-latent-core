@@ -147,6 +147,50 @@
           "minItems": 1
         }
       }
+    },
+    "ha": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "single",
+            "active_active",
+            "active_passive"
+          ]
+        },
+        "chainId": {
+          "type": "string",
+          "pattern": "^[^|\\r\\n]*$"
+        },
+        "leaseTtlSeconds": {
+          "type": "string"
+        },
+        "standbyPollSeconds": {
+          "type": "string"
+        },
+        "maxSequencingLagSeconds": {
+          "type": "string"
+        },
+        "sequencerUrlSecret": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "key": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "sharedClaim": {
+          "type": "string"
+        }
+      }
     }
   }
 }

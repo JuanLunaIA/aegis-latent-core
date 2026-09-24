@@ -104,6 +104,7 @@ The documents that decide what may be said, and on what evidence.
 | [Key Rotation Runbook](operations/KEY_ROTATION_RUNBOOK.md) | Signer and trusted-root rotation. |
 | [Rollback Runbook](operations/ROLLBACK_RUNBOOK.md) | Release and configuration rollback under evidence constraints. |
 | [Backpressure Runbook](operations/BACKPRESSURE_RUNBOOK.md) | SSE queue saturation and upstream slowdown. |
+| [High Availability](operations/HIGH_AVAILABILITY.md) | Active-passive failover, active-active replicas with one global sequence, multi-team boundary. |
 | [Operations Playbook](institutional/DOC-04_OPERATIONS_PLAYBOOK.md) | The full institutional operations volume. |
 | [Scaling Guide](performance/SCALING_GUIDE.md) | Scaling boundaries and what they do not establish. |
 

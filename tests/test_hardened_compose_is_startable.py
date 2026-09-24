@@ -19,11 +19,9 @@ import re
 from pathlib import Path
 from typing import Any
 
-import pytest
+import yaml
 
-yaml = pytest.importorskip("yaml")
-
-from aegis.config import AegisSettings  # noqa: E402
+from aegis.config import AegisSettings
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPOSE = ROOT / "deploy/docker/docker-compose.yml"

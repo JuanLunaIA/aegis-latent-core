@@ -32,7 +32,7 @@ The components below are licensed under weak-copyleft terms (LGPL, MPL or EPL). 
 
 ## Full component inventory
 
-380 components are distributed with an Aegis artifact. A further 257 are build-time only (test runners, type checkers, packaging tools); they are inventoried in `docs/compliance/LICENSE_AUDIT.md` but create no distribution obligation and are not listed here.
+383 components are distributed with an Aegis artifact. A further 257 are build-time only (test runners, type checkers, packaging tools); they are inventoried in `docs/compliance/LICENSE_AUDIT.md` but create no distribution obligation and are not listed here.
 
 ### crates.io (254)
 
@@ -391,13 +391,16 @@ The components below are licensed under weak-copyleft terms (LGPL, MPL or EPL). 
 | victory-vendor | 37.3.6 | MIT AND ISC | dashboard |
 | zod | 4.5.4 | MIT | dashboard |
 
-### pypi (33)
+### pypi (36)
 
 | component | version | licence | distributed with |
 | --- | --- | --- | --- |
+| aiosqlite | 0.22.1 | MIT License | gateway (Python runtime) |
 | annotated-doc | 0.0.5 | MIT | gateway (Python runtime) |
 | annotated-types | 0.8.0 | MIT | gateway (Python runtime) |
 | anyio | 4.14.2 | MIT | gateway (Python runtime) |
+| asyncpg | 0.31.0 | Apache-2.0 | gateway (Python runtime) |
+| cachetools | 7.2.0 | MIT | gateway (Python runtime) |
 | cbor2 | 6.1.4 | MIT | gateway (Python runtime) |
 | certifi | 2026.7.22 | MPL-2.0 | gateway (Python runtime) |
 | cffi | 2.1.1 | MIT-0 | gateway (Python runtime) |

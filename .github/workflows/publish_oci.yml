@@ -70,7 +70,7 @@ jobs:
       - name: Build the gateway image
         run: docker build -f deploy/docker/Dockerfile -t aegis-latent-core:smoke .
       - name: Run the image in the hardened compose posture
-        run: python3 scripts/container_smoke_test.py --image aegis-latent-core:smoke --apparmor aegis-latent-core
+        run: python3 scripts/container_smoke_test.py --image aegis-latent-core:smoke --apparmor aegis-latent-core --ha
       - name: Kernel denials (on failure)
         if: failure()
         run: sudo dmesg | grep -E 'apparmor="DENIED"|type=1326' | tail -n 100 || true

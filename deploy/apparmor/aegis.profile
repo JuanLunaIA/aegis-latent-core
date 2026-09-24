@@ -6,6 +6,10 @@
 #
 #   sudo apparmor_parser -r -W deploy/apparmor/aegis.profile
 #
+# The first CI run under this profile also denied an exec of /usr/sbin/ldconfig:
+# the gateway ran ldconfig to locate libc (REG-D83). That was fixed in the code,
+# not granted here — nothing in the gateway needs to execute a program.
+#
 # REG-D80: the previous profile granted writes only under /var/lib/aegis and
 # /tmp/aegis, while the image and compose keep the WAL at /data, and it granted
 # nothing to execute the interpreter or read the installed application — the
@@ -24,14 +28,17 @@ profile aegis-latent-core flags=(attach_disconnected,mediate_deleted) {
   # (the image installs everything under /usr/local). The seccomp filter the
   # gateway loads at startup forbids execve afterwards; `ix` here covers the
   # container entry point and the image's own HEALTHCHECK.
+  /usr/local/bin/ r,
   /usr/local/bin/** rmix,
   /usr/local/lib/** rm,
   /app/ r,
   /app/** r,
 
-  # Configuration and operator-mounted material (TLS CA/cert/key files).
+  # Configuration and operator-mounted material (TLS CA/cert/key files), and
+  # OpenSSL's own configuration, read when the TLS context is built.
   /etc/aegis/ r,
   /etc/aegis/** r,
+  /etc/ssl/openssl.cnf r,
   /etc/localtime r,
   /usr/share/zoneinfo/** r,
 
@@ -62,6 +69,8 @@ profile aegis-latent-core flags=(attach_disconnected,mediate_deleted) {
   /sys/fs/cgroup/** r,
   /sys/module/apparmor/parameters/enabled r,
   /sys/devices/system/cpu/** r,
+  @{PROC}/version r,
+  @{PROC}/version_signature r,
 
   # Network: clients inbound, the upstream provider and Redis outbound, DNS,
   # and the netlink route query glibc's getaddrinfo makes for AI_ADDRCONFIG.

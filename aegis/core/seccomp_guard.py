@@ -12,6 +12,8 @@ import os
 import sys
 from dataclasses import dataclass
 
+from aegis.core.libc import load_libc
+
 logger = logging.getLogger(__name__)
 
 # Constants re-exported for callers that import them from this module.
@@ -165,6 +167,13 @@ class SeccompGuard:
             # (scripts/container_smoke_test.py): these two were the only misses.
             "uname",  # glibc res_init -> gethostname() for the resolver's default domain
             "sendmmsg",  # glibc getaddrinfo sends the A and AAAA queries in one call
+            # ── Graceful shutdown (REG-D84). asyncio.Runner.close() runs
+            # loop.run_until_complete(shutdown_asyncgens()) after the app has
+            # stopped, and uvloop's run_until_complete creates a socketpair for
+            # its signal wake-up: every SIGTERM ended in SIGSYS (exit 159) once
+            # the lifespan had finished. A connected local pair only — no
+            # address, no network reach.
+            "socketpair",
             # clone is added separately and only with CLONE_THREAD: the ASGI
             # threadpool (sync endpoints, to_thread) spawns threads per request;
             # process creation stays impossible.
@@ -236,12 +245,11 @@ class SeccompGuard:
                 )
 
             # 1. Set PR_SET_NO_NEW_PRIVS (required before the seccomp filter).
-            import ctypes.util
-
-            libc_path = ctypes.util.find_library("c")
-            if not libc_path:
-                raise RuntimeError("libc not found via ctypes.util.find_library")
-            libc = ctypes.CDLL(libc_path)
+            # load_libc, not ctypes.util.find_library: the latter executes
+            # ldconfig, which the shipped AppArmor profile denies (REG-D83).
+            libc = load_libc()
+            if libc is None:
+                raise RuntimeError("libc is not loadable in this process")
             res = libc.prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)
             if res != 0:
                 raise PermissionError("Failed to set PR_SET_NO_NEW_PRIVS")
@@ -254,6 +262,7 @@ class SeccompGuard:
                 default_action=SCMP_ACT_KILL_PROCESS,
                 thread_clone_only=True,
                 errno_syscalls=IO_URING_ERRNO_SYSCALLS,
+                synchronize_threads=True,
             )
             if not sb.enabled:
                 logger.error("libseccomp not available. Entering degraded mode.")
@@ -286,3 +295,21 @@ class SeccompGuard:
 
     def is_degraded(self) -> bool:
         return self._degraded_mode
+
+
+# The single-host SQLite global-sequence store (aegis.core.ha, non-strict only)
+# writes and reads its pages positionally and truncates its journal. Measured by
+# strace over 6,000 appends after lockdown: these three were the only syscalls
+# outside the profile. Added only when that store is configured, so the strict
+# profile (PostgreSQL store) is unchanged.
+SQLITE_SEQUENCE_STORE_SYSCALLS: frozenset[str] = frozenset({"pread64", "pwrite64", "ftruncate"})
+
+
+def profile_with(extra: frozenset[str]) -> SyscallProfile:
+    """The default profile plus *extra* allowed syscalls (never minus anything)."""
+    base = SeccompGuard.DEFAULT_PROFILE
+    return SyscallProfile(
+        name=f"{base.name}+{len(extra)}",
+        allowed_syscalls=set(base.allowed_syscalls) | set(extra),
+        forbidden_syscalls=set(base.forbidden_syscalls) - set(extra),
+    )

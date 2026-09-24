@@ -161,7 +161,6 @@ def test_apply_filter_uses_seccomp_sandbox_in_non_sandbox():
     guard._degraded_mode = False
     guard.profile = SeccompGuard.DEFAULT_PROFILE
 
-    import ctypes.util as _ctu
     from unittest.mock import MagicMock, patch
 
     mock_libc = MagicMock()
@@ -172,8 +171,7 @@ def test_apply_filter_uses_seccomp_sandbox_in_non_sandbox():
     mock_sb.apply_filter.return_value = True
 
     with (
-        patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
-        patch("ctypes.CDLL", return_value=mock_libc),
+        patch("aegis.core.seccomp_guard.load_libc", return_value=mock_libc),
         patch("aegis.core.sandbox_l1.SeccompSandbox", return_value=mock_sb),
     ):
         result = guard.apply_filter()
