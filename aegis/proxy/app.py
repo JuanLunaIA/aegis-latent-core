@@ -2644,6 +2644,17 @@ def main() -> None:
     """CLI entry point: ``aegis`` / ``aegis-server``."""
     import uvicorn
 
+    # REG-D67: libuv (under uvloop) creates an io_uring instance when the event
+    # loop is built and later calls io_uring_enter, which the seccomp allowlist
+    # does not permit — the process was killed with SIGSYS ~2 s after startup.
+    # io_uring is deliberately not allowlisted (its operations run without
+    # passing through the filter), so libuv must never create one. libuv reads
+    # this once, when the loop is created — which uvicorn.run does below, so it
+    # has to be set here. The image sets the same value (deploy/docker/Dockerfile);
+    # an explicit operator value is respected, and SeccompGuard refuses to lock
+    # down over a live ring rather than letting it kill the process.
+    os.environ.setdefault("UV_USE_IO_URING", "0")
+
     cfg = get_settings()
 
     # FIX-BLOCKER-03 (server side): pass SSL/mTLS config to uvicorn.
