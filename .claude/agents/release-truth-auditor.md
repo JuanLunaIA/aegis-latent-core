@@ -22,7 +22,9 @@ claimed. Reading back one does not establish another.
 Read `AGENTS.md` for the authoritative text before writing anything, and treat it
 as the source of truth over your own memory. The shape of it:
 
-- The source baseline is **5.0.0**, published on 2026-09-16 to every surface
+- The checked-out source baseline is **5.0.1** with fourteen synchronized
+  anchors — **published nowhere** (read back 2026-09-21). The most recent
+  published release is **5.0.0**, published on 2026-09-16 to every surface
   **except** PyPI `aegis-latent-core`.
 - Readback established: the signed annotated tag, a GitHub Release with its
   assets, PyPI `aegis-latent-sdk` 5.0.0, npm `aegis-latent-sdk` 5.0.0, and GHCR

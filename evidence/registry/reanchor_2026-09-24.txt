@@ -1,0 +1,177 @@
+RE-ANCHOR 2026-09-24 — v5.0.1 mission-order audit re-verification, docs/REGISTRY.md
+re-read, and the standing audit record (AUDIT_REPORT_v5.0.1_PREP.md) re-checked at
+main 9df5fd3 instead of re-generated from scratch.
+
+Host: 4 CPU, Linux 7.2.6-artix2-1, uid 1000 (luna), CPython 3.11.11 (uv venv, hash-locked
+requirements), cargo/rustc stable via rustup, node/npm present. Not the CI runners.
+
+=== 1. Registry state read first ===
+
+Section 4.6 [AUDIT] block: 30 rows, REG-D05 to REG-D34, every one FIXED (the last three,
+REG-D32/REG-D33/REG-D34, closed 2026-09-22; the section 2 log records "open = 0 of 105" at
+REG-D32's closure). At 9df5fd3, measured over the file:
+  OPEN = 0, SEED = 0; no non-terminal row anywhere.
+Roadmap: 35 unchecked boxes — the three open audit tickets AUD-35 [P2] (inert settings),
+AUD-36 [P2] (MiFID/MAR wire-or-retire), AUD-37 [P3] (date-bound docs), plus standing
+acceptance/boundary items. Every open ticket carries its owner and its own quoted unblock
+path in docs/MODULE_INVENTORY.md ("Open roadmap tickets" section).
+
+=== 2. Quick battery at 9df5fd3 ===
+
+== git ==
+9df5fd3835634c89271c385bdbd0bc6e90810e4d; working tree clean at start and at end of the run.
+== ruff check . / ruff format --check . ==
+All checks passed!  |  601 files already formatted
+== bandit -r aegis/ aegis_server/ -c pyproject.toml -lll ==
+No issues identified. Total lines of code: 54905; 0 high, 0 medium, 0 low.
+== mypy --strict aegis ==
+Success: no issues found in 208 source files
+== mypy --strict --explicit-package-bases --follow-imports=silent scripts tools ==
+Success: no issues found in 41 source files
+== tools/docs/verify_documentation.py --root . --strict ==
+status PASS, errors 0, warnings 0, required_files 27
+== scripts/verify_docs.py ==
+verify_docs: PASS (0 findings)
+== scripts/verify_claims.py ==
+verify_claims: PASS (106 claims, 0 findings)
+== bash scripts/verify_links.sh ==
+verify_links: PASS (1405 relative links and anchors resolved)
+== scripts/verify_import_reachability.py ==
+modules discovered: 225  reached: 114  declared roadmap: 34  allowlisted: 77
+verify_import_reachability: PASS — no undeclared orphans, no stale roadmap entries
+== scripts/verify_release_contract.py ==
+release source contract: READY; fourteen anchors synchronized at 5.0.1
+== scripts/verify_ai_context_manifest.py ==
+AI context manifest verified: 83 files; source anchor fdace8844568eb788216740b2cb5daf187d99d3b
+== scripts/verify_github_action_pins.py ==
+github_action_sha_pins=PASS remote_references=123
+== scripts/audit_documentation_corpus.py --output-dir <scratch> ==
+{"all_files": 1267, "crlf_files": 0, "exact_duplicate_groups": 11, "institutional_files": 12,
+ "institutional_placeholders": 0, "markdown_files": 255, "non_nfc_files": 0,
+ "repeated_heading_groups": 18, "text_files": 1151, "utf8_failures": 0}
+status=PASS
+== scripts/generate_module_inventory.py --check ==
+docs/MODULE_INVENTORY.md is current (301 files; owner @JuanLunaIA resolves for all 301)
+
+=== 3. Suite and CI mirrors ===
+
+== extension ==
+maturin build --release --features extension-module →
+aegis_rust-5.0.1-cp311-abi3-manylinux_2_38_x86_64.whl built and installed; import OK.
+== pytest -n auto (HERMES_SANDBOX=true, extension installed) ==
+7425 passed, 32 skipped in 229.43s (0:03:49)   [exit 0]
+(Log stderr note: the only non-progress content is one faulthandler stack sample —
+`Timeout (0:01:00)!` from a worker while a test ran past the CI flag's 60 s sample threshold.
+The log contains zero `failed` and zero `ERROR` occurrences. Diagnostic, not a failure; the
+Rust debug run shows the same class — one test prints "has been running for over 60 seconds"
+and then passes.)
+== targeted Phase-1 selection (mmr domain separation, mmr portable, compliance wording gate,
+   retracted figure gate, documentation verifiers, benchmark claim labels, error response
+   hygiene, stream admission gate, stream bounds, terminal outbox, WAL single writer,
+   coalesced commit) ==
+246 passed, 1 warning in 17.25s   [exit 0]
+== explicit streaming/teardown runs ==
+tests/test_streaming_teardown.py: 8 passed in 0.79s
+tests/test_proxy_streaming.py: 26 passed in 12.84s
+== sdk/python (CI steps: ruff, mypy config, mypy --strict src, pytest, in an isolated venv) ==
+All checks passed!  |  Success: no issues found in 10 source files (x2)  |  20 passed in 22.81s
+== sdk/typescript (CI steps: npm ci, npm run check, npm audit, npm pack --dry-run) ==
+Test Files 6 passed (6), Tests 26 passed (26), check exit 0; npm audit: found 0 vulnerabilities;
+npm pack: aegis-latent-sdk-5.0.1.tgz
+== dashboard (CI steps: npm ci, typecheck, vitest, next build with canary envs, npm audit,
+   check:bundle-secrets) ==
+Test Files 3 passed (3), Tests 6 passed (6); build exit 0; npm audit: found 0 vulnerabilities;
+"client bundle secret check passed: 52 browser-served file(s), 1 server-only value(s)
+searched, 0 findings"
+
+=== 4. Rust (aegis_rust_v2) ===
+
+== cargo test --release ==
+test result: ok. 90 passed; 0 failed ... finished in 104.72s   (lib)
+test result: ok. 3 passed; 0 failed ... (block_buffer_panic_safety)   [exit 0]
+== cargo test --lib (debug; the same command tools/forensic/forensic_checks.py runs) ==
+test result: ok. 90 passed; 0 failed ... finished in 554.83s   [exit 0]
+== cargo clippy --locked --all-targets --all-features -- -D warnings ==
+Finished `dev` profile [unoptimized + debuginfo] target(s) in 7m 38s   [exit 0]
+== tools/forensic/forensic_checks.py ==
+exit 0; python_syntax_errors: 0 (py_compile over the tree).
+Its `cargo test --lib` step recorded returncode 127; a re-run captured the full cause: the
+debug test binary links `libpython3.11.so.1.0` (pyo3 without `extension-module`, linked
+against the uv-managed interpreter that a `.venv/bin`-first PATH resolves) and that
+interpreter's lib dir is not on the loader search path, so the test executable does not start
+(`error while loading shared libraries: libpython3.11.so.1.0: cannot open shared object
+file`; cargo surfaces the process exit status, 127). The script's own note anticipates
+exactly this class as a linker/environment issue. With the default PATH here (system
+`/usr/bin/python` = 3.14) cargo builds the other flavour and the same command runs to
+completion: 90 passed, 0 failed, exit 0. Neither the crate nor the script is at fault; it is
+an environment boundary of this host. To make the script's rust step green here, export
+LD_LIBRARY_PATH from the venv's `sysconfig` LIBDIR before running it.
+Note on the script's pattern counts: they are tree-state dependent. The script excludes
+.git, target, .venv, __pycache__ and .pytest_cache, but not node_modules; with JS
+dependencies installed the counts are dominated by third-party files and are not comparable
+to a clean-tree run.
+== report.json handling ==
+The script rewrote the tracked tools/forensic/report.json; the regenerated file was read for
+the fields above and then restored (`git checkout -- tools/forensic/report.json`). Tree clean.
+
+=== 5. Property verifications (the brief's Phase 1, by its own items) ===
+
+- MMR domain separation: aegis/core/mmr.py:56-62 and :165-177 — leaf SHA-256(0x00 || payload),
+  node SHA-256(0x01 || left32 || right32), root SHA-256(0x02 || peaks); HASH_SCHEME_V2 =
+  "v2-binary-domain-separated". tests/test_mmr_domain_separation.py and test_mmr_portable.py
+  pass. "v1 completely deprecated" is not true and is not claimed: UC-060 publishes the
+  residual (v1 stays live for historical chains; `auto` reopens a chain under its recorded
+  scheme), CLM-064 states the position, and no in-place upgrade exists by construction.
+- Non-finite floats: refused, not sanitised — aegis/core/forensic_bundle.py:92-93 and
+  :145-146 ("does not accept non-finite floats"); aegis/proxy/audit_api.py:236.
+- Weak RNG: sweep of aegis/ shows os.urandom or secrets on every key/nonce path
+  (core/crypto_shredder.py:237, core/forensic_sealing.py:46, core/phi_encryption.py:110,
+  core/audit_node_encryptor.py:135, core/rfc3161_timestamper.py:176, core/timing_defense.py:52);
+  the only `random` use is core/red_team_framework.py:106 with `nosec B311 — not cryptographic`.
+- Secret sweep (AKIA-style keys, PRIVATE KEY markers, provider token shapes) over the tree:
+  all hits are synthetic fixtures — Samples/*.html demo payloads and
+  scripts/integration_test_mock.py carrying AWS's documented example key. No live credential.
+- Stack-trace and error hygiene: tests/test_error_response_hygiene.py passes.
+- msync/fsync: the native segment sequence (reserve, copy, zero terminator, flush_range,
+  publish) is described in docs/operations/STORAGE_REQUIREMENTS.md against
+  aegis_rust_v2/src/wal.rs:222-228; group-commit ordering covered by
+  tests/test_coalesced_commit.py and REG-A05.
+- Cancel/teardown: TerminalCommitHandoff (aegis/proxy/streaming.py:83) with _freeze_summary
+  (:769, :805, :840); tests/test_proxy_streaming.py::test_cancellation_closes_upstream_and_commits_once
+  (:398) and ::test_large_logical_stream_retained_memory_is_bounded (:462); the eight tests in
+  tests/test_streaming_teardown.py; tests/test_terminal_outbox.py. "Fence-on-cancel" is not a
+  term in this tree (one grep hit total, inside AUDIT_REPORT_v5.0.1_PREP.md itself); the real
+  name is the teardown handoff (REG-D07).
+- OTR / order-to-trade: 0 matches in aegis/ — the repository does not generate or execute
+  trading logic; the MiFID/MAR modules are inputs, not wiring (CLM-103/CLM-104; AUD-36 open).
+- Audit record spot-checks at HEAD (section 7 items of the report): market_abuse_detector.py
+  cites MAR (Reg. (EU) 596/2014) Art. 12(1)(a)(ii) at :28 and MiFID II Art. 16(3) at :40;
+  mifid_record_keeper.py:7 says "contributes technical inputs"; DEEP_DIVE.md contains neither
+  of the two wordings item 4 removed; "feeds directly into the proxy WAF verdict pipeline" has
+  0 hits; llms.txt:6 carries the 5.0.1 baseline; docs/REPOSITORY_MAP.md:3 carries the
+  provenance stamp and routes the re-check to AUD-37.
+- Candidate nit found by this pass (listed, not applied): market_abuse_detector.py:8-9 cites
+  AUD-20 (closed) for the unwired state; the live wire-or-retire ticket is AUD-36.
+
+=== 6. Not run here, stated rather than implied ===
+
+- The zk-spartan feature tests (SIGILL boundary on pre-ADX hosts, REG-D04) — unchanged.
+- No fuzzing, Miri or Kani run; no live-hardware cryptography (no HSM/TPM/PKCS#11
+  in this environment); no CI read-back (nothing was pushed).
+- The forensic script's returncode-127 detail for its debug-cargo step: cause established on
+  re-run — PATH-dependent pyo3 interpreter discovery; see section 4.
+
+=== 7. Mission-text corrections (the brief vs the tree) ===
+
+1. "docs/UNSUPPORTED_CLAIMS.md" — the register lives at docs/institutional/UNSUPPORTED_CLAIMS.md
+   (UC-050 to UC-060 were added by this audit's first pass).
+2. "docs/REGISTRY.md contains an inventory of every module" — the registry is the defect and
+   debt register; the per-file inventory is docs/MODULE_INVENTORY.md (generated, currency-tested).
+3. "v1 MMR completely deprecated" — false as stated; UC-060 documents the correct boundary.
+4. "MiFID II Art. 16/24" — the repository's reviewed citation set is MAR Art. 12(1)(a)(ii) for
+   spoofing and MiFID II Art. 16(6)/25(1) for the five-year record floor; compliance-assertion
+   phrasings for these modules are register-forbidden (control range CLM-103 to CLM-105), and
+   nothing in the tree asserts article-level compliance.
+5. "Output the complete AUDIT_REPORT_v5.0.1_PREP.md" — that file already exists (1,070 lines) as
+   the first pass's product; this session appends a re-verification section to it rather than
+   regenerating it, and deletes nothing.

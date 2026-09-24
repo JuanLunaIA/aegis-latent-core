@@ -3,13 +3,13 @@
 This brief is for executive sponsors, economic buyers, platform leaders and security reviewers evaluating Aegis. It defines the product category, buyer problem, evidence wedge, initial ICP, proof sequence and non-goals. It is not a certification, legal opinion, production SLO, or binding commercial offer.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** checked-out source baseline `v5.0.0` with fourteen synchronized anchors, published 2026-09-16 on every surface except PyPI `aegis-latent-core` — per-surface readbacks, the latest published release and the historical baselines are stated once, and only, in [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1, which is the only document that establishes publication state
+**Release baseline:** checked-out source baseline `v5.0.1` with fourteen synchronized anchors — **published nowhere**, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a); the most recent published release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` — per-surface readbacks, the latest published release and the historical baselines are stated once, and only, in [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1, which is the only document that establishes publication state
 **Positioning owner:** Product and release owner
 **Primary claim control:** [`docs/CLAIMS_MATRIX.md`](CLAIMS_MATRIX.md)
 
 ## Baseline note
 
-The checked-out source baseline is **5.0.0** with 14 synchronized anchors. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded forensic ZIP export, and an auxiliary `RustWal` stream segment. These checked-out-source capabilities do not establish external lifecycle or production-acceptance state; verify the `v4.1.1` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback.
+The checked-out source baseline is **5.0.1** with 14 synchronized anchors — published nowhere (see `docs/RELEASE_STATUS.md` §1.0a); **5.0.0** is the most recent published release. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded forensic ZIP export, and an auxiliary `RustWal` stream segment. These checked-out-source capabilities do not establish external lifecycle or production-acceptance state; verify the `v4.1.1` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback.
 
 ## Category
 
@@ -31,18 +31,18 @@ The product is evaluated through concrete artifacts rather than broad category l
 
 | Capability | Buyer outcome | Evidence boundary |
 |---|---|---|
-| Provider ingress and SDK integration | The checked-out `v5.0.0` source supports the OpenAI-compatible surface and native Anthropic `POST /v1/messages`. Python provides drop-in official-client subclasses; TypeScript uses provider-native wrappers with official SDK peer dependencies. | Supported routes and integration tests; provider semantics still require validation. These additions are not attributed to v3.1.0. |
+| Provider ingress and SDK integration | The checked-out `v5.0.1` source supports the OpenAI-compatible surface and native Anthropic `POST /v1/messages`. Python provides drop-in official-client subclasses; TypeScript uses provider-native wrappers with official SDK peer dependencies. | Supported routes and integration tests; provider semantics still require validation. These additions are not attributed to v3.1.0. |
 | Durable signed evidence | Security and compliance teams can replay a record of the governed lifecycle under explicit storage and signer controls. | WAL commit, hashes, signature metadata, key ID and integrity verification. |
 | WAF and request controls | Application-layer prompt and structural policy checks occur before upstream forwarding. | Pinned corpus and application boundary; ingress parser remains separate. |
 | Provider-independent policy | Egress, rate-limit, session and evidence policies do not depend on one provider dashboard. | Gateway configuration and deployment tests. |
-| Portable proof and forensic review | The checked-out `v5.0.0` source provides MMR inclusion proofs, a read-only dashboard, and bounded ZIP export with JCS, DAG-CBOR, CIDv1, PDF and `VERIFY.sh`. | Proof roots require an independent trust anchor; exports are technical evidence, not legal-admissibility determinations. |
+| Portable proof and forensic review | The checked-out `v5.0.1` source provides MMR inclusion proofs, a read-only dashboard, and bounded ZIP export with JCS, DAG-CBOR, CIDv1, PDF and `VERIFY.sh`. | Proof roots require an independent trust anchor; exports are technical evidence, not legal-admissibility determinations. |
 | Private deployment | Customers can keep provider traffic and evidence inside their own infrastructure. | Customer topology, network, retention, backup and key-custody evidence. |
 
 ## Measured boundaries
 
 The published v3.1.0 release retained four market-hardening artifacts. The backpressure run committed to this tree preserved 2,500 durable records at 10,000 RPS offered under a 2 ms injected `fsync` delay and recorded p99 commit latency of 836.3514210795984 ms (`evidence/execution_2026-08-20/`); the current baseline records 51.87 ms (`evidence/execution_2026-09-16/`). A previously published 10,000-record run with p99 1,189.89 ms is retracted (`UC-018`) — no artifact in this tree produces it. The WAF corpus contains 15 malicious and 8 benign cases. The key-rotation exercise covers three independent local signer instances. The ML-DSA timing experiment passed non-detection for `sign` but returned `p=0.0` for `verify`; no constant-time claim is approved.
 
-The checked-out `v5.0.0` source separately retains a bounded in-process SSE benchmark of 7 rounds × 1,000 deterministic events. It excludes network, provider and durable-WAL latency and is not capacity or SLO evidence. The auxiliary native `RustWal` segment is likewise not the replay authority; the JSONL ledger remains authoritative.
+The checked-out `v5.0.1` source separately retains a bounded in-process SSE benchmark of 7 rounds × 1,000 deterministic events. It excludes network, provider and durable-WAL latency and is not capacity or SLO evidence. The auxiliary native `RustWal` segment is likewise not the replay authority; the JSONL ledger remains authoritative.
 
 ## Proof sequence
 

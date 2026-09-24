@@ -427,3 +427,83 @@ earlier commit's state and stays as history. `verify_claims` 105 · `verify_link
 
 **Still owed and unchanged:** the signed tag `v5.0.1` (the register is not yet at zero open rows,
 and this host has no GPG secret key), and the single PR (no push credentials on this host).
+
+## 7. Post-merge addendum — 2026-09-24 (second re-verification pass)
+
+The mission order behind this log was re-issued and executed a second time at
+`9df5fd3`; every phase was re-verified in place, and one genuine gap was found
+and closed — the baseline-currency class had recurred at this bump (`REG-D56`).
+
+§1.5's restructure covered the thirteen artifacts whose sentences fused the
+target and the publication; it did not reach the wider corpus, where 53 files
+still named `5.0.0` as their checked-out source baseline. The repository-wide
+currency gate could not see them: its superseded-token was pinned to `4.1.2`
+(its own comment still said "because that is `5.0.0`"). This pass:
+
+- restructured 116 sentences into the established two-fact form (target
+  `5.0.1` — published nowhere, §1.0a; `v5.0.0` — most recent published
+  release, §1.0), with every publication fact, readback date and review stamp
+  preserved and line counts unchanged;
+- extended `tests/test_documentation_currency.py` to both superseded tokens,
+  framed `registr(?:y|ies)`, exempted the three dated records it would
+  otherwise misread, added the `_STALE_WIRING` rule for "not wired in
+  <version>" warnings, and stated the "extend at each bump" rule in the module;
+- corrected the warning-string family — the 15 `**[Not wired in 5.0.0 …]**`
+  config warnings, 4 preset comments, `docs/operations/DEPLOYMENT_PROFILES.md`
+  and one test docstring — pinned by the new
+  `test_inert_warnings_name_the_checked_out_release`;
+- corrected the one lockfile copy (`dashboard/package-lock.json` line 36) and
+  the two agent-facing files (`.github/copilot-instructions.md`,
+  `.claude/agents/release-truth-auditor.md`);
+- regenerated the AI-context manifest (83 files, anchor `fdace884…`);
+- left content reviews and review stamps to `AUD-37` (dated note added there).
+
+Re-verification results at the working tree: coverage floor reached
+(`--cov=aegis --cov-fail-under=90`, **7,425 passed, 32 skipped, 0 failed,
+TOTAL 91.30%, exit 0**); `cargo test --all-features` exits 101 by the
+documented `extension-module` link design (CI runs the per-feature
+configuration); `cargo clippy --all-targets --all-features -- -D warnings`
+exit 0; zero `TODO`/`FIXME`/`HACK` markers in first-party roots (`REG-D35`
+stands). Full record: `evidence/registry/baseline-currency_2026-09-24.txt`.
+
+Release commands (the first two commits are §5; do not run the tag or push
+until release is authorized — nothing is published for `5.0.1`, and `v5.0.0`
+remains the most recent published release):
+
+    git add -A
+    git commit -m "docs: close the baseline-currency recurrence (REG-D56); extend the currency gate"
+    git tag -a v5.0.1 -m "aegis-latent-core 5.0.1"    # release act — only on authorization
+    git push origin main --follow-tags                 # publication — only on authorization
+
+
+---
+
+## 8. PR record — 2026-09-24
+
+The commit prepared in §7's closing block above was executed after this log was
+written, and the shape changed from "commit on `main`" to a reviewable branch:
+
+- branch `fix/reg-d56-baseline-currency`; commit
+  `f7dd42f58b0a11aba6e985d2a3c3e76769d85ab3` (70 files changed, +671/−164), the
+  message carrying the full change inventory;
+- pushed to `origin`; the remote head was read back equal to the local commit;
+- opened as **PR #199** — `https://github.com/JuanLunaIA/aegis-latent-core/pull/199`,
+  base `main`, not a draft — with the verification table (full suite
+  7,425/32/0 at 91.30%, gates green, contract READY 14/14) and the
+  nothing-published boundary in the body; CI checks were pending at open time.
+
+This subsumes the earlier credential statements in this log (§5: "push
+credentials are absent on this host"; §7: "the single PR (no push credentials on
+this host)"): both were true when written and are not true now — GitHub
+credentials are configured on this host and the push was verified by readback.
+
+The tag and every release act remain **unexecuted and unauthorized**: `5.0.1` is
+still unpublished, and `v5.0.0` remains the most recent published release. The
+commands actually used (superseding §7's first two lines; the tag/merge lines
+wait for release authorization):
+
+    git switch -c fix/reg-d56-baseline-currency
+    git add -A
+    git commit -F <message-file>
+    git push -u origin fix/reg-d56-baseline-currency
+    # merge PR #199; then, only on release authorization: git tag -a v5.0.1

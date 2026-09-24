@@ -18,6 +18,11 @@ anchor of the fourteen the release contract checks — so a baseline bump fails
 here until every navigation artifact says the same thing, and a stale artifact
 cannot pass by agreeing with another stale artifact.
 
+The repository-wide scan below carries a *superseded-token set* — currently
+`4.1.2` and `5.0.0` — and the set must be extended at each baseline bump: after
+the `5.0.1` bump, `5.0.0` became the version no document may present as the
+checked-out baseline (REG-D56).
+
 Boundaries, stated rather than implied: this pins *agreement on the baseline and
 on coverage*, not the truth of any individual sentence. Historical statements
 ("parent `fdace884…` retains fourteen `4.0.0` anchors", "prior observation at
@@ -159,14 +164,17 @@ def subprocess_listing() -> list[str]:
 
 
 # The class REG-D23 was re-opened for: a survey of every tracked document found it
-# alive at ~30 sites outside the navigation artifacts the first pass fixed. The
-# rule that generalises is *framing*: `4.1.2` may appear anywhere as the release
-# that PyPI still serves for the gateway distribution, as the most recent version
-# published on every surface, or as history — it may not appear as the checked-out
-# / source / current baseline, because that is `5.0.0`.
+# alive at ~30 sites outside the navigation artifacts the first pass fixed, and it
+# recurred at the next bump (REG-D56): the token set was pinned to `4.1.2`, so
+# `5.0.0` sailed through as the "checked-out baseline" in 50 sentences. The rule
+# that generalises is *framing*: a superseded version — `4.1.2` (the release PyPI
+# still serves for the gateway distribution) or `5.0.0` (previous source target,
+# most recent published release) — may appear as a published, read-back, or
+# historical fact; it may not appear as the checked-out / source / current
+# baseline, because that is `5.0.1`.
 _FRAMED_WITH = re.compile(
     r"published|read ?back|most recent|latest|historical|prior|remains|still|"
-    r"gateway distribution|PyPI|npm|registry|4\.0\.|version (?:list|history)|"
+    r"gateway distribution|PyPI|npm|registr(?:y|ies)|4\.0\.|version (?:list|history)|"
     # Each of the following names a way the line makes its own meaning explicit:
     # install behaviour that is true today, an upgrade span, a defect being
     # reported, a re-verification, or a dated measurement row.
@@ -174,8 +182,15 @@ _FRAMED_WITH = re.compile(
     r"re-checked|not the checked-out baseline|20\d\d-\d\d-\d\d",
     re.I,
 )
-_UNFRAMED_AS = re.compile(r"\bv?4\.1\.2\b", re.I)
+_UNFRAMED_AS = re.compile(r"\bv?(?:4\.1\.2|5\.0\.0)\b", re.I)
 _PRESENTS_AS_BASELINE = re.compile(r"source|checked-out|current|baseline", re.I)
+
+# The warning-string family found by the same re-verification: user-facing
+# "not wired in <version>" text must name the checked-out release, not a
+# superseded one (REG-D56).
+_STALE_WIRING = re.compile(
+    r"(?:not wired in|not read by any code path in)\s+`?v?(?:4\.1\.2|5\.0\.0)\b", re.I
+)
 
 CURRENCY_SCAN_EXEMPT = {
     "docs/REGISTRY.md",  # the register itself, dated by its own rows
@@ -186,6 +201,12 @@ CURRENCY_SCAN_EXEMPT = {
     # surfaces; every one of its rows quotes the
     # stale text it reports as corrected
     "AUDIT_REPORT_v5.0.1_PREP.md",
+    "IMPLEMENTATION_LOG_5.0.1.md",  # dated release-process record; quotes the
+    # pre-bump state it describes
+    "STATE_MANIFEST.md",  # dated measurement snapshot; every value is bound to
+    # its commit and time
+    "docs/commercial/ARTIFACT_INVENTORY.md",  # self-declared pre-change snapshot;
+    # its markers read in the past tense
 }
 
 
@@ -204,7 +225,7 @@ def _tracked_documents() -> list[str]:
     ]
 
 
-def test_repository_wide_no_document_presents_4_1_2_as_the_baseline() -> None:
+def test_repository_wide_no_document_presents_a_superseded_version_as_the_baseline() -> None:
     offenders: list[str] = []
     for relative in _tracked_documents():
         for number, line in enumerate(_text(relative).splitlines(), start=1):
@@ -212,14 +233,19 @@ def test_repository_wide_no_document_presents_4_1_2_as_the_baseline() -> None:
             # license an unframed baseline claim in one of its sentences. Judge by
             # sentence, which is the unit a reader takes the claim from.
             for sentence in re.split(r"(?<=[.;])\s+", line):
+                if _STALE_WIRING.search(sentence):
+                    offenders.append(f"{relative}:{number}: {sentence.strip()[:170]}")
+                    continue
                 if not _UNFRAMED_AS.search(sentence) or not _PRESENTS_AS_BASELINE.search(sentence):
                     continue
                 if _FRAMED_WITH.search(sentence):
                     continue
                 offenders.append(f"{relative}:{number}: {sentence.strip()[:170]}")
     assert not offenders, (
-        "documents present `4.1.2` as the checked-out/source/current baseline "
-        "without framing it as the published/historical release:\n  " + "\n  ".join(offenders[:15])
+        "documents present a superseded version (`4.1.2` / `5.0.0`) as the "
+        "checked-out/source/current baseline without framing it as the "
+        "published/historical release, or name one in a present-tense "
+        '"not wired in" warning:\n  ' + "\n  ".join(offenders[:15])
     )
 
 

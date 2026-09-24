@@ -1068,3 +1068,43 @@ Everything below is appended to the registers in the same commit as this report;
 ---
 
 *End of report. Every P1 in §1 was reproduced first-hand on this host; every cited line in §3 was re-printed from disk during the audit; the two places where the delegated scans were imprecise (a `CLAIMS_MATRIX` line number, and the hardware-token token_hash mechanism) are corrected inline and marked.*
+
+---
+
+## 9. Re-verification at `9df5fd3` (2026-09-24)
+
+This mission order was re-issued on 2026-09-24. It was executed as a **verification pass at current `main` (`9df5fd3`)** rather than a second from-scratch audit: this report is the first pass's product, and re-running the same scans over an equivalent tree would produce a second copy of it, not new evidence. Every line below is an executed output on the stated host; the raw captures are in [`evidence/registry/reanchor_2026-09-24.txt`](evidence/registry/reanchor_2026-09-24.txt).
+
+**Registry state read first.** §4.6's `[AUDIT]` block: 30 rows, all terminal (`REG-D05`–`REG-D34`; the last three `FIXED` 2026-09-22). At `9df5fd3`: `OPEN` = 0, `SEED` = 0. Audit backlog: `AUD-01`–`AUD-30` `[x]`; open: `AUD-35` [P2] inert settings, `AUD-36` [P2] MiFID/MAR wire-or-retire, `AUD-37` [P3] date-bound documents, each with owner and its own quoted unblock path in `docs/MODULE_INVENTORY.md`.
+
+**Battery (all exit 0; extension built with CI's `maturin build --release --features extension-module`).**
+
+| Check | Result |
+|---|---|
+| `ruff check` / `format --check` | pass; 601 files formatted |
+| `bandit -lll` | 0 issues; 54,905 LOC scanned |
+| `mypy --strict aegis` / `scripts tools` | 208 + 41 files clean |
+| `verify_docs` / `verify_claims` / `verify_links` | 0 findings / 106 claims 0 findings / 1,405 links and anchors |
+| `verify_documentation --strict` | PASS, 27 required files, 0 errors, 0 warnings |
+| reachability / release contract / AI-context / action pins | PASS (225/114/34/77) / READY, fourteen anchors at 5.0.1 / 83 files / PASS 123 |
+| corpus audit | PASS — 1,267 files, 0 institutional placeholders, 0 NFC/CRLF/UTF-8 issues |
+| module inventory | current — 301 files, owner `@JuanLunaIA` for all 301 |
+| full suite (`HERMES_SANDBOX=true`, `-n auto`, extension installed) | **7,425 passed, 32 skipped, 0 failed** (229.4 s) |
+| targeted Phase-1 selection (12 files) | **246 passed** |
+| streaming/teardown explicit | `test_streaming_teardown.py` 8 passed; `test_proxy_streaming.py` 26 passed |
+| sdk/python (CI steps, isolated venv) | ruff, mypy, mypy `--strict` clean; **20 passed** |
+| sdk/typescript (CI steps) | **26 passed** (6 files); audit 0 vulnerabilities; pack OK |
+| dashboard (CI steps, canary envs) | **6 passed** (3 files); next build OK; audit 0 vulnerabilities; bundle-secrets 52 files searched, 0 findings |
+| `cargo test --release` / `--lib` (debug) | 90 + 3 passed / 90 passed |
+| `cargo clippy --locked --all-targets --all-features -- -D warnings` | exit 0 |
+| `tools/forensic/forensic_checks.py` | exit 0; `python_syntax_errors` 0 |
+
+**Phase-1 properties, by the brief's own items.** Concurrency and mmap: the native WAL's writer-exclusion and frame-arithmetic tests pass in release and debug (`second_handle_is_refused_while_a_writer_holds_the_segment`, `header_end_is_bounded_and_never_wraps`, `concurrent_appends_publish_only_complete_frames`); the mapping itself stays outside Miri and Kani by design (`docs/formal/FORMAL_VERIFICATION_LIMITS.md`). Unbounded allocations: admission gate and bound tests pass, including `test_large_logical_stream_retained_memory_is_bounded`. Fence-on-cancel: not a term in this tree; the property is `TerminalCommitHandoff` (`aegis/proxy/streaming.py:83`) plus `test_cancellation_closes_upstream_and_commits_once` and the eight teardown tests — all pass. Non-finite floats: refused, not sanitised (`aegis/core/forensic_bundle.py:92-93,145-146`). fsync/msync ordering: as recorded (`docs/operations/STORAGE_REQUIREMENTS.md`; `wal.rs:222-228`), with `test_coalesced_commit.py`. Weak RNG: no finding — every key and nonce path uses `os.urandom`/`secrets`; the single `random` use is the red-team scenario picker under `nosec B311`. Hardcoded secrets: no live credential; all pattern hits are synthetic fixtures. Stack-trace hygiene: `test_error_response_hygiene.py` passes. MMR v1: "completely deprecated" is contrary to the record and must not be written; `UC-060` publishes the residual, `CLM-064` states the position.
+
+**Corrections to the re-issued brief (re-checked; same as the first pass established).** `docs/UNSUPPORTED_CLAIMS.md` is `docs/institutional/UNSUPPORTED_CLAIMS.md`; `docs/REGISTRY.md` is the defect register, not the module inventory (`docs/MODULE_INVENTORY.md`, currency-tested); "v1 completely deprecated" contradicts the record; "MiFID II Art. 16/24" is not the repository's citation set (MAR Art. 12(1)(a)(ii); MiFID II Art. 16(6)/25(1)), and article-level compliance phrasings for these modules are register-forbidden (`CLM-103`–`CLM-105`). No regulatory wording was added anywhere by this pass.
+
+**Findings of this pass.** No new code defect. One candidate nit, listed and deliberately not applied: `aegis/core/market_abuse_detector.py:8-9` cites `AUD-20` (closed) for its unwired state, while the live wire-or-retire ticket is `AUD-36`; AUD-20's closure names AUD-36, so the pointer traverses — a refresh, not a defect.
+
+**Not run here, stated rather than implied.** The zk-spartan feature tests (pre-ADX SIGILL boundary, `REG-D04`); no fuzzing, Miri or Kani; no live-hardware cryptography (no HSM/TPM/PKCS#11 here); no CI read-back (nothing was pushed).
+
+*Append-only: nothing above this section was modified by the re-verification; no finding of the first pass was re-opened and none was withdrawn.*

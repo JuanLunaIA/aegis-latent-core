@@ -1,10 +1,10 @@
-# Compliance Contribution Map — Aegis Latent Core v5.0.0 Source Baseline
+# Compliance Contribution Map — Aegis Latent Core v5.0.1 Source Baseline
 
 This document explains which **implemented technical behaviors** may contribute evidence to a customer security, privacy, AI-governance, or audit program. It is written for compliance officers, security reviewers, procurement teams, and counsel. It does **not** determine compliance, certification, authorization, legal admissibility, or contractual sufficiency.
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out source metadata is synchronized at `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core`; `v4.1.2` remains the most recent version published on every surface
+**Source baseline:** checked-out source metadata is synchronized at `v5.0.1` — **published nowhere**, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a). The most recent published release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core`; `v4.1.2` remains the most recent version published on every surface
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, compliance result, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical
 **Owner:** Release owner and qualified customer reviewer

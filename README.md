@@ -257,7 +257,7 @@ pip install -e ./sdk/python
 cd sdk/typescript && npm ci && npm run build
 ```
 
-**Registry state.** Both registries carry `aegis-latent-sdk` at `5.0.0`, matching this source tree: the 2026-09-16 readback recorded in [Release Status](docs/RELEASE_STATUS.md) §1.0 found PyPI `aegis-latent-sdk` `5.0.0` and npm `aegis-latent-sdk` `5.0.0`. **The gateway distribution is the exception:** PyPI `aegis-latent-core` was not published at `5.0.0` and still resolves to `4.1.2`, so `pip install aegis-latent-core` gets `4.1.2` code — not what this tree documents. Take the gateway from the GitHub Release assets or GHCR (`ghcr.io/juanlunaia/aegis-latent-core:5.0.0`) instead. The npm version list skips `4.1.1`, whose publish step failed.
+**Registry state.** Both registries carry `aegis-latent-sdk` at `5.0.0`, the version matching the published `5.0.0` release — this source tree's SDK is `5.0.1`, published nowhere yet ([Release Status](docs/RELEASE_STATUS.md) §1.0a): the 2026-09-16 readback recorded in [Release Status](docs/RELEASE_STATUS.md) §1.0 found PyPI `aegis-latent-sdk` `5.0.0` and npm `aegis-latent-sdk` `5.0.0`. **The gateway distribution is the exception:** PyPI `aegis-latent-core` was not published at `5.0.0` and still resolves to `4.1.2`, so `pip install aegis-latent-core` gets `4.1.2` code — not what this tree documents. Take the gateway from the GitHub Release assets or GHCR (`ghcr.io/juanlunaia/aegis-latent-core:5.0.0`) instead. The npm version list skips `4.1.1`, whose publish step failed.
 
 **Proof verification caution.** A proof verified against a root supplied by the same gateway that produced it establishes internal consistency only. Obtain the trusted root through an independent channel, or the verification is circular.
 

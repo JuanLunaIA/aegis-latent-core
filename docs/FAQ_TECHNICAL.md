@@ -3,14 +3,14 @@
 This FAQ answers implementation and operating questions for developers and platform engineers. Each answer states the current boundary and links to the implementation or verification path. It is not a substitute for the architecture or deployment guides.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** `v5.0.0`, **published 2026-09-16 on every surface except PyPI `aegis-latent-core`**; `v4.1.2` remains the most recent version published on every surface. External release status always requires independent readback, recorded in `docs/RELEASE_STATUS.md` §1.0 and §1.1
-**Source baseline:** `v5.0.0`; the source version does not by itself prove that the tag, packages, images, or attestations were published — each was read back separately, and PyPI `aegis-latent-core` was **not** published at `5.0.0`
+**Release baseline:** `v5.0.1` — **published nowhere**, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a). The most recent published release is `v5.0.0`, **published 2026-09-16 on every surface except PyPI `aegis-latent-core`**; `v4.1.2` remains the most recent version published on every surface. External release status always requires independent readback, recorded in `docs/RELEASE_STATUS.md` §1.0 and §1.1
+**Source baseline:** `v5.0.1` — **published nowhere**, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a). The most recent published release is `v5.0.0`; the source version does not by itself prove that the tag, packages, images, or attestations were published — each was read back separately, and PyPI `aegis-latent-core` was **not** published at `5.0.0`
 **Retained evidence baseline:** `v3.1.0`; retained measurements are historical evidence for that release only
 **Comparison anchor:** `fdace8844568eb788216740b2cb5daf187d99d3b` (the pre-v4.0.2 source snapshot; its active version anchors were `4.0.0`)
 **Audience:** Developers, platform engineers and technical evaluators
 **Root document:** [`README.md`](../README.md)
 
-Answers about implementation behavior refer to the `v5.0.0` source unless they identify retained evidence. Publication status must be verified independently against the Git tag, GitHub Release, package registries, OCI registry, and their attestations. All retained numeric measurements in this FAQ belong to the published `v3.1.0` historical evidence baseline; they must not be promoted to v4 capacity, latency, availability, detection, security, or SLO claims without a v4 rerun and applicable target-environment acceptance evidence.
+Answers about implementation behavior refer to the `v5.0.1` source unless they identify retained evidence. Publication status must be verified independently against the Git tag, GitHub Release, package registries, OCI registry, and their attestations. All retained numeric measurements in this FAQ belong to the published `v3.1.0` historical evidence baseline; they must not be promoted to v4 capacity, latency, availability, detection, security, or SLO claims without a v4 rerun and applicable target-environment acceptance evidence.
 
 ## What does Aegis do?
 

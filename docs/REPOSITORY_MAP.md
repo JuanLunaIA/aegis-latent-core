@@ -7,7 +7,7 @@
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** previously published `v3.1.0` artifacts and retained measurements remain historical
 
-Read the root [`README.md`](../README.md) first. Paths below describe the checked-out `v5.0.0` source baseline unless a row is explicitly historical. Source paths and version metadata do not imply that corresponding packages or images are available from a public registry or that an OCI image has been published.
+Read the root [`README.md`](../README.md) first. Paths below describe the checked-out `v5.0.1` source baseline unless a row is explicitly historical. Source paths and version metadata do not imply that corresponding packages or images are available from a public registry or that an OCI image has been published.
 
 ## Runtime and product surfaces
 

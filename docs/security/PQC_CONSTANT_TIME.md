@@ -1,10 +1,10 @@
-# ML-DSA-65 Timing Assessment — Aegis Latent Core v5.0.0 Source Baseline
+# ML-DSA-65 Timing Assessment — Aegis Latent Core v5.0.1 Source Baseline
 
 This document is for cryptography reviewers and security architects evaluating the native ML-DSA-65 timing boundary. It defines the experiment, statistical interpretation, retained result and blocked claims. It does not prove constant-time execution, side-channel absence, FIPS 140 validation or legal admissibility.
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** four-layer truth model
-**Source baseline:** `v5.0.0` with fourteen synchronized anchors, **published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)** — source metadata does not establish external lifecycle state, so each surface was read back separately. The most recent published release is `v4.1.2`, whose tag, GitHub Release, PyPI, npm, OCI digest and signature objects were read back on 2026-09-04 and are recorded in `docs/RELEASE_STATUS.md` §1.1; `cosign verify` and `gh attestation verify` were not run
+**Source baseline:** `v5.0.1` with fourteen synchronized anchors — **published nowhere**, read back 2026-09-21 (`docs/RELEASE_STATUS.md` §1.0a). The most recent published release is `v5.0.0`, **published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)** — source metadata does not establish external lifecycle state, so each surface was read back separately. The most recent version published on **every** surface is `v4.1.2`, whose tag, GitHub Release, PyPI, npm, OCI digest and signature objects were read back on 2026-09-04 and are recorded in `docs/RELEASE_STATUS.md` §1.1; `cosign verify` and `gh attestation verify` were not run
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` with `4.0.0` anchors
 **Previous public GitHub Release:** `v4.0.1` lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Observed registries:** PyPI/npm `4.0.0`, without workflow provenance attribution

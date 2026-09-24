@@ -150,7 +150,7 @@ class EnterpriseSettings(BaseSettings):
     webhook_url: str = Field(
         default="",
         description=(
-            "**[Not wired in 5.0.0 \u2014 no code path reads this field; setting it enforces nothing (UC-066).]** "
+            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-066).]** "
             "POST alert payloads here (Slack, PagerDuty, SIEM ingest). "
             "Not read by any code path; see AUD-35 in ROADMAP.md."
         ),

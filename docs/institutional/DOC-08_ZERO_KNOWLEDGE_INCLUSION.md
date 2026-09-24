@@ -1,7 +1,7 @@
 # DOC-08 — Zero-Knowledge Inclusion Proof: Construction and Epistemic Boundary
 
 **Document ID:** `DOC-08`
-**Source boundary:** checked-out source metadata is synchronized at `v5.0.0`; it does not prove external tag, release, registry, OCI, deployment, or acceptance state
+**Source boundary:** checked-out source metadata is synchronized at `v5.0.1`; it does not prove external tag, release, registry, OCI, deployment, or acceptance state
 **Canonical language:** US English
 **Review method:** construction review against `aegis/core/mmr.py` and the circuit source; no third-party cryptographic audit has been performed
 **Normative claim control:** [`docs/CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)
