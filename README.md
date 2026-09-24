@@ -72,6 +72,8 @@ Details: [Architecture](docs/architecture/ARCHITECTURE.md) · [Failure Semantics
 
 Real measurements from the retained 2026-09-24 artifact ([`evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json`](evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json)), taken against real backends — a real WAL `fsync` per commit — on one shared, unpinned four-CPU `x86_64` container (Linux, CPython 3.11.15). Reproduce with `scripts/run_benchmarks_5.0.1.py --json`.
 
+### Verified metrics
+
 | Metric | Result (2026-09-24) | What it measures |
 | --- | --- | --- |
 | Commit latency (P99) | **1.22 ms** (p50 0.62 · p95 1.00 · max 4.18 ms, n = 1,000) | MMR append + HMAC sign + one real WAL `fsync`, per commit |
