@@ -127,9 +127,12 @@ dev = [
     # The `metrics` extra is installed by no job, so every one of those skipped.
     "prometheus-client>=0.20.0",
 ]
-# ── Full install (all optional extras) ───────────────────────────────────────
+# ── Full install (all optional runtime extras) ───────────────────────────────
+# `dev` is deliberately absent (REG-D74): `[all]` used to pull pytest, ruff,
+# mypy, bandit, pip-audit and hypothesis into a runtime install. Contributors
+# install `.[dev]` explicitly, as CI does.
 all = [
-    "aegis-latent-core[storage-all,vault,oidc,gpu,metrics,otel,pqc,dev]",
+    "aegis-latent-core[storage-all,vault,oidc,gpu,metrics,otel,pqc]",
 ]
 
 [project.scripts]

@@ -62,7 +62,7 @@ try:  # Windows byte-range locking. Absent on POSIX; see _lock_wal_fd.
 except ImportError:  # pragma: no cover - platform dependent
     _msvcrt_module = None  # type: ignore[assignment]
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -1120,6 +1120,10 @@ class CryptographicAuditLedger:
         self.chain: deque[AuditNode] = deque(maxlen=max_memory_nodes)
         self._window_anchor_hash = "0" * 64
         self._lock = Lock()
+        # Called with each node once it is durable (after its fsync), never for
+        # replayed nodes. Used by aegis.core.ha to sequence evidence across
+        # replicas; a listener cannot affect or fail a commit.
+        self._commit_listeners: list[Callable[[AuditNode], None]] = []
         # Guards *which descriptor is current*, not the ledger state. The
         # group-commit syncer runs with `_lock` released — that is the whole
         # point — so it needs something to hold the WAL handle still against a
@@ -1423,6 +1427,7 @@ class CryptographicAuditLedger:
         # each. The node is not returned — not reported committed — until its
         # record is on stable storage.
         self._await_durable(ticket)
+        self._notify_committed(node)
         return node
 
     def commit_rejection(
@@ -1566,6 +1571,7 @@ class CryptographicAuditLedger:
         # each. The node is not returned — not reported committed — until its
         # record is on stable storage.
         self._await_durable(ticket)
+        self._notify_committed(node)
         return node
 
     def commit_state(
@@ -1836,6 +1842,7 @@ class CryptographicAuditLedger:
         # each. The node is not returned — not reported committed — until its
         # record is on stable storage.
         self._await_durable(ticket)
+        self._notify_committed(node)
         return node
 
     def verify_integrity(self) -> tuple[bool, int | None]:
@@ -2647,6 +2654,46 @@ class CryptographicAuditLedger:
                 # there is nothing left here to force.
                 return
             self._fsync(handle.fileno())
+
+    def add_commit_listener(self, listener: Callable[[AuditNode], None]) -> None:
+        """Register *listener* to receive every node after it is on stable storage.
+
+        Listeners run on the committing thread, after the commit is durable and
+        before it returns, so they must be quick and must not block; exceptions
+        are logged and swallowed. Notification order across concurrent commits
+        is not chain order — a consumer that needs chain order follows
+        ``prev_hash`` linkage (``aegis.core.ha.GlobalSequencer`` does).
+        """
+        with self._lock:
+            self._commit_listeners.append(listener)
+
+    def _notify_committed(self, node: AuditNode) -> None:
+        for listener in tuple(self._commit_listeners):
+            try:
+                listener(node)
+            except Exception:
+                logger.exception("commit listener failed; the commit itself is durable")
+
+    def iter_wal_nodes(self) -> Iterator[AuditNode]:
+        """Yield every node recorded in the WAL, oldest first, across all segments.
+
+        Read-only and independent of the in-memory window, so a consumer can
+        reach nodes the window has evicted. Stops at the first unparseable line,
+        as replay does (replay also latches ``wal_corrupt`` there).
+        """
+        files = self._segment_paths()
+        if os.path.exists(self.persistence_path):
+            files.append(self.persistence_path)
+        for path in files:
+            with open(path) as handle:
+                for raw in handle:
+                    raw = raw.strip()
+                    if not raw:
+                        continue
+                    try:
+                        yield AuditNode.from_dict(json.loads(raw))
+                    except (json.JSONDecodeError, TypeError, KeyError):
+                        return
 
     def _await_durable(self, ticket: int | None) -> None:
         """Block until a ticketed record is on stable storage.

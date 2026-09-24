@@ -5,7 +5,9 @@
 
 from __future__ import annotations
 
+import os
 import sys
+from collections.abc import Iterator
 from unittest.mock import patch
 
 import pytest
@@ -17,6 +19,25 @@ from aegis.core.rt_scheduler import (
     SchedulingPolicy,
     SchedulingResult,
 )
+
+
+@pytest.fixture(autouse=True)
+def _restore_scheduling_policy() -> Iterator[None]:
+    """Put the test thread's scheduling policy back after each test (REG-D85).
+
+    These tests call the real sched_setscheduler. Where the process may (root, or
+    CAP_SYS_NICE) the pytest thread really became SCHED_FIFO 50 and stayed so;
+    with test_cpu_affinity also pinning it to CPU 0, the first later test that
+    races two threads (tests/test_audit_read_snapshot.py) livelocked the run.
+    """
+    if not hasattr(os, "sched_getscheduler"):
+        yield
+        return
+    policy = os.sched_getscheduler(0)
+    param = os.sched_getparam(0)
+    yield
+    os.sched_setscheduler(0, policy, param)
+
 
 # ── get_current_policy() ──────────────────────────────────────────────────────
 

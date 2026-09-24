@@ -13,7 +13,6 @@ capability is absent or the platform is not Linux.
 from __future__ import annotations
 
 import ctypes
-import ctypes.util
 import logging
 import os
 import sys
@@ -21,19 +20,17 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from aegis.core.libc import load_libc
+
 logger = logging.getLogger(__name__)
 
 # ── Optional libc import ──────────────────────────────────────────────────────
 
-try:
-    _libc_name = ctypes.util.find_library("c")
-    if _libc_name is None:
-        raise OSError("libc not found")
-    _libc = ctypes.CDLL(_libc_name, use_errno=True)
-    HAS_LIBC: bool = True
-except OSError:
-    _libc = None  # type: ignore[assignment]
-    HAS_LIBC = False
+# Never ctypes.util.find_library: it executes ldconfig at import (REG-D83).
+_loaded = load_libc()
+HAS_LIBC: bool = _loaded is not None
+# Callers check HAS_LIBC before use, exactly as when this was a try/except.
+_libc: ctypes.CDLL = _loaded  # type: ignore[assignment]
 
 # ── Linux scheduling constants ────────────────────────────────────────────────
 

@@ -42,8 +42,18 @@ class TestRetentionPolicies:
         assert "Dodd-Frank Section 727" in DODD_FRANK_SWAP.citations
 
     def test_mifid_full_citations(self):
-        assert "MiFID II Article 25(1)" in MIFID_ARTICLE_25_FULL.citations
+        assert (
+            "MiFIR (Regulation (EU) No 600/2014) Article 25(1)" in MIFID_ARTICLE_25_FULL.citations
+        )
+        assert any("Article 16(7)" in c for c in MIFID_ARTICLE_25_FULL.citations)
         assert "MiFID II RTS 6 / RTS 7 (order records)" in MIFID_ARTICLE_25_FULL.citations
+
+    def test_no_policy_cites_directive_article_25_as_record_keeping(self):
+        # REG-D77: Directive 2014/65/EU Art. 25(1) is staff competence; the
+        # five-year order/transaction record duty is MiFIR Art. 25(1).
+        for policy in (MIFID_ARTICLE_25_STANDARD, MIFID_ARTICLE_25_FULL):
+            assert "MiFID II Article 25(1)" not in policy.citations
+            assert not any(c.startswith("MiFID II") and "25(1)" in c for c in policy.citations)
 
     def test_policies_are_frozen(self):
         with pytest.raises((AttributeError, TypeError)):
@@ -289,7 +299,7 @@ class TestFinancialCommsExport:
     def test_export_regulatory_frameworks_from_policy(self):
         keeper = MiFIDRecordKeeper()
         ex = keeper.export(_KEY)
-        assert "MiFID II Article 25(1)" in ex.regulatory_frameworks
+        assert "MiFIR (Regulation (EU) No 600/2014) Article 25(1)" in ex.regulatory_frameworks
 
     def test_export_custom_frameworks(self):
         keeper = self._make_keeper_with_records()

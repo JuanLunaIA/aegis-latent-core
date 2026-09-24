@@ -60,9 +60,7 @@ def test_apply_filter_non_sandbox_libc_not_found():
     guard._degraded_mode = False
     guard.profile = SeccompGuard.DEFAULT_PROFILE
 
-    import ctypes.util as _ctu
-
-    with patch.object(_ctu, "find_library", return_value=None):
+    with patch("aegis.core.seccomp_guard.load_libc", return_value=None):
         with pytest.raises(RuntimeError, match="Seccomp enforcement failed"):
             guard.apply_filter()
 
@@ -82,11 +80,8 @@ def test_apply_filter_non_sandbox_prctl_fails():
     mock_libc = MagicMock()
     mock_libc.prctl.return_value = -1
 
-    import ctypes.util as _ctu
-
     with (
-        patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
-        patch("ctypes.CDLL", return_value=mock_libc),
+        patch("aegis.core.seccomp_guard.load_libc", return_value=mock_libc),
     ):
         with pytest.raises(RuntimeError, match="Seccomp enforcement failed"):
             guard.apply_filter()
@@ -110,11 +105,8 @@ def test_apply_filter_non_sandbox_libseccomp_unavailable():
     mock_sb = MagicMock()
     mock_sb.enabled = False  # libseccomp not available
 
-    import ctypes.util as _ctu
-
     with (
-        patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
-        patch("ctypes.CDLL", return_value=mock_libc),
+        patch("aegis.core.seccomp_guard.load_libc", return_value=mock_libc),
         patch("aegis.core.sandbox_l1.SeccompSandbox", return_value=mock_sb),
     ):
         result = guard.apply_filter()
@@ -141,11 +133,8 @@ def test_apply_filter_non_sandbox_success():
     mock_sb.enabled = True
     mock_sb.apply_filter.return_value = True
 
-    import ctypes.util as _ctu
-
     with (
-        patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
-        patch("ctypes.CDLL", return_value=mock_libc),
+        patch("aegis.core.seccomp_guard.load_libc", return_value=mock_libc),
         patch("aegis.core.sandbox_l1.SeccompSandbox", return_value=mock_sb),
     ):
         result = guard.apply_filter()
@@ -172,11 +161,8 @@ def test_apply_filter_non_sandbox_filter_load_fails():
     mock_sb.enabled = True
     mock_sb.apply_filter.return_value = False  # load failed
 
-    import ctypes.util as _ctu
-
     with (
-        patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
-        patch("ctypes.CDLL", return_value=mock_libc),
+        patch("aegis.core.seccomp_guard.load_libc", return_value=mock_libc),
         patch("aegis.core.sandbox_l1.SeccompSandbox", return_value=mock_sb),
     ):
         with pytest.raises(RuntimeError, match="Seccomp enforcement failed"):
@@ -209,8 +195,6 @@ def test_apply_filter_passes_kill_action_to_sandbox():
     mock_sb.enabled = True
     mock_sb.apply_filter.return_value = True
 
-    import ctypes.util as _ctu
-
     constructor_kwargs: dict = {}
 
     def _capture_sb(*args, **kwargs):
@@ -218,8 +202,7 @@ def test_apply_filter_passes_kill_action_to_sandbox():
         return mock_sb
 
     with (
-        patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
-        patch("ctypes.CDLL", return_value=mock_libc),
+        patch("aegis.core.seccomp_guard.load_libc", return_value=mock_libc),
         patch("aegis.core.sandbox_l1.SeccompSandbox", side_effect=_capture_sb),
     ):
         guard.apply_filter()
@@ -245,8 +228,6 @@ def test_apply_filter_passes_profile_syscalls_to_sandbox():
     mock_sb.enabled = True
     mock_sb.apply_filter.return_value = True
 
-    import ctypes.util as _ctu
-
     captured_syscalls: list = []
 
     def _capture_sb(*args, **kwargs):
@@ -254,8 +235,7 @@ def test_apply_filter_passes_profile_syscalls_to_sandbox():
         return mock_sb
 
     with (
-        patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
-        patch("ctypes.CDLL", return_value=mock_libc),
+        patch("aegis.core.seccomp_guard.load_libc", return_value=mock_libc),
         patch("aegis.core.sandbox_l1.SeccompSandbox", side_effect=_capture_sb),
     ):
         guard.apply_filter()

@@ -12,6 +12,8 @@ import os
 import sys
 from dataclasses import dataclass
 
+from aegis.core.libc import load_libc
+
 logger = logging.getLogger(__name__)
 
 # Constants re-exported for callers that import them from this module.
@@ -19,6 +21,35 @@ SCMP_ACT_KILL = 0x00000000  # kills only the calling thread: a miss hangs the pr
 SCMP_ACT_KILL_PROCESS = 0x80000000  # a miss exits with SIGSYS, visibly and restartably
 SCMP_ACT_ALLOW = 0x7FFF0000
 PR_SET_NO_NEW_PRIVS = 38
+
+# REG-D67: io_uring is not allowlisted — its submitted operations run in the
+# kernel without passing through this filter, so permitting it would hollow the
+# control out. A ring that already exists when the filter loads is fatal, though:
+# libuv (under uvloop) calls io_uring_enter on it later and the process dies with
+# SIGSYS. New rings are refused with EPERM after lockdown (libuv falls back to
+# epoll when io_uring_setup fails); an existing ring is detected before lockdown.
+IO_URING_ERRNO_SYSCALLS: tuple[str, ...] = ("io_uring_setup",)
+_IO_URING_FD_TARGET = "anon_inode:[io_uring]"
+
+
+class IoUringActiveError(RuntimeError):
+    """An io_uring instance is open, so loading the filter would kill the process."""
+
+
+def open_io_uring_fds(fd_dir: str = "/proc/self/fd") -> list[int]:
+    """Return this process's open io_uring file descriptors (empty off Linux)."""
+    try:
+        entries = os.listdir(fd_dir)
+    except OSError:
+        return []
+    found: list[int] = []
+    for entry in entries:
+        try:
+            if os.readlink(os.path.join(fd_dir, entry)) == _IO_URING_FD_TARGET:
+                found.append(int(entry))
+        except (OSError, ValueError):
+            continue  # closed between listdir and readlink, or not an fd entry
+    return sorted(found)
 
 
 @dataclass
@@ -129,6 +160,20 @@ class SeccompGuard:
             "shutdown",  # HTTP connection close
             "tgkill",  # thread-directed signal during shutdown
             "exit",  # a single thread ending (exit_group ends the process)
+            # ── Hostname resolution (REG-D78). The list above came from a
+            # loopback-only run, so no name was ever resolved; the shipped image
+            # talking to a named upstream or Redis was killed on its first request.
+            # Found by running the image's whole request flow under SCMP_ACT_LOG
+            # (scripts/container_smoke_test.py): these two were the only misses.
+            "uname",  # glibc res_init -> gethostname() for the resolver's default domain
+            "sendmmsg",  # glibc getaddrinfo sends the A and AAAA queries in one call
+            # ── Graceful shutdown (REG-D84). asyncio.Runner.close() runs
+            # loop.run_until_complete(shutdown_asyncgens()) after the app has
+            # stopped, and uvloop's run_until_complete creates a socketpair for
+            # its signal wake-up: every SIGTERM ended in SIGSYS (exit 159) once
+            # the lifespan had finished. A connected local pair only — no
+            # address, no network reach.
+            "socketpair",
             # clone is added separately and only with CLONE_THREAD: the ASGI
             # threadpool (sync endpoints, to_thread) spawns threads per request;
             # process creation stays impossible.
@@ -166,11 +211,13 @@ class SeccompGuard:
         except ImportError:
             pass
 
-        # Check for existence of common sandbox markers
-        for marker in ["/.hermes_sandbox_marker", "/.dockerenv"]:
-            if os.path.exists(marker):
-                return True
-        return False
+        # An explicit test-harness marker only. "/.dockerenv" used to be listed
+        # here too, which switched the filter off in every Docker container —
+        # and with the image's strict AEGIS_REQUIRE_SECCOMP=true the gateway
+        # then refused to start (REG-D68). A container is not a reason to drop
+        # the control: this filter stacks on the runtime's profile, and the
+        # stricter action of the two wins.
+        return os.path.exists("/.hermes_sandbox_marker")
 
     def apply_filter(self) -> bool:
         """Apply the Seccomp-BPF filter for this guard's profile.
@@ -186,13 +233,23 @@ class SeccompGuard:
             return False
 
         try:
-            # 1. Set PR_SET_NO_NEW_PRIVS (required before the seccomp filter).
-            import ctypes.util
+            # 0. Refuse to lock down over a live io_uring (REG-D67): checked before
+            #    PR_SET_NO_NEW_PRIVS, so a refusal leaves the process unchanged.
+            rings = open_io_uring_fds()
+            if rings:
+                raise IoUringActiveError(
+                    f"io_uring instance(s) open on fd {rings}: loading the seccomp filter "
+                    "would kill the process on its next io_uring_enter. Start the gateway "
+                    "with the `aegis` entry point (it sets UV_USE_IO_URING=0), export "
+                    "UV_USE_IO_URING=0 before launching uvicorn, or use --loop asyncio."
+                )
 
-            libc_path = ctypes.util.find_library("c")
-            if not libc_path:
-                raise RuntimeError("libc not found via ctypes.util.find_library")
-            libc = ctypes.CDLL(libc_path)
+            # 1. Set PR_SET_NO_NEW_PRIVS (required before the seccomp filter).
+            # load_libc, not ctypes.util.find_library: the latter executes
+            # ldconfig, which the shipped AppArmor profile denies (REG-D83).
+            libc = load_libc()
+            if libc is None:
+                raise RuntimeError("libc is not loadable in this process")
             res = libc.prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)
             if res != 0:
                 raise PermissionError("Failed to set PR_SET_NO_NEW_PRIVS")
@@ -204,6 +261,8 @@ class SeccompGuard:
                 allowed_syscalls=tuple(self.profile.allowed_syscalls),
                 default_action=SCMP_ACT_KILL_PROCESS,
                 thread_clone_only=True,
+                errno_syscalls=IO_URING_ERRNO_SYSCALLS,
+                synchronize_threads=True,
             )
             if not sb.enabled:
                 logger.error("libseccomp not available. Entering degraded mode.")
@@ -215,6 +274,11 @@ class SeccompGuard:
             self._is_enforced = True
             return True
 
+        except IoUringActiveError as exc:
+            # Re-raised as itself so the lifespan reports the actionable message.
+            logger.error("Seccomp not applied: %s", exc)
+            self._degraded_mode = True
+            raise
         except Exception as exc:
             logger.error("Seccomp application failed: %s", exc)
             self._degraded_mode = True
@@ -231,3 +295,21 @@ class SeccompGuard:
 
     def is_degraded(self) -> bool:
         return self._degraded_mode
+
+
+# The single-host SQLite global-sequence store (aegis.core.ha, non-strict only)
+# writes and reads its pages positionally and truncates its journal. Measured by
+# strace over 6,000 appends after lockdown: these three were the only syscalls
+# outside the profile. Added only when that store is configured, so the strict
+# profile (PostgreSQL store) is unchanged.
+SQLITE_SEQUENCE_STORE_SYSCALLS: frozenset[str] = frozenset({"pread64", "pwrite64", "ftruncate"})
+
+
+def profile_with(extra: frozenset[str]) -> SyscallProfile:
+    """The default profile plus *extra* allowed syscalls (never minus anything)."""
+    base = SeccompGuard.DEFAULT_PROFILE
+    return SyscallProfile(
+        name=f"{base.name}+{len(extra)}",
+        allowed_syscalls=set(base.allowed_syscalls) | set(extra),
+        forbidden_syscalls=set(base.forbidden_syscalls) - set(extra),
+    )

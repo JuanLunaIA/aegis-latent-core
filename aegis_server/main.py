@@ -54,11 +54,12 @@ import json
 import logging
 import time
 import uuid
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 import numpy as np
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
@@ -103,7 +104,7 @@ class ComplianceExportRequest(BaseModel):
     def _empty_to_none(cls, v: Any) -> str | None:
         if v == "":
             return None
-        return v
+        return cast("str | None", v)
 
 
 class ComplianceExportResponse(BaseModel):
@@ -137,7 +138,7 @@ class EnterpriseHealthResponse(BaseModel):
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """
     FastAPI lifespan context manager.
 
@@ -251,6 +252,17 @@ def create_app(settings: EnterpriseSettings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state._enterprise_settings_override = cfg
+
+    # REG-D73: an unhandled exception used to reach Starlette's default, which
+    # answers 500 with a text/plain "Internal Server Error". No traceback or
+    # exception text ever reached the client, but every other error this API
+    # returns is JSON, so clients had to special-case the one error they can
+    # least predict. The body stays generic on purpose: exception text can carry
+    # paths, identifiers or payload fragments. The traceback is logged here.
+    @app.exception_handler(Exception)
+    async def _unhandled_error(request: Request, exc: Exception) -> JSONResponse:
+        logger.error("unhandled error on %s %s", request.method, request.url.path, exc_info=exc)
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
     # ── CORS ──────────────────────────────────────────────────────────
     if cfg.cors_origins:
@@ -650,10 +662,8 @@ async def _run_forensic_analytics(
     # ---------------------------------------------------------------------------
 
 
-def _health_router():
+def _health_router() -> APIRouter:
     """Liveness + readiness probes (unauthenticated)."""
-    from fastapi import APIRouter
-
     router = APIRouter(tags=["Health"])
 
     @router.get("/health", include_in_schema=False)
@@ -670,10 +680,8 @@ def _health_router():
     return router
 
 
-def _enterprise_router():
+def _enterprise_router() -> APIRouter:
     """Enterprise-specific endpoints (authenticated)."""
-    from fastapi import APIRouter
-
     router = APIRouter(prefix="/v1/enterprise", tags=["Enterprise"])
 
     # ── Health ────────────────────────────────────────────────────────
@@ -790,7 +798,7 @@ def _enterprise_router():
                 for f in export_dir.glob("aegis_compliance_*.json")
                 if f.is_file()
             ),
-            key=lambda x: x["filename"],
+            key=lambda x: str(x["filename"]),
             reverse=True,
         )[:limit]
 

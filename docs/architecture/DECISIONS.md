@@ -212,6 +212,42 @@ The weakness being addressed is real and was demonstrated before being fixed: v1
 
 ---
 
+## AD-17 — Run replicas behind a chain writer lease and one global sequence, without moving custody off the local WAL
+
+**Revises `AD-16`,** which remains below as it was decided; this entry records the revision, as the section after it requires. Recorded 2026-09-24 at the owner's request to run beyond one gateway process: active-passive failover, active-active replicas and multi-team use.
+
+**Decision.** `AEGIS_HA_MODE` selects one of three shapes (`aegis/core/ha.py`); `single`, the default, changes nothing.
+
+- **`active_passive`** — every replica mounts the same WAL volume and competes for one chain's **writer lease** in Redis (`aegis:ha:lease:<chain_id>`). The lease carries a monotonic **epoch** drawn with `INCR` on every fresh acquisition. The holder renews every third of the TTL from its own thread and stops admitting requests once its own conservative view of the lease has run out: the view is timed from *before* each renewal was sent, less a margin of `max(0.2·TTL, 0.5 s)`. On loss the holder exits, so the orchestrator restarts it as a standby. A standby answers `/health` with `standby` and refuses everything else with `503` until it wins the lease. The new holder's first act is a signed state node, `ha-lease-<chain>-<epoch>`, which puts the handover into the chain itself.
+- **`active_active`** — every replica writes **its own** chain under its own lease, and every durable node of every chain is appended to **one shared, hash-linked global sequence** (`aegis_global_sequence`, PostgreSQL in production). Each append is compare-and-append on the sequence tip, so concurrent replicas interleave but cannot fork it. In the same transaction the append checks that the chain's previous sequenced entry is this node's predecessor, and that the writer's epoch is not older than the chain's last entry. The sequence trails the local commit by a lag that is monitored and bounded: admission is refused while the oldest durable, unsequenced node is older than `AEGIS_HA_MAX_SEQUENCING_LAG_SECONDS`.
+- The global sequence is optional for `active_passive`, where it adds the storage-side epoch fence.
+
+`python -m aegis.core.ha verify` re-derives the whole sequence from its stored rows and checks each named WAL against it. The check is read-only and exits `0` only if everything verifies.
+
+**Rejected.** (a) Making the external store the authoritative record, which is `AD-16`'s option (b) as originally framed. (b) A consensus round over node content. (c) Redis locks without an epoch, which is the common pattern. (d) One WAL written by several processes at once.
+
+**Why.** `AD-16` declined (a) because it would move custody of the authoritative record to an external service. This design does not do that, and it is the reason the decision could be revised rather than overturned. Each replica's local, `fsync`-ed WAL is still the record of what that replica committed, signed and chained exactly as before. The global sequence stores only **references** (`chain_id`, local sequence number, node hash) plus its own hash links, never content. The sequence can therefore be rebuilt against, and checked against, the WALs; it cannot contradict them unnoticed.
+
+(b) was declined on the same grounds as in `AD-03` and `AD-13`: capacity, availability, failover, recovery and custody. Content consensus also answers a question nobody asked here. Each chain's content legitimately belongs to its writer, and the missing piece was one agreed **order** plus one writer per chain.
+
+(c) is declined because a lock without a fencing token cannot stop a writer that paused past its TTL. The epoch is that token, and the sequence store checks it inside the append transaction. A former holder that wakes up after losing the lease is **refused** at the sequence, not merely detected later.
+
+(d) is the fork `AD-16` exists to prevent, and nothing here permits it. The lease and the WAL's own single-writer lock (`WalWriterConflictError`) both still hold.
+
+**Cost.**
+
+- Two external dependencies, Redis for the lease and PostgreSQL for the sequence, and **their outage stops admission**. That is the fail-closed direction, and it is still an availability cost that `single` mode does not have.
+- The global order is an **agreed total order of references**, not a happens-before relation or a clock. Timestamps remain each writer's own.
+- A holder paused past its TTL can still append **one more node to its local WAL** before it notices. The epoch fence keeps that node out of the sequence, and `verify` reports it as unsequenced, so the cost is bounded and visible rather than silent.
+- `active_passive` needs a `ReadWriteMany` volume whose `fsync` and locking the operator must accept for their storage. `STORAGE_REQUIREMENTS` still applies, and network filesystems are exactly where it bites.
+- Failover takes up to the lease TTL, plus the standby poll interval, plus the new holder's startup. The container smoke test measured 5.2 s from `SIGKILL` to takeover with a 5 s TTL and a 0.5 s poll. With the default 15 s TTL, plan for correspondingly longer. The measurement came from one host, and it is not a service-level objective.
+- Multi-team use is multi-*tenant* in the gateway's existing sense (principals, tenant IDs and scopes per key). It is **not** isolation of one team's evidence from another's in a shared chain: an audit reader of a chain sees that chain.
+- There are more configuration shapes to get wrong. `validate_ha` and the Helm chart refuse the ones that would fork evidence (`workers > 1`; no chain ID for `active_passive`; no sequence store for `active_active`; SQLite under strict mode).
+
+None of this is capacity or production acceptance for any deployment. Governed by `CLM-108` (and `CLM-012` for the chart), `UC-005` (revised) and [High Availability](../operations/HIGH_AVAILABILITY.md).
+
+---
+
 ## Revisiting a decision
 
 A decision is revisited when its cost becomes unacceptable or its premise changes. Record the revision here with the new reasoning and the new cost. Do not edit a past entry to match a new position — the sequence of what was decided and why is the useful part.

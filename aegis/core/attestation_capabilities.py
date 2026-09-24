@@ -17,19 +17,20 @@ it is:
   report this**; the value exists only so an auditor can detect a regression.
 
 The probes here are deliberately cheap and side-effect-free (``shutil.which``,
-``os.path.exists``, ``ctypes.util.find_library``, bounded local manifest reads,
+``os.path.exists``, loading an already-installed library, bounded local manifest reads,
 and import checks). They never run the underlying tools, so calling this endpoint
 cannot extend a PCR, load a BPF program, or shell out to a fuzzer.
 """
 
 from __future__ import annotations
 
-import ctypes.util
 import importlib.util
 import os
 import shutil
 from dataclasses import dataclass
 from typing import Literal
+
+from aegis.core.libc import libseccomp_available
 
 CapabilityStatus = Literal["REAL", "UNAVAILABLE", "SIMULATED"]
 
@@ -100,14 +101,17 @@ def _audit_signing() -> ControlCapability:
 
 
 def _seccomp_sandbox() -> ControlCapability:
-    lib = ctypes.util.find_library("seccomp")
+    # Loads libseccomp by the name the sandbox uses. ctypes.util.find_library
+    # executes ldconfig; from this request handler, after lockdown, that killed
+    # the gateway (REG-D83).
+    lib = libseccomp_available()
     return ControlCapability(
         name="seccomp_syscall_filter",
         category="runtime-isolation",
         status="REAL" if lib else "UNAVAILABLE",
         module="aegis.core.sandbox_l1",
         detail=(
-            f"libseccomp present ({lib})"
+            "libseccomp.so.2 loadable"
             if lib
             else "libseccomp not found; syscall filtering cannot be loaded"
         ),

@@ -599,6 +599,61 @@ class AegisSettings(BaseSettings):
             "one misconfiguration cannot expose both."
         ),
     )
+    # ── Multi-replica operation (aegis.core.ha) ────────────────────────────
+    ha_mode: str = Field(
+        default="single",
+        description=(
+            "'single' (one writer, no coordination), 'active_passive' (replicas compete "
+            "for one chain's writer lease; the holder serves, the others stand by), or "
+            "'active_active' (every replica writes its own chain under its own lease and "
+            "every committed node is appended to one shared, hash-linked global sequence)."
+        ),
+    )
+    ha_chain_id: str = Field(
+        default="",
+        description=(
+            "Chain this replica writes. active_passive: the one chain all replicas "
+            "share (required). active_active: this replica's own chain; defaults to the "
+            "host name, which a StatefulSet makes unique and stable."
+        ),
+    )
+    ha_redis_url: str = Field(
+        default="",
+        description="Redis for the writer lease. Empty = redis_url.",
+    )
+    ha_lease_ttl_seconds: float = Field(
+        default=15.0,
+        ge=3.0,
+        le=300.0,
+        description=(
+            "Writer lease lifetime. The holder renews every third of it and stops "
+            "admitting requests once less than a fifth remains unrenewed."
+        ),
+    )
+    ha_standby_poll_seconds: float = Field(
+        default=2.0,
+        ge=0.2,
+        le=60.0,
+        description="How often a standby replica retries the writer lease.",
+    )
+    ha_sequencer_url: str = Field(
+        default="",
+        description=(
+            "Global sequence store: postgresql://… (production) or sqlite:///absolute/path "
+            "(single host, non-strict only). Required for active_active; optional for "
+            "active_passive, where it adds storage-level fencing by lease epoch."
+        ),
+    )
+    ha_max_sequencing_lag_seconds: float = Field(
+        default=30.0,
+        ge=1.0,
+        le=3600.0,
+        description=(
+            "Admission is refused (503) while the oldest durable, not-yet-sequenced "
+            "node is older than this: the bound on how far the global sequence may "
+            "trail the local chains."
+        ),
+    )
     gossip_client_certificate: str = Field(
         default="",
         description="PEM certificate this replica presents to peers, in both directions.",
@@ -723,6 +778,14 @@ class AegisSettings(BaseSettings):
     rate_limit_backend: str = Field(
         default="memory",
         description="Rate limiter backend: 'memory' (default, no Redis) or 'redis'.",
+    )
+    require_distributed_limiter: bool = Field(
+        default=False,
+        description=(
+            "Refuse startup, in any enforcement mode, unless rate_limit_backend is "
+            "'redis'. Strict mode already requires Redis; this makes the example "
+            "deployment variable an enforced control rather than an inert one (REG-D60)."
+        ),
     )
     rate_limit_token_capacity: int = Field(default=100_000, ge=1)
     rate_limit_tokens_per_minute: int = Field(default=100_000, ge=1)
@@ -1037,6 +1100,13 @@ class AegisSettings(BaseSettings):
                 "AEGIS_DEBUG_MODE=true for local development, or remove "
                 "AEGIS_AUTH_DISABLED and configure AEGIS_API_KEYS for production."
             )
+        if self.auth_disabled and "host" not in self.model_fields_set and self.host == "0.0.0.0":
+            # REG-D75: an unauthenticated gateway holding the operator's backend
+            # key used to listen on every interface by default. With auth
+            # disabled and no explicit host, it now binds loopback only; an
+            # explicit AEGIS_HOST (the evaluation compose file sets 0.0.0.0 inside
+            # its container and publishes on host loopback) is respected.
+            self.host = "127.0.0.1"
         if self.max_stream_event_bytes > self.stream_queue_max_bytes:
             raise ValueError("max_stream_event_bytes must not exceed stream_queue_max_bytes")
         if self.rate_limit_default_output_tokens > self.rate_limit_max_output_tokens:
@@ -1073,6 +1143,9 @@ class AegisSettings(BaseSettings):
 
     def validate_runtime_invariants(self) -> None:
         """Raise before binding sockets when strict runtime invariants are absent."""
+        if self.require_distributed_limiter and self.rate_limit_backend != "redis":
+            raise ValueError("require_distributed_limiter=True requires rate_limit_backend='redis'")
+        self.validate_ha()
         if self.security_enforcement_mode != "strict":
             return
         if self.debug_mode:
@@ -1102,6 +1175,27 @@ class AegisSettings(BaseSettings):
                 raise ValueError(
                     "strict API-key mode requires an explicit principal mapping per key"
                 )
+
+    def validate_ha(self) -> None:
+        if self.ha_mode not in {"single", "active_passive", "active_active"}:
+            raise ValueError("ha_mode must be 'single', 'active_passive' or 'active_active'")
+        if self.ha_mode == "single":
+            return
+        if self.workers != 1:
+            raise ValueError("ha_mode requires workers=1: each replica is one writer process")
+        if not (self.ha_redis_url or self.redis_url):
+            raise ValueError("ha_mode requires ha_redis_url or redis_url for the writer lease")
+        if self.ha_mode == "active_passive" and not self.ha_chain_id:
+            raise ValueError("ha_mode='active_passive' requires ha_chain_id (the shared chain)")
+        if self.ha_mode == "active_active" and not self.ha_sequencer_url:
+            raise ValueError("ha_mode='active_active' requires ha_sequencer_url")
+        url = self.ha_sequencer_url
+        if url and not url.startswith(("postgresql://", "postgres://", "sqlite:///")):
+            raise ValueError("ha_sequencer_url must be postgresql://… or sqlite:///absolute/path")
+        if url.startswith("sqlite") and self.security_enforcement_mode == "strict":
+            # SQLite's file locking is not safe on the network filesystems replicas
+            # would share, and its I/O path is outside the strict seccomp allowlist.
+            raise ValueError("strict runtime requires a postgresql:// ha_sequencer_url")
 
     def get_api_keys(self) -> frozenset[str]:
         if not self.api_keys:

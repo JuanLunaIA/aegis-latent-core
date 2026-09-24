@@ -5,12 +5,30 @@
 
 from __future__ import annotations
 
+import os
 import sys
+from collections.abc import Iterator
 from unittest.mock import patch
 
 import pytest
 
 from aegis.core.cpu_affinity import AffinityResult, CPUAffinity, CPUAffinityError
+
+
+@pytest.fixture(autouse=True)
+def _restore_cpu_affinity() -> Iterator[None]:
+    """Put the test thread's CPU mask back after each test (REG-D85).
+
+    These tests call the real sched_setaffinity, which succeeds unprivileged: the
+    pytest thread stayed pinned to CPU 0 for every later test in the run.
+    """
+    if not hasattr(os, "sched_getaffinity"):
+        yield
+        return
+    mask = os.sched_getaffinity(0)
+    yield
+    os.sched_setaffinity(0, mask)
+
 
 # ── get_affinity() ────────────────────────────────────────────────────────────
 

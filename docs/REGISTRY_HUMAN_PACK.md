@@ -188,7 +188,7 @@ Both are stated rather than silently carried, because a handoff pack that passes
 
 **Checklist**
 
-1. Confirm the retention statement `aegis/core/mifid_record_keeper.py` and `CLM-104` now carry: MiFID II Art. 16(6)/25(1) is a **five-year** minimum, extendable to seven at a competent authority's request — not a seven-year default.
+1. Confirm the retention statement `aegis/core/mifid_record_keeper.py` and `CLM-104` now carry: MiFID II Art. 16(7) and MiFIR Art. 25(1) set a **five-year** minimum, extendable to seven at a competent authority's request under Art. 16(7) — not a seven-year default (citation corrected by `REG-D77`).
 2. Decide the **UK SMCR** question the module explicitly puts outside its scope: whether an SMCR-scope firm would have a retention period this module cannot serve, and if so, whether that belongs in the module's docstring, its CLM row, or neither.
 3. Confirm the market-abuse citation split in `CLM-103` (MAR Art. 12(1)(a)(ii) for spoofing; MiFID II Art. 12 is "Assessment period") and that no document may read either module as monitoring coverage.
 

@@ -47,18 +47,23 @@ WORKDIR /build
 # scripts/vendor_wheels.sh on a networked machine before the air-gapped build).
 COPY vendor/wheels /wheels
 
-# Install the package and all runtime dependencies exclusively from local wheels.
-# --no-index prevents any PyPI access; --find-links points to the wheel cache.
-COPY pyproject.toml README.md ./
-COPY aegis ./aegis
-COPY aegis_server ./aegis_server
-COPY integrations ./integrations
-
+# Runtime dependencies exclusively from the vendored wheels, verified against the
+# hashes in requirements.lock (REG-D69). --no-index prevents any index access.
+COPY requirements.lock ./
 RUN pip install \
         --no-cache-dir \
         --no-index \
         --find-links /wheels \
-        ".[storage-sqlite]"
+        --require-hashes \
+        -r requirements.lock
+
+# The package itself, without re-resolving dependencies; `pip check` fails the
+# build if the lock is missing anything the package declares (REG-D70).
+COPY pyproject.toml README.md ./
+COPY aegis ./aegis
+COPY aegis_server ./aegis_server
+COPY integrations ./integrations
+RUN pip install --no-cache-dir --no-index --find-links /wheels --no-deps . && pip check
 
 # ── Stage 2: minimal runtime image ────────────────────────────────────────────
 FROM python:3.11-slim@${PYTHON_BASE_DIGEST}

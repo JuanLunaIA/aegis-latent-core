@@ -874,8 +874,11 @@ def _validate_active_deployment_versions(
             f'org.opencontainers.image.version="{version}"',
             f"-t aegis-latent-core:{version}-airgap",
         ),
+        # The air-gapped wheel set is the hash-locked runtime set (REG-D69); the
+        # version stays anchored through the image tag the script prints.
         "scripts/vendor_wheels.sh": (
-            f'"aegis-latent-core[storage-sqlite]=={version}"',
+            "--require-hashes",
+            '-r "${REPO_ROOT}/requirements.lock"',
             f"-t aegis-latent-core:{version}-airgap",
         ),
         "scripts/install_aegis.sh": (

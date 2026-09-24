@@ -75,19 +75,41 @@ def test_detect_sandbox_pytest_in_sys_modules():
     assert guard.is_sandbox is True  # pytest detected
 
 
-def test_detect_sandbox_docker_marker():
+def test_a_docker_container_is_not_a_sandbox():
+    """REG-D68: inverted, not deleted. This test used to assert that /.dockerenv
+    switches the filter off — which is how the image's strict mode came to refuse
+    to start in every Docker container. A container is not a reason to drop the
+    control, so the marker must not count. HERMES_SANDBOX is cleared because CI
+    sets it, and it would answer True before the marker is ever consulted."""
+
     def _exists(path: str) -> bool:
         return path == "/.dockerenv"
 
-    with patch("os.path.exists", side_effect=_exists):
+    with (
+        patch.dict("os.environ", {}, clear=True),
+        patch("os.path.exists", side_effect=_exists),
+    ):
         guard = SeccompGuard.__new__(SeccompGuard)
-        # pytest detection comes first, but let's test the file path too
-        # by bypassing the pytest check with a patched importlib
         import importlib.util as ilu
 
         with patch.object(ilu, "find_spec", return_value=None):
             result = guard._detect_sandbox()
-    # Since /.dockerenv exists and pytest check was bypassed, sandbox detected
+    assert result is False
+
+
+def test_the_explicit_harness_marker_still_counts():
+    def _exists(path: str) -> bool:
+        return path == "/.hermes_sandbox_marker"
+
+    with (
+        patch.dict("os.environ", {}, clear=True),
+        patch("os.path.exists", side_effect=_exists),
+    ):
+        guard = SeccompGuard.__new__(SeccompGuard)
+        import importlib.util as ilu
+
+        with patch.object(ilu, "find_spec", return_value=None):
+            result = guard._detect_sandbox()
     assert result is True
 
 
@@ -139,7 +161,6 @@ def test_apply_filter_uses_seccomp_sandbox_in_non_sandbox():
     guard._degraded_mode = False
     guard.profile = SeccompGuard.DEFAULT_PROFILE
 
-    import ctypes.util as _ctu
     from unittest.mock import MagicMock, patch
 
     mock_libc = MagicMock()
@@ -150,8 +171,7 @@ def test_apply_filter_uses_seccomp_sandbox_in_non_sandbox():
     mock_sb.apply_filter.return_value = True
 
     with (
-        patch.object(_ctu, "find_library", return_value="/lib/libc.so"),
-        patch("ctypes.CDLL", return_value=mock_libc),
+        patch("aegis.core.seccomp_guard.load_libc", return_value=mock_libc),
         patch("aegis.core.sandbox_l1.SeccompSandbox", return_value=mock_sb),
     ):
         result = guard.apply_filter()

@@ -237,20 +237,18 @@ class TestAssertStartupAdjtimex:
     def test_adjtimex_time_ok(self):
         with patch.object(ClockIntegrityAssertion, "_check_timedatectl", return_value=None):
             with patch("sys.platform", "linux"):
-                with patch("ctypes.util.find_library", return_value="libc.so.6"):
-                    with patch("ctypes.CDLL", return_value=self._mock_adjtimex(0)):
-                        cia = ClockIntegrityAssertion()
-                        status = cia.assert_startup()
+                with patch("aegis.core.libc.load_libc", return_value=self._mock_adjtimex(0)):
+                    cia = ClockIntegrityAssertion()
+                    status = cia.assert_startup()
         assert status.source == "adjtimex"
         assert status.ntp_synchronized is True
 
     def test_adjtimex_time_error(self):
         with patch.object(ClockIntegrityAssertion, "_check_timedatectl", return_value=None):
             with patch("sys.platform", "linux"):
-                with patch("ctypes.util.find_library", return_value="libc.so.6"):
-                    with patch("ctypes.CDLL", return_value=self._mock_adjtimex(5)):
-                        cia = ClockIntegrityAssertion()
-                        status = cia.assert_startup()
+                with patch("aegis.core.libc.load_libc", return_value=self._mock_adjtimex(5)):
+                    cia = ClockIntegrityAssertion()
+                    status = cia.assert_startup()
         assert status.source == "adjtimex"
         assert status.ntp_synchronized is False
         assert "TIME_ERROR" in status.warning
@@ -258,10 +256,9 @@ class TestAssertStartupAdjtimex:
     def test_adjtimex_leap_second_insert_synced(self):
         with patch.object(ClockIntegrityAssertion, "_check_timedatectl", return_value=None):
             with patch("sys.platform", "linux"):
-                with patch("ctypes.util.find_library", return_value="libc.so.6"):
-                    with patch("ctypes.CDLL", return_value=self._mock_adjtimex(1)):
-                        cia = ClockIntegrityAssertion()
-                        status = cia.assert_startup()
+                with patch("aegis.core.libc.load_libc", return_value=self._mock_adjtimex(1)):
+                    cia = ClockIntegrityAssertion()
+                    status = cia.assert_startup()
         assert status.ntp_synchronized is True
 
 

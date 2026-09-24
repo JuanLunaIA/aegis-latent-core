@@ -541,7 +541,7 @@ class SQLiteStorageProvider(StorageProvider):
                     await db.execute(pragma)
                 db.row_factory = aiosqlite.Row
                 cursor = await db.execute(_ALL_FOR_INTEGRITY_SQL)
-                rows = await cursor.fetchall()
+                rows = list(await cursor.fetchall())
         except Exception as exc:
             raise RuntimeError(f"SQLiteStorageProvider.check_integrity failed: {exc}") from exc
 

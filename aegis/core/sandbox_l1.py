@@ -36,6 +36,7 @@ _SCMP_ACT_KILL_PROCESS = 0x80000000  # kill the whole process (SIGSYS), libsecco
 _SCMP_ACT_ERRNO_EPERM = 0x00050001  # SCMP_ACT_ERRNO(1 == EPERM)
 _SCMP_ACT_ERRNO_ENOSYS = 0x00050026  # SCMP_ACT_ERRNO(38 == ENOSYS)
 _SCMP_ACT_ALLOW = 0x7FFF0000
+_SCMP_FLTATR_CTL_TSYNC = 4  # enum scmp_filter_attr: sync the filter to all threads
 _SCMP_CMP_MASKED_EQ = 7  # enum scmp_compare
 _CLONE_THREAD = 0x00010000
 
@@ -160,6 +161,8 @@ def _load_libseccomp() -> ctypes.CDLL | None:
     ]
     lib.seccomp_syscall_resolve_name.restype = ctypes.c_int
     lib.seccomp_syscall_resolve_name.argtypes = [ctypes.c_char_p]
+    lib.seccomp_attr_set.restype = ctypes.c_int
+    lib.seccomp_attr_set.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_uint32]
     return lib
 
 
@@ -182,11 +185,25 @@ class SeccompSandbox:
         allowed_syscalls: tuple[str, ...] | None = None,
         default_action: int = _SCMP_ACT_ERRNO_EPERM,
         thread_clone_only: bool = False,
+        errno_syscalls: tuple[str, ...] = (),
+        synchronize_threads: bool = False,
     ) -> None:
+        # SECCOMP_FILTER_FLAG_TSYNC (REG-D82): without it the filter binds only the
+        # calling thread and threads it creates later; a thread already running at
+        # lockdown (a lease-renewal thread, a pre-warmed Tokio worker) would stay
+        # unfiltered. With it, the kernel applies the filter to every thread of
+        # the process or refuses the load outright, and apply_filter() fails.
+        self._synchronize_threads = synchronize_threads
         self._allowed_syscalls: tuple[str, ...] = (
             allowed_syscalls if allowed_syscalls is not None else _ALLOWED_SYSCALLS
         )
         self._default_action = default_action
+        # Syscalls answered with EPERM instead of the default action, so a caller
+        # that can fall back (libuv's io_uring_setup -> epoll) does, rather than
+        # the process being killed. Never overrides an allowlisted syscall.
+        self._errno_syscalls: tuple[str, ...] = tuple(
+            n for n in errno_syscalls if n not in self._allowed_syscalls
+        )
         # Threads yes, processes no: clone() is allowed only with CLONE_THREAD, and
         # clone3() (whose flags live behind a pointer BPF cannot read) gets ENOSYS so
         # glibc's pthread_create falls back to clone().
@@ -218,6 +235,10 @@ class SeccompSandbox:
         if not ctx:
             logger.error("SeccompSandbox: seccomp_init() returned NULL.")
             return None
+        if self._synchronize_threads and lib.seccomp_attr_set(ctx, _SCMP_FLTATR_CTL_TSYNC, 1):
+            logger.error("SeccompSandbox: cannot request thread synchronization (TSYNC)")
+            lib.seccomp_release(ctx)
+            return None
 
         missing: list[str] = []
         for name in self._allowed_syscalls:
@@ -235,6 +256,12 @@ class SeccompSandbox:
                 len(missing),
                 missing,
             )
+        for name in self._errno_syscalls:
+            nr = lib.seccomp_syscall_resolve_name(name.encode())
+            if nr >= 0 and lib.seccomp_rule_add(ctx, _SCMP_ACT_ERRNO_EPERM, nr, 0):
+                logger.error("SeccompSandbox: %s EPERM rule failed", name)
+                lib.seccomp_release(ctx)
+                return None
         if self._thread_clone_only and not self._add_thread_clone_rules(ctx):
             lib.seccomp_release(ctx)
             return None

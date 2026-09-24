@@ -95,6 +95,33 @@ gossip:
     secretName: ""
     mountPath: /etc/aegis/gossip
 
+# ── Multi-replica operation (aegis.core.ha) ───────────────────────────────────
+# "single" (default): every replica writes its own chain; nothing coordinates.
+# "active_active": every replica still writes its own chain (its pod name is its
+#   chain id) under a Redis writer lease, and every committed node is appended
+#   to one shared, hash-linked global sequence in PostgreSQL.
+# "active_passive": all replicas share ONE chain and ONE WAL; only the lease
+#   holder serves, the others stand by (Ready=false) and take over on loss.
+#   Requires a ReadWriteMany claim (sharedClaim) that every replica mounts, and
+#   renders podManagementPolicy=Parallel with updateStrategy=OnDelete, because a
+#   standby is never Ready and would stall an ordered rolling update. Roll it by
+#   deleting the standby pods first, then the holder.
+# Redis (aegis.redisUrl) holds the lease; strict mode already requires it.
+ha:
+  mode: "single"
+  # active_passive: the shared chain's id (required). active_active: leave empty
+  # to use the pod name.
+  chainId: ""
+  leaseTtlSeconds: "15"
+  standbyPollSeconds: "2"
+  maxSequencingLagSeconds: "30"
+  # {name, key} of a Secret holding the postgresql:// DSN of the global sequence
+  # store. Required for active_active; optional for active_passive (adds the
+  # storage-side epoch fence).
+  sequencerUrlSecret: {}
+  # active_passive only: name of an existing ReadWriteMany PVC for the shared WAL.
+  sharedClaim: ""
+
 # ── WAL persistence ───────────────────────────────────────────────────────────
 # Rendered as the StatefulSet's volumeClaimTemplates, so each replica gets its
 # own claim and therefore its own WAL path. ReadWriteOnce is correct and

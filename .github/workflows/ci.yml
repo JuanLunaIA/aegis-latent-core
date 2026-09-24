@@ -188,11 +188,14 @@ jobs:
       # its own pinned dependencies.
       - name: Mypy (strict — whole aegis package)
         run: mypy --strict aegis
+      # REG-026: the enterprise server's 25 strict errors were cleared on
+      # 2026-09-24; this step keeps them from coming back.
+      - name: Mypy (strict — aegis_server package)
+        run: mypy --strict aegis_server
       # The gate programs (doc, claim, reachability, release, inventory) and the
       # measurement harnesses are Python too, and were outside every type-check
-      # scope until REG-D33. Imports are followed silently: `aegis` is checked
-      # strictly above, and aegis_server's accepted debt (REG-038) is measured
-      # on its own, not re-reported here.
+      # scope until REG-D33. Imports are followed silently: `aegis` and
+      # `aegis_server` are checked strictly above, not re-reported here.
       - name: Mypy (strict — scripts/ and tools/)
         run: mypy --strict --explicit-package-bases --follow-imports=silent scripts tools
 
@@ -648,6 +651,82 @@ jobs:
         with:
           version: v3.14.4
       - run: helm lint deploy/helm/
+      - name: Multi-replica render guards (aegis.core.ha)
+        run: |
+          set -eu
+          # Unsafe shapes must refuse to render.
+          ! helm template t deploy/helm/ --set ha.mode=active_passive
+          ! helm template t deploy/helm/ --set ha.mode=active_active
+          ! helm template t deploy/helm/ --set ha.mode=bogus
+          # Safe shapes render what they promise.
+          helm template t deploy/helm/ --set ha.mode=active_passive \
+            --set ha.sharedClaim=wal-rwx --set ha.chainId=prod | grep -q "type: OnDelete"
+          helm template t deploy/helm/ --set ha.mode=active_active \
+            --set ha.sequencerUrlSecret.name=seq --set ha.sequencerUrlSecret.key=dsn \
+            | grep -q "AEGIS_HA_SEQUENCER_URL"
+
+  # ── Container smoke test: the shipped image, in its shipped posture ────────
+  # Builds deploy/docker/Dockerfile and runs it the way deploy/docker/
+  # docker-compose.yml does — strict mode, its own seccomp filter (kill on any
+  # unlisted syscall), the repository AppArmor profile, read-only root, all
+  # capabilities dropped, a real Redis, an HTTPS upstream reached by hostname —
+  # then drives completions, refusals, a WAF block, a stream, the evidence
+  # chain and a restart. REG-D67/D68/D69/D70/D78/D80/D81 were all invisible to
+  # every other job because nothing ever started the image.
+  container-smoke:
+    name: Container Smoke Test
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Load the repository AppArmor profile
+        run: |
+          sudo apparmor_parser -r -W deploy/apparmor/aegis.profile
+          sudo aa-status | grep -F aegis-latent-core
+      - name: Build the gateway image
+        run: docker build -f deploy/docker/Dockerfile -t aegis-latent-core:smoke .
+      - name: Run the image in the hardened compose posture, then as HA replicas
+        run: python3 scripts/container_smoke_test.py --image aegis-latent-core:smoke --apparmor aegis-latent-core --ha
+      - name: Kernel denials (on failure)
+        if: failure()
+        run: sudo dmesg | grep -E 'apparmor="DENIED"|type=1326' | tail -n 100 || true
+
+  # ── Multi-replica operation against real Redis and PostgreSQL ────────────
+  # tests/ha skips without backends in the main test job; here the services
+  # exist and AEGIS_TEST_REQUIRE_HA_BACKENDS=1 turns any skip into a failure.
+  ha-integration:
+    name: HA Integration (Redis + PostgreSQL)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    services:
+      redis:
+        image: redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+        ports: ["6379:6379"]
+        options: --health-cmd "redis-cli ping" --health-interval 2s --health-retries 30
+      postgres:
+        image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+        env:
+          POSTGRES_USER: aegis
+          POSTGRES_PASSWORD: aegis-ci-only
+          POSTGRES_DB: aegis
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U aegis" --health-interval 2s --health-retries 30
+    env:
+      AEGIS_TEST_REQUIRE_HA_BACKENDS: "1"
+      AEGIS_TEST_REDIS_URL: redis://127.0.0.1:6379/0
+      AEGIS_TEST_POSTGRES_DSN: postgresql://aegis:aegis-ci-only@127.0.0.1:5432/aegis
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install package with dev and PostgreSQL extras
+        run: pip install -e ".[dev,storage-postgres]"
+      - name: Multi-replica suite (real processes, real seccomp filter)
+        # The seccomp-enforced replicas are the point; the workflow-wide
+        # HERMES_SANDBOX would disable the filter in them.
+        run: env -u HERMES_SANDBOX python -m pytest tests/ha -v -p no:cacheprovider
 
   # ── SBOM and attestation (main + release) ─────────────────────────────────
   sbom:
@@ -720,7 +799,7 @@ jobs:
   docker:
     name: Docker Build & Push
     runs-on: ubuntu-22.04
-    needs: [lint, typecheck, test, security, rust, helm-lint, market-hardening]
+    needs: [lint, typecheck, test, security, rust, helm-lint, market-hardening, container-smoke]
     if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     permissions:
       contents: read

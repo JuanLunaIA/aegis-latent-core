@@ -262,16 +262,17 @@ class ClockIntegrityAssertion:
         """
         try:
             import ctypes
-            import ctypes.util
             import sys as _sys
+
+            from aegis.core.libc import load_libc
 
             if _sys.platform != "linux":
                 return None
 
-            libc_path = ctypes.util.find_library("c")
-            if not libc_path:
+            # Never ctypes.util.find_library: it executes ldconfig (REG-D83).
+            libc = load_libc()
+            if libc is None:
                 return None
-            libc = ctypes.CDLL(libc_path, use_errno=True)
 
             # struct timex is large; we only need the first int (modes) and
             # the return value.  Pass a zeroed 200-byte buffer (more than enough).

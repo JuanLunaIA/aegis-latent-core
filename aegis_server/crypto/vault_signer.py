@@ -242,7 +242,7 @@ class VaultSigner(SignerProvider):
         if self._client is not None and self._client.is_authenticated():
             return
 
-        client_kwargs: dict = {"url": self._vault_url}
+        client_kwargs: dict[str, str] = {"url": self._vault_url}
         if self._namespace:
             client_kwargs["namespace"] = self._namespace
 
@@ -312,7 +312,7 @@ class VaultSigner(SignerProvider):
         Returns:
             Sleep duration in seconds.
         """
-        return self._retry_base_delay * (2**attempt) + secrets.SystemRandom().uniform(
+        return self._retry_base_delay * float(2**attempt) + secrets.SystemRandom().uniform(
             0, self._retry_base_delay
         )
 
