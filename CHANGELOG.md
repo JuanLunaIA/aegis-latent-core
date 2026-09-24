@@ -304,6 +304,16 @@ addressed. Fixed on the branch restarted from `main` afterward.
   `ExitStack` became `contextlib.AsyncExitStack`, with a stop callback
   registered for every one of those resources right after it starts.
 
+### Fixed — a test PR #198 added, red in CI's serial run after it merged
+
+- **REG-D57** — `test_a_much_later_startup_failure_stops_the_handoff_worker_too`
+  passed under `pytest -n auto` and failed in CI's serial Forensic job on
+  every Python version. An earlier test reloads `aegis.proxy.forwarder` on
+  purpose; after that, a fresh `from aegis.proxy.forwarder import
+  LLMForwarder` is a different class object from the one `app.py` holds, so
+  the test patched a class the app never calls. Both lifespan tests now patch
+  the classes `lifespan` actually resolves.
+
 ## [5.0.0] — unreleased source target
 
 **Nothing is published for `5.0.0`.** There is no tag, GitHub Release, PyPI or

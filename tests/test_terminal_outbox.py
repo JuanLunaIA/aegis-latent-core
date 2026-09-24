@@ -805,9 +805,10 @@ def test_a_later_startup_failure_still_closes_the_outbox(
     def _boom(self: TerminalCommitHandoff) -> None:
         raise RuntimeError("simulated later-startup failure")
 
-    monkeypatch.setattr(TerminalCommitHandoff, "start", _boom)
-
     app = create_app(_settings(tmp_path, terminal_outbox_enabled=True))
+    # Patch the class of the instance lifespan will call, not a name imported
+    # here: a module reloaded earlier in the session leaves the two different.
+    monkeypatch.setattr(type(app.state.aegis.terminal_handoff), "start", _boom)
     with pytest.raises(RuntimeError, match="simulated later-startup failure"), TestClient(app):
         pass
     state = app.state.aegis
@@ -831,24 +832,31 @@ def test_a_much_later_startup_failure_stops_the_handoff_worker_too(
     """
     from fastapi.testclient import TestClient
 
-    from aegis.proxy.app import create_app
-    from aegis.proxy.forwarder import LLMForwarder
+    import aegis.proxy.app as app_module
+
+    # Both classes are taken from where lifespan resolves them, not imported
+    # here: tests/test_coverage_final.py reloads aegis.proxy.forwarder, after
+    # which `from aegis.proxy.forwarder import LLMForwarder` is a new class
+    # object that app.py never calls — patching it made this test pass under
+    # xdist and fail in CI's serial run.
+    app = app_module.create_app(_settings(tmp_path, terminal_outbox_enabled=True))
+    handoff_cls = type(app.state.aegis.terminal_handoff)
+    forwarder_cls = app_module.LLMForwarder
 
     stopped = False
-    real_stop = TerminalCommitHandoff.stop
+    real_stop = handoff_cls.stop
 
     async def _spy_stop(self: TerminalCommitHandoff, *, timeout: float) -> None:
         nonlocal stopped
         stopped = True
         await real_stop(self, timeout=timeout)
 
-    def _boom(self: LLMForwarder) -> None:
+    def _boom(self: object) -> None:
         raise RuntimeError("simulated forwarder startup failure")
 
-    monkeypatch.setattr(TerminalCommitHandoff, "stop", _spy_stop)
-    monkeypatch.setattr(LLMForwarder, "start", _boom)
+    monkeypatch.setattr(handoff_cls, "stop", _spy_stop)
+    monkeypatch.setattr(forwarder_cls, "start", _boom)
 
-    app = create_app(_settings(tmp_path, terminal_outbox_enabled=True))
     with pytest.raises(RuntimeError, match="simulated forwarder startup failure"), TestClient(app):
         pass
     assert stopped  # the handoff worker, started long before the forwarder, was stopped too

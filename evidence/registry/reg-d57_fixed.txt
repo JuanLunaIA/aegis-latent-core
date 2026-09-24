@@ -1,0 +1,91 @@
+REG-D57 — a lifespan test that could only fail in a serial run
+================================================================
+
+PR #198 merged (9df5fd3, main) with its three "Forensic checks" jobs red
+(Python 3.11, 3.12, 3.13; workflow run 35936153814, jobs 107433541953,
+107433542100, 107433542135). All three failed the same test, which PR #198
+itself added:
+
+  FAILED tests/test_terminal_outbox.py::
+    test_a_much_later_startup_failure_stops_the_handoff_worker_too
+    - Failed: DID NOT RAISE RuntimeError
+  1 failed, 7425 passed, 31 skipped   (py3.13 job)
+
+The captured log showed startup reaching the seccomp step
+("app.py:1327 Seccomp unavailable; development runtime continues"), i.e. the
+patched LLMForwarder.start never ran — startup completed.
+
+Why local runs passed
+---------------------
+
+Every local run in the session used `pytest -n auto`. CI's Forensic job runs:
+
+  python -X faulthandler -m pytest -q --tb=short -o faulthandler_timeout=60
+
+serially. Reproduced locally with that exact command at 6c8b4c2:
+
+  1 failed, 7421 passed, 39 skipped in 276.18s   (same test, same message)
+
+Root cause
+----------
+
+tests/test_coverage_final.py::test_forwarder_handles_missing_rust_extension
+(lines 228-251) calls importlib.reload() on aegis.proxy.forwarder, twice, to
+exercise the pure-Python fallback — the reload is the point of that test.
+Afterwards `aegis.proxy.forwarder.LLMForwarder` is a new class object, while
+aegis/proxy/app.py:62 (`from aegis.proxy.forwarder import LLMForwarder`)
+still binds the class it imported at load time. The failing test did its own
+`from aegis.proxy.forwarder import LLMForwarder` and patched *that* class, so
+`lifespan`'s `LLMForwarder(...)` (app.py) built an unpatched instance.
+
+Under xdist the reloading test lands on another worker process, so the two
+never share module state — hence green locally, red in CI.
+
+Minimal reproduction (three tests, in this order, serial):
+
+  tests/test_terminal_outbox.py::test_the_outbox_is_off_by_default
+      (imports aegis.proxy.app before the reload)
+  tests/test_coverage_final.py::test_forwarder_handles_missing_rust_extension
+  tests/test_terminal_outbox.py::test_a_much_later_startup_failure_stops_the_handoff_worker_too
+  (+ tests/test_terminal_outbox.py::test_a_later_startup_failure_still_closes_the_outbox)
+
+  HERMES_SANDBOX=true pytest -q -p no:xdist <the four ids above>
+    before the fix (git stash) -> 1 failed, 3 passed
+    after the fix              -> 4 passed
+
+Without the first test (aegis.proxy.app first imported after the reload) the
+pair passes even unfixed — app.py then binds the reloaded class — which is
+why the first reproduction attempt with only the reloading test did not fail.
+
+Fix
+---
+
+tests/test_terminal_outbox.py only. Both lifespan-failure tests now patch the
+classes lifespan actually resolves, not freshly imported names:
+
+  - test_a_much_later_startup_failure_stops_the_handoff_worker_too:
+      forwarder_cls = aegis.proxy.app.LLMForwarder
+      handoff_cls   = type(app.state.aegis.terminal_handoff)
+  - test_a_later_startup_failure_still_closes_the_outbox (same latent
+    fragility, not currently failing — aegis.proxy.streaming is not reloaded
+    anywhere today):
+      type(app.state.aegis.terminal_handoff)
+
+tests/test_coverage_final.py is unchanged.
+
+Verified
+--------
+
+  ruff check / ruff format --check tests/test_terminal_outbox.py -> clean
+  git diff --check -> clean
+  minimal reproduction above -> 1 failed before, 4 passed after
+  full suite, serial, CI's exact command:
+    running at the time of this commit; its result is recorded in a
+    follow-up commit on the same PR (CI's own serial Forensic job on this
+    PR is the independent confirmation)
+
+Process note
+------------
+
+The pre-push battery for PR #198 ran `-n auto` only. A serial run is the one
+that matches CI's Forensic job; it is the confirming run recorded here.
