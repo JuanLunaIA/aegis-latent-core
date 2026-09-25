@@ -1,0 +1,1673 @@
+{
+ "inputs": {
+  "hsm_b1_hourly_usd": {
+   "value": 3.2,
+   "tag": "VERIFIED",
+   "note": "Azure Retail Prices API, 'Key Vault HSM Pool' Standard B1, eastus, meterId 74a72b91-1389-578c-b534-d4c204e6e37d, read 2026-09-25",
+   "note_es": "API Azure Retail Prices, 'Key Vault HSM Pool' Standard B1, eastus, meterId 74a72b91-1389-578c-b534-d4c204e6e37d, consultada el 25/09/2026"
+  },
+  "hsm_b1_month_usd": {
+   "value": 2342.4,
+   "tag": "VERIFIED",
+   "note": "3.20 USD/h x 732 h (30.5-day month) = 2,342.40; excluded by design",
+   "note_es": "3,20 USD/h x 732 h (mes de 30,5 días) = 2.342,40; excluido por diseño"
+  },
+  "vm_d4s_v5_hourly_usd": {
+   "value": 0.192,
+   "tag": "VERIFIED",
+   "note": "Azure Retail Prices API, Standard_D4s_v5 Linux, eastus, meterId db8c0962-f3f8-5b44-99aa-f3c7c1e668c8, read 2026-09-25",
+   "note_es": "API Azure Retail Prices, Standard_D4s_v5 Linux, eastus, meterId db8c0962-f3f8-5b44-99aa-f3c7c1e668c8, consultada el 25/09/2026"
+  },
+  "blob_hot_lrs_gb_month_usd": {
+   "value": 0.0208,
+   "tag": "VERIFIED",
+   "note": "Azure Retail Prices API, Blob Hot LRS data stored, first tier, eastus, meterId 272492b3-1c92-4a5f-bee9-52a8e10ca514, read 2026-09-25",
+   "note_es": "API Azure Retail Prices, Blob Hot LRS, datos almacenados, primer tramo, eastus, meterId 272492b3-1c92-4a5f-bee9-52a8e10ca514, consultada el 25/09/2026"
+  },
+  "fx_ars_per_usd": {
+   "value": 1519.5,
+   "tag": "VERIFIED",
+   "note": "BCRA API Estadisticas Cambiarias v1.0, Cotizaciones/USD, date 2026-09-24 (tipoCotizacion), read 2026-09-25; used only by the Spanish edition to show pesos in parentheses",
+   "note_es": "API del BCRA Estadísticas Cambiarias v1.0, Cotizaciones/USD, fecha 24/09/2026 (tipoCotizacion), consultada el 25/09/2026; solo la usa la edición en castellano para mostrar pesos entre paréntesis"
+  },
+  "commits_per_s_100_threads": {
+   "value": 1482.37,
+   "tag": "VERIFIED",
+   "note": "evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json, 4 vCPU shared VM, commit_forensic incl. MMR append + HMAC + WAL fsync",
+   "note_es": "evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json, VM compartida de 4 vCPU, commit_forensic con append al MMR + HMAC + fsync del WAL"
+  },
+  "commit_p50_ms": {
+   "value": 0.617,
+   "tag": "VERIFIED",
+   "note": "same artifact, n=1000",
+   "note_es": "mismo artefacto, n=1000"
+  },
+  "commit_p99_ms": {
+   "value": 1.216,
+   "tag": "VERIFIED",
+   "note": "same artifact, n=1000",
+   "note_es": "mismo artefacto, n=1000"
+  },
+  "tests_passed": {
+   "value": 7550,
+   "tag": "VERIFIED",
+   "note": "pytest -n auto on the 5.0.1 tree, 2026-09-24: 7,550 passed, 41 skipped, 0 failed",
+   "note_es": "pytest -n auto sobre el árbol 5.0.1, 24/09/2026: 7.550 aprobadas, 41 omitidas, 0 fallidas"
+  },
+  "claims_registered": {
+   "value": 112,
+   "tag": "VERIFIED",
+   "note": "scripts/verify_claims.py, 2026-09-25: 0 findings",
+   "note_es": "scripts/verify_claims.py, 25/09/2026: 0 hallazgos"
+  },
+  "claims_refused": {
+   "value": 70,
+   "tag": "VERIFIED",
+   "note": "docs/institutional/UNSUPPORTED_CLAIMS.md rows",
+   "note_es": "filas de docs/institutional/UNSUPPORTED_CLAIMS.md"
+  },
+  "test_to_source_loc": {
+   "value": 1.24,
+   "tag": "VERIFIED",
+   "note": "87,557 test LOC / 70,672 Python source LOC (aegis + aegis_server), 2026-09-25",
+   "note_es": "87.557 líneas de prueba / 70.672 líneas de código Python (aegis + aegis_server), 25/09/2026"
+  },
+  "orphan_modules_disclosed": {
+   "value": 77,
+   "tag": "VERIFIED",
+   "note": "scripts/import_reachability_allowlist.txt entries, of ~207 aegis modules",
+   "note_es": "entradas de scripts/import_reachability_allowlist.txt, sobre ~207 módulos de aegis"
+  },
+  "azure_typical_month_usd": {
+   "value": 17.54,
+   "tag": "MODEL",
+   "note": "owner-supplied planning input; cited evidence file is absent from the repo (docs/REGISTRY_HUMAN_PACK.md) -> downgraded from VERIFIED",
+   "note_es": "dato de planificación del fundador; el archivo de evidencia citado no está en el repositorio (docs/REGISTRY_HUMAN_PACK.md) -> baja de VERIFIED a MODEL"
+  },
+  "azure_worst_month_usd": {
+   "value": 44.77,
+   "tag": "MODEL",
+   "note": "owner-supplied, same status",
+   "note_es": "dato del fundador, mismo estado"
+  },
+  "azure_credit_usd": {
+   "value": 200.0,
+   "tag": "MODEL",
+   "note": "Founders Hub credit, owner-stated",
+   "note_es": "crédito de Founders Hub, según el fundador"
+  },
+  "human_fixed_cash_month_usd": {
+   "value": 100.0,
+   "tag": "MODEL",
+   "note": "owner prior",
+   "note_es": "supuesto previo del fundador"
+  },
+  "cac_founder_led_usd": {
+   "value": 6400.0,
+   "tag": "MODEL",
+   "note": "prior: founder-led, per paying customer",
+   "note_es": "supuesto previo: venta liderada por el fundador, por cliente que paga"
+  },
+  "churn_prior": {
+   "value": 0.4,
+   "tag": "MODEL",
+   "note": "annual logo churn prior",
+   "note_es": "supuesto previo de churn anual de clientes"
+  },
+  "contribution_margin_prior": {
+   "value": 0.9,
+   "tag": "MODEL",
+   "note": "prior",
+   "note_es": "supuesto previo"
+  },
+  "ltv_prior_usd": {
+   "value": 33750.0,
+   "tag": "MODEL",
+   "note": "prior at 40% churn",
+   "note_es": "supuesto previo con churn del 40%"
+  },
+  "acv_implied_by_prior_usd": {
+   "value": 15000.0,
+   "tag": "MODEL",
+   "note": "LTV x churn / CM = 15,000 (derived)",
+   "note_es": "LTV x churn / MC = 15.000 (derivado)"
+  },
+  "payback_prior_months": {
+   "value": 6.3,
+   "tag": "MODEL",
+   "note": "prior as supplied",
+   "note_es": "supuesto previo tal como se recibió"
+  },
+  "support_cost_per_customer_year": {
+   "value": 4000.0,
+   "tag": "MODEL",
+   "note": "0.05 FTE of an 80k senior; self-hosted product",
+   "note_es": "0,05 FTE de un senior de 80 mil; producto autoalojado"
+  },
+  "hosting_per_customer_year": {
+   "value": 537.24,
+   "tag": "MODEL",
+   "note": "one staging/demo environment at the worst-case Azure month",
+   "note_es": "un entorno de staging/demo al costo mensual de Azure del peor caso"
+  },
+  "pilot_delivery_cost_share": {
+   "value": 0.25,
+   "tag": "MODEL",
+   "note": "founder/SE time + travel",
+   "note_es": "tiempo del fundador/ingeniero de soluciones + viajes"
+  },
+  "payment_fee_share": {
+   "value": 0.03,
+   "tag": "MODEL",
+   "note": "cards/wires/FX spread",
+   "note_es": "tarjetas/transferencias/diferencial cambiario"
+  },
+  "evidence_record_bytes": {
+   "value": 1500,
+   "tag": "MODEL",
+   "note": "WAL JSONL line incl. MMR and signature",
+   "note_es": "línea JSONL del WAL con MMR y firma"
+  },
+  "retention_months": {
+   "value": 60,
+   "tag": "MODEL",
+   "note": "MiFID II Art 16(7) five-year horizon",
+   "note_es": "horizonte de cinco años de MiFID II art. 16(7)"
+  },
+  "hosted_vm_utilisation": {
+   "value": 0.3,
+   "tag": "MODEL",
+   "note": "average utilisation of a hosted node",
+   "note_es": "utilización promedio de un nodo alojado"
+  },
+  "dso_days": {
+   "value": 45,
+   "tag": "MODEL",
+   "note": "enterprise net-30/45 terms",
+   "note_es": "plazos empresariales de 30/45 días"
+  },
+  "deferred_revenue_share_of_arr": {
+   "value": 0.5,
+   "tag": "MODEL",
+   "note": "annual upfront billing, mid-term",
+   "note_es": "facturación anual por adelantado, a mitad de período"
+  },
+  "tax_rate": {
+   "value": 0.25,
+   "tag": "MODEL",
+   "note": "applied only once cumulative EBT > 0",
+   "note_es": "se aplica solo cuando el resultado antes de impuestos acumulado es > 0"
+  },
+  "commission_share_of_new_acv": {
+   "value": 0.08,
+   "tag": "MODEL",
+   "note": "",
+   "note_es": ""
+  },
+  "opex_contingency": {
+   "value": 0.1,
+   "tag": "MODEL",
+   "note": "",
+   "note_es": ""
+  },
+  "engineering_week_usd": {
+   "value": 2300.0,
+   "tag": "MODEL",
+   "note": "110k loaded / 48 weeks",
+   "note_es": "110 mil con cargas / 48 semanas"
+  },
+  "scorecard_reference_usd": {
+   "value": 10000000.0,
+   "tag": "MODEL",
+   "note": "pre-seed post-money SAFE-cap reference (press-reported US medians); range 8-12M",
+   "note_es": "referencia de tope post-money de SAFE pre-semilla (medianas de EE. UU. informadas por la prensa); rango 8-12 M"
+  },
+  "exit_arr_multiple": {
+   "value": {
+    "bear": 4.0,
+    "base": 8.0,
+    "bull": 12.0
+   },
+   "tag": "MODEL",
+   "note": "private security-software M&A range (not strategic-premium comps)",
+   "note_es": "rango de M&A privado de software de seguridad (sin comparables con prima estratégica)"
+  },
+  "vc_target_multiple": {
+   "value": 10.0,
+   "tag": "MODEL",
+   "note": "mission spec",
+   "note_es": "especificación de la misión"
+  },
+  "vc_stage_discount": {
+   "value": 0.6,
+   "tag": "MODEL",
+   "note": "mission spec: applied as a 0.40 retention factor",
+   "note_es": "especificación de la misión: se aplica como factor de retención de 0,40"
+  },
+  "dcf_discount_rate": {
+   "value": 0.25,
+   "tag": "MODEL",
+   "note": "mission spec",
+   "note_es": "especificación de la misión"
+  },
+  "scenario_probabilities": {
+   "value": {
+    "bear": 0.45,
+    "base": 0.4,
+    "bull": 0.15
+   },
+   "tag": "MODEL",
+   "note": "audit 51/100 ~ P(base or better)=0.55; bull capped at 0.15 with zero buyer interviews",
+   "note_es": "auditoría 51/100 ~ P(base o mejor)=0,55; el optimista se limita a 0,15 sin entrevistas con compradores"
+  },
+  "audit_bands": {
+   "value": {
+    "replacement": [
+     1800000.0,
+     11000000.0
+    ],
+    "asset_floor": [
+     650000.0,
+     3100000.0
+    ],
+    "seed_today": [
+     8000000.0,
+     15000000.0
+    ],
+    "post_conditions": [
+     18000000.0,
+     28000000.0
+    ],
+    "series_a": [
+     30000000.0,
+     60000000.0
+    ],
+    "score": 51
+   },
+   "tag": "MODEL",
+   "note": "[AUDIT] executed independent audit, as supplied",
+   "note_es": "[AUDIT] auditoría independiente realizada, tal como se recibió"
+  },
+  "raise_usd": {
+   "value": {
+    "T1": 300000,
+    "T2": 250000,
+    "T3": 200000
+   },
+   "tag": "MODEL",
+   "note": "tranche-gated SAFE, sized to the 18-month plan + contingency",
+   "note_es": "SAFE por tramos atados a hitos, dimensionado al plan de 18 meses + contingencia"
+  },
+  "post_money_caps_usd": {
+   "value": {
+    "T1": 6000000.0,
+    "T2": 8000000.0,
+    "T3": 10000000.0
+   },
+   "tag": "MODEL",
+   "note": "milestone step-up: T1 at the haircut-now value, T2 at the [AUDIT] floor, T3 above it",
+   "note_es": "escalonado por hitos: T1 al valor con descuentos de hoy, T2 en el piso [AUDIT], T3 por encima"
+  },
+  "pricing": {
+   "value": {
+    "pilot": [
+     2500,
+     30000
+    ],
+    "mid": [
+     25000,
+     75000
+    ],
+    "ent": [
+     95000,
+     175000
+    ],
+    "mgt": {
+     "10-50M": 1500,
+     "50-250M": 950,
+     "250M+": 500
+    }
+   },
+   "tag": "HYPOTHESIS",
+   "note": "zero buyer interviews; validate with 3 interviews + 1 paid pilot (REG-H06)",
+   "note_es": "cero entrevistas con compradores; se valida con 3 entrevistas + 1 piloto pago (REG-H06)"
+  },
+  "channel_cac_usd": {
+   "value": {
+    "founder_outbound": 6400,
+    "oss_inbound": 2000,
+    "partner_si": 9000,
+    "events_paid": 18000
+   },
+   "tag": "HYPOTHESIS",
+   "note": "founder-led is the MODEL prior; the rest untested",
+   "note_es": "la venta del fundador es el supuesto previo MODEL; el resto no se probó"
+  },
+  "channel_mix": {
+   "value": {
+    "founder_outbound": 0.5,
+    "oss_inbound": 0.3,
+    "partner_si": 0.15,
+    "events_paid": 0.05
+   },
+   "tag": "HYPOTHESIS",
+   "note": "",
+   "note_es": ""
+  },
+  "scenarios": {
+   "value": {
+    "bear": {
+     "pilots": [
+      2,
+      4,
+      6,
+      8,
+      10
+     ],
+     "pilot_price": 5000,
+     "conv": 0.3,
+     "acv": [
+      20000.0,
+      25000.0,
+      30000.0,
+      35000.0,
+      40000.0
+     ],
+     "churn": 0.55,
+     "exp": 0.0
+    },
+    "base": {
+     "pilots": [
+      4,
+      8,
+      12,
+      16,
+      20
+     ],
+     "pilot_price": 10000,
+     "conv": 0.5,
+     "acv": [
+      30000.0,
+      40000.0,
+      50000.0,
+      60000.0,
+      70000.0
+     ],
+     "churn": 0.4,
+     "exp": 0.1
+    },
+    "bull": {
+     "pilots": [
+      6,
+      12,
+      18,
+      24,
+      30
+     ],
+     "pilot_price": 15000,
+     "conv": 0.65,
+     "acv": [
+      40000.0,
+      60000.0,
+      80000.0,
+      100000.0,
+      120000.0
+     ],
+     "churn": 0.25,
+     "exp": 0.2
+    }
+   },
+   "tag": "HYPOTHESIS",
+   "note": "pilots, conversion, ACV path, churn, expansion per scenario",
+   "note_es": "pilotos, conversión, trayectoria del ACV, churn y expansión por escenario"
+  }
+ },
+ "unit_economics": {
+  "tiers": {
+   "Blended prior": {
+    "acv": 15000.0,
+    "cm": 0.9,
+    "cac": 6400.0,
+    "ltv_25": 54000.0,
+    "ltv_40": 33750.0,
+    "ltv_55": 24545.4545,
+    "payback_months": 5.6889,
+    "ltv_cac_40": 5.2734
+   },
+   "Mid-market": {
+    "acv": 50000.0,
+    "cm": 0.9093,
+    "cac": 12500.0,
+    "ltv_25": 181851.04,
+    "ltv_40": 113656.9,
+    "ltv_55": 82659.5636,
+    "payback_months": 3.2994,
+    "ltv_cac_40": 9.0926
+   },
+   "Enterprise": {
+    "acv": 150000.0,
+    "cm": 0.9031,
+    "cac": 33750.0,
+    "ltv_25": 541851.04,
+    "ltv_40": 338656.9,
+    "ltv_55": 246295.9273,
+    "payback_months": 2.9898,
+    "ltv_cac_40": 10.0343
+   },
+   "Pilot (one-off)": {
+    "acv": 10000.0,
+    "cm": 0.75,
+    "cac": 0.0,
+    "ltv_25": 7500.0,
+    "ltv_40": 7500.0,
+    "ltv_55": 7500.0,
+    "payback_months": 0.0,
+    "ltv_cac_40": null
+   }
+  },
+  "blended_cac": 6050.0,
+  "mgt": {
+   "10-50M": {
+    "price": 1500,
+    "marginal_cost_hosted": 1.9919,
+    "margin": 0.9987
+   },
+   "50-250M": {
+    "price": 950,
+    "marginal_cost_hosted": 1.9919,
+    "margin": 0.9979
+   },
+   "250M+": {
+    "price": 500,
+    "marginal_cost_hosted": 1.9919,
+    "margin": 0.996
+   }
+  },
+  "mgt_compute": 0.1199,
+  "mgt_storage": 1.872,
+  "grid": {
+   "0.25": {
+    "15000.0": {
+     "ltv": 54000.0,
+     "ltv_cac": 8.4375,
+     "cac": 6400.0
+    },
+    "25000.0": {
+     "ltv": 90000.0,
+     "ltv_cac": 14.0625,
+     "cac": 6400.0
+    },
+    "50000.0": {
+     "ltv": 180000.0,
+     "ltv_cac": 14.4,
+     "cac": 12500.0
+    },
+    "75000.0": {
+     "ltv": 270000.0,
+     "ltv_cac": 14.4,
+     "cac": 18750.0
+    },
+    "135000.0": {
+     "ltv": 486000.0,
+     "ltv_cac": 14.4,
+     "cac": 33750.0
+    }
+   },
+   "0.4": {
+    "15000.0": {
+     "ltv": 33750.0,
+     "ltv_cac": 5.2734,
+     "cac": 6400.0
+    },
+    "25000.0": {
+     "ltv": 56250.0,
+     "ltv_cac": 8.7891,
+     "cac": 6400.0
+    },
+    "50000.0": {
+     "ltv": 112500.0,
+     "ltv_cac": 9.0,
+     "cac": 12500.0
+    },
+    "75000.0": {
+     "ltv": 168750.0,
+     "ltv_cac": 9.0,
+     "cac": 18750.0
+    },
+    "135000.0": {
+     "ltv": 303750.0,
+     "ltv_cac": 9.0,
+     "cac": 33750.0
+    }
+   },
+   "0.55": {
+    "15000.0": {
+     "ltv": 24545.4545,
+     "ltv_cac": 3.8352,
+     "cac": 6400.0
+    },
+    "25000.0": {
+     "ltv": 40909.0909,
+     "ltv_cac": 6.392,
+     "cac": 6400.0
+    },
+    "50000.0": {
+     "ltv": 81818.1818,
+     "ltv_cac": 6.5455,
+     "cac": 12500.0
+    },
+    "75000.0": {
+     "ltv": 122727.2727,
+     "ltv_cac": 6.5455,
+     "cac": 18750.0
+    },
+    "135000.0": {
+     "ltv": 220909.0909,
+     "ltv_cac": 6.5455,
+     "cac": 33750.0
+    }
+   }
+  },
+  "payback_recomputed": 5.6889,
+  "cac_stress_ltv_cac": {
+   "0.25": 3.6,
+   "0.4": 2.25,
+   "0.55": 1.6364
+  }
+ },
+ "models": {
+  "bear": {
+   "rows": [
+    {
+     "year": 1,
+     "new_customers": 0.6,
+     "customers_end": 0.6,
+     "arr_end": 12000.0,
+     "new_arr": 12000.0,
+     "net_new_arr": 12000.0,
+     "recurring_revenue": 6000.0,
+     "pilot_revenue": 10000,
+     "revenue": 16000.0,
+     "cogs": 4341.172,
+     "gross_profit": 11658.828,
+     "gross_margin": 0.7287,
+     "opex": 361090.2973,
+     "opex_lines": {
+      "Headcount": 177666.6667,
+      "Commissions": 960.0,
+      "Penetration testing": 22000,
+      "SOC 2 (Type I Y1, Type II after)": 35000,
+      "Escrow": 10500,
+      "Legal & corporate": 32000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 3537.24,
+      "Travel & design-partner program": 10800.0,
+      "Recruiting": 16000,
+      "Contingency": 32826.3907
+     },
+     "s_and_m": 61760.0,
+     "ebitda": -349431.4693,
+     "tax": 0.0,
+     "net_income": -349431.4693,
+     "cfo": -345404.0721,
+     "cfi": 0.0,
+     "cff": 550000,
+     "cash_open": 0.0,
+     "cash_close": 204595.9279,
+     "ar": 1972.6027,
+     "deferred_revenue": 6000.0,
+     "paid_in": 550000.0,
+     "equity": 200568.5307,
+     "assets": 206568.5307,
+     "liabilities": 6000.0,
+     "headcount": 3,
+     "balance_check": 0.0,
+     "burn_multiple": 28.7837,
+     "magic_number": 0.1943
+    },
+    {
+     "year": 2,
+     "new_customers": 1.2,
+     "customers_end": 1.47,
+     "arr_end": 35400.0,
+     "new_arr": 30000.0,
+     "net_new_arr": 23400.0,
+     "recurring_revenue": 23700.0,
+     "pilot_revenue": 20000,
+     "revenue": 43700.0,
+     "cogs": 11007.0434,
+     "gross_profit": 32692.9566,
+     "gross_margin": 0.7481,
+     "opex": 449340.0604,
+     "opex_lines": {
+      "Headcount": 278400.0,
+      "Commissions": 2400.0,
+      "Penetration testing": 18000,
+      "SOC 2 (Type I Y1, Type II after)": 50000,
+      "Escrow": 3000,
+      "Legal & corporate": 15000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 3890.964,
+      "Travel & design-partner program": 18000.0,
+      "Recruiting": 0,
+      "Contingency": 40849.0964
+     },
+     "s_and_m": 124400.0,
+     "ebitda": -416647.1038,
+     "tax": 0.0,
+     "net_income": -416647.1038,
+     "cfo": -408362.1723,
+     "cfi": 0.0,
+     "cff": 0,
+     "cash_open": 204595.9279,
+     "cash_close": -203766.2444,
+     "ar": 5387.6712,
+     "deferred_revenue": 17700.0,
+     "paid_in": 550000.0,
+     "equity": -216078.5731,
+     "assets": -198378.5731,
+     "liabilities": 17700.0,
+     "headcount": 3,
+     "balance_check": 0.0,
+     "burn_multiple": 17.4514,
+     "magic_number": 0.1881
+    },
+    {
+     "year": 3,
+     "new_customers": 1.8,
+     "customers_end": 2.4615,
+     "arr_end": 69930.0,
+     "new_arr": 54000.0,
+     "net_new_arr": 34530.0,
+     "recurring_revenue": 52665.0,
+     "pilot_revenue": 30000,
+     "revenue": 82665.0,
+     "cogs": 18899.0295,
+     "gross_profit": 63765.9705,
+     "gross_margin": 0.7714,
+     "opex": 385413.6664,
+     "opex_lines": {
+      "Headcount": 208976.0,
+      "Commissions": 4320.0,
+      "Penetration testing": 18000,
+      "SOC 2 (Type I Y1, Type II after)": 50000,
+      "Escrow": 3000,
+      "Legal & corporate": 15000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 4280.0604,
+      "Travel & design-partner program": 27000.0,
+      "Recruiting": 0,
+      "Contingency": 35037.606
+     },
+     "s_and_m": 31320.0,
+     "ebitda": -321647.696,
+     "tax": 0.0,
+     "net_income": -321647.696,
+     "cfo": -309186.6001,
+     "cfi": 0.0,
+     "cff": 0,
+     "cash_open": -203766.2444,
+     "cash_close": -512952.8444,
+     "ar": 10191.5753,
+     "deferred_revenue": 34965.0,
+     "paid_in": 550000.0,
+     "equity": -537726.2691,
+     "assets": -502761.2691,
+     "liabilities": 34965.0,
+     "headcount": 2,
+     "balance_check": 0.0,
+     "burn_multiple": 8.9541,
+     "magic_number": 1.1025
+    },
+    {
+     "year": 4,
+     "new_customers": 2.4,
+     "customers_end": 3.5077,
+     "arr_end": 115468.5,
+     "new_arr": 84000.0,
+     "net_new_arr": 45538.5,
+     "recurring_revenue": 92699.25,
+     "pilot_revenue": 40000,
+     "revenue": 132699.25,
+     "cogs": 27522.7673,
+     "gross_profit": 105176.4827,
+     "gross_margin": 0.7926,
+     "opex": 409159.4171,
+     "opex_lines": {
+      "Headcount": 218735.04,
+      "Commissions": 6720.0,
+      "Penetration testing": 18000,
+      "SOC 2 (Type I Y1, Type II after)": 50000,
+      "Escrow": 3000,
+      "Legal & corporate": 15000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 4708.0664,
+      "Travel & design-partner program": 36000.0,
+      "Recruiting": 0,
+      "Contingency": 37196.3106
+     },
+     "s_and_m": 42720.0,
+     "ebitda": -303982.9344,
+     "tax": 0.0,
+     "net_income": -303982.9344,
+     "cfo": -287382.2905,
+     "cfi": 0.0,
+     "cff": 0,
+     "cash_open": -512952.8444,
+     "cash_close": -800335.135,
+     "ar": 16360.1815,
+     "deferred_revenue": 57734.25,
+     "paid_in": 550000.0,
+     "equity": -841709.2035,
+     "assets": -783974.9535,
+     "liabilities": 57734.25,
+     "headcount": 2,
+     "balance_check": 0.0,
+     "burn_multiple": 6.3108,
+     "magic_number": 1.066
+    },
+    {
+     "year": 5,
+     "new_customers": 3.0,
+     "customers_end": 4.5785,
+     "arr_end": 171960.825,
+     "new_arr": 120000.0,
+     "net_new_arr": 56492.325,
+     "recurring_revenue": 143714.6625,
+     "pilot_revenue": 50000,
+     "revenue": 193714.6625,
+     "cogs": 36655.7933,
+     "gross_profit": 157058.8692,
+     "gross_margin": 0.8108,
+     "opex": 433689.6462,
+     "opex_lines": {
+      "Headcount": 228684.4416,
+      "Commissions": 9600.0,
+      "Penetration testing": 18000,
+      "SOC 2 (Type I Y1, Type II after)": 50000,
+      "Escrow": 3000,
+      "Legal & corporate": 15000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 5178.8731,
+      "Travel & design-partner program": 45000.0,
+      "Recruiting": 0,
+      "Contingency": 39426.3315
+     },
+     "s_and_m": 54600.0,
+     "ebitda": -276630.7769,
+     "tax": 0.0,
+     "net_income": -276630.7769,
+     "cfo": -255907.0625,
+     "cfi": 0.0,
+     "cff": 0,
+     "cash_open": -800335.135,
+     "cash_close": -1056242.1975,
+     "ar": 23882.6296,
+     "deferred_revenue": 85980.4125,
+     "paid_in": 550000.0,
+     "equity": -1118339.9804,
+     "assets": -1032359.5679,
+     "liabilities": 85980.4125,
+     "headcount": 2,
+     "balance_check": 0.0,
+     "burn_multiple": 4.5299,
+     "magic_number": 1.0347
+    }
+   ],
+   "min_cash": -1056242.1975,
+   "min_cash_year": 5,
+   "funding_gap": 1056242.1975
+  },
+  "base": {
+   "rows": [
+    {
+     "year": 1,
+     "new_customers": 2.0,
+     "customers_end": 2.0,
+     "arr_end": 60000.0,
+     "new_arr": 60000.0,
+     "net_new_arr": 60000.0,
+     "recurring_revenue": 30000.0,
+     "pilot_revenue": 40000,
+     "revenue": 70000.0,
+     "cogs": 16637.24,
+     "gross_profit": 53362.76,
+     "gross_margin": 0.7623,
+     "opex": 373234.2973,
+     "opex_lines": {
+      "Headcount": 177666.6667,
+      "Commissions": 4800.0,
+      "Penetration testing": 22000,
+      "SOC 2 (Type I Y1, Type II after)": 35000,
+      "Escrow": 10500,
+      "Legal & corporate": 32000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 3537.24,
+      "Travel & design-partner program": 18000.0,
+      "Recruiting": 16000,
+      "Contingency": 33930.3907
+     },
+     "s_and_m": 72800.0,
+     "ebitda": -319871.5373,
+     "tax": 0.0,
+     "net_income": -319871.5373,
+     "cfo": -298501.6743,
+     "cfi": 0.0,
+     "cff": 550000,
+     "cash_open": 0.0,
+     "cash_close": 251498.3257,
+     "ar": 8630.137,
+     "deferred_revenue": 30000.0,
+     "paid_in": 550000.0,
+     "equity": 230128.4627,
+     "assets": 260128.4627,
+     "liabilities": 30000.0,
+     "headcount": 3,
+     "balance_check": -0.0,
+     "burn_multiple": 4.975,
+     "magic_number": 0.8242
+    },
+    {
+     "year": 2,
+     "new_customers": 4.0,
+     "customers_end": 5.2,
+     "arr_end": 199600.0,
+     "new_arr": 160000.0,
+     "net_new_arr": 139600.0,
+     "recurring_revenue": 130400.0,
+     "pilot_revenue": 80000,
+     "revenue": 210400.0,
+     "cogs": 42646.064,
+     "gross_profit": 167753.936,
+     "gross_margin": 0.7973,
+     "opex": 473980.0604,
+     "opex_lines": {
+      "Headcount": 278400.0,
+      "Commissions": 12800.0,
+      "Penetration testing": 18000,
+      "SOC 2 (Type I Y1, Type II after)": 50000,
+      "Escrow": 3000,
+      "Legal & corporate": 15000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 3890.964,
+      "Travel & design-partner program": 30000.0,
+      "Recruiting": 0,
+      "Contingency": 43089.0964
+     },
+     "s_and_m": 146800.0,
+     "ebitda": -306226.1244,
+     "tax": 0.0,
+     "net_income": -306226.1244,
+     "cfo": -253735.7134,
+     "cfi": 0.0,
+     "cff": 200000,
+     "cash_open": 251498.3257,
+     "cash_close": 197762.6122,
+     "ar": 25939.726,
+     "deferred_revenue": 99800.0,
+     "paid_in": 750000.0,
+     "equity": 123902.3383,
+     "assets": 223702.3383,
+     "liabilities": 99800.0,
+     "headcount": 3,
+     "balance_check": -0.0,
+     "burn_multiple": 1.8176,
+     "magic_number": 0.951
+    },
+    {
+     "year": 3,
+     "new_customers": 6.0,
+     "customers_end": 9.12,
+     "arr_end": 431736.0,
+     "new_arr": 300000.0,
+     "net_new_arr": 232136.0,
+     "recurring_revenue": 317664.0,
+     "pilot_revenue": 120000,
+     "revenue": 437664.0,
+     "cogs": 75616.5584,
+     "gross_profit": 362047.4416,
+     "gross_margin": 0.8272,
+     "opex": 816437.6664,
+     "opex_lines": {
+      "Headcount": 547136.0,
+      "Commissions": 24000.0,
+      "Penetration testing": 18000,
+      "SOC 2 (Type I Y1, Type II after)": 50000,
+      "Escrow": 3000,
+      "Legal & corporate": 15000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 4280.0604,
+      "Travel & design-partner program": 45000.0,
+      "Recruiting": 16000,
+      "Contingency": 74221.606
+     },
+     "s_and_m": 297160.0,
+     "ebitda": -454390.2248,
+     "tax": 0.0,
+     "net_income": -454390.2248,
+     "cfo": -366341.0742,
+     "cfi": 0.0,
+     "cff": 0,
+     "cash_open": 197762.6122,
+     "cash_close": -168578.4619,
+     "ar": 53958.5753,
+     "deferred_revenue": 215868.0,
+     "paid_in": 750000.0,
+     "equity": -330487.8866,
+     "assets": -114619.8866,
+     "liabilities": 215868.0,
+     "headcount": 5,
+     "balance_check": 0.0,
+     "burn_multiple": 1.5781,
+     "magic_number": 0.7812
+    },
+    {
+     "year": 4,
+     "new_customers": 8.0,
+     "customers_end": 13.472,
+     "arr_end": 764945.76,
+     "new_arr": 480000.0,
+     "net_new_arr": 333209.76,
+     "recurring_revenue": 602658.24,
+     "pilot_revenue": 160000,
+     "revenue": 762658.24,
+     "cogs": 114132.4102,
+     "gross_profit": 648525.8298,
+     "gross_margin": 0.8503,
+     "opex": 1078362.4571,
+     "opex_lines": {
+      "Headcount": 755421.44,
+      "Commissions": 38400.0,
+      "Penetration testing": 18000,
+      "SOC 2 (Type I Y1, Type II after)": 50000,
+      "Escrow": 3000,
+      "Legal & corporate": 15000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 4708.0664,
+      "Travel & design-partner program": 60000.0,
+      "Recruiting": 16000,
+      "Contingency": 98032.9506
+     },
+     "s_and_m": 405686.4,
+     "ebitda": -429836.6273,
+     "tax": 0.0,
+     "net_income": -429836.6273,
+     "cfo": -303299.5303,
+     "cfi": 0.0,
+     "cff": 0,
+     "cash_open": -168578.4619,
+     "cash_close": -471877.9923,
+     "ar": 94026.3584,
+     "deferred_revenue": 382472.88,
+     "paid_in": 750000.0,
+     "equity": -760324.5139,
+     "assets": -377851.6339,
+     "liabilities": 382472.88,
+     "headcount": 7,
+     "balance_check": 0.0,
+     "burn_multiple": 0.9102,
+     "magic_number": 0.8213
+    },
+    {
+     "year": 5,
+     "new_customers": 10.0,
+     "customers_end": 18.0832,
+     "arr_end": 1204864.2016,
+     "new_arr": 700000.0,
+     "net_new_arr": 439918.4416,
+     "recurring_revenue": 992554.4384,
+     "pilot_revenue": 200000,
+     "revenue": 1192554.4384,
+     "cogs": 157363.391,
+     "gross_profit": 1035191.0474,
+     "gross_margin": 0.868,
+     "opex": 1413298.8878,
+     "opex_lines": {
+      "Headcount": 1026838.2976,
+      "Commissions": 56000.0,
+      "Penetration testing": 18000,
+      "SOC 2 (Type I Y1, Type II after)": 50000,
+      "Escrow": 3000,
+      "Legal & corporate": 15000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 5178.8731,
+      "Travel & design-partner program": 75000.0,
+      "Recruiting": 16000,
+      "Contingency": 128481.7171
+     },
+     "s_and_m": 575577.856,
+     "ebitda": -378107.8403,
+     "tax": 0.0,
+     "net_income": -378107.8403,
+     "cfo": -211149.5207,
+     "cfi": 0.0,
+     "cff": 0,
+     "cash_open": -471877.9923,
+     "cash_close": -683027.513,
+     "ar": 147027.2595,
+     "deferred_revenue": 602432.1008,
+     "paid_in": 750000.0,
+     "equity": -1138432.3542,
+     "assets": -536000.2534,
+     "liabilities": 602432.1008,
+     "headcount": 9,
+     "balance_check": 0.0,
+     "burn_multiple": 0.48,
+     "magic_number": 0.7643
+    }
+   ],
+   "min_cash": -683027.513,
+   "min_cash_year": 5,
+   "funding_gap": 683027.513
+  },
+  "bull": {
+   "rows": [
+    {
+     "year": 1,
+     "new_customers": 3.9,
+     "customers_end": 3.9,
+     "arr_end": 156000.0,
+     "new_arr": 156000.0,
+     "net_new_arr": 156000.0,
+     "recurring_revenue": 78000.0,
+     "pilot_revenue": 90000,
+     "revenue": 168000.0,
+     "cogs": 36387.618,
+     "gross_profit": 131612.382,
+     "gross_margin": 0.7834,
+     "opex": 391582.2973,
+     "opex_lines": {
+      "Headcount": 177666.6667,
+      "Commissions": 12480.0,
+      "Penetration testing": 22000,
+      "SOC 2 (Type I Y1, Type II after)": 35000,
+      "Escrow": 10500,
+      "Legal & corporate": 32000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 3537.24,
+      "Travel & design-partner program": 27000.0,
+      "Recruiting": 16000,
+      "Contingency": 35598.3907
+     },
+     "s_and_m": 89480.0,
+     "ebitda": -259969.9153,
+     "tax": 0.0,
+     "net_income": -259969.9153,
+     "cfo": -202682.2441,
+     "cfi": 0.0,
+     "cff": 750000,
+     "cash_open": 0.0,
+     "cash_close": 547317.7559,
+     "ar": 20712.3288,
+     "deferred_revenue": 78000.0,
+     "paid_in": 750000.0,
+     "equity": 490030.0847,
+     "assets": 568030.0847,
+     "liabilities": 78000.0,
+     "headcount": 3,
+     "balance_check": 0.0,
+     "burn_multiple": 1.2992,
+     "magic_number": 1.7434
+    },
+    {
+     "year": 2,
+     "new_customers": 7.8,
+     "customers_end": 10.725,
+     "arr_end": 608400.0,
+     "new_arr": 468000.0,
+     "net_new_arr": 452400.0,
+     "recurring_revenue": 384150.0,
+     "pilot_revenue": 180000,
+     "revenue": 564150.0,
+     "cogs": 95103.0675,
+     "gross_profit": 469046.9325,
+     "gross_margin": 0.8314,
+     "opex": 788184.0604,
+     "opex_lines": {
+      "Headcount": 508400.0,
+      "Commissions": 37440.0,
+      "Penetration testing": 18000,
+      "SOC 2 (Type I Y1, Type II after)": 50000,
+      "Escrow": 3000,
+      "Legal & corporate": 15000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 3890.964,
+      "Travel & design-partner program": 45000.0,
+      "Recruiting": 16000,
+      "Contingency": 71653.0964
+     },
+     "s_and_m": 306440.0,
+     "ebitda": -319137.1279,
+     "tax": 0.0,
+     "net_income": -319137.1279,
+     "cfo": -141777.5389,
+     "cfi": 0.0,
+     "cff": 0,
+     "cash_open": 547317.7559,
+     "cash_close": 405540.217,
+     "ar": 69552.7397,
+     "deferred_revenue": 304200.0,
+     "paid_in": 750000.0,
+     "equity": 170892.9568,
+     "assets": 475092.9568,
+     "liabilities": 304200.0,
+     "headcount": 5,
+     "balance_check": 0.0,
+     "burn_multiple": 0.3134,
+     "magic_number": 1.4763
+    },
+    {
+     "year": 3,
+     "new_customers": 11.7,
+     "customers_end": 19.7438,
+     "arr_end": 1483560.0,
+     "new_arr": 936000.0,
+     "net_new_arr": 875160.0,
+     "recurring_revenue": 1053585.0,
+     "pilot_revenue": 270000,
+     "revenue": 1323585.0,
+     "cogs": 176329.5656,
+     "gross_profit": 1147255.4344,
+     "gross_margin": 0.8668,
+     "opex": 1110775.6664,
+     "opex_lines": {
+      "Headcount": 741336.0,
+      "Commissions": 74880.0,
+      "Penetration testing": 18000,
+      "SOC 2 (Type I Y1, Type II after)": 50000,
+      "Escrow": 3000,
+      "Legal & corporate": 15000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 4280.0604,
+      "Travel & design-partner program": 67500.0,
+      "Recruiting": 16000,
+      "Contingency": 100979.606
+     },
+     "s_and_m": 445340.0,
+     "ebitda": 36479.7679,
+     "tax": 0.0,
+     "net_income": 36479.7679,
+     "cfo": 380430.7953,
+     "cfi": 0.0,
+     "cff": 0,
+     "cash_open": 405540.217,
+     "cash_close": 785971.0124,
+     "ar": 163181.7123,
+     "deferred_revenue": 741780.0,
+     "paid_in": 750000.0,
+     "equity": 207372.7247,
+     "assets": 949152.7247,
+     "liabilities": 741780.0,
+     "headcount": 7,
+     "balance_check": 0.0,
+     "burn_multiple": null,
+     "magic_number": 1.9652
+    },
+    {
+     "year": 4,
+     "new_customers": 15.6,
+     "customers_end": 30.4078,
+     "arr_end": 2895204.0,
+     "new_arr": 1560000.0,
+     "net_new_arr": 1411644.0,
+     "recurring_revenue": 2207926.5,
+     "pilot_revenue": 360000,
+     "revenue": 2567926.5,
+     "cogs": 280812.6327,
+     "gross_profit": 2287113.8673,
+     "gross_margin": 0.8906,
+     "opex": 1489067.2571,
+     "opex_lines": {
+      "Headcount": 1012389.44,
+      "Commissions": 124800.0,
+      "Penetration testing": 18000,
+      "SOC 2 (Type I Y1, Type II after)": 50000,
+      "Escrow": 3000,
+      "Legal & corporate": 15000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 4708.0664,
+      "Travel & design-partner program": 90000.0,
+      "Recruiting": 16000,
+      "Contingency": 135369.7506
+     },
+     "s_and_m": 654878.4,
+     "ebitda": 798046.6102,
+     "tax": 199511.6525,
+     "net_income": 598534.9576,
+     "cfo": 1150944.9919,
+     "cfi": 0.0,
+     "cff": 0,
+     "cash_open": 785971.0124,
+     "cash_close": 1936916.0043,
+     "ar": 316593.6781,
+     "deferred_revenue": 1447602.0,
+     "paid_in": 750000.0,
+     "equity": 805907.6823,
+     "assets": 2253509.6823,
+     "liabilities": 1447602.0,
+     "headcount": 9,
+     "balance_check": 0.0,
+     "burn_multiple": null,
+     "magic_number": 2.1556
+    },
+    {
+     "year": 5,
+     "new_customers": 19.5,
+     "customers_end": 42.3059,
+     "arr_end": 4945683.6,
+     "new_arr": 2340000.0,
+     "net_new_arr": 2050479.6,
+     "recurring_revenue": 3956633.85,
+     "pilot_revenue": 450000,
+     "revenue": 4406633.85,
+     "cogs": 409658.7058,
+     "gross_profit": 3996975.1442,
+     "gross_margin": 0.907,
+     "opex": 1903840.2798,
+     "opex_lines": {
+      "Headcount": 1304085.0176,
+      "Commissions": 187200.0,
+      "Penetration testing": 18000,
+      "SOC 2 (Type I Y1, Type II after)": 50000,
+      "Escrow": 3000,
+      "Legal & corporate": 15000,
+      "Insurance (cyber/E&O)": 6000,
+      "Accounting & tax (AR + US)": 9000,
+      "Tools & SaaS": 4800,
+      "Cloud (company)": 5178.8731,
+      "Travel & design-partner program": 112500.0,
+      "Recruiting": 16000,
+      "Contingency": 173076.3891
+     },
+     "s_and_m": 887381.536,
+     "ebitda": 2093134.8645,
+     "tax": 523283.7161,
+     "net_income": 1569851.1483,
+     "cfo": 2368401.0011,
+     "cfi": 0.0,
+     "cff": 0,
+     "cash_open": 1936916.0043,
+     "cash_close": 4305317.0054,
+     "ar": 543283.6253,
+     "deferred_revenue": 2472841.8,
+     "paid_in": 750000.0,
+     "equity": 2375758.8307,
+     "assets": 4848600.6307,
+     "liabilities": 2472841.8,
+     "headcount": 11,
+     "balance_check": 0.0,
+     "burn_multiple": null,
+     "magic_number": 2.3107
+    }
+   ],
+   "min_cash": 0.0,
+   "min_cash_year": 0,
+   "funding_gap": 0.0
+  }
+ },
+ "monte_carlo": {
+  "p10": [
+   0.0,
+   39661.3596,
+   132071.6176,
+   283922.6332,
+   501952.6196,
+   789647.1711
+  ],
+  "p50": [
+   0.0,
+   60792.2445,
+   202765.2421,
+   437183.9835,
+   774748.283,
+   1219363.6616
+  ],
+  "p90": [
+   0.0,
+   90273.7175,
+   301462.9636,
+   653398.3525,
+   1162398.332,
+   1834840.7892
+  ]
+ },
+ "burn_runway": {
+  "pre_funding": {
+   "credit_runway_typical_months": 11.4025,
+   "credit_runway_worst_months": 4.4673,
+   "cash_burn_while_credit_lasts": 100.0,
+   "cash_burn_after_credit_typical": 117.54,
+   "cash_burn_after_credit_worst": 144.77,
+   "alerts": {
+    "50%": {
+     "usd": 100.0,
+     "month_typical": 5.7013,
+     "month_worst": 2.2336
+    },
+    "80%": {
+     "usd": 160.0,
+     "month_typical": 9.122,
+     "month_worst": 3.5738
+    },
+    "95%": {
+     "usd": 190.0,
+     "month_typical": 10.8324,
+     "month_worst": 4.2439
+    }
+   }
+  },
+  "post_funding": {
+   "all tranches": {
+    "0": 22,
+    "1": 24,
+    "3": 28
+   },
+   "T1 only": {
+    "0": 10,
+    "1": 11,
+    "3": 15
+   }
+  },
+  "avg_monthly_opex_18m": 33901.3515,
+  "contribution_per_client_month": 3788.5633,
+  "opex_monthly": [
+   31102.8581,
+   31102.8581,
+   31102.8581,
+   31102.8581,
+   31102.8581,
+   31102.8581,
+   31102.8581,
+   31102.8581,
+   31102.8581,
+   31102.8581,
+   31102.8581,
+   31102.8581,
+   39498.3384,
+   39498.3384,
+   39498.3384,
+   39498.3384,
+   39498.3384,
+   39498.3384,
+   39498.3384,
+   39498.3384,
+   39498.3384,
+   39498.3384,
+   39498.3384,
+   39498.3384,
+   68036.4722,
+   68036.4722,
+   68036.4722,
+   68036.4722,
+   68036.4722,
+   68036.4722,
+   68036.4722,
+   68036.4722,
+   68036.4722,
+   68036.4722,
+   68036.4722,
+   68036.4722
+  ]
+ },
+ "use_of_funds": {
+  "workstreams": {
+   "Engineering continuity (2nd maintainer, 16 mo)": 146666.6667,
+   "Go-to-market (solutions engineer 12 mo + design-partner program)": 130000,
+   "Assurance (pen test + retest, SOC 2 Type I, escrow)": 76500,
+   "Legal & corporate (entity, IP, licence, regulatory, AI-authorship opinion)": 39500,
+   "Founder salary (18 mo)": 66000,
+   "Infra, tools, insurance, accounting (18 mo)": 35005.86,
+   "Recruiting": 16000,
+   "Contingency (10%)": 50967.2527
+  },
+  "total_18m": 560639.7793,
+  "raise": 750000,
+  "buffer": 189360.2207
+ },
+ "valuation": {
+  "vc": {
+   "bear": {
+    "arr5": 171960.825,
+    "exit_ev": 687843.3,
+    "post": 27513.732,
+    "pre": 0.0
+   },
+   "base": {
+    "arr5": 1204864.2016,
+    "exit_ev": 9638913.6128,
+    "post": 385556.5445,
+    "pre": 0.0
+   },
+   "bull": {
+    "arr5": 4945683.6,
+    "exit_ev": 59348203.2,
+    "post": 2373928.128,
+    "pre": 1623928.128
+   }
+  },
+  "vc_weighted_pre": 243589.2192,
+  "scorecard": {
+   "factor": 0.898,
+   "low": 7184000.0,
+   "mid": 8980000.0,
+   "high": 10776000.0,
+   "weights": {
+    "Team": 0.3,
+    "Opportunity size": 0.25,
+    "Product/technology": 0.15,
+    "Competitive environment": 0.1,
+    "Sales channels/partnerships": 0.1,
+    "Need for more capital": 0.05,
+    "Other (jurisdiction, licence)": 0.05
+   },
+   "scores": {
+    "Team": 0.6,
+    "Opportunity size": 1.4,
+    "Product/technology": 1.02,
+    "Competitive environment": 0.8,
+    "Sales channels/partnerships": 0.4,
+    "Need for more capital": 1.1,
+    "Other (jurisdiction, licence)": 0.8
+   }
+  },
+  "berkus": {
+   "elements": {
+    "Sound idea": 0.7,
+    "Prototype (audit 51/100)": 0.51,
+    "Quality team": 0.3,
+    "Strategic relationships": 0.1,
+    "Product rollout/sales": 0.2
+   },
+   "low": 905000.0,
+   "high": 1810000.0
+  },
+  "replacement_premium": {
+   "low": 1980000.0,
+   "high": 13750000.0
+  },
+  "asset_floor": {
+   "low": 650000.0,
+   "high": 3100000.0
+  },
+  "dcf": {
+   "6.0": 1586679.6209,
+   "8.0": 2376299.424,
+   "10.0": 3165919.2272
+  },
+  "dcf_pv_fcf": -782179.7886,
+  "haircuts": {
+   "Bus factor 1": [
+    0.2,
+    0.08,
+    "second maintainer hired + escrow executed"
+   ],
+   "AGPL friction": [
+    0.07,
+    0.04,
+    "commercial licence counsel + one executed commercial licence"
+   ],
+   "Zero revenue": [
+    0.25,
+    0.1,
+    "two paid design partners"
+   ],
+   "No third-party audit": [
+    0.12,
+    0.03,
+    "pen test report with criticals remediated"
+   ],
+   "Single geography": [
+    0.05,
+    0.03,
+    "one EU or US design partner"
+   ],
+   "FX / Argentina jurisdiction": [
+    0.12,
+    0.04,
+    "Delaware parent + USD contracts"
+   ]
+  },
+  "haircut_reference": 15000000.0,
+  "haircut_now": 6157641.6,
+  "haircut_after_gates": 10769797.3248
+ },
+ "cap_t1": 6000000.0,
+ "trl": [
+  {
+   "component": "Gateway core",
+   "now": 6,
+   "target": 7,
+   "evidence": "7,550 tests; shipped image smoke-tested in hardened posture (CLM-109); signed 5.0.1 release",
+   "gap": "operational pilot at a design partner",
+   "eng_weeks": 8,
+   "external_usd": 0
+  },
+  {
+   "component": "WAL + group commit",
+   "now": 6,
+   "target": 7,
+   "evidence": "commit p50 0.62 ms / p99 1.22 ms incl. fsync; 1,482 commits/s @100 threads on 4 vCPU",
+   "gap": "30-day soak + power-loss test on target storage",
+   "eng_weeks": 3,
+   "external_usd": 1000
+  },
+  {
+   "component": "MMR v2 proofs",
+   "now": 6,
+   "target": 7,
+   "evidence": "Rust/Python root agreement; portable inclusion proofs (CLM-064)",
+   "gap": "third-party verification in a pilot",
+   "eng_weeks": 2,
+   "external_usd": 0
+  },
+  {
+   "component": "SDK verifiers",
+   "now": 6,
+   "target": 7,
+   "evidence": "PyPI/npm 5.0.1 byte-identical to Release assets; provenance verified",
+   "gap": "external auditor runs aegis-sdk verify in a pilot",
+   "eng_weeks": 2,
+   "external_usd": 0
+  },
+  {
+   "component": "WAF L1/L2",
+   "now": 5,
+   "target": 6,
+   "evidence": "corpus-tested normalisation; finite pattern set (UC-042)",
+   "gap": "published adversarial eval + pen test coverage",
+   "eng_weeks": 4,
+   "external_usd": 0
+  },
+  {
+   "component": "Crypto-shredding",
+   "now": 5,
+   "target": 6,
+   "evidence": "wired into commit path; keyed digests (CLM-098)",
+   "gap": "counsel review of erasure semantics + pilot",
+   "eng_weeks": 3,
+   "external_usd": 3000
+  },
+  {
+   "component": "HA lease + global sequence",
+   "now": 5,
+   "target": 6,
+   "evidence": "CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108)",
+   "gap": "partition/failover chaos tests + pilot",
+   "eng_weeks": 6,
+   "external_usd": 2000
+  },
+  {
+   "component": "ZK circuit",
+   "now": 4,
+   "target": 4,
+   "evidence": "preview guard; not on the request path",
+   "gap": "proving-system audit; deferred",
+   "eng_weeks": 12,
+   "external_usd": 40000
+  },
+  {
+   "component": "Raft / consensus",
+   "now": 2,
+   "target": 2,
+   "evidence": "orphan module; superseded by AD-17 lease design",
+   "gap": "not on roadmap",
+   "eng_weeks": 0,
+   "external_usd": 0
+  },
+  {
+   "component": "HSM / PQC signing",
+   "now": 4,
+   "target": 5,
+   "evidence": "PKCS#11 path; ML-DSA-65 sign 173 us / verify 62 us; Managed HSM excluded ($2,342/mo)",
+   "gap": "Key Vault Premium HSM-backed key integration test",
+   "eng_weeks": 4,
+   "external_usd": 500
+  },
+  {
+   "component": "OTel / metrics",
+   "now": 6,
+   "target": 7,
+   "evidence": "/metrics verified in the shipped image by the evidence collector (REG-D86)",
+   "gap": "pilot dashboards + alert runbook exercised",
+   "eng_weeks": 1,
+   "external_usd": 0
+  },
+  {
+   "component": "Azure deployment kit",
+   "now": 3,
+   "target": 5,
+   "evidence": "deploy/azure has aks/ only; phase-0 guardrails not in repo (REG-H07)",
+   "gap": "commit phase-0 IaC + budget alerts + one real deployment readback",
+   "eng_weeks": 2,
+   "external_usd": 540
+  }
+ ]
+}
