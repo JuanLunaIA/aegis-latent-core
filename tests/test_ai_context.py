@@ -225,6 +225,7 @@ def test_workflow_roles_and_publication_boundaries_match_source() -> None:
         "publish_npm.yml",
         "publish_oci.yml",
         "publish_pypi.yml",
+        "publish_pypi_gateway.yml",
         "release.yml",
         "security.yml",
     }

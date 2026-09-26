@@ -202,7 +202,7 @@
 | Raft / consensus | 2 | orphan module; superseded by AD-17 lease design | not on roadmap | 0 | $0 | $0 |
 | HSM / PQC signing | 4 | PKCS#11 path; ML-DSA-65 sign 173 us / verify 62 us; Managed HSM excluded ($2,342/mo) | Key Vault Premium HSM-backed key integration test | 4 | $500 | $9,700 |
 | OTel / metrics | 6 | /metrics verified in the shipped image by the evidence collector (REG-D86) | pilot dashboards + alert runbook exercised | 1 | $0 | $2,300 |
-| Azure deployment kit | 3 | deploy/azure has aks/ only; phase-0 guardrails not in repo (REG-H07) | commit phase-0 IaC + budget alerts + one real deployment readback | 2 | $540 | $5,140 |
+| Azure deployment kit | 4 | VM kit deployed and measured once (Standard_B2als_v2, Chile Central, 2026-09-26): strict mode started, verify.sh passed, one signed record committed (REG-H07) | run phase0_guardrails.sh end to end, observe a budget alert fire, repeat on a second size/region | 1 | $200 | $2,500 |
 
 ### Monte Carlo ARR percentiles (seed 42, n=5,000)
 | Percentile | FY1 | FY2 | FY3 | FY4 | FY5 |

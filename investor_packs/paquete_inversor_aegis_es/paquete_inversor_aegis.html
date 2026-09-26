@@ -231,7 +231,7 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 <ul>
   <li><strong>El núcleo del gateway queda en 6, no en 7.</strong> La imagen publicada corre con su postura endurecida en CI, pero todavía no existe ningún entorno de cliente.</li>
   <li><strong>“Lease de HA + secuencia global” es una fila nueva, en 5.</strong> La v5.0.1 lo implementa y el CI lo prueba contra Redis y PostgreSQL reales, con un failover por SIGKILL medido en 4,2–5,2 s<span class="chip v" title="VERIFIED (verificado)">V</span> con un lease de 5 s<span class="chip v" title="VERIFIED (verificado)">V</span>. Raft sigue siendo código huérfano, en 2. Esto corrige el “sin HA” del §0 sin afirmar HA de producción (D10.4).</li>
-  <li><strong>El kit de despliegue en Azure queda en 3.</strong> El código de infraestructura de la fase 0 y el archivo de precios que menciona el §0 no están en el repositorio.</li>
+  <li><strong>El kit de despliegue en Azure pasó de 3 a 4.</strong> Desde que se escribió el §0 se incorporaron <code>deploy/azure/phase0</code> y un kit de VM, y se midió un despliegue (Standard_B2als_v2, Chile Central, 26/09/2026): modo estricto activo, <code>verify.sh</code> aprobado, un registro firmado llegó al WAL. Las cifras de US$ 17,54 <span class="ars">(ARS 26.652)</span>/US$ 44,77 <span class="ars">(ARS 68.028)</span> por mes del §0 siguen sin medirse; el precio de lista de la propia VM, US$0,0526<span class="chip v" title="VERIFIED (verificado)">V</span>/hora (≈US$38<span class="chip v" title="VERIFIED (verificado)">V</span>/mes antes del disco), se verificó ese mismo día.</li>
 </ul>
 <div class="tablewrap"><table><caption>D2 Matriz TRL <span class="chip m">M</span></caption>
 <thead><tr><th>Componente</th><th>TRL hoy</th><th>Evidencia</th><th>Brecha a TRL+1</th><th>Semanas de ingeniería</th><th>Externo</th><th>Costo de cierre</th></tr></thead><tbody>
@@ -246,11 +246,11 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 <tr><td>Raft / consenso</td><td class="num">2</td><td>módulo huérfano; reemplazado por el diseño de lease AD-17</td><td>fuera de la hoja de ruta</td><td class="num">0</td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td></tr>
 <tr><td>Firma HSM / PQC</td><td class="num">4</td><td>camino PKCS#11; ML-DSA-65 firma en 173 us y verifica en 62 us; Managed HSM excluido: US$ 2.342<br><span class="ars">(ARS 3,6 M)</span> por mes</td><td>prueba de integración con una clave respaldada por HSM en Key Vault Premium</td><td class="num">4</td><td class="num">US$ 500<br><span class="ars">(ARS 759.750)</span></td><td class="num">US$ 9.700<br><span class="ars">(ARS 14,7 M)</span></td></tr>
 <tr><td>OTel / métricas</td><td class="num">6</td><td>/metrics verificado en la imagen publicada por el recolector de evidencia (REG-D86)</td><td>tableros del piloto + runbook de alertas ejercitado</td><td class="num">1</td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td><td class="num">US$ 2.300<br><span class="ars">(ARS 3,5 M)</span></td></tr>
-<tr><td>Kit de despliegue en Azure</td><td class="num">3</td><td>deploy/azure solo tiene aks/; las salvaguardas de la fase 0 no están en el repositorio (REG-H07)</td><td>IaC de la fase 0 en el repositorio + alertas de presupuesto + la lectura de un despliegue real</td><td class="num">2</td><td class="num">US$ 540<br><span class="ars">(ARS 820.530)</span></td><td class="num">US$ 5.140<br><span class="ars">(ARS 7,8 M)</span></td></tr>
+<tr><td>Kit de despliegue en Azure</td><td class="num">4</td><td>kit de VM desplegado y medido una vez (Standard_B2als_v2, Chile Central, 26/09/2026): modo estricto activo, verify.sh aprobado, un registro firmado confirmado (REG-H07)</td><td>correr phase0_guardrails.sh de punta a punta, observar una alerta de presupuesto disparada, repetir en un segundo tamaño/región</td><td class="num">1</td><td class="num">US$ 200<br><span class="ars">(ARS 303.900)</span></td><td class="num">US$ 2.500<br><span class="ars">(ARS 3,8 M)</span></td></tr>
 </tbody></table></div>
-<p>Cerrar cada brecha hasta el nivel siguiente cuesta US$ 87.540 <span class="ars">(ARS 133 M)</span><span class="chip m" title="MODEL (modelo)">M</span> en 35<span class="chip m" title="MODEL (modelo)">M</span> semanas de ingeniería, sin contar la auditoría diferida del sistema de pruebas ZK (US$ 67.600 <span class="ars">(ARS 103 M)</span><span class="chip m" title="MODEL (modelo)">M</span>). La semana de ingeniería se costea en US$ 2.300 <span class="ars">(ARS 3,5 M)</span><span class="chip m" title="MODEL (modelo)">M</span>.</p>
+<p>Cerrar cada brecha hasta el nivel siguiente cuesta US$ 84.900 <span class="ars">(ARS 129 M)</span><span class="chip m" title="MODEL (modelo)">M</span> en 34<span class="chip m" title="MODEL (modelo)">M</span> semanas de ingeniería, sin contar la auditoría diferida del sistema de pruebas ZK (US$ 67.600 <span class="ars">(ARS 103 M)</span><span class="chip m" title="MODEL (modelo)">M</span>). La semana de ingeniería se costea en US$ 2.300 <span class="ars">(ARS 3,5 M)</span><span class="chip m" title="MODEL (modelo)">M</span>.</p>
 <figure class="plate"><img src="img/04_trl_heatmap.png" alt="Mapa de calor TRL: las celdas llenas son niveles alcanzados con evidencia citada; las rayadas, metas a 12 meses." loading="lazy"><figcaption>Mapa de calor TRL: las celdas llenas son niveles alcanzados con evidencia citada; las rayadas, metas a 12 meses.</figcaption></figure>
-<p class="census"><span class="lbl">Censo de etiquetas</span> <span class="chip v">V</span> 2 · <span class="chip m">M</span> 76 · <span class="chip h">H</span> 0</p>
+<p class="census"><span class="lbl">Censo de etiquetas</span> <span class="chip v">V</span> 4 · <span class="chip m">M</span> 76 · <span class="chip h">H</span> 0</p>
 </section>
 
 <section id="d3">
@@ -321,6 +321,7 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 <tr><td><code>vm_d4s_v5_hourly_usd</code></td><td class="num">US$ 0,192 <span class="ars">(ARS 291,74)</span></td><td><span class="chip v">V</span></td><td>API Azure Retail Prices, Standard_D4s_v5 Linux, eastus, meterId db8c0962-f3f8-5b44-99aa-f3c7c1e668c8, consultada el 25/09/2026</td></tr>
 <tr><td><code>blob_hot_lrs_gb_month_usd</code></td><td class="num">US$ 0,0208 <span class="ars">(ARS 31,61)</span></td><td><span class="chip v">V</span></td><td>API Azure Retail Prices, Blob Hot LRS, datos almacenados, primer tramo, eastus, meterId 272492b3-1c92-4a5f-bee9-52a8e10ca514, consultada el 25/09/2026</td></tr>
 <tr><td><code>fx_ars_per_usd</code></td><td class="num">1.519,5</td><td><span class="chip v">V</span></td><td>API del BCRA Estadísticas Cambiarias v1.0, Cotizaciones/USD, fecha 24/09/2026 (tipoCotizacion), consultada el 25/09/2026; solo la usa la edición en castellano para mostrar pesos entre paréntesis</td></tr>
+<tr><td><code>azure_b2als_v2_chilecentral_hourly_usd</code></td><td class="num">US$ 0,0526 <span class="ars">(ARS 79,93)</span></td><td><span class="chip v">V</span></td><td>evidence/benchmarks/azure/azure_Standard_B2als_v2_chilecentral_2026-09-26.json (SHA-256 762016d9...); precio de lista obtenido con aegis_azure_kit.py estimate, 26/09/2026; solo la VM, sin el disco adjunto</td></tr>
 <tr><td><code>commits_per_s_100_threads</code></td><td class="num">1.482,37</td><td><span class="chip v">V</span></td><td>evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json, VM compartida de 4 vCPU, commit_forensic con append al MMR + HMAC + fsync del WAL</td></tr>
 <tr><td><code>commit_p50_ms</code></td><td class="num">0,617</td><td><span class="chip v">V</span></td><td>mismo artefacto, n=1000</td></tr>
 <tr><td><code>commit_p99_ms</code></td><td class="num">1,216</td><td><span class="chip v">V</span></td><td>mismo artefacto, n=1000</td></tr>
@@ -452,7 +453,7 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 <tr><td>P90</td><td class="num">US$ 90,3 mil<br><span class="ars">(ARS 137 M)</span></td><td class="num">US$ 301,5 mil<br><span class="ars">(ARS 458 M)</span></td><td class="num">US$ 653,4 mil<br><span class="ars">(ARS 993 M)</span></td><td class="num">US$ 1,16 M<br><span class="ars">(ARS 1.766 M)</span></td><td class="num">US$ 1,83 M<br><span class="ars">(ARS 2.788 M)</span></td></tr>
 </tbody></table></div>
 <p>La banda de Monte Carlo sortea de forma independiente la conversión, el churn, la expansión, el ACV y el volumen de pilotos, a partir de distribuciones triangulares alrededor del escenario base. Su P10–P90 del AF5, de US$ 0,79–1,83 M <span class="ars">(ARS 1.200–2.781 M)</span><span class="chip m" title="MODEL (modelo)">M</span>, es más angosta que el rango entre el pesimista y el optimista porque cada escenario con nombre lleva todas las palancas a su extremo al mismo tiempo.</p>
-<p class="census"><span class="lbl">Censo de etiquetas</span> <span class="chip v">V</span> 13 · <span class="chip m">M</span> 78 (incl. 1 M·A) · <span class="chip h">H</span> 479</p>
+<p class="census"><span class="lbl">Censo de etiquetas</span> <span class="chip v">V</span> 14 · <span class="chip m">M</span> 78 (incl. 1 M·A) · <span class="chip h">H</span> 479</p>
 </section>
 
 <section id="d5">
@@ -735,6 +736,17 @@ FX_ARS = inp(
     &quot;read 2026-09-25; used only by the Spanish edition to show pesos in parentheses&quot;,
     &quot;API del BCRA Estadísticas Cambiarias v1.0, Cotizaciones/USD, fecha 24/09/2026 (tipoCotizacion), &quot;
     &quot;consultada el 25/09/2026; solo la usa la edición en castellano para mostrar pesos entre paréntesis&quot;,
+)
+AZURE_VM_HOURLY = inp(
+    &quot;azure_b2als_v2_chilecentral_hourly_usd&quot;,
+    0.0526,
+    &quot;VERIFIED&quot;,
+    &quot;evidence/benchmarks/azure/azure_Standard_B2als_v2_chilecentral_2026-09-26.json &quot;
+    &quot;(SHA-256 762016d9...); retail list price fetched via aegis_azure_kit.py estimate, &quot;
+    &quot;2026-09-26; VM only, excludes the attached disk&quot;,
+    &quot;evidence/benchmarks/azure/azure_Standard_B2als_v2_chilecentral_2026-09-26.json &quot;
+    &quot;(SHA-256 762016d9...); precio de lista obtenido con aegis_azure_kit.py estimate, &quot;
+    &quot;26/09/2026; solo la VM, sin el disco adjunto&quot;,
 )
 THROUGHPUT_100T = inp(
     &quot;commits_per_s_100_threads&quot;,
@@ -1805,12 +1817,13 @@ TRL = [
     ),
     (
         &quot;Azure deployment kit&quot;,
-        3,
-        5,
-        &quot;deploy/azure has aks/ only; phase-0 guardrails not in repo (REG-H07)&quot;,
-        &quot;commit phase-0 IaC + budget alerts + one real deployment readback&quot;,
-        2,
-        540,
+        4,
+        6,
+        &quot;VM kit deployed and measured once (Standard_B2als_v2, Chile Central, 2026-09-26): &quot;
+        &quot;strict mode started, verify.sh passed, one signed record committed (REG-H07)&quot;,
+        &quot;run phase0_guardrails.sh end to end, observe a budget alert fire, repeat on a second size/region&quot;,
+        1,
+        200,
     ),
 ]
 TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
@@ -1871,8 +1884,10 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     ),
     &quot;Azure deployment kit&quot;: (
         &quot;Kit de despliegue en Azure&quot;,
-        &quot;deploy/azure solo tiene aks/; las salvaguardas de la fase 0 no están en el repositorio (REG-H07)&quot;,
-        &quot;IaC de la fase 0 en el repositorio + alertas de presupuesto + la lectura de un despliegue real&quot;,
+        &quot;kit de VM desplegado y medido una vez (Standard_B2als_v2, Chile Central, 26/09/2026): &quot;
+        &quot;modo estricto activo, verify.sh aprobado, un registro firmado confirmado (REG-H07)&quot;,
+        &quot;correr phase0_guardrails.sh de punta a punta, observar una alerta de presupuesto disparada, &quot;
+        &quot;repetir en un segundo tamaño/región&quot;,
     ),
 }
 
@@ -2930,7 +2945,8 @@ if __name__ == &quot;__main__&quot;:
 <tr><td>Registro de marca</td><td class="miss">Falta</td><td>Fundador</td></tr>
 <tr><td>Estados contables y declaraciones impositivas</td><td class="miss">Falta</td><td>Todavía no hay sociedad (M1)</td></tr>
 <tr><td>Seguro de ciberriesgos y de responsabilidad profesional (E&amp;O)</td><td class="miss">Falta</td><td>Presupuestado en US$ 6 mil/año <span class="ars">(ARS 9,1 M/año)</span><span class="chip m" title="MODEL (modelo)">M</span></td></tr>
-<tr><td>Código de infraestructura de la fase 0 de Azure y archivo de precios verificado</td><td class="miss">Falta</td><td>REG-H07</td></tr>
+<tr><td>Script de la fase 0 de Azure y Bicep de presupuesto (<code>deploy/azure/phase0/</code>)</td><td class="ok">Existe</td><td>Incorporado el 26/09/2026; todavía no se corrió de punta a punta, así que ninguna alerta de presupuesto se disparó (REG-H07)</td></tr>
+<tr><td>Consumo mensual de Azure del fundador, verificado (US$ 17.54 <span class="ars">(ARS 2,7 M)</span>/US$ 44.77 <span class="ars">(ARS 6,8 M)</span> en el §0)</td><td class="miss">Falta</td><td>Sigue siendo un dato del fundador sin medir; REG-H07</td></tr>
 <tr><td>Contratos laborales o de locación de servicios</td><td class="miss">Falta</td><td>M3</td></tr>
 </tbody></table></div>
 
@@ -2974,8 +2990,9 @@ if __name__ == &quot;__main__&quot;:
 <tr><td>8</td><td>Ley de IA de la UE: “se aplica el 2/8/2026”</td><td>Correcto, y la fecha ya pasó; existió una propuesta para postergar las obligaciones de alto riesgo (su estado actual no se verificó acá)</td><td>El Marco A se reformula como “ya en marcha”, con un refutador</td></tr>
 <tr><td>9</td><td>Costos de pentest, SOC 2, escrow, abogados y segundo mantenedor</td><td>El repositorio tiene sus propias estimaciones (REG-H01–H05, H10); el segundo mantenedor se modela a US$ 110 mil <span class="ars">(ARS 167 M)</span><span class="chip m" title="MODEL (modelo)">M</span>, por debajo de los US$ 150–250 mil <span class="ars">(ARS 228–380 M)</span><span class="chip m" title="MODEL (modelo)">M</span> del repositorio</td><td>Se usan las estimaciones del repositorio; sensibilidad en D7</td></tr>
 <tr><td>10</td><td>Pedido de la edición en castellano: precios en pesos argentinos entre paréntesis</td><td>La API de Estadísticas Cambiarias del BCRA publica US$ 1 = ARS 1.519,50<span class="chip v" title="VERIFIED (verificado)">V</span> para el 24/09/2026 (respuesta guardada en <code>datos/fx/</code>). Otras cotizaciones de referencia o de mercado, si difieren, darían montos en pesos distintos; no se verificaron acá</td><td>Se usa la cotización del BCRA para todos los montos, sin proyectar inflación ni devaluación. El modelo, los topes y los tramos siguen en dólares</td></tr>
+<tr><td>11</td><td>Kit de despliegue en Azure en TRL 3, sin fase 0 en el repositorio (tal como decía el §0 de este mismo paquete el 25/09/2026)</td><td>Un commit de la misma semana (26/09/2026) agregó <code>deploy/azure/phase0</code> y un kit de VM, y se desplegó y midió una VM (Standard_B2als_v2, Chile Central): modo estricto activo, un registro firmado confirmado. Las cifras propias del fundador de US$ 17.54 <span class="ars">(ARS 2,7 M)</span>/US$ 44.77 <span class="ars">(ARS 6,8 M)</span> por mes no se volvieron a medir</td><td>D2 se actualizó a TRL 4; se muestra el precio de lista verificado de la propia VM, US$0,0526<span class="chip v" title="VERIFIED (verificado)">V</span>/hora, junto a las cifras mensuales que siguen sin verificarse</td></tr>
 </tbody></table></div>
-<p class="census"><span class="lbl">Censo de etiquetas</span> <span class="chip v">V</span> 14 · <span class="chip m">M</span> 14 · <span class="chip h">H</span> 50</p>
+<p class="census"><span class="lbl">Censo de etiquetas</span> <span class="chip v">V</span> 15 · <span class="chip m">M</span> 14 · <span class="chip h">H</span> 50</p>
 </section>
 
 <section id="ask" class="ask">

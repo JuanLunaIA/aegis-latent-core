@@ -57,8 +57,8 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/08_COMPONENT_PACKAGE_WORKFLOW_MATRIX.md",
-      "sha256": "64550c01cbb7e326a0760a06fafc064faa4c1df6f81787ae57c186c236be5a2d",
-      "size": 9228
+      "sha256": "71ed6f60867c6b2d485f90d97a2ede1a1d3b0637f28e36d675da689df0b786ae",
+      "size": 9869
     },
     {
       "category": "context",
@@ -99,14 +99,14 @@
     {
       "category": "governed_input",
       "path": "README.md",
-      "sha256": "84f2fe82f234338720a817295a93edafe5f1ee25424ae4080666a589f6c8d67e",
-      "size": 17316
+      "sha256": "781a6b2a471a5d218ee77d75f757d937ce0cb99aa26e0313f941563ac9c83eb7",
+      "size": 17423
     },
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "e29b6aff18819b18bbb640b8fd1f39269a9cc40a18f48b09a7f6e8c640033a36",
-      "size": 210510
+      "sha256": "e4a5fdfbded429f621a6cc3c9802453587701d3b1640d8c0510ea6b0d1a3923f",
+      "size": 211909
     },
     {
       "category": "governed_input",
@@ -117,8 +117,8 @@
     {
       "category": "governed_input",
       "path": "DEPLOYMENT_GUIDE.md",
-      "sha256": "62ed124a8da289ce7693768faace845c66c8914d6cbbf8bf702a102080231c07",
-      "size": 15876
+      "sha256": "97afeebecb459f9e44755c167f4409ea57a8fe5b112b95d89877eaf11e02e9de",
+      "size": 16387
     },
     {
       "category": "governed_input",
@@ -495,8 +495,8 @@
     {
       "category": "governed_input",
       "path": "tests/test_ai_context.py",
-      "sha256": "a7cc605135340b2f7572dfcc97b4ea425d1f5c2437df4a22a0494109ba806e80",
-      "size": 14681
+      "sha256": "95e6dd59cabedc4969c4c7e6cfd6e6ca36b979103d7d342dda4ea77777800ffa",
+      "size": 14717
     }
   ],
   "hash_algorithm": "sha256",
