@@ -30,6 +30,12 @@
    "note": "BCRA API Estadisticas Cambiarias v1.0, Cotizaciones/USD, date 2026-09-24 (tipoCotizacion), read 2026-09-25; used only by the Spanish edition to show pesos in parentheses",
    "note_es": "API del BCRA Estadísticas Cambiarias v1.0, Cotizaciones/USD, fecha 24/09/2026 (tipoCotizacion), consultada el 25/09/2026; solo la usa la edición en castellano para mostrar pesos entre paréntesis"
   },
+  "azure_b2als_v2_chilecentral_hourly_usd": {
+   "value": 0.0526,
+   "tag": "VERIFIED",
+   "note": "evidence/benchmarks/azure/azure_Standard_B2als_v2_chilecentral_2026-09-26.json (SHA-256 762016d9...); retail list price fetched via aegis_azure_kit.py estimate, 2026-09-26; VM only, excludes the attached disk",
+   "note_es": "evidence/benchmarks/azure/azure_Standard_B2als_v2_chilecentral_2026-09-26.json (SHA-256 762016d9...); precio de lista obtenido con aegis_azure_kit.py estimate, 26/09/2026; solo la VM, sin el disco adjunto"
+  },
   "commits_per_s_100_threads": {
    "value": 1482.37,
    "tag": "VERIFIED",
@@ -1662,12 +1668,12 @@
   },
   {
    "component": "Azure deployment kit",
-   "now": 3,
-   "target": 5,
-   "evidence": "deploy/azure has aks/ only; phase-0 guardrails not in repo (REG-H07)",
-   "gap": "commit phase-0 IaC + budget alerts + one real deployment readback",
-   "eng_weeks": 2,
-   "external_usd": 540
+   "now": 4,
+   "target": 6,
+   "evidence": "VM kit deployed and measured once (Standard_B2als_v2, Chile Central, 2026-09-26): strict mode started, verify.sh passed, one signed record committed (REG-H07)",
+   "gap": "run phase0_guardrails.sh end to end, observe a budget alert fire, repeat on a second size/region",
+   "eng_weeks": 1,
+   "external_usd": 200
   }
  ]
 }

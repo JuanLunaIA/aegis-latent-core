@@ -100,6 +100,17 @@ FX_ARS = inp(
     "API del BCRA Estadísticas Cambiarias v1.0, Cotizaciones/USD, fecha 24/09/2026 (tipoCotizacion), "
     "consultada el 25/09/2026; solo la usa la edición en castellano para mostrar pesos entre paréntesis",
 )
+AZURE_VM_HOURLY = inp(
+    "azure_b2als_v2_chilecentral_hourly_usd",
+    0.0526,
+    "VERIFIED",
+    "evidence/benchmarks/azure/azure_Standard_B2als_v2_chilecentral_2026-09-26.json "
+    "(SHA-256 762016d9...); retail list price fetched via aegis_azure_kit.py estimate, "
+    "2026-09-26; VM only, excludes the attached disk",
+    "evidence/benchmarks/azure/azure_Standard_B2als_v2_chilecentral_2026-09-26.json "
+    "(SHA-256 762016d9...); precio de lista obtenido con aegis_azure_kit.py estimate, "
+    "26/09/2026; solo la VM, sin el disco adjunto",
+)
 THROUGHPUT_100T = inp(
     "commits_per_s_100_threads",
     1482.37,
@@ -1169,12 +1180,13 @@ TRL = [
     ),
     (
         "Azure deployment kit",
-        3,
-        5,
-        "deploy/azure has aks/ only; phase-0 guardrails not in repo (REG-H07)",
-        "commit phase-0 IaC + budget alerts + one real deployment readback",
-        2,
-        540,
+        4,
+        6,
+        "VM kit deployed and measured once (Standard_B2als_v2, Chile Central, 2026-09-26): "
+        "strict mode started, verify.sh passed, one signed record committed (REG-H07)",
+        "run phase0_guardrails.sh end to end, observe a budget alert fire, repeat on a second size/region",
+        1,
+        200,
     ),
 ]
 TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
@@ -1235,8 +1247,10 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     ),
     "Azure deployment kit": (
         "Kit de despliegue en Azure",
-        "deploy/azure solo tiene aks/; las salvaguardas de la fase 0 no están en el repositorio (REG-H07)",
-        "IaC de la fase 0 en el repositorio + alertas de presupuesto + la lectura de un despliegue real",
+        "kit de VM desplegado y medido una vez (Standard_B2als_v2, Chile Central, 26/09/2026): "
+        "modo estricto activo, verify.sh aprobado, un registro firmado confirmado (REG-H07)",
+        "correr phase0_guardrails.sh de punta a punta, observar una alerta de presupuesto disparada, "
+        "repetir en un segundo tamaño/región",
     ),
 }
 

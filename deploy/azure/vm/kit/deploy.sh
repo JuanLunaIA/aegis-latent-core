@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 # Deploy this kit: resource group + VM + data disk + TLS. Prompts before spending; prints no secret.
 #   ./deploy.sh [--yes]
 set -euo pipefail

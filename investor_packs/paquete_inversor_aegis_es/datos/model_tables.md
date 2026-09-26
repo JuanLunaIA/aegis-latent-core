@@ -202,7 +202,7 @@
 | Raft / consenso | 2 | módulo huérfano; reemplazado por el diseño de lease AD-17 | fuera de la hoja de ruta | 0 | US$ 0 (ARS 0,00) | US$ 0 (ARS 0,00) |
 | Firma HSM / PQC | 4 | camino PKCS#11; ML-DSA-65 firma en 173 us y verifica en 62 us; Managed HSM excluido: US$ 2.342 (ARS 3,6 M) por mes | prueba de integración con una clave respaldada por HSM en Key Vault Premium | 4 | US$ 500 (ARS 759.750) | US$ 9.700 (ARS 14,7 M) |
 | OTel / métricas | 6 | /metrics verificado en la imagen publicada por el recolector de evidencia (REG-D86) | tableros del piloto + runbook de alertas ejercitado | 1 | US$ 0 (ARS 0,00) | US$ 2.300 (ARS 3,5 M) |
-| Kit de despliegue en Azure | 3 | deploy/azure solo tiene aks/; las salvaguardas de la fase 0 no están en el repositorio (REG-H07) | IaC de la fase 0 en el repositorio + alertas de presupuesto + la lectura de un despliegue real | 2 | US$ 540 (ARS 820.530) | US$ 5.140 (ARS 7,8 M) |
+| Kit de despliegue en Azure | 4 | kit de VM desplegado y medido una vez (Standard_B2als_v2, Chile Central, 26/09/2026): modo estricto activo, verify.sh aprobado, un registro firmado confirmado (REG-H07) | correr phase0_guardrails.sh de punta a punta, observar una alerta de presupuesto disparada, repetir en un segundo tamaño/región | 1 | US$ 200 (ARS 303.900) | US$ 2.500 (ARS 3,8 M) |
 
 ### Monte Carlo: percentiles de ARR (semilla 42, n=5.000)
 | Percentil | AF1 | AF2 | AF3 | AF4 | AF5 |
