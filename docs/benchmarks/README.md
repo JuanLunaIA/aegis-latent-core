@@ -88,6 +88,7 @@ A change to source, compiler, dependency, storage, runtime flags, corpus or meas
 ## Related documents
 
 - [`BENCHMARK_RESULTS.md`](BENCHMARK_RESULTS.md)
+- [`AZURE_BENCHMARKS.md`](AZURE_BENCHMARKS.md)
 - [`../BENCHMARKS.md`](../BENCHMARKS.md)
 - [`../CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)
 - [`../security/WAF_TESTING.md`](../security/WAF_TESTING.md)

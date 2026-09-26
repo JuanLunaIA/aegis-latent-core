@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Store the upstream LLM provider key. Reads it from stdin so it never lands in argv or history:
+#   ssh azureuser@<fqdn> 'sudo aegis-set-backend-key' <<< "$PROVIDER_KEY"
+set -euo pipefail
+umask 077
+KEY=$(head -n1 | tr -d '\r\n')
+[ -n "$KEY" ] || { echo "empty key refused" >&2; exit 2; }
+sed -i '/^AEGIS_BACKEND_API_KEY=/d' /etc/aegis/aegis.env
+echo "AEGIS_BACKEND_API_KEY=$KEY" >> /etc/aegis/aegis.env
+systemctl restart aegis.service
+echo "backend key stored; gateway restarted"

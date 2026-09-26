@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Print the generated client and audit API keys to the caller's terminal (root only).
+set -euo pipefail
+grep -E '^AEGIS_(API|AUDIT_API)_KEYS=' /etc/aegis/aegis.env

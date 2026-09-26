@@ -39,7 +39,10 @@ Every cell below is one of:
 | Target | Status | Evidence |
 |---|---|---|
 | Self-hosted / bare-metal, single node | **SUPPORTED** | This is what every CI job above actually is: a plain Linux process with local disk. No cloud SDK or credential is required for the base gateway to start, commit evidence, or serve requests. |
-| AWS, Azure, GCP (as a managed compute target) | **UNTESTED** | No workflow authenticates to, deploys to, or runs against a live AWS, Azure, or GCP account. Claims about behavior on managed compute (e.g. instance metadata services, managed disk semantics) are not established here. |
+| Azure VM with a Managed Disk (`deploy/azure/vm`, Azure Kit Creator) | **DEPLOYED AND MEASURED ONCE** | One manual deployment on 2026-09-26 (`Standard_B2als_v2`, Chile Central, Premium SSD, Ubuntu 24.04): strict mode started, `verify.sh` passed, one signed record reached the WAL, and disk and harness numbers are retained in [Azure Benchmarks](benchmarks/AZURE_BENCHMARKS.md). No CI workflow deploys to Azure, so this is not a regression gate. |
+| Azure AKS (`deploy/azure/aks`) | **OPERATOR-RUN, NOT VERIFIED HERE** | Authored and run by the owner against their subscription; not deployed or measured in this record. |
+| Azure Container Apps | **UNSUPPORTED** | Persistent volumes are Azure Files, which breaks the single-writer lock; see [Azure Install Options](operations/AZURE_INSTALL_OPTIONS.md#d-azure-container-apps). Not tested against a live environment. |
+| AWS, GCP (as a managed compute target) | **UNTESTED** | No workflow authenticates to, deploys to, or runs against a live AWS or GCP account. Claims about behavior on managed compute (e.g. instance metadata services, managed disk semantics) are not established here. |
 
 ## Storage backend
 

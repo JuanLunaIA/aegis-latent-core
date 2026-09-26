@@ -1,0 +1,8 @@
+# Automatic HTTPS (Let's Encrypt HTTP-01) for the VM's Azure DNS label.
+{$AEGIS_FQDN} {
+	encode zstd gzip
+	request_body {
+		max_size 1MB
+	}
+	reverse_proxy aegis:8080
+}

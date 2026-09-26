@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Format (first boot only) and mount the WAL data disk (LUN 0) at /var/lib/aegis.
+set -euo pipefail
+# SCSI-attached sizes expose LUN 0 under scsi1; NVMe-attached sizes (e.g. the v6/v7 families) under data/by-lun.
+DEV=""
+for _ in $(seq 60); do
+  for cand in /dev/disk/azure/scsi1/lun0 /dev/disk/azure/data/by-lun/0; do
+    [ -b "$cand" ] && DEV=$cand && break 2
+  done
+  sleep 2
+done
+[ -n "$DEV" ] || { echo "data disk LUN 0 not found" >&2; exit 1; }
+if ! blkid "$DEV" >/dev/null 2>&1; then
+  mkfs.ext4 -q -L aegis-wal "$DEV"     # default data=ordered; see docs/operations/STORAGE_REQUIREMENTS.md
+fi
+mkdir -p /var/lib/aegis
+grep -q 'LABEL=aegis-wal' /etc/fstab || echo 'LABEL=aegis-wal /var/lib/aegis ext4 defaults,nofail 0 2' >> /etc/fstab
+mountpoint -q /var/lib/aegis || mount /var/lib/aegis
+chown 10001:10001 /var/lib/aegis
+chmod 700 /var/lib/aegis

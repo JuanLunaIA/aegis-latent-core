@@ -113,7 +113,7 @@ export AEGIS_BACKEND_URL=http://127.0.0.1:9999
 aegis
 ```
 
-Development mode disables the controls that make records meaningful — it is for reading the API, not for evaluating security. For a hardened single node see [Deployment Profiles](docs/operations/DEPLOYMENT_PROFILES.md). Container alternative: `docker compose up --build` (evaluation profile, bound to `127.0.0.1`).
+Development mode disables the controls that make records meaningful — it is for reading the API, not for evaluating security. For a hardened single node see [Deployment Profiles](docs/operations/DEPLOYMENT_PROFILES.md); to run one on Azure with a generated kit, see the [Azure Quickstart](docs/operations/AZURE_QUICKSTART.md). Container alternative: `docker compose up --build` (evaluation profile, bound to `127.0.0.1`).
 
 **Step 3 — make a governed call and read the evidence headers:**
 
