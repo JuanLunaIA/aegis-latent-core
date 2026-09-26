@@ -75,3 +75,6 @@ tools/visualizer/gallery/
 # they produced live in tests/redteam/ as regression tests and in
 # evidence/fuzz/*/README.md as narrative; the raw seeds do not need to travel.
 evidence/fuzz/*/*_corpus/
+
+# Generated Azure kits
+aegis-azure-kits/

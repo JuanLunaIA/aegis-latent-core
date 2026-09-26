@@ -1,0 +1,79 @@
+# Aegis Latent Core on a single Azure VM. Rendered onto the VM by cloud-init.
+# Secrets live in /etc/aegis/aegis.env (root, 0600), never in this file.
+services:
+  aegis:
+    image: ${AEGIS_IMAGE}
+    restart: always
+    env_file: /etc/aegis/aegis.env
+    environment:
+      AEGIS_SECURITY_ENFORCEMENT_MODE: strict
+      AEGIS_REQUIRE_DURABLE_EVIDENCE: "true"
+      AEGIS_REQUIRE_LSM: "true"
+      AEGIS_REQUIRE_SECCOMP: "true"
+      AEGIS_RATE_LIMIT_BACKEND: redis
+      AEGIS_WORKERS: "1"               # one writer per WAL path; see docs/operations/AZURE_INSTALL_OPTIONS.md
+      AEGIS_WAL_PATH: /data/aegis.wal.jsonl
+      AEGIS_PROVIDER: ${AEGIS_PROVIDER}
+      AEGIS_BACKEND_URL: ${AEGIS_BACKEND_URL}
+    volumes:
+      - /var/lib/aegis:/data           # Azure managed data disk, ext4, single writer
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true         # Docker's default seccomp and AppArmor profiles stay applied
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [edge, backend]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    # Rate-limit state only; ephemeral by design, same posture as deploy/azure/aks.
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --save '' --appendonly no"]
+    env_file: /etc/aegis/redis.env
+    user: "999:999"
+    read_only: true
+    tmpfs: [/tmp:size=16m]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  caddy:
+    image: caddy:2
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      AEGIS_FQDN: ${AEGIS_FQDN}
+    volumes:
+      - /opt/aegis/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    depends_on: [aegis]
+    networks: [edge]
+
+networks:
+  edge: {}
+  backend:
+    internal: true                     # Redis is unreachable from outside and cannot reach out
+
+volumes:
+  caddy-data: {}

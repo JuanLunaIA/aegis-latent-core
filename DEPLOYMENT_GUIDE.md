@@ -97,6 +97,8 @@ A recommended topology places a TLS/mTLS ingress in front of Aegis, runs Aegis o
 
 The process should run with a read-only root filesystem, a dedicated non-root identity, dropped Linux capabilities, a Seccomp profile, an enforcing AppArmor/SELinux profile, bounded CPU and memory, and an explicit writable mount only for the evidence path. Network namespaces, nftables, cloud egress policies, and Kubernetes NetworkPolicy remain necessary defense-in-depth; the application EgressGuard does not replace them.
 
+On Azure, the single-VM path is packaged as a generated kit; the options, trade-offs and the storage constraint that decides between them are in [`docs/operations/AZURE_INSTALL_OPTIONS.md`](docs/operations/AZURE_INSTALL_OPTIONS.md), and a step-by-step build is in [`docs/operations/AZURE_QUICKSTART.md`](docs/operations/AZURE_QUICKSTART.md).
+
 ## 6. Request and evidence lifecycle
 
 ```text
@@ -180,6 +182,8 @@ Aegis is not, by itself, a FedRAMP authorization, HIPAA compliance determination
 - [`docs/DEVELOPER_QUICKSTART.md`](docs/DEVELOPER_QUICKSTART.md)
 - [`docs/PLATFORM_OPERATOR_GUIDE.md`](docs/PLATFORM_OPERATOR_GUIDE.md)
 - [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)
+- [`docs/operations/AZURE_QUICKSTART.md`](docs/operations/AZURE_QUICKSTART.md)
+- [`docs/operations/AZURE_INSTALL_OPTIONS.md`](docs/operations/AZURE_INSTALL_OPTIONS.md)
 - [`docs/operations/BACKPRESSURE_RUNBOOK.md`](docs/operations/BACKPRESSURE_RUNBOOK.md)
 - [`docs/operations/KEY_ROTATION_RUNBOOK.md`](docs/operations/KEY_ROTATION_RUNBOOK.md)
 - [`docs/operations/ROLLBACK_RUNBOOK.md`](docs/operations/ROLLBACK_RUNBOOK.md)

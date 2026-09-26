@@ -25,7 +25,7 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 | Supplied | Verification status |
 |---|---|
 | Azure burn model: **$17.54/mo typical, $44.77/mo worst; runway 11.4 / 4.5 months** | **UNVERIFIED.** No such figure exists anywhere in the corpus — `grep` for `17.54`, `44.77`, `runway` returns nothing. Recorded as an owner-supplied planning input, not a measurement |
-| `deploy/azure/phase0/phase0_guardrails.sh` on tenant `8c1e7bd7-…` | **NOT IN REPOSITORY.** `deploy/azure/` contains only `aks/`. There is no `phase0/` directory and no such script. `REG-H07` cannot be executed against this tree as written |
+| `deploy/azure/phase0/phase0_guardrails.sh` on tenant `8c1e7bd7-…` | **NOW IN REPOSITORY (2026-09-26).** The script and `budget.bicep` were added under `deploy/azure/phase0/`. The identifier `8c1e7bd7-…` matches the subscription ID of the account logged in when they were added, not its tenant ID; the script targets whatever subscription `az` is logged into and prints it for confirmation. See `REG-H07` |
 
 Both are stated rather than silently carried, because a handoff pack that passes an unverified number through to a budget decision is the failure mode the registry exists to prevent.
 
@@ -141,11 +141,13 @@ Both are stated rather than silently carried, because a handoff pack that passes
 | | |
 |---|---|
 | **Severity** | HIGH |
-| **Status** | **CANNOT EXECUTE AS WRITTEN** |
+| **Status** | **PARTIALLY CLOSED (2026-09-26)** |
 
-`deploy/azure/phase0/phase0_guardrails.sh` **does not exist in this repository.** `deploy/azure/` contains only `aks/`, whose `bootstrap.sh` is the AKS provisioning path.
+`deploy/azure/phase0/phase0_guardrails.sh` and `budget.bicep` now exist, together with an easy-install VM kit ([Azure Kit Creator](operations/AZURE_KIT_CREATOR.md)) and a recorded live deployment ([Azure Benchmarks](benchmarks/AZURE_BENCHMARKS.md)). What is established: `budget.bicep` validated against Azure; the VM kit deployed, passed its checks and was measured once.
 
-**Owner action:** supply the Phase-0 kit, or restate the item against `deploy/azure/aks/bootstrap.sh`, which does exist and carries its own cost annotations. The tenant identifier supplied with this item is recorded as given and was not resolved or verified.
+**Still open:** the Phase-0 script itself was not run end to end (it changes subscription-level settings, so it needs the owner's go-ahead); the budget alerts have not been observed firing; and Azure notifies at a threshold but does not stop spend. The `$17.54` and `$44.77` monthly figures remain owner-supplied, unmeasured inputs. For scale, the retail list price of one `Standard_B2als_v2` in Chile Central was 0.0526 USD/hour on 2026-09-26, about 38.40 USD per 730-hour month before disks.
+
+**Owner action:** run `deploy/azure/phase0/phase0_guardrails.sh --email <you> --budget <credit>` once, then confirm an alert arrives.
 
 **Unblocks:** Azure Phase 1, per the directive that named it.
 

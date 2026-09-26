@@ -100,6 +100,9 @@ The documents that decide what may be said, and on what evidence.
 | --- | --- |
 | [Deployment Profiles](operations/DEPLOYMENT_PROFILES.md) | Local, single-node hardened, Kubernetes, air-gapped. |
 | [Storage Requirements](operations/STORAGE_REQUIREMENTS.md) | Durability, `fsync`, single-writer, capacity. |
+| [Azure Quickstart](operations/AZURE_QUICKSTART.md) | Empty subscription to a running strict-mode gateway on one VM, and back. |
+| [Azure Install Options](operations/AZURE_INSTALL_OPTIONS.md) | VM kit, AKS, Helm, Container Apps: advantages, disadvantages, costs. |
+| [Azure Kit Creator](operations/AZURE_KIT_CREATOR.md) | `doctor`, `estimate`, `create`, `verify`, and what a generated kit contains. |
 | [Monitoring and Alerting](operations/MONITORING_ALERTING.md) | Metrics, logs policy, alert rules. |
 | [Backup and Restore](operations/BACKUP_RESTORE.md) | Scope, integrity checks, restore drill. |
 | [Key Rotation Runbook](operations/KEY_ROTATION_RUNBOOK.md) | Signer and trusted-root rotation. |
@@ -133,6 +136,7 @@ The documents that decide what may be said, and on what evidence.
 | [Formal Verification Limits](formal/FORMAL_VERIFICATION_LIMITS.md) | What the models do not prove. |
 | [Benchmark Results](benchmarks/BENCHMARK_RESULTS.md) | Measured numbers with environment and date. |
 | [Benchmark Method](benchmarks/BENCHMARK_METHOD.md) | How measurements are taken and what they exclude. |
+| [Azure Benchmarks](benchmarks/AZURE_BENCHMARKS.md) | Disk and gateway measurements on one Azure VM, 2026-09-26. |
 | [Benchmarks](BENCHMARKS.md) | The v3.1.0 measurement record. |
 
 | [Prove It Yourself](PROVE_IT.md) | Reproduce the evidence on your own machine, command by command. |

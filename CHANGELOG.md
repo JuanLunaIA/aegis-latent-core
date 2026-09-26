@@ -16,7 +16,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Azure Kit Creator** (`deploy/azure/kit-creator/aegis_azure_kit.py`): `doctor`, `estimate`,
+  `create` and `verify` generate a self-contained, secret-free Azure VM kit (Bicep, Docker
+  Compose, Caddy TLS, lifecycle scripts). Secrets are generated on the VM at first boot.
+- `deploy/azure/vm/`, the kit source: strict-mode gateway with the WAL on a Premium Managed
+  Disk, Redis on an internal-only network, and a budget alert.
+- `deploy/azure/phase0/` (`phase0_guardrails.sh`, `budget.bicep`): providers, tagged
+  resource group and subscription budget alerts. Partially closes `REG-H07`.
+- `deploy/azure/benchmarks/`: harness that records raw-disk `fsync`, the repository harness
+  and `/health` latency on an Azure VM.
+- `tests/test_azure_kit.py`: offline checks for the kit (validation, checksums, secret scan,
+  Bicep compilation, compose posture, cloud-init rendering).
+
 ### Documentation
+
+- Azure: [Quickstart](docs/operations/AZURE_QUICKSTART.md), [Install Options](docs/operations/AZURE_INSTALL_OPTIONS.md)
+  (advantages, disadvantages, costs; Container Apps recorded as unsupported),
+  [Kit Creator](docs/operations/AZURE_KIT_CREATOR.md) and
+  [Azure Benchmarks](docs/benchmarks/AZURE_BENCHMARKS.md) with the retained artifact under
+  `evidence/benchmarks/azure/`. `docs/PLATFORM_COMPATIBILITY.md` and `REG-H07` now state
+  what the one live deployment on 2026-09-26 did and did not establish.
 
 - The verified `5.0.1` publication is recorded: `docs/RELEASE_STATUS.md` §1.0a,
   `CLM-112`, and the readback transcript

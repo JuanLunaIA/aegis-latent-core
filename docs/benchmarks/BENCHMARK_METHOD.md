@@ -35,6 +35,7 @@ A number without these four things is not a measurement:
 | WAF corpus | Pinned corpus replay | Traffic outside the corpus |
 | PQC signing timing | Sample-based timing | Constant-time behaviour, which is not established |
 | Commit latency distribution, concurrent-thread commit throughput, in-process streaming RSS, Ed25519/ML-DSA-65 sign+verify | `scripts/run_benchmarks_5.0.1.py` — see §8 | Network, provider, request handling, multi-process/multi-replica scaling, constant-time behaviour |
+| The same harness plus raw-disk `fsync` on an Azure VM data disk | `deploy/azure/benchmarks/run_azure_benchmarks.sh` — see [Azure Benchmarks](AZURE_BENCHMARKS.md) | Every other size, region, disk and load; power-loss durability; governed HTTP traffic |
 
 ## 8. The v5.0.1 documentation-pass benchmark (`run_benchmarks_5.0.1.py`)
 
@@ -52,8 +53,8 @@ Reproduce with `python scripts/run_benchmarks_5.0.1.py --json`.
 | Ed25519 sign / verify | Best-of-5 over 500 ops, `cryptography` (RFC 8032) | sign 40.5 µs/op · verify 128.6 µs/op |
 | ML-DSA-65 sign / verify | Best-of-5 over 500 ops, `aegis_rust` (pqcrypto-mldsa, FIPS 204) | sign 173.0 µs/op · verify 62.4 µs/op |
 
-Read the throughput row carefully: **it does not scale with thread count, and that
-is the correct result, not noise.** All three columns measure one process writing
+Read the throughput row carefully: **on this host it does not scale with thread count, and that
+is the correct result, not noise.** (On the Azure VM in [Azure Benchmarks](AZURE_BENCHMARKS.md) it did rise between 10 and 50 threads, so this observation is specific to this host's storage.) All three columns measure one process writing
 to one WAL file through one lock (`AD-16`: this source tree does not implement a
 distributed WAL); more threads add contention on that lock, not more writers.
 Confusing this row for a multi-replica capacity figure would misstate the

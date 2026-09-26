@@ -1,0 +1,25 @@
+#cloud-config
+# Rendered by main.bicep: double-underscore tokens are replaced with validated parameters and base64 asset bodies.
+package_update: true
+packages: [docker.io, docker-compose-v2, openssl, curl, jq]
+write_files:
+  - path: /etc/aegis/kit.env
+    permissions: "0644"
+    content: |
+      AEGIS_IMAGE=__IMAGE__
+      AEGIS_FQDN=__FQDN__
+      AEGIS_PROVIDER=__PROVIDER__
+      AEGIS_BACKEND_URL=__BACKEND_URL__
+  - { path: /opt/aegis/docker-compose.yml, permissions: "0644", encoding: b64, content: __COMPOSE_B64__ }
+  - { path: /opt/aegis/Caddyfile, permissions: "0644", encoding: b64, content: __CADDY_B64__ }
+  - { path: /etc/systemd/system/aegis.service, permissions: "0644", encoding: b64, content: __UNIT_B64__ }
+  - { path: /usr/local/sbin/aegis-prepare-disk, permissions: "0700", encoding: b64, content: __DISK_B64__ }
+  - { path: /usr/local/sbin/aegis-bootstrap-secrets, permissions: "0700", encoding: b64, content: __SECRETS_B64__ }
+  - { path: /usr/local/sbin/aegis-set-backend-key, permissions: "0700", encoding: b64, content: __SETKEY_B64__ }
+  - { path: /usr/local/sbin/aegis-show-client-key, permissions: "0700", encoding: b64, content: __SHOWKEY_B64__ }
+runcmd:
+  - [systemctl, enable, --now, docker]
+  - [/usr/local/sbin/aegis-prepare-disk]
+  - [/usr/local/sbin/aegis-bootstrap-secrets]
+  - [systemctl, daemon-reload]
+  - [systemctl, enable, --now, aegis.service]

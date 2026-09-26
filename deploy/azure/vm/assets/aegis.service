@@ -1,0 +1,17 @@
+[Unit]
+Description=Aegis Latent Core (docker compose)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/aegis/aegis.env
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/aegis
+ExecStart=/usr/bin/docker compose --env-file /etc/aegis/kit.env -f /opt/aegis/docker-compose.yml up -d --remove-orphans
+ExecStop=/usr/bin/docker compose --env-file /etc/aegis/kit.env -f /opt/aegis/docker-compose.yml down
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target
