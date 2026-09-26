@@ -57,8 +57,8 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/08_COMPONENT_PACKAGE_WORKFLOW_MATRIX.md",
-      "sha256": "64550c01cbb7e326a0760a06fafc064faa4c1df6f81787ae57c186c236be5a2d",
-      "size": 9228
+      "sha256": "78d2c7dc86a485abbb6f92eee0f06df481a625fdaedd86f0c20f410a626387a5",
+      "size": 9827
     },
     {
       "category": "context",
@@ -495,8 +495,8 @@
     {
       "category": "governed_input",
       "path": "tests/test_ai_context.py",
-      "sha256": "a7cc605135340b2f7572dfcc97b4ea425d1f5c2437df4a22a0494109ba806e80",
-      "size": 14681
+      "sha256": "95e6dd59cabedc4969c4c7e6cfd6e6ca36b979103d7d342dda4ea77777800ffa",
+      "size": 14717
     }
   ],
   "hash_algorithm": "sha256",
