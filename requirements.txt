@@ -33,4 +33,4 @@ urllib3>=2.7.0
 # IDNA 2003 TLS hostname encoding enables certificate spoofing) and
 # GHSA-5p39-cfhj-2xmp (process-pool workers can block indefinitely on
 # undrained stderr) — both fixed in 4.14.2, already the pin in requirements.lock
-anyio>=4.14.2
+anyio>=4.15.1
