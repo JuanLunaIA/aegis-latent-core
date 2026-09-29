@@ -156,6 +156,10 @@ The documents that decide what may be said, and on what evidence.
 
 | [Verification-first Sales Surface](../tools/sales/README.md) | The verifier kit, landing page, data room, copy lint and demo, each with its reproduce command. |
 | [Validation Engine](commercial/validation/README.md) | The 60-row log, outbound batch 1, interview script, pilot generator and kill switch. |
+| [Assurance Status](assurance/ASSURANCE_STATUS.md) | Where each independent-assurance item stands and the wording it allows. |
+| [Penetration Test SOW Draft](assurance/PENTEST_SOW_DRAFT.md) | Draft scope for an evidence-path test and retest. |
+| [SOC 2 Readiness for the Vendor](assurance/SOC2_READINESS.md) | What a vendor Type I report would need and what exists. |
+| [Escrow Execution Plan](assurance/ESCROW_EXECUTION_PLAN.md) | Steps to a verified deposit, and the manifest tool. |
 | [Legal Stack: Drafts for Counsel](legal/README.md) | Licence, pilot, escrow, IP assignment, open-core memo and counsel questions, all unreviewed drafts. |
 | [Commercial Licence Template](legal/COMMERCIAL_LICENSE_TEMPLATE.md) | Draft licence beside the AGPLv3 grant, for counsel. |
 | [Paid Pilot Agreement Template](legal/PILOT_AGREEMENT_TEMPLATE.md) | Draft fixed-scope pilot contract, for counsel. |

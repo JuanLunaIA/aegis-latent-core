@@ -33,6 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Assurance pipeline** (`docs/assurance/`, `tools/assurance/`): a penetration-test SOW draft scoped to the
+  evidence path, a vendor SOC 2 readiness assessment, an escrow execution plan with
+  `escrow_manifest.py` (records a tag's tracked files and digests, refuses key material, checks a restore),
+  and `ASSURANCE_STATUS.md` with a machine-readable copy that tests keep from running ahead of its
+  evidence. No independent assurance exists; every item is `NOT_STARTED` or `DRAFTED`.
 - **Validation engine** (`tools/validation/`, `docs/commercial/validation/`): a blank 60-row validation log,
   outbound batch 1 (30 first touches by segment, sent by the owner), a buyer-interview script, a pilot
   generator that fills the pilot template and refuses a pilot that breaks its own rules, and
