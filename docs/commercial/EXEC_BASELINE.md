@@ -106,9 +106,32 @@ python -m pytest tests/test_determinism.py -q
 git ls-remote --tags origin 'v5.0.1*'
 # release checksums: download the 15 files listed in SHA256SUMS from the v5.0.1 release, then
 sha256sum -c SHA256SUMS
-curl -s https://pypi.org/pypi/aegis-latent-core/5.0.1/json
+for pkg in aegis-latent-core aegis-latent-sdk; do
+  curl -s "https://pypi.org/pypi/$pkg/5.0.1/json" \
+    | python -c "import sys,json;[print(f['digests']['sha256'],f['filename'],f['url']) for f in json.load(sys.stdin)['urls']]"
+done
+# download each URL printed above, run sha256sum on it, and compare with the digest shown and the SHA256SUMS line
 curl -s https://registry.npmjs.org/aegis-latent-sdk/5.0.1
-cd investor_packs/aegis_investor_pack_en && sha256sum -c SHA256SUMS
 ```
+
+Engine identity (G1, G2). Use a venv with the versions in `investor_packs/aegis_investor_pack_en/engine/requirements.txt` (numpy 2.4.6, matplotlib 3.11.2, Python 3.11):
+
+```bash
+cd investor_packs/aegis_investor_pack_en
+sha256sum -c SHA256SUMS
+python engine/aegis_financial_engine.py --out ./rebuild
+cmp rebuild/model_tables.md data/model_tables.md
+cmp rebuild/model_outputs.json data/model_outputs.json
+for f in img/*.png; do cmp "$f" "rebuild/$(basename "$f")"; done
+cd ../paquete_inversor_aegis_es
+sha256sum -c SHA256SUMS
+python motor/aegis_financial_engine.py --out ./reconstruccion --lang es
+cmp reconstruccion/model_tables.md datos/model_tables.md
+cmp reconstruccion/model_outputs.json datos/model_outputs.json
+for f in img/*.png; do cmp "$f" "reconstruccion/$(basename "$f")"; done
+cmp ../aegis_investor_pack_en/data/model_outputs.json datos/model_outputs.json
+```
+
+Delete the `rebuild/` and `reconstruccion/` folders afterwards; they are not to be committed.
 
 WAITING FOR OWNER: AVANZA FASE 1
