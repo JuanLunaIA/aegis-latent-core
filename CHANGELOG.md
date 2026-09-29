@@ -41,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Operating cadence** (`docs/cadence/`, `tools/cadence/cadence.py`): weekly report, monthly recompute
+  (re-runs the seed-42 engine and compares it byte for byte with the committed pack) and a kill-switch
+  register covering the six kill criteria, the budget alerts and the tranche gates, plus a draft
+  wind-down path for counsel. The tools read only owner-recorded facts, estimate nothing, send nothing
+  and never write `KILL_ACK.json`.
 - **Raise execution drafts and tools** (`docs/raise/`, `tools/raise/`): data-room index and hash
   manifest, SAFE sheet, tranche evidence packs, monthly-update generator and a pre-drafted downgrade
   memo. `tranche_gate.py` counts a gate as met only from a dated, referenced record the owner wrote;

@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "63a111750de7666d8431add8a9556b3dd406288e133879a9e3e7bb2d51a58596",
-      "size": 216279
+      "sha256": "9ba397ade62efb8cfc67a628fe8d96ccab58eac5a48a86e3229e4807b237eecc",
+      "size": 216721
     },
     {
       "category": "governed_input",
@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "89ca42c4fc56419576dc4df00e4d67c172f5dd9543a1430d93c54160e1827546",
-      "size": 40962
+      "sha256": "a9d05754f4c4a3320a56853d64813282af64e29b4c9147752ae0c588cf24e305",
+      "size": 41393
     },
     {
       "category": "governed_input",

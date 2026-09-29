@@ -168,6 +168,10 @@ The documents that decide what may be said, and on what evidence.
 | [Tranche Evidence Packs](raise/TRANCHE_EVIDENCE_PACKS.md) | What an investor checks at each gate and what evidence exists today. |
 | [Monthly Investor Update](raise/MONTHLY_UPDATE.md) | How the update draft is generated from recorded facts. |
 | [Downgrade Memo Draft](raise/DOWNGRADE_MEMO_DRAFT.md) | Pre-drafted letter to SAFE holders if a gate or kill criterion fires. |
+| [Operating Cadence](cadence/README.md) | Weekly report, monthly recompute and kill-switch register: commands, inputs and rules. |
+| [Kill-Switch Register](cadence/KILL_SWITCH_REGISTER.md) | Every stop condition with status, owner answer and consequence (blank-state rendering). |
+| [Wind-Down Path](cadence/WIND_DOWN_PATH.md) | Ordered checklist if the plan stops; a draft for counsel, not a decision. |
+| [Weekly Report 2026-W40](cadence/weekly/WEEKLY_2026-W40.md) | Blank-state baseline weekly report. |
 | [Commercial Licence Template](legal/COMMERCIAL_LICENSE_TEMPLATE.md) | Draft licence beside the AGPLv3 grant, for counsel. |
 | [Paid Pilot Agreement Template](legal/PILOT_AGREEMENT_TEMPLATE.md) | Draft fixed-scope pilot contract, for counsel. |
 | [Escrow Term Sheet](legal/ESCROW_TERM_SHEET.md) | Terms to propose to an escrow agent. |
