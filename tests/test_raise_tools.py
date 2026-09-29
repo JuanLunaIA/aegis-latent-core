@@ -61,6 +61,12 @@ def _dirs(tmp_path: Path, *, evidence=None, pilots=None, plan=None) -> tuple[Pat
     return data, val
 
 
+def _paid(val: Path, evidence: dict) -> int:
+    with (val / "PILOTS.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    return int(gate.paid_pilots(rows, evidence, 2500))
+
+
 def _status(results, tranche: str) -> str:
     return next(t for t in results if t["tranche"] == tranche)["status"]
 
@@ -118,7 +124,7 @@ def test_a_pilot_below_the_fee_floor_does_not_count(tmp_path: Path):
     pilots = [["P-1", "Acme", "2026-11-01", "", "active", "1000"]]
     ev = {"pilot_orders": {"P-1": {"date": "2026-10-30", "ref": "v/p1.pdf"}}}
     data, val = _dirs(tmp_path, evidence=ev, pilots=pilots)
-    assert gate.paid_pilots(list(csv.DictReader((val / "PILOTS.csv").open())), ev, 2500) == 0
+    assert _paid(val, ev) == 0
 
 
 def test_two_pilots_for_the_same_customer_count_once(tmp_path: Path):
@@ -128,7 +134,7 @@ def test_two_pilots_for_the_same_customer_count_once(tmp_path: Path):
     ]
     ev = {"pilot_orders": {p[0]: {"date": "2026-10-30", "ref": "v"} for p in pilots}}
     data, val = _dirs(tmp_path, evidence=ev, pilots=pilots)
-    assert gate.paid_pilots(list(csv.DictReader((val / "PILOTS.csv").open())), ev, 2500) == 1
+    assert _paid(val, ev) == 1
 
 
 def test_gate_two_is_late_only_after_month_eight_and_exits_three(tmp_path: Path):
