@@ -31,8 +31,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `examples/demo.py` runs again: it declares development mode, builds its API-key principal
   mapping, and expects two nodes per request. It had failed five of nine checks on `main`.
 
+### Fixed
+
+- **`HSMSigningBackend` RSA-PSS signing failed on every real PKCS#11 token.** It called
+  `pkcs11.mechanisms.RSA_PKCS_PSS_PARAMS`, which exists only in the unit-test mock; the real
+  library takes a `(hash, mgf, salt length)` tuple. ECDSA now falls back to raw `CKM_ECDSA` over a
+  host-computed SHA-256 digest on tokens without `CKM_ECDSA_SHA256`. Found by running the adapter
+  against SoftHSM 2.6.1 (`tests/test_hsm_softhsm.py`).
+
 ### Added
 
+- **TRL closure evidence** (`docs/assurance/TRL_CLOSURE.md`): `tools/qualification/wal_crash_soak.py`
+  (kill-and-recover; 60 rounds, 27,735 acknowledged commits, 0 lost), `tests/ha/test_ha_chaos.py`
+  (a real partition and a Redis restart), `deploy/observability/` (alert rules and dashboard checked
+  against the exported metrics), `tools/sales/build_verifier_kit.py`, and retained WAF corpus and soak
+  reports under `evidence/qualification/`. Finding: a Redis that loses its data resets the lease
+  epoch counter, and the sequence fence then stops the chain admitting (documented in
+  `docs/operations/HIGH_AVAILABILITY.md`; no code change made).
 - **Assurance pipeline** (`docs/assurance/`, `tools/assurance/`): a penetration-test SOW draft scoped to the
   evidence path, a vendor SOC 2 readiness assessment, an escrow execution plan with
   `escrow_manifest.py` (records a tag's tracked files and digests, refuses key material, checks a restore),

@@ -277,14 +277,12 @@ class HSMSigningBackend:
         self, session: Any, priv_key: Any, data: bytes, _pkcs11: Any
     ) -> tuple[bytes, str, str]:
         """RSA-PSS signing with SHA-256 / MGF1-SHA-256 / salt=32."""
-        import pkcs11.mechanisms as _mech  # noqa: PLC0415
-
         mechanism = _pkcs11.Mechanism.SHA256_RSA_PKCS_PSS
-        params = _mech.RSA_PKCS_PSS_PARAMS(
-            hashAlg=_pkcs11.Mechanism.SHA256,
-            mgf=_pkcs11.MGF.SHA256,
-            sLen=32,
-        )
+        # python-pkcs11 takes the PSS parameters as a (hash, mgf, salt length) tuple.
+        # There is no parameter class: an earlier version of this method called
+        # ``pkcs11.mechanisms.RSA_PKCS_PSS_PARAMS``, which exists only in the unit-test
+        # mock, so RSA signing failed on every real token.
+        params = (_pkcs11.Mechanism.SHA256, _pkcs11.MGF.SHA256, 32)
         pub_hex = self._export_rsa_public_key(session, _pkcs11)
         if not pub_hex:
             raise HSMUnavailableError("RSA public key is missing or ambiguous")
@@ -298,7 +296,17 @@ class HSMSigningBackend:
         pub_hex = self._export_ec_public_key(session, _pkcs11)
         if not pub_hex:
             raise HSMUnavailableError("EC public key is missing or ambiguous")
-        sig_bytes: bytes = priv_key.sign(data, mechanism=_pkcs11.Mechanism.ECDSA_SHA256)
+        try:
+            sig_bytes: bytes = priv_key.sign(data, mechanism=_pkcs11.Mechanism.ECDSA_SHA256)
+        except _pkcs11.exceptions.MechanismInvalid:
+            # Some tokens (SoftHSM 2.x among them) offer only raw CKM_ECDSA. Hash on the
+            # host and sign the digest: the result is the same r||s signature over
+            # SHA-256(data) that CKM_ECDSA_SHA256 returns.
+            import hashlib  # noqa: PLC0415
+
+            sig_bytes = priv_key.sign(
+                hashlib.sha256(data).digest(), mechanism=_pkcs11.Mechanism.ECDSA
+            )
         return sig_bytes, pub_hex, "pkcs11-ecdsa-sha256"
 
     def _export_rsa_public_key(self, session: Any, _pkcs11: Any) -> str:

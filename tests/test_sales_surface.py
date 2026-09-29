@@ -114,3 +114,22 @@ def test_end_to_end_demo_passes_every_check():
     result = _run("-m", "examples.demo", timeout=120)
     assert result.returncode == 0, result.stdout[-2000:] + result.stderr[-2000:]
     assert "RESULT: 5/5 checks OK" in result.stdout
+
+
+def test_verifier_kit_is_deterministic_and_runs_on_its_own(tmp_path: Path):
+    import zipfile
+
+    builder = ROOT / "tools" / "sales" / "build_verifier_kit.py"
+    first, second = tmp_path / "a.zip", tmp_path / "b.zip"
+    assert _run(str(builder), "--out", str(first)).returncode == 0
+    assert _run(str(builder), "--out", str(second)).returncode == 0
+    assert first.read_bytes() == second.read_bytes()
+    extracted = tmp_path / "kit"
+    with zipfile.ZipFile(first) as archive:
+        archive.extractall(extracted)
+    assert sorted(p.name for p in extracted.iterdir()) == [
+        "README.txt", "SHA256SUMS", "TRUSTED_ROOT.txt", "prove_it.py",
+        "record.json", "record_tampered.json",
+    ]  # fmt: skip
+    result = _run(str(extracted / "prove_it.py"), "--demo")
+    assert result.returncode == 0, result.stdout + result.stderr

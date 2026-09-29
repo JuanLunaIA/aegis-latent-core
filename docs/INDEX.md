@@ -156,6 +156,7 @@ The documents that decide what may be said, and on what evidence.
 
 | [Verification-first Sales Surface](../tools/sales/README.md) | The verifier kit, landing page, data room, copy lint and demo, each with its reproduce command. |
 | [Validation Engine](commercial/validation/README.md) | The 60-row log, outbound batch 1, interview script, pilot generator and kill switch. |
+| [TRL Closure: Evidence Against Each Gap](assurance/TRL_CLOSURE.md) | What was run against each maturity gap, the result, and what is still open. |
 | [Assurance Status](assurance/ASSURANCE_STATUS.md) | Where each independent-assurance item stands and the wording it allows. |
 | [Penetration Test SOW Draft](assurance/PENTEST_SOW_DRAFT.md) | Draft scope for an evidence-path test and retest. |
 | [SOC 2 Readiness for the Vendor](assurance/SOC2_READINESS.md) | What a vendor Type I report would need and what exists. |

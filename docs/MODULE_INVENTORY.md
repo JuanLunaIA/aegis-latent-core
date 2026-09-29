@@ -2,7 +2,7 @@
 
 Every file under the six source roots, with what it is, what reaches it, what tests it, and who owns it. Generated — edit `scripts/generate_module_inventory.py`, not this file. Currency is enforced by `tests/test_module_inventory_current.py`.
 
-`python scripts/generate_module_inventory.py` — 322 files.
+`python scripts/generate_module_inventory.py` — 324 files.
 
 ## What the status column means
 
@@ -18,9 +18,9 @@ Every file under the six source roots, with what it is, what reaches it, what te
 
 ## Coverage and ownership
 
-- **Navigation coverage:** 69 of 322 files (21%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
-- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 60, `roadmap-omit` 34, `unreferenced` 19.
-- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 322 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
+- **Navigation coverage:** 69 of 324 files (21%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
+- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 62, `roadmap-omit` 34, `unreferenced` 19.
+- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 324 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
 
 Tests are the test files that import the module directly, capped at 4 per row; the count is exact, the list is not exhaustive.
 
@@ -119,7 +119,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis/core/gossip_wal_sync.py` | module | aegis.core.gossip_wal_sync — SWIM-inspired gossip WAL sync. | allowlisted | `tests/test_gossip_wal_sync.py` | @JuanLunaIA |
 | `aegis/core/group_commit.py` | module | aegis.core.group_commit — coalesce concurrent WAL commits into one fsync. | reachable | `tests/test_coalesced_commit.py` | @JuanLunaIA |
 | `aegis/core/gxp_qualification.py` | module | aegis.core.gxp_qualification — GxP-oriented qualification support hooks. | allowlisted | `tests/test_gxp_qualification.py` | @JuanLunaIA |
-| `aegis/core/ha.py` | module | aegis.core.ha — running more than one gateway replica without forking evidence. | reachable | `tests/ha/test_ha_failover.py`, `tests/ha/test_ha_lease.py`, `tests/ha/test_ha_sequence.py`, `tests/ha/test_ha_sequencer_ledger.py` | @JuanLunaIA |
+| `aegis/core/ha.py` | module | aegis.core.ha — running more than one gateway replica without forking evidence. | reachable | `tests/ha/test_ha_chaos.py`, `tests/ha/test_ha_failover.py`, `tests/ha/test_ha_lease.py`, `tests/ha/test_ha_sequence.py`, … (+1 more)` | @JuanLunaIA |
 | `aegis/core/hardware_token.py` | module | aegis.core.hardware_token — Domain 1.2 hardware-bound session tokens. | allowlisted | `tests/test_hardware_token.py` | @JuanLunaIA |
 | `aegis/core/hl7_fhir_phi_detector.py` | module | aegis.core.hl7_fhir_phi_detector — HL7 v2 / FHIR structured PHI detection. | allowlisted | `tests/test_hl7_fhir_phi_detector.py` | @JuanLunaIA |
 | `aegis/core/homoglyph_normalizer.py` | module | aegis.core.homoglyph_normalizer — Homoglyph normalization beyond NFKC. | reachable | `tests/test_homoglyph_normalizer.py` | @JuanLunaIA |
@@ -338,8 +338,10 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `tools/qualification/__init__.py` | package | GxP qualification scripts — IQ/OQ evidence generation. | referenced | — | @JuanLunaIA |
 | `tools/qualification/iq_checks.py` | module | Installation Qualification (IQ) protocol — verifies Aegis is installed per specification. | unreferenced | — | @JuanLunaIA |
 | `tools/qualification/oq_checks.py` | module | Operational Qualification (OQ) protocol — verifies Aegis operates per specification. | unreferenced | — | @JuanLunaIA |
+| `tools/qualification/wal_crash_soak.py` | module | Kill a committing process again and again and check that no acknowledged commit is lost. | referenced | — | @JuanLunaIA |
 | `tools/sales/README.md` | text/data | — | referenced | — | @JuanLunaIA |
 | `tools/sales/build_site.py` | module | Build the static verification-first sales pages under ``site/``. | unreferenced | — | @JuanLunaIA |
+| `tools/sales/build_verifier_kit.py` | module | Package the verifier kit as one zip an external auditor can run without this repository. | referenced | — | @JuanLunaIA |
 | `tools/sales/data_room.json` | text/data | — | unreferenced | — | @JuanLunaIA |
 | `tools/sales/prove_it/TRUSTED_ROOT.txt` | text/data | — | unreferenced | — | @JuanLunaIA |
 | `tools/sales/prove_it/make_fixture.py` | module | Regenerate the synthetic fixtures that ``prove_it.py --demo`` verifies. | unreferenced | — | @JuanLunaIA |
