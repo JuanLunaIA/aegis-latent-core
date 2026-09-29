@@ -36,6 +36,14 @@ In a regulated industry that is not a paperwork problem — it is an existential
 - **Regulatory inputs.** MiFID II Art. 16(6)/16(7) and MiFIR Art. 25(1) record-keeping framing (durable, ordered-within-process records; no orders — RTS 24 — and no clock traceability — RTS 25); EU AI Act Art. 12 logging inputs (commit-before-response, tamper detection, verifiable inclusion); HIPAA Safe-Harbor-style pattern redaction; ISO/IEC 27037-style extracts. **These are technical inputs, not compliance.** No certification exists, none is in progress, and whether any obligation is met is a determination for you and your assessor (`CLM-039` is LEGAL-REVIEW-REQUIRED).
 
 > **→ [Prove it yourself](docs/PROVE_IT.md)** — twelve lines of Python, no call to our servers, three cases of which two must fail.
+>
+> ```bash
+> pip install aegis-latent-sdk aegis-latent-core   # verifier + gateway, both 5.0.1 on PyPI
+> python tools/sales/prove_it/prove_it.py --demo   # accepts one record, rejects two forgeries
+> python -m examples.demo                          # gateway + mock upstream, tamper detected
+> ```
+>
+> Both commands run from a checkout of this repository; [what each one shows and does not show](tools/sales/README.md).
 
 ---
 

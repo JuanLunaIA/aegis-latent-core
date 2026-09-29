@@ -2,7 +2,7 @@
 
 Every file under the six source roots, with what it is, what reaches it, what tests it, and who owns it. Generated — edit `scripts/generate_module_inventory.py`, not this file. Currency is enforced by `tests/test_module_inventory_current.py`.
 
-`python scripts/generate_module_inventory.py` — 307 files.
+`python scripts/generate_module_inventory.py` — 316 files.
 
 ## What the status column means
 
@@ -18,9 +18,9 @@ Every file under the six source roots, with what it is, what reaches it, what te
 
 ## Coverage and ownership
 
-- **Navigation coverage:** 67 of 307 files (22%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
-- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 50, `roadmap-omit` 34, `unreferenced` 14.
-- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 307 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
+- **Navigation coverage:** 69 of 316 files (22%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
+- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 54, `roadmap-omit` 34, `unreferenced` 19.
+- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 316 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
 
 Tests are the test files that import the module directly, capped at 4 per row; the count is exact, the list is not exhaustive.
 
@@ -305,6 +305,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `scripts/install_gitsign.sh` | shell script | — | referenced | — | @JuanLunaIA |
 | `scripts/integration_test_mock.py` | module | integration_test_mock.py — comprehensive local verification harness for Aegis v4.1.0. | unreferenced | — | @JuanLunaIA |
 | `scripts/license/license_scan.py` | module | License inventory and copyleft reconciliation across all three ecosystems. | referenced | — | @JuanLunaIA |
+| `scripts/lint_sales_copy.py` | module | Reject banned superlatives in sales-facing copy (Mission XVI, PD-XV-2). | unreferenced | — | @JuanLunaIA |
 | `scripts/prepare_release_assets.py` | module | Flatten release payloads and generate a deterministic integrity envelope. | referenced | — | @JuanLunaIA |
 | `scripts/regenerate_protobuf.sh` | shell script | Regenerate aegis/core/audit_node_pb2.py from aegis/core/audit_node.proto. | referenced | — | @JuanLunaIA |
 | `scripts/run_benchmarks_5.0.1.py` | module | scripts/run_benchmarks_5.0.1.py — real measurements for the v5.0.1 documentation pass. | referenced | — | @JuanLunaIA |
@@ -336,6 +337,14 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `tools/qualification/__init__.py` | package | GxP qualification scripts — IQ/OQ evidence generation. | referenced | — | @JuanLunaIA |
 | `tools/qualification/iq_checks.py` | module | Installation Qualification (IQ) protocol — verifies Aegis is installed per specification. | unreferenced | — | @JuanLunaIA |
 | `tools/qualification/oq_checks.py` | module | Operational Qualification (OQ) protocol — verifies Aegis operates per specification. | unreferenced | — | @JuanLunaIA |
+| `tools/sales/README.md` | text/data | — | referenced | — | @JuanLunaIA |
+| `tools/sales/build_site.py` | module | Build the static verification-first sales pages under ``site/``. | unreferenced | — | @JuanLunaIA |
+| `tools/sales/data_room.json` | text/data | — | unreferenced | — | @JuanLunaIA |
+| `tools/sales/prove_it/TRUSTED_ROOT.txt` | text/data | — | unreferenced | — | @JuanLunaIA |
+| `tools/sales/prove_it/make_fixture.py` | module | Regenerate the synthetic fixtures that ``prove_it.py --demo`` verifies. | unreferenced | — | @JuanLunaIA |
+| `tools/sales/prove_it/prove_it.py` | module | Verify an Aegis evidence record without trusting the gateway that made it. | referenced | — | @JuanLunaIA |
+| `tools/sales/prove_it/record.json` | text/data | — | referenced | — | @JuanLunaIA |
+| `tools/sales/prove_it/record_tampered.json` | text/data | — | referenced | — | @JuanLunaIA |
 | `tools/security/run_waf_corpus.py` | module | — | referenced | — | @JuanLunaIA |
 | `tools/visualizer/README.md` | text/data | — | referenced | — | @JuanLunaIA |
 | `tools/visualizer/app.py` | module | — | referenced | — | @JuanLunaIA |

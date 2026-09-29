@@ -1,0 +1,31 @@
+{
+  "mmr_proof": {
+    "algorithm": "sha256-binary-domain-separated",
+    "leaf_count": 3,
+    "leaf_index": 2,
+    "path": [],
+    "peak_index": 1,
+    "peaks": [
+      {
+        "hash": "AGD_4u15y0dNIJvG0_Qe7JZzmG6vXBonrGtCLfGlAhk",
+        "height": 1
+      },
+      {
+        "hash": "UFACj5vFkgVCXVN3EqfSo2E8nvYDc5YQvMw3h5VD6Uc",
+        "height": 0
+      }
+    ],
+    "root": "CPkdU5K9zUEI30EmETfHMnDpqxTvjPVXtJREmr0v4OE",
+    "version": "aegis-mmr-inclusion-v2"
+  },
+  "record": {
+    "decision": "allowed",
+    "model": "demo-model",
+    "prompt_sha256": "98f5cf32c7bb00be0bb0025b0711ea66e6968a9097dc978435bc09d05bad87b9",
+    "request_id": "demo-req-0002",
+    "response_sha256": "21aeecc9cc1facfb82cb601784d3fa8e97c18e877de8967fb388016737f81e9a",
+    "tenant": "demo-tenant"
+  },
+  "schema": "aegis-sales-demo-record-v1",
+  "synthetic_fixture": true
+}

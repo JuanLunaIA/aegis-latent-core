@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aegis Latent Core: verify it yourself</title>
+<meta name="description" content="Verify a tamper-evident AI evidence record with no call to the vendor, and see exactly what a pass does not prove.">
+<style>
+:root{--bg:#fff;--fg:#14171a;--mute:#4a5560;--line:#d5dbe1;--card:#f5f7f9;--acc:#0b5cad;--v:#0a6b3a;--code:#101418;--codefg:#e8edf2}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1317;--fg:#e6ebf0;--mute:#a9b4bf;--line:#2b343d;--card:#171d23;--acc:#7db8f5;--v:#56d08b;--code:#080b0e;--codefg:#e8edf2}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main,header,footer{max-width:60rem;margin:0 auto;padding:0 1rem}
+header{padding-top:2rem}
+nav a{margin-right:1rem}
+a{color:var(--acc)}
+h1{font-size:1.9rem;line-height:1.25;margin:1.5rem 0 .5rem}
+h2{font-size:1.3rem;margin:2.2rem 0 .6rem}
+p.lede{font-size:1.1rem;color:var(--mute)}
+pre{background:var(--code);color:var(--codefg);padding:1rem;overflow-x:auto;border-radius:.4rem;font:.85rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{border-bottom:1px solid var(--line);padding:.5rem .6rem;text-align:left;vertical-align:top}
+th{background:var(--card)}
+.chip{display:inline-block;border:1px solid var(--v);color:var(--v);border-radius:.6rem;padding:0 .35rem;font-size:.75rem;margin-left:.25rem}
+.note{background:var(--card);border-left:4px solid var(--acc);padding:.6rem 1rem;margin:1rem 0}
+footer{color:var(--mute);font-size:.85rem;padding-bottom:3rem;margin-top:3rem;border-top:1px solid var(--line)}
+@media(max-width:40rem){th,td{padding:.4rem .3rem}}
+</style>
+</head>
+<body>
+<header>
+<nav aria-label="Primary"><a href="index.html">Verify</a><a href="data-room.html">Data room</a><a href="https://github.com/JuanLunaIA/aegis-latent-core/blob/main/docs/CLAIMS_MATRIX.md">Claims</a><a href="https://github.com/JuanLunaIA/aegis-latent-core/blob/main/COMMERCIAL.md">Licensing</a></nav>
+</header>
+<main>
+
+<h1>Check an AI evidence record without trusting us</h1>
+<p class="lede">Aegis Latent Core commits a signed, hash-linked record of every governed AI call before the response reaches the caller, and issues a portable proof that a third party verifies without trusting the gateway, the vendor or the operator.</p>
+
+<h2>Verify it in three commands</h2>
+<pre>pip install aegis-latent-sdk
+git clone https://github.com/JuanLunaIA/aegis-latent-core
+python aegis-latent-core/tools/sales/prove_it/prove_it.py --demo</pre>
+<p>The verifier makes no network call. It accepts one genuine record and rejects two forgeries. This is the exact output of that command<span class="chip" title="Produced by running the command when this page was built">V</span>:</p>
+<pre>1. genuine record, root it belongs to (must be INCLUDED)
+leaf 2 of 3  scheme=aegis-mmr-inclusion-v2
+INCLUDED
+
+2. one altered field in the record (must be NOT INCLUDED)
+leaf 2 of 3  scheme=aegis-mmr-inclusion-v2
+NOT INCLUDED
+
+3. genuine record, root you did not obtain (must be NOT INCLUDED)
+leaf 2 of 3  scheme=aegis-mmr-inclusion-v2
+NOT INCLUDED
+
+all 3 cases behaved as required</pre>
+<p class="note">The three records are generated fixtures, not captured from a running gateway. The third case matters most: a proof checks only against a root you obtained by a path the discloser does not control.</p>
+
+<h2>What a passing check does not establish</h2>
+<table>
+<thead><tr><th>It does not establish</th><th>Because</th></tr></thead>
+<tbody>
+<tr><td>That the AI response was correct, safe or appropriate</td><td>The record commits to what was sent and returned, not to its quality.</td></tr>
+<tr><td>That the request passed a security boundary</td><td>The WAF is bounded pattern detection, not an injection boundary (UC-042).</td></tr>
+<tr><td>Who produced the record</td><td>With the default HMAC-SHA256 chain any key holder can forge. It authenticates a key, not a party (UC-041, CLM-090).</td></tr>
+<tr><td>That the timestamp is accurate</td><td>It is the issuer&#x27;s unattested clock unless an RFC 3161 token is attached.</td></tr>
+<tr><td>That the record set is complete</td><td>An inclusion proof says nothing about what is absent. There is no non-membership proof.</td></tr>
+<tr><td>That the record is admissible</td><td>Admissibility is a judicial determination this software does not create (UC-022, UC-034).</td></tr>
+<tr><td>That the operator could not delete records</td><td>Tampering is detected, not prevented. An operator with filesystem access can destroy the chain; you would see the break.</td></tr>
+</tbody>
+</table>
+
+<h2>Facts you can re-read</h2>
+<table>
+<thead><tr><th>Fact</th><th>Value</th><th>Reproduce</th></tr></thead>
+<tbody>
+<tr><td>Latest release</td><td>v5.0.1, published 2026-09-24<span class="chip" title="Read back 2026-09-24">V</span></td><td><code>git ls-remote --tags origin 'v5.0.1*'</code></td></tr>
+<tr><td>PyPI gateway <code>aegis-latent-core</code></td><td>5.0.1, published 2026-09-26<span class="chip" title="Read back 2026-09-29">V</span></td><td><code>curl -s https://pypi.org/pypi/aegis-latent-core/json</code></td></tr>
+<tr><td>Commit latency, p50 / p99</td><td>0.617 ms / 1.216 ms<span class="chip" title="Retained artifact evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json">V</span></td><td><code>python scripts/run_benchmarks_5.0.1.py --json</code></td></tr>
+<tr><td>Claims register</td><td>Every public claim has a locator and a boundary<span class="chip" title="Checked by a gate in CI">V</span></td><td><code>python scripts/verify_claims.py</code></td></tr>
+</tbody>
+</table>
+<p>The latency figures come from one shared, unpinned four-CPU container with a real write-ahead-log <code>fsync</code> per commit. They are not a capacity claim. Re-run the harness in your own environment before planning against them.</p>
+
+<h2>What we do not claim</h2>
+<ul>
+<li>Certification of any kind, or that one is in progress.</li>
+<li>Legal compliance, or that any regulation is satisfied.</li>
+<li>Court admissibility.</li>
+<li>Production readiness or production capacity.</li>
+<li>External assurance: no independent penetration test or SOC 2 report exists yet (REG-H01, REG-H02).</li>
+<li>Customer traction: no paying customer or signed pilot exists yet.</li>
+</ul>
+<p>The full list of refused claims is in the <a href="https://github.com/JuanLunaIA/aegis-latent-core/blob/main/docs/institutional/UNSUPPORTED_CLAIMS.md">Unsupported Claims register</a>. What exists and what is still missing is on the <a href="data-room.html">data room</a> page.</p>
+
+</main>
+<footer>
+<p>Rebuild this page: <code>python tools/sales/build_site.py</code></p>
+<p>Source: <a href="https://github.com/JuanLunaIA/aegis-latent-core">github.com/JuanLunaIA/aegis-latent-core</a>. Licence: AGPLv3 or commercial.</p>
+</footer>
+</body>
+</html>

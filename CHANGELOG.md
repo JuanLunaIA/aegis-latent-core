@@ -24,9 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that `pip install aegis-latent-core` still gets `4.1.2` were replaced across the corpus, the
   `5.0.1` publication is recorded in `docs/RELEASE_STATUS.md` §1.0b and `CLM-113`, and
   `UC-047` is amended with its original text kept. Statements about `5.0.0` and earlier stand.
+- `examples/demo.py` runs again: it declares development mode, builds its API-key principal
+  mapping, and expects two nodes per request. It had failed five of nine checks on `main`.
 
 ### Added
 
+- **Verification-first sales surface** (`tools/sales/`, `site/`, `scripts/lint_sales_copy.py`): a
+  verifier kit (`prove_it.py --demo` accepts one synthetic record and rejects two forgeries), two static
+  pages (landing and data room) built by `build_site.py`, a banned-word copy lint, and
+  `tests/test_sales_surface.py`. Lighthouse 12.8.2 scored both pages 100/100/96/100 on 2026-09-29.
 - **Azure Kit Creator** (`deploy/azure/kit-creator/aegis_azure_kit.py`): `doctor`, `estimate`,
   `create` and `verify` generate a self-contained, secret-free Azure VM kit (Bicep, Docker
   Compose, Caddy TLS, lifecycle scripts). Secrets are generated on the VM at first boot.

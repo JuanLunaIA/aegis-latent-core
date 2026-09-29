@@ -1,0 +1,24 @@
+{
+  "as_of": "2026-09-29",
+  "source": "docs/commercial/EXEC_BASELINE.md section 3",
+  "rows": [
+    {"doc": "Release record and readback transcript", "status": "exists", "paths": ["docs/RELEASE_STATUS.md", "evidence/v5_0_1_release_readback_2026-09-24.md"]},
+    {"doc": "Claims register and refused claims", "status": "exists", "paths": ["docs/CLAIMS_MATRIX.md", "docs/institutional/UNSUPPORTED_CLAIMS.md"]},
+    {"doc": "Defect registry and founder-only actions", "status": "exists", "paths": ["docs/REGISTRY.md", "docs/REGISTRY_HUMAN_PACK.md"]},
+    {"doc": "Security policy and threat model", "status": "exists", "paths": ["SECURITY.md", "docs/security/THREAT_MODEL.md"]},
+    {"doc": "Third-party licences", "status": "exists", "paths": ["LICENSE-THIRD-PARTY.md"]},
+    {"doc": "Audit-readiness package and control mappings", "status": "exists", "paths": ["docs/compliance/AUDIT_READINESS.md", "docs/compliance/COMPLIANCE_MAPPING.md"]},
+    {"doc": "Maintainer handbook (continuity, escrow contents)", "status": "exists", "paths": ["docs/MAINTAINER_HANDBOOK.md"]},
+    {"doc": "Licences and pricing hypotheses", "status": "exists", "paths": ["LICENSE", "COMMERCIAL.md", "docs/commercial/ENTERPRISE_PRICING_GUIDE.md"]},
+    {"doc": "Benchmarks", "status": "exists", "paths": ["evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json", "docs/BENCHMARKS.md"]},
+    {"doc": "Verify-it-yourself kit", "status": "exists", "paths": ["tools/sales/prove_it/prove_it.py", "docs/PROVE_IT.md"]},
+    {"doc": "Commercialization execution baseline", "status": "exists", "paths": ["docs/commercial/EXEC_BASELINE.md"]},
+    {"doc": "Penetration-test report", "status": "missing-human", "reg": "REG-H01", "owner": "Founder, then maintainer", "target": "SOW 2027-03-31; report 2027-06-30"},
+    {"doc": "SOC 2 report", "status": "missing-human", "reg": "REG-H02", "owner": "Founder and auditor", "target": "auditor engaged 2027-08-31; report 2027-12-31"},
+    {"doc": "Escrow agreement", "status": "missing-human", "reg": "REG-H03", "owner": "Founder", "target": "2027-03-31"},
+    {"doc": "Customer contracts, LOIs, executed commercial licence", "status": "missing-human", "reg": "REG-H06", "owner": "Founder", "target": "2027-05-31 to 2027-09-30"},
+    {"doc": "Buyer interview notes", "status": "missing-human", "reg": "REG-H06", "owner": "Founder", "target": "2027-01-31"},
+    {"doc": "Legal opinions: licence, AI-authorship copyright, MiFID/MAR inputs", "status": "missing-human", "reg": "REG-H04, REG-H10", "owner": "Counsel", "target": "2027-01-31"},
+    {"doc": "Corporate formation and IP assignment", "status": "missing-human", "reg": "REG-H09", "owner": "Founder and counsel", "target": "2027-01-31"}
+  ]
+}
