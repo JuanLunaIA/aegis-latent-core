@@ -2,7 +2,7 @@
 
 Every file under the six source roots, with what it is, what reaches it, what tests it, and who owns it. Generated — edit `scripts/generate_module_inventory.py`, not this file. Currency is enforced by `tests/test_module_inventory_current.py`.
 
-`python scripts/generate_module_inventory.py` — 324 files.
+`python scripts/generate_module_inventory.py` — 328 files.
 
 ## What the status column means
 
@@ -18,9 +18,9 @@ Every file under the six source roots, with what it is, what reaches it, what te
 
 ## Coverage and ownership
 
-- **Navigation coverage:** 69 of 324 files (21%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
-- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 62, `roadmap-omit` 34, `unreferenced` 19.
-- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 324 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
+- **Navigation coverage:** 69 of 328 files (21%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
+- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 67, `roadmap-omit` 34, `unreferenced` 18.
+- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 328 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
 
 Tests are the test files that import the module directly, capped at 4 per row; the count is exact, the list is not exhaustive.
 
@@ -339,10 +339,14 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `tools/qualification/iq_checks.py` | module | Installation Qualification (IQ) protocol — verifies Aegis is installed per specification. | unreferenced | — | @JuanLunaIA |
 | `tools/qualification/oq_checks.py` | module | Operational Qualification (OQ) protocol — verifies Aegis operates per specification. | unreferenced | — | @JuanLunaIA |
 | `tools/qualification/wal_crash_soak.py` | module | Kill a committing process again and again and check that no acknowledged commit is lost. | referenced | — | @JuanLunaIA |
+| `tools/raise/data_room_manifest.py` | module | Hash every existing data-room file so an investor can check what they were shown. | referenced | — | @JuanLunaIA |
+| `tools/raise/monthly_update.py` | module | Draft the monthly investor update from what the owner recorded, and nothing else. | referenced | — | @JuanLunaIA |
+| `tools/raise/terms.json` | text/data | — | referenced | — | @JuanLunaIA |
+| `tools/raise/tranche_gate.py` | module | Evaluate the tranche gates of the SAFE round against facts the owner recorded. | referenced | — | @JuanLunaIA |
 | `tools/sales/README.md` | text/data | — | referenced | — | @JuanLunaIA |
 | `tools/sales/build_site.py` | module | Build the static verification-first sales pages under ``site/``. | unreferenced | — | @JuanLunaIA |
 | `tools/sales/build_verifier_kit.py` | module | Package the verifier kit as one zip an external auditor can run without this repository. | referenced | — | @JuanLunaIA |
-| `tools/sales/data_room.json` | text/data | — | unreferenced | — | @JuanLunaIA |
+| `tools/sales/data_room.json` | text/data | — | referenced | — | @JuanLunaIA |
 | `tools/sales/prove_it/TRUSTED_ROOT.txt` | text/data | — | unreferenced | — | @JuanLunaIA |
 | `tools/sales/prove_it/make_fixture.py` | module | Regenerate the synthetic fixtures that ``prove_it.py --demo`` verifies. | unreferenced | — | @JuanLunaIA |
 | `tools/sales/prove_it/prove_it.py` | module | Verify an Aegis evidence record without trusting the gateway that made it. | referenced | — | @JuanLunaIA |

@@ -41,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Raise execution drafts and tools** (`docs/raise/`, `tools/raise/`): data-room index and hash
+  manifest, SAFE sheet, tranche evidence packs, monthly-update generator and a pre-drafted downgrade
+  memo. `tranche_gate.py` counts a gate as met only from a dated, referenced record the owner wrote;
+  the tooling sends, signs and files nothing and estimates no figure.
 - **TRL closure evidence** (`docs/assurance/TRL_CLOSURE.md`): `tools/qualification/wal_crash_soak.py`
   (kill-and-recover; 60 rounds, 27,735 acknowledged commits, 0 lost), `tests/ha/test_ha_chaos.py`
   (a real partition and a Redis restart), `deploy/observability/` (alert rules and dashboard checked
