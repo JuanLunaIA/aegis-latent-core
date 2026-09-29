@@ -40,7 +40,7 @@ That sentence carries the three things that matter: **ordering**, **verifiabilit
 
 **Do not lead with:** compliance, cryptography theory, or enterprise framing.
 
-**Be honest early about:** `pending-terminal` semantics, one worker per WAL path, and the gateway registry gap — a developer who runs `pip install aegis-latent-core` gets `4.1.2` while this documentation describes `5.0.1` (and the registries carry the published `5.0.0` SDKs), and will hit a mismatch and lose trust. The SDKs are the published registry versions at `5.0.0` on both registries; it is the gateway distribution that lags.
+**Be honest early about:** `pending-terminal` semantics, one worker per WAL path, and that the gateway distribution reached PyPI only on 2026-09-26, three days after the other surfaces: anyone who read older material may still expect `pip install aegis-latent-core` to give `4.1.2`. It now gives `5.0.1`, the same version as the SDKs on both registries.
 
 ### Security reviewers
 
@@ -85,7 +85,7 @@ These are prohibited in every channel, to every audience, regardless of who is a
 | Production-ready | Source baseline; target acceptance required |
 | Guaranteed, SLA, uptime | No service level exists outside an executed agreement |
 | Enterprise-grade, best-in-class, unmatched | Say what it does |
-| `pip install aegis-latent-core` gets 5.0.1 | It gets `4.1.2`; that distribution was never published at `5.0.0` or `5.0.1`. SDKs are at `5.0.1` on both registries |
+| `pip install aegis-latent-core` gets 5.0.1 | Correct since 2026-09-26 (`CLM-113`); it gave `4.1.2` before that, and `5.0.0` was never on PyPI. SDKs are at `5.0.1` on both registries |
 
 Full list: [Style Guide §3](../STYLE_GUIDE.md#3-prohibited-language) and [Unsupported Claims](../institutional/UNSUPPORTED_CLAIMS.md).
 

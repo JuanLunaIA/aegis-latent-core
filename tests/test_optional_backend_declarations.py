@@ -128,6 +128,7 @@ class TestLakehouseExportTestsAreExercised:
 _REAL_SERVICE_SKIPS = {
     "asyncpg": "storage-postgres: needs a reachable PostgreSQL endpoint",
     "aioboto3": "storage-dynamodb: needs a reachable DynamoDB endpoint",
+    "pkcs11": "hsm: python-pkcs11 alone is not enough; tests/test_hsm_softhsm.py also needs the SoftHSM2 library and softhsm2-util",
 }
 
 # Not PyPI distributions at all, so no extra can declare them.

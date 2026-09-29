@@ -2,7 +2,7 @@
 
 Every file under the six source roots, with what it is, what reaches it, what tests it, and who owns it. Generated — edit `scripts/generate_module_inventory.py`, not this file. Currency is enforced by `tests/test_module_inventory_current.py`.
 
-`python scripts/generate_module_inventory.py` — 307 files.
+`python scripts/generate_module_inventory.py` — 329 files.
 
 ## What the status column means
 
@@ -18,9 +18,9 @@ Every file under the six source roots, with what it is, what reaches it, what te
 
 ## Coverage and ownership
 
-- **Navigation coverage:** 67 of 307 files (22%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
-- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 50, `roadmap-omit` 34, `unreferenced` 14.
-- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 307 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
+- **Navigation coverage:** 69 of 329 files (21%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
+- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 68, `roadmap-omit` 34, `unreferenced` 18.
+- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 329 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
 
 Tests are the test files that import the module directly, capped at 4 per row; the count is exact, the list is not exhaustive.
 
@@ -119,7 +119,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis/core/gossip_wal_sync.py` | module | aegis.core.gossip_wal_sync — SWIM-inspired gossip WAL sync. | allowlisted | `tests/test_gossip_wal_sync.py` | @JuanLunaIA |
 | `aegis/core/group_commit.py` | module | aegis.core.group_commit — coalesce concurrent WAL commits into one fsync. | reachable | `tests/test_coalesced_commit.py` | @JuanLunaIA |
 | `aegis/core/gxp_qualification.py` | module | aegis.core.gxp_qualification — GxP-oriented qualification support hooks. | allowlisted | `tests/test_gxp_qualification.py` | @JuanLunaIA |
-| `aegis/core/ha.py` | module | aegis.core.ha — running more than one gateway replica without forking evidence. | reachable | `tests/ha/test_ha_failover.py`, `tests/ha/test_ha_lease.py`, `tests/ha/test_ha_sequence.py`, `tests/ha/test_ha_sequencer_ledger.py` | @JuanLunaIA |
+| `aegis/core/ha.py` | module | aegis.core.ha — running more than one gateway replica without forking evidence. | reachable | `tests/ha/test_ha_chaos.py`, `tests/ha/test_ha_failover.py`, `tests/ha/test_ha_lease.py`, `tests/ha/test_ha_sequence.py`, … (+1 more)` | @JuanLunaIA |
 | `aegis/core/hardware_token.py` | module | aegis.core.hardware_token — Domain 1.2 hardware-bound session tokens. | allowlisted | `tests/test_hardware_token.py` | @JuanLunaIA |
 | `aegis/core/hl7_fhir_phi_detector.py` | module | aegis.core.hl7_fhir_phi_detector — HL7 v2 / FHIR structured PHI detection. | allowlisted | `tests/test_hl7_fhir_phi_detector.py` | @JuanLunaIA |
 | `aegis/core/homoglyph_normalizer.py` | module | aegis.core.homoglyph_normalizer — Homoglyph normalization beyond NFKC. | reachable | `tests/test_homoglyph_normalizer.py` | @JuanLunaIA |
@@ -305,6 +305,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `scripts/install_gitsign.sh` | shell script | — | referenced | — | @JuanLunaIA |
 | `scripts/integration_test_mock.py` | module | integration_test_mock.py — comprehensive local verification harness for Aegis v4.1.0. | unreferenced | — | @JuanLunaIA |
 | `scripts/license/license_scan.py` | module | License inventory and copyleft reconciliation across all three ecosystems. | referenced | — | @JuanLunaIA |
+| `scripts/lint_sales_copy.py` | module | Reject banned superlatives in sales-facing copy (Mission XVI, PD-XV-2). | referenced | — | @JuanLunaIA |
 | `scripts/prepare_release_assets.py` | module | Flatten release payloads and generate a deterministic integrity envelope. | referenced | — | @JuanLunaIA |
 | `scripts/regenerate_protobuf.sh` | shell script | Regenerate aegis/core/audit_node_pb2.py from aegis/core/audit_node.proto. | referenced | — | @JuanLunaIA |
 | `scripts/run_benchmarks_5.0.1.py` | module | scripts/run_benchmarks_5.0.1.py — real measurements for the v5.0.1 documentation pass. | referenced | — | @JuanLunaIA |
@@ -323,10 +324,12 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `scripts/verify_release_readback.py` | module | Read a published release back from every external surface it claims (REG-028). | referenced | — | @JuanLunaIA |
 | `scripts/verify_release_tag.sh` | shell script | — | referenced | — | @JuanLunaIA |
 | `tools/anchor_v1_chain_into_v2.py` | module | Cross-sign a v1 MMR chain's terminal root into a new v2 chain's genesis. | referenced | — | @JuanLunaIA |
+| `tools/assurance/escrow_manifest.py` | module | List what an escrow deposit of the repository at a ref would contain, and check a restore. | referenced | — | @JuanLunaIA |
 | `tools/benchmarks/run_backpressure_stall.py` | module | — | referenced | — | @JuanLunaIA |
 | `tools/benchmarks/run_group_commit.py` | module | Measure what coalescing the WAL fsync does to commit latency and throughput. | referenced | — | @JuanLunaIA |
 | `tools/benchmarks/run_key_rotation.py` | module | — | referenced | — | @JuanLunaIA |
 | `tools/benchmarks/run_pqc_timing.py` | module | — | referenced | — | @JuanLunaIA |
+| `tools/cadence/cadence.py` | module | Operating cadence: the weekly report, the monthly recompute and the kill-switch register. | referenced | — | @JuanLunaIA |
 | `tools/docs/verify_documentation.py` | module | Validate the Aegis documentation contract without external dependencies. | referenced | — | @JuanLunaIA |
 | `tools/forensic/diagnose_aegis.py` | module | diagnose_aegis.py — Self-service diagnostic tool for Aegis Latent Core. | referenced | — | @JuanLunaIA |
 | `tools/forensic/forensic_checks.py` | module | Run repository forensic checks: pattern search, unsafe API usage, basic Python syntax checks | referenced | — | @JuanLunaIA |
@@ -336,7 +339,26 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `tools/qualification/__init__.py` | package | GxP qualification scripts — IQ/OQ evidence generation. | referenced | — | @JuanLunaIA |
 | `tools/qualification/iq_checks.py` | module | Installation Qualification (IQ) protocol — verifies Aegis is installed per specification. | unreferenced | — | @JuanLunaIA |
 | `tools/qualification/oq_checks.py` | module | Operational Qualification (OQ) protocol — verifies Aegis operates per specification. | unreferenced | — | @JuanLunaIA |
+| `tools/qualification/wal_crash_soak.py` | module | Kill a committing process again and again and check that no acknowledged commit is lost. | referenced | — | @JuanLunaIA |
+| `tools/raise/data_room_manifest.py` | module | Hash every existing data-room file so an investor can check what they were shown. | referenced | — | @JuanLunaIA |
+| `tools/raise/monthly_update.py` | module | Draft the monthly investor update from what the owner recorded, and nothing else. | referenced | — | @JuanLunaIA |
+| `tools/raise/terms.json` | text/data | — | referenced | — | @JuanLunaIA |
+| `tools/raise/tranche_gate.py` | module | Evaluate the tranche gates of the SAFE round against facts the owner recorded. | referenced | — | @JuanLunaIA |
+| `tools/sales/README.md` | text/data | — | referenced | — | @JuanLunaIA |
+| `tools/sales/build_site.py` | module | Build the static verification-first sales pages under ``site/``. | unreferenced | — | @JuanLunaIA |
+| `tools/sales/build_verifier_kit.py` | module | Package the verifier kit as one zip an external auditor can run without this repository. | referenced | — | @JuanLunaIA |
+| `tools/sales/data_room.json` | text/data | — | referenced | — | @JuanLunaIA |
+| `tools/sales/prove_it/TRUSTED_ROOT.txt` | text/data | — | unreferenced | — | @JuanLunaIA |
+| `tools/sales/prove_it/make_fixture.py` | module | Regenerate the synthetic fixtures that ``prove_it.py --demo`` verifies. | unreferenced | — | @JuanLunaIA |
+| `tools/sales/prove_it/prove_it.py` | module | Verify an Aegis evidence record without trusting the gateway that made it. | referenced | — | @JuanLunaIA |
+| `tools/sales/prove_it/record.json` | text/data | — | referenced | — | @JuanLunaIA |
+| `tools/sales/prove_it/record_tampered.json` | text/data | — | referenced | — | @JuanLunaIA |
 | `tools/security/run_waf_corpus.py` | module | — | referenced | — | @JuanLunaIA |
+| `tools/validation/PLAN.template.json` | text/data | — | unreferenced | — | @JuanLunaIA |
+| `tools/validation/kill_criteria.json` | text/data | — | referenced | — | @JuanLunaIA |
+| `tools/validation/kill_switch.py` | module | Evaluate the D10.3 model-kill criteria against the recorded facts. | referenced | — | @JuanLunaIA |
+| `tools/validation/make_log.py` | module | Write the empty validation log and the two ledgers the kill switch reads. | referenced | — | @JuanLunaIA |
+| `tools/validation/pilot_generator.py` | module | Fill the paid-pilot agreement template from one JSON file of facts. | referenced | — | @JuanLunaIA |
 | `tools/visualizer/README.md` | text/data | — | referenced | — | @JuanLunaIA |
 | `tools/visualizer/app.py` | module | — | referenced | — | @JuanLunaIA |
 | `tools/visualizer/generate_samples.py` | module | Generate the `Samples/` gallery: copies of the live dashboard (static/index.html) | referenced | — | @JuanLunaIA |

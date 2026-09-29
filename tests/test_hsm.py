@@ -44,9 +44,11 @@ def _make_pkcs11_module() -> MagicMock:
     mod.MGF.SHA256 = "MGF_SHA256"
 
     # Sub-modules
-    mechanisms = MagicMock(name="pkcs11.mechanisms")
-    mechanisms.RSA_PKCS_PSS_PARAMS = MagicMock(return_value=MagicMock())
-    mod.mechanisms = mechanisms
+    # The real ``pkcs11.mechanisms`` has no PSS parameter class (the parameters are a
+    # tuple); this mock used to invent one, which hid that RSA signing failed on real tokens.
+    mod.mechanisms = MagicMock(name="pkcs11.mechanisms")
+    mod.exceptions = MagicMock(name="pkcs11.exceptions")
+    mod.exceptions.MechanismInvalid = type("MechanismInvalid", (Exception,), {})
     mod.util = MagicMock()
     mod.util.rsa = MagicMock()
     mod.util.rsa.encode_rsa_public_key = MagicMock(return_value=b"\x00" * 32)

@@ -12,9 +12,9 @@
 
 Every load-bearing claim in this file carries a locator and a stated boundary; the gates that enforce that discipline run in CI.
 
-> **Current release:** `v5.0.1` — published 2026-09-24 on every surface except PyPI `aegis-latent-core`, read back the same day ([Release Status](docs/RELEASE_STATUS.md) §1.0a). The Sigstore-signed tag passes `gitsign verify-tag`; the GitHub Release carries 31 assets and all 15 files listed in its `SHA256SUMS` re-hash to their digests; PyPI `aegis-latent-sdk` `5.0.1` and npm `aegis-latent-sdk` `5.0.1` are byte-identical to the release assets of the same name; and the GHCR gateway and dashboard images pass `cosign verify` and their build-provenance attestations verify, each against the exact publishing workflow identity. **The gateway distribution `aegis-latent-core` is not on PyPI at `5.0.1`** — `pip install aegis-latent-core` still gets `4.1.2`; take the gateway from GHCR, the Release assets or this repository. The previous release, `v5.0.0`, was published 2026-09-16 on the same surfaces (§1.0). There is no `4.2.0`; the number was skipped.
+> **Current release:** `v5.0.1` — published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26), read back the same day ([Release Status](docs/RELEASE_STATUS.md) §1.0a). The Sigstore-signed tag passes `gitsign verify-tag`; the GitHub Release carries 31 assets and all 15 files listed in its `SHA256SUMS` re-hash to their digests; PyPI `aegis-latent-sdk` `5.0.1` and npm `aegis-latent-sdk` `5.0.1` are byte-identical to the release assets of the same name; and the GHCR gateway and dashboard images pass `cosign verify` and their build-provenance attestations verify, each against the exact publishing workflow identity. **The gateway distribution `aegis-latent-core` reached PyPI at `5.0.1` on 2026-09-26** (run `36224961909` of `publish_pypi_gateway.yml`, read back 2026-09-29, [Release Status](docs/RELEASE_STATUS.md) §1.0b); `pip install aegis-latent-core` resolves to `5.0.1`, and its wheel and sdist match the release assets byte for byte. The GHCR images and the Release assets remain available. The previous release, `v5.0.0`, was published 2026-09-16 on the same surfaces (§1.0). There is no `4.2.0`; the number was skipped.
 >
-> **Last version with the gateway on PyPI:** `v4.1.2`, read back on 2026-09-04 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images. **`4.1.2` is the first version installable from PyPI as `aegis-latent-core`**; before it the gateway came from source or GHCR only. The npm version list skips `4.1.1`, whose publish step failed. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The two PyPI gateway artifacts are byte-different from the release assets of the same name — same content, different build host — so `SHA256SUMS` does not cover the PyPI downloads. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
+> **First published version with the gateway on PyPI:** `v4.1.2`, read back on 2026-09-04 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images. **`4.1.2` is the first version installable from PyPI as `aegis-latent-core`**; before it the gateway came from source or GHCR only. The npm version list skips `4.1.1`, whose publish step failed. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The two `4.1.2` PyPI gateway artifacts are byte-different from the release assets of the same name — same content, different build host — so `SHA256SUMS` does not cover those downloads; the `5.0.1` PyPI gateway artifacts match it. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
 ---
 
@@ -36,6 +36,14 @@ In a regulated industry that is not a paperwork problem — it is an existential
 - **Regulatory inputs.** MiFID II Art. 16(6)/16(7) and MiFIR Art. 25(1) record-keeping framing (durable, ordered-within-process records; no orders — RTS 24 — and no clock traceability — RTS 25); EU AI Act Art. 12 logging inputs (commit-before-response, tamper detection, verifiable inclusion); HIPAA Safe-Harbor-style pattern redaction; ISO/IEC 27037-style extracts. **These are technical inputs, not compliance.** No certification exists, none is in progress, and whether any obligation is met is a determination for you and your assessor (`CLM-039` is LEGAL-REVIEW-REQUIRED).
 
 > **→ [Prove it yourself](docs/PROVE_IT.md)** — twelve lines of Python, no call to our servers, three cases of which two must fail.
+>
+> ```bash
+> pip install aegis-latent-sdk aegis-latent-core   # verifier + gateway, both 5.0.1 on PyPI
+> python tools/sales/prove_it/prove_it.py --demo   # accepts one record, rejects two forgeries
+> python -m examples.demo                          # gateway + mock upstream, tamper detected
+> ```
+>
+> Both commands run from a checkout of this repository; [what each one shows and does not show](tools/sales/README.md).
 
 ---
 
@@ -92,7 +100,7 @@ Measured suite (dated records; counts move as tests are added — run `pytest -q
 
 ## Quickstart
 
-Three steps, copy-pasteable. Honest channel note first: **`pip install aegis-latent-core` currently installs `4.1.2`** — the gateway distribution was not published to PyPI at `5.0.0` or `5.0.1` (`UC-047`). For the gateway use this repository, the GHCR image `ghcr.io/juanlunaia/aegis-latent-core:5.0.1`, or the wheel attached to the `v5.0.1` GitHub Release.
+Three steps, copy-pasteable. Honest channel note first: **`pip install aegis-latent-core` installs `5.0.1`** (read back 2026-09-29, `CLM-113`); at `5.0.0` the gateway was never on PyPI (`UC-047`, kept as history). You can also use this repository, the GHCR image `ghcr.io/juanlunaia/aegis-latent-core:5.0.1`, or the wheel attached to the `v5.0.1` GitHub Release.
 
 **Step 1 — get the source:**
 

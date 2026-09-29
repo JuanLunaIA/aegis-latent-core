@@ -1,0 +1,118 @@
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
+# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+#
+# Prometheus alert rules for Aegis Latent Core. Eleven rules are the ones written out in
+# docs/operations/MONITORING_ALERTING.md section 3, unchanged except that the stream
+# ceiling placeholder is filled with the default (256). Three more (marked EXTRA) cover
+# other exported signals. Every metric name is checked against
+# aegis/core/observability.py by tests/test_observability_assets.py.
+#
+# The thresholds are starting points, not tuned values, and no deployment has exercised
+# them. Establish your own baseline before paging anyone on a latency threshold.
+groups:
+  - name: aegis-evidence-integrity
+    rules:
+      - alert: AegisDevelopmentModeInGovernedEnvironment
+        expr: aegis_security_enforcement_mode == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "Gateway is running in development mode"
+          description: >
+            Required authentication, durable evidence, distributed limiting and kernel
+            controls are relaxed. Traffic served in this window is not governed.
+            Runbook: docs/security/INCIDENT_RESPONSE.md
+      - alert: AegisAuditCommitErrors
+        expr: rate(aegis_audit_commit_errors_total[5m]) > 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "Evidence commits are failing"
+          description: >
+            Governed responses may be refused. Check WAL storage capacity, mount state,
+            and whether a second writer took the path.
+      - alert: AegisTerminalOutboxErrors  # EXTRA
+        expr: rate(aegis_terminal_outbox_errors_total[5m]) > 0
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "The durable terminal-evidence outbox is failing"
+          description: "Handed-off terminal commits may be lost if this process dies. Runbook: docs/operations/BACKPRESSURE_RUNBOOK.md"
+  - name: aegis-evidence-health
+    rules:
+      - alert: AegisAuditCommitLagHigh
+        expr: histogram_quantile(0.99, rate(aegis_audit_commit_lag_seconds_bucket[10m])) > 1
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "p99 evidence commit lag above 1s"
+          description: >
+            Starting threshold, not a tuned value. Establish your own baseline.
+            Investigate storage and fsync latency before adding replicas.
+            Runbook: docs/operations/BACKPRESSURE_RUNBOOK.md
+      - alert: AegisPendingCommitsGrowing
+        expr: aegis_audit_pending_commits > 100
+        for: 5m
+        labels: {severity: warning}
+      - alert: AegisNativeStreamWalErrors
+        expr: rate(aegis_native_stream_wal_errors_total[15m]) > 0
+        for: 15m
+        labels: {severity: info}
+        annotations:
+          summary: "Auxiliary native WAL failing; JSONL remains authoritative"
+      - alert: AegisTerminalOutboxPending  # EXTRA
+        expr: aegis_terminal_outbox_pending > 0
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Terminal commits are waiting in the outbox"
+  - name: aegis-control-decisions
+    rules:
+      - alert: AegisWafBlockSpike
+        expr: rate(aegis_waf_blocks_total[5m]) > 3 * rate(aegis_waf_blocks_total[1h] offset 1h)
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "WAF block rate well above its own recent baseline"
+      - alert: AegisRateLimitBackendErrors
+        expr: rate(aegis_ratelimit_backend_errors_total[5m]) > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Rate-limit backend failing; requests fail closed at 503"
+  - name: aegis-availability
+    rules:
+      - alert: AegisCircuitBreakerOpen
+        expr: aegis_circuit_breaker_state > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "A provider circuit breaker is not closed"
+          description: "0 closed, 1 half-open, 2 open."
+      - alert: AegisAnalysisQueueSaturated
+        expr: rate(aegis_analysis_queue_rejections_total[5m]) > 0
+        for: 10m
+        labels: {severity: info}
+        annotations:
+          summary: "Enrichment rejected; governed calls unaffected"
+      - alert: AegisStreamAdmissionNearCeiling
+        # 256 is the default AEGIS_MAX_CONCURRENT_STREAMS; set your configured value.
+        expr: aegis_stream_admission_active / on() vector(256) > 0.9
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Concurrent streams sustained above 90% of AEGIS_MAX_CONCURRENT_STREAMS"
+          description: "New streaming requests are close to being refused (429) on this replica."
+      - alert: AegisStreamAdmissionRejecting
+        expr: increase(aegis_stream_admission_rejected_total[5m]) > 0
+        for: 0m
+        labels: {severity: info}
+        annotations:
+          summary: "Streaming requests refused; the concurrent-stream ceiling was reached at least once"
+      - alert: AegisUpstreamForwardErrors  # EXTRA
+        expr: sum(rate(aegis_forward_errors_total[5m])) > 0
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Upstream forwarding is failing"

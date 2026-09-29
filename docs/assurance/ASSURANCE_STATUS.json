@@ -1,0 +1,16 @@
+{
+  "as_of": "2026-09-29",
+  "states": ["NOT_STARTED", "DRAFTED", "ENGAGED", "IN_PROGRESS", "COMPLETE"],
+  "items": [
+    {"id": "pentest", "register": "REG-H01", "state": "DRAFTED", "prepared": ["docs/assurance/PENTEST_SOW_DRAFT.md"], "evidence": null,
+     "forbidden": ["penetration-tested", "externally assessed", "independently reviewed"]},
+    {"id": "soc2_type1", "register": "REG-H02", "state": "DRAFTED", "prepared": ["docs/assurance/SOC2_READINESS.md"], "evidence": null,
+     "forbidden": ["SOC 2 compliant", "SOC 2 certified", "SOC 2 attested"]},
+    {"id": "escrow", "register": "REG-H03", "state": "DRAFTED", "prepared": ["docs/assurance/ESCROW_EXECUTION_PLAN.md", "docs/legal/ESCROW_TERM_SHEET.md", "tools/assurance/escrow_manifest.py"], "evidence": null,
+     "forbidden": ["escrow is in place", "continuity is guaranteed"]},
+    {"id": "second_maintainer", "register": "REG-H05", "state": "NOT_STARTED", "prepared": [], "evidence": null, "forbidden": []},
+    {"id": "pqc_constant_time_review", "register": "REG-041", "state": "NOT_STARTED", "prepared": ["docs/security/PQC_CONSTANT_TIME.md"], "evidence": null,
+     "forbidden": ["constant-time"]},
+    {"id": "target_acceptance", "register": "UC-005", "state": "NOT_STARTED", "prepared": ["docs/compliance/AUDIT_READINESS.md"], "evidence": null, "forbidden": []}
+  ]
+}

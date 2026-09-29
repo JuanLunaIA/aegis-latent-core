@@ -1,0 +1,24 @@
+{
+  "source": "Mission XV investor pack (investor_packs/aegis_investor_pack_en) D8/D10; amounts and caps must equal model_outputs.json inputs raise_usd and post_money_caps_usd (tests enforce it)",
+  "min_pilot_fee_usd": 2500,
+  "min_pilot_fee_tag": "H",
+  "tranches": [
+    {"id": "T1", "amount_usd": 300000, "post_money_cap_usd": 6000000, "deadline_month": null,
+     "conditions": [
+       {"id": "T1-a", "text": "SAFE for T1 countersigned by the company and the investor", "kind": "evidence", "key": "safe_t1_signed"},
+       {"id": "T1-b", "text": "Issuing entity exists (agent-added precondition: a SAFE needs an issuer; the pack schedules the entity in months 1 to 8)", "kind": "evidence", "key": "entity_formed"}
+     ]},
+    {"id": "T2", "amount_usd": 250000, "post_money_cap_usd": 8000000, "deadline_month": 8,
+     "conditions": [
+       {"id": "T2-a", "text": "Paid pilot #1 signed, fee at or above the floor", "kind": "paid_pilots", "min": 1},
+       {"id": "T2-b", "text": "Penetration-test SOW signed", "kind": "evidence", "key": "pentest_sow_signed"}
+     ]},
+    {"id": "T3", "amount_usd": 200000, "post_money_cap_usd": 10000000, "deadline_month": 14,
+     "conditions": [
+       {"id": "T3-a", "text": "Two paid design partners", "kind": "paid_pilots", "min": 2},
+       {"id": "T3-b", "text": "Pen-test critical findings remediated (report plus retest letter)", "kind": "evidence", "key": "pentest_criticals_remediated"},
+       {"id": "T3-c", "text": "SOC 2 Type I auditor engaged", "kind": "evidence", "key": "soc2_auditor_engaged"}
+     ]}
+  ],
+  "budget_alerts": {"0.5": "Gate review with SAFE holders: pilot pipeline, pen-test status, hiring.", "0.8": "Hiring freeze unless the next gate is met; founder salary deferred.", "0.95": "Wind-down path: see DOWNGRADE_MEMO_DRAFT.md."}
+}

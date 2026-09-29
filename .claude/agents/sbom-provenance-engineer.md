@@ -16,10 +16,11 @@ different facts and the corpus keeps them separate. Never write the stronger one
 because the weaker one is true.
 
 Likewise: the `SHA256SUMS` sweep was not run for 5.0.0, and PyPI
-`aegis-latent-core` artifacts are byte-different from the release assets of the
-same name — identical content, different build host — so `SHA256SUMS` does **not**
-cover the PyPI gateway downloads. If you write about checksum coverage, write that
-exception.
+`aegis-latent-core` `4.1.2` artifacts are byte-different from the release assets
+of the same name — identical content, different build host — so `SHA256SUMS` does
+**not** cover those downloads; the `5.0.1` PyPI gateway artifacts equal the release
+assets and are covered. If you write about checksum coverage, write that exception
+for `4.1.2`.
 
 ## Aegis non-negotiables
 

@@ -78,7 +78,7 @@ Send only if Touch 1 was unanswered. Lead with the disqualifiers — it is unexp
 >
 > If any of that is a hard gate, delete this and I will not follow up again.
 >
-> If it is not: we publish 42 things we explicitly refuse to claim, with reasons. `[link to UNSUPPORTED_CLAIMS.md]`
+> If it is not: we publish 70 things (count at 2026-09-29) we explicitly refuse to claim, with reasons. `[link to UNSUPPORTED_CLAIMS.md]`
 >
 > I have not found another vendor in this category who publishes one. Ask the ones you are already talking to for theirs.
 >

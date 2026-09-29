@@ -21,7 +21,7 @@ La línea de código actual es **5.0.1** con catorce anclas sincronizadas y es l
 
 **La publicación se afirma únicamente a partir de lectura posterior (readback), nunca a partir de metadatos de versión.** El 2026-09-16 se leyeron: el tag anotado firmado `v5.0.0`, el GitHub Release con 31 assets cargados, PyPI `aegis-latent-sdk` `5.0.0`, npm `aegis-latent-sdk` `5.0.0`, y ambas imágenes GHCR con objetos de firma cosign presentes. **No se ejecutaron `cosign verify` ni `gh attestation verify`**, y que un objeto de firma resuelva no es verificación: establece que se subió un objeto, no que valide ni quién lo firmó.
 
-**Una brecha, declarada y no suavizada:** la distribución del gateway, PyPI `aegis-latent-core`, **no se publicó en `5.0.0`** y sigue resolviendo a `4.1.2`. Ningún workflow publica esa distribución, de modo que esperar no lo resuelve. Un `pip install aegis-latent-core` obtiene código `4.1.2`; para el gateway en `5.0.0` use los assets del GitHub Release o `ghcr.io/juanlunaia/aegis-latent-core:5.0.0`. Véase [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0.
+**Una brecha, declarada y no suavizada:** la distribución del gateway, PyPI `aegis-latent-core`, **no se publicó en `5.0.0`**, pero sí en `5.0.1` el 2026-09-26 (lectura de verificación 2026-09-29). Un `pip install aegis-latent-core` obtiene hoy `5.0.1`; para `5.0.0` use los assets del GitHub Release o `ghcr.io/juanlunaia/aegis-latent-core:5.0.0`. Véase [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0 y §1.0b.
 
 ## Resumen ejecutivo
 

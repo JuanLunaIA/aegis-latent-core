@@ -154,6 +154,33 @@ The documents that decide what may be said, and on what evidence.
 | [Procurement FAQ](FAQ_PROCUREMENT.md) | Common procurement questions. |
 | [Security FAQ](FAQ_SECURITY.md) | Common security-review questions. |
 
+| [Verification-first Sales Surface](../tools/sales/README.md) | The verifier kit, landing page, data room, copy lint and demo, each with its reproduce command. |
+| [Validation Engine](commercial/validation/README.md) | The 60-row log, outbound batch 1, interview script, pilot generator and kill switch. |
+| [TRL Closure: Evidence Against Each Gap](assurance/TRL_CLOSURE.md) | What was run against each maturity gap, the result, and what is still open. |
+| [Assurance Status](assurance/ASSURANCE_STATUS.md) | Where each independent-assurance item stands and the wording it allows. |
+| [Penetration Test SOW Draft](assurance/PENTEST_SOW_DRAFT.md) | Draft scope for an evidence-path test and retest. |
+| [SOC 2 Readiness for the Vendor](assurance/SOC2_READINESS.md) | What a vendor Type I report would need and what exists. |
+| [Escrow Execution Plan](assurance/ESCROW_EXECUTION_PLAN.md) | Steps to a verified deposit, and the manifest tool. |
+| [Legal Stack: Drafts for Counsel](legal/README.md) | Licence, pilot, escrow, IP assignment, open-core memo and counsel questions, all unreviewed drafts. |
+| [Raise Execution](raise/README.md) | Round preparation: what exists, findings, owner-written inputs and commands. |
+| [Data-Room Index](raise/DATA_ROOM_INDEX.md) | Which files exist, which only the founder can supply, and how to hash them. |
+| [SAFE Sheet](raise/SAFE_SHEET.md) | Tranche amounts, caps, conditions and questions for counsel; no instrument text. |
+| [Tranche Evidence Packs](raise/TRANCHE_EVIDENCE_PACKS.md) | What an investor checks at each gate and what evidence exists today. |
+| [Monthly Investor Update](raise/MONTHLY_UPDATE.md) | How the update draft is generated from recorded facts. |
+| [Downgrade Memo Draft](raise/DOWNGRADE_MEMO_DRAFT.md) | Pre-drafted letter to SAFE holders if a gate or kill criterion fires. |
+| [Operating Cadence](cadence/README.md) | Weekly report, monthly recompute and kill-switch register: commands, inputs and rules. |
+| [Kill-Switch Register](cadence/KILL_SWITCH_REGISTER.md) | Every stop condition with status, owner answer and consequence (blank-state rendering). |
+| [Wind-Down Path](cadence/WIND_DOWN_PATH.md) | Ordered checklist if the plan stops; a draft for counsel, not a decision. |
+| [Weekly Report 2026-W40](cadence/weekly/WEEKLY_2026-W40.md) | Blank-state baseline weekly report. |
+| [Commercial Licence Template](legal/COMMERCIAL_LICENSE_TEMPLATE.md) | Draft licence beside the AGPLv3 grant, for counsel. |
+| [Paid Pilot Agreement Template](legal/PILOT_AGREEMENT_TEMPLATE.md) | Draft fixed-scope pilot contract, for counsel. |
+| [Escrow Term Sheet](legal/ESCROW_TERM_SHEET.md) | Terms to propose to an escrow agent. |
+| [IP Assignment Draft](legal/IP_ASSIGNMENT_DRAFT.md) | Founder-to-company assignment, for counsel. |
+| [Open-core Decision Memo](legal/OPEN_CORE_DECISION_MEMO.md) | What is gated by a token today, and the options. |
+| [Questions for Counsel](legal/COUNSEL_QUESTIONS.md) | Ten questions the drafts cannot answer. |
+| [Outbound Batch 1](commercial/validation/OUTBOUND_BATCH_1.md) | Segment plan and send rules for the first 30 touches. |
+| [Buyer Interview Script](commercial/validation/INTERVIEW_SCRIPT.md) | Script and note template for the three buyer interviews. |
+| [Commercialization Execution Baseline](commercial/EXEC_BASELINE.md) | Mission XVI Phase 0 readback: gates, data-room diff, open conflicts. |
 | [Commercial Readiness](commercial/COMMERCIAL_READINESS.md) | What stands between this repository and an enterprise sale. |
 | [Revenue Artifact Inventory](commercial/ARTIFACT_INVENTORY.md) | Inventory of the commercial artifacts and their state. |
 | [Sales Claim Ledger](commercial/CLAIM_LEDGER.md) | Claims sales may and may not make, with their evidence. |

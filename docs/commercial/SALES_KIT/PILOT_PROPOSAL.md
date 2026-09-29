@@ -43,9 +43,9 @@ Written here, agreed before work begins, and evaluated literally. Each is a fals
 
 | # | Criterion | How it is judged | Passes if |
 |---|---|---|---|
-| 1 | Evidence precedes emission | Issue `[N]` governed non-streaming calls; for each, confirm the record is durable before the response was observable | 100%. Any exception is a failure, not a percentage |
+| 1 | Evidence precedes emission | Issue `[N]` governed non-streaming calls; for each, confirm the record is durable before the response was observable | Every one of the `[N]` calls. Any exception is a failure, not a percentage |
 | 2 | A third party verifies a record | Customer's auditor or security team runs the verifier against a root obtained through a channel Aegis does not touch | Verification succeeds, and an altered record fails |
-| 3 | Refusals are evidence | Trigger `[N]` WAF blocks and quota rejections; confirm each is committed to the signed chain before the error returns | 100% |
+| 3 | Refusals are evidence | Trigger `[N]` WAF blocks and quota rejections; confirm each is committed to the signed chain before the error returns | Every one of the `[N]` blocks |
 | 4 | **It fails closed** | Remove the signer; fill the evidence volume; break the chain on disk. Confirm governed endpoints refuse and `/health` stays reachable | Refuses in every case. **Serving one unevidenced call is a failed pilot** |
 | 5 | Streaming holds the line | Confirm `pending-terminal` until the terminal summary commits, and that the terminal marker is withheld when the commit fails | Marker never precedes its commit |
 | 6 | Redaction on the customer's own corpus | Run the customer's real patterns; count what it catches and what it misses | **Measured, not passed.** The output is a number the customer owns |

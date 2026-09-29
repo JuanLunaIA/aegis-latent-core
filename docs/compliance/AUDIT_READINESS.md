@@ -199,7 +199,7 @@ See [MiFID II inputs](MIFID_II_TECHNICAL_INPUTS.md): the Article 16(6)/(7) and M
 | `/metrics` is unauthenticated | Standard for Prometheus scraping | Source-IP admission and `NetworkPolicy` |
 | HA is untested on real storage classes, under partitions and with Redis/PostgreSQL failover | Only local and container-level tests exist | Target acceptance testing |
 | No independent penetration test or external code audit | None has been commissioned | Commission one against the deployed configuration |
-| `5.0.1` is published on every surface except PyPI `aegis-latent-core` (read back 2026-09-24); `pip install aegis-latent-core` still gets `4.1.2` | [Release Status](../RELEASE_STATUS.md) §1.0a | Take the gateway from GHCR or the Release assets; re-run §3.1 against the artifact you deploy |
+| `5.0.1` is published on every surface: PyPI `aegis-latent-core` `5.0.1` followed the other surfaces on 2026-09-26 (read back 2026-09-29); `pip install aegis-latent-core` installs `5.0.1` | [Release Status](../RELEASE_STATUS.md) §1.0a, §1.0b | Re-run §3.1 against the artifact you deploy, whichever channel you take it from |
 
 ## 6. What the deploying organisation supplies
 

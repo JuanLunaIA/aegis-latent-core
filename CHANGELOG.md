@@ -3,12 +3,12 @@
 All notable changes to **Aegis Latent Core** are documented in this file.
 
 **Last verified:** 2026-09-24 UTC
-**Published release (2026-09-24):** `v5.0.1`, fourteen synchronized anchors, **published on every surface except PyPI `aegis-latent-core`** — the signed tag (`gitsign verify-tag` passed), the GitHub Release with 31 assets (`SHA256SUMS` sweep 15 of 15), PyPI `aegis-latent-sdk` `5.0.1`, npm `aegis-latent-sdk` `5.0.1`, and both GHCR images (`cosign verify` and provenance attestations verified against the exact workflow identity) were read back; see `docs/RELEASE_STATUS.md` §1.0a.
+**Published release (2026-09-24):** `v5.0.1`, fourteen synchronized anchors, **published on every surface except PyPI `aegis-latent-core`, which followed on 2026-09-26 (`docs/RELEASE_STATUS.md` §1.0b)** — the signed tag (`gitsign verify-tag` passed), the GitHub Release with 31 assets (`SHA256SUMS` sweep 15 of 15), PyPI `aegis-latent-sdk` `5.0.1`, npm `aegis-latent-sdk` `5.0.1`, and both GHCR images (`cosign verify` and provenance attestations verified against the exact workflow identity) were read back; see `docs/RELEASE_STATUS.md` §1.0a.
 **Previous release (2026-09-16):** `v5.0.0`, fourteen synchronized anchors, **published on every surface except PyPI `aegis-latent-core`** — signed tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk`, and both GHCR images were read back; the gateway distribution on PyPI remains `4.1.2`. Source metadata does not establish external lifecycle state, which requires independent readback; see `docs/RELEASE_STATUS.md` §1.0 for what was and was not verified. There is no `4.2.0` or `4.4.0`; both numbers were skipped deliberately and no artifact was ever published under either.
 **Most recent published release on every surface (readback 2026-09-04):** `v4.1.2` signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway image `sha256:b3f6aadc…f80710` and dashboard image `sha256:27e1bbc2…d92398`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
-**Release baseline:** `v5.0.1` (fourteen synchronized `5.0.1` anchors), published 2026-09-24 on every surface except PyPI `aegis-latent-core`, whose latest remains `4.1.2`; recorded in `docs/RELEASE_STATUS.md` §1.0a
+**Release baseline:** `v5.0.1` (fourteen synchronized `5.0.1` anchors), published 2026-09-24 on every surface, with PyPI `aegis-latent-core` `5.0.1` following on 2026-09-26; recorded in `docs/RELEASE_STATUS.md` §1.0a
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
@@ -16,8 +16,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Release truth corrected: the gateway is on PyPI at `5.0.1`.** `publish_pypi_gateway.yml`
+  run `36224961909` published `aegis-latent-core` `5.0.1` on 2026-09-26; the public PyPI API,
+  read back 2026-09-29, shows both files equal to the GitHub Release assets. The statements
+  that `pip install aegis-latent-core` still gets `4.1.2` were replaced across the corpus, the
+  `5.0.1` publication is recorded in `docs/RELEASE_STATUS.md` §1.0b and `CLM-113`, and
+  `UC-047` is amended with its original text kept. Statements about `5.0.0` and earlier stand.
+- The count of refused claims in sales copy (`PROVE_IT.md`, `POSITIONING.md`, `ONE_PAGER.md`, `OUTBOUND_SEQUENCES.md`)
+  read 42; the register has 70 rows at 2026-09-29.
+- Three remaining statements that `pip install aegis-latent-core` gets `4.1.2` (`COMMERCIAL.md`,
+  `docs/USAGE_EXAMPLES.md`, `docs/corporate/PRODUCT_ONE_PAGER.md`) were corrected to `5.0.1`.
+- `examples/demo.py` runs again: it declares development mode, builds its API-key principal
+  mapping, and expects two nodes per request. It had failed five of nine checks on `main`.
+
+### Fixed
+
+- **`HSMSigningBackend` RSA-PSS signing failed on every real PKCS#11 token.** It called
+  `pkcs11.mechanisms.RSA_PKCS_PSS_PARAMS`, which exists only in the unit-test mock; the real
+  library takes a `(hash, mgf, salt length)` tuple. ECDSA now falls back to raw `CKM_ECDSA` over a
+  host-computed SHA-256 digest on tokens without `CKM_ECDSA_SHA256`. Found by running the adapter
+  against SoftHSM 2.6.1 (`tests/test_hsm_softhsm.py`).
+
 ### Added
 
+- **Operating cadence** (`docs/cadence/`, `tools/cadence/cadence.py`): weekly report, monthly recompute
+  (re-runs the seed-42 engine and compares it byte for byte with the committed pack) and a kill-switch
+  register covering the six kill criteria, the budget alerts and the tranche gates, plus a draft
+  wind-down path for counsel. The tools read only owner-recorded facts, estimate nothing, send nothing
+  and never write `KILL_ACK.json`.
+- **Raise execution drafts and tools** (`docs/raise/`, `tools/raise/`): data-room index and hash
+  manifest, SAFE sheet, tranche evidence packs, monthly-update generator and a pre-drafted downgrade
+  memo. `tranche_gate.py` counts a gate as met only from a dated, referenced record the owner wrote;
+  the tooling sends, signs and files nothing and estimates no figure.
+- **TRL closure evidence** (`docs/assurance/TRL_CLOSURE.md`): `tools/qualification/wal_crash_soak.py`
+  (kill-and-recover; 60 rounds, 27,735 acknowledged commits, 0 lost), `tests/ha/test_ha_chaos.py`
+  (a real partition and a Redis restart), `deploy/observability/` (alert rules and dashboard checked
+  against the exported metrics), `tools/sales/build_verifier_kit.py`, and retained WAF corpus and soak
+  reports under `evidence/qualification/`. Finding: a Redis that loses its data resets the lease
+  epoch counter, and the sequence fence then stops the chain admitting (documented in
+  `docs/operations/HIGH_AVAILABILITY.md`; no code change made).
+- **Assurance pipeline** (`docs/assurance/`, `tools/assurance/`): a penetration-test SOW draft scoped to the
+  evidence path, a vendor SOC 2 readiness assessment, an escrow execution plan with
+  `escrow_manifest.py` (records a tag's tracked files and digests, refuses key material, checks a restore),
+  and `ASSURANCE_STATUS.md` with a machine-readable copy that tests keep from running ahead of its
+  evidence. No independent assurance exists; every item is `NOT_STARTED` or `DRAFTED`.
+- **Validation engine** (`tools/validation/`, `docs/commercial/validation/`): a blank 60-row validation log,
+  outbound batch 1 (30 first touches by segment, sent by the owner), a buyer-interview script, a pilot
+  generator that fills the pilot template and refuses a pilot that breaks its own rules, and
+  `kill_switch.py`, which evaluates the six D10.3 model-kill criteria and halts until the owner records `SI`.
+  Nothing in it is a prospect, reply or result.
+- **Legal stack drafts** (`docs/legal/`): commercial licence template, paid pilot agreement template,
+  escrow term sheet, founder-to-company IP assignment draft, open-core decision memo and questions for
+  counsel. All are unreviewed drafts marked `[COUNSEL-REVIEW-REQUIRED]`; none is signed or offered.
+  `tests/test_legal_drafts.py` keeps the banner on and the signature rows empty.
+- **Verification-first sales surface** (`tools/sales/`, `site/`, `scripts/lint_sales_copy.py`): a
+  verifier kit (`prove_it.py --demo` accepts one synthetic record and rejects two forgeries), two static
+  pages (landing and data room) built by `build_site.py`, a banned-word copy lint, and
+  `tests/test_sales_surface.py`. Lighthouse 12.8.2 scored both pages 100/100/96/100 on 2026-09-29.
 - **Azure Kit Creator** (`deploy/azure/kit-creator/aegis_azure_kit.py`): `doctor`, `estimate`,
   `create` and `verify` generate a self-contained, secret-free Azure VM kit (Bicep, Docker
   Compose, Caddy TLS, lifecycle scripts). Secrets are generated on the VM at first boot.

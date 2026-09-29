@@ -723,6 +723,13 @@ jobs:
           cache: pip
       - name: Install package with dev and PostgreSQL extras
         run: pip install -e ".[dev,storage-postgres]"
+      - name: Install a redis-server binary for the fault-injection tests
+        # tests/ha/test_ha_chaos.py starts its own Redis on a private port so it can kill
+        # and restart it; the service container above cannot be restarted from a test.
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends redis-server
+          sudo systemctl disable --now redis-server || true
       - name: Multi-replica suite (real processes, real seccomp filter)
         # The seccomp-enforced replicas are the point; the workflow-wide
         # HERMES_SANDBOX would disable the filter in them.
