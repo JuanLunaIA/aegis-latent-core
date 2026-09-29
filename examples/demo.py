@@ -19,7 +19,8 @@ credentials, so an evaluator can run it and see the value in under one minute:
 What it proves (each step prints PASS/FAIL with the evidence):
 
     1. Proxy forwards OpenAI-format requests transparently.
-    2. Every request appends exactly one signed node to the audit chain.
+    2. Every request appends exactly two signed nodes (request and analysis) to
+       the audit chain.
     3. verify_integrity() returns valid over the full chain.
     4. Mutating any node field breaks the chain → tamper detected at that index.
     5. The chain exports to a sealed compliance bundle whose signature
@@ -31,6 +32,7 @@ Exit code is 0 only if every assertion holds.
 from __future__ import annotations
 
 import asyncio
+import json
 import secrets
 import socket
 import sys
@@ -48,6 +50,9 @@ from fastapi.responses import JSONResponse
 # ── Demo constants ────────────────────────────────────────────────────────────
 
 _N_REQUESTS = 5
+# Each governed request commits two signed nodes: the request record and its
+# ``:analysis`` record (same request id).
+_NODES_PER_REQUEST = 2
 _PROXY_KEY = "demo-proxy-key"
 _AUDIT_KEY = "demo-audit-readonly-key"
 _TENANT = "demo-tenant"
@@ -177,16 +182,43 @@ def _build_aegis_app(backend_port: int) -> FastAPI:
     # signed with a different HMAC key, which would break chain verification.
     wal_path = Path(tempfile.mkdtemp(prefix="aegis_demo_wal_")) / "aegis.wal.jsonl"
 
+    from aegis.auth.principal import build_api_key_principals
+
+    # Keys are bound to a tenant, roles and scopes; a bare AEGIS_API_KEYS list
+    # authenticates but holds no scope, so every request would be refused.
+    identity_key = secrets.token_hex(32)
+    principals = build_api_key_principals(
+        identity_key,
+        {
+            _PROXY_KEY: {
+                "tenant_id": _TENANT,
+                "roles": ["proxy_user"],
+                "scopes": ["proxy:completions"],
+            },
+            _AUDIT_KEY: {
+                "tenant_id": _TENANT,
+                "roles": ["auditor"],
+                "scopes": ["audit:read", "audit:export"],
+            },
+        },
+    )
+
     os.environ.update(
         {
             "AEGIS_PROVIDER": "openai",
             "AEGIS_BACKEND_URL": f"http://127.0.0.1:{backend_port}",
             "AEGIS_BACKEND_API_KEY": "",
             "AEGIS_WAL_PATH": str(wal_path),
-            "AEGIS_API_KEYS": _PROXY_KEY,
+            "AEGIS_API_KEYS": f"{_PROXY_KEY},{_AUDIT_KEY}",
+            "AEGIS_AUTH_IDENTITY_HMAC_KEY": identity_key,
+            "AEGIS_API_KEY_PRINCIPALS_JSON": json.dumps(principals),
             "AEGIS_AUDIT_API_KEYS": _AUDIT_KEY,
             # Dedicated HMAC key → signature_assurance = "SYMMETRIC_AUTHENTICATED".
             "AEGIS_SIGNING_KEY": secrets.token_hex(32),
+            # The default enforcement mode is strict (needs Redis, HSM-grade
+            # settings and mTLS-ready config). This ephemeral demo has none of
+            # those, so it declares development mode explicitly.
+            "AEGIS_SECURITY_ENFORCEMENT_MODE": "development",
             "AEGIS_DEBUG_MODE": "false",
             "AEGIS_FORCE_LOGPROBS": "true",
             # Demo runs in-process: declare sandbox to skip real seccomp/LSM
@@ -346,9 +378,11 @@ def main() -> int:
                         "messages": [{"role": "user", "content": f"demo request #{i}"}],
                     },
                 )
-                count = _wait_for_node_count(client, base, expected=i + 1, timeout=10.0)
+                count = _wait_for_node_count(
+                    client, base, expected=_NODES_PER_REQUEST * (i + 1), timeout=10.0
+                )
                 line = f"request #{i} → HTTP {resp.status_code} · chain length = {count}"
-                if resp.status_code == 200 and count == i + 1:
+                if resp.status_code == 200 and count == _NODES_PER_REQUEST * (i + 1):
                     _ok(line)
                 else:
                     _fail(line)
