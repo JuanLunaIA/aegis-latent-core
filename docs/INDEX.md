@@ -155,6 +155,7 @@ The documents that decide what may be said, and on what evidence.
 | [Security FAQ](FAQ_SECURITY.md) | Common security-review questions. |
 
 | [Verification-first Sales Surface](../tools/sales/README.md) | The verifier kit, landing page, data room, copy lint and demo, each with its reproduce command. |
+| [Legal Stack: Drafts for Counsel](legal/README.md) | Licence, pilot, escrow, IP assignment, open-core memo and counsel questions, all unreviewed drafts. |
 | [Commercialization Execution Baseline](commercial/EXEC_BASELINE.md) | Mission XVI Phase 0 readback: gates, data-room diff, open conflicts. |
 | [Commercial Readiness](commercial/COMMERCIAL_READINESS.md) | What stands between this repository and an enterprise sale. |
 | [Revenue Artifact Inventory](commercial/ARTIFACT_INVENTORY.md) | Inventory of the commercial artifacts and their state. |

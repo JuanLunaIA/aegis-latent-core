@@ -24,11 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that `pip install aegis-latent-core` still gets `4.1.2` were replaced across the corpus, the
   `5.0.1` publication is recorded in `docs/RELEASE_STATUS.md` §1.0b and `CLM-113`, and
   `UC-047` is amended with its original text kept. Statements about `5.0.0` and earlier stand.
+- Three remaining statements that `pip install aegis-latent-core` gets `4.1.2` (`COMMERCIAL.md`,
+  `docs/USAGE_EXAMPLES.md`, `docs/corporate/PRODUCT_ONE_PAGER.md`) were corrected to `5.0.1`.
 - `examples/demo.py` runs again: it declares development mode, builds its API-key principal
   mapping, and expects two nodes per request. It had failed five of nine checks on `main`.
 
 ### Added
 
+- **Legal stack drafts** (`docs/legal/`): commercial licence template, paid pilot agreement template,
+  escrow term sheet, founder-to-company IP assignment draft, open-core decision memo and questions for
+  counsel. All are unreviewed drafts marked `[COUNSEL-REVIEW-REQUIRED]`; none is signed or offered.
+  `tests/test_legal_drafts.py` keeps the banner on and the signature rows empty.
 - **Verification-first sales surface** (`tools/sales/`, `site/`, `scripts/lint_sales_copy.py`): a
   verifier kit (`prove_it.py --demo` accepts one synthetic record and rejects two forgeries), two static
   pages (landing and data room) built by `build_site.py`, a banned-word copy lint, and
