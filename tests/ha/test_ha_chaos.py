@@ -84,13 +84,13 @@ class Blackhole:
                 if not self.cut:
                     dst.sendall(data)
         except OSError:
-            pass
+            pass  # a peer reset or our own close ends the pump; nothing to recover
         finally:
             for s in (src, dst):
                 try:
                     s.close()
                 except OSError:
-                    pass
+                    pass  # already closed by the other pump
 
     def close(self) -> None:
         self._stop.set()
