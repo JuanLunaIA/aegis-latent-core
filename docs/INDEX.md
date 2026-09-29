@@ -154,6 +154,7 @@ The documents that decide what may be said, and on what evidence.
 | [Procurement FAQ](FAQ_PROCUREMENT.md) | Common procurement questions. |
 | [Security FAQ](FAQ_SECURITY.md) | Common security-review questions. |
 
+| [Commercialization Execution Baseline](commercial/EXEC_BASELINE.md) | Mission XVI Phase 0 readback: gates, data-room diff, open conflicts. |
 | [Commercial Readiness](commercial/COMMERCIAL_READINESS.md) | What stands between this repository and an enterprise sale. |
 | [Revenue Artifact Inventory](commercial/ARTIFACT_INVENTORY.md) | Inventory of the commercial artifacts and their state. |
 | [Sales Claim Ledger](commercial/CLAIM_LEDGER.md) | Claims sales may and may not make, with their evidence. |
