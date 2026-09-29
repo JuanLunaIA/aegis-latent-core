@@ -2,7 +2,7 @@
 
 **Last verified:** 2026-09-04 UTC
 **Release baseline:** `v4.1.2` remains what PyPI serves for the gateway distribution (`aegis-latent-core`), read back 2026-09-04; `5.0.1` — the checked-out source baseline and the most recent published release — reached every other surface on 2026-09-24, recorded in [Release Status §1.0a](RELEASE_STATUS.md), as did `5.0.0` on 2026-09-16 (§1.0)
-**Source baseline:** `v5.0.1` — **published 2026-09-24 on every surface except PyPI `aegis-latent-core`**, read back the same day (see `docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); source metadata alone does not establish publication
+**Source baseline:** `v5.0.1` — **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (see `docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); source metadata alone does not establish publication
 **Audience:** developers integrating Aegis for the first time
 **Root document:** [`README.md`](../README.md)
 
@@ -119,10 +119,11 @@ publishing history, not a yanked release.
 
 A version on a registry is not provenance. The readback commands and the
 digests observed on 2026-09-04 are in [Release Status §2](RELEASE_STATUS.md).
-One boundary worth knowing before you check hashes: the two PyPI
+One boundary worth knowing before you check hashes: the two `4.1.2` PyPI
 `aegis-latent-core` artifacts are byte-different from the GitHub Release assets
 of the same name — identical content, different build host — so `SHA256SUMS`
-does not cover the PyPI downloads. Compare against the digests PyPI publishes.
+does not cover those downloads. The `5.0.1` PyPI artifacts match `SHA256SUMS`;
+for any other version compare against the digests PyPI publishes.
 The SDK artifacts on both registries do match `SHA256SUMS`.
 
 ---

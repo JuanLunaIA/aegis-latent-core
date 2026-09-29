@@ -4,7 +4,7 @@
 **Format identifier:** `aegis-mmr-inclusion-v1`
 **Status:** implemented in the checked-out `v5.0.1` source baseline and covered by cross-language golden vectors
 **Last reviewed:** 2026-09-08 UTC
-**Source baseline:** checked-out source metadata is synchronized at `v5.0.1` — **published 2026-09-24 on every surface except PyPI `aegis-latent-core`**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` remains the most recent version published on every surface
+**Source baseline:** checked-out source metadata is synchronized at `v5.0.1` — **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` was the last version published on every surface before `5.0.1` completed the set on 2026-09-26
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical distribution boundary:** this format was not included in the `v3.1.0` distribution
 

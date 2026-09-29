@@ -36,10 +36,10 @@ python -m pip install --no-deps -e .
 pytest -q
 ```
 
-- And the fact that catches everyone: `pip install aegis-latent-core` currently
-  gets **4.1.2**, because the gateway distribution is not on PyPI at 5.0.0. The SDK
-  distributions are at 5.0.0. If your quickstart does not say this, your quickstart
-  is wrong.
+- And the fact that catches everyone: `pip install aegis-latent-core` gets **5.0.1**
+  only since 2026-09-26; the gateway was never on PyPI at 5.0.0, and older pins
+  resolve to 4.1.2. The SDK distributions are at 5.0.1. If your quickstart names
+  a PyPI version for the gateway, it must be one read back (`CLM-113`).
 
 ## What makes these documents good
 

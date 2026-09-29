@@ -23,7 +23,7 @@ Read `AGENTS.md` for the authoritative text before writing anything, and treat i
 as the source of truth over your own memory. The shape of it:
 
 - The checked-out source baseline is **5.0.1** with fourteen synchronized
-  anchors — **published 2026-09-24 on every surface except PyPI `aegis-latent-core`** (read back 2026-09-21). The most recent
+  anchors — **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)** (read back 2026-09-21). The most recent
   published release is **5.0.0**, published on 2026-09-16 to every surface
   **except** PyPI `aegis-latent-core`.
 - Readback established: the signed annotated tag, a GitHub Release with its
@@ -32,18 +32,19 @@ as the source of truth over your own memory. The shape of it:
 - **`cosign verify` and `gh attestation verify` were NOT run.** Signature objects
   being present is not the same as signatures verifying. Never collapse those.
 - The `SHA256SUMS` sweep was not run for 5.0.0.
-- **The gateway distribution `aegis-latent-core` is NOT on PyPI at 5.0.0** — the
-  latest there is 4.1.2, so `pip install aegis-latent-core` gets 4.1.2, and no
-  workflow publishes that distribution. This will not resolve on its own.
+- **The gateway distribution `aegis-latent-core` was NOT on PyPI at 5.0.0.** It
+  reached PyPI at 5.0.1 on 2026-09-26 (`publish_pypi_gateway.yml` run
+  `36224961909`), read back 2026-09-29 (`docs/RELEASE_STATUS.md` §1.0b, `CLM-113`).
 - **There is no 4.2.0 or 4.4.0** at any surface. Both numbers were skipped
   deliberately. Their absence is not a withdrawn release and must never be written
   as one.
 - The 4.3.0 → 5.0.0 jump is a breaking public JSON API change (CLM-090:
   `signature_assurance` replaces `legal_admissibility` on `/audit/health` and
   `/audit/integrity`), not a numbering oversight.
-- PyPI `aegis-latent-core` artifacts are byte-different from the release assets of
-  the same name — identical content, different build host — so `SHA256SUMS` does
-  **not** cover the PyPI gateway downloads.
+- PyPI `aegis-latent-core` `4.1.2` artifacts are byte-different from the release
+  assets of the same name — identical content, different build host — so
+  `SHA256SUMS` does **not** cover those downloads. The `5.0.1` PyPI gateway
+  artifacts equal the release assets, so it does cover them.
 
 ## Aegis non-negotiables
 

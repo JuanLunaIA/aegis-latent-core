@@ -53,9 +53,9 @@ have found exactly the defect this role exists for.
 
 The offline install guide must list what the operator must transfer, in what order,
 and how to verify each piece on arrival. Include the checksums and note the
-`SHA256SUMS` coverage exception: PyPI `aegis-latent-core` artifacts are
+`SHA256SUMS` coverage exception: PyPI `aegis-latent-core` `4.1.2` artifacts are
 byte-different from the release assets of the same name, so the checksum file does
-not cover the PyPI gateway downloads.
+not cover those downloads (the `5.0.1` ones match it).
 
 ## Hand-off
 

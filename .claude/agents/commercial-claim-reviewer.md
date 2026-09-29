@@ -45,9 +45,9 @@ The dangerous claims are rarely the headline. They are:
 - "compliant", "certified", "guaranteed", "court-admissible", "production-ready",
   "24/7", "mission-critical SLA", "zero overhead" — several of these fail the gate
   outright
-- implied publication — `pip install aegis-latent-core` currently gets **4.1.2**,
-  not 5.0.0, because the gateway distribution is not on PyPI at 5.0.0. Any install
-  instruction must be true today.
+- implied publication — the gateway distribution was never on PyPI at 5.0.0, and
+  `pip install aegis-latent-core` gets **5.0.1** only since 2026-09-26 (`CLM-113`).
+  Any install instruction must be true today, and must not name 5.0.0 for PyPI.
 - capability implied by a module existing. Check reachability.
 
 ## Verification you must run
