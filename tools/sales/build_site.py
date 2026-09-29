@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -96,6 +97,18 @@ def _chip(title: str) -> str:
     return f'<span class="chip" title="{html.escape(title)}">V</span>'
 
 
+def _sdk_env() -> dict[str, str]:
+    """The environment for the verifier, with the in-repo SDK importable.
+
+    A buyer runs ``pip install aegis-latent-sdk``; a checkout that has not
+    installed it still has the same source under ``sdk/python/src``.
+    """
+    env = dict(os.environ)
+    src = str(ROOT / "sdk" / "python" / "src")
+    env["PYTHONPATH"] = os.pathsep.join(filter(None, [src, env.get("PYTHONPATH", "")]))
+    return env
+
+
 def _demo_output() -> str:
     """Run the shipped verifier demo and return its exact output."""
     proc = subprocess.run(  # noqa: S603  # nosec B603 - argv is this interpreter and a fixed in-repo script, shell=False
@@ -104,6 +117,7 @@ def _demo_output() -> str:
         text=True,
         check=False,
         cwd=ROOT,
+        env=_sdk_env(),
     )
     if proc.returncode != 0:
         raise SystemExit(f"prove_it --demo failed:\n{proc.stdout}\n{proc.stderr}")

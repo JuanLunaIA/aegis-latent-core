@@ -11,6 +11,7 @@ the banned superlatives fail unless a sentence negates them.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -19,11 +20,23 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 KIT = ROOT / "tools" / "sales" / "prove_it"
+# The verifier needs aegis_sdk; a checkout without it installed still has the source.
+_ENV = {
+    **os.environ,
+    "PYTHONPATH": os.pathsep.join(
+        filter(None, [str(ROOT / "sdk" / "python" / "src"), os.environ.get("PYTHONPATH", "")])
+    ),
+}
 
 
 def _run(*args: str, timeout: int = 90) -> subprocess.CompletedProcess[str]:
     return subprocess.run(  # noqa: S603  # nosec B603 - fixed in-repo scripts, shell=False
-        [sys.executable, *args], capture_output=True, text=True, cwd=ROOT, timeout=timeout
+        [sys.executable, *args],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        timeout=timeout,
+        env=_ENV,
     )
 
 

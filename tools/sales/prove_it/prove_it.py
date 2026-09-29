@@ -41,7 +41,7 @@ def verify_file(record_path: Path, trusted_root: str) -> bool:
     record = json.loads(record_path.read_text(encoding="utf-8"))
     try:
         proof = InclusionProof.from_mapping(record["mmr_proof"])
-        included = verify_inclusion(_leaf_bytes(record["record"]), proof, trusted_root)
+        included = bool(verify_inclusion(_leaf_bytes(record["record"]), proof, trusted_root))
     except (AegisProofError, KeyError, TypeError):
         print("proof malformed")
         print("NOT INCLUDED")
