@@ -118,7 +118,7 @@ The same invitation extends past the proof:
 |---|---|
 | The test suite is what we say | `pytest -n auto -q` |
 | Every public claim has a locator | Read [Claims Matrix](CLAIMS_MATRIX.md); pick three rows at random and follow them to the code |
-| What we refuse to claim | Read [Unsupported Claims](institutional/UNSUPPORTED_CLAIMS.md) — 42 rows |
+| What we refuse to claim | Read [Unsupported Claims](institutional/UNSUPPORTED_CLAIMS.md) — 70 rows at 2026-09-29 (`grep -c '^| `UC-' docs/institutional/UNSUPPORTED_CLAIMS.md`) |
 | The prose gate rejects overclaiming | `python tools/docs/verify_documentation.py --root . --strict` |
 | The claims register is internally consistent | `python scripts/verify_claims.py --root .` |
 | What was published, and what was not | [Release Status](RELEASE_STATUS.md) — each surface read back separately, with the gaps named |

@@ -48,7 +48,7 @@ Twelve lines, two languages, **no call to us** — alter one byte of the record 
 
 **No SOC 2, ISO 27001, HIPAA attestation or FedRAMP — none in progress.** No independent penetration test. No SLA. Tampering is detected, not prevented; an operator with root can alter records. The WAF is bounded detection, not an injection boundary. Single maintainer; bus factor of one.
 
-Full list: [Unsupported Claims](../../institutional/UNSUPPORTED_CLAIMS.md), 42 rows. Ask any other vendor for theirs.
+Full list: [Unsupported Claims](../../institutional/UNSUPPORTED_CLAIMS.md), 70 rows at 2026-09-29. Ask any other vendor for theirs.
 
 ## Commercial status
 

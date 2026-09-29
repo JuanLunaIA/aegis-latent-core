@@ -1,0 +1,17 @@
+{
+  "source": "Mission XV investor pack, D10.3 Model-kill criteria (investor_packs/aegis_investor_pack_en/aegis_investor_pack.html); thresholds and their tags are copied from it",
+  "criteria": [
+    {"id": "KC-1", "name": "CAC model", "action": "The CAC model is dead. Re-plan the channel before T2 is spent.",
+     "params": {"messages": 30, "min_calls": 2, "window_days": 30}, "tags": {"messages": "H", "min_calls": "H", "window_days": "H"}},
+    {"id": "KC-2", "name": "LTV model", "action": "The LTV model is dead.",
+     "params": {"max_churn": 0.5, "min_concluded_pilots": 3}, "tags": {"max_churn": "H", "min_concluded_pilots": "agent choice, not in D10.3: a rate over fewer pilots is noise"}},
+    {"id": "KC-3", "name": "ACV path", "action": "The base ACV path is dead and the bear case becomes the base case.",
+     "params": {"contracts": 3, "acv_usd_below": 15000}, "tags": {"contracts": "H", "acv_usd_below": "H"}},
+    {"id": "KC-4", "name": "Gate 2 by month 8", "action": "T2 is not released, and the plan follows the wind-down path.",
+     "params": {"month": 8}, "tags": {"month": "M"}},
+    {"id": "KC-5", "name": "Pen-test critical in the evidence path", "action": "The product thesis pauses.",
+     "params": {"fix_within_days": 30}, "tags": {"fix_within_days": "M"}},
+    {"id": "KC-6", "name": "Senior hire by month 5", "action": "The bus-factor haircut stays, and the T3 cap reverts to $8M.",
+     "params": {"month": 5, "reverted_t3_cap_usd": 8000000}, "tags": {"month": "M", "reverted_t3_cap_usd": "M"}}
+  ]
+}

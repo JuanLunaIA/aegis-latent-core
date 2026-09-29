@@ -155,7 +155,16 @@ The documents that decide what may be said, and on what evidence.
 | [Security FAQ](FAQ_SECURITY.md) | Common security-review questions. |
 
 | [Verification-first Sales Surface](../tools/sales/README.md) | The verifier kit, landing page, data room, copy lint and demo, each with its reproduce command. |
+| [Validation Engine](commercial/validation/README.md) | The 60-row log, outbound batch 1, interview script, pilot generator and kill switch. |
 | [Legal Stack: Drafts for Counsel](legal/README.md) | Licence, pilot, escrow, IP assignment, open-core memo and counsel questions, all unreviewed drafts. |
+| [Commercial Licence Template](legal/COMMERCIAL_LICENSE_TEMPLATE.md) | Draft licence beside the AGPLv3 grant, for counsel. |
+| [Paid Pilot Agreement Template](legal/PILOT_AGREEMENT_TEMPLATE.md) | Draft fixed-scope pilot contract, for counsel. |
+| [Escrow Term Sheet](legal/ESCROW_TERM_SHEET.md) | Terms to propose to an escrow agent. |
+| [IP Assignment Draft](legal/IP_ASSIGNMENT_DRAFT.md) | Founder-to-company assignment, for counsel. |
+| [Open-core Decision Memo](legal/OPEN_CORE_DECISION_MEMO.md) | What is gated by a token today, and the options. |
+| [Questions for Counsel](legal/COUNSEL_QUESTIONS.md) | Ten questions the drafts cannot answer. |
+| [Outbound Batch 1](commercial/validation/OUTBOUND_BATCH_1.md) | Segment plan and send rules for the first 30 touches. |
+| [Buyer Interview Script](commercial/validation/INTERVIEW_SCRIPT.md) | Script and note template for the three buyer interviews. |
 | [Commercialization Execution Baseline](commercial/EXEC_BASELINE.md) | Mission XVI Phase 0 readback: gates, data-room diff, open conflicts. |
 | [Commercial Readiness](commercial/COMMERCIAL_READINESS.md) | What stands between this repository and an enterprise sale. |
 | [Revenue Artifact Inventory](commercial/ARTIFACT_INVENTORY.md) | Inventory of the commercial artifacts and their state. |

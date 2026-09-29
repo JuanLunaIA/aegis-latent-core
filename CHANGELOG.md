@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that `pip install aegis-latent-core` still gets `4.1.2` were replaced across the corpus, the
   `5.0.1` publication is recorded in `docs/RELEASE_STATUS.md` §1.0b and `CLM-113`, and
   `UC-047` is amended with its original text kept. Statements about `5.0.0` and earlier stand.
+- The count of refused claims in sales copy (`PROVE_IT.md`, `POSITIONING.md`, `ONE_PAGER.md`, `OUTBOUND_SEQUENCES.md`)
+  read 42; the register has 70 rows at 2026-09-29.
 - Three remaining statements that `pip install aegis-latent-core` gets `4.1.2` (`COMMERCIAL.md`,
   `docs/USAGE_EXAMPLES.md`, `docs/corporate/PRODUCT_ONE_PAGER.md`) were corrected to `5.0.1`.
 - `examples/demo.py` runs again: it declares development mode, builds its API-key principal
@@ -31,6 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Validation engine** (`tools/validation/`, `docs/commercial/validation/`): a blank 60-row validation log,
+  outbound batch 1 (30 first touches by segment, sent by the owner), a buyer-interview script, a pilot
+  generator that fills the pilot template and refuses a pilot that breaks its own rules, and
+  `kill_switch.py`, which evaluates the six D10.3 model-kill criteria and halts until the owner records `SI`.
+  Nothing in it is a prospect, reply or result.
 - **Legal stack drafts** (`docs/legal/`): commercial licence template, paid pilot agreement template,
   escrow term sheet, founder-to-company IP assignment draft, open-core decision memo and questions for
   counsel. All are unreviewed drafts marked `[COUNSEL-REVIEW-REQUIRED]`; none is signed or offered.
