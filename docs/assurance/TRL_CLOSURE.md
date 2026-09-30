@@ -23,7 +23,7 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 ## WAL: kill and recover
 
-`tools/qualification/wal_crash_soak.py` starts a committing process, kills it with `SIGKILL` at a random moment, reopens the ledger and checks the chain verifies and that every commit the process had acknowledged is present. Sixty rounds, seed 42, 223 seconds, retained as `evidence/qualification/wal_crash_soak_2026-09-29.json`: 27,735 acknowledged commits, none lost, no duplicates, integrity valid after each round.
+`tools/qualification/wal_crash_soak.py` starts a committing process, kills it with `SIGKILL` at a random moment, reopens the ledger and checks the chain verifies and that every commit the process had acknowledged is present. Sixty rounds, seed 42, 223 seconds, retained as `evidence/qualification/wal_crash_soak_2026-09-29.json`: 27,735 acknowledged commits, none lost, no duplicates, integrity valid after each round. A kill that lands inside a write leaves a torn last line, which the harness now repairs with `tools/wal_repair.py` between rounds and counts as `torn_tails_repaired`; that run predates the repair step and does not record the count.
 
 **What this is not.** `SIGKILL` ends the process but leaves the operating system's page cache intact, so this exercises replay and torn-tail handling, not the storage stack or `fsync` honesty. It is not a power-loss test and 223 seconds is not a 30-day soak. Both need the target host: `python tools/qualification/wal_crash_soak.py --hours 720 --wal /mnt/target/aegis.wal.jsonl`.
 
