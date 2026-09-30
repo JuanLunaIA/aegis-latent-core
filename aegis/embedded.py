@@ -30,6 +30,14 @@ for cooperative code, not a containment boundary against the process it runs
 in. Where the application itself is the thing being constrained, the gateway is
 the correct deployment and this is not a substitute for it.
 
+**When the evidence chain is damaged.** If replay stops at a WAL line it cannot
+read (``wal_corrupt``), or any other ledger fault is latched, a wrapped call
+raises :class:`AegisEmbeddedError` before the provider is contacted and commits
+nothing, as the gateway answers ``503``. Carrying on would issue receipts for
+records that a restart cannot read back. The engine still opens, so the state
+can be inspected; repair the file with ``tools/wal_repair.py`` and open a new
+engine. A call already admitted when a fault latches is not recalled.
+
 Provider SDKs are not imported here and are not dependencies of this package.
 Clients are recognised by shape — an object exposing ``chat.completions.create``
 or ``messages.create`` — so this module imports cleanly whether or not either
@@ -254,6 +262,34 @@ class AegisEmbedded:
 
     # ── request path ───────────────────────────────────────────────────────
 
+    def _require_intact_ledger(self) -> None:
+        """Refuse to admit a call while the evidence chain is known to be broken.
+
+        The gateway does the same at ingress (``_require_intact_ledger`` in
+        :mod:`aegis.proxy.app`, answered with ``503``). Without it a torn or
+        corrupt WAL line, which replay reports as ``wal_corrupt``, would not stop
+        this engine: each later call would reach the provider, commit a node
+        and hand back a receipt for a record that a restart can never read back,
+        because replay stops at the damaged line. The damage is silent, since
+        every individual commit succeeds.
+
+        Any state other than ``healthy`` refuses, so a latched signing or
+        persistence failure stops admission too. Recovery is a human decision:
+        repair the file (``tools/wal_repair.py``) and open a new engine.
+        """
+        fault = getattr(self.ledger, "_fault_state", "healthy")
+        if fault == "healthy":
+            return
+        logger.error(
+            "embedded call refused: ledger fault_state=%s; refusing to extend an "
+            "unreplayable evidence chain",
+            fault,
+        )
+        raise AegisEmbeddedError(
+            f"evidence chain is not intact (ledger fault_state={fault}); the call "
+            "was not sent to the provider and nothing was committed"
+        )
+
     def guard_request(self, payload: dict[str, Any], *, endpoint: str) -> dict[str, Any]:
         """Inspect and de-identify a request, or refuse it.
 
@@ -261,13 +297,19 @@ class AegisEmbedded:
         request leaves the same kind of signed, chain-linked trace as one that
         was served. Evidence failure never converts a block into a pass.
 
+        The ledger is checked first, before any inspection: an engine whose
+        chain cannot be replayed refuses every call, blocked or not, and appends
+        nothing. A call already admitted when a fault latches is not recalled.
+
         Returns:
             The payload to send upstream — de-identified when
             ``redact_requests`` is set, otherwise the payload unchanged.
 
         Raises:
+            AegisEmbeddedError: When the ledger's fault state is not ``healthy``.
             AegisBlockedError: In ``strict`` mode, when the WAF detects.
         """
+        self._require_intact_ledger()
         result = self.waf.inspect_payload(payload)
         if not result.allowed:
             reason = result.reason or "payload rejected by WAF"

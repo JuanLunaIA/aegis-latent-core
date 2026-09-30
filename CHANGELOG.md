@@ -75,6 +75,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The embedded engine kept calling the provider and issuing receipts on a WAL it could not replay.**
+  `aegis.wrap` and `AegisEmbedded.guard_request` never consulted the ledger's fault state. After a kill left
+  a torn last line, replay stopped there and latched `wal_corrupt`, yet every later wrapped call reached the
+  provider, committed a node and attached `_aegis_evidence`; a restart read back only the records before the
+  tear, so those receipts pointed at records nobody could reach. The gateway has refused this since
+  `_require_intact_ledger` (`503`); the embedded engine now does the same. `guard_request` is checked before
+  any inspection and raises `AegisEmbeddedError` (not `AegisBlockedError`) when the state is anything other
+  than `healthy`, before the provider is contacted, and commits nothing, including for a prompt the WAF would
+  have blocked and in `shadow` mode. The engine still opens, so the state can be inspected; recovery is
+  `tools/wal_repair.py` and a new engine. Behaviour change for callers: a wrapped call on an unhealthy chain
+  now raises instead of succeeding. `CryptographicAuditLedger` itself is unchanged: its commit methods still
+  do not check the state (`tests/test_reliability.py`, `tests/test_chaos.py` pin that), and a call already
+  admitted when a fault latches is not recalled. `tests/test_embedded_mode.py`.
 - **`HSMSigningBackend` RSA-PSS signing failed on every real PKCS#11 token.** It called
   `pkcs11.mechanisms.RSA_PKCS_PSS_PARAMS`, which exists only in the unit-test mock; the real
   library takes a `(hash, mgf, salt length)` tuple. ECDSA now falls back to raw `CKM_ECDSA` over a

@@ -374,6 +374,13 @@ rather than only a log line.
 which is the safe way to measure a pattern set against live traffic before
 enforcing it.
 
+A damaged evidence chain is not a block. If the WAL cannot be replayed (for
+example a torn last line after a kill, reported as `wal_corrupt`), every call
+raises `AegisEmbeddedError` before the provider is contacted, whatever the
+prompt and in either enforcement mode, and nothing is committed. Catch
+`AegisBlockedError` for policy and let this one surface: the fix is to repair
+the file with `tools/wal_repair.py` and open a new engine, not to retry.
+
 ---
 
 ## 4. Gateway mode — the `aegis` process
