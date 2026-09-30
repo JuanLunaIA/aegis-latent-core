@@ -43,4 +43,4 @@ Hashes are not committed here because they change with every commit. Run `python
 
 - Show the commit id and the manifest with every export. Do not edit a file after hashing it.
 - Never place credentials, raw WAL records, customer data or the licence-signing private key in the room. `tools/assurance/escrow_manifest.py` refuses key-like paths for the same reason.
-- Do not include the investor pack HTML as if current. It states its own snapshot date.
+- The investor pack (both editions) was refreshed on 2026-09-30 and says so on its first page and in section U or A. Re-run the engine and the checksums before each export; the monthly recompute (`tools/cadence/cadence.py monthly`) does the model comparison.

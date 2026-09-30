@@ -25,4 +25,4 @@ The engine for `monthly` needs numpy 2.4.6 and matplotlib 3.11.2 (`investor_pack
 
 ## First monthly finding
 
-The 2026-09-29 run reproduced both model files byte for byte and found one stale verified input: the pack records 112 registered claims and `scripts/verify_claims.py` now reports 113 (`CLM-113`, added in Phase 0). The pack was not regenerated; that refresh is the separate batch already offered.
+The 2026-09-29 run reproduced both model files byte for byte and found one stale verified input: the pack recorded 112 registered claims while `scripts/verify_claims.py` reported 113 (`CLM-113`, added in Phase 0). The pack was refreshed on 2026-09-30 (claims 113, tests 7,673, test-to-source ratio 1.26, plus new qualification evidence in seven TRL rows) and a second monthly run reproduces both files again.
