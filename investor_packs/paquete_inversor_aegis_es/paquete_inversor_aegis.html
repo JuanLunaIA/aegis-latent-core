@@ -2918,7 +2918,7 @@ if __name__ == &quot;__main__&quot;:
 <h3>8 · “Un solo nodo, sin HA.”</h3>
 <p><b>Respuesta.</b> Corregido respecto del brief: la v5.0.1 incluye un modo activo-pasivo (un lease de escritura en Redis con fencing por época) y un modo activo-activo (una secuencia global encadenada por hash en PostgreSQL). Los dos se prueban en CI contra Redis y PostgreSQL reales, con un failover por SIGKILL de 4,2–5,2 s<span class="chip v" title="VERIFIED (verificado)">V</span>. Eso lo ubica en TRL 5<span class="chip m" title="MODEL (modelo)">M</span>; Raft sigue siendo código huérfano, en TRL 2<span class="chip m" title="MODEL (modelo)">M</span>.</p>
 <p><b>Evidencia.</b> <code>CLM-108</code>; <code>docs/operations/HIGH_AVAILABILITY.md</code>; D2.</p>
-<p class="concede"><b>No afirmamos</b> HA de producción: nada corrió todavía con particiones de red, failover de base de datos, almacenamiento compartido real ni carga de producción.</p>
+<p class="concede"><b>No afirmamos</b> HA de producción: se corrió un solo escenario de partición contra un único Redis (29/09/2026), que además mostró que un reinicio de Redis sin persistencia reinicia el contador de épocas y el cerco de secuencia pasa a rechazar los appends. Nada corrió todavía con failover de base de datos, almacenamiento compartido real ni carga de producción.</p>
 </div>
 <div class="obj">
 <h3>9 · “¿Esa valuación, con cero ingresos?”</h3>

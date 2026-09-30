@@ -2917,7 +2917,7 @@ if __name__ == &quot;__main__&quot;:
 <h3>8 · "Single node, no HA."</h3>
 <p><b>Answer.</b> Corrected since the brief: v5.0.1 ships active-passive mode (a Redis writer lease with epoch fencing) and active-active mode (a hash-linked global sequence in PostgreSQL). Both are tested in CI against real Redis and PostgreSQL, with SIGKILL failover at 4.2–5.2 s<span class="chip v" title="VERIFIED">V</span>. That puts it at TRL 5<span class="chip m" title="MODEL">M</span>; Raft remains orphan code at TRL 2<span class="chip m" title="MODEL">M</span>.</p>
 <p><b>Evidence.</b> <code>CLM-108</code>; <code>docs/operations/HIGH_AVAILABILITY.md</code>; D2.</p>
-<p class="concede"><b>We do not claim</b> production HA: nothing has run under network partitions, database failover, real shared storage or production load.</p>
+<p class="concede"><b>We do not claim</b> production HA: one partition scenario against a single Redis has run (29 Sep 2026), and it also exposed that a Redis restart without persistence resets the epoch counter, after which the sequence fence refuses appends. Nothing has run under database failover, real shared storage or production load.</p>
 </div>
 <div class="obj">
 <h3>9 · "That valuation, with zero revenue?"</h3>
