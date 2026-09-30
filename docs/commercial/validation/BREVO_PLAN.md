@@ -8,7 +8,7 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 **Audience:** the founder.
 **Scope:** how the Brevo connector, authorized on 2026-09-30, fits the validation work: what goes into it, what is drafted there, and what stays out.
-**Boundary:** a plan, not an account state. The session that wrote this could not call Brevo (see "Status"), so nothing here was created, imported or sent in Brevo, and no Brevo behaviour is asserted beyond what the connector describes: analyse campaigns, know an audience, create drafts.
+**Boundary:** an account state read back on 2026-09-30, not a promise about Brevo's behaviour. Nothing was imported, activated, scheduled or sent.
 
 ## Status
 
@@ -21,6 +21,12 @@ Set up through the Brevo API on 2026-09-30, with the owner's key and after the o
 | List | "Opted in", id 3, 0 contacts, in folder 1. The pre-existing "Su primera lista" (id 2) was not touched |
 | Templates, all **inactive** | 1 "Aegis - Opt-in confirmation" (tag `optin`), 2 "Aegis - Send me information", 3 "Aegis - Investor update" |
 | Campaigns | none. Nothing was scheduled or sent |
+
+Verified afterwards through the Brevo connector, which now loads, so the API key is no longer needed and can be revoked:
+
+- Brevo flags template 1 as a double opt-in template (`doiTemplate: true`), so `{{ params.DOIurl }}` is the variable it expects. `{{ contact.NOMBRE }}` and `{{ unsubscribe }}` are not confirmed by any flag; check them in the editor's preview.
+- The sender (id 1) is a personal `@gmail.com` address, and its name reads "Aegis Latent Core " with a trailing space. Mail sent from a `gmail.com` address through Brevo's servers cannot pass DMARC alignment for that domain. `gmail.com` publishes `p=none` today (read 2026-09-30), so it is not rejected on that ground alone, but large mailbox providers weigh unauthenticated bulk mail against delivery. **Before any real send, add a sender on a domain you own and authenticate it in Brevo (SPF, DKIM, DMARC).**
+- No segments exist; the "Opted in" list is empty.
 
 Not done by the agent: turning double opt-in on for a form (Brevo's form editor, which picks template 1), importing contacts, filling the sender's legal name and postal address, and activating any template. Each is yours. Rotate the API key used here, since it was pasted into a chat.
 
