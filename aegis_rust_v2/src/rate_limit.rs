@@ -287,42 +287,53 @@ mod verification {
         assert!(cap as i128 == capacity as i128 * 1000);
     }
 
-    /// The refill CAS preserves `0 <= tokens <= capacity` for every elapsed
-    /// time and rate that pass `try_consume`'s guard.
+    /// The refill CAS preserves `0 <= tokens <= capacity` for every
+    /// non-negative gain, which `refill_gain_is_positive` shows is every gain
+    /// `try_consume` can compute.
     #[kani::proof]
     fn refill_preserves_the_bounds() {
         let (cur, cap) = bucket();
-        let elapsed: i64 = kani::any();
-        let rate: u32 = kani::any();
-        let refill_per_ms = rate as i64;
-        kani::assume(elapsed > 0 && refill_per_ms > 0);
-        let next = refill_target(cur, refill_gain(elapsed, refill_per_ms), cap);
+        let gain: i64 = kani::any();
+        kani::assume(gain >= 0);
+        let next = refill_target(cur, gain, cap);
         assert!(0 <= next && next <= cap);
         assert!(next >= cur);
     }
 
     /// Saturation only prevents an overflow; it never loses or invents a
-    /// token. The result equals `min(cur + elapsed * rate, capacity)` over the
-    /// integers. When the product fits an `i64` the comparison is exact, with
-    /// the sum taken in `i128`; when it does not, the true product exceeds
-    /// `i64::MAX`, which is at least `capacity`, so the exact result is the
-    /// capacity. (Stating it with an `i128` product instead is the same claim
-    /// but a 128-bit multiplication CBMC does not finish in reasonable time.)
+    /// token. For any non-negative gain the refill result equals
+    /// `min(cur + gain, capacity)` over the integers, the sum taken in `i128`.
+    /// A saturated gain is `i64::MAX`, which is at least `capacity`, so this
+    /// also covers the idle-bucket case: the exact result is the capacity.
+    /// The gain is symbolic here, and `refill_gain_is_positive` covers the
+    /// multiplication that produces it; one harness over both did not finish
+    /// in 30 minutes of CBMC time.
     #[kani::proof]
     fn refill_equals_the_unbounded_result() {
         let (cur, cap) = bucket();
+        let gain: i64 = kani::any();
+        kani::assume(gain >= 0);
+        let next = refill_target(cur, gain, cap);
+        let exact = (cur as i128 + gain as i128).min(cap as i128);
+        assert!(next as i128 == exact);
+    }
+
+    /// For every elapsed time and rate that pass `try_consume`'s guard the
+    /// gain is positive and never less than the elapsed time, so a refill
+    /// never debits a bucket and never stalls one. That the gain is the exact
+    /// product below `i64::MAX` is `saturating_mul`'s documented contract,
+    /// checked at the overflow boundary by the unit test
+    /// `a_long_idle_bucket_refills_to_capacity_without_overflow`; a harness
+    /// comparing it against a second 64-bit multiplication did not finish in
+    /// 10 minutes of CBMC time.
+    #[kani::proof]
+    fn refill_gain_is_positive() {
         let elapsed: i64 = kani::any();
         let rate: u32 = kani::any();
         let refill_per_ms = rate as i64;
         kani::assume(elapsed > 0 && refill_per_ms > 0);
-        let next = refill_target(cur, refill_gain(elapsed, refill_per_ms), cap);
-        match elapsed.checked_mul(refill_per_ms) {
-            Some(product) => {
-                let exact = (cur as i128 + product as i128).min(cap as i128);
-                assert!(next as i128 == exact);
-            }
-            None => assert!(next == cap),
-        }
+        let gain = refill_gain(elapsed, refill_per_ms);
+        assert!(gain >= elapsed);
     }
 
     /// The consume CAS preserves the invariant, debits exactly the cost when

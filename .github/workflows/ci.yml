@@ -503,7 +503,8 @@ jobs:
           python -m pytest tests/test_zk_native_surface.py -v
 
   # ── Model checking ────────────────────────────────────────────────────────
-  # Bit-level proofs over the WAL's frame-bounds arithmetic. Scope and limits:
+  # Bit-level proofs over the WAL's frame-bounds arithmetic and the rate
+  # limiter's token-bucket arithmetic. Scope and limits:
   # docs/formal/FORMAL_VERIFICATION_LIMITS.md.
   #
   # Kept out of the `rust` job because `cargo kani setup` downloads its own
@@ -534,7 +535,7 @@ jobs:
           cargo install --locked --version 0.67.0 kani-verifier
           cargo kani setup
           cargo kani --version
-      - name: Verify WAL frame-bounds proofs
+      - name: Verify WAL frame-bounds and token-bucket proofs
         working-directory: aegis_rust_v2
         run: cargo kani
 
