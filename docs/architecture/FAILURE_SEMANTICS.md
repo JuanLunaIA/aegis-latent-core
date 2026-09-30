@@ -63,6 +63,8 @@ Startup replay stops at the first malformed line and marks the ledger `wal_corru
 
 This closes a gap that earlier revisions of this document described as the one place the system was not fully fail-closed. The old behaviour was worse than it sounds: each individual commit past the corruption point succeeded and verified, so a gateway that started on a corrupt WAL would keep accepting traffic and building a chain whose earlier segment could not be replayed at all — a divergence visible only to whoever eventually tried to replay it. `tests/test_app_wal_corrupt.py` pins the refusal, that it happens before the upstream call, and that the chain does not grow.
 
+The in-process engine (`aegis.wrap`) applies the same rule at `guard_request`: any ledger state other than `healthy` raises `AegisEmbeddedError` before the provider is contacted, and nothing is committed (`tests/test_embedded_mode.py`). The ledger class does not gate its own commits; the boundary that admits traffic does.
+
 **`/health` and `/metrics` stay reachable on purpose.** They fail closed in the sense of reporting `503` and `fault_state: wal_corrupt`, but they keep answering. An observability surface that went dark alongside the data path would leave an operator watching traffic stop with no way to learn why from the process itself.
 
 Recovery remains a human decision. The gateway will not repair, truncate, or roll over a corrupt WAL on your behalf; it stops so that the damage does not extend. Alert on `wal_corrupt`; see [Monitoring and Alerting](../operations/MONITORING_ALERTING.md).
