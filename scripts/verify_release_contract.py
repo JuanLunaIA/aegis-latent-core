@@ -483,7 +483,7 @@ def _validate_release_architectures(root: Path, diagnostics: list[Diagnostic]) -
     )
     expected_actions = (
         "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
-        "docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a",
+        "docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1",
         "docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e",
         "docker/login-action@dbcb813823bdd20940b903addbd779551569679f",
         "docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a",

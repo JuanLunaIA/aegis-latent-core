@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "24ecd7fb29871af4e48b7f6c8b96bb66ed2509fb146baa6a539c04bf58aac42c",
-      "size": 217177
+      "sha256": "7348fb12bb1193da28871e23cadd2ba34cb60d87dd97d59c604fde8c3366d588",
+      "size": 220161
     },
     {
       "category": "governed_input",
@@ -195,13 +195,13 @@
     {
       "category": "governed_input",
       "path": "requirements.txt",
-      "sha256": "4027afc3013b491b6c13676032cca6f7509819de36f03a7d5adbe97495dc269d",
-      "size": 1531
+      "sha256": "1466b7cb0cfe4282fcbc3e0cc5f08b050486dd2065331a2a39bfb6196361d191",
+      "size": 1528
     },
     {
       "category": "governed_input",
       "path": "requirements.lock",
-      "sha256": "ea2355e1f9422062193516af1aca5c23fc14b5480c19015536a6ff1e2edd8e46",
+      "sha256": "411915439773e44816b692aab1ede76ad36ac1c97719c986dc59a7e715d51096",
       "size": 95839
     },
     {
@@ -261,8 +261,8 @@
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/Cargo.lock",
-      "sha256": "268a8f7279072480f23251adc0f75781238a2efc16c0b773cab1e608d2aa15d2",
-      "size": 80191
+      "sha256": "b9a06af68abc270c3c9f5a4f5580e62461ca2dced69247d228eaabee0a1e43e1",
+      "size": 80446
     },
     {
       "category": "governed_input",
@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "a9d05754f4c4a3320a56853d64813282af64e29b4c9147752ae0c588cf24e305",
-      "size": 41393
+      "sha256": "85852d787f5664acf5eefa4b2e3d4d26baaef0ceaa708b4fb2c9ee778e03674f",
+      "size": 41394
     },
     {
       "category": "governed_input",
@@ -333,8 +333,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/forensic.yml",
-      "sha256": "37676e248c5873f0813fc6faf7acf5bb95bbca285ec9b599b33b79f643ce7485",
-      "size": 3303
+      "sha256": "407080e1808afd716821491a8b926f8745bb5a95061d0d191cd0d10f7208c8f2",
+      "size": 3304
     },
     {
       "category": "governed_input",
@@ -357,7 +357,7 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/publish_oci.yml",
-      "sha256": "a5fd608dfd20e69c700048dae2c1c2232c666eab3cbf9b5a6918506a14a277d3",
+      "sha256": "4386af1d01a9986887e4f72f976d01f846b5f607eb569c68c7d92bada4a0838a",
       "size": 5654
     },
     {
@@ -375,7 +375,7 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/security.yml",
-      "sha256": "219d701ab039693ee732f7f2c8db8cb75cd7435e909a95d6ee6f6c380028c09d",
+      "sha256": "f7bc86ab12810e360049ef30e57f6a137173a004fc81308b5f5fed09fcfbccfa",
       "size": 7943
     },
     {
@@ -465,7 +465,7 @@
     {
       "category": "governed_input",
       "path": "scripts/verify_release_contract.py",
-      "sha256": "c02676725e0ae01e72f94e39314ed0a8f5101cf0d367599392cc8990baf56af1",
+      "sha256": "4190e404ecc111ffdfd0d9a95a0e786b7fca39f422f9dbe76326335d0d426486",
       "size": 42581
     },
     {

@@ -179,6 +179,7 @@ The documents that decide what may be said, and on what evidence.
 | [Open-core Decision Memo](legal/OPEN_CORE_DECISION_MEMO.md) | What is gated by a token today, and the options. |
 | [Questions for Counsel](legal/COUNSEL_QUESTIONS.md) | Ten questions the drafts cannot answer. |
 | [Outbound Batch 1](commercial/validation/OUTBOUND_BATCH_1.md) | Segment plan and send rules for the first 30 touches. |
+| [Brevo Plan](commercial/validation/BREVO_PLAN.md) | What the Brevo connector is for, what stays out of it, and what must exist before a real send. |
 | [Buyer Interview Script](commercial/validation/INTERVIEW_SCRIPT.md) | Script and note template for the three buyer interviews. |
 | [Commercialization Execution Baseline](commercial/EXEC_BASELINE.md) | Mission XVI Phase 0 readback: gates, data-room diff, open conflicts. |
 | [Commercial Readiness](commercial/COMMERCIAL_READINESS.md) | What stands between this repository and an enterprise sale. |

@@ -28,6 +28,12 @@ updates:
     groups:
       python-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # hatchling >= 1.32 writes Metadata-Version 2.5, which the twine==6.2.0
+      # pinned in the publish workflows rejects. The backend is pinned in
+      # several files that scripts/verify_release_contract.py checks together,
+      # so it is moved by hand with twine, not by a per-package PR.
+      - dependency-name: "hatchling"
 
   # ── Rust extension (aegis_rust_v2/Cargo.toml + Cargo.lock) ─────────────────
   - package-ecosystem: "cargo"
