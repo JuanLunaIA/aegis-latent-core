@@ -23,6 +23,8 @@ Tags: **V** = read back from a primary source or retained artifact today. **M** 
 
 **Gate verdict:** no gate is red. One is yellow (G4) and two are NOT_EXECUTED (G10, G12). None of them blocks Phase 1; each is carried forward in §5.
 
+*(Amended 2026-09-30: **G12 executed.** `deploy/azure/phase0/00_query_prices.sh` now exists. It is read-only: one unauthenticated GET per meter to the Azure Retail Prices API, with no login and nothing created or spent. It wrote `evidence/benchmarks/azure/prices_verified_2026-09-30.json` (fetched 2026-09-30T21:36:41Z, V). The four prices the investor engine tags VERIFIED all read back **MATCH**: Key Vault HSM Pool Standard B1 at 3.20 USD/h, Standard_D4s_v5 Linux at 0.192 USD/h and Blob Hot LRS first tier at 0.0208 USD/GB-month, all eastus; and B2als v2 Linux in chilecentral at 0.0526 USD/h. The meter ids returned equal the ones the engine cites. A P4 LRS 32 GiB Premium SSD disk in chilecentral, 6.736598 USD/month, is recorded for context only. The file is dated 2026-09-30, not the 2026-09-16 the plan named. `tests/test_azure_price_readback.py` keeps the script's expected values equal to both engines' and turns a moved price into exit 3. The table row above is left as observed on 2026-09-29. G12 is now GREEN; G10 remains NOT_EXECUTED.)*
+
 ## 2. G4 detail
 
 - The single failure is `tests/test_determinism.py::TestIEC62443Determinism::test_no_outlier_exceeds_500us`: one dispatch event took 594.7 µs against a 500 µs bound (V).
@@ -78,7 +80,7 @@ Engine inputs (`model_outputs.json`, identical in EN and ES): 50 inputs, **V 14 
 
 | # | Item | State | Effect |
 |---|---|---|---|
-| C-1 | Founder's own monthly Azure burn ($17.54 / $44.77) | remains **M**, unmeasured. `00_query_prices.sh` does not exist, so nothing was run. Retail prices alone could not verify an owner's burn composition even if it had. | State "unmeasured, MODEL" on every burn slide. |
+| C-1 | Founder's own monthly Azure burn ($17.54 / $44.77) | remains **M**, unmeasured. *(Amended 2026-09-30: `00_query_prices.sh` now exists and ran, see G12; it verifies list prices only. The owner's burn composition still needs the owner's own Cost Management export, so C-1 stays M.)* | State "unmeasured, MODEL" on every burn slide. |
 | C-2 | `paginaaegis.html` (Phase 1 site input) | not in the repository | Phase 1 must either receive the file from the owner or build the sales surface from the repo. |
 | C-3 | Audit corpus (AEG1 67.5/100, AEG2/L11 51/100, strategic audit, teardown notes) | not present as files; only summarised inside the investor packs | Not consumed. Those scores stay unverified until the source files are supplied. |
 | C-4 | Signature and attestation verification (G10) | tools absent here | Phase 4 assurance work must not describe signatures as verified by this session. |

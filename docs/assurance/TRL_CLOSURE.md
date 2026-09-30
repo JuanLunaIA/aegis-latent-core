@@ -14,7 +14,7 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 | Component | Gap named in the pack | Run today | Result | Still open |
 | --- | --- | --- | --- | --- |
-| WAL + group commit | 30-day soak and power-loss test on target storage | 60 rounds of kill and recover | 27,735 acknowledged commits, 0 lost, chain valid in every round | The 30-day soak and a real power cut on target storage |
+| WAL + group commit | 30-day soak and power-loss test on target storage | 60 rounds of kill and recover | 27,735 acknowledged commits, 0 lost, chain valid in every round; re-run 2026-09-30: 28,753, 0 lost, 0 torn tails | The 30-day soak and a real power cut on target storage |
 | SDK verifiers | External auditor runs the verifier in a pilot | Deterministic verifier kit and a test that runs it stand-alone | Builds byte-identically; demo passes from the extracted kit | An external auditor using it in a pilot |
 | HA lease + global sequence | Partition and failover chaos tests | 45 existing HA tests against real Redis 7.0.15 and PostgreSQL 16, plus two new fault-injection tests | All pass; one **finding** on Redis data loss, fixed on 2026-09-30 (`REG-D91`) | Real network partitions, PostgreSQL failover, storage classes, a pilot |
 | WAF L1/L2 | Published adversarial evaluation and pen-test coverage | The pinned 23-case corpus | 0 bypasses, 0 false positives; the 95% upper bound on the bypass rate is 20.4% | An independent, larger corpus; the pen test |
@@ -24,6 +24,8 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 ## WAL: kill and recover
 
 `tools/qualification/wal_crash_soak.py` starts a committing process, kills it with `SIGKILL` at a random moment, reopens the ledger and checks the chain verifies and that every commit the process had acknowledged is present. Sixty rounds, seed 42, 223 seconds, retained as `evidence/qualification/wal_crash_soak_2026-09-29.json`: 27,735 acknowledged commits, none lost, no duplicates, integrity valid after each round. A kill that lands inside a write leaves a torn last line, which the harness now repairs with `tools/wal_repair.py` between rounds and counts as `torn_tails_repaired`; that run predates the repair step and does not record the count.
+
+*(Amended 2026-09-30.)* The same sixty rounds were re-run with the repair step in place (seed 42, 223.5 seconds), retained as `evidence/qualification/wal_crash_soak_2026-09-30.json`. The results were 28,753 acknowledged commits, none lost, no duplicates, and integrity valid after each round. `torn_tails_repaired` is **0**: no kill in this run landed inside a write, so the repair step was present but not exercised by the soak. The repair path is covered separately: `tests/test_wal_crash_soak.py` tears a last line and checks the harness heals it and refuses anything else, and `tests/test_wal_repair.py` covers the tool (14 passed on 2026-09-30). The 2026-09-29 paragraph above is kept as written.
 
 **What this is not.** `SIGKILL` ends the process but leaves the operating system's page cache intact, so this exercises replay and torn-tail handling, not the storage stack or `fsync` honesty. It is not a power-loss test and 223 seconds is not a 30-day soak. Both need the target host: `python tools/qualification/wal_crash_soak.py --hours 720 --wal /mnt/target/aegis.wal.jsonl`.
 
@@ -51,6 +53,8 @@ The existing HA suite passed against real backends: 45 passed and 4 skipped (Hel
 
 `tools/security/run_waf_corpus.py` on `tests/data/waf_corpus_v1.json`, retained as `evidence/qualification/waf_corpus_report_2026-09-29.json`: 15 malicious and 8 benign cases, 0 bypasses, 0 false positives. With 15 malicious cases the Wilson 95% upper bound on the bypass rate is 20.4%, so the result is compatible with a WAF that misses a fifth of attacks. It shows the corpus behaves as written. It does not close a gap that asks for a published adversarial evaluation, and the WAF remains bounded pattern detection (`UC-042`).
 
+*(Amended 2026-09-30.)* The 20.4% bound turned out to be the right warning. A red-team pass over HTTP found evasions that all 23 cases missed: invisible characters, separator runs, base64, a phrase placed in a field other than `messages`, and a Layer-2 stage that could never fire. It also found that eight of 24 benign regulated sentences were refused. The fixes, each with a test, are `REG-D94`–`REG-D101` (`CLM-117`), with before/after counts in `evidence/registry/reg-d94_d105_closure.txt`. `CLM-117` lists what still passes. The gap is unchanged: it asks for an independent, larger corpus and a pen test, and this pass was neither.
+
 ## Observability
 
 `deploy/observability/` holds fourteen alert rules (eleven from the operations guide, three marked extra) and a twelve-panel dashboard. `tests/test_observability_assets.py` fails if any alert or panel references a metric the gateway does not export, and if a documented alert is missing from the shipped file. Neither asset has been loaded into a live Prometheus or Grafana, and no threshold has been tuned.
@@ -65,7 +69,7 @@ The existing HA suite passed against real backends: 45 passed and 4 skipped (Hel
 
 ## Not done in this phase
 
-No Azure resource was created and nothing was spent. The Key Vault Premium test, a run of `phase0_guardrails.sh` end to end and a second-region repeat all spend money, so they wait for the owner. The script `deploy/azure/phase0/00_query_prices.sh` still does not exist.
+No Azure resource was created and nothing was spent. The Key Vault Premium test, a run of `phase0_guardrails.sh` end to end and a second-region repeat all spend money, so they wait for the owner. *(Amended 2026-09-30: `deploy/azure/phase0/00_query_prices.sh` now exists. It is a read-only readback of the list prices the pack cites, it spends nothing, and all four VERIFIED prices matched on 2026-09-30, per `evidence/benchmarks/azure/prices_verified_2026-09-30.json`. Nothing billable was created, so the three money-spending items above still wait for the owner.)*
 
 ## Reproduce
 

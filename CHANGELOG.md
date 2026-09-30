@@ -16,7 +16,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`docs/compliance/CERTIFICATION_SCOPE.md`** (`CLM-120`, `LEGAL-REVIEW-REQUIRED`). For each framework a
+  regulated buyer names, it says whether any certificate exists and who receives it. Class F frameworks have
+  no certificate a software component could hold: HIPAA, GDPR, the EU AI Act, FRE 902(14), SEC 17a-4, NIST
+  AI RMF, CSF and SP 800-53, and OWASP LLM. For them it states, clause by clause, which functions the gateway
+  provides, which it provides in part, and which only the deployer can supply. Class O certificates attest an
+  organisation (SOC 2, ISO/IEC 27001 and 42001, HITRUST, PCI DSS, FedRAMP). Class P needs the product or its
+  module validated (FIPS 140-3, CAVP, Common Criteria, FDA/MDR). Class O and P stay "none". It is not legal
+  advice and no counsel has reviewed it.
+- **`deploy/azure/phase0/00_query_prices.sh`** (`CLM-121`, `EXEC_BASELINE` G12). A read-only readback of
+  the four Azure list prices the investor pack tags `VERIFIED`, from the public Retail Prices API. It exits
+  `3` when a price has moved and `4` when a meter no longer answers. All four matched on 2026-09-30
+  (`evidence/benchmarks/azure/prices_verified_2026-09-30.json`); `tests/test_azure_price_readback.py` checks
+  it offline and keeps its expected values equal to the engine's.
+
 ### Changed
+
+- `docs/compliance/AUDIT_READINESS.md` and `docs/DEVELOPER_INTEGRATIONS_GUIDE.md` no longer advise
+  configuring `tsa_url` for trusted time in the hardened posture: a strict gateway now refuses it
+  (`REG-D105`), and no out-of-process anchoring tool ships. `docs/assurance/TRL_CLOSURE.md` records the
+  2026-09-30 WAL crash-soak re-run (28,753 acknowledged commits, 0 lost, 0 torn tails) and the WAF
+  red-team findings the 23-case corpus had missed.
 
 - **Behaviour change: unusable request bodies answer `400`, not `500`** (`REG-D98`, `CLM-118`). At
   `/v1/chat/completions`, `/v1/completions` and `/v1/messages`, invalid UTF-8, an integer past Python's digit
