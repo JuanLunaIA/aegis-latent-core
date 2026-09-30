@@ -241,7 +241,7 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 <tr><td>SDK verifiers</td><td class="num">6</td><td>PyPI/npm SDKs 5.0.1 byte-identical to Release assets (2026-09-24 readback); signature and provenance checks are recorded in docs/RELEASE_STATUS.md and were not re-run for the 2026-09-30 update</td><td>external auditor runs aegis-sdk verify in a pilot</td><td class="num">2</td><td class="num">$0</td><td class="num">$4,600</td></tr>
 <tr><td>WAF L1/L2</td><td class="num">5</td><td>corpus-tested normalisation; finite pattern set (UC-042); 23-case corpus run 2026-09-29: 15 malicious blocked, 8 benign passed, Wilson 95% upper bound on the bypass rate 20.4%, a sample too small to support a detection-rate claim</td><td>published adversarial eval + pen test coverage</td><td class="num">4</td><td class="num">$0</td><td class="num">$9,200</td></tr>
 <tr><td>Crypto-shredding</td><td class="num">5</td><td>wired into commit path; keyed digests (CLM-098)</td><td>counsel review of erasure semantics + pilot</td><td class="num">3</td><td class="num">$3,000</td><td class="num">$9,900</td></tr>
-<tr><td>HA lease + global sequence</td><td class="num">5</td><td>CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108); partition test against real Redis 2026-09-29: never two writers at any sample; a Redis restart without persistence resets the epoch counter and the sequence fence then refuses appends (an availability incident, not a fork; fix undecided)</td><td>decide Redis-restart epoch behaviour; chaos tests on target infrastructure + pilot</td><td class="num">6</td><td class="num">$2,000</td><td class="num">$15,800</td></tr>
+<tr><td>HA lease + global sequence</td><td class="num">5</td><td>CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108); partition test against real Redis 2026-09-29: never two writers at any sample; a separate Redis-restart test showed that a restart without persistence resets the epoch counter and the sequence fence then refuses appends (an availability incident, not a fork; fix undecided)</td><td>decide Redis-restart epoch behaviour; chaos tests on target infrastructure + pilot</td><td class="num">6</td><td class="num">$2,000</td><td class="num">$15,800</td></tr>
 <tr><td>ZK circuit</td><td class="num">4</td><td>preview guard; not on the request path</td><td>proving-system audit; deferred</td><td class="num">12</td><td class="num">$40,000</td><td class="num">$67,600</td></tr>
 <tr><td>Raft / consensus</td><td class="num">2</td><td>orphan module; superseded by AD-17 lease design</td><td>not on roadmap</td><td class="num">0</td><td class="num">$0</td><td class="num">$0</td></tr>
 <tr><td>HSM / PQC signing</td><td class="num">4</td><td>PKCS#11 path exercised against SoftHSM 2.6.1 (a software token, not an HSM) 2026-09-29; ML-DSA-65 sign 173 us / verify 62 us; Managed HSM excluded ($2,342/mo)</td><td>Key Vault Premium HSM-backed key integration test</td><td class="num">4</td><td class="num">$500</td><td class="num">$9,700</td></tr>
@@ -1781,8 +1781,8 @@ TRL = [
         5,
         6,
         &quot;CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108); partition test against real Redis 2026-09-29: &quot;
-        &quot;never two writers at any sample; a Redis restart without persistence resets the epoch counter and the sequence &quot;
-        &quot;fence then refuses appends (an availability incident, not a fork; fix undecided)&quot;,
+        &quot;never two writers at any sample; a separate Redis-restart test showed that a restart without persistence resets &quot;
+        &quot;the epoch counter and the sequence fence then refuses appends (an availability incident, not a fork; fix undecided)&quot;,
         &quot;decide Redis-restart epoch behaviour; chaos tests on target infrastructure + pilot&quot;,
         6,
         2_000,
@@ -1874,8 +1874,8 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     &quot;HA lease + global sequence&quot;: (
         &quot;Lease de HA + secuencia global&quot;,
         &quot;CI contra Redis/PostgreSQL reales; failover por SIGKILL en 4,2-5,2 s (CLM-108); prueba de partición contra Redis real el 29/09/2026: &quot;
-        &quot;nunca hubo dos escritores en ninguna muestra; un reinicio de Redis sin persistencia reinicia el contador de épocas y el cerco de secuencia &quot;
-        &quot;rechaza los appends (una caída de disponibilidad, no una bifurcación; arreglo sin decidir)&quot;,
+        &quot;nunca hubo dos escritores en ninguna muestra; una prueba aparte de reinicio de Redis mostró que un reinicio sin persistencia reinicia &quot;
+        &quot;el contador de épocas y el cerco de secuencia rechaza los appends (una caída de disponibilidad, no una bifurcación; arreglo sin decidir)&quot;,
         &quot;decidir el comportamiento de épocas tras un reinicio de Redis; pruebas de caos en la infraestructura destino + piloto&quot;,
     ),
     &quot;ZK circuit&quot;: (
@@ -2917,7 +2917,7 @@ if __name__ == &quot;__main__&quot;:
 <h3>8 · "Single node, no HA."</h3>
 <p><b>Answer.</b> Corrected since the brief: v5.0.1 ships active-passive mode (a Redis writer lease with epoch fencing) and active-active mode (a hash-linked global sequence in PostgreSQL). Both are tested in CI against real Redis and PostgreSQL, with SIGKILL failover at 4.2–5.2 s<span class="chip v" title="VERIFIED">V</span>. That puts it at TRL 5<span class="chip m" title="MODEL">M</span>; Raft remains orphan code at TRL 2<span class="chip m" title="MODEL">M</span>.</p>
 <p><b>Evidence.</b> <code>CLM-108</code>; <code>docs/operations/HIGH_AVAILABILITY.md</code>; D2.</p>
-<p class="concede"><b>We do not claim</b> production HA: nothing has run under network partitions, database failover, real shared storage or production load.</p>
+<p class="concede"><b>We do not claim</b> production HA: separate HA fault-injection work has run (29 Sep 2026): one partition test against a single Redis, and an independent Redis-restart-without-persistence test that exposed that the restart resets the epoch counter, after which the sequence fence refuses appends. Nothing has run under database failover, real shared storage or production load.</p>
 </div>
 <div class="obj">
 <h3>9 · "That valuation, with zero revenue?"</h3>
@@ -3028,7 +3028,7 @@ if __name__ == &quot;__main__&quot;:
 <ul>
 <li><strong>Write-ahead log.</strong> A kill-and-recover soak ran 60<span class="chip v" title="VERIFIED">V</span> rounds: 27,735<span class="chip v" title="VERIFIED">V</span> acknowledged commits, 0<span class="chip v" title="VERIFIED">V</span> lost. It kills the process; it is not a power cut. The 30-day soak and power-loss test on target storage remain the gap.</li>
 <li><strong>Injection filter.</strong> A 23<span class="chip v" title="VERIFIED">V</span>-case corpus: 15<span class="chip v" title="VERIFIED">V</span> malicious blocked, 8<span class="chip v" title="VERIFIED">V</span> benign passed, no false positive. The Wilson 95% upper bound on the bypass rate is 20.4%<span class="chip v" title="VERIFIED">V</span>, so the sample is too small to state a detection rate.</li>
-<li><strong>High availability.</strong> A partition test against a real Redis never showed two writers. The same work found a limit: a Redis restart without persistence resets the epoch counter, and the sequence fence then refuses appends. That is an availability incident, not a fork, and the fix is not decided.</li>
+<li><strong>High availability.</strong> A partition test against a real Redis never showed two writers. A separate test found a limit: a Redis restart without persistence resets the epoch counter, and the sequence fence then refuses appends. That is an availability incident, not a fork, and the fix is not decided.</li>
 <li><strong>Hardware key custody.</strong> The PKCS#11 adapter now runs against SoftHSM 2.6.1, a software token. It is not an HSM, and no managed HSM was tested.</li>
 <li><strong>Observability.</strong> 14<span class="chip v" title="VERIFIED">V</span> alert rules and a 12<span class="chip v" title="VERIFIED">V</span>-panel dashboard ship in <code>deploy/observability</code> and are checked statically by tests, not against a live Prometheus or Grafana.</li>
 </ul>
