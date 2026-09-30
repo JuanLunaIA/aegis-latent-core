@@ -20,6 +20,7 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 | Outbound batch 1 | [`OUTBOUND_BATCH_1.md`](OUTBOUND_BATCH_1.md) | `python scripts/lint_sales_copy.py docs/commercial/validation` |
 | Interview script and note | [`INTERVIEW_SCRIPT.md`](INTERVIEW_SCRIPT.md) | none |
 | Brevo plan | [`BREVO_PLAN.md`](BREVO_PLAN.md) | `python scripts/lint_sales_copy.py docs/commercial/validation` |
+| Public pricing signals | [`PRICING_EVIDENCE.md`](PRICING_EVIDENCE.md) | `python scripts/lint_sales_copy.py docs/commercial/validation` |
 | Brevo import gate | [`tools/validation/brevo_export.py`](../../../tools/validation/brevo_export.py) | `python tools/validation/brevo_export.py contacts_private.csv --out brevo_import.csv` |
 | Pilot generator | [`tools/validation/pilot_generator.py`](../../../tools/validation/pilot_generator.py) | `python tools/validation/pilot_generator.py facts.json --out pilot.md` |
 | Kill switch | [`tools/validation/kill_switch.py`](../../../tools/validation/kill_switch.py) | `python tools/validation/kill_switch.py --data docs/commercial/validation` |
