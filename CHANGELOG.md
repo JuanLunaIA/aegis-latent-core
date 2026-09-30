@@ -32,6 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `7.0.0` accepts it). The wheel members were otherwise identical, but a backend bump needs `twine` moved in
   the same change and a live upload to prove PyPI takes the metadata, so Dependabot now ignores `hatchling`
   and the pin stays at `1.28.0` until that is done deliberately.
+- **Brevo kit staged; nothing created in Brevo.** The connector was authorized on 2026-09-30 but answered
+  "requires authentication" in the sessions that prepared this, so none of its tools loaded and an unattended
+  session cannot complete the sign-in. Prepared instead: `tools/validation/brevo_export.py`, which turns the
+  owner's private contact sheet into a Brevo import file and refuses any row without a consent basis, a real
+  past consent date, a valid and unique address, a known segment and source (opted-out rows are skipped,
+  reports name rows and log ids, never addresses, and paths inside the repository are refused);
+  `tests/test_brevo_export.py` (21 tests); three email drafts and a header-only contact sheet under
+  `docs/commercial/validation/brevo/`; and the first steps in `BREVO_PLAN.md`. `.gitignore` blocks
+  `contacts_private*.csv` and `brevo_import*.csv`. Nothing is sent by the agent.
 - CI: `faulthandler_timeout` raised from 60 to 180 seconds in `ci.yml` and `forensic.yml`. The option exits
   the process when a single test outlives it, and `test_integrity_across_one_hundred_thousand_nodes`
   (marked `slow`, about 60 seconds on a loaded runner) crossed it on Python 3.11 three times, killing an

@@ -12,7 +12,31 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 ## Status
 
-The connector reports as connected and enabled for the session, but none of its tools were exposed to it, so no list, template or draft exists in Brevo yet. The first session in which the Brevo tools load starts with read-only calls (account, senders, lists) and then creates the drafts below. Nothing is sent by the agent.
+Authorized in claude.ai on 2026-09-30, but in the sessions that prepared this the connector answered "requires authentication" and none of its tools loaded, so no list, template or draft exists in Brevo yet. An unattended session cannot complete that sign-in; it is done from the connector settings in claude.ai, then a new session picks the tools up. Everything that can be prepared without Brevo is prepared (see "The kit"). Nothing is sent by the agent.
+
+## The kit
+
+| Piece | Path | What it does |
+| --- | --- | --- |
+| Contact sheet template | [`brevo/contacts_template.csv`](brevo/contacts_template.csv) | Header only. Copy it **outside the repository** and fill it in; it is the only place an address lives. |
+| Exporter | [`tools/validation/brevo_export.py`](../../../tools/validation/brevo_export.py) | Turns that sheet into a Brevo import file. Refuses a row with no consent basis, no real past consent date, a malformed or duplicate address, or an unknown segment or source; skips anyone marked `opted_out`; reports by row and log id, never by address; refuses paths inside the repository. |
+| Opt-in confirmation | [`brevo/optin_confirmation.html`](brevo/optin_confirmation.html) | Double opt-in message. |
+| "Send me information" reply | [`brevo/send_me_information.html`](brevo/send_me_information.html) | Two links and the disqualifiers. |
+| Investor update | [`brevo/investor_update.html`](brevo/investor_update.html) | Shell for the output of `tools/raise/monthly_update.py`. |
+
+```bash
+python tools/validation/brevo_export.py ~/contacts_private.csv --out ~/brevo_import.csv
+```
+
+Both files stay in your home directory; `.gitignore` also blocks `contacts_private*.csv` and `brevo_import*.csv` if one is ever copied into the tree.
+
+## First steps once the Brevo tools load
+
+1. Read only: account, verified senders, existing lists and templates. Report what is already there before creating anything.
+2. Create the contact attributes in the table below.
+3. Create one list, "Opted in", with double opt-in on. Create the three drafts from the files above. **Do not create a campaign with a send date.**
+4. Hand back the list id, the template ids and the exporter command. Import is yours: `brevo_export.py` output goes in through Brevo's import screen, so the consent columns arrive with the contacts.
+5. After any real send, read campaign statistics and record replies and calls in the validation log; opens are not counted.
 
 ## Where it fits, and where it does not
 
@@ -38,11 +62,13 @@ Create these attributes before any import, so every contact carries its basis:
 | `CONSENT_BASIS` | how the person asked to be contacted, in words |
 | `CONSENT_DATE` | ISO date |
 
-## Drafts to create (not sent)
+## Drafts (not sent)
 
 1. **Opt-in confirmation.** One sentence on what the list is for, the confirm link, and the sender identity block.
 2. **"Send me information" reply.** [One Pager](../SALES_KIT/ONE_PAGER.md) and [Prove It Yourself](../../PROVE_IT.md) links, nothing else. Wording follows [Outbound Sequences](../SALES_KIT/OUTBOUND_SEQUENCES.md) rules 1 to 7.
-3. **Investor update.** For holders who agreed to receive it, built from `python tools/raise/monthly_update.py`; the figures are the tool's, not typed by hand.
+3. **Investor update.** For holders who agreed to receive it, built from `python tools/raise/monthly_update.py --month YYYY-MM`; the figures are the tool's, not typed by hand.
+
+The Brevo variable names in the files (`{{ contact.FIRSTNAME }}`, `{{ unsubscribe }}`, `{{ params.DOIurl }}`) were written from memory of Brevo's template syntax, not checked against its editor; confirm them when the drafts are created.
 
 ## Before the first real send
 
