@@ -472,6 +472,19 @@ class AegisSettings(BaseSettings):
             "private key and is written 0600; give it the custody any signing secret needs."
         ),
     )
+    trusted_signing_public_keys: str = Field(
+        default="",
+        description=(
+            "Comma-separated hex ML-DSA public keys whose signatures the ledger accepts in "
+            "addition to its own identity's (AEGIS_PQC_IDENTITY_PATH): earlier identities after "
+            "a rotation, and the identity of every other replica that writes the same chain in "
+            "high availability. While the ledger holds its own identity or this list is "
+            "non-empty, a pqc-ml-dsa record signed under any other key is invalid and fails "
+            "verify_integrity, because a key read from the record itself is whatever whoever "
+            "last wrote the WAL chose; with neither, such records read unverified. Take each "
+            "key from the identity at provisioning, never from the chain."
+        ),
+    )
     terminal_outbox_enabled: bool = Field(
         default=False,
         description=(
@@ -1058,6 +1071,17 @@ class AegisSettings(BaseSettings):
         if value not in {"strict", "development"}:
             raise ValueError("security_enforcement_mode must be 'strict' or 'development'")
         return value
+
+    @field_validator("trusted_signing_public_keys")
+    @classmethod
+    def _validate_trusted_signing_public_keys(cls, v: str) -> str:
+        keys = [key.strip() for key in v.split(",") if key.strip()]
+        for key in keys:
+            if len(key) % 2 or any(c not in "0123456789abcdefABCDEF" for c in key):
+                raise ValueError(
+                    "AEGIS_TRUSTED_SIGNING_PUBLIC_KEYS must be comma-separated hex public keys"
+                )
+        return ",".join(key.lower() for key in keys)
 
     @field_validator("rate_limit_backend")
     @classmethod

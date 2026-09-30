@@ -62,7 +62,7 @@ try:  # Windows byte-range locking. Absent on POSIX; see _lock_wal_fd.
 except ImportError:  # pragma: no cover - platform dependent
     _msvcrt_module = None  # type: ignore[assignment]
 from collections import deque
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -196,6 +196,33 @@ class WalWriterConflictError(RuntimeError):
     The topology is documented as unsupported; this exception makes it
     enforced rather than merely documented, so the fork cannot occur silently.
     """
+
+
+class LedgerFaultedError(RuntimeError):
+    """The ledger has latched a fault and refuses to extend the chain.
+
+    A fault (``signing_failed``, ``wal_persist_failed``, ``wal_corrupt``,
+    ``mmr_scheme_mismatch``, ``mmr_replay_mismatch``) means the chain on disk
+    may not replay past some point. A commit accepted after that point would
+    be reported durable and could be emitted, yet replay stops before it and
+    ``tools/wal_repair.py`` refuses interior damage, so the record would be
+    lost for every later verifier. ``specs/aegis_invariants.tla`` finds that
+    trace when the ledger does not gate its own commits
+    (``aegis_invariants_ungated.cfg``): a request admitted before the latch
+    commits after a torn line. Callers that read the fault before committing
+    cannot close that window, because the read and the commit are not atomic;
+    the check under the ledger lock does.
+
+    The latch clears only when a new ledger replays a WAL that verifies, that
+    is after operator repair and a restart.
+    """
+
+    def __init__(self, fault_state: str) -> None:
+        super().__init__(
+            f"ledger fault_state={fault_state}; refusing to extend an evidence chain "
+            "that may not replay"
+        )
+        self.fault_state = fault_state
 
 
 # Platform selector for the WAL lock, kept as a module constant so the branch
@@ -367,10 +394,13 @@ class SignatureAssurance(StrEnum):
     invented separately from it.
 
     UNSIGNED
-        No recognised scheme. Unreachable via ``_sign`` — every commit path
-        either signs under a known tier or raises before a node exists — so
-        this is a defensive floor for corrupt or newer-than-this-build WAL
-        data, not a state a live commit can produce.
+        No signature this verifier can attribute: an unrecognised scheme,
+        material inconsistent with its label, or — when the verifier passes
+        its pinned keys to :func:`chain_signature_assurance` — a
+        ``pqc-ml-dsa`` signature under a key it does not pin. A live commit
+        never produces the first two (every commit path signs under a known
+        tier or raises before a node exists); the third is how a verifier
+        that holds no key, or the wrong one, reads an ML-DSA chain.
     COMPROMISED_EPHEMERAL
         ``ed25519-fallback``: a fresh keypair minted per node and never
         persisted. Verifiable within the process that signed it, not across
@@ -380,8 +410,9 @@ class SignatureAssurance(StrEnum):
         key. Requires that key to stay in process memory.
     ASYMMETRIC_SOFTWARE
         ``pqc-ml-dsa``: a persistent post-quantum identity, verifiable
-        against a published public key, but the private key lives in
-        process memory rather than a hardware boundary.
+        against a public key the verifier pins (its own identity or
+        ``trusted_public_keys``), but the private key lives in process
+        memory rather than a hardware boundary.
     ASYMMETRIC_HARDWARE_ATTESTED
         ``pkcs11-rsa-pss-sha256`` / ``pkcs11-ecdsa-sha256``: signed by an
         HSM-resident key that never leaves the token boundary.
@@ -537,21 +568,49 @@ def scheme_material_inconsistency(node: AuditNode) -> str | None:
     return None
 
 
-def chain_signature_assurance(nodes: list[AuditNode]) -> SignatureAssurance | None:
+def chain_signature_assurance(
+    nodes: list[AuditNode], trusted_keys: frozenset[str] | None = None
+) -> SignatureAssurance | None:
     """Weakest-link assurance over ``nodes``, or ``None`` if ``nodes`` is empty.
 
     Shared by :attr:`CryptographicAuditLedger.signature_assurance` and
     ``aegis.core.iso27037_evidence.build_evidence_package``, which both need
     the same chain-history reduction but take their own chain snapshot under
     the ledger's lock (this function does not lock).
+
+    ``trusted_keys`` is the verifier's set of pinned asymmetric public keys.
+    When it is given, a ``pqc-ml-dsa`` node signed under any other key reports
+    ``UNSIGNED``: its signature checks only against the key the record carries
+    itself, which anyone rewriting the WAL can replace, so the label must not
+    buy the asymmetric tier. ``None`` keeps the label-only reading for callers
+    that hold no key material at all.
     """
 
     if not nodes:
         return None
     return min(
-        (node_signature_assurance(node) for node in nodes),
+        (_pinned_assurance(node, trusted_keys) for node in nodes),
         key=lambda tier: _ASSURANCE_RANK[tier],
     )
+
+
+def _pinned_assurance(node: AuditNode, trusted_keys: frozenset[str] | None) -> SignatureAssurance:
+    tier = node_signature_assurance(node)
+    if (
+        trusted_keys is not None
+        and node.signature_scheme in _PINNED_KEY_SCHEMES
+        and node.public_key.lower() not in trusted_keys
+    ):
+        return SignatureAssurance.UNSIGNED
+    return tier
+
+
+#: Asymmetric schemes whose public key is carried in the node and must be
+#: pinned by the verifier before a signature under it attributes anything.
+#: ``ed25519-fallback`` is not listed: its key is minted per node and can never
+#: be pinned, which is why its tier is already ``COMPROMISED_EPHEMERAL``. The
+#: ``pkcs11-*`` tiers have no verifier in this build (``UC-054``).
+_PINNED_KEY_SCHEMES: Final[frozenset[str]] = frozenset({"pqc-ml-dsa"})
 
 
 @dataclass
@@ -1003,6 +1062,24 @@ def _ed25519_sign(data: bytes) -> tuple[str, str, str]:
     return sig.hex(), pub.public_bytes_raw().hex(), "ed25519-fallback"
 
 
+def normalise_trusted_public_keys(keys: Iterable[str] | None) -> frozenset[str]:
+    """Validate an allowlist of hex-encoded public keys and fold it to lower case.
+
+    A bare string is refused rather than iterated character by character,
+    which would silently produce an allowlist of single hex digits.
+    """
+    if keys is None:
+        return frozenset()
+    if isinstance(keys, str):
+        raise TypeError("trusted_public_keys must be an iterable of hex strings, not one string")
+    normalised: set[str] = set()
+    for key in keys:
+        if not isinstance(key, str) or not _is_hex_token(key.strip()):
+            raise ValueError("trusted_public_keys entries must be non-empty hex-encoded keys")
+        normalised.add(key.strip().lower())
+    return frozenset(normalised)
+
+
 # ── Ledger ────────────────────────────────────────────────────────────────────
 
 
@@ -1091,6 +1168,7 @@ class CryptographicAuditLedger:
         shredder_vault_path: str | os.PathLike[str] | None = None,
         commit_batch_max_size: int | None = None,
         commit_batch_timeout_ms: float | None = None,
+        trusted_public_keys: Iterable[str] | None = None,
     ) -> None:
         if mmr_hash_scheme not in _SCHEME_PROOF_VERSIONS and mmr_hash_scheme != MMR_SCHEME_AUTO:
             raise ValueError(
@@ -1113,6 +1191,11 @@ class CryptographicAuditLedger:
         #: its key type up front (AUD-27). Empty means "not learned yet".
         self._hsm_learned_scheme = ""
         self._require_strong_signing = require_strong_signing
+        # Public keys, beyond this ledger's own ML-DSA identity, whose
+        # asymmetric signatures this verifier accepts: earlier identities after
+        # a rotation, or the other writers of an HA chain. See
+        # :meth:`_trusted_signing_keys`.
+        self._trusted_public_keys = normalise_trusted_public_keys(trusted_public_keys)
         self.max_memory_nodes = max_memory_nodes
         self.max_forensic_bytes = max_forensic_bytes
         self.max_wal_bytes = max_wal_bytes
@@ -1225,9 +1308,12 @@ class CryptographicAuditLedger:
         to :meth:`_configured_signing_ceiling`.
         """
 
+        trusted = self._trusted_signing_keys()
         with self._lock:
             chain_snapshot = list(self.chain)
-        return chain_signature_assurance(chain_snapshot) or self._configured_signing_ceiling()
+        return (
+            chain_signature_assurance(chain_snapshot, trusted) or self._configured_signing_ceiling()
+        )
 
     @property
     def archived_segments(self) -> list[str]:
@@ -1343,6 +1429,7 @@ class CryptographicAuditLedger:
         )
 
         with self._lock:
+            self._refuse_if_faulted()
             prev_hash = self.chain[-1].node_hash if self.chain else "0" * 64
             timestamp = time.time()
             # O(log n) rollback token, not a copy of the accumulator: this runs
@@ -1495,6 +1582,7 @@ class CryptographicAuditLedger:
         )
 
         with self._lock:
+            self._refuse_if_faulted()
             prev_hash = self.chain[-1].node_hash if self.chain else "0" * 64
             timestamp = time.time()
             mmr_before = self._mmr.checkpoint()
@@ -1769,6 +1857,7 @@ class CryptographicAuditLedger:
         }
 
         with self._lock:
+            self._refuse_if_faulted()
             prev_hash = self.chain[-1].node_hash if self.chain else "0" * 64
             timestamp = time.time()
             # See commit_forensic: rollback token rather than a snapshot.
@@ -1889,12 +1978,22 @@ class CryptographicAuditLedger:
             if self._require_strong_signing and node.is_fallback:
                 logger.error("Integrity violation: fallback signature at node %d", i)
                 return False, i
+            status = self.signature_status(node)
+            if (
+                self._require_strong_signing
+                and status == "unverified"
+                and node.signature_scheme in _PINNED_KEY_SCHEMES
+            ):
+                # Strict mode does not accept an asymmetric signature it cannot
+                # attribute to a pinned key.
+                logger.error("Integrity violation: node %d signed under an unpinned key", i)
+                return False, i
             # Signature verification runs through the scheme dispatcher for
             # every node, not only for HMAC-labelled ones: a rewritten label
             # or a failed verification is a violation. A tier this build has
             # no verifier for reports ``unverified`` and does not fail the
             # sweep — that boundary is published as UC-054.
-            if self.signature_status(node) == "invalid":
+            if status == "invalid":
                 logger.error(
                     "Integrity violation: node %d signature invalid (scheme %s)",
                     i,
@@ -1927,9 +2026,17 @@ class CryptographicAuditLedger:
         scheme outside the allowlist — is ``invalid``, not ``unverified``,
         so a rewritten label is a positive detection rather than an absence
         of information. ``unverified`` is reserved for material that is
-        consistent with its scheme but cannot be checked by this build (no
-        signing key in memory, or an HSM / ML-DSA tier whose verifier is not
-        available here).
+        consistent with its scheme but whose origin this verifier cannot
+        establish: no signing key in memory, an HSM / ML-DSA tier whose
+        verifier is not available here, an ``ed25519-fallback`` signature
+        (checked, but only against the one-node key the record carries), or an
+        ML-DSA signature checked against the record's own key because the
+        verifier pins none.
+
+        Asymmetric keys are pinned (:meth:`_trusted_signing_keys`): an ML-DSA
+        node signed under a key outside the verifier's trusted set is
+        ``invalid`` whenever that set is non-empty, so a WAL rewritten and
+        re-signed under an attacker's own key does not verify.
 
         Since AUD-27 the candidate material includes the node's own declared
         scheme for records written by this build, so a rewritten label does not
@@ -1956,6 +2063,10 @@ class CryptographicAuditLedger:
                     return "valid"
                 return "invalid"
             if node.signature_scheme == "ed25519-fallback":
+                # The key was minted for this one node and is carried in it, so
+                # a signature that checks proves only that the record is
+                # internally consistent: anyone rewriting the WAL can mint a
+                # key and re-sign. A mismatch is still a positive detection.
                 public_key = ed25519.Ed25519PublicKey.from_public_bytes(
                     bytes.fromhex(node.public_key)
                 )
@@ -1964,9 +2075,18 @@ class CryptographicAuditLedger:
                         public_key.verify(bytes.fromhex(node.signature), payload)
                     except InvalidSignature:
                         continue
-                    return "valid"
+                    return "unverified"
                 return "invalid"
-            if node.signature_scheme == "pqc-ml-dsa" and RUST_AVAILABLE:
+            if node.signature_scheme == "pqc-ml-dsa":
+                # Pin the key before checking the signature. A key the verifier
+                # does not trust, while it does hold trusted keys, is either a
+                # forgery or a rotation nobody declared; both must fail rather
+                # than verify against the key the record chose for itself.
+                trusted = self._trusted_signing_keys()
+                if trusted and node.public_key.lower() not in trusted:
+                    return "invalid"
+                if not RUST_AVAILABLE:
+                    return "unverified"
                 if any(
                     aegis_rust.verify_pqc_signature(  # type: ignore[name-defined]
                         payload,
@@ -1975,7 +2095,10 @@ class CryptographicAuditLedger:
                     )
                     for payload in payloads
                 ):
-                    return "valid"
+                    # With no trusted key the check is against the record's
+                    # own key, which is circular (CLM-095): consistent, not
+                    # attributed.
+                    return "valid" if trusted else "unverified"
                 return "invalid"
         except (ValueError, TypeError, InvalidSignature):
             return "invalid"
@@ -2574,6 +2697,37 @@ class CryptographicAuditLedger:
             except OSError:  # pragma: no cover - best-effort cleanup
                 logger.debug("Could not remove temporary identity file %s", temporary)
 
+    def _trusted_signing_keys(self) -> frozenset[str]:
+        """The asymmetric public keys this verifier pins, lower-case hex.
+
+        The configured allowlist plus the public half of this ledger's own
+        ML-DSA identity, when one is configured and loads. A ledger that signs
+        under its identity therefore verifies its own chain with no extra
+        configuration, and a verifier with no identity and no allowlist pins
+        nothing, so it can report asymmetric signatures only as ``unverified``.
+
+        Takes the ledger lock to resolve the identity, so it must not be
+        called with the lock held.
+        """
+        if not self.pqc_identity_path:
+            return self._trusted_public_keys
+        with self._lock:
+            signer = self._pqc_signer()
+        if signer is None:
+            return self._trusted_public_keys
+        return self._trusted_public_keys | {bytes(signer.public_key).hex()}
+
+    def _refuse_if_faulted(self) -> None:
+        """Raise :class:`LedgerFaultedError` while a fault is latched.
+
+        Must be called under ``self._lock``, before anything is appended to the
+        MMR or the WAL: every writer that latches a fault either holds the lock
+        or takes it to latch, so a commit that passes this check cannot start
+        writing behind a record whose persistence has already failed.
+        """
+        if self._fault_state != "healthy":
+            raise LedgerFaultedError(self._fault_state)
+
     def _persist_node(self, node: AuditNode) -> int | None:
         """Append node as a JSON line to the WAL. Must be called under self._lock.
 
@@ -2704,8 +2858,12 @@ class CryptographicAuditLedger:
         batch that failed may hold records from several concurrent commits, and
         later nodes have already linked against this one, so there is no single
         node to roll back to a consistent state. Latching
-        ``wal_persist_failed`` is what the proxy's ``_require_intact_ledger``
-        already reads to answer 503 and stop extending the chain.
+        ``wal_persist_failed`` stops the chain growing: every later commit is
+        refused by :meth:`_refuse_if_faulted` under the ledger lock, and the
+        proxy's ``_require_intact_ledger`` reads the same latch to answer 503
+        before a request reaches the provider. A commit already past that
+        check when the latch is set wrote a complete line ahead of this
+        failure, and its own ``_await_durable`` either succeeds or latches too.
         """
         if ticket is None:
             return

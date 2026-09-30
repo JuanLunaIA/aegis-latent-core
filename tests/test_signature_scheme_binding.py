@@ -328,6 +328,11 @@ def test_the_same_relabel_is_accepted_on_a_pre_binding_record(tmp_path, monkeypa
     payload, which is what the pre-fix code did. The stand-in verifier accepts
     it, which is the audit's "a fabricated but well-shaped claim" — the state
     ``REG-D31`` removes for records written by this build.
+
+    The verifier pins the token's key, so the control isolates the binding:
+    with the key pinned the relabel reads ``valid``. Without a pinned key the
+    same record reads ``unverified``, because an ML-DSA signature checked only
+    against the key the record carries attributes nothing.
     """
 
     wal = tmp_path / "audit.jsonl"
@@ -338,11 +343,17 @@ def test_the_same_relabel_is_accepted_on_a_pre_binding_record(tmp_path, monkeypa
     monkeypatch.setattr(crypto_audit, "RUST_AVAILABLE", True)
     monkeypatch.setattr(crypto_audit, "aegis_rust", _StandInMlDsaModule(hsm.signed), raising=False)
 
-    ledger = _reopen(wal)
+    ledger = _reopen(wal, trusted_public_keys=["ab" * 32])
     try:
         node = ledger.chain[0]
         assert scheme_material_inconsistency(node) is None
         assert ledger.signature_status(node) == "valid"
+    finally:
+        ledger.close()
+
+    ledger = _reopen(wal)
+    try:
+        assert ledger.signature_status(ledger.chain[0]) == "unverified"
     finally:
         ledger.close()
 

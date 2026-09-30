@@ -394,8 +394,13 @@ def build_evidence_package(
     # Snapshot through the ledger's own accessor (taken under its lock, so the
     # copy cannot be torn by a commit landing mid-iteration). The assurance is
     # derived from that same snapshot, which is what makes the two consistent.
+    # Asymmetric signatures count only under a key the ledger pins, exactly as
+    # in CryptographicAuditLedger.signature_assurance.
     chain_snapshot = ledger.chain_snapshot()
-    assurance = chain_signature_assurance(chain_snapshot) or ledger._configured_signing_ceiling()
+    assurance = (
+        chain_signature_assurance(chain_snapshot, ledger._trusted_signing_keys())
+        or ledger._configured_signing_ceiling()
+    )
 
     # Preserves this package's pre-existing two-value vocabulary
     # ("High"/"Compromised", distinct from the LegalAdmissibility enum
