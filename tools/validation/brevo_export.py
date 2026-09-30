@@ -40,9 +40,9 @@ INPUT_COLUMNS = (
     "log_id", "email", "first_name", "last_name", "organisation", "role",
     "segment", "lead_source", "consent_basis", "consent_date", "opted_out",
 )  # fmt: skip
-# Brevo attribute names, in the order the plan creates them.
+# Brevo attribute names. NOMBRE and APELLIDOS are the account's own name attributes.
 BREVO_COLUMNS = (
-    "EMAIL", "FIRSTNAME", "LASTNAME", "ORGANISATION", "ROLE", "SEGMENT",
+    "EMAIL", "NOMBRE", "APELLIDOS", "ORGANISATION", "ROLE", "SEGMENT",
     "LEAD_SOURCE", "LOG_ID", "CONSENT_BASIS", "CONSENT_DATE",
 )  # fmt: skip
 SEGMENTS = frozenset({"fintech", "healthtech", "insurance", "challenged"})
@@ -102,8 +102,8 @@ def convert(rows: list[dict[str, str | None]], today: date) -> Result:
         result.exported.append(
             {
                 "EMAIL": row["email"],
-                "FIRSTNAME": row["first_name"],
-                "LASTNAME": row["last_name"],
+                "NOMBRE": row["first_name"],
+                "APELLIDOS": row["last_name"],
                 "ORGANISATION": row["organisation"],
                 "ROLE": row["role"],
                 "SEGMENT": row["segment"],

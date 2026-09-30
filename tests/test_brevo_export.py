@@ -73,8 +73,8 @@ def test_a_complete_row_is_exported_under_brevo_attribute_names() -> None:
     assert result.exported == [
         {
             "EMAIL": "reader@example.org",
-            "FIRSTNAME": "Ana",
-            "LASTNAME": "Rey",
+            "NOMBRE": "Ana",
+            "APELLIDOS": "Rey",
             "ORGANISATION": "Example Fintech",
             "ROLE": "CISO",
             "SEGMENT": "fintech",

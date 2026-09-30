@@ -32,7 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `7.0.0` accepts it). The wheel members were otherwise identical, but a backend bump needs `twine` moved in
   the same change and a live upload to prove PyPI takes the metadata, so Dependabot now ignores `hatchling`
   and the pin stays at `1.28.0` until that is done deliberately.
-- **Brevo kit staged; nothing created in Brevo.** The connector was authorized on 2026-09-30 but answered
+- **Brevo set up through its API (2026-09-30), nothing sent.** Seven contact attributes, the "Opted in"
+  list (id 3) and three inactive templates created and read back; no campaign exists. The exporter now emits
+  the account's own `NOMBRE`/`APELLIDOS`. Status recorded in `BREVO_PLAN.md`.
+- **Brevo kit staged.** The connector was authorized on 2026-09-30 but answered
   "requires authentication" in the sessions that prepared this, so none of its tools loaded and an unattended
   session cannot complete the sign-in. Prepared instead: `tools/validation/brevo_export.py`, which turns the
   owner's private contact sheet into a Brevo import file and refuses any row without a consent basis, a real

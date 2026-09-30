@@ -12,7 +12,17 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 ## Status
 
-Authorized in claude.ai on 2026-09-30, but in the sessions that prepared this the connector answered "requires authentication" and none of its tools loaded, so no list, template or draft exists in Brevo yet. An unattended session cannot complete that sign-in; it is done from the connector settings in claude.ai, then a new session picks the tools up. Everything that can be prepared without Brevo is prepared (see "The kit"). Nothing is sent by the agent.
+Set up through the Brevo API on 2026-09-30, with the owner's key and after the owner authorized this environment's outgoing addresses in Brevo. Read back the same day:
+
+| Object | State |
+| --- | --- |
+| Account | "Aegis Latent Core", free plan; one active sender (id 1) |
+| Contact attributes added | `ORGANISATION`, `ROLE`, `SEGMENT`, `LEAD_SOURCE`, `LOG_ID`, `CONSENT_BASIS` (text), `CONSENT_DATE` (date). Names use the account's own `NOMBRE` and `APELLIDOS` |
+| List | "Opted in", id 3, 0 contacts, in folder 1. The pre-existing "Su primera lista" (id 2) was not touched |
+| Templates, all **inactive** | 1 "Aegis - Opt-in confirmation" (tag `optin`), 2 "Aegis - Send me information", 3 "Aegis - Investor update" |
+| Campaigns | none. Nothing was scheduled or sent |
+
+Not done by the agent: turning double opt-in on for a form (Brevo's form editor, which picks template 1), importing contacts, filling the sender's legal name and postal address, and activating any template. Each is yours. Rotate the API key used here, since it was pasted into a chat.
 
 ## The kit
 
@@ -30,7 +40,7 @@ python tools/validation/brevo_export.py ~/contacts_private.csv --out ~/brevo_imp
 
 Both files stay in your home directory; `.gitignore` also blocks `contacts_private*.csv` and `brevo_import*.csv` if one is ever copied into the tree.
 
-## First steps once the Brevo tools load
+## Steps (1 to 3 done 2026-09-30)
 
 1. Read only: account, verified senders, existing lists and templates. Report what is already there before creating anything.
 2. Create the contact attributes in the table below.
@@ -54,7 +64,7 @@ Create these attributes before any import, so every contact carries its basis:
 
 | Attribute | Content |
 | --- | --- |
-| `EMAIL`, `FIRSTNAME`, `LASTNAME` | as given by the person |
+| `EMAIL`, `NOMBRE`, `APELLIDOS` | as given by the person |
 | `ORGANISATION`, `ROLE` | as in the validation log row |
 | `SEGMENT` | one of `fintech`, `healthtech`, `insurance`, `challenged` |
 | `LEAD_SOURCE` | one of `oss`, `partner`, `event`, `direct`, as in the log |
@@ -68,7 +78,7 @@ Create these attributes before any import, so every contact carries its basis:
 2. **"Send me information" reply.** [One Pager](../SALES_KIT/ONE_PAGER.md) and [Prove It Yourself](../../PROVE_IT.md) links, nothing else. Wording follows [Outbound Sequences](../SALES_KIT/OUTBOUND_SEQUENCES.md) rules 1 to 7.
 3. **Investor update.** For holders who agreed to receive it, built from `python tools/raise/monthly_update.py --month YYYY-MM`; the figures are the tool's, not typed by hand.
 
-The Brevo variable names in the files (`{{ contact.FIRSTNAME }}`, `{{ unsubscribe }}`, `{{ params.DOIurl }}`) were written from memory of Brevo's template syntax, not checked against its editor; confirm them when the drafts are created.
+The Brevo variable names in the files (`{{ contact.NOMBRE }}`, `{{ unsubscribe }}`, `{{ params.DOIurl }}`) were written from memory of Brevo's template syntax, not checked against its editor; confirm them when the drafts are created.
 
 ## Before the first real send
 
