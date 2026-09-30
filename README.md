@@ -200,6 +200,15 @@ Two things that snippet does not establish. It shows the bytes match the manifes
 
 ---
 
+## Support the project
+
+Aegis Latent Core is developed by one maintainer. A donation is voluntary: it buys no licence, support, feature or influence, and it is not tax-deductible. Commercial use is licensed separately ([COMMERCIAL.md](COMMERCIAL.md)).
+
+[![Donate by card](docs/assets/donate/donate-card.svg)](https://donate.stripe.com/dRm6oG6Vpbnf3BB3sOfUQ00)
+[![Donate with PayPal](docs/assets/donate/donate-paypal.svg)](https://www.paypal.com/ncp/payment/PLB-ZBB5SW68AQNM)
+
+---
+
 ## Links
 
 - [ROADMAP.md](docs/ROADMAP.md) — what is built, what is not, and the ticket ledger behind it.

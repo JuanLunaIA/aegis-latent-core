@@ -44,6 +44,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/test_brevo_export.py` (21 tests); three email drafts and a header-only contact sheet under
   `docs/commercial/validation/brevo/`; and the first steps in `BREVO_PLAN.md`. `.gitignore` blocks
   `contacts_private*.csv` and `brevo_import*.csv`. Nothing is sent by the agent.
+- **README: "Support the project" section (2026-09-30).** Two donation banners under
+  `docs/assets/donate/` link to a Stripe Payment Link (card) and a PayPal payment link, both created by the
+  owner's accounts. The text says a donation is voluntary, buys no licence, support, feature or influence,
+  and is not tax-deductible. Nothing in the software reads or depends on either link.
+- **Public pricing signals recorded** in `docs/commercial/validation/PRICING_EVIDENCE.md`: six adjacent
+  LLM-observability and gateway products, read through Pricing Optimizer AI on 2026-09-30, dated and
+  attributed, with what the snapshot does not show. No figure in the Enterprise Pricing Guide changed.
 - CI: `faulthandler_timeout` raised from 60 to 180 seconds in `ci.yml` and `forensic.yml`. The option exits
   the process when a single test outlives it, and `test_integrity_across_one_hundred_thousand_nodes`
   (marked `slow`, about 60 seconds on a loaded runner) crossed it on Python 3.11 three times, killing an
