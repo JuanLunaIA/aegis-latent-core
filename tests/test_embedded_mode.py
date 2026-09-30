@@ -592,9 +592,10 @@ def test_a_damaged_chain_records_no_rejection_for_a_hostile_prompt(
 def test_a_storage_failure_stops_the_next_call(tmp_path: Path) -> None:
     """A commit that fails leaves the ledger latched; the engine must not keep
     admitting calls on top of it, though the latch is only read at admission."""
-    engine = AegisEmbedded(storage_path=str(tmp_path / "full.jsonl"), signing_key=SIGNING_KEY)
-    client = aegis.wrap(OpenAIClient(), engine=engine)
-    try:
+    with AegisEmbedded(
+        storage_path=str(tmp_path / "full.jsonl"), signing_key=SIGNING_KEY
+    ) as engine:
+        client = aegis.wrap(OpenAIClient(), engine=engine)
         client.chat.completions.create(**_prompt("fits on the disk"))
         handle = engine.ledger._wal_handle
         assert handle is not None, "precondition: the ledger writes through a file handle"
@@ -613,8 +614,6 @@ def test_a_storage_failure_stops_the_next_call(tmp_path: Path) -> None:
         # failed to commit; the third never left the process.
         assert len(client.completions.seen) == 2
         assert len(engine.ledger.chain) == 1
-    finally:
-        engine.close()
 
 
 def test_a_repaired_wal_is_admitted_again(tmp_path: Path) -> None:
@@ -630,10 +629,7 @@ def test_a_repaired_wal_is_admitted_again(tmp_path: Path) -> None:
         assert len(client.completions.seen) == 1
 
     # Every receipt issued, before and after the tear, is reachable on replay.
-    replayed = CryptographicAuditLedger(path, signing_key=SIGNING_KEY)
-    try:
+    with CryptographicAuditLedger(path, signing_key=SIGNING_KEY) as replayed:
         assert replayed._fault_state == "healthy"
         assert [node.node_hash for node in replayed.chain] == hashes
         assert replayed.verify_integrity() == (True, None)
-    finally:
-        replayed.close()
