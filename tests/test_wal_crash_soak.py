@@ -67,7 +67,8 @@ def _commit(soak, path: Path, first: int, count: int) -> None:
     assert ledger._fault_state == "healthy"
     for index in range(first, first + count):
         ledger.commit_forensic(state_id=f"soak-{index:09d}", request_bytes=b"request")
-    del ledger
+    # No close(): it would write an MMR checkpoint, and this stands in for a killed writer.
+    # Returning drops the last reference, which releases the single-writer lock.
 
 
 def _tear(path: Path) -> None:
