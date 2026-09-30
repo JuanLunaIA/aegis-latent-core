@@ -148,7 +148,7 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 <body>
 <main class="page" lang="es-AR">
 <header class="masthead">
-  <p class="eyebrow">Orden de Misión XV · Data room semilla · preparado el 25 de septiembre de 2026 · edición en castellano rioplatense</p>
+  <p class="eyebrow">Orden de Misión XV · Data room semilla · preparado el 25 de septiembre de 2026 · actualizado el 30 de septiembre de 2026 · edición en castellano rioplatense</p>
   <h1>Aegis Latent Core — Paquete para inversores semilla</h1>
   <p class="lede">Un gateway autoalojado que registra evidencia firmada y encadenada por hash de cada llamada de IA gobernada antes de que la respuesta llegue a quien la pidió. Este paquete le pone precio, lo somete a pruebas de estrés y dice qué lo refutaría.</p>
   <div class="legend">
@@ -158,10 +158,10 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
     <span class="chip ma">M·A</span> MODEL tomado del insumo [AUDIT]
     <span class="chip h">H</span> HYPOTHESIS (hipótesis): el experimento que la valida está en D10
   </div>
-  <p class="note">Todas las cifras de D3 a D7 y los seis gráficos salen de un único script, <code>aegis_financial_engine.py</code> (semilla 42, reproducido completo en D8). Al contrastarlos con el repositorio y con fuentes primarias, nueve insumos del §0 se corrigieron o bajaron de categoría; el registro de conflictos está en D10.4.</p>
+  <p class="note">Todas las cifras de D3 a D7 y los seis gráficos salen de un único script, <code>aegis_financial_engine.py</code> (semilla 42, reproducido completo en D8). Al contrastarlos con el repositorio y con fuentes primarias, nueve insumos del §0 se corrigieron o bajaron de categoría; el registro de conflictos está en D10.4. Actualizado el 30 de septiembre de 2026: la sección A enumera qué cambió, y ninguna cifra del modelo se movió.</p>
   <p class="note"><strong>Pesos argentinos.</strong> Cada monto en dólares lleva entre paréntesis su equivalente en pesos, calculado a US$ 1 = ARS 1.519,50<span class="chip v" title="VERIFIED (verificado)">V</span>, la cotización del dólar que publica el BCRA para el 24/09/2026 (API de Estadísticas Cambiarias, consultada el 25/09/2026). El modelo corre en dólares: los pesos no proyectan inflación ni devaluación, y cada monto en pesos hereda la etiqueta del monto en dólares al que acompaña. En el texto, los pesos se calculan sobre el monto en dólares tal como se muestra; en las tablas, sobre el valor sin redondear, así que pueden diferir en el último dígito. Abreviaturas: “mil” = miles; “M” = millones.</p>
   <nav class="toc" aria-label="Entregables">
-    <a href="#d1">D1 Memo</a><a href="#d1es">D1 Resumen</a><a href="#d2">D2 TRL</a><a href="#d3">D3 Economía unitaria</a><a href="#d4">D4 Tres estados</a><a href="#d5">D5 Consumo y autonomía</a><a href="#d6">D6 Valuación</a><a href="#d7">D7 Fondos e hitos</a><a href="#d8">D8 Material visual</a><a href="#d9">D9 Objeciones</a><a href="#d10">D10 Data room</a><a href="#ask">PROPUESTA</a>
+    <a href="#d1">D1 Memo</a><a href="#d1es">D1 Resumen</a><a href="#d2">D2 TRL</a><a href="#d3">D3 Economía unitaria</a><a href="#d4">D4 Tres estados</a><a href="#d5">D5 Consumo y autonomía</a><a href="#d6">D6 Valuación</a><a href="#d7">D7 Fondos e hitos</a><a href="#d8">D8 Material visual</a><a href="#d9">D9 Objeciones</a><a href="#d10">D10 Data room</a><a href="#update">A Actualización</a><a href="#ask">PROPUESTA</a>
   </nav>
 </header>
 
@@ -180,7 +180,7 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 </ol>
 
 <h3>Lo que existe hoy, leído y comprobado</h3>
-<p>La versión 5.0.1 se publicó el 24 de septiembre de 2026<span class="chip v" title="VERIFIED (verificado)">V</span> y se leyó de vuelta cada superficie: la etiqueta firmada con Sigstore, el GitHub Release (se recalcularon los hashes de 15<span class="chip v" title="VERIFIED (verificado)">V</span> de 15<span class="chip v" title="VERIFIED (verificado)">V</span> archivos con checksum), los SDK en PyPI y npm, idénticos byte a byte al release, y las imágenes de contenedor, cuyas firmas y procedencia de compilación se verifican contra el workflow que las publicó. Pasan 7.550<span class="chip v" title="VERIFIED (verificado)">V</span> pruebas. El registro de afirmaciones contiene 112<span class="chip v" title="VERIFIED (verificado)">V</span> afirmaciones con 0<span class="chip v" title="VERIFIED (verificado)">V</span> hallazgos y rechaza 70<span class="chip v" title="VERIFIED (verificado)">V</span> que no tienen respaldo. El commit de evidencia, escritura durable en disco incluida, mide p50 0,62 ms<span class="chip v" title="VERIFIED (verificado)">V</span> y p99 1,22 ms<span class="chip v" title="VERIFIED (verificado)">V</span> en una VM compartida de 4<span class="chip v" title="VERIFIED (verificado)">V</span> vCPU.</p>
+<p>La versión 5.0.1 se publicó el 24 de septiembre de 2026<span class="chip v" title="VERIFIED (verificado)">V</span> y se leyó de vuelta cada superficie: la etiqueta firmada con Sigstore, el GitHub Release (se recalcularon los hashes de 15<span class="chip v" title="VERIFIED (verificado)">V</span> de 15<span class="chip v" title="VERIFIED (verificado)">V</span> archivos con checksum), los SDK en PyPI y npm, idénticos byte a byte al release, el gateway en PyPI en la 5.0.1 con wheel y sdist iguales a los archivos del release, y las imágenes de contenedor, cuyas firmas y procedencia de compilación se verifican contra el workflow que las publicó (según el registro de release del repositorio; no se repitió el 30/9). Pasan 7.673<span class="chip v" title="VERIFIED (verificado)">V</span> pruebas (suite completa al 30/9). El registro de afirmaciones contiene 113<span class="chip v" title="VERIFIED (verificado)">V</span> afirmaciones con 0<span class="chip v" title="VERIFIED (verificado)">V</span> hallazgos y rechaza 70<span class="chip v" title="VERIFIED (verificado)">V</span> que no tienen respaldo. El commit de evidencia, escritura durable en disco incluida, mide p50 0,62 ms<span class="chip v" title="VERIFIED (verificado)">V</span> y p99 1,22 ms<span class="chip v" title="VERIFIED (verificado)">V</span> en una VM compartida de 4<span class="chip v" title="VERIFIED (verificado)">V</span> vCPU.</p>
 
 <h3>Marco A: los relojes ya están corriendo</h3>
 <p>La Ley de IA de la UE se aplica desde el 2 de agosto de 2026<span class="chip vp" title="VERIFIED-PRIMARY (verificado en origen)">V·P</span>; sus prohibiciones rigen desde el 2 de febrero de 2025<span class="chip vp" title="VERIFIED-PRIMARY (verificado en origen)">V·P</span> y las obligaciones del Anexo I llegan el 2 de agosto de 2027<span class="chip vp" title="VERIFIED-PRIMARY (verificado en origen)">V·P</span>. La alternativa de audit trail de la regla 17a-4(f) de la SEC es exigible desde el 3 de mayo de 2023<span class="chip vp" title="VERIFIED-PRIMARY (verificado en origen)">V·P</span>. Los registros del artículo 16(7) de MiFID II se conservan 5 años<span class="chip vp" title="VERIFIED-PRIMARY (verificado en origen)">V·P</span>, y 7<span class="chip vp" title="VERIFIED-PRIMARY (verificado en origen)">V·P</span> si la autoridad lo pide. Una empresa regulada que no puede mostrar qué se le pidió a un modelo, ni probar que el registro no se editó, asume esa pérdida en la inspección, mucho después de la decisión de compra.</p>
@@ -200,6 +200,7 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 <h3>Marco D: compromiso, en tramos</h3>
 <p>US$ 300 mil <span class="ars">(ARS 456 M)</span><span class="chip m" title="MODEL (modelo)">M</span> a la firma; US$ 250 mil <span class="ars">(ARS 380 M)</span><span class="chip m" title="MODEL (modelo)">M</span> cuando se firme el piloto n.º 1 y se contrate el pentest; US$ 200 mil <span class="ars">(ARS 304 M)</span><span class="chip m" title="MODEL (modelo)">M</span> cuando haya dos clientes de diseño firmados, los hallazgos críticos del pentest estén corregidos y haya un auditor de SOC 2 Tipo I contratado. Un inversor que se detiene después del T1 arriesga US$ 300 mil <span class="ars">(ARS 456 M)</span><span class="chip m" title="MODEL (modelo)">M</span> frente a 10 meses<span class="chip m" title="MODEL (modelo)">M</span> de autonomía y un piso de venta de activos de US$ 0,65–3,1 M <span class="ars">(ARS 988–4.710 M)</span><span class="chip ma" title="MODEL tomado de [AUDIT]">M·A</span>.</p>
 <p class="limit"><b>Límite honesto</b> El esquema por tramos traslada el riesgo de financiamiento al fundador: un tramo posterior puede no llegar aunque se cumpla su hito.</p>
+<p class="limit"><b>Pendiente con el abogado</b> Un SAFE necesita una sociedad emisora, y la sociedad de Delaware es el hito M1, así que el T1 no puede firmarse antes de que exista. Además, los tramos condicionados necesitan tres SAFE o una carta complementaria para que el inversor quede obligado a fondear un hito cumplido.</p>
 <p class="falsifier"><b>Refutador</b> Si el Hito 2 no se cumple al mes 8<span class="chip m" title="MODEL (modelo)">M</span>, el T2 no se libera y el plan pasa al camino de cierre ordenado de D5.</p>
 
 <h3>Lo que dice el modelo</h3>
@@ -217,7 +218,7 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
   <li>Tramo 3: US$ 200 mil <span class="ars">(ARS 304 M)</span><span class="chip m" title="MODEL (modelo)">M</span> con dos clientes de diseño firmados, los hallazgos críticos del pentest corregidos y un auditor de SOC 2 Tipo I contratado. Tope de US$ 10 M <span class="ars">(ARS 15.195 M)</span><span class="chip m" title="MODEL (modelo)">M</span>.</li>
 </ul>
 <p><strong>Lo que tenés que saber antes que nada.</strong> Todavía no hay ventas ni entrevistas con compradores. El código lo mantiene una sola persona; el 20%<span class="chip m" title="MODEL (modelo)">M</span> de los fondos (US$ 147 mil <span class="ars">(ARS 223 M)</span><span class="chip m" title="MODEL (modelo)">M</span>) paga un segundo mantenedor. Todavía no hay pentest ni informe SOC 2; están atados a los tramos 2 y 3. Los métodos basados en flujo de caja valúan la empresa entre US$ 0 y US$ 3,2 M <span class="ars">(ARS 4.862 M)</span><span class="chip m" title="MODEL (modelo)">M</span>; los de mercado, entre US$ 6,2 M <span class="ars">(ARS 9.421 M)</span> y US$ 10,8 M <span class="ars">(ARS 16.411 M)</span><span class="chip m" title="MODEL (modelo)">M</span>. Por eso el tope sube a medida que aparece evidencia, en vez de fijarse alto desde el primer día.</p>
-<p><strong>Lo que ya existe y se puede comprobar.</strong> La versión 5.0.1 se publicó el 24/09/2026<span class="chip v" title="VERIFIED (verificado)">V</span>. Verificamos la firma de la etiqueta, los 15<span class="chip v" title="VERIFIED (verificado)">V</span> archivos del release contra sus checksums, los SDK en PyPI y npm (idénticos byte a byte al release) y la procedencia de las imágenes de contenedor. Pasan 7.550<span class="chip v" title="VERIFIED (verificado)">V</span> pruebas. El registro de afirmaciones tiene 112<span class="chip v" title="VERIFIED (verificado)">V</span> entradas sin hallazgos y rechaza 70<span class="chip v" title="VERIFIED (verificado)">V</span> afirmaciones que no se pueden respaldar.</p>
+<p><strong>Lo que ya existe y se puede comprobar.</strong> La versión 5.0.1 se publicó el 24/09/2026<span class="chip v" title="VERIFIED (verificado)">V</span>. Verificamos la firma de la etiqueta, los 15<span class="chip v" title="VERIFIED (verificado)">V</span> archivos del release contra sus checksums, los SDK en PyPI y npm (idénticos byte a byte al release), el gateway en PyPI en la 5.0.1 (wheel y sdist iguales a los del release) y la procedencia de las imágenes de contenedor (según el registro de release del repositorio; no se repitió el 30/9). Pasan 7.673<span class="chip v" title="VERIFIED (verificado)">V</span> pruebas (suite completa al 30/9). El registro de afirmaciones tiene 113<span class="chip v" title="VERIFIED (verificado)">V</span> entradas sin hallazgos y rechaza 70<span class="chip v" title="VERIFIED (verificado)">V</span> afirmaciones que no se pueden respaldar.</p>
 <p><strong>Por qué ahora.</strong> La Ley de IA de la UE rige desde el 2/8/2026<span class="chip vp" title="VERIFIED-PRIMARY (verificado en origen)">V·P</span>, y la alternativa de audit trail de la regla 17a-4(f) de la SEC se exige desde el 3/5/2023<span class="chip vp" title="VERIFIED-PRIMARY (verificado en origen)">V·P</span>. Las empresas reguladas van a tener que mostrar qué se le pidió a un modelo y probar que ese registro no se modificó. <em>Qué lo refutaría:</em> que los responsables de cumplimiento que entrevistemos digan que su almacenamiento WORM y su SIEM ya les alcanzan.</p>
 <p><strong>Riesgo cambiario y jurisdicción.</strong> El fundador vive en Argentina. El plan crea una sociedad en Delaware, le cede la propiedad intelectual y factura en dólares (hito M1). Los montos en pesos de este paquete son una referencia al tipo de cambio del 24/09/2026; el plan se ejecuta en dólares.</p>
 <p><strong>Escenarios a 5 años.</strong> Base: ARR de US$ 1,2 M <span class="ars">(ARS 1.823 M)</span><span class="chip h" title="HYPOTHESIS (hipótesis)">H</span> en el año 5, con otra ronda de unos US$ 0,7 M <span class="ars">(ARS 1.064 M)</span><span class="chip m" title="MODEL (modelo)">M</span> a mitad del año 3. Pesimista (probabilidad 45%<span class="chip m" title="MODEL (modelo)">M</span>): los fondos alcanzan unos 18 meses<span class="chip m" title="MODEL (modelo)">M</span> y se sale vendiendo los activos. Optimista (15%<span class="chip m" title="MODEL (modelo)">M</span>): flujo de caja positivo desde el año 3.</p>
@@ -235,17 +236,17 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 </ul>
 <div class="tablewrap"><table><caption>D2 Matriz TRL <span class="chip m">M</span></caption>
 <thead><tr><th>Componente</th><th>TRL hoy</th><th>Evidencia</th><th>Brecha a TRL+1</th><th>Semanas de ingeniería</th><th>Externo</th><th>Costo de cierre</th></tr></thead><tbody>
-<tr><td>Núcleo del gateway</td><td class="num">6</td><td>7.550 pruebas; la imagen publicada se probó con la postura endurecida (CLM-109); release 5.0.1 firmado</td><td>piloto operativo en un cliente de diseño</td><td class="num">8</td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td><td class="num">US$ 18.400<br><span class="ars">(ARS 28,0 M)</span></td></tr>
-<tr><td>WAL + commit agrupado</td><td class="num">6</td><td>commit p50 0,62 ms / p99 1,22 ms con fsync; 1.482 commits/s @100 hilos en 4 vCPU</td><td>prueba de resistencia de 30 días + prueba de corte de energía en el almacenamiento destino</td><td class="num">3</td><td class="num">US$ 1.000<br><span class="ars">(ARS 1,5 M)</span></td><td class="num">US$ 7.900<br><span class="ars">(ARS 12,0 M)</span></td></tr>
+<tr><td>Núcleo del gateway</td><td class="num">6</td><td>7.673 pruebas aprobadas (30/09/2026); la imagen publicada se probó con la postura endurecida (CLM-109); release 5.0.1 firmado; gateway en PyPI en la 5.0.1 desde el 26/09/2026, con wheel y sdist iguales a los archivos del release</td><td>piloto operativo en un cliente de diseño</td><td class="num">8</td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td><td class="num">US$ 18.400<br><span class="ars">(ARS 28,0 M)</span></td></tr>
+<tr><td>WAL + commit agrupado</td><td class="num">6</td><td>commit p50 0,62 ms / p99 1,22 ms con fsync; 1.482 commits/s @100 hilos en 4 vCPU; prueba de resistencia con SIGKILL 29/09/2026: 60 rondas, 27.735 commits confirmados, 0 perdidos (se mata el proceso; no es un corte de energía)</td><td>prueba de resistencia de 30 días + prueba de corte de energía en el almacenamiento destino</td><td class="num">3</td><td class="num">US$ 1.000<br><span class="ars">(ARS 1,5 M)</span></td><td class="num">US$ 7.900<br><span class="ars">(ARS 12,0 M)</span></td></tr>
 <tr><td>Pruebas MMR v2</td><td class="num">6</td><td>raíces Rust/Python coincidentes; pruebas de inclusión portables (CLM-064)</td><td>verificación por un tercero en un piloto</td><td class="num">2</td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td><td class="num">US$ 4.600<br><span class="ars">(ARS 7,0 M)</span></td></tr>
-<tr><td>Verificadores del SDK</td><td class="num">6</td><td>PyPI/npm 5.0.1 idénticos byte a byte a los archivos del release; procedencia verificada</td><td>un auditor externo ejecuta aegis-sdk verify en un piloto</td><td class="num">2</td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td><td class="num">US$ 4.600<br><span class="ars">(ARS 7,0 M)</span></td></tr>
-<tr><td>WAF L1/L2</td><td class="num">5</td><td>normalización probada contra un corpus; conjunto finito de patrones (UC-042)</td><td>evaluación adversarial publicada + cobertura del pentest</td><td class="num">4</td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td><td class="num">US$ 9.200<br><span class="ars">(ARS 14,0 M)</span></td></tr>
+<tr><td>Verificadores del SDK</td><td class="num">6</td><td>SDK 5.0.1 en PyPI/npm idénticos byte a byte a los archivos del release (lectura del 24/09/2026); las verificaciones de firma y procedencia figuran en docs/RELEASE_STATUS.md y no se repitieron en la actualización del 30/09/2026</td><td>un auditor externo ejecuta aegis-sdk verify en un piloto</td><td class="num">2</td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td><td class="num">US$ 4.600<br><span class="ars">(ARS 7,0 M)</span></td></tr>
+<tr><td>WAF L1/L2</td><td class="num">5</td><td>normalización probada contra un corpus; conjunto finito de patrones (UC-042); corpus de 23 casos el 29/09/2026: 15 maliciosos bloqueados, 8 benignos aprobados, cota superior de Wilson al 95 % de la tasa de evasión: 20,4 %, muestra demasiado chica para afirmar una tasa de detección</td><td>evaluación adversarial publicada + cobertura del pentest</td><td class="num">4</td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td><td class="num">US$ 9.200<br><span class="ars">(ARS 14,0 M)</span></td></tr>
 <tr><td>Borrado criptográfico</td><td class="num">5</td><td>integrado al camino de commit; digests con clave (CLM-098)</td><td>revisión legal de la semántica de borrado + piloto</td><td class="num">3</td><td class="num">US$ 3.000<br><span class="ars">(ARS 4,6 M)</span></td><td class="num">US$ 9.900<br><span class="ars">(ARS 15,0 M)</span></td></tr>
-<tr><td>Lease de HA + secuencia global</td><td class="num">5</td><td>CI contra Redis/PostgreSQL reales; failover por SIGKILL en 4,2-5,2 s (CLM-108)</td><td>pruebas de caos de partición y failover + piloto</td><td class="num">6</td><td class="num">US$ 2.000<br><span class="ars">(ARS 3,0 M)</span></td><td class="num">US$ 15.800<br><span class="ars">(ARS 24,0 M)</span></td></tr>
+<tr><td>Lease de HA + secuencia global</td><td class="num">5</td><td>CI contra Redis/PostgreSQL reales; failover por SIGKILL en 4,2-5,2 s (CLM-108); prueba de partición contra Redis real el 29/09/2026: nunca hubo dos escritores en ninguna muestra; un reinicio de Redis sin persistencia reinicia el contador de épocas y el cerco de secuencia rechaza los appends (una caída de disponibilidad, no una bifurcación; arreglo sin decidir)</td><td>decidir el comportamiento de épocas tras un reinicio de Redis; pruebas de caos en la infraestructura destino + piloto</td><td class="num">6</td><td class="num">US$ 2.000<br><span class="ars">(ARS 3,0 M)</span></td><td class="num">US$ 15.800<br><span class="ars">(ARS 24,0 M)</span></td></tr>
 <tr><td>Circuito ZK</td><td class="num">4</td><td>protección de vista previa; fuera del camino de las solicitudes</td><td>auditoría del sistema de pruebas; diferida</td><td class="num">12</td><td class="num">US$ 40.000<br><span class="ars">(ARS 60,8 M)</span></td><td class="num">US$ 67.600<br><span class="ars">(ARS 103 M)</span></td></tr>
 <tr><td>Raft / consenso</td><td class="num">2</td><td>módulo huérfano; reemplazado por el diseño de lease AD-17</td><td>fuera de la hoja de ruta</td><td class="num">0</td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td></tr>
-<tr><td>Firma HSM / PQC</td><td class="num">4</td><td>camino PKCS#11; ML-DSA-65 firma en 173 us y verifica en 62 us; Managed HSM excluido: US$ 2.342<br><span class="ars">(ARS 3,6 M)</span> por mes</td><td>prueba de integración con una clave respaldada por HSM en Key Vault Premium</td><td class="num">4</td><td class="num">US$ 500<br><span class="ars">(ARS 759.750)</span></td><td class="num">US$ 9.700<br><span class="ars">(ARS 14,7 M)</span></td></tr>
-<tr><td>OTel / métricas</td><td class="num">6</td><td>/metrics verificado en la imagen publicada por el recolector de evidencia (REG-D86)</td><td>tableros del piloto + runbook de alertas ejercitado</td><td class="num">1</td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td><td class="num">US$ 2.300<br><span class="ars">(ARS 3,5 M)</span></td></tr>
+<tr><td>Firma HSM / PQC</td><td class="num">4</td><td>camino PKCS#11 ejercitado contra SoftHSM 2.6.1 (un token por software, no un HSM) el 29/09/2026; ML-DSA-65 firma en 173 us y verifica en 62 us; Managed HSM excluido: US$ 2.342 (ARS 3,6 M) por mes</td><td>prueba de integración con una clave respaldada por HSM en Key Vault Premium</td><td class="num">4</td><td class="num">US$ 500<br><span class="ars">(ARS 759.750)</span></td><td class="num">US$ 9.700<br><span class="ars">(ARS 14,7 M)</span></td></tr>
+<tr><td>OTel / métricas</td><td class="num">6</td><td>/metrics verificado en la imagen publicada por el recolector de evidencia (REG-D86); 14 reglas de alerta y un tablero de 12 paneles en deploy/observability, revisados de forma estática por pruebas, no ejecutados contra un Prometheus ni un Grafana reales</td><td>tableros del piloto + runbook de alertas ejercitado</td><td class="num">1</td><td class="num">US$ 0<br><span class="ars">(ARS 0,00)</span></td><td class="num">US$ 2.300<br><span class="ars">(ARS 3,5 M)</span></td></tr>
 <tr><td>Kit de despliegue en Azure</td><td class="num">4</td><td>kit de VM desplegado y medido una vez (Standard_B2als_v2, Chile Central, 26/09/2026): modo estricto activo, verify.sh aprobado, un registro firmado confirmado (REG-H07)</td><td>correr phase0_guardrails.sh de punta a punta, observar una alerta de presupuesto disparada, repetir en un segundo tamaño/región</td><td class="num">1</td><td class="num">US$ 200<br><span class="ars">(ARS 303.900)</span></td><td class="num">US$ 2.500<br><span class="ars">(ARS 3,8 M)</span></td></tr>
 </tbody></table></div>
 <p>Cerrar cada brecha hasta el nivel siguiente cuesta US$ 84.900 <span class="ars">(ARS 129 M)</span><span class="chip m" title="MODEL (modelo)">M</span> en 34<span class="chip m" title="MODEL (modelo)">M</span> semanas de ingeniería, sin contar la auditoría diferida del sistema de pruebas ZK (US$ 67.600 <span class="ars">(ARS 103 M)</span><span class="chip m" title="MODEL (modelo)">M</span>). La semana de ingeniería se costea en US$ 2.300 <span class="ars">(ARS 3,5 M)</span><span class="chip m" title="MODEL (modelo)">M</span>.</p>
@@ -325,10 +326,10 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 <tr><td><code>commits_per_s_100_threads</code></td><td class="num">1.482,37</td><td><span class="chip v">V</span></td><td>evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json, VM compartida de 4 vCPU, commit_forensic con append al MMR + HMAC + fsync del WAL</td></tr>
 <tr><td><code>commit_p50_ms</code></td><td class="num">0,617</td><td><span class="chip v">V</span></td><td>mismo artefacto, n=1000</td></tr>
 <tr><td><code>commit_p99_ms</code></td><td class="num">1,216</td><td><span class="chip v">V</span></td><td>mismo artefacto, n=1000</td></tr>
-<tr><td><code>tests_passed</code></td><td class="num">7.550</td><td><span class="chip v">V</span></td><td>pytest -n auto sobre el árbol 5.0.1, 24/09/2026: 7.550 aprobadas, 41 omitidas, 0 fallidas</td></tr>
-<tr><td><code>claims_registered</code></td><td class="num">112</td><td><span class="chip v">V</span></td><td>scripts/verify_claims.py, 25/09/2026: 0 hallazgos</td></tr>
+<tr><td><code>tests_passed</code></td><td class="num">7.673</td><td><span class="chip v">V</span></td><td>pytest -n auto sobre main en 861c88b, 30/09/2026: 7.673 aprobadas, 42 omitidas, 0 fallidas (cifra anterior, árbol 5.0.1, 24/09/2026: 7.550 aprobadas, 41 omitidas, 0 fallidas)</td></tr>
+<tr><td><code>claims_registered</code></td><td class="num">113</td><td><span class="chip v">V</span></td><td>scripts/verify_claims.py, 30/09/2026: 0 hallazgos (eran 112 el 25/09/2026; se agregó CLM-113)</td></tr>
 <tr><td><code>claims_refused</code></td><td class="num">70</td><td><span class="chip v">V</span></td><td>filas de docs/institutional/UNSUPPORTED_CLAIMS.md</td></tr>
-<tr><td><code>test_to_source_loc</code></td><td class="num">1,24</td><td><span class="chip v">V</span></td><td>87.557 líneas de prueba / 70.672 líneas de código Python (aegis + aegis_server), 25/09/2026</td></tr>
+<tr><td><code>test_to_source_loc</code></td><td class="num">1,26</td><td><span class="chip v">V</span></td><td>89.225 líneas de prueba / 70.680 líneas de código Python (aegis + aegis_server), árbol git en 861c88b, 30/09/2026</td></tr>
 <tr><td><code>orphan_modules_disclosed</code></td><td class="num">77</td><td><span class="chip v">V</span></td><td>entradas de scripts/import_reachability_allowlist.txt, sobre ~207 módulos de aegis</td></tr>
 <tr><td><code>azure_typical_month_usd</code></td><td class="num">US$ 17,54 <span class="ars">(ARS 26.652)</span></td><td><span class="chip m">M</span></td><td>dato de planificación del fundador; el archivo de evidencia citado no está en el repositorio (docs/REGISTRY_HUMAN_PACK.md) -&gt; baja de VERIFIED a MODEL</td></tr>
 <tr><td><code>azure_worst_month_usd</code></td><td class="num">US$ 44,77 <span class="ars">(ARS 68.028)</span></td><td><span class="chip m">M</span></td><td>dato del fundador, mismo estado</td></tr>
@@ -489,7 +490,7 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 <tbody>
 <tr><td>50%<span class="chip m" title="MODEL (modelo)">M</span></td><td>Revisión de hitos con los tenedores de SAFE: cartera de pilotos, estado del pentest, contrataciones.</td></tr>
 <tr><td>80%<span class="chip m" title="MODEL (modelo)">M</span></td><td>Congelamiento de contrataciones, salvo que se cumpla el hito siguiente; se difiere el sueldo del fundador.</td></tr>
-<tr><td>95%<span class="chip m" title="MODEL (modelo)">M</span></td><td>Cierre ordenado: liberar el depósito en escrow a los clientes de diseño, hacer una venta de activos (piso de US$ 0,65–3,1 M <span class="ars">(ARS 988–4.710 M)</span><span class="chip ma" title="MODEL tomado de [AUDIT]">M·A</span>) y devolver el remanente a prorrata.</td></tr>
+<tr><td>95%<span class="chip m" title="MODEL (modelo)">M</span></td><td>Cierre ordenado: hacer una venta de activos (piso de US$ 0,65–3,1 M <span class="ars">(ARS 988–4.710 M)</span><span class="chip ma" title="MODEL tomado de [AUDIT]">M·A</span>) y devolver el remanente según lo que permitan los instrumentos y la ley. La liberación del depósito en escrow a los clientes de diseño depende de un contrato de escrow que todavía no está firmado, y este texto espera la revisión de un abogado.</td></tr>
 </tbody></table></div>
 <p class="census"><span class="lbl">Censo de etiquetas</span> <span class="chip v">V</span> 2 · <span class="chip m">M</span> 44 (incl. 1 M·A) · <span class="chip h">H</span> 1</p>
 </section>
@@ -625,7 +626,7 @@ flowchart TD
   S["Firma del SAFE: T1 US$ 300 mil (ARS 456 M), tope US$ 6 M (ARS 9.117 M)"] --> W1["Meses 1 a 8: contratar al mantenedor, Delaware y PI, 3 entrevistas, SOW del pentest"]
   W1 --> G2{"Hito 2 al mes 8: piloto pago 1 Y SOW del pentest"}
   G2 -->|"cumplido"| T2["T2 US$ 250 mil (ARS 380 M), tope US$ 8 M (ARS 12.156 M)"]
-  G2 -->|"no cumplido"| K["Congelamiento de contrataciones y luego cierre ordenado al 95 % del T1: liberación del escrow, venta de activos"]
+  G2 -->|"no cumplido"| K["Congelamiento de contrataciones y luego cierre ordenado al 95 % del T1: venta de activos, remanente devuelto según los términos del SAFE y el criterio de un abogado"]
   T2 --> W2["Meses 9 a 14: pentest y correcciones, cliente de diseño 2, preparación para SOC 2"]
   W2 --> G3{"Hito 3 al mes 14: 2 clientes pagos Y críticos corregidos Y auditor de SOC 2 contratado"}
   G3 -->|"cumplido"| T3["T3 US$ 200 mil (ARS 304 M), tope US$ 10 M (ARS 15.195 M)"]
@@ -765,17 +766,19 @@ COMMIT_P99_MS = inp(
 )
 TESTS_PASSED = inp(
     &quot;tests_passed&quot;,
-    7550,
+    7673,
     &quot;VERIFIED&quot;,
-    &quot;pytest -n auto on the 5.0.1 tree, 2026-09-24: 7,550 passed, 41 skipped, 0 failed&quot;,
-    &quot;pytest -n auto sobre el árbol 5.0.1, 24/09/2026: 7.550 aprobadas, 41 omitidas, 0 fallidas&quot;,
+    &quot;pytest -n auto on main at 861c88b, 2026-09-30: 7,673 passed, 42 skipped, 0 failed &quot;
+    &quot;(previous figure, 5.0.1 tree, 2026-09-24: 7,550 passed, 41 skipped, 0 failed)&quot;,
+    &quot;pytest -n auto sobre main en 861c88b, 30/09/2026: 7.673 aprobadas, 42 omitidas, 0 fallidas &quot;
+    &quot;(cifra anterior, árbol 5.0.1, 24/09/2026: 7.550 aprobadas, 41 omitidas, 0 fallidas)&quot;,
 )
 CLAIMS = inp(
     &quot;claims_registered&quot;,
-    112,
+    113,
     &quot;VERIFIED&quot;,
-    &quot;scripts/verify_claims.py, 2026-09-25: 0 findings&quot;,
-    &quot;scripts/verify_claims.py, 25/09/2026: 0 hallazgos&quot;,
+    &quot;scripts/verify_claims.py, 2026-09-30: 0 findings (was 112 on 2026-09-25; CLM-113 added)&quot;,
+    &quot;scripts/verify_claims.py, 30/09/2026: 0 hallazgos (eran 112 el 25/09/2026; se agregó CLM-113)&quot;,
 )
 UNSUPPORTED = inp(
     &quot;claims_refused&quot;,
@@ -786,10 +789,10 @@ UNSUPPORTED = inp(
 )
 TEST_SRC = inp(
     &quot;test_to_source_loc&quot;,
-    1.24,
+    1.26,
     &quot;VERIFIED&quot;,
-    &quot;87,557 test LOC / 70,672 Python source LOC (aegis + aegis_server), 2026-09-25&quot;,
-    &quot;87.557 líneas de prueba / 70.672 líneas de código Python (aegis + aegis_server), 25/09/2026&quot;,
+    &quot;89,225 test LOC / 70,680 Python source LOC (aegis + aegis_server), git tree at 861c88b, 2026-09-30&quot;,
+    &quot;89.225 líneas de prueba / 70.680 líneas de código Python (aegis + aegis_server), árbol git en 861c88b, 30/09/2026&quot;,
 )
 ORPHANS = inp(
     &quot;orphan_modules_disclosed&quot;,
@@ -1720,7 +1723,8 @@ TRL = [
         &quot;Gateway core&quot;,
         6,
         7,
-        &quot;7,550 tests; shipped image smoke-tested in hardened posture (CLM-109); signed 5.0.1 release&quot;,
+        &quot;7,673 tests pass (2026-09-30); shipped image smoke-tested in hardened posture (CLM-109); signed 5.0.1 release; &quot;
+        &quot;gateway on PyPI at 5.0.1 since 2026-09-26, wheel and sdist equal to the Release assets&quot;,
         &quot;operational pilot at a design partner&quot;,
         8,
         0,
@@ -1729,7 +1733,8 @@ TRL = [
         &quot;WAL + group commit&quot;,
         6,
         7,
-        &quot;commit p50 0.62 ms / p99 1.22 ms incl. fsync; 1,482 commits/s @100 threads on 4 vCPU&quot;,
+        &quot;commit p50 0.62 ms / p99 1.22 ms incl. fsync; 1,482 commits/s @100 threads on 4 vCPU; &quot;
+        &quot;SIGKILL soak 2026-09-29: 60 rounds, 27,735 acknowledged commits, 0 lost (process kill, not a power cut)&quot;,
         &quot;30-day soak + power-loss test on target storage&quot;,
         3,
         1_000,
@@ -1747,7 +1752,8 @@ TRL = [
         &quot;SDK verifiers&quot;,
         6,
         7,
-        &quot;PyPI/npm 5.0.1 byte-identical to Release assets; provenance verified&quot;,
+        &quot;PyPI/npm SDKs 5.0.1 byte-identical to Release assets (2026-09-24 readback); signature and provenance checks are &quot;
+        &quot;recorded in docs/RELEASE_STATUS.md and were not re-run for the 2026-09-30 update&quot;,
         &quot;external auditor runs aegis-sdk verify in a pilot&quot;,
         2,
         0,
@@ -1756,7 +1762,8 @@ TRL = [
         &quot;WAF L1/L2&quot;,
         5,
         6,
-        &quot;corpus-tested normalisation; finite pattern set (UC-042)&quot;,
+        &quot;corpus-tested normalisation; finite pattern set (UC-042); 23-case corpus run 2026-09-29: 15 malicious blocked, &quot;
+        &quot;8 benign passed, Wilson 95% upper bound on the bypass rate 20.4%, a sample too small to support a detection-rate claim&quot;,
         &quot;published adversarial eval + pen test coverage&quot;,
         4,
         0,
@@ -1774,8 +1781,10 @@ TRL = [
         &quot;HA lease + global sequence&quot;,
         5,
         6,
-        &quot;CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108)&quot;,
-        &quot;partition/failover chaos tests + pilot&quot;,
+        &quot;CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108); partition test against real Redis 2026-09-29: &quot;
+        &quot;never two writers at any sample; a Redis restart without persistence resets the epoch counter and the sequence &quot;
+        &quot;fence then refuses appends (an availability incident, not a fork; fix undecided)&quot;,
+        &quot;decide Redis-restart epoch behaviour; chaos tests on target infrastructure + pilot&quot;,
         6,
         2_000,
     ),
@@ -1801,7 +1810,8 @@ TRL = [
         &quot;HSM / PQC signing&quot;,
         4,
         5,
-        &quot;PKCS#11 path; ML-DSA-65 sign 173 us / verify 62 us; Managed HSM excluded ($2,342/mo)&quot;,
+        &quot;PKCS#11 path exercised against SoftHSM 2.6.1 (a software token, not an HSM) 2026-09-29; &quot;
+        &quot;ML-DSA-65 sign 173 us / verify 62 us; Managed HSM excluded ($2,342/mo)&quot;,
         &quot;Key Vault Premium HSM-backed key integration test&quot;,
         4,
         500,
@@ -1810,7 +1820,8 @@ TRL = [
         &quot;OTel / metrics&quot;,
         6,
         7,
-        &quot;/metrics verified in the shipped image by the evidence collector (REG-D86)&quot;,
+        &quot;/metrics verified in the shipped image by the evidence collector (REG-D86); 14 alert rules and a 12-panel dashboard &quot;
+        &quot;shipped in deploy/observability and checked statically by tests, not run against a live Prometheus or Grafana&quot;,
         &quot;pilot dashboards + alert runbook exercised&quot;,
         1,
         0,
@@ -1829,12 +1840,14 @@ TRL = [
 TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     &quot;Gateway core&quot;: (
         &quot;Núcleo del gateway&quot;,
-        &quot;7.550 pruebas; la imagen publicada se probó con la postura endurecida (CLM-109); release 5.0.1 firmado&quot;,
+        &quot;7.673 pruebas aprobadas (30/09/2026); la imagen publicada se probó con la postura endurecida (CLM-109); release 5.0.1 firmado; &quot;
+        &quot;gateway en PyPI en la 5.0.1 desde el 26/09/2026, con wheel y sdist iguales a los archivos del release&quot;,
         &quot;piloto operativo en un cliente de diseño&quot;,
     ),
     &quot;WAL + group commit&quot;: (
         &quot;WAL + commit agrupado&quot;,
-        &quot;commit p50 0,62 ms / p99 1,22 ms con fsync; 1.482 commits/s @100 hilos en 4 vCPU&quot;,
+        &quot;commit p50 0,62 ms / p99 1,22 ms con fsync; 1.482 commits/s @100 hilos en 4 vCPU; &quot;
+        &quot;prueba de resistencia con SIGKILL 29/09/2026: 60 rondas, 27.735 commits confirmados, 0 perdidos (se mata el proceso; no es un corte de energía)&quot;,
         &quot;prueba de resistencia de 30 días + prueba de corte de energía en el almacenamiento destino&quot;,
     ),
     &quot;MMR v2 proofs&quot;: (
@@ -1844,12 +1857,14 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     ),
     &quot;SDK verifiers&quot;: (
         &quot;Verificadores del SDK&quot;,
-        &quot;PyPI/npm 5.0.1 idénticos byte a byte a los archivos del release; procedencia verificada&quot;,
+        &quot;SDK 5.0.1 en PyPI/npm idénticos byte a byte a los archivos del release (lectura del 24/09/2026); las verificaciones de firma y procedencia &quot;
+        &quot;figuran en docs/RELEASE_STATUS.md y no se repitieron en la actualización del 30/09/2026&quot;,
         &quot;un auditor externo ejecuta aegis-sdk verify en un piloto&quot;,
     ),
     &quot;WAF L1/L2&quot;: (
         &quot;WAF L1/L2&quot;,
-        &quot;normalización probada contra un corpus; conjunto finito de patrones (UC-042)&quot;,
+        &quot;normalización probada contra un corpus; conjunto finito de patrones (UC-042); corpus de 23 casos el 29/09/2026: 15 maliciosos bloqueados, &quot;
+        &quot;8 benignos aprobados, cota superior de Wilson al 95 % de la tasa de evasión: 20,4 %, muestra demasiado chica para afirmar una tasa de detección&quot;,
         &quot;evaluación adversarial publicada + cobertura del pentest&quot;,
     ),
     &quot;Crypto-shredding&quot;: (
@@ -1859,8 +1874,10 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     ),
     &quot;HA lease + global sequence&quot;: (
         &quot;Lease de HA + secuencia global&quot;,
-        &quot;CI contra Redis/PostgreSQL reales; failover por SIGKILL en 4,2-5,2 s (CLM-108)&quot;,
-        &quot;pruebas de caos de partición y failover + piloto&quot;,
+        &quot;CI contra Redis/PostgreSQL reales; failover por SIGKILL en 4,2-5,2 s (CLM-108); prueba de partición contra Redis real el 29/09/2026: &quot;
+        &quot;nunca hubo dos escritores en ninguna muestra; un reinicio de Redis sin persistencia reinicia el contador de épocas y el cerco de secuencia &quot;
+        &quot;rechaza los appends (una caída de disponibilidad, no una bifurcación; arreglo sin decidir)&quot;,
+        &quot;decidir el comportamiento de épocas tras un reinicio de Redis; pruebas de caos en la infraestructura destino + piloto&quot;,
     ),
     &quot;ZK circuit&quot;: (
         &quot;Circuito ZK&quot;,
@@ -1874,12 +1891,14 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     ),
     &quot;HSM / PQC signing&quot;: (
         &quot;Firma HSM / PQC&quot;,
-        &quot;camino PKCS#11; ML-DSA-65 firma en 173 us y verifica en 62 us; Managed HSM excluido: {hsm} por mes&quot;,
+        &quot;camino PKCS#11 ejercitado contra SoftHSM 2.6.1 (un token por software, no un HSM) el 29/09/2026; &quot;
+        &quot;ML-DSA-65 firma en 173 us y verifica en 62 us; Managed HSM excluido: {hsm} por mes&quot;,
         &quot;prueba de integración con una clave respaldada por HSM en Key Vault Premium&quot;,
     ),
     &quot;OTel / metrics&quot;: (
         &quot;OTel / métricas&quot;,
-        &quot;/metrics verificado en la imagen publicada por el recolector de evidencia (REG-D86)&quot;,
+        &quot;/metrics verificado en la imagen publicada por el recolector de evidencia (REG-D86); 14 reglas de alerta y un tablero de 12 paneles &quot;
+        &quot;en deploy/observability, revisados de forma estática por pruebas, no ejecutados contra un Prometheus ni un Grafana reales&quot;,
         &quot;tableros del piloto + runbook de alertas ejercitado&quot;,
     ),
     &quot;Azure deployment kit&quot;: (
@@ -2993,6 +3012,54 @@ if __name__ == &quot;__main__&quot;:
 <tr><td>11</td><td>Kit de despliegue en Azure en TRL 3, sin fase 0 en el repositorio (tal como decía el §0 de este mismo paquete el 25/09/2026)</td><td>Un commit de la misma semana (26/09/2026) agregó <code>deploy/azure/phase0</code> y un kit de VM, y se desplegó y midió una VM (Standard_B2als_v2, Chile Central): modo estricto activo, un registro firmado confirmado. Las cifras propias del fundador de US$ 17.54 <span class="ars">(ARS 2,7 M)</span>/US$ 44.77 <span class="ars">(ARS 6,8 M)</span> por mes no se volvieron a medir</td><td>D2 se actualizó a TRL 4; se muestra el precio de lista verificado de la propia VM, US$0,0526<span class="chip v" title="VERIFIED (verificado)">V</span>/hora, junto a las cifras mensuales que siguen sin verificarse</td></tr>
 </tbody></table></div>
 <p class="census"><span class="lbl">Censo de etiquetas</span> <span class="chip v">V</span> 15 · <span class="chip m">M</span> 14 · <span class="chip h">H</span> 50</p>
+</section>
+
+<section id="update">
+<h2><span class="dnum">A</span> Actualización del 30 de septiembre de 2026: qué cambió y qué no</h2>
+<p class="meta">Motor ejecutado de nuevo (semilla 42); los seis gráficos salen idénticos byte a byte; ninguna cifra del modelo se movió</p>
+<p>Esta actualización renueva los datos que quedaron viejos desde el paquete del 25 de septiembre. No revalúa la empresa, no cambia ningún TRL ni agrega ninguna afirmación.</p>
+<h3>Datos renovados</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Concepto</th><th>Paquete del 25/9</th><th>Actualización del 30/9</th><th>Fuente</th></tr></thead>
+<tbody>
+<tr><td>Pruebas aprobadas</td><td>7.550<span class="chip v" title="VERIFIED (verificado)">V</span> aprobadas, 41<span class="chip v" title="VERIFIED (verificado)">V</span> omitidas, 0<span class="chip v" title="VERIFIED (verificado)">V</span> fallidas (árbol 5.0.1)</td><td>7.673<span class="chip v" title="VERIFIED (verificado)">V</span> aprobadas, 42<span class="chip v" title="VERIFIED (verificado)">V</span> omitidas, 0<span class="chip v" title="VERIFIED (verificado)">V</span> fallidas</td><td>Suite completa, <code>pytest -n auto</code>, main en <code>861c88b</code></td></tr>
+<tr><td>Afirmaciones registradas</td><td>112<span class="chip v" title="VERIFIED (verificado)">V</span></td><td>113<span class="chip v" title="VERIFIED (verificado)">V</span>, 0<span class="chip v" title="VERIFIED (verificado)">V</span> hallazgos</td><td><code>scripts/verify_claims.py</code> (CLM-113 deja asentado el estado real de la publicación del gateway en PyPI)</td></tr>
+<tr><td>Relación pruebas / código</td><td>1,24<span class="chip v" title="VERIFIED (verificado)">V</span></td><td>1,26<span class="chip v" title="VERIFIED (verificado)">V</span></td><td>89.225<span class="chip v" title="VERIFIED (verificado)">V</span> líneas de prueba sobre 70.680<span class="chip v" title="VERIFIED (verificado)">V</span> de código</td></tr>
+<tr><td>Gateway en PyPI</td><td>no figuraba</td><td><code>aegis-latent-core</code> 5.0.1, publicado el 26/9, con wheel y sdist iguales a los archivos del release</td><td>Leído de vuelta el 29/9; <code>docs/RELEASE_STATUS.md</code></td></tr>
+</tbody></table></div>
+<h3>Evidencia nueva, sin cambio de TRL</h3>
+<ul>
+<li><strong>Registro de escritura previa (WAL).</strong> Una prueba de resistencia que mata y recupera el proceso corrió 60<span class="chip v" title="VERIFIED (verificado)">V</span> rondas: 27.735<span class="chip v" title="VERIFIED (verificado)">V</span> commits confirmados, 0<span class="chip v" title="VERIFIED (verificado)">V</span> perdidos. Mata el proceso; no es un corte de energía. La prueba de 30 días y el corte de energía en el almacenamiento destino siguen siendo la brecha.</li>
+<li><strong>Filtro de inyección.</strong> Un corpus de 23<span class="chip v" title="VERIFIED (verificado)">V</span> casos: 15<span class="chip v" title="VERIFIED (verificado)">V</span> maliciosos bloqueados, 8<span class="chip v" title="VERIFIED (verificado)">V</span> benignos aprobados y ningún falso positivo. La cota superior de Wilson al 95 % de la tasa de evasión es 20,4 %<span class="chip v" title="VERIFIED (verificado)">V</span>, así que la muestra es demasiado chica para afirmar una tasa de detección.</li>
+<li><strong>Alta disponibilidad.</strong> Una prueba de partición contra un Redis real nunca mostró dos escritores. El mismo trabajo encontró un límite: un reinicio de Redis sin persistencia reinicia el contador de épocas y el cerco de secuencia rechaza los appends. Es una caída de disponibilidad, no una bifurcación, y el arreglo no está decidido.</li>
+<li><strong>Custodia de claves por hardware.</strong> El adaptador PKCS#11 corre ahora contra SoftHSM 2.6.1, un token por software. No es un HSM y no se probó ningún HSM administrado.</li>
+<li><strong>Observabilidad.</strong> 14<span class="chip v" title="VERIFIED (verificado)">V</span> reglas de alerta y un tablero de 12<span class="chip v" title="VERIFIED (verificado)">V</span> paneles viajan en <code>deploy/observability</code> y las pruebas los revisan de forma estática, no contra un Prometheus ni un Grafana reales.</li>
+</ul>
+<h3>Textos corregidos</h3>
+<ul>
+<li><strong>Cierre ordenado.</strong> El texto del 25/9 prometía el depósito en escrow para los clientes de diseño y una devolución a prorrata. El contrato de escrow no está firmado y la prioridad de disolución la fija el propio SAFE, así que D5 ahora dice que la devolución sigue lo que permitan los instrumentos y la ley, a la espera de un abogado.</li>
+<li><strong>T1 «a la firma».</strong> Un SAFE necesita una sociedad emisora; la sociedad de Delaware es el hito M1 de D7. Además, los tramos condicionados necesitan tres SAFE o una carta complementaria para que el inversor quede obligado a fondear un hito cumplido. Ambos puntos son preguntas para el abogado (Marco D).</li>
+</ul>
+<h3>Límites de esta actualización</h3>
+<ul>
+<li>No se volvieron a verificar firmas ni procedencia: <code>cosign</code>, <code>gitsign</code> y <code>gh</code> no están instalados en el entorno que produjo esta actualización. El paquete se apoya en el registro de release del repositorio.</li>
+<li>La facturación sigue en cero y no se entrevistó a ningún comprador. El motor de validación existe y su registro está en blanco.</li>
+<li>Todo documento legal, de aseguramiento o de la ronda que figura abajo es un borrador. Ninguno está firmado y ninguno de los ítems de aseguramiento (pentest, SOC 2, escrow, segundo mantenedor) está completo.</li>
+<li>Ningún abogado revisó este paquete.</li>
+</ul>
+<h3>Qué existe ahora en el repositorio para la ronda</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Área</th><th>Dónde</th><th>Estado</th></tr></thead>
+<tbody>
+<tr><td>Kit para verificar por cuenta propia</td><td><code>tools/sales/prove_it/</code>, <code>docs/PROVE_IT.md</code></td><td>Corre sin conexión sobre un caso grabado e informa aprobado o fallado</td></tr>
+<tr><td>Páginas de venta</td><td><code>site/</code></td><td>Construidas y revisadas con el linter; sin publicar</td></tr>
+<tr><td>Borradores legales</td><td><code>docs/legal/</code></td><td>Licencia, piloto, escrow, cesión de propiedad intelectual, memo de núcleo abierto y preguntas para el abogado; sin revisar</td></tr>
+<tr><td>Motor de validación</td><td><code>tools/validation/</code>, <code>docs/commercial/validation/</code></td><td>Los seis criterios de corte corren como código; el registro de contactos está en blanco</td></tr>
+<tr><td>Borradores de aseguramiento</td><td><code>docs/assurance/</code></td><td>Alcance del pentest, preparación para SOC 2, plan de escrow; ninguno completo</td></tr>
+<tr><td>Documentos y herramientas de la ronda</td><td><code>docs/raise/</code>, <code>tools/raise/</code></td><td>Hoja de SAFE, evidencia por tramo, actualización mensual, memo de rebaja; nada enviado ni firmado</td></tr>
+<tr><td>Cadencia operativa</td><td><code>docs/cadence/</code>, <code>tools/cadence/</code></td><td>Reporte semanal, recálculo mensual, registro de kill-switches y ruta de cierre</td></tr>
+</tbody></table></div>
+<p class="census"><span class="lbl">Censo de etiquetas</span> <span class="chip v">V</span> 22 · <span class="chip m">M</span> 0 · <span class="chip h">H</span> 0</p>
 </section>
 
 <section id="ask" class="ask">

@@ -1,6 +1,6 @@
 # Aegis Latent Core: Seed Investor Pack (English)
 
-**Date created:** 25 September 2026 (2026-09-25)
+**Date created:** 25 September 2026 (2026-09-25). **Updated:** 30 September 2026 (2026-09-30); see section U of the page.
 
 This folder is the English edition of the Mission Order XV investor pack: deliverables D1–D10 and the one-screen ask. A separate folder, `paquete_inversor_aegis_es/`, holds the Rioplatense Spanish edition, with peso amounts in parentheses. Both editions come from the same engine and the same numbers.
 
@@ -39,4 +39,5 @@ With numpy 2.4.6, matplotlib 3.11.2 and Python 3.11, the engine reproduced every
 - **Offline.** The page loads its fonts from Google Fonts and draws its two diagrams with Mermaid from jsDelivr. Without a network connection, the fonts fall back to system fonts and the diagrams appear as their source text.
 - **What this pack does not claim.** No certification, legal compliance, court admissibility, production readiness or capacity, or external assurance. The conflict log in D10.4 records every supplied input that was corrected or downgraded.
 - **Engine changes.** 2026-09-25: a `--lang es` switch and one input, `fx_ars_per_usd`, were added for the Spanish edition; the English charts and tables were checked byte-identical to the versions before the change. 2026-09-26: the "Azure deployment kit" TRL row and its cost-to-close total were updated to reflect the same-week Azure deployment kit commit (`deploy/azure/phase0`, one live VM deployment and measurement); a new VERIFIED input, `azure_b2als_v2_chilecentral_hourly_usd`, records that VM's own retail price. The founder's own monthly Azure burn ($17.54/$44.77 in D10.4 row 1) remains unmeasured; see D10.4 row 10.
+- **Update of 2026-09-30.** Three VERIFIED inputs were refreshed (`tests_passed` 7,673 passed / 42 skipped / 0 failed, `claims_registered` 113, `test_to_source_loc` 1.26) and the evidence and gap text of seven TRL rows was extended with the qualification runs of 2026-09-29 (WAL kill soak, injection-filter corpus, HA partition test and the Redis-restart limit, SoftHSM, observability assets). No TRL, cost-to-close figure, chart or model number changed: the six PNGs are byte-identical to the 2026-09-25 versions in both editions, and `model_outputs.json` differs only in those three inputs and the TRL text. The wind-down wording and the T1 issuer precondition were corrected and section U was added to the page. Signatures and provenance were not re-verified in this update.
 - **Handling.** These are fundraising materials, committed to the `aegis-latent-core` repository at the owner's request on 2026-09-25. They are not product documentation; `docs/CLAIMS_MATRIX.md` remains the only source of product capability claims.

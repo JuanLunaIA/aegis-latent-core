@@ -128,17 +128,19 @@ COMMIT_P99_MS = inp(
 )
 TESTS_PASSED = inp(
     "tests_passed",
-    7550,
+    7673,
     "VERIFIED",
-    "pytest -n auto on the 5.0.1 tree, 2026-09-24: 7,550 passed, 41 skipped, 0 failed",
-    "pytest -n auto sobre el árbol 5.0.1, 24/09/2026: 7.550 aprobadas, 41 omitidas, 0 fallidas",
+    "pytest -n auto on main at 861c88b, 2026-09-30: 7,673 passed, 42 skipped, 0 failed "
+    "(previous figure, 5.0.1 tree, 2026-09-24: 7,550 passed, 41 skipped, 0 failed)",
+    "pytest -n auto sobre main en 861c88b, 30/09/2026: 7.673 aprobadas, 42 omitidas, 0 fallidas "
+    "(cifra anterior, árbol 5.0.1, 24/09/2026: 7.550 aprobadas, 41 omitidas, 0 fallidas)",
 )
 CLAIMS = inp(
     "claims_registered",
-    112,
+    113,
     "VERIFIED",
-    "scripts/verify_claims.py, 2026-09-25: 0 findings",
-    "scripts/verify_claims.py, 25/09/2026: 0 hallazgos",
+    "scripts/verify_claims.py, 2026-09-30: 0 findings (was 112 on 2026-09-25; CLM-113 added)",
+    "scripts/verify_claims.py, 30/09/2026: 0 hallazgos (eran 112 el 25/09/2026; se agregó CLM-113)",
 )
 UNSUPPORTED = inp(
     "claims_refused",
@@ -149,10 +151,10 @@ UNSUPPORTED = inp(
 )
 TEST_SRC = inp(
     "test_to_source_loc",
-    1.24,
+    1.26,
     "VERIFIED",
-    "87,557 test LOC / 70,672 Python source LOC (aegis + aegis_server), 2026-09-25",
-    "87.557 líneas de prueba / 70.672 líneas de código Python (aegis + aegis_server), 25/09/2026",
+    "89,225 test LOC / 70,680 Python source LOC (aegis + aegis_server), git tree at 861c88b, 2026-09-30",
+    "89.225 líneas de prueba / 70.680 líneas de código Python (aegis + aegis_server), árbol git en 861c88b, 30/09/2026",
 )
 ORPHANS = inp(
     "orphan_modules_disclosed",
@@ -1083,7 +1085,8 @@ TRL = [
         "Gateway core",
         6,
         7,
-        "7,550 tests; shipped image smoke-tested in hardened posture (CLM-109); signed 5.0.1 release",
+        "7,673 tests pass (2026-09-30); shipped image smoke-tested in hardened posture (CLM-109); signed 5.0.1 release; "
+        "gateway on PyPI at 5.0.1 since 2026-09-26, wheel and sdist equal to the Release assets",
         "operational pilot at a design partner",
         8,
         0,
@@ -1092,7 +1095,8 @@ TRL = [
         "WAL + group commit",
         6,
         7,
-        "commit p50 0.62 ms / p99 1.22 ms incl. fsync; 1,482 commits/s @100 threads on 4 vCPU",
+        "commit p50 0.62 ms / p99 1.22 ms incl. fsync; 1,482 commits/s @100 threads on 4 vCPU; "
+        "SIGKILL soak 2026-09-29: 60 rounds, 27,735 acknowledged commits, 0 lost (process kill, not a power cut)",
         "30-day soak + power-loss test on target storage",
         3,
         1_000,
@@ -1110,7 +1114,8 @@ TRL = [
         "SDK verifiers",
         6,
         7,
-        "PyPI/npm 5.0.1 byte-identical to Release assets; provenance verified",
+        "PyPI/npm SDKs 5.0.1 byte-identical to Release assets (2026-09-24 readback); signature and provenance checks are "
+        "recorded in docs/RELEASE_STATUS.md and were not re-run for the 2026-09-30 update",
         "external auditor runs aegis-sdk verify in a pilot",
         2,
         0,
@@ -1119,7 +1124,8 @@ TRL = [
         "WAF L1/L2",
         5,
         6,
-        "corpus-tested normalisation; finite pattern set (UC-042)",
+        "corpus-tested normalisation; finite pattern set (UC-042); 23-case corpus run 2026-09-29: 15 malicious blocked, "
+        "8 benign passed, Wilson 95% upper bound on the bypass rate 20.4%, a sample too small to support a detection-rate claim",
         "published adversarial eval + pen test coverage",
         4,
         0,
@@ -1137,8 +1143,10 @@ TRL = [
         "HA lease + global sequence",
         5,
         6,
-        "CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108)",
-        "partition/failover chaos tests + pilot",
+        "CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108); partition test against real Redis 2026-09-29: "
+        "never two writers at any sample; a Redis restart without persistence resets the epoch counter and the sequence "
+        "fence then refuses appends (an availability incident, not a fork; fix undecided)",
+        "decide Redis-restart epoch behaviour; chaos tests on target infrastructure + pilot",
         6,
         2_000,
     ),
@@ -1164,7 +1172,8 @@ TRL = [
         "HSM / PQC signing",
         4,
         5,
-        "PKCS#11 path; ML-DSA-65 sign 173 us / verify 62 us; Managed HSM excluded ($2,342/mo)",
+        "PKCS#11 path exercised against SoftHSM 2.6.1 (a software token, not an HSM) 2026-09-29; "
+        "ML-DSA-65 sign 173 us / verify 62 us; Managed HSM excluded ($2,342/mo)",
         "Key Vault Premium HSM-backed key integration test",
         4,
         500,
@@ -1173,7 +1182,8 @@ TRL = [
         "OTel / metrics",
         6,
         7,
-        "/metrics verified in the shipped image by the evidence collector (REG-D86)",
+        "/metrics verified in the shipped image by the evidence collector (REG-D86); 14 alert rules and a 12-panel dashboard "
+        "shipped in deploy/observability and checked statically by tests, not run against a live Prometheus or Grafana",
         "pilot dashboards + alert runbook exercised",
         1,
         0,
@@ -1192,12 +1202,14 @@ TRL = [
 TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     "Gateway core": (
         "Núcleo del gateway",
-        "7.550 pruebas; la imagen publicada se probó con la postura endurecida (CLM-109); release 5.0.1 firmado",
+        "7.673 pruebas aprobadas (30/09/2026); la imagen publicada se probó con la postura endurecida (CLM-109); release 5.0.1 firmado; "
+        "gateway en PyPI en la 5.0.1 desde el 26/09/2026, con wheel y sdist iguales a los archivos del release",
         "piloto operativo en un cliente de diseño",
     ),
     "WAL + group commit": (
         "WAL + commit agrupado",
-        "commit p50 0,62 ms / p99 1,22 ms con fsync; 1.482 commits/s @100 hilos en 4 vCPU",
+        "commit p50 0,62 ms / p99 1,22 ms con fsync; 1.482 commits/s @100 hilos en 4 vCPU; "
+        "prueba de resistencia con SIGKILL 29/09/2026: 60 rondas, 27.735 commits confirmados, 0 perdidos (se mata el proceso; no es un corte de energía)",
         "prueba de resistencia de 30 días + prueba de corte de energía en el almacenamiento destino",
     ),
     "MMR v2 proofs": (
@@ -1207,12 +1219,14 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     ),
     "SDK verifiers": (
         "Verificadores del SDK",
-        "PyPI/npm 5.0.1 idénticos byte a byte a los archivos del release; procedencia verificada",
+        "SDK 5.0.1 en PyPI/npm idénticos byte a byte a los archivos del release (lectura del 24/09/2026); las verificaciones de firma y procedencia "
+        "figuran en docs/RELEASE_STATUS.md y no se repitieron en la actualización del 30/09/2026",
         "un auditor externo ejecuta aegis-sdk verify en un piloto",
     ),
     "WAF L1/L2": (
         "WAF L1/L2",
-        "normalización probada contra un corpus; conjunto finito de patrones (UC-042)",
+        "normalización probada contra un corpus; conjunto finito de patrones (UC-042); corpus de 23 casos el 29/09/2026: 15 maliciosos bloqueados, "
+        "8 benignos aprobados, cota superior de Wilson al 95 % de la tasa de evasión: 20,4 %, muestra demasiado chica para afirmar una tasa de detección",
         "evaluación adversarial publicada + cobertura del pentest",
     ),
     "Crypto-shredding": (
@@ -1222,8 +1236,10 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     ),
     "HA lease + global sequence": (
         "Lease de HA + secuencia global",
-        "CI contra Redis/PostgreSQL reales; failover por SIGKILL en 4,2-5,2 s (CLM-108)",
-        "pruebas de caos de partición y failover + piloto",
+        "CI contra Redis/PostgreSQL reales; failover por SIGKILL en 4,2-5,2 s (CLM-108); prueba de partición contra Redis real el 29/09/2026: "
+        "nunca hubo dos escritores en ninguna muestra; un reinicio de Redis sin persistencia reinicia el contador de épocas y el cerco de secuencia "
+        "rechaza los appends (una caída de disponibilidad, no una bifurcación; arreglo sin decidir)",
+        "decidir el comportamiento de épocas tras un reinicio de Redis; pruebas de caos en la infraestructura destino + piloto",
     ),
     "ZK circuit": (
         "Circuito ZK",
@@ -1237,12 +1253,14 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     ),
     "HSM / PQC signing": (
         "Firma HSM / PQC",
-        "camino PKCS#11; ML-DSA-65 firma en 173 us y verifica en 62 us; Managed HSM excluido: {hsm} por mes",
+        "camino PKCS#11 ejercitado contra SoftHSM 2.6.1 (un token por software, no un HSM) el 29/09/2026; "
+        "ML-DSA-65 firma en 173 us y verifica en 62 us; Managed HSM excluido: {hsm} por mes",
         "prueba de integración con una clave respaldada por HSM en Key Vault Premium",
     ),
     "OTel / metrics": (
         "OTel / métricas",
-        "/metrics verificado en la imagen publicada por el recolector de evidencia (REG-D86)",
+        "/metrics verificado en la imagen publicada por el recolector de evidencia (REG-D86); 14 reglas de alerta y un tablero de 12 paneles "
+        "en deploy/observability, revisados de forma estática por pruebas, no ejecutados contra un Prometheus ni un Grafana reales",
         "tableros del piloto + runbook de alertas ejercitado",
     ),
     "Azure deployment kit": (

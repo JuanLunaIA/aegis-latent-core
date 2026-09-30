@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Investor pack refreshed (2026-09-30, both editions).** Three verified inputs updated (tests 7,673
+  passed / 42 skipped / 0 failed, claims 113, test-to-source ratio 1.26), seven TRL rows extended with the
+  2026-09-29 qualification evidence and its limits, the wind-down wording and the T1 issuer precondition
+  corrected, and a section listing every change added. No TRL, chart or model number moved; signatures and
+  provenance were not re-verified.
 - **Release truth corrected: the gateway is on PyPI at `5.0.1`.** `publish_pypi_gateway.yml`
   run `36224961909` published `aegis-latent-core` `5.0.1` on 2026-09-26; the public PyPI API,
   read back 2026-09-29, shows both files equal to the GitHub Release assets. The statements

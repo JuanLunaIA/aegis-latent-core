@@ -166,11 +166,14 @@ def test_monthly_compares_spend_with_the_model_and_names_what_it_did_not_measure
     assert "not re-measured" in text
 
 
-def test_monthly_flags_the_stale_claims_count_when_it_differs():
+def test_monthly_compares_the_model_claims_count_with_the_live_count():
     if shutil.which("git") is None:
         pytest.skip("no git")
     text, _ = cad.monthly(BASELINE_DAY, str(ROOT / "no-such-python"), cad.VALIDATION, cad.RAISE)
-    assert "`claims_registered`: model 112, live" in text
+    match = re.search(r"`claims_registered`: model (\d+), live (\d+): (current|STALE)", text)
+    assert match
+    expected = "current" if match[1] == match[2] else "STALE"
+    assert match[3] == expected
 
 
 def test_wind_down_path_is_marked_and_ordered():
