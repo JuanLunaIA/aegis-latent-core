@@ -84,7 +84,7 @@ Create these attributes before any import, so every contact carries its basis:
 2. **"Send me information" reply.** [One Pager](../SALES_KIT/ONE_PAGER.md) and [Prove It Yourself](../../PROVE_IT.md) links, nothing else. Wording follows [Outbound Sequences](../SALES_KIT/OUTBOUND_SEQUENCES.md) rules 1 to 7.
 3. **Investor update.** For holders who agreed to receive it, built from `python tools/raise/monthly_update.py --month YYYY-MM`; the figures are the tool's, not typed by hand.
 
-The Brevo variable names in the files (`{{ contact.NOMBRE }}`, `{{ unsubscribe }}`, `{{ params.DOIurl }}`) were written from memory of Brevo's template syntax, not checked against its editor; confirm them when the drafts are created.
+Of the Brevo variables in the files, `{{ params.DOIurl }}` is confirmed (Brevo flags template 1 as a double opt-in template, see Status). `{{ contact.NOMBRE }}` and `{{ unsubscribe }}` are not confirmed by any flag; check them in the editor's preview before activating a template.
 
 ## Before the first real send
 
