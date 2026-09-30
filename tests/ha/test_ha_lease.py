@@ -18,7 +18,15 @@ import uuid
 
 import pytest
 
-from aegis.core.ha import ChainLease, LeaseKeeper, LeaseUnavailableError, wait_for_lease
+from aegis.core.ha import (
+    MAX_EPOCH,
+    ChainLease,
+    HAController,
+    LeaseKeeper,
+    LeaseUnavailableError,
+    highest_recorded_epoch,
+    wait_for_lease,
+)
 
 
 def _chain() -> str:
@@ -132,3 +140,137 @@ def test_chain_ids_that_could_forge_a_lease_value_are_refused(chain: str) -> Non
 
     with pytest.raises(ValueError, match="chain_id"):
         ChainLease(Stub(), chain, "h:1", 5.0)
+
+
+# ── the epoch floor: a counter that restarted must not go backwards ─────────
+
+
+def test_a_fresh_draw_is_lifted_above_the_floor(redis_client: object) -> None:
+    chain = _chain()
+    first = _lease(redis_client, chain, "a:1")
+    assert first.acquire(floor=41) == 42
+    first.release()
+    # The counter moved with the draw, so a holder that knows no floor still
+    # draws above it.
+    assert _lease(redis_client, chain, "b:2").acquire() == 43
+
+
+def test_raising_above_a_lower_floor_changes_nothing(redis_client: object) -> None:
+    chain = _chain()
+    lease = _lease(redis_client, chain, "a:1")
+    assert lease.acquire() == 1
+    assert lease.raise_epoch_above(0) == 1
+    assert redis_client.get(lease.key) == b"a:1|1"  # type: ignore[attr-defined]
+
+
+def test_a_raised_lease_is_the_one_redis_holds(redis_client: object) -> None:
+    chain = _chain()
+    lease = _lease(redis_client, chain, "a:1")
+    assert lease.acquire() == 1
+    assert lease.raise_epoch_above(7) == 8
+    assert lease.epoch == 8
+    assert redis_client.get(lease.key) == b"a:1|8"  # type: ignore[attr-defined]
+    assert lease.renew() is True
+    assert lease.holds()
+    lease.release()
+    assert _lease(redis_client, chain, "b:2").acquire() == 9
+
+
+def test_a_lease_taken_over_cannot_be_raised(redis_client: object) -> None:
+    chain = _chain()
+    lease = _lease(redis_client, chain, "a:1")
+    assert lease.acquire() == 1
+    redis_client.set(lease.key, "intruder:9|99")  # type: ignore[attr-defined]
+    with pytest.raises(LeaseUnavailableError):
+        lease.raise_epoch_above(5)
+    assert not lease.holds()
+    assert redis_client.get(lease.key) == b"intruder:9|99"  # type: ignore[attr-defined]
+
+
+def test_a_lease_never_acquired_cannot_be_raised(redis_client: object) -> None:
+    with pytest.raises(LeaseUnavailableError):
+        _lease(redis_client, _chain(), "a:1").raise_epoch_above(1)
+
+
+@pytest.mark.parametrize("floor", [-1, True, MAX_EPOCH + 1, 1.5])
+def test_an_out_of_range_floor_is_refused(redis_client: object, floor: object) -> None:
+    lease = _lease(redis_client, _chain(), "a:1")
+    with pytest.raises(ValueError, match="floor"):
+        lease.acquire(floor=floor)  # type: ignore[arg-type]
+    assert lease.acquire() == 1
+    with pytest.raises(ValueError, match="floor"):
+        lease.raise_epoch_above(floor)  # type: ignore[arg-type]
+
+
+def test_raising_while_the_keeper_renews_never_reads_as_a_loss(redis_client: object) -> None:
+    # Without serialising the scripts, a renewal that read the old epoch could
+    # reach Redis after the raise replaced the value and report the lease lost,
+    # which shuts the holder down.
+    chain = _chain()
+    lease = _lease(redis_client, chain, "kept:1", ttl=1.0)
+    assert lease.acquire() == 1
+    lost: list[str] = []
+    keeper = LeaseKeeper(lease, lost.append)
+    keeper.start()
+    try:
+        # Raise back to back for several renewal intervals, so that renewals
+        # land inside a raise's round trip.
+        deadline = time.monotonic() + 2.5
+        floor = 1
+        while time.monotonic() < deadline:
+            floor = lease.raise_epoch_above(floor)
+        assert not lost, lost
+        assert lease.holds()
+        assert redis_client.get(lease.key) == f"kept:1|{lease.epoch}".encode()  # type: ignore[attr-defined]
+    finally:
+        keeper.stop()
+        keeper.join(timeout=3)
+
+
+class _Node:
+    def __init__(self, state_id: str, tenant_id: str = "aegis-system") -> None:
+        self.state_id = state_id
+        self.tenant_id = tenant_id
+
+
+def test_the_highest_recorded_epoch_reads_only_this_chains_handovers() -> None:
+    nodes = [
+        _Node("ha-lease-main-3"),
+        _Node("request-1", tenant_id="tenant-a"),
+        _Node("ha-lease-main-12"),
+        _Node("ha-lease-main-9"),
+        _Node("ha-lease-main-other-40"),  # a different chain whose id extends this one
+        _Node("ha-lease-other-50"),
+        _Node("ha-lease-main-60", tenant_id="tenant-a"),  # not a system record
+        _Node("ha-lease-main-x7"),
+        _Node("ha-lease-main-" + "9" * 17),  # past what the scripts can hold exactly
+    ]
+    assert highest_recorded_epoch(nodes, "main") == 12
+    assert highest_recorded_epoch([], "main") == 0
+
+
+def test_the_handover_is_recorded_above_every_epoch_the_chain_holds(
+    redis_client: object, tmp_path: object
+) -> None:
+    # The integration the finding needs: a WAL whose last handover is epoch 7,
+    # a Redis whose counter restarted, and the gateway's handover step.
+    from types import SimpleNamespace
+
+    from aegis.core.crypto_audit import CryptographicAuditLedger
+    from aegis.proxy.app import _record_writer_handover
+
+    chain = _chain()
+    wal = f"{tmp_path}/chain.jsonl"
+    with CryptographicAuditLedger(wal, signing_key="ha-epoch-test") as earlier:
+        earlier.commit_state(f"ha-lease-{chain}-7", 0.0, b"{}", tenant_id="aegis-system")
+        earlier.commit_state("request-1", 0.0, b"payload", tenant_id="tenant-a")
+
+    lease = _lease(redis_client, chain, "new:1")
+    assert lease.acquire() == 1  # the restarted counter
+    controller = HAController("active_passive", chain, lease, None)
+    with CryptographicAuditLedger(wal, signing_key="ha-epoch-test") as ledger:
+        _record_writer_handover(SimpleNamespace(ha=controller, ledger=ledger))
+        assert lease.epoch == 8
+        assert ledger.chain[-1].state_id == f"ha-lease-{chain}-8"
+        assert ledger.chain[-1].tenant_id == "aegis-system"
+    assert redis_client.get(lease.key) == b"new:1|8"  # type: ignore[attr-defined]

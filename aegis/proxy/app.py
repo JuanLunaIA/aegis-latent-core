@@ -483,8 +483,13 @@ def _record_writer_handover(state: _AppState) -> None:
     if controller.sequencer is not None:
         state.ledger.add_commit_listener(controller.sequencer.notify)
     if controller.lease is not None:
+        # The epoch counter lives in Redis; after Redis loses its data it
+        # restarts below epochs this chain already records. Lift it above the
+        # highest one before the handover is written or anything is sequenced.
+        floor = ha.highest_recorded_epoch(state.ledger.iter_wal_nodes(), controller.chain_id)
+        epoch = controller.lease.raise_epoch_above(floor)
         state.ledger.commit_state(
-            state_id=f"ha-lease-{controller.chain_id}-{controller.lease.epoch}",
+            state_id=f"ha-lease-{controller.chain_id}-{epoch}",
             entropy=0.0,
             payload=ha.handover_record(controller),
             tenant_id="aegis-system",

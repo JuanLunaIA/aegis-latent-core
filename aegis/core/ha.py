@@ -89,14 +89,22 @@ class SequenceDivergedError(RuntimeError):
 
 # ── Chain writer lease ──────────────────────────────────────────────────────
 
-# KEYS[1] lease key, KEYS[2] epoch counter; ARGV[1] holder id, ARGV[2] TTL (ms).
-# A fresh acquisition always draws a new epoch, so epochs order every holder the
-# chain has ever had. Re-acquiring a lease this holder already owns keeps its
-# epoch (holder ids are unique per process, so this is only ever the same process).
+# KEYS[1] lease key, KEYS[2] epoch counter; ARGV[1] holder id, ARGV[2] TTL (ms),
+# ARGV[3] the epoch floor. A fresh acquisition always draws a new epoch, so epochs
+# order every holder the chain has ever had, and the draw is lifted above the
+# floor when the counter is behind it: a Redis that lost its data restarts INCR
+# at 1, below epochs the chain has already recorded (see raise_epoch_above).
+# Re-acquiring a lease this holder already owns keeps its epoch (holder ids are
+# unique per process, so this is only ever the same process).
 _ACQUIRE_LUA = """
 local current = redis.call('GET', KEYS[1])
 if current == false then
   local epoch = redis.call('INCR', KEYS[2])
+  local floor = tonumber(ARGV[3])
+  if epoch <= floor then
+    epoch = floor + 1
+    redis.call('SET', KEYS[2], epoch)
+  end
   redis.call('SET', KEYS[1], ARGV[1] .. '|' .. epoch, 'PX', ARGV[2])
   return epoch
 end
@@ -115,6 +123,28 @@ if redis.call('GET', KEYS[1]) == ARGV[1] then
 end
 return 0
 """
+
+# KEYS[1] lease key, KEYS[2] epoch counter; ARGV[1] the exact value we set,
+# ARGV[2] TTL (ms), ARGV[3] the epoch floor, ARGV[4] holder id. Only the holder
+# can move its own lease to a new epoch, and the counter moves with it, so every
+# later holder draws above it too.
+_RAISE_LUA = """
+if redis.call('GET', KEYS[1]) ~= ARGV[1] then
+  return false
+end
+local epoch = redis.call('INCR', KEYS[2])
+local floor = tonumber(ARGV[3])
+if epoch <= floor then
+  epoch = floor + 1
+  redis.call('SET', KEYS[2], epoch)
+end
+redis.call('SET', KEYS[1], ARGV[4] .. '|' .. epoch, 'PX', ARGV[2])
+return epoch
+"""
+
+#: Redis runs Lua 5.1, whose numbers are doubles: integers are exact only up to
+#: 2**53. An epoch floor at or past that would lose precision in the scripts.
+MAX_EPOCH = 2**53 - 2
 
 _RELEASE_LUA = """
 if redis.call('GET', KEYS[1]) == ARGV[1] then
@@ -162,10 +192,16 @@ class ChainLease:
         self._client = client
         self._clock = clock
         self._state_lock = threading.Lock()
+        # Serialises the scripts that name the lease's current value. Without
+        # it a renewal that read the old epoch could reach Redis just after
+        # raise_epoch_above replaced the value, find it changed, and report
+        # the lease lost, which shuts the holder down.
+        self._op_lock = threading.Lock()
         self._epoch: int | None = None
         self._valid_until = 0.0
         self._acquire_script = client.register_script(_ACQUIRE_LUA)
         self._renew_script = client.register_script(_RENEW_LUA)
+        self._raise_script = client.register_script(_RAISE_LUA)
         self._release_script = client.register_script(_RELEASE_LUA)
 
     @property
@@ -180,41 +216,89 @@ class ChainLease:
     def _value(self, epoch: int) -> str:
         return f"{self.holder_id}|{epoch}"
 
-    def acquire(self) -> int | None:
-        """Take the lease if it is free; return its epoch, or None if held elsewhere."""
-        sent = self._clock()
-        result = self._acquire_script(
-            keys=[self.key, self.epoch_key], args=[self.holder_id, self._ttl_ms]
-        )
-        if result is None:
-            return None
-        epoch = int(result)
-        with self._state_lock:
-            self._epoch = epoch
-            self._valid_until = sent + self.ttl_seconds - self.margin_seconds
-        return epoch
+    def acquire(self, floor: int = 0) -> int | None:
+        """Take the lease if it is free; return its epoch, or None if held elsewhere.
+
+        A fresh epoch is always greater than ``floor``, the highest epoch the
+        caller already knows this chain has had.
+        """
+        floor = _checked_floor(floor)
+        with self._op_lock:
+            sent = self._clock()
+            result = self._acquire_script(
+                keys=[self.key, self.epoch_key], args=[self.holder_id, self._ttl_ms, floor]
+            )
+            if result is None:
+                return None
+            epoch = int(result)
+            with self._state_lock:
+                self._epoch = epoch
+                self._valid_until = sent + self.ttl_seconds - self.margin_seconds
+            return epoch
+
+    def raise_epoch_above(self, floor: int) -> int:
+        """Move the held lease to an epoch greater than ``floor``; return the epoch.
+
+        The epoch counter lives in Redis, and a Redis that restarts without
+        persistence restarts it at 1. The next holder then draws an epoch below
+        ones the chain has already recorded, and the sequence store's fence,
+        which refuses a writer older than the chain's last entry, turns against
+        it: the new holder is refused while a paused former holder, still
+        carrying the old, higher epoch, would pass. The holder therefore lifts
+        its epoch above the highest one its chain records before it writes or
+        sequences anything. A no-op when the epoch is already above ``floor``.
+
+        Raises :class:`LeaseUnavailableError` when the lease is no longer this
+        holder's, in which case it must not write at all.
+        """
+        floor = _checked_floor(floor)
+        with self._op_lock:
+            epoch = self.epoch
+            if epoch is None:
+                raise LeaseUnavailableError(f"chain {self.chain_id}: no writer lease is held")
+            if epoch > floor:
+                return epoch
+            sent = self._clock()
+            result = self._raise_script(
+                keys=[self.key, self.epoch_key],
+                args=[self._value(epoch), self._ttl_ms, floor, self.holder_id],
+            )
+            with self._state_lock:
+                if result is None:
+                    self._valid_until = 0.0
+                    raise LeaseUnavailableError(
+                        f"chain {self.chain_id}: the writer lease was lost before its epoch "
+                        f"could be raised above {floor}"
+                    )
+                self._epoch = int(result)
+                self._valid_until = sent + self.ttl_seconds - self.margin_seconds
+                return self._epoch
 
     def renew(self) -> bool:
         """Extend the lease. False means it is gone (expired, or taken over)."""
-        epoch = self.epoch
-        if epoch is None:
-            return False
-        sent = self._clock()
-        renewed = int(self._renew_script(keys=[self.key], args=[self._value(epoch), self._ttl_ms]))
-        with self._state_lock:
-            if renewed == 1:
-                self._valid_until = sent + self.ttl_seconds - self.margin_seconds
-                return True
-            self._valid_until = 0.0
-            return False
+        with self._op_lock:
+            epoch = self.epoch
+            if epoch is None:
+                return False
+            sent = self._clock()
+            renewed = int(
+                self._renew_script(keys=[self.key], args=[self._value(epoch), self._ttl_ms])
+            )
+            with self._state_lock:
+                if renewed == 1:
+                    self._valid_until = sent + self.ttl_seconds - self.margin_seconds
+                    return True
+                self._valid_until = 0.0
+                return False
 
     def release(self) -> None:
         """Give the lease up, only if it is still ours."""
-        epoch = self.epoch
-        with self._state_lock:
-            self._valid_until = 0.0
-        if epoch is not None:
-            self._release_script(keys=[self.key], args=[self._value(epoch)])
+        with self._op_lock:
+            epoch = self.epoch
+            with self._state_lock:
+                self._valid_until = 0.0
+            if epoch is not None:
+                self._release_script(keys=[self.key], args=[self._value(epoch)])
 
     def holds(self) -> bool:
         with self._state_lock:
@@ -223,6 +307,35 @@ class ChainLease:
     def seconds_remaining(self) -> float:
         with self._state_lock:
             return max(0.0, self._valid_until - self._clock())
+
+
+def _checked_floor(floor: int) -> int:
+    if isinstance(floor, bool) or not isinstance(floor, int) or not 0 <= floor <= MAX_EPOCH:
+        raise ValueError(f"an epoch floor must be an integer in [0, {MAX_EPOCH}]")
+    return floor
+
+
+def highest_recorded_epoch(nodes: Iterable[AuditNode], chain_id: str) -> int:
+    """The highest writer epoch the handover records in ``nodes`` name for ``chain_id``.
+
+    Every holder commits a ``ha-lease-<chain_id>-<epoch>`` node under the
+    ``aegis-system`` tenant before it serves or sequences anything, so this is
+    at least the highest epoch the global sequence can hold for the chain.
+    Returns 0 for a chain with no handover yet. A record whose epoch does not
+    parse, or is out of range, is ignored rather than trusted.
+    """
+    prefix = f"ha-lease-{chain_id}-"
+    highest = 0
+    for node in nodes:
+        if node.tenant_id != "aegis-system" or not node.state_id.startswith(prefix):
+            continue
+        suffix = node.state_id[len(prefix) :]
+        if not suffix.isdigit() or len(suffix) > 16:
+            continue
+        epoch = int(suffix)
+        if epoch <= MAX_EPOCH:
+            highest = max(highest, epoch)
+    return highest
 
 
 class LeaseKeeper(threading.Thread):
