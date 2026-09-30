@@ -488,6 +488,18 @@ def _record_writer_handover(state: _AppState) -> None:
         # highest one before the handover is written or anything is sequenced.
         floor = ha.highest_recorded_epoch(state.ledger.iter_wal_nodes(), controller.chain_id)
         epoch = controller.lease.raise_epoch_above(floor)
+        fault = getattr(state.ledger, "_fault_state", "healthy")
+        if fault != "healthy":
+            # The ledger refuses every commit while faulted. Start anyway, as a
+            # single replica does: /audit/health reports the fault and
+            # _require_intact_ledger answers 503 until the chain is repaired.
+            logger.error(
+                "writer handover for chain %s at epoch %d not recorded: ledger fault_state=%s",
+                controller.chain_id,
+                epoch,
+                fault,
+            )
+            return
         state.ledger.commit_state(
             state_id=f"ha-lease-{controller.chain_id}-{epoch}",
             entropy=0.0,

@@ -14,8 +14,10 @@ tests pin two things that were previously unasserted:
    node list, the peak list, peak/node object aliasing, the leaf bookkeeping,
    the root, and every subsequent inclusion proof.
 2. The ledger actually reverts its MMR when signing or persistence fails, so a
-   failed commit leaves no leaf behind and the next successful commit produces
-   the same root it would have produced had the failure never happened.
+   failed commit leaves no leaf behind. The failure latches the ledger, which
+   then refuses commits; once the chain resumes after a restart, the next
+   successful commit produces the same root it would have produced had the
+   failure never happened.
 """
 
 # Copyright (c) 2026 Juan Luna. All rights reserved.
@@ -32,7 +34,7 @@ from typing import Any
 
 import pytest
 
-from aegis.core.crypto_audit import CryptographicAuditLedger
+from aegis.core.crypto_audit import CryptographicAuditLedger, LedgerFaultedError
 from aegis.core.mmr import MerkleMountainRange
 
 REQUEST = b'{"messages":[{"role":"user","content":"hello"}]}'
@@ -232,7 +234,9 @@ def test_commit_after_a_failed_commit_matches_an_unbroken_run(
     """The chain must continue as if the failed commit had never been attempted.
 
     A rollback that merely restored the leaf *count* while leaving a stale
-    interior node would pass the previous test and fail this one.
+    interior node would pass the previous test and fail this one. The failure
+    latches the ledger, so the next commit on the same instance is refused; the
+    chain resumes after a restart, and must then match an unbroken run.
     """
     broken = _ledger(tmp_path / "broken")
     clean = _ledger(tmp_path / "clean")
@@ -249,6 +253,14 @@ def test_commit_after_a_failed_commit_matches_an_unbroken_run(
         broken.commit_forensic(state_id="doomed", request_bytes=REQUEST, response_bytes=RESPONSE)
     setattr(broken, failing_stage, original)
 
+    # The revert is exact at the point of failure, not merely after a replay.
+    assert _state(broken._mmr) == _state(clean._mmr)
+    with pytest.raises(LedgerFaultedError):
+        broken.commit_forensic(state_id="ok-8", request_bytes=REQUEST, response_bytes=RESPONSE)
+    assert _state(broken._mmr) == _state(clean._mmr)
+    broken.close()
+
+    broken = _ledger(tmp_path / "broken")
     for i in range(8, 20):
         for ledger in (broken, clean):
             ledger.commit_forensic(
@@ -283,10 +295,20 @@ def test_failed_commit_writes_no_wal_record(tmp_path: Path) -> None:
 def test_proofs_still_verify_after_a_failed_commit(tmp_path: Path) -> None:
     """Every committed leaf must still prove inclusion against the live root.
 
-    This is the property a botched rollback would break in the field: the root
-    keeps advancing, but proofs served from the corrupted structure no longer
-    verify against it.
+    This is the property a botched rollback would break in the field: proofs
+    served from the corrupted structure no longer verify against the root. It
+    must hold on the faulted instance, which keeps serving proofs for what it
+    already committed, and again once the chain resumes after a restart.
     """
+
+    def assert_every_proof_verifies(ledger: CryptographicAuditLedger) -> None:
+        mmr = ledger._mmr
+        root = mmr.get_root_hash()
+        for index in range(mmr.get_leaf_count()):
+            leaf_hash = mmr.nodes[mmr._leaf_node_indices[index]].hash
+            proof = mmr.get_portable_inclusion_proof(index)
+            assert MerkleMountainRange.verify_portable_inclusion_hash(leaf_hash, proof, root)
+
     ledger = _ledger(tmp_path)
     for i in range(6):
         ledger.commit_forensic(state_id=f"ok-{i}", request_bytes=REQUEST, response_bytes=RESPONSE)
@@ -296,13 +318,16 @@ def test_proofs_still_verify_after_a_failed_commit(tmp_path: Path) -> None:
         ledger.commit_forensic(state_id="doomed", request_bytes=REQUEST, response_bytes=RESPONSE)
     del ledger._persist_node
 
+    assert ledger._mmr.get_leaf_count() == 6
+    assert_every_proof_verifies(ledger)
+    with pytest.raises(LedgerFaultedError):
+        ledger.commit_forensic(state_id="ok-6", request_bytes=REQUEST, response_bytes=RESPONSE)
+    ledger.close()
+
+    ledger = _ledger(tmp_path)
     for i in range(6, 12):
         ledger.commit_forensic(state_id=f"ok-{i}", request_bytes=REQUEST, response_bytes=RESPONSE)
 
-    mmr = ledger._mmr
-    root = mmr.get_root_hash()
-    for index in range(mmr.get_leaf_count()):
-        leaf_hash = mmr.nodes[mmr._leaf_node_indices[index]].hash
-        proof = mmr.get_portable_inclusion_proof(index)
-        assert MerkleMountainRange.verify_portable_inclusion_hash(leaf_hash, proof, root)
+    assert ledger._mmr.get_leaf_count() == 12
+    assert_every_proof_verifies(ledger)
     ledger.close()

@@ -274,3 +274,34 @@ def test_the_handover_is_recorded_above_every_epoch_the_chain_holds(
         assert ledger.chain[-1].state_id == f"ha-lease-{chain}-8"
         assert ledger.chain[-1].tenant_id == "aegis-system"
     assert redis_client.get(lease.key) == b"new:1|8"  # type: ignore[attr-defined]
+
+
+def test_a_faulted_chain_starts_without_a_handover_record(
+    redis_client: object, tmp_path: object
+) -> None:
+    # The ledger refuses commits while faulted, so the handover step must not
+    # turn a corrupt WAL into a failed start: the replica comes up as a single
+    # one does, reporting the fault and refusing governed traffic.
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from aegis.core.crypto_audit import CryptographicAuditLedger
+    from aegis.proxy.app import _record_writer_handover
+
+    chain = _chain()
+    wal = Path(f"{tmp_path}/chain.jsonl")
+    with CryptographicAuditLedger(str(wal), signing_key="ha-epoch-test") as earlier:
+        earlier.commit_state(f"ha-lease-{chain}-4", 0.0, b"{}", tenant_id="aegis-system")
+    with wal.open("a") as handle:
+        handle.write('{"torn": ')
+    size_before = wal.stat().st_size
+
+    lease = _lease(redis_client, chain, "new:1")
+    assert lease.acquire() == 1
+    controller = HAController("active_passive", chain, lease, None)
+    with CryptographicAuditLedger(str(wal), signing_key="ha-epoch-test") as ledger:
+        assert ledger._fault_state == "wal_corrupt"
+        _record_writer_handover(SimpleNamespace(ha=controller, ledger=ledger))
+        assert lease.epoch == 5  # still lifted above what the chain records
+        assert all(not node.state_id.endswith("-5") for node in ledger.chain)
+    assert wal.stat().st_size == size_before
