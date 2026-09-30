@@ -248,6 +248,29 @@ None of this is capacity or production acceptance for any deployment. Governed b
 
 ---
 
+## AD-18 — The ledger gates its own commits, and a verifier trusts only keys it pins
+
+Recorded 2026-09-30. The rewritten formal models (`specs/aegis_invariants.tla`, `specs/aegis_ledger_immutability.tla`) each found a counterexample in the real design, and the owner directed that the recorded items be resolved.
+
+**Decision.**
+
+- `CryptographicAuditLedger` refuses every commit with `LedgerFaultedError` while its fault latch is not `healthy`. The check is under the ledger lock, before anything is appended to the MMR or the WAL, in all four commit methods. The latch still clears only when a new ledger replays a WAL that verifies.
+- A `pqc-ml-dsa` signature is verified only against a public key the verifier pins: the public half of its own ML-DSA identity plus `AEGIS_TRUSTED_SIGNING_PUBLIC_KEYS`. With a non-empty pinned set, any other key is `invalid`. With an empty one, a signature that checks is `unverified`, never `valid`, and counts as `UNSIGNED`. An `ed25519-fallback` signature that checks is `unverified`, because its key is minted for that one node.
+
+**Rejected.** (a) Leaving the gate at the admission boundary only (`_require_intact_ledger`, `guard_request`), which is where the gate lived until now ([Failure Semantics](FAILURE_SEMANTICS.md) §4 said the ledger class did not gate its own commits). (b) Retrying or skipping past a failed write inside the ledger. (c) Trusting the key recorded in the node, with a warning. (d) Trust-on-first-use of the first key seen in a WAL.
+
+**Why.** (a): TLC's trace in `aegis_invariants_ungated.cfg` is a request admitted before another request's write tore, whose own commit then lands after the torn bytes and is reported durable although replay can never read it. The admission check and the commit are not atomic, so no caller can close that window; only the lock that every latching writer holds can. (b) would write behind a line whose persistence is unknown, which is the same defect. (c): TLC's trace in `aegis_ledger_immutability_unpinned.cfg` is the attack itself. Anyone with write access to the WAL rewrites it and re-signs it under a key of their own, and every signature checks against the key the forged node carries; `evidence/registry/reg-d88_d93_closure.txt` shows it passing `verify_integrity()` on the code before this change. A warning does not change what verification reports. (d) accepts whatever the attacker wrote first, so it pins the forgery.
+
+**Cost.**
+
+- A process that kept committing after a failed write now gets an exception. That is a behaviour change for direct users of the ledger class; the gateway and the embedded engine already refused.
+- Operators who rotate an identity, or run HA replicas with separate identities on one chain, must list the other public keys, or those nodes read `invalid` and integrity fails. A verifier with no identity and no list reports ML-DSA chains as `unverified`, which is correct but weaker than the `valid` it reported before.
+- Pinning says which key signed. It says nothing about who held the key, whether it was compromised (`aegis_ledger_immutability_compromised.cfg`), or when the signature was made, and truncation of the tail is still undetected without an external anchor for the length. `AD-10` stands: this detects tampering, it does not prevent it.
+
+Governed by `CLM-114`, `CLM-115`, `UC-054` and [Failure Semantics](FAILURE_SEMANTICS.md).
+
+---
+
 ## Revisiting a decision
 
 A decision is revisited when its cost becomes unacceptable or its premise changes. Record the revision here with the new reasoning and the new cost. Do not edit a past entry to match a new position — the sequence of what was decided and why is the useful part.

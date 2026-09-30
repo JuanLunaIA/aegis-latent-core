@@ -99,6 +99,14 @@ verified with `hmac.compare_digest()` (constant-time) on the HMAC path.
 > weakest-signed node governs the whole chain's reported assurance. The signing key
 > is held **separately** from `AEGIS_API_KEYS`.
 
+**Verification pins asymmetric keys (`CLM-115`).** An ML-DSA node carries its own
+public key, so a signature that checks against it proves only that the record is
+internally consistent. A verifier accepts ML-DSA signatures only under its own
+identity or a key listed in `AEGIS_TRUSTED_SIGNING_PUBLIC_KEYS`: an unpinned key is
+`invalid` while that set is non-empty and `unverified` otherwise, and in either case
+the node counts as `UNSIGNED` in `signature_assurance`. For the same reason an
+`ed25519-fallback` signature that checks reads `unverified`, never `valid`.
+
 ### 2.3 `verify_integrity()`
 
 An O(N) sweep that detects, per node:

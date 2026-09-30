@@ -109,8 +109,10 @@ class FormalVerificationSuite:
 # --- Reference specifications, in proof-assistant-style axiom notation ---
 # Documentation only: illustrates the properties the methods above check
 # empirically. Not read by, or generated from, any Coq/Lean source — there
-# is no .v file in this repository, and the actual mechanically checked
-# proof of the signing/durability property is specs/AegisVerification.lean.
+# is no .v file in this repository. The mechanically checked artifacts are
+# specs/AegisVerification.lean (the request lifecycle: nothing is emitted
+# without a durable commit) and the TLC models under specs/, of which
+# aegis_ledger_immutability.tla covers signature tamper evidence.
 FORMAL_SPECS = {
     "normalization": {
         "Axiom_1": "forall s: string, normalize s = normalize (normalize s)",

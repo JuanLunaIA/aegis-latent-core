@@ -88,12 +88,32 @@ The asymmetry to plan around is the reverse: nothing retroactively seals records
 
 Lowering the cap shrinks request and response previews in new leaves only; existing leaves, signatures and proofs are untouched. It is the precondition for zero-knowledge inclusion proofs (`DOC-08` §6.3), and it costs the preview evidence those bytes carry.
 
+## 9. Signature verification pins keys, and the ledger refuses commits while faulted (unreleased source)
+
+These changes are on `main` after `5.0.1` and are not in any published release. They change what verification reports, so read this before you upgrade a verifier.
+
+**ML-DSA keys are pinned.** Earlier builds checked a `pqc-ml-dsa` signature against the public key recorded in the node itself, so anyone able to rewrite the WAL could re-sign a rewritten chain under a new key and it verified. A verifier now pins the public half of its own ML-DSA identity (`AEGIS_PQC_IDENTITY_PATH`) plus every key listed in `AEGIS_TRUSTED_SIGNING_PUBLIC_KEYS`, a comma-separated list of hex-encoded public keys.
+
+| Your deployment | What you see after upgrading | What to do |
+|---|---|---|
+| One gateway that signs under its own identity and verifies its own chain | Nothing changes; its nodes read `valid`. | Nothing. |
+| An identity was rotated, so older nodes carry an earlier key | Older nodes read `invalid` and `verify_integrity()` fails at the first of them. | List each retired public key in `AEGIS_TRUSTED_SIGNING_PUBLIC_KEYS`. |
+| HA replicas, each with its own identity, sharing one chain | Each replica reads the other's nodes as `invalid`. | List every replica's public key on every replica. |
+| A verifier with no identity and an empty allowlist | ML-DSA nodes read `unverified` (they read `valid` before), and `signature_assurance` reports `UNSIGNED`; strict mode fails the chain. | Configure the allowlist with the keys you trust. |
+
+**`ed25519-fallback` reads `unverified`.** A fallback signature that checks now reads `unverified` rather than `valid`, because its key was minted for that one node and proves only internal consistency. `verify_integrity()` and the `COMPROMISED_EPHEMERAL` tier are unchanged. If you counted `valid` statuses, fallback nodes no longer count.
+
+**The ledger refuses commits while faulted.** `commit_forensic`, `commit_state`, `commit_rejection` and `commit_forensic_summary` raise `LedgerFaultedError` (a `RuntimeError`) while the fault latch is anything but `healthy`. The gateway already answered `503` for this state; code that drives `CryptographicAuditLedger` directly and kept committing after a failed write will now get the exception. Recovery is the same as before: repair with `tools/wal_repair.py` where that applies, then open a new ledger.
+
+**HA epoch after Redis data loss.** Nothing to configure. A replica lifts the writer epoch above the highest handover its WAL records when it takes the lease, so the manual step of restoring `aegis:ha:epoch:<chain>` after a Redis restart without persistence is no longer needed.
+
 ## Upgrade order
 
 1. Read §1 and §2 and change your API reads and proxy configuration **first**.
 2. Upgrade both SDKs and the gateway together (§3).
 3. Roll out to a non-production environment and exercise your own traffic against the stricter WAF (§4).
 4. Verify `/audit/integrity` returns the `signature_assurance` tier you expect, and that it is not weaker than you assumed.
+5. Before upgrading any verifier to a build that pins keys (§9), list every rotated or replica public key it must accept.
 
 ## Rollback
 

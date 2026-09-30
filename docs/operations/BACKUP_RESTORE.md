@@ -18,6 +18,7 @@ Backing up the WAL alone produces an unverifiable archive. Five things travel to
 | **Trusted MMR roots** | Wherever you pinned them | Proofs verify only against a root supplied by the gateway, which is not independent |
 | **Configuration** | Your config management | You cannot reconstruct which controls were active when the records were written |
 | **PQC signing identity**, if `AEGIS_PQC_IDENTITY_PATH` is set | That path (raw ML-DSA-65 private key, mode `0600`) | Records signed under the post-quantum tier become unverifiable, exactly as a lost HMAC key would |
+| **Pinned public keys**, if `AEGIS_TRUSTED_SIGNING_PUBLIC_KEYS` is set | Your config management, next to the configuration above | A verifier pins only its own identity plus this list, so the ML-DSA records of a retired identity or of another HA replica read `invalid` once the list is lost (`CLM-115`) |
 | **Shredder key vault**, if `AEGIS_ENABLE_CRYPTOGRAPHIC_SHREDDING=true` | `<wal_path>.shredder.db` unless `AEGIS_SHREDDER_VAULT_PATH` says otherwise | Every sealed payload is permanently unreadable — the chain still verifies, because the vault holds no hashes, but nothing in it can be opened |
 
 **Retired keys are the item most often missed.** Rotation is routine; destroying the retired key converts every record signed under it into an unverifiable blob. Retain retired keys under the same custody as active ones, for at least as long as the records they signed.
