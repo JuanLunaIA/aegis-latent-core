@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "88ee82185249ff8d861a002383dfbe839c5d39b1702b0487619292afd619adab",
-      "size": 228162
+      "sha256": "2a7f51b5a28def77b98a6cfbf5d2667b5160679bbabf0de4daa97281c26351a9",
+      "size": 228863
     },
     {
       "category": "governed_input",
@@ -237,13 +237,13 @@
     {
       "category": "governed_input",
       "path": "dashboard/package.json",
-      "sha256": "76846a4e2da8b50d3307abdb6e01804d467b80952c3b2a108aef06de57d0520d",
+      "sha256": "083a4c6fd234876064ea100233a91706fb43e4b71214ba20a50c450e0ef8196b",
       "size": 1072
     },
     {
       "category": "governed_input",
       "path": "dashboard/package-lock.json",
-      "sha256": "4a9f7c476398a1f3248b3e78eeb8fd8e588f229b07e2db4977fcb1a8e4ef4174",
+      "sha256": "d76a35d915899eec57b88dad275620c5a566be1be695000f849b978dca9216b5",
       "size": 123609
     },
     {

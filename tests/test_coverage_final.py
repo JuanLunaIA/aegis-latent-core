@@ -270,11 +270,12 @@ def test_log_softmax_rejects_non_finite():
 def _reload_without_rust(module):
     """Reload ``module`` with ``import aegis_rust`` forced to raise ImportError.
 
-    Restores the original extension module object and reloads again so the
-    module returns to its real (Rust-available) state regardless of outcome.
+    Returns what ``_restore_with_rust`` needs to put back the original
+    extension module object and the module's original namespace.
     """
     real_import = builtins.__import__
     saved_rust = sys.modules.get("aegis_rust")
+    namespace = dict(vars(module))
 
     def fake_import(name, *args, **kwargs):
         if name == "aegis_rust":
@@ -284,13 +285,18 @@ def _reload_without_rust(module):
     sys.modules.pop("aegis_rust", None)
     with patch("builtins.__import__", side_effect=fake_import):
         importlib.reload(module)
-    return saved_rust
+    return saved_rust, namespace
 
 
-def _restore_with_rust(module, saved_rust):
+def _restore_with_rust(module, saved):
+    saved_rust, namespace = saved
     if saved_rust is not None:
         sys.modules["aegis_rust"] = saved_rust
-    importlib.reload(module)
+    # Put the original objects back rather than reloading again: a second
+    # reload rebinds every class, so callers that imported one before this test
+    # (``LedgerFaultedError`` in a ``pytest.raises``) would no longer match
+    # what the module raises.
+    vars(module).update(namespace)
 
 
 def test_rust_integration_without_extension():

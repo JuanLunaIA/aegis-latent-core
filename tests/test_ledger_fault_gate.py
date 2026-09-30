@@ -63,14 +63,11 @@ def _ledger(wal: Path) -> CryptographicAuditLedger:
 
 
 def _replayed_ids(wal: Path) -> list[str]:
-    ledger = _ledger(wal)
-    try:
+    with _ledger(wal) as ledger:
         assert ledger._fault_state == "healthy"
         ok, bad_index = ledger.verify_integrity()
         assert ok, f"replayed chain does not verify at index {bad_index}"
         return [node.state_id for node in ledger.chain]
-    finally:
-        ledger.close()
 
 
 class _TearingWrite:
@@ -108,8 +105,7 @@ class TestEveryEntryPointIsGated:
     @pytest.mark.parametrize("fault", FAULTS)
     def test_nothing_is_written_while_a_fault_is_latched(self, tmp_path: Path, fault: str) -> None:
         wal = tmp_path / "audit.jsonl"
-        ledger = _ledger(wal)
-        try:
+        with _ledger(wal) as ledger:
             ledger.commit_state("before", 0.0, b"payload")
             ledger._fault_state = fault
             wal_before = wal.read_bytes()
@@ -145,26 +141,20 @@ class TestEveryEntryPointIsGated:
             assert ledger._mmr.get_leaf_count() == leaves_before
             assert [node.state_id for node in ledger.chain] == chain_before
             assert ledger._fault_state == fault
-        finally:
-            ledger.close()
 
     def test_a_healthy_ledger_is_not_refused(self, tmp_path: Path) -> None:
         # The gate is not a blanket refusal: the same calls succeed while healthy.
-        ledger = _ledger(tmp_path / "audit.jsonl")
-        try:
+        with _ledger(tmp_path / "audit.jsonl") as ledger:
             node = ledger.commit_rejection(
                 request_bytes=b"req", rejection_code=403, reason_category="waf"
             )
             assert node.node_hash
             assert ledger._fault_state == "healthy"
-        finally:
-            ledger.close()
 
     def test_a_signing_failure_refuses_every_later_commit(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        ledger = _ledger(tmp_path / "audit.jsonl")
-        try:
+        with _ledger(tmp_path / "audit.jsonl") as ledger:
             ledger.commit_state("s1", 0.0, b"payload")
             original = ledger._sign_bound
 
@@ -180,16 +170,13 @@ class TestEveryEntryPointIsGated:
             with pytest.raises(LedgerFaultedError):
                 ledger.commit_state("s3", 0.0, b"payload")
             assert [node.state_id for node in ledger.chain] == ["s1"]
-        finally:
-            ledger.close()
 
 
 class TestCommittedRecordsStayReplayable:
     def test_a_commit_after_a_torn_write_is_refused(self, tmp_path: Path) -> None:
         wal = tmp_path / "audit.jsonl"
-        ledger = _ledger(wal)
         returned: list[str] = []
-        try:
+        with _ledger(wal) as ledger:
             returned.append(ledger.commit_state("s1", 0.0, b"payload").state_id)
             tear = _install_tear(ledger, tear_on_call=1)
             with pytest.raises(OSError, match="No space left"):
@@ -201,8 +188,6 @@ class TestCommittedRecordsStayReplayable:
             with pytest.raises(LedgerFaultedError):
                 ledger.commit_state("s3", 0.0, b"payload")
             assert tear.calls == 1, "the refused commit must not reach the WAL"
-        finally:
-            ledger.close()
 
         # Only the torn tail is damaged, so the supported repair applies, and
         # every node the ledger returned replays and verifies.
@@ -213,7 +198,6 @@ class TestCommittedRecordsStayReplayable:
         self, tmp_path: Path
     ) -> None:
         wal = tmp_path / "audit.jsonl"
-        ledger = _ledger(wal)
         returned: list[str] = []
         guard = threading.Lock()
         start = threading.Barrier(16)
@@ -228,14 +212,12 @@ class TestCommittedRecordsStayReplayable:
                 returned.append(node.state_id)
             return "committed"
 
-        try:
+        with _ledger(wal) as ledger:
             ledger.commit_state("seed", 0.0, b"payload")
             returned.append("seed")
             _install_tear(ledger, tear_on_call=6)
             with ThreadPoolExecutor(max_workers=16) as pool:
                 outcomes = list(pool.map(commit, range(16)))
-        finally:
-            ledger.close()
 
         # Five commits land before the tear, one tears, and every commit that
         # takes the lock afterwards is refused rather than written behind it.

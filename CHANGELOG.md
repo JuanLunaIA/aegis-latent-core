@@ -202,6 +202,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `tests/test_azure_kit.py`: offline checks for the kit (validation, checksums, secret scan,
   Bicep compilation, compose posture, cloud-init rendering).
 
+### Security
+
+- **Audit dashboard: `next` `16.3.4` → `16.3.8` (GHSA-vcvr-r3jv-pc5j, critical).** The advisory covers remote
+  code execution through `next/og` `ImageResponse` in `16.2.0`–`16.3.5` and was published while this branch
+  was open; `npm audit --audit-level=high` in the Audit Dashboard job failed on it. The dashboard does not
+  import `next/og`, so no route calls the vulnerable renderer, but the package ships in the dashboard image and
+  the gate is right to refuse it. After the bump, `npm ci`, typecheck, the 6 vitest tests, `next build`,
+  `npm audit` (0 vulnerabilities) and the client-bundle secret check all pass locally. No published image
+  changes until the next release.
+
 ### Documentation
 
 - Azure: [Quickstart](docs/operations/AZURE_QUICKSTART.md), [Install Options](docs/operations/AZURE_INSTALL_OPTIONS.md)

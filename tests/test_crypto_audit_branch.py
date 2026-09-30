@@ -37,14 +37,19 @@ def test_rust_available_true_branch(tmp_path):
     mock_rust.generate_pqc_keypair.return_value = mock_keypair
 
     orig = _module.RUST_AVAILABLE
+    # A reload rebinds every class in the module. Put the original objects back
+    # afterwards instead of reloading a second time: test modules that imported
+    # ``LedgerFaultedError`` before this test runs hold the original class, and
+    # a ledger raising a re-created one slips past their ``pytest.raises``.
+    namespace = dict(vars(_module))
     try:
         with patch.dict("sys.modules", {"aegis_rust": mock_rust}):
             importlib.reload(_module)
             assert _module.RUST_AVAILABLE is True
     finally:
-        # Restore — reload without mocked aegis_rust so normal state resumes.
-        importlib.reload(_module)
-        assert _module.RUST_AVAILABLE == orig
+        vars(_module).update(namespace)
+    assert _module.RUST_AVAILABLE == orig
+    assert _module.CryptographicAuditLedger is CryptographicAuditLedger
 
 
 # ── signature_assurance — chain-history-based lattice (line ~273) ────────────
