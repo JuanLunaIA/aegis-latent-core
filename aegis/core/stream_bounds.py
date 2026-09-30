@@ -26,11 +26,17 @@ declared ranges, used by both.
 What this does and does not establish
 -------------------------------------
 
-The Z3 check in ``specs/aegis_stream_buffer.smt2`` is an arithmetic
-consistency check — it asserts the retained-byte expression and then asserts
-that the same expression exceeds itself, and ``unsat`` says only that no
-assignment inside the declared ranges does so. It is not a refinement proof of
-this module, of the proxy, of CPython's allocator, or of process memory.
+The Z3 run over ``specs/aegis_stream_buffer.smt2`` checks arithmetic over the
+declared ranges: an observation whose held-back characters, queued bytes,
+in-flight event and preview each stay within their budget never retains more
+than ``R_max`` (check S1); ``R_max`` never exceeds 33,636,352 bytes and reaches
+it (S2, S3); ``4W`` never exceeds ``R_max`` for the same ``W`` (S4); and a
+ceiling of ``3W`` in place of ``4W`` is exceeded by some observation (W1), so
+the factor four is load-bearing. The gate also requires the satisfiable checks
+to come back ``sat``, so a contradictory domain fails instead of passing. That
+each component actually stays within its budget is enforced by the streaming
+code and its tests, not by Z3. It is not a refinement proof of this module, of
+the proxy, of CPython's allocator, or of process memory.
 ``docs/formal/FORMAL_VERIFICATION_LIMITS.md`` records that boundary and it is
 unchanged here.
 
@@ -57,20 +63,20 @@ from typing import Final
 #: Maximum bytes one Unicode code point occupies in UTF-8.
 UTF8_MAX_BYTES_PER_CHAR: Final[int] = 4
 
-#: ``W`` range declared by ``specs/aegis_stream_buffer.smt2`` line 10, matching
+#: ``W`` range declared for ``window_chars`` in ``specs/aegis_stream_buffer.smt2``, matching
 #: ``StreamingDeidentifier`` and ``AegisSettings.stream_deidentifier_window_chars``.
 WINDOW_CHARS_MIN: Final[int] = 64
 WINDOW_CHARS_MAX: Final[int] = 4096
 
-#: ``Q`` range declared by ``specs/aegis_stream_buffer.smt2`` line 11.
+#: ``Q`` range declared for ``queue_bytes`` in ``specs/aegis_stream_buffer.smt2``.
 QUEUE_BYTES_MIN: Final[int] = 1_024
 QUEUE_BYTES_MAX: Final[int] = 16_777_216
 
-#: ``E`` lower bound declared by ``specs/aegis_stream_buffer.smt2`` line 12. Its
+#: ``E`` lower bound declared for ``event_bytes`` in ``specs/aegis_stream_buffer.smt2``. Its
 #: upper bound is ``Q``, so it is checked relationally rather than as a constant.
 EVENT_BYTES_MIN: Final[int] = 256
 
-#: ``P`` range declared by ``specs/aegis_stream_buffer.smt2`` line 13.
+#: ``P`` range declared for ``preview_bytes`` in ``specs/aegis_stream_buffer.smt2``.
 PREVIEW_BYTES_MIN: Final[int] = 0
 PREVIEW_BYTES_MAX: Final[int] = 65_536
 
@@ -129,8 +135,8 @@ class StreamRetentionBounds:
         ``False`` for these bounds and says so rather than pretending a queue
         that is not there. The expression is non-decreasing in each term, so
         this ceiling is no larger than the ceiling of any declared-domain
-        configuration with the same ``W``; that is arithmetic stated here, not
-        a result the Z3 run establishes.
+        configuration with the same ``W``; check S4 in the spec file is that
+        statement, and the formal gate requires it to be ``unsat``.
         """
 
         return cls(window_chars=window_chars, queue_bytes=0, event_bytes=0, preview_bytes=0)

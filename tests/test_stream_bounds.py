@@ -13,9 +13,12 @@ declares — a drift between them would leave the code enforcing a bound nobody
 proved anything about — and that the expression is monotone, since the
 in-process reduction to ``4W`` relies on it.
 
-Not claimed: that any of this proves the proxy's memory use. The Z3 check is an
-arithmetic tautology over declared ranges. These tests check that the code
-agrees with it, which is a smaller statement than "the bound holds".
+Not claimed: that any of this proves the proxy's memory use. The Z3 checks are
+arithmetic over the declared ranges: an observation whose components each stay
+within budget never exceeds ``R_max``, and the domain maximum is 33,636,352
+bytes. That each component stays within its budget is the streaming code's job.
+These tests check that the code agrees with the spec file, which is a smaller
+statement than "the bound holds".
 
 Calls with side effects are assigned before being asserted on, never called
 inside the ``assert`` itself (``python -O`` strips asserts; CodeQL flags this as
@@ -80,6 +83,33 @@ class TestSpecAgreement:
             f"(+ (* {UTF8_MAX_BYTES_PER_CHAR} window_chars) queue_bytes event_bytes preview_bytes)"
         )
         assert expression in text
+
+    def test_the_domain_maximum_is_the_constant_the_spec_checks(self) -> None:
+        # Checks S2 and S3 state that R_max peaks at exactly this many bytes
+        # over the declared domain. Reading the constant out of the file and
+        # computing it from the code's maxima ties the two together: a range
+        # widened on one side only changes one of these numbers.
+        text = SPEC.read_text(encoding="utf-8")
+        found = re.search(r"\(assert \(> R_max (\d+)\)\)", text)
+        assert found is not None, "check S2 no longer states a domain maximum"
+        peak = StreamRetentionBounds(
+            window_chars=WINDOW_CHARS_MAX,
+            queue_bytes=QUEUE_BYTES_MAX,
+            event_bytes=QUEUE_BYTES_MAX,
+            preview_bytes=PREVIEW_BYTES_MAX,
+        )
+        assert peak.in_declared_domain
+        assert peak.max_retained_bytes == int(found.group(1)) == 33_636_352
+
+    def test_every_check_in_the_spec_declares_its_expected_result(self) -> None:
+        # The formal gate compares Z3's output with this line; a check added
+        # without extending it fails the gate, and so does this test.
+        text = SPEC.read_text(encoding="utf-8")
+        expected = re.search(r"^; expect: (.+)$", text, re.MULTILINE)
+        assert expected is not None
+        results = expected.group(1).split()
+        assert len(results) == text.count("(check-sat)")
+        assert "sat" in results, "no satisfiable check: a vacuous domain would pass"
 
 
 class TestExpression:

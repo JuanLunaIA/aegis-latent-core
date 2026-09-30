@@ -38,6 +38,33 @@ fn refill_target(cur: i64, gain: i64, capacity_milli: i64) -> i64 {
     cur.saturating_add(gain).min(capacity_milli)
 }
 
+/// Millitokens earned over `elapsed_ms`: saturating for the same reason as
+/// [`refill_target`] — a bucket idle for about 25 days at the largest `u32`
+/// rate would overflow `i64` here.
+#[inline]
+fn refill_gain(elapsed_ms: i64, refill_per_ms: i64) -> i64 {
+    elapsed_ms.saturating_mul(refill_per_ms)
+}
+
+/// Balance after admitting one request of `cost_milli`, or `None` to reject.
+///
+/// Factored out of the consume CAS loop so that the arithmetic the loop
+/// commits is the arithmetic `mod verification` checks.
+#[inline]
+fn consume_target(cur: i64, cost_milli: i64) -> Option<i64> {
+    if cur < cost_milli {
+        None
+    } else {
+        Some(cur - cost_milli)
+    }
+}
+
+/// `capacity` tokens in millitokens. `u32::MAX * 1000` is far inside `i64`.
+#[inline]
+fn capacity_milli(capacity: u32) -> i64 {
+    (capacity as i64) * 1000
+}
+
 fn now_millis() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -78,7 +105,7 @@ impl BucketState {
                 .compare_exchange(last, now_ms, Ordering::AcqRel, Ordering::Relaxed)
                 .is_ok()
             {
-                let gain = elapsed.saturating_mul(refill_per_ms);
+                let gain = refill_gain(elapsed, refill_per_ms);
                 // Add gain and clamp to capacity.
                 let mut cur = self.tokens_milli.load(Ordering::Acquire);
                 loop {
@@ -99,12 +126,12 @@ impl BucketState {
         // ── Consume phase ─────────────────────────────────────────────────
         let mut cur = self.tokens_milli.load(Ordering::Acquire);
         loop {
-            if cur < cost_milli {
+            let Some(next) = consume_target(cur, cost_milli) else {
                 return false;
-            }
+            };
             match self.tokens_milli.compare_exchange_weak(
                 cur,
-                cur - cost_milli,
+                next,
                 Ordering::AcqRel,
                 Ordering::Relaxed,
             ) {
@@ -135,7 +162,7 @@ impl RustRateLimiter {
     pub fn new(capacity: u32, refill_rate: u32) -> Self {
         RustRateLimiter {
             buckets: Arc::new(DashMap::new()),
-            capacity_milli: (capacity as i64) * 1000,
+            capacity_milli: capacity_milli(capacity),
             // tokens/sec = millitokens/ms (identities cancel: ×1000 milli/token ÷ 1000 ms/sec).
             // Direct assignment preserves correct refill speed for rates as low as 1 token/sec.
             refill_per_ms: (refill_rate as i64).max(0),
@@ -185,6 +212,22 @@ mod tests {
     }
 
     #[test]
+    fn a_long_idle_bucket_refills_to_capacity_without_overflow() {
+        // 2^31 + 1 ms (~24.9 days) at the largest rate is past i64::MAX.
+        let gain = refill_gain(2_147_483_649, i64::from(u32::MAX));
+        assert_eq!(gain, i64::MAX);
+        let cap = capacity_milli(u32::MAX);
+        assert_eq!(refill_target(0, gain, cap), cap);
+    }
+
+    #[test]
+    fn consume_rejects_below_cost_and_debits_at_or_above_it() {
+        assert_eq!(consume_target(999, 1_000), None);
+        assert_eq!(consume_target(1_000, 1_000), Some(0));
+        assert_eq!(consume_target(5_500, 1_000), Some(4_500));
+    }
+
+    #[test]
     fn evict_stale_tolerates_an_absurd_max_age() {
         let rl = RustRateLimiter::new(5, 1);
         assert!(rl.check_and_consume("tenant-a"));
@@ -211,5 +254,91 @@ mod tests {
         assert!(!rl.check_and_consume("a"));
         // tenant b unaffected
         assert!(rl.check_and_consume("b"));
+    }
+}
+
+/// Kani proofs over the limiter's arithmetic, the same functions the CAS loops
+/// call. `specs/aegis_invariants.smt2` states these properties over the
+/// mathematical integers; these harnesses check them bit-precisely in the code
+/// itself, where an overflow is a verification failure (Kani checks every
+/// arithmetic operation). Scope: arithmetic only. No atomics, memory ordering,
+/// clock or `DashMap` is modelled.
+#[cfg(kani)]
+mod verification {
+    use super::{capacity_milli, consume_target, refill_gain, refill_target};
+
+    /// A balance `0 <= cur <= capacity_milli(capacity)` for a symbolic `u32`
+    /// capacity: the invariant both CAS steps must preserve.
+    fn bucket() -> (i64, i64) {
+        let capacity: u32 = kani::any();
+        let cap = capacity_milli(capacity);
+        let cur: i64 = kani::any();
+        kani::assume(0 <= cur && cur <= cap);
+        (cur, cap)
+    }
+
+    /// The constructor never overflows and a fresh bucket, which starts full,
+    /// satisfies the invariant.
+    #[kani::proof]
+    fn capacity_milli_is_exact_and_non_negative() {
+        let capacity: u32 = kani::any();
+        let cap = capacity_milli(capacity);
+        assert!(cap >= 0);
+        assert!(cap as i128 == capacity as i128 * 1000);
+    }
+
+    /// The refill CAS preserves `0 <= tokens <= capacity` for every elapsed
+    /// time and rate that pass `try_consume`'s guard.
+    #[kani::proof]
+    fn refill_preserves_the_bounds() {
+        let (cur, cap) = bucket();
+        let elapsed: i64 = kani::any();
+        let rate: u32 = kani::any();
+        let refill_per_ms = rate as i64;
+        kani::assume(elapsed > 0 && refill_per_ms > 0);
+        let next = refill_target(cur, refill_gain(elapsed, refill_per_ms), cap);
+        assert!(0 <= next && next <= cap);
+        assert!(next >= cur);
+    }
+
+    /// Saturation only prevents an overflow; it never loses or invents a
+    /// token. The result equals `min(cur + elapsed * rate, capacity)` over the
+    /// integers. When the product fits an `i64` the comparison is exact, with
+    /// the sum taken in `i128`; when it does not, the true product exceeds
+    /// `i64::MAX`, which is at least `capacity`, so the exact result is the
+    /// capacity. (Stating it with an `i128` product instead is the same claim
+    /// but a 128-bit multiplication CBMC does not finish in reasonable time.)
+    #[kani::proof]
+    fn refill_equals_the_unbounded_result() {
+        let (cur, cap) = bucket();
+        let elapsed: i64 = kani::any();
+        let rate: u32 = kani::any();
+        let refill_per_ms = rate as i64;
+        kani::assume(elapsed > 0 && refill_per_ms > 0);
+        let next = refill_target(cur, refill_gain(elapsed, refill_per_ms), cap);
+        match elapsed.checked_mul(refill_per_ms) {
+            Some(product) => {
+                let exact = (cur as i128 + product as i128).min(cap as i128);
+                assert!(next as i128 == exact);
+            }
+            None => assert!(next == cap),
+        }
+    }
+
+    /// The consume CAS preserves the invariant, debits exactly the cost when
+    /// it admits, and rejects exactly when the balance is below the cost.
+    #[kani::proof]
+    fn consume_preserves_the_bounds() {
+        let (cur, cap) = bucket();
+        let cost: i64 = kani::any();
+        kani::assume(cost >= 0);
+        match consume_target(cur, cost) {
+            Some(next) => {
+                assert!(cur >= cost);
+                assert!(next == cur - cost);
+                assert!(0 <= next && next <= cap);
+            }
+            None => assert!(cur < cost),
+        }
     }
 }

@@ -2,78 +2,151 @@
    Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
    Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms. *)
  ------------------------ MODULE aegis_session_manager ------------------------
+(***************************************************************************)
+(* SessionLifecycleManager (aegis/core/session_manager.py): an LRU-bounded *)
+(* map from session ID to its own LogitEntropyMonitor.                     *)
+(*                                                                         *)
+(* The previous model described sessions bound to ledger roots and a       *)
+(* network status. The code has neither, and its ZeroTrustEnforced        *)
+(* invariant read a variable that no action ever changed. This model is   *)
+(* the code's actual contract: get_monitor, terminate_session and close,   *)
+(* under the single RLock that serialises them.                            *)
+(*                                                                         *)
+(* PoolMonitors models a tempting optimisation - hand the evicted session's*)
+(* monitor to the new one instead of allocating - which would carry one    *)
+(* user's EMA state into another's. MonitorOwnership fails under it         *)
+(* (aegis_session_manager_pooled.cfg); the code allocates, and             *)
+(* tests/test_session_manager_conformance.py checks the same invariants on *)
+(* the real class.                                                         *)
+(*                                                                         *)
+(* Scope: the Python mapping only. The optional Rust metadata store is a   *)
+(* mirror for metrics and is not modelled.                                 *)
+(***************************************************************************)
 EXTENDS Naturals, Sequences, FiniteSets
 
-CONSTANTS SessionIds, Roots, NoRoot, MaxCommits
+CONSTANTS SessionIds, MaxSessions, MaxMonitors, NoMonitor, NoOwner, PoolMonitors
 
-VARIABLES sessions, binding, ledger, network_status, insecure_processing
+ASSUME MaxSessions \in Nat \ {0}
+ASSUME PoolMonitors \in BOOLEAN
 
-vars == <<sessions, binding, ledger, network_status, insecure_processing>>
+VARIABLES order, monitor_of, owner, created, last_get, evicted_once,
+          reaccessed_once
 
-SequenceRange(sequence) ==
-    {sequence[index] : index \in 1..Len(sequence)}
+vars == <<order, monitor_of, owner, created, last_get, evicted_once,
+          reaccessed_once>>
+
+Monitors == 1..MaxMonitors
+
+Range(s) == {s[i] : i \in 1..Len(s)}
+Without(s, x) == SelectSeq(s, LAMBDA y: y # x)
+Live == Range(order)
 
 TypeOK ==
-    /\ SessionIds # {}
-    /\ Roots # {}
-    /\ NoRoot \notin Roots
-    /\ MaxCommits \in Nat \ {0}
-    /\ sessions \subseteq SessionIds
-    /\ binding \in [SessionIds -> Roots \cup {NoRoot}]
-    /\ ledger \in Seq(Roots)
-    /\ Len(ledger) <= MaxCommits
-    /\ network_status \in {"SECURE", "COMPROMISED"}
-    /\ insecure_processing \in BOOLEAN
+    /\ order \in Seq(SessionIds)
+    /\ monitor_of \in [SessionIds -> Monitors \cup {NoMonitor}]
+    /\ owner \in [Monitors -> SessionIds \cup {NoOwner}]
+    /\ created \in 0..MaxMonitors
+    /\ last_get \in {<<>>} \cup (SessionIds \X Monitors)
+    /\ evicted_once \in BOOLEAN
+    /\ reaccessed_once \in BOOLEAN
 
 Init ==
-    /\ sessions = {}
-    /\ binding = [session \in SessionIds |-> NoRoot]
-    /\ ledger = <<>>
-    /\ network_status = "SECURE"
-    /\ insecure_processing = FALSE
+    /\ order = <<>>
+    /\ monitor_of = [s \in SessionIds |-> NoMonitor]
+    /\ owner = [m \in Monitors |-> NoOwner]
+    /\ created = 0
+    /\ last_get = <<>>
+    /\ evicted_once = FALSE
+    /\ reaccessed_once = FALSE
 
-CommitToLedger(root) ==
-    /\ Len(ledger) < MaxCommits
-    /\ ledger' = Append(ledger, root)
-    /\ UNCHANGED <<sessions, binding, network_status, insecure_processing>>
+\* get_monitor(s) for a live session: move it to the MRU end, return its monitor.
+Reaccess(s) ==
+    /\ s \in Live
+    /\ order' = Append(Without(order, s), s)
+    /\ last_get' = <<s, monitor_of[s]>>
+    /\ reaccessed_once' = TRUE
+    /\ UNCHANGED <<monitor_of, owner, created, evicted_once>>
 
-CreateSession(session) ==
-    /\ session \notin sessions
-    /\ Len(ledger) > 0
-    /\ sessions' = sessions \cup {session}
-    /\ binding' = [binding EXCEPT ![session] = ledger[Len(ledger)]]
-    /\ UNCHANGED <<ledger, network_status, insecure_processing>>
+\* get_monitor(s) for a new session: evict the LRU entry at capacity, then
+\* insert a monitor for s.
+Create(s) ==
+    /\ s \notin Live
+    /\ LET full == Len(order) >= MaxSessions
+           victim == Head(order)
+           pooled == full /\ PoolMonitors
+           m == IF pooled THEN monitor_of[victim] ELSE created + 1
+       IN /\ pooled \/ created < MaxMonitors
+          /\ order' = Append(IF full THEN Tail(order) ELSE order, s)
+          /\ monitor_of' = [x \in SessionIds |->
+                               IF x = s THEN m
+                               ELSE IF full /\ x = victim THEN NoMonitor
+                               ELSE monitor_of[x]]
+          /\ owner' = IF pooled THEN owner ELSE [owner EXCEPT ![m] = s]
+          /\ created' = IF pooled THEN created ELSE created + 1
+          /\ last_get' = <<s, m>>
+          /\ evicted_once' = (evicted_once \/ full)
+    /\ UNCHANGED reaccessed_once
 
-ProcessRequest(session) ==
-    /\ session \in sessions
-    /\ network_status = "SECURE"
-    /\ UNCHANGED vars
+Terminate(s) ==
+    /\ order' = Without(order, s)
+    /\ monitor_of' = [monitor_of EXCEPT ![s] = NoMonitor]
+    /\ last_get' = <<>>
+    /\ UNCHANGED <<owner, created, evicted_once, reaccessed_once>>
 
-NetworkFailure ==
-    /\ network_status = "SECURE"
-    /\ network_status' = "COMPROMISED"
-    /\ UNCHANGED <<sessions, binding, ledger, insecure_processing>>
-
-NetworkRecovery ==
-    /\ network_status = "COMPROMISED"
-    /\ network_status' = "SECURE"
-    /\ UNCHANGED <<sessions, binding, ledger, insecure_processing>>
+Close ==
+    /\ order' = <<>>
+    /\ monitor_of' = [s \in SessionIds |-> NoMonitor]
+    /\ last_get' = <<>>
+    /\ UNCHANGED <<owner, created, evicted_once, reaccessed_once>>
 
 Next ==
-    \/ \E root \in Roots: CommitToLedger(root)
-    \/ \E session \in SessionIds: CreateSession(session)
-    \/ \E session \in SessionIds: ProcessRequest(session)
-    \/ NetworkFailure
-    \/ NetworkRecovery
-
-SessionBinding ==
-    \A session \in sessions: binding[session] \in SequenceRange(ledger)
-
-ZeroTrustEnforced ==
-    insecure_processing = FALSE
+    \/ \E s \in SessionIds: Reaccess(s) \/ Create(s) \/ Terminate(s)
+    \/ Close
 
 Spec == Init /\ [][Next]_vars
 
-THEOREM Spec => []SessionBinding
-THEOREM Spec => []ZeroTrustEnforced
+(***************************************************************************)
+(* Safety.                                                                 *)
+(***************************************************************************)
+
+\* max_sessions is a hard bound (BUG-05: the map used to grow without limit).
+Bounded == Len(order) <= MaxSessions
+
+NoDuplicates == Len(order) = Cardinality(Live)
+
+LiveIffMonitor == \A s \in SessionIds: (s \in Live) <=> (monitor_of[s] # NoMonitor)
+
+\* Two live sessions never share a monitor.
+Isolation ==
+    \A s1, s2 \in Live: s1 # s2 => monitor_of[s1] # monitor_of[s2]
+
+\* A live session's monitor was created for that session and no other, so no
+\* EMA state crosses from one session to another, even through eviction.
+MonitorOwnership == \A s \in Live: owner[monitor_of[s]] = s
+
+\* What get_monitor returns belongs to the session it was asked for.
+ReturnedOwned == last_get # <<>> => owner[last_get[2]] = last_get[1]
+
+\* Re-accessing a live session returns the monitor it already had.
+StableOnReaccess ==
+    [][\A s \in SessionIds:
+         (s \in Live /\ last_get' # <<>> /\ last_get'[1] = s)
+            => last_get'[2] = monitor_of[s]]_vars
+
+\* The only session get_monitor ever removes is the least recently used one.
+EvictsLeastRecentlyUsed ==
+    [][\A s \in SessionIds:
+         (s \in Live /\ s \notin Range(order') /\ last_get' # <<>>
+            /\ last_get'[1] # s)
+            => s = Head(order)]_vars
+
+THEOREM Spec => [](Bounded /\ Isolation /\ MonitorOwnership /\ ReturnedOwned)
+
+(***************************************************************************)
+(* Witnesses: each is expected to be VIOLATED.                             *)
+(***************************************************************************)
+
+WitnessNeverFull == Len(order) < MaxSessions
+WitnessNoEviction == ~evicted_once
+WitnessNoReaccess == ~reaccessed_once
 =============================================================================
