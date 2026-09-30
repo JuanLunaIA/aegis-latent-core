@@ -2,8 +2,10 @@ REG-D94..REG-D105 — closure record for the 2026-09-30 WAF red-team and seccomp
 ===========================================================================================
 
 Branch claude/aegis-v4-comprehensive-audit-m2qyka. Every item was fixed in
-f3e7bb1 on top of 8e03b31. For each item this record gives what was observed at
-8e03b31 before the fix and what was observed on the branch after it.
+f3e7bb1 on top of 8e03b31. 8e03b31 is the head of PR #225, which main carries
+as the squash commit 3d7bc69; `git diff 8e03b31 3d7bc69` is empty, so the
+"before" tree is also main's. For each item this record gives what was
+observed at 8e03b31 before the fix and what was observed on the branch after it.
 
 Environment: Linux 6.18 x86_64 container, Python 3.11 venv with the hash-locked
 runtime, libseccomp.so.2, and the aegis_rust extension rebuilt from the branch
