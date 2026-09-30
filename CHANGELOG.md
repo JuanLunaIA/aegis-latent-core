@@ -18,6 +18,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Behaviour change: unusable request bodies answer `400`, not `500`** (`REG-D98`, `CLM-118`). At
+  `/v1/chat/completions`, `/v1/completions` and `/v1/messages`, invalid UTF-8, an integer past Python's digit
+  limit, a body that is not a JSON object, and nesting deeper than 32 levels are refused `400` before
+  canonicalisation. The details are `Invalid JSON`, `Request body must be a JSON object` and
+  `JSON nesting exceeds 32 levels`. A body nested 33 levels or more was a `403` from the WAF depth guard and
+  is now a `400`; it is still recorded as a rejection node. `/v1/messages` answers a non-object body with the
+  new shared detail instead of `Anthropic request must be an object`. See `docs/UPGRADING.md`.
+- **Behaviour change: a strict gateway refuses `tsa_url`** (`REG-D105`, `CLM-119`). RFC 3161 verification
+  runs the `openssl` binary, which the seccomp profile forbids, so the first anchor used to kill the
+  process. The lifespan now refuses the combination before the filter loads. Strict mode with
+  `require_seccomp` fails startup; development mode warns and runs without the filter. Anchor archived
+  segment manifests out of process instead.
+- **Behaviour change: the WAF no longer refuses ordinary prose containing "dan" or "disregard previous"**
+  (`REG-D94`). "clinical guidance", "in accordance with", "Jordan", "Dante" and "disregard previous
+  correspondence" now pass. The DAN family needs a word boundary, and "disregard" needs an instruction
+  object, in both Layer 1 and the Rust pre-filter. Every DAN and disregard attack form in the tests is still
+  refused.
 - **Behaviour change: `pqc-ml-dsa` signatures are verified only against pinned keys.** A verifier pins
   the public half of its own ML-DSA identity and the keys in the new `AEGIS_TRUSTED_SIGNING_PUBLIC_KEYS`
   (comma-separated hex). While that set is non-empty, a node signed under any other key reads `invalid` and
@@ -89,6 +106,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The gateway killed itself the first time a post-lockdown feature ran** (`REG-D103`, `REG-D104`,
+  `CLM-119`). The seccomp profile had been measured on the request path. WAL rotation, which S3 archival
+  requires, called `chmod` on a path, and `mkdir` on a directory that already existed. S3 archival and
+  cryptographic shredding write SQLite databases whose syscalls were loaded only for the HA sequence store.
+  Each feature was killed with SIGSYS on first use; this was reproduced with the real filter at `8e03b31`.
+  Rotation now uses `fchmod` on the open descriptor and creates directories only when missing. The lifespan
+  loads `SQLITE_SYSCALLS` (`fchown`, `ftruncate`, `geteuid`, `pread64`, `pwrite64`) only when archival,
+  shredding or the SQLite sequence store is configured. `tests/test_seccomp_runtime_paths.py` runs each flow
+  under the real filter in a child interpreter.
+- **Five malformed-body classes answered `500`** (`REG-D98`). One parser now answers `400` at all three
+  model endpoints (see Changed). A chat text block whose `text` is null or a list no longer raises in the
+  WAF.
+- **The YARA rule-header regex was cubic on a run of spaces** (`REG-D102`). 2000 spaces took 2.3 s and now
+  take 0.00006 s. `aegis/core/yara_engine.py` is not on the gateway path.
 - **A commit could be reported durable and then never replay.** `specs/aegis_invariants.tla`, rewritten to
   model write failures, torn tails, crashes, replay and repair, found it: request A's write tears part-way
   through a line and latches `wal_persist_failed`; request B, admitted by the gateway before the latch,
@@ -204,6 +235,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **WAF evasions closed, each reproduced over HTTP first** (`REG-D95`–`REG-D97`, `REG-D99`–`REG-D101`,
+  `CLM-117`). Every payload below reached the provider before this fix:
+  - Unicode tag characters, a word joiner, bidi isolates, variation selectors and combining marks, each
+    splitting "ignore previous instructions".
+  - Star, slash, pipe and padded letter-spacing, and phrases written with no spaces at all.
+  - Base64-wrapped Layer-1 phrases.
+  - Layer-2-only phrases placed in `prompt` or `system` instead of `messages`.
+
+  Also fixed:
+  - The template pattern was quadratic on unclosed `{{`. 32 KB took 3.45 s, and a 1 MiB body could hold a
+    worker for about an hour; it now takes 0.031 s.
+  - The Layer-2 obfuscation markers never matched.
+
+  Each fix counters one named encoding. Alternating separators, other encodings, split fields and
+  paraphrase still pass Layer 1, and the WAF remains detection, not an injection boundary (`UC-042`).
+  Layer 2 now scores tool descriptions and metadata, so it can refuse benign ones.
 - **Audit dashboard: `next` `16.3.4` → `16.3.8` (GHSA-vcvr-r3jv-pc5j, critical).** The advisory covers remote
   code execution through `next/og` `ImageResponse` in `16.2.0`–`16.3.5` and was published while this branch
   was open; `npm audit --audit-level=high` in the Audit Dashboard job failed on it. The dashboard does not

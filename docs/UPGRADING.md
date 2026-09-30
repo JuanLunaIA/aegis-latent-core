@@ -107,6 +107,43 @@ These changes are on `main` after `5.0.1` and are not in any published release. 
 
 **HA epoch after Redis data loss.** Nothing to configure. A replica lifts the writer epoch above the highest handover its WAL records when it takes the lease, so the manual step of restoring `aegis:ha:epoch:<chain>` after a Redis restart without persistence is no longer needed.
 
+## 10. Malformed bodies answer `400`, a strict gateway refuses `tsa_url`, and the WAF refuses less ordinary prose (unreleased source)
+
+These changes are on `main` after `5.0.1` and are not in any published release.
+
+**Malformed bodies answer `400`, not `500`** (`CLM-118`). The three model endpoints parse every body with one helper.
+
+| Body | Before | After |
+|---|---|---|
+| Invalid UTF-8, or an integer longer than Python's digit limit | `500 Internal server error` | `400 Invalid JSON` |
+| Valid JSON that is not an object (a list, a string, `null`) | `500` at `/v1/chat/completions` and `/v1/completions`; `400 Anthropic request must be an object` at `/v1/messages` | `400 Request body must be a JSON object` at all three |
+| Nested 11 to 32 levels | `403` from the WAF depth guard, with a rejection node | unchanged |
+| Nested 33 levels to the parser's limit | `403` with a rejection node, or `500` once `canonical_normalize` ran out of stack | `400 JSON nesting exceeds 32 levels`, with a rejection node |
+| Nested past the parser's own recursion limit | `500` | `400 Invalid JSON` |
+
+If a client or dashboard counted `403` for over-deep bodies, count `400` with an `X-Aegis-Rejection-ID` instead. A `400` without that header is a body the gateway could not use, and it is not recorded, as before.
+
+**A strict gateway refuses `tsa_url`** (`CLM-119`). RFC 3161 verification runs the `openssl` binary, and the seccomp profile forbids starting a program. Until now, the first anchor killed the gateway with SIGSYS. With `tsa_url` set and the filter about to load, the lifespan now raises before loading it:
+
+- Strict mode with `require_seccomp` fails startup with `Seccomp enforcement required but unavailable: tsa_url is set, ...`.
+- Development mode logs the reason and runs without the filter.
+
+To keep trusted-time anchoring alongside the filter, unset `AEGIS_TSA_URL` on the gateway and timestamp the archived segment manifests from a separate process.
+
+**The WAF refuses less ordinary prose** (`REG-D94`). Words containing "dan" ("guidance", "accordance", "Jordan") and "disregard previous" without an instruction object ("disregard previous correspondence") are no longer refused. If you relied on those refusals as a crude filter, add the phrases to your own policy. The DAN and disregard attack forms are still refused.
+
+**The WAF refuses more attacks** (`CLM-117`). It now refuses several spellings it used to pass:
+
+- tag-character, invisible-character and combining-mark spellings;
+- star-, slash- and pipe-separated spellings;
+- phrases with their spaces removed;
+- base64-wrapped phrases;
+- Layer-2 phrases in any field, not only `messages`.
+
+A tool description or metadata string that contains a Layer-2 phrase can now cause a refusal. Check your tool schemas against `/v1/chat/completions` in development mode before upgrading.
+
+**WAL rotation, S3 archival and cryptographic shredding now run behind the filter.** Nothing to configure. They were killed with SIGSYS on first use before (`CLM-119`). The larger profile is loaded only when archival, shredding or the SQLite HA sequence store is configured.
+
 ## Upgrade order
 
 1. Read §1 and §2 and change your API reads and proxy configuration **first**.
