@@ -483,8 +483,25 @@ def _record_writer_handover(state: _AppState) -> None:
     if controller.sequencer is not None:
         state.ledger.add_commit_listener(controller.sequencer.notify)
     if controller.lease is not None:
+        # The epoch counter lives in Redis; after Redis loses its data it
+        # restarts below epochs this chain already records. Lift it above the
+        # highest one before the handover is written or anything is sequenced.
+        floor = ha.highest_recorded_epoch(state.ledger.iter_wal_nodes(), controller.chain_id)
+        epoch = controller.lease.raise_epoch_above(floor)
+        fault = getattr(state.ledger, "_fault_state", "healthy")
+        if fault != "healthy":
+            # The ledger refuses every commit while faulted. Start anyway, as a
+            # single replica does: /audit/health reports the fault and
+            # _require_intact_ledger answers 503 until the chain is repaired.
+            logger.error(
+                "writer handover for chain %s at epoch %d not recorded: ledger fault_state=%s",
+                controller.chain_id,
+                epoch,
+                fault,
+            )
+            return
         state.ledger.commit_state(
-            state_id=f"ha-lease-{controller.chain_id}-{controller.lease.epoch}",
+            state_id=f"ha-lease-{controller.chain_id}-{epoch}",
             entropy=0.0,
             payload=ha.handover_record(controller),
             tenant_id="aegis-system",
@@ -1010,6 +1027,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         require_strong_signing=cfg.security_enforcement_mode == "strict",
         mmr_hash_scheme=cfg.mmr_hash_scheme,
         pqc_identity_path=cfg.pqc_identity_path,
+        trusted_public_keys=[
+            key.strip() for key in cfg.trusted_signing_public_keys.split(",") if key.strip()
+        ],
         enable_cryptographic_shredding=cfg.enable_cryptographic_shredding,
         shredder_vault_path=cfg.shredder_vault_path or None,
     )

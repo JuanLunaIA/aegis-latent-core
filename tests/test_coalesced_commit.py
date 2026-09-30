@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from aegis.core.crypto_audit import CryptographicAuditLedger
+from aegis.core.crypto_audit import CryptographicAuditLedger, LedgerFaultedError
 from aegis.core.group_commit import CoalescedCommitEngine, WalDurabilityError
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -194,7 +194,10 @@ class TestABatchFailsClosedTogether:
                     )
                 )
 
-            assert all(o == "failed" for o in outcomes), outcomes
+            # Each commit either shares the failed fsync or arrives after the
+            # latch and is refused before it writes; none returns a node.
+            assert set(outcomes) <= {"failed", "refused"}, outcomes
+            assert "failed" in outcomes, outcomes
             assert ledger._fault_state == "wal_persist_failed"
 
     def test_the_ledger_refuses_further_commits_after_a_durability_failure(
@@ -212,9 +215,10 @@ class TestABatchFailsClosedTogether:
             with pytest.raises(WalDurabilityError):
                 _commit(ledger, 1)
 
-            # The disk "recovers" — the ledger must not.
+            # The disk "recovers" — the ledger must not. The refusal now comes
+            # from the ledger's own check, before anything is written.
             disk.armed.clear()
-            with pytest.raises(WalDurabilityError):
+            with pytest.raises(LedgerFaultedError):
                 _commit(ledger, 2)
 
     def test_a_failed_commit_is_reported_as_a_failure_not_a_missing_node(
@@ -238,6 +242,8 @@ def _outcome(ledger: CryptographicAuditLedger, index: int) -> str:
         _commit(ledger, index)
     except WalDurabilityError:
         return "failed"
+    except LedgerFaultedError:
+        return "refused"
     except Exception as exc:  # pragma: no cover - would be a different defect
         return f"unexpected:{type(exc).__name__}:{exc}"
     return "returned"
@@ -330,9 +336,10 @@ class TestWhatAFsyncFailureLeavesBehind:
                 futures = [pool.submit(_outcome, ledger, i) for i in range(1, 9)]
                 outcomes = [future.result() for future in futures]
 
-            assert set(outcomes) == {"failed"}, (
+            assert set(outcomes) <= {"failed", "refused"}, (
                 f"every commit in a failed batch must raise, got {sorted(set(outcomes))}"
             )
+            assert "failed" in outcomes
 
     def test_the_fault_is_latched_not_transient(self, tmp_path: Path) -> None:
         """Recovery must require operator action, not just a working disk.
@@ -349,7 +356,7 @@ class TestWhatAFsyncFailureLeavesBehind:
                 _commit(ledger, 1)
 
             disk.armed.clear()  # the disk is healthy again
-            assert _outcome(ledger, 2) == "failed", (
+            assert _outcome(ledger, 2) == "refused", (
                 "a healed disk must not silently un-poison the ledger"
             )
 
@@ -367,8 +374,8 @@ class TestWhatAFsyncFailureLeavesBehind:
             disk.armed.set()
             with pytest.raises(WalDurabilityError):
                 _commit(ledger, 99)
-            # Still inside the ledger's lifetime: a later commit must also fail.
-            assert _outcome(ledger, 100) == "failed"
+            # Still inside the ledger's lifetime: a later commit is refused.
+            assert _outcome(ledger, 100) == "refused"
 
         written = _wal_state_ids(wal)
         assert "req-0000" in written, "the acknowledged commit must be on disk"
@@ -379,7 +386,10 @@ class TestWhatAFsyncFailureLeavesBehind:
         # that they reached stable media, which is the whole distinction the
         # `WalDurabilityError` carries.
         assert "req-0099" in written
-        assert "req-0100" in written
+        # A commit after the latch is refused under the ledger lock before
+        # anything is written, so it leaves no record behind at all. Before the
+        # ledger gated its own commits this record reached the file too.
+        assert "req-0100" not in written
 
         # So the asymmetry to hold on to is the direction of the error. On
         # replay these records are read back as committed while their callers

@@ -136,6 +136,16 @@ def test_hmac_material_carrying_a_public_key_is_inconsistent(tmp_path):
 
 
 def test_ed25519_fallback_chain_verifies_with_its_recorded_key(tmp_path):
+    """A fallback signature is checked, but it is reported ``unverified``.
+
+    Each fallback node carries a key minted for that node alone, so a signature
+    that checks proves only that the record agrees with itself: a WAL rewritten
+    and re-signed under a fresh key checks just as well (see
+    ``test_signing_key_pinning``). ``valid`` would attribute the record to a
+    signer nobody can name. The chain still passes ``verify_integrity`` outside
+    strict mode, and its tier stays ``COMPROMISED_EPHEMERAL``.
+    """
+
     wal = tmp_path / "audit.jsonl"
     _commit_chain(wal, count=2)  # no signing key: Ed25519 ephemeral fallback
 
@@ -144,7 +154,7 @@ def test_ed25519_fallback_chain_verifies_with_its_recorded_key(tmp_path):
         node = ledger.chain[0]
         assert node.signature_scheme == "ed25519-fallback"
         assert scheme_material_inconsistency(node) is None
-        assert ledger.signature_status(node) == "valid"
+        assert ledger.signature_status(node) == "unverified"
         assert ledger.verify_integrity() == (True, None)
         assert ledger.signature_assurance == SignatureAssurance.COMPROMISED_EPHEMERAL
     finally:

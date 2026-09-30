@@ -22,7 +22,7 @@ import httpx
 import pytest
 
 from aegis.core.circuit_breaker import CircuitBreaker, CircuitOpenError
-from aegis.core.crypto_audit import CryptographicAuditLedger
+from aegis.core.crypto_audit import CryptographicAuditLedger, LedgerFaultedError
 
 # ── WAL write failure scenarios ───────────────────────────────────────────────
 
@@ -70,10 +70,15 @@ class TestWALWriteFailure:
         ok, err_idx = ledger.verify_integrity()
         assert ok is True, f"chain corrupted at index {err_idx}"
 
-        # The latch is sticky: a later commit that succeeds does not clear it, so
-        # a gateway reading the flag keeps answering 503 until it restarts.
-        recovered = ledger.commit_state("s3", 2.0, b"payload3", tenant_id="t1")
-        assert recovered is not None
+        # The latch is sticky and the ledger enforces it itself: with the disk
+        # writable again, a later commit is still refused before anything is
+        # written, and the fault stands until a restart replays a clean WAL. A
+        # commit accepted here would sit behind the aborted write, where replay
+        # may never reach it.
+        with pytest.raises(LedgerFaultedError) as refused:
+            ledger.commit_state("s3", 2.0, b"payload3", tenant_id="t1")
+        assert refused.value.fault_state == "wal_persist_failed"
+        assert [n.state_id for n in ledger.chain] == ["s1"]
         assert ledger._fault_state == "wal_persist_failed"
         ledger.close()
 

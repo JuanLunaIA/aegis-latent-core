@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import hashlib
 import time
+from pathlib import Path
 
 import pytest
 
@@ -120,10 +121,14 @@ def test_check_does_not_raise_when_closed():
 def test_wal_corruption_recovery_partial_chain(tmp_path):
     """A corrupted WAL line stops reconstruction; prior nodes are kept.
 
-    The ledger must enter fault_state='wal_corrupt' but still allow
-    subsequent commits (fail-open on the audit storage path).
+    The ledger enters fault_state='wal_corrupt' and refuses to extend the
+    chain. This test used to require the opposite - that a commit succeed on
+    top of the corrupt line - which is the defect: replay stops at that line,
+    so the new record was reported durable and yet no later verifier could
+    ever read it back (the trace TLC finds for specs/aegis_invariants.tla with
+    aegis_invariants_ungated.cfg).
     """
-    from aegis.core.crypto_audit import CryptographicAuditLedger
+    from aegis.core.crypto_audit import CryptographicAuditLedger, LedgerFaultedError
 
     wal = str(tmp_path / "corrupt.wal.jsonl")
     signing_key = "test-key-reliability"
@@ -153,10 +158,14 @@ def test_wal_corruption_recovery_partial_chain(tmp_path):
         assert ledger2._fault_state == "wal_corrupt"
         # Two good nodes were loaded before the corruption.
         assert len(ledger2.chain) == 2
-        # Despite the fault state, new commits must still work (fail-open).
-        node = ledger2.commit_state("s3", 1.0, b"payload-3")
-        assert node.state_id == "s3"
-        assert len(ledger2.chain) == 3
+        # The ledger refuses to write behind the corrupt line, and the file is
+        # left exactly as it was found for the operator to inspect.
+        before = Path(wal).read_bytes()
+        with pytest.raises(LedgerFaultedError) as refused:
+            ledger2.commit_state("s3", 1.0, b"payload-3")
+        assert refused.value.fault_state == "wal_corrupt"
+        assert len(ledger2.chain) == 2
+        assert Path(wal).read_bytes() == before
     finally:
         ledger2.close()
 

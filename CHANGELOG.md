@@ -18,6 +18,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Behaviour change: `pqc-ml-dsa` signatures are verified only against pinned keys.** A verifier pins
+  the public half of its own ML-DSA identity and the keys in the new `AEGIS_TRUSTED_SIGNING_PUBLIC_KEYS`
+  (comma-separated hex). While that set is non-empty, a node signed under any other key reads `invalid` and
+  fails `verify_integrity()`. With neither, a signature that checks reads `unverified` (it was `valid`), and
+  `signature_assurance` counts the node as `UNSIGNED`. HA replicas that share a chain, and identities retired
+  by a rotation, must be listed or their nodes fail verification. See `docs/UPGRADING.md`.
+- **Behaviour change: an `ed25519-fallback` signature that checks now reads `unverified`, not `valid`.** Its
+  key is minted for that one node and carried in it, so a check proves only that the record is internally
+  consistent. A mismatch still reads `invalid`, the chain tier stays `COMPROMISED_EPHEMERAL`, and
+  `verify_integrity()` is unchanged.
+- **Behaviour change: the ledger refuses commits while faulted.** Every commit method raises
+  `LedgerFaultedError` (a `RuntimeError`) while the fault latch is not `healthy`; the gateway answers `503`
+  as for any other commit failure. Code that kept committing on a ledger after a failed write must reopen it
+  after repair. See `docs/UPGRADING.md`.
 - **Dependency updates that Dependabot proposed (#210–#217) applied by hand in one change.** The eight
   PRs were closed unmerged (each failed the release-contract test or the AI-context manifest hash because
   it moved a governed file without its companions). Applied: `github/codeql-action` `init`, `autobuild`,
@@ -75,6 +89,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A commit could be reported durable and then never replay.** `specs/aegis_invariants.tla`, rewritten to
+  model write failures, torn tails, crashes, replay and repair, found it: request A's write tears part-way
+  through a line and latches `wal_persist_failed`; request B, admitted by the gateway before the latch,
+  commits anyway, its line lands after the torn bytes and its caller is told it is durable; replay stops at
+  the torn line, and B is never read back. The gateway's `_require_intact_ledger` read of the latch could not
+  close the window because the read and the commit are not atomic. `CryptographicAuditLedger` now checks the
+  latch under its own lock before anything reaches the MMR or the WAL, in all four commit methods
+  (`LedgerFaultedError`, `CLM-114`, `REG-D88`). A replica in HA mode that opens a faulted WAL still starts, lifts its
+  epoch, records no handover, and refuses governed traffic until repair (`REG-D93`). `tests/test_ledger_fault_gate.py`,
+  `tests/ha/test_ha_lease.py::test_a_faulted_chain_starts_without_a_handover_record`.
+- **A rewritten WAL re-signed under an attacker's own ML-DSA key verified.** `signature_status` checked each
+  signature against the public key the node itself records, so write access to the WAL was enough to replace
+  records, re-sign them with a fresh key and pass `verify_integrity()`. `specs/aegis_ledger_immutability.tla`
+  reproduces it (`aegis_ledger_immutability_unpinned.cfg`). Keys are now pinned (`CLM-115`, `REG-D89`; the
+  `ed25519-fallback` reading above is `REG-D90`); `tests/test_signing_key_pinning.py` (21 tests).
+- **After Redis lost its data, an HA chain stopped admitting until an operator restored the epoch counter by
+  hand.** The counter restarted at `1`, below epochs the chain and the global sequence already record, and
+  the fence refused every node the new holder wrote. A replica now lifts its lease epoch above the highest
+  handover epoch its WAL records before it writes its own handover, in one Lua script that re-checks holder
+  and epoch and is serialised with renewal and release (`ChainLease.raise_epoch_above`, `CLM-116`, `REG-D91`).
+  `tests/ha/test_ha_lease.py`, `tests/ha/test_ha_chaos.py`.
+- **Formal artifacts that could not fail.** `specs/aegis_invariants.smt2` asserted a predicate with its own
+  negation and `specs/aegis_stream_buffer.smt2` asserted `retained_bytes > R_max` right after defining them
+  equal, so both returned `unsat` whatever the arithmetic; the three TLA+ models had no configuration that
+  could violate an invariant, and the Lean file had no failure path. Every check is now falsifiable: SMT files
+  declare the expected result of every query and include a satisfiable one; each TLA+ model has witness and
+  counterexample configurations that must be violated; the Lean file must prove nine named theorems with
+  only the standard axioms. The session-manager model now describes the class that exists
+  (`SessionLifecycleManager`), and `tests/test_session_manager_conformance.py` checks its invariants on the
+  real class. See `docs/formal/FORMAL_VERIFICATION.md` (`CLM-026`, `REG-D92`). Before-and-after output for
+  `REG-D88`–`REG-D93` against `main` is in `evidence/registry/reg-d88_d93_closure.txt`.
 - **The embedded engine kept calling the provider and issuing receipts on a WAL it could not replay.**
   `aegis.wrap` and `AegisEmbedded.guard_request` never consulted the ledger's fault state. After a kill left
   a torn last line, replay stopped there and latched `wal_corrupt`, yet every later wrapped call reached the
@@ -85,9 +130,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   than `healthy`, before the provider is contacted, and commits nothing, including for a prompt the WAF would
   have blocked and in `shadow` mode. The engine still opens, so the state can be inspected; recovery is
   `tools/wal_repair.py` and a new engine. Behaviour change for callers: a wrapped call on an unhealthy chain
-  now raises instead of succeeding. `CryptographicAuditLedger` itself is unchanged: its commit methods still
-  do not check the state (`tests/test_reliability.py`, `tests/test_chaos.py` pin that), and a call already
-  admitted when a fault latches is not recalled. `tests/test_embedded_mode.py`.
+  now raises instead of succeeding. `CryptographicAuditLedger` now also refuses commits while faulted (entry below), so a call
+  already admitted when a fault latches fails at its commit; the provider call it made is not recalled.
+  `tests/test_embedded_mode.py`.
 - **`HSMSigningBackend` RSA-PSS signing failed on every real PKCS#11 token.** It called
   `pkcs11.mechanisms.RSA_PKCS_PSS_PARAMS`, which exists only in the unit-test mock; the real
   library takes a `(hash, mgf, salt length)` tuple. ECDSA now falls back to raw `CKM_ECDSA` over a
@@ -105,6 +150,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Kani harnesses for the token-bucket arithmetic** (`aegis_rust_v2/src/rate_limit.rs`, `mod verification`):
+  the refill and consume steps the limiter's compare-and-swap loops commit are factored into functions, and
+  five harnesses check them bit-precisely: capacity construction, refill bounds, refill exactness for every
+  non-negative gain, gain positivity, and consume. Arithmetic only; no atomics, clock or map is modelled.
+  `cargo kani` verifies all eleven harnesses in the crate in about 25 seconds, and CI's Kani step is renamed
+  to cover both files.
 - **Operating cadence** (`docs/cadence/`, `tools/cadence/cadence.py`): weekly report, monthly recompute
   (re-runs the seed-42 engine and compares it byte for byte with the committed pack) and a kill-switch
   register covering the six kill criteria, the budget alerts and the tranche gates, plus a draft
@@ -119,8 +170,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (a real partition and a Redis restart), `deploy/observability/` (alert rules and dashboard checked
   against the exported metrics), `tools/sales/build_verifier_kit.py`, and retained WAF corpus and soak
   reports under `evidence/qualification/`. Finding: a Redis that loses its data resets the lease
-  epoch counter, and the sequence fence then stops the chain admitting (documented in
-  `docs/operations/HIGH_AVAILABILITY.md`; no code change made).
+  epoch counter, and the sequence fence then stops the chain admitting. Fixed in the same release: the
+  epoch is lifted above the chain's own record (entry under Fixed).
 - **Assurance pipeline** (`docs/assurance/`, `tools/assurance/`): a penetration-test SOW draft scoped to the
   evidence path, a vendor SOC 2 readiness assessment, an escrow execution plan with
   `escrow_manifest.py` (records a tag's tracked files and digests, refuses key material, checks a restore),
@@ -150,6 +201,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `/health` latency on an Azure VM.
 - `tests/test_azure_kit.py`: offline checks for the kit (validation, checksums, secret scan,
   Bicep compilation, compose posture, cloud-init rendering).
+
+### Security
+
+- **Audit dashboard: `next` `16.3.4` → `16.3.8` (GHSA-vcvr-r3jv-pc5j, critical).** The advisory covers remote
+  code execution through `next/og` `ImageResponse` in `16.2.0`–`16.3.5` and was published while this branch
+  was open; `npm audit --audit-level=high` in the Audit Dashboard job failed on it. The dashboard does not
+  import `next/og`, so no route calls the vulnerable renderer, but the package ships in the dashboard image and
+  the gate is right to refuse it. After the bump, `npm ci`, typecheck, the 6 vitest tests, `next build`,
+  `npm audit` (0 vulnerabilities) and the client-bundle secret check all pass locally. No published image
+  changes until the next release.
 
 ### Documentation
 

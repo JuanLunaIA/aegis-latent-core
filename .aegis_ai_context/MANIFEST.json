@@ -21,8 +21,8 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/02_OPERATIONAL_INVARIANTS_MATRIX.md",
-      "sha256": "8aebc5618457d1c7786259fdbc5159a89bdea733a5edc55f05c1b05be7f03a3f",
-      "size": 7794
+      "sha256": "bb26c9b3f18372758814f0488a88cee208dab30fe15a0ae36232c1cb4f138b1d",
+      "size": 8231
     },
     {
       "category": "context",
@@ -33,8 +33,8 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/04_FORMAL_SPECIFICATIONS_MAPPING.md",
-      "sha256": "97674e4b86c361f45702cc2ce39d695b413f54769ea6e1117152952a96e8261a",
-      "size": 5284
+      "sha256": "1e9809ed3e606493d9e6ad2ee79de841a6827f44ed8ed8047b5af820118217cb",
+      "size": 6629
     },
     {
       "category": "context",
@@ -63,8 +63,8 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/09_COMMAND_AND_CI_MATRIX.md",
-      "sha256": "7f85ed3c15c2bd2c0cfb409f412dd514cbe67651706627cd257369f2c62c3b2c",
-      "size": 6563
+      "sha256": "5d2225e6a1e853a5e3d671671b05e448bf24223555b907f3eab5dc3bcec5563d",
+      "size": 6921
     },
     {
       "category": "context",
@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "369287c069699003ca7521f5c0eaa9b3d3cde3c218a6bd81a929e0157e283c29",
-      "size": 223038
+      "sha256": "2a7f51b5a28def77b98a6cfbf5d2667b5160679bbabf0de4daa97281c26351a9",
+      "size": 228863
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "78c6007466a6c504b4d88ed530148732ee1d7adcde89d684e484f65bfad2de76",
-      "size": 158091
+      "sha256": "c5dab4a0982086de4b919295dd9bba6f981be8da3bee255bbb5b99180fa07acf",
+      "size": 165618
     },
     {
       "category": "governed_input",
@@ -237,13 +237,13 @@
     {
       "category": "governed_input",
       "path": "dashboard/package.json",
-      "sha256": "76846a4e2da8b50d3307abdb6e01804d467b80952c3b2a108aef06de57d0520d",
+      "sha256": "083a4c6fd234876064ea100233a91706fb43e4b71214ba20a50c450e0ef8196b",
       "size": 1072
     },
     {
       "category": "governed_input",
       "path": "dashboard/package-lock.json",
-      "sha256": "4a9f7c476398a1f3248b3e78eeb8fd8e588f229b07e2db4977fcb1a8e4ef4174",
+      "sha256": "d76a35d915899eec57b88dad275620c5a566be1be695000f849b978dca9216b5",
       "size": 123609
     },
     {
@@ -321,8 +321,8 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "85852d787f5664acf5eefa4b2e3d4d26baaef0ceaa708b4fb2c9ee778e03674f",
-      "size": 41394
+      "sha256": "260b4f2013ffa56aba8c1900cbdf20cf8eefdf4ab85f034996de28a7fc08b530",
+      "size": 41462
     },
     {
       "category": "governed_input",

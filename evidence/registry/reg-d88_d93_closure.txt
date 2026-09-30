@@ -1,0 +1,278 @@
+REG-D88..REG-D93 — closure record for the 2026-09-30 formal-methods and core security pass
+==========================================================================================
+
+Branch claude/aegis-v4-comprehensive-audit-m2qyka, restarted from main 8b0dd18
+after PR #224 merged. Each item lists the commit that fixed it, what was
+observed on main before, and what was observed on the branch after.
+
+Environment: Linux 6.18 x86_64 container, Python 3.11 venv with the hash-locked
+runtime and the aegis_rust extension (ML-DSA verification available),
+redis-server 7 on localhost, z3 5.1.0, Lean 4.33.0, TLA+ tools at revision
+341472c, Kani 0.67.0. CI pins z3 4.8.12 and its own TLA+ revision; the gate
+compares Z3 answers, not versions.
+
+Method
+------
+One probe script, using only APIs present on both trees, run twice from the
+same interpreter: once with PYTHONPATH pointing at a git worktree of main
+8b0dd18, once at the branch. The first output line names the source tree the
+import resolved to. The script is reproduced at the end of this file; it is not
+committed as a tool.
+
+Before (main 8b0dd18)
+---------------------
+aegis_source <scratchpad>/main_wt
+REG-D88 commit_while_faulted=accepted nodes= 2
+REG-D89 forged_chain statuses= ['valid'] verify_integrity= (True, None) assurance= ASYMMETRIC_SOFTWARE
+REG-D90 fallback scheme= ed25519-fallback status= valid
+REG-D91 epoch_before_loss= 3
+REG-D91 epoch_drawn_after_loss= 1 no floor mechanism; recorded_epoch=3
+
+After (branch)
+--------------
+aegis_source /home/user/aegis-latent-core
+REG-D88 commit_while_faulted=refused LedgerFaultedError nodes= 1
+Integrity violation: node 0 signature invalid (scheme pqc-ml-dsa)
+REG-D89 forged_chain statuses= ['invalid'] verify_integrity= (False, 0) assurance= UNSIGNED
+REG-D90 fallback scheme= ed25519-fallback status= unverified
+REG-D91 epoch_before_loss= 3
+REG-D91 epoch_drawn_after_loss= 1 recorded_epoch= 3 epoch_after_raise= 4
+
+(The symmetric-signing startup warning each ledger logs is omitted from both
+runs above; it is identical on both trees.)
+
+REG-D88 (P1) — the ledger committed while a fault was latched      FIXED 7d9bc6a
+  before: a commit on a ledger whose fault_state is wal_persist_failed is
+          accepted and extends the chain (2 nodes).
+  after:  every commit method raises LedgerFaultedError under the ledger
+          lock; nothing is written (1 node). The latch clears only when a new
+          ledger replays a WAL that verifies.
+  found:  specs/aegis_invariants_ungated.cfg — CommittedReplayable is violated
+          when the commit is not gated inside the ledger (a request admitted
+          before the latch commits after a torn line).
+  tests:  tests/test_ledger_fault_gate.py (9 tests: all five fault states refused;
+          a signing failure refuses every later commit; a commit after a torn
+          write is refused; concurrent commits around a torn write lose
+          nothing the ledger returned). tests/test_mmr_rollback.py adapted to
+          latch-then-restart.
+
+REG-D89 (P1) — ML-DSA verified against the record's own key          FIXED 7d9bc6a
+  before: a WAL written under an attacker's ML-DSA identity, read by a
+          verifier holding the deployment's real identity, verifies
+          (['valid'], (True, None)) and reads ASYMMETRIC_SOFTWARE.
+  after:  keys are pinned (the verifier's own identity plus
+          AEGIS_TRUSTED_SIGNING_PUBLIC_KEYS): the same chain is ['invalid'],
+          verify_integrity() is (False, 0), and the tier floors to UNSIGNED.
+  found:  specs/aegis_ledger_immutability_unpinned.cfg — ChainEvidence is
+          violated when the verifier accepts the key the record chose.
+  tests:  tests/test_signing_key_pinning.py (21 tests: forgery invalid; the
+          same forgery passes only against its own key; own identity, listed
+          key, rotation and two-replica cases; unpinned reads unverified and
+          UNSIGNED when nothing is pinned; strict mode fails; allowlist
+          validation in the ledger and in AegisSettings).
+
+REG-D90 (P2) — ed25519-fallback read valid                           FIXED 7d9bc6a
+  before: a checking fallback signature reads 'valid'.
+  after:  'unverified' (its key is minted per node and carried in it); a
+          mismatch is still 'invalid'.
+  tests:  tests/test_signing_key_pinning.py::
+          test_a_fallback_signature_that_checks_reads_unverified
+
+REG-D91 (P1) — HA epoch reset after Redis data loss                  FIXED 6370023
+  before: three handovers reach epoch 3; after FLUSHALL (a restart without
+          persistence) the next holder draws 1 again although the chain
+          records a handover at 3; main has no floor mechanism.
+  after:  the new holder reads highest_recorded_epoch() from the WAL and
+          raise_epoch_above() lifts the lease to 4 atomically (Lua, under the
+          holder check) before the handover is written.
+  tests:  tests/ha/test_ha_lease.py (floor lifted; lower floor no-op; raised
+          lease is the one Redis holds; taken-over and never-acquired leases
+          cannot be raised; out-of-range floor refused; raise racing the
+          keeper; only this chain's handovers read; handover recorded above
+          every epoch the chain holds), tests/ha/test_ha_chaos.py::
+          test_a_redis_restart_without_persistence_fences_holders_and_the_epoch_is_raised
+
+REG-D92 (P1) — formal artifacts could pass vacuously                 FIXED fcb0442
+  before: aegis_stream_buffer.smt2 asserted retained_bytes > R_max right
+          after defining them equal (unsat for any expression); no TLA+
+          configuration could violate an invariant; the gate did not compare
+          Z3 answers with expectations.
+  after:  scripts/verify_formal_artifacts.sh, this host:
+            z3_proof=aegis_invariants expected="sat unsat unsat unsat unsat unsat sat sat" actual="sat unsat unsat unsat unsat unsat sat sat"
+            z3_proof=aegis_stream_buffer expected="sat unsat unsat sat unsat sat" actual="sat unsat unsat sat unsat sat"
+            lean_result=verified theorems=9  (axioms: propext only, or none)
+            aegis_invariants            main cfg: 26041 generated / 10973 distinct / depth 27, no error
+              ungated  CommittedReplayable            violated_as_expected
+              witness  NoEmission, NoTornTail, NoRefusal, NoEmissionAfterRepair  violated_as_expected
+            aegis_ledger_immutability   main cfg: 4452703 generated / 247063 distinct / depth 17, no error
+              compromised, unpinned  ChainEvidence   violated_as_expected
+              witness  NoTampering, TruncationUndetected  violated_as_expected
+            aegis_session_manager       main cfg: 64880 generated / 11167 distinct / depth 12, no error
+              pooled   MonitorOwnership               violated_as_expected
+              witness  NeverFull, NoEviction, NoReaccess  violated_as_expected
+            formal_gate=passed   (exit 0, 23 s)
+          The number of states TLC generates before it reports an expected
+          violation varies between runs (4 workers); the verdict does not.
+  tests:  tests/test_stream_bounds.py (the domain maximum is the constant the
+          spec checks; every check declares its expected result),
+          tests/test_session_manager_conformance.py (Hypothesis state machine
+          against the session model's invariants).
+
+REG-D93 (P2) — a faulted replica could not start under HA            FIXED 80283ec
+  before (6370023, with REG-D88 in place): the writer handover commit raises
+          LedgerFaultedError out of startup on a WAL with a torn tail.
+  after:  the epoch is still raised; the handover is logged, not committed;
+          /audit/health reports the fault and _require_intact_ledger answers
+          503.
+  tests:  tests/ha/test_ha_lease.py::
+          test_a_faulted_chain_starts_without_a_handover_record — with app.py
+          from 6370023 restored it fails:
+            aegis.core.crypto_audit.LedgerFaultedError: ledger fault_state=wal_corrupt;
+            refusing to extend an evidence chain that may not replay
+            1 failed in 1.11s
+          and with the fix it passes.
+
+Test run (branch, after all six fixes)
+--------------------------------------
+pytest tests/test_ledger_fault_gate.py tests/test_signing_key_pinning.py
+  tests/ha/test_ha_lease.py tests/ha/test_ha_chaos.py tests/test_mmr_rollback.py
+  tests/test_stream_bounds.py tests/test_session_manager_conformance.py
+  tests/test_signature_scheme_binding.py tests/test_crypto_audit_scheme_binding.py
+  tests/test_coalesced_commit.py tests/test_reliability.py tests/test_chaos.py
+=> 207 passed, 1 skipped in 16.24s
+   (skip: tests/test_chaos.py "Real Prometheus metric; noop test not applicable",
+   pre-existing and unrelated.)
+
+Kani (aegis_rust_v2, `cargo kani`, every harness in the crate, as CI runs it)
+----------------------------------------------------------------------------
+Complete - 11 successfully verified harnesses, 0 failures, 11 total.  (25 s wall)
+  rate_limit: capacity_milli_is_exact_and_non_negative, refill_preserves_the_bounds,
+              refill_equals_the_unbounded_result, refill_gain_is_positive,
+              consume_preserves_the_bounds
+  wal:        header_and_payload_do_not_overlap, a_frame_walk_strictly_advances,
+              zero_length_payload_is_never_a_frame, payload_range_is_in_bounds,
+              header_range_is_in_bounds, header_end_is_the_same_bound
+Mutation check: refill_gain changed from saturating_mul to wrapping_mul ->
+  refill_gain_is_positive: "VERIFICATION:- FAILED" (restored afterwards).
+Two harness shapes were abandoned for time, not for failing: one harness over
+the multiplication and the refill together (no result in 30 min of CBMC), and
+one comparing saturating_mul against a second checked_mul (no result in
+10 min). The exact-product property below i64::MAX is saturating_mul's
+documented contract and is checked at the overflow boundary by the unit test
+a_long_idle_bucket_refills_to_capacity_without_overflow.
+
+Probe script (as run)
+---------------------
+"""Behavioural probe for REG-D88..D91, runnable against main and the branch.
+
+Uses only APIs present on both trees. Prints one line per probe.
+"""
+
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
+import tempfile
+import time
+from pathlib import Path
+
+import aegis
+from aegis.core.crypto_audit import CryptographicAuditLedger
+
+print("aegis_source", Path(aegis.__file__).parent.parent)
+
+with tempfile.TemporaryDirectory() as tmp:
+    root = Path(tmp)
+
+    # REG-D88: a commit on a ledger whose latch is set.
+    ledger = CryptographicAuditLedger(str(root / "a.jsonl"), signing_key="k" * 32)
+    ledger.commit_forensic(state_id="a", request_bytes=b"x", response_bytes=b"y")
+    ledger._fault_state = "wal_persist_failed"
+    try:
+        ledger.commit_forensic(state_id="b", request_bytes=b"x", response_bytes=b"y")
+        print("REG-D88 commit_while_faulted=accepted nodes=", len(ledger.chain))
+    except Exception as exc:  # noqa: BLE001 - reported, not handled
+        print("REG-D88 commit_while_faulted=refused", type(exc).__name__, "nodes=", len(ledger.chain))
+    ledger.close()
+
+    # REG-D89: a chain re-signed under an attacker's ML-DSA identity, read by
+    # a verifier that holds the deployment's real identity.
+    def write_chain(wal: Path, identity: Path) -> str:
+        with CryptographicAuditLedger(
+            str(wal), signing_key="probe", pqc_identity_path=str(identity)
+        ) as writer:
+            keys = {writer.commit_state(f"s{i}", 0.5, b"payload").public_key for i in range(3)}
+        return keys.pop()
+
+    (root / "genuine").mkdir()
+    (root / "forged").mkdir()
+    deployment = root / "deployment.pqc"
+    write_chain(root / "genuine" / "audit.jsonl", deployment)
+    write_chain(root / "forged" / "audit.jsonl", root / "attacker.pqc")
+    with CryptographicAuditLedger(
+        str(root / "forged" / "audit.jsonl"), signing_key="probe", pqc_identity_path=str(deployment)
+    ) as verifier:
+        statuses = sorted({verifier.signature_status(node) for node in verifier.chain})
+        print(
+            "REG-D89 forged_chain statuses=", statuses,
+            "verify_integrity=", verifier.verify_integrity(),
+            "assurance=", verifier.signature_assurance.value,
+        )
+
+    # REG-D90: an ed25519-fallback node (no signing key configured).
+    fallback = CryptographicAuditLedger(str(root / "f.jsonl"))
+    fallback.commit_forensic(state_id="f", request_bytes=b"x", response_bytes=b"y")
+    node = fallback.chain[0]
+    print("REG-D90 fallback scheme=", node.signature_scheme, "status=", fallback.signature_status(node))
+    fallback.close()
+
+    # REG-D91: the epoch a new holder draws after Redis loses its data.
+    redis_server = shutil.which("redis-server")
+    if redis_server is None:
+        print("REG-D91 skipped: no redis-server")
+    else:
+        import redis
+
+        from aegis.core import ha
+
+        port = "6411"
+        proc = subprocess.Popen(
+            [redis_server, "--port", port, "--save", "", "--appendonly", "no"],
+            stdout=subprocess.DEVNULL,
+        )
+        try:
+            client = redis.Redis(port=int(port))
+            for _ in range(50):
+                try:
+                    client.ping()
+                    break
+                except redis.ConnectionError:
+                    time.sleep(0.1)
+            for holder in ("a", "b", "c"):  # three handovers: epochs 1, 2, 3
+                lease = ha.ChainLease(client, "probe", holder, ttl_seconds=5)
+                lease.acquire()
+                lease.release()
+            print("REG-D91 epoch_before_loss=", lease.epoch)
+            client.flushall()  # what a restart without persistence leaves
+            wal = root / "ha.jsonl"
+            with CryptographicAuditLedger(str(wal), signing_key="k" * 32) as chain:
+                chain.commit_state("ha-lease-probe-3", 0.0, b"{}", tenant_id="aegis-system")
+            new = ha.ChainLease(client, "probe", "d", ttl_seconds=5)
+            new.acquire()
+            drawn = new.epoch
+            raise_above = getattr(new, "raise_epoch_above", None)
+            if raise_above is None:
+                print("REG-D91 epoch_drawn_after_loss=", drawn, "no floor mechanism; recorded_epoch=3")
+            else:
+                with CryptographicAuditLedger(str(wal), signing_key="k" * 32) as chain:
+                    floor = ha.highest_recorded_epoch(chain.iter_wal_nodes(), "probe")
+                print(
+                    "REG-D91 epoch_drawn_after_loss=", drawn, "recorded_epoch=", floor,
+                    "epoch_after_raise=", raise_above(floor),
+                )
+            new.release()
+        finally:
+            proc.terminate()
+            proc.wait()
+os.environ.pop("PYTHONPATH", None)

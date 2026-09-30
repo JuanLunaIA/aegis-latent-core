@@ -185,17 +185,20 @@ def test_a_partitioned_holder_fences_itself_before_a_standby_can_take_over(priva
         proxy.close()
 
 
-def test_a_redis_restart_without_persistence_fences_holders_but_resets_the_epoch_counter(  # type: ignore[no-untyped-def]
+def test_a_redis_restart_without_persistence_fences_holders_and_the_epoch_is_raised(  # type: ignore[no-untyped-def]
     private_redis,
 ) -> None:
-    """Characterisation, not an endorsement: the counter is not durable.
+    """A Redis that loses its data restarts the epoch counter; the holder lifts it.
 
-    After Redis loses its data no old holder can renew (good), but the next holder is
-    drawn an epoch *below* one already sequenced. The global sequence refuses a writer
-    whose epoch is older than its last entry, so the chain stops admitting rather than
-    forking: fail-closed, and an availability incident until the operator intervenes.
-    Redis must therefore keep the epoch counter (append-only file or a managed service
-    with persistence).
+    After the restart no old holder can renew (good), but ``INCR`` starts again at 1,
+    below epochs the chain has already sequenced. Left there, the sequence fence
+    turns against the new holder: it refuses the writer whose epoch is older than
+    the chain's last entry, while a paused former holder that still carries the
+    old, higher epoch would pass. ``raise_epoch_above`` closes that: before it
+    writes or sequences anything, the holder moves its lease above the highest
+    epoch its chain records (``highest_recorded_epoch``), the counter moves with
+    it, and from then on the fence refuses the stale writer and accepts the
+    current one.
     """
     import redis
 
@@ -240,14 +243,34 @@ def test_a_redis_restart_without_persistence_fences_holders_but_resets_the_epoch
     assert second.renew() is False, "a holder must be fenced when Redis loses its lease"
     assert not second.holds()
     third = ChainLease(redis.Redis(port=port, socket_timeout=1), chain, "third:3", 2.0)
-    new_epoch = third.acquire()
-    assert new_epoch == 1, "the epoch counter is expected to restart without persistence"
+    drawn = third.acquire()
+    assert drawn == 1, "the counter restarts without persistence; the raise below is the fix"
 
     last = SequenceEntry(
         seq=7, prev_entry_hash="h0", chain_id=chain, chain_epoch=2, local_seq=7,
         node_hash="n7", local_prev_hash="n6", recorded_at="2026-01-01T00:00:00Z", entry_hash="e7",
     )  # fmt: skip
+    pending = [PendingNode(local_seq=8, node_hash="n8", local_prev_hash="n7")]
+    # Unraised, the current holder is the one the fence refuses.
     with pytest.raises(SequenceDivergedError):
-        plan_append(
-            last, new_epoch, [PendingNode(local_seq=8, node_hash="n8", local_prev_hash="n7")]
-        )
+        plan_append(last, drawn, pending)
+
+    raised = third.raise_epoch_above(last.chain_epoch)
+    assert raised == 3
+    assert third.holds()
+    assert third.renew() is True, "the raised lease is the one Redis holds"
+    assert plan_append(last, raised, pending)
+
+    # Once the current holder has sequenced at its raised epoch, the paused former
+    # holder's epoch is the stale one.
+    after = SequenceEntry(
+        seq=8, prev_entry_hash="e7", chain_id=chain, chain_epoch=raised, local_seq=8,
+        node_hash="n8", local_prev_hash="n7", recorded_at="2026-01-01T00:00:01Z", entry_hash="e8",
+    )  # fmt: skip
+    with pytest.raises(SequenceDivergedError):
+        plan_append(after, 2, [PendingNode(local_seq=9, node_hash="n9", local_prev_hash="n8")])
+
+    # The counter moved with the lease, so the next holder draws above it.
+    third.release()
+    fourth = ChainLease(redis.Redis(port=port, socket_timeout=1), chain, "fourth:4", 2.0)
+    assert fourth.acquire() == 4
