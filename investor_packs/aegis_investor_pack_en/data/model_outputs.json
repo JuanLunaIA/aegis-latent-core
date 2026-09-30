@@ -1625,7 +1625,7 @@
    "component": "HA lease + global sequence",
    "now": 5,
    "target": 6,
-   "evidence": "CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108); partition test against real Redis 2026-09-29: never two writers at any sample; a Redis restart without persistence resets the epoch counter and the sequence fence then refuses appends (an availability incident, not a fork; fix undecided)",
+   "evidence": "CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108); partition test against real Redis 2026-09-29: never two writers at any sample; a separate Redis-restart test showed that a restart without persistence resets the epoch counter and the sequence fence then refuses appends (an availability incident, not a fork; fix undecided)",
    "gap": "decide Redis-restart epoch behaviour; chaos tests on target infrastructure + pilot",
    "eng_weeks": 6,
    "external_usd": 2000

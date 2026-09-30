@@ -1144,8 +1144,8 @@ TRL = [
         5,
         6,
         "CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108); partition test against real Redis 2026-09-29: "
-        "never two writers at any sample; a Redis restart without persistence resets the epoch counter and the sequence "
-        "fence then refuses appends (an availability incident, not a fork; fix undecided)",
+        "never two writers at any sample; a separate Redis-restart test showed that a restart without persistence resets "
+        "the epoch counter and the sequence fence then refuses appends (an availability incident, not a fork; fix undecided)",
         "decide Redis-restart epoch behaviour; chaos tests on target infrastructure + pilot",
         6,
         2_000,
@@ -1237,8 +1237,8 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     "HA lease + global sequence": (
         "Lease de HA + secuencia global",
         "CI contra Redis/PostgreSQL reales; failover por SIGKILL en 4,2-5,2 s (CLM-108); prueba de partición contra Redis real el 29/09/2026: "
-        "nunca hubo dos escritores en ninguna muestra; un reinicio de Redis sin persistencia reinicia el contador de épocas y el cerco de secuencia "
-        "rechaza los appends (una caída de disponibilidad, no una bifurcación; arreglo sin decidir)",
+        "nunca hubo dos escritores en ninguna muestra; una prueba aparte de reinicio de Redis mostró que un reinicio sin persistencia reinicia "
+        "el contador de épocas y el cerco de secuencia rechaza los appends (una caída de disponibilidad, no una bifurcación; arreglo sin decidir)",
         "decidir el comportamiento de épocas tras un reinicio de Redis; pruebas de caos en la infraestructura destino + piloto",
     ),
     "ZK circuit": (
