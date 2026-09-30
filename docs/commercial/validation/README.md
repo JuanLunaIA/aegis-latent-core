@@ -19,6 +19,7 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 | Plan dates, blank | [`PLAN.json`](PLAN.json) | owner fills |
 | Outbound batch 1 | [`OUTBOUND_BATCH_1.md`](OUTBOUND_BATCH_1.md) | `python scripts/lint_sales_copy.py docs/commercial/validation` |
 | Interview script and note | [`INTERVIEW_SCRIPT.md`](INTERVIEW_SCRIPT.md) | none |
+| Brevo plan | [`BREVO_PLAN.md`](BREVO_PLAN.md) | `python scripts/lint_sales_copy.py docs/commercial/validation` |
 | Pilot generator | [`tools/validation/pilot_generator.py`](../../../tools/validation/pilot_generator.py) | `python tools/validation/pilot_generator.py facts.json --out pilot.md` |
 | Kill switch | [`tools/validation/kill_switch.py`](../../../tools/validation/kill_switch.py) | `python tools/validation/kill_switch.py --data docs/commercial/validation` |
 | Kill thresholds | [`tools/validation/kill_criteria.json`](../../../tools/validation/kill_criteria.json) | read it |

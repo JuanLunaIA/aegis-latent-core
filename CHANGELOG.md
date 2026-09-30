@@ -18,6 +18,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Dependency updates that Dependabot proposed (#210–#217) applied by hand in one change.** The eight
+  PRs were closed unmerged (each failed the release-contract test or the AI-context manifest hash because
+  it moved a governed file without its companions). Applied: `github/codeql-action` `init`, `autobuild`,
+  `analyze` and `upload-sarif` to `4.38.2`; `docker/setup-qemu-action` `4.4.0`, with the pinned SHA in
+  `scripts/verify_release_contract.py` moved to match; `anyio>=4.15.1` in `requirements.txt` and
+  `anyio==4.15.1` in `requirements.lock`; and ten crates in `aegis_rust_v2/Cargo.lock` (`aho-corasick`,
+  `blake3`, `crc32fast`, `crossbeam-queue`, `http`, `pyo3` `0.29.2`, `reqwest`, `serde` with the new `syn 3`,
+  `serde_json`, `tokio`). Checked locally: the CI lock-drift command (pip 25.2, pip-tools 7.5.2, Python 3.12)
+  reproduces `requirements.lock` byte for byte; `cargo check --locked --all-targets` passes.
+  **Not applied: `hatchling` `1.32.4` (#214).** It writes `Metadata-Version: 2.5`, which the `twine==6.2.0`
+  pinned in five publish workflows rejects (`twine check` fails on both the wheel and the sdist; `twine`
+  `7.0.0` accepts it). The wheel members were otherwise identical, but a backend bump needs `twine` moved in
+  the same change and a live upload to prove PyPI takes the metadata, so Dependabot now ignores `hatchling`
+  and the pin stays at `1.28.0` until that is done deliberately.
+- CI: `faulthandler_timeout` raised from 60 to 180 seconds in `ci.yml` and `forensic.yml`. The option exits
+  the process when a single test outlives it, and `test_integrity_across_one_hundred_thousand_nodes`
+  (marked `slow`, about 60 seconds on a loaded runner) crossed it on Python 3.11 three times, killing an
+  xdist worker; it stays a hang detector, three times looser.
 - **Investor pack refreshed (2026-09-30, both editions).** Three verified inputs updated (tests 7,673
   passed / 42 skipped / 0 failed, claims 113, test-to-source ratio 1.26), seven TRL rows extended with the
   2026-09-29 qualification evidence and its limits, the wind-down wording and the T1 issuer precondition

@@ -83,7 +83,7 @@ jobs:
         run: pip-audit -r requirements.txt --progress-spinner off
 
       - name: Run full test suite
-        run: python -X faulthandler -m pytest -q --tb=short -o faulthandler_timeout=60
+        run: python -X faulthandler -m pytest -q --tb=short -o faulthandler_timeout=180
 
       - name: Run forensic checks script
         run: python tools/forensic/forensic_checks.py

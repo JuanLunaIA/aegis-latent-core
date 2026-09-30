@@ -312,7 +312,7 @@ jobs:
       - name: Run test suite with coverage gate
         run: |
           python -X faulthandler -m pytest tests/ -n auto \
-            -o faulthandler_timeout=60 \
+            -o faulthandler_timeout=180 \
             --cov=aegis \
             --cov-report=xml \
             --cov-report=term-missing \

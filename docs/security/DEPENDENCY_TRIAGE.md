@@ -578,7 +578,7 @@ No components in this bucket.
 | zod | 4.5.4 | npm | direct | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
 | annotated-doc | 0.0.5 | pypi | transitive | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
 | annotated-types | 0.8.0 | pypi | transitive | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
-| anyio | 4.14.2 | pypi | transitive | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
+| anyio | 4.15.1 | pypi | transitive | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
 | cbor2 | 6.1.4 | pypi | direct | Install scripts; Install scripts | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
 | certifi | 2026.7.22 | pypi | transitive | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
 | charset-normalizer | 3.5.1 | pypi | transitive | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |

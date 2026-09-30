@@ -398,7 +398,7 @@ The components below are licensed under weak-copyleft terms (LGPL, MPL or EPL). 
 | aiosqlite | 0.22.1 | MIT License | gateway (Python runtime) |
 | annotated-doc | 0.0.5 | MIT | gateway (Python runtime) |
 | annotated-types | 0.8.0 | MIT | gateway (Python runtime) |
-| anyio | 4.14.2 | MIT | gateway (Python runtime) |
+| anyio | 4.15.1 | MIT | gateway (Python runtime) |
 | asyncpg | 0.31.0 | Apache-2.0 | gateway (Python runtime) |
 | cachetools | 7.2.0 | MIT | gateway (Python runtime) |
 | cbor2 | 6.1.4 | MIT | gateway (Python runtime) |
