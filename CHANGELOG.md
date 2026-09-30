@@ -80,6 +80,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   library takes a `(hash, mgf, salt length)` tuple. ECDSA now falls back to raw `CKM_ECDSA` over a
   host-computed SHA-256 digest on tokens without `CKM_ECDSA_SHA256`. Found by running the adapter
   against SoftHSM 2.6.1 (`tests/test_hsm_softhsm.py`).
+- **The kill-and-recover soak could report acknowledged commits as lost.** A `SIGKILL` between
+  `write()` and the newline leaves a torn last line. Replay latches `wal_corrupt` on it, which is
+  the state the gateway answers 503 for, but the harness's next worker opened the ledger anyway,
+  appended after the torn line and acknowledged commits that replay could never reach. It showed up
+  as a rare, unrepeatable `Forensic checks (Python 3.13)` failure of
+  `test_killed_committer_loses_no_acknowledged_commit`. `tools/qualification/wal_crash_soak.py` now
+  applies `tools/wal_repair.py` to a torn tail between rounds and counts it
+  (`torn_tails_repaired`), its worker exits 3 on a ledger that is not healthy, and damage that is
+  not a single torn last line still fails the soak. Gateway behaviour is unchanged.
 
 ### Added
 
