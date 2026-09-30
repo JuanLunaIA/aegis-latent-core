@@ -745,3 +745,33 @@ class TestCustomRules:
         engine.add_rules('rule Late { strings: $s1 = "late" condition: $s1 }')
         result = engine.scan("this is a late addition")
         assert result.matches
+
+
+# ── REG-D102: the rule-header search is linear ────────────────────────────────
+
+
+def test_rule_header_without_a_brace_is_rejected_in_linear_time():
+    """A header of "rule x :" and 4 000 spaces, no brace, took 22 s before REG-D102.
+
+    Three quantifiers could each claim every space, so the search was cubic in
+    the length of the run. The bound compares n and 4n on one host: a linear
+    search grows about 4x, a cubic one about 64x.
+    """
+    import time
+
+    timings = []
+    for n in (4_000, 16_000):
+        start = time.perf_counter()
+        rules, _ = parse_yara_rules("rule x :" + " " * n + "!")
+        timings.append(time.perf_counter() - start)
+        assert rules == []
+    assert timings[1] < 0.5, timings
+    assert timings[1] < 16 * max(timings[0], 0.001), timings
+
+
+def test_rule_header_tags_still_parse():
+    rules, errors = parse_yara_rules(
+        "rule A : tag1 tag2 { condition: true }\nrule B { condition: true }"
+    )
+    assert [rule.name for rule in rules] == ["A", "B"]
+    assert errors == []

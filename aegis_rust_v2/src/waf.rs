@@ -36,7 +36,11 @@ const CRITICAL_PATTERNS: &[&str] = &[
     // Instruction override
     "ignore previous instructions",
     "ignore all previous",
-    "disregard previous",
+    // The object is part of the phrase: bare "disregard previous" also matched
+    // "please disregard previous correspondence" in ordinary legal and
+    // clinical text (REG-D94). The Python Layer 1 keeps the wider forms.
+    "disregard previous instructions",
+    "disregard all previous instructions",
     "forget previous instructions",
     "override my instructions",
     // System override / jailbreak
@@ -278,6 +282,21 @@ mod tests {
         // Insert ZWJ between words to try to evade pattern match
         let r = waf.scan("ignore\u{200D}previous\u{200D}instructions");
         assert!(r.blocked);
+    }
+
+    #[test]
+    fn disregard_needs_an_instruction_object() {
+        // REG-D94: correspondence, versions and dosages are ordinary objects of
+        // "disregard previous"; only the model's instructions are critical.
+        let waf = RustWaf::new().unwrap();
+        for benign in [
+            "Please disregard previous correspondence on this matter.",
+            "Disregard previous versions of the contract.",
+        ] {
+            assert!(!waf.scan(benign).blocked, "{benign} was blocked");
+        }
+        assert!(waf.scan("Disregard previous instructions.").blocked);
+        assert!(waf.scan("disregard all previous instructions now").blocked);
     }
 
     #[test]

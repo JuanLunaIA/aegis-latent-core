@@ -396,14 +396,111 @@ class _AppState:
         return self.analyzers.get(session_id)
 
 
+# Deeper than any chat, completions or messages body needs, and far below the
+# ~450 levels at which canonical_normalize exhausts the recursion limit. The
+# WAF refuses more than ten levels itself, with evidence; this bound only has
+# to stop a body before it can crash the parse (REG-D98).
+_MAX_JSON_NESTING = 32
+
+
+class _NestingExceededError(HTTPException):
+    """A parsed body deeper than ``_MAX_JSON_NESTING``: a 400 that is recorded."""
+
+
+def _json_nesting_exceeds(value: Any, limit: int) -> bool:
+    """True when *value* holds a container more than *limit* levels deep.
+
+    Iterative, so it cannot itself run out of stack on the input it guards.
+    """
+    stack: list[tuple[Any, int]] = [(value, 0)]
+    while stack:
+        node, depth = stack.pop()
+        if isinstance(node, dict):
+            children: Any = node.values()
+        elif isinstance(node, list):
+            children = node
+        else:
+            continue
+        if depth > limit:
+            return True
+        stack.extend((child, depth + 1) for child in children)
+    return False
+
+
+def _parse_request_json(raw_body: bytes) -> dict[str, Any]:
+    """Parse, bound and canonicalise a request body, or answer 400.
+
+    Every endpoint used to catch ``JSONDecodeError`` alone. Invalid UTF-8
+    (``UnicodeDecodeError``), an integer longer than Python's digit limit
+    (``ValueError``) and nesting past the recursion limit (``RecursionError``)
+    escaped as 500s, and so did a valid body nested a few hundred levels,
+    which ``canonical_normalize`` recursed into (REG-D98). A body that is not
+    an object was accepted by the chat and completions endpoints and failed
+    later on the first ``body.get``.
+    """
+    try:
+        parsed = json.loads(raw_body)
+    except (ValueError, RecursionError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid JSON") from exc
+    if not isinstance(parsed, dict):
+        raise HTTPException(status_code=400, detail="Request body must be a JSON object")
+    if _json_nesting_exceeds(parsed, _MAX_JSON_NESTING):
+        raise _NestingExceededError(
+            status_code=400, detail=f"JSON nesting exceeds {_MAX_JSON_NESTING} levels"
+        )
+    return cast(dict[str, Any], canonical_normalize(parsed))
+
+
+async def _parse_governed_body(
+    state: _AppState, raw_body: bytes, *, tenant_id: str | None, endpoint: str
+) -> dict[str, Any]:
+    """``_parse_request_json``, with a rejection node for a body refused for depth.
+
+    Before the parse bound existed, a body nested past the WAF's ten-level
+    guard reached the WAF and was refused 403 with a durable rejection node.
+    The bound now refuses the deepest of those first, so it records them the
+    same way, or the fix for REG-D98 would have removed evidence the gateway
+    used to write. The node hashes the wire bytes: the body was refused before
+    it was normalised. Bodies that do not parse, or are not objects, were never
+    recorded and still are not.
+    """
+    try:
+        return _parse_request_json(raw_body)
+    except _NestingExceededError as exc:
+        evidence = await _commit_rejection_evidence(
+            state,
+            rejection_code=400,
+            reason_category="json_nesting",
+            request_bytes=raw_body,
+            tenant_id=tenant_id,
+            endpoint=endpoint,
+        )
+        raise HTTPException(status_code=400, detail=exc.detail, headers=evidence) from None
+
+
 def _extract_payload_text(body: dict[str, Any]) -> str:
     if "messages" in body:
-        return " ".join(
-            m.get("content", "") if isinstance(m, dict) else str(m) for m in body["messages"]
-        )
+        messages = body["messages"]
+        parts: list[str] = []
+        for m in messages if isinstance(messages, list) else [messages]:
+            if not isinstance(m, dict):
+                parts.append(str(m))
+                continue
+            content = m.get("content", "")
+            if isinstance(content, str):
+                parts.append(content)
+            elif isinstance(content, list):
+                # Content blocks used to reach the join as lists: TypeError,
+                # a 500 whenever the entropy guard was on (REG-D98).
+                parts.extend(
+                    block["text"]
+                    for block in content
+                    if isinstance(block, dict) and isinstance(block.get("text"), str)
+                )
+        return " ".join(parts)
     if "prompt" in body:
         prompt = body["prompt"]
-        return " ".join(prompt) if isinstance(prompt, list) else str(prompt)
+        return " ".join(map(str, prompt)) if isinstance(prompt, list) else str(prompt)
     return ""
 
 
@@ -1415,16 +1512,36 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             guard = None
             try:
                 from aegis.core.seccomp_guard import (
-                    SQLITE_SEQUENCE_STORE_SYSCALLS,
+                    SQLITE_SYSCALLS,
                     SeccompGuard,
                     profile_with,
                 )
 
+                # REG-D104: each of these keeps a SQLite database it reads and
+                # writes after lockdown; without the SQLite syscalls the first
+                # archival pass or shredded commit killed the gateway.
+                sqlite_after_lockdown = (
+                    cfg.ha_sequencer_url.startswith("sqlite")
+                    or cfg.s3_archive_enabled
+                    or cfg.enable_cryptographic_shredding
+                )
                 guard = (
-                    SeccompGuard(profile_with(SQLITE_SEQUENCE_STORE_SYSCALLS))
-                    if cfg.ha_sequencer_url.startswith("sqlite")
+                    SeccompGuard(profile_with(SQLITE_SYSCALLS))
+                    if sqlite_after_lockdown
                     else SeccompGuard()
                 )
+                if cfg.tsa_url and not guard.is_sandbox:
+                    # REG-D105: RFC 3161 verification runs the openssl binary,
+                    # and the profile forbids execve and process creation. The
+                    # first anchor after lockdown killed the gateway; refuse
+                    # here instead, before the filter is loaded.
+                    raise RuntimeError(
+                        "tsa_url is set, but RFC 3161 anchoring verifies each response "
+                        "with the openssl binary, which the seccomp profile forbids "
+                        "(execve). Unset AEGIS_TSA_URL and timestamp archived segment "
+                        "manifests outside the gateway, or run without the filter "
+                        "(development mode only)."
+                    )
                 if not guard.apply_filter():
                     if cfg.security_enforcement_mode == "strict" and cfg.require_seccomp:
                         raise RuntimeError("strict runtime requires an active seccomp filter")
@@ -1966,10 +2083,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         _require_intact_ledger()
         request_start = time.perf_counter()
         raw_body = await request.body()
-        try:
-            body = canonical_normalize(json.loads(raw_body))
-        except json.JSONDecodeError as exc:
-            raise HTTPException(status_code=400, detail="Invalid JSON") from exc
+        body = await _parse_governed_body(
+            state, raw_body, tenant_id=principal.tenant_id, endpoint=request.url.path
+        )
 
         with observability.record_span("aegis.waf.check") as sp:
             waf_result = state.waf.inspect_payload(body)
@@ -2325,13 +2441,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         _require_intact_ledger()
         request_start = time.perf_counter()
         raw_body = await request.body()
-        try:
-            parsed = canonical_normalize(json.loads(raw_body))
-        except json.JSONDecodeError as exc:
-            raise HTTPException(status_code=400, detail="Invalid JSON") from exc
-        if not isinstance(parsed, dict):
-            raise HTTPException(status_code=400, detail="Anthropic request must be an object")
-        body: dict[str, Any] = parsed
+        body = await _parse_governed_body(
+            state, raw_body, tenant_id=principal.tenant_id, endpoint=request.url.path
+        )
         if not isinstance(body.get("model"), str) or not isinstance(body.get("messages"), list):
             raise HTTPException(status_code=422, detail="model and messages are required")
         max_tokens = body.get("max_tokens")
@@ -2607,10 +2719,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     ) -> Response:
         _require_intact_ledger()
         raw_body = await request.body()
-        try:
-            body = canonical_normalize(json.loads(raw_body))
-        except json.JSONDecodeError as exc:
-            raise HTTPException(status_code=400, detail="Invalid JSON") from exc
+        body = await _parse_governed_body(
+            state, raw_body, tenant_id=principal.tenant_id, endpoint=request.url.path
+        )
 
         waf_result = state.waf.inspect_payload(body)
         if not waf_result.allowed:

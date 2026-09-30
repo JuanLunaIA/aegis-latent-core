@@ -438,7 +438,10 @@ def parse_yara_rules(text: str) -> tuple[list[YARARule], list[str]]:
     text = _strip_comments(text)
     pos = 0
     while pos < len(text):
-        m = re.search(r"\brule\s+(\w+)\s*(?::\s*[\w\s]+?)?\s*\{", text[pos:])
+        # Tags are one [\w\s]+ run: the earlier "\s*[\w\s]+?\s*" let three
+        # quantifiers share every space, so "rule x :" and 4 000 spaces with no
+        # brace took 22 s to reject (REG-D102).
+        m = re.search(r"\brule\s+(\w+)\s*(?::[\w\s]+)?\{", text[pos:])
         if not m:
             break
         rule_name = m.group(1)

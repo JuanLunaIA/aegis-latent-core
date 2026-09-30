@@ -174,6 +174,13 @@ class SeccompGuard:
             # the lifespan had finished. A connected local pair only — no
             # address, no network reach.
             "socketpair",
+            # ── WAL rotation (REG-D103). With max_wal_bytes > 0 (required for
+            # S3 archival) the ledger renames the active WAL and reopens a new
+            # one after lockdown. The reopen tightens the file to 0o600 through
+            # the descriptor it holds; the path-based chmod and the
+            # unconditional mkdir it used to issue killed the gateway on its
+            # first rotation. fchmod reaches only a file already open here.
+            "fchmod",
             # clone is added separately and only with CLONE_THREAD: the ASGI
             # threadpool (sync endpoints, to_thread) spawns threads per request;
             # process creation stays impossible.
@@ -303,6 +310,15 @@ class SeccompGuard:
 # outside the profile. Added only when that store is configured, so the strict
 # profile (PostgreSQL store) is unchanged.
 SQLITE_SEQUENCE_STORE_SYSCALLS: frozenset[str] = frozenset({"pread64", "pwrite64", "ftruncate"})
+
+# Every SQLite database the gateway reads or writes after lockdown (REG-D104):
+# the sequence store above, the S3 archiver's journal, and the shredding key
+# vault. The last two open their -journal/-wal/-shm files after lockdown, which
+# the sequence store (one connection, opened before) never did. SQLite checks
+# its effective uid on that open and, only as root, re-owns the new file to
+# match the database. Found by adding each killing syscall under the loaded
+# filter until archival and shredded commits ran clean; these five were all.
+SQLITE_SYSCALLS: frozenset[str] = SQLITE_SEQUENCE_STORE_SYSCALLS | frozenset({"geteuid", "fchown"})
 
 
 def profile_with(extra: frozenset[str]) -> SyscallProfile:
