@@ -428,7 +428,7 @@ The components below are licensed under weak-copyleft terms (LGPL, MPL or EPL). 
 | structlog | 26.1.0 | MIT OR Apache-2.0 | gateway (Python runtime) |
 | typing-inspection | 0.4.4 | MIT | gateway (Python runtime) |
 | typing_extensions | 4.16.0 | PSF-2.0 | gateway (Python runtime) |
-| urllib3 | 2.7.0 | MIT | gateway (Python runtime) |
+| urllib3 | 2.8.0 | MIT | gateway (Python runtime) |
 | uvloop | 0.22.1 | MIT License | gateway (Python runtime) |
 | watchfiles | 1.2.0 | MIT | gateway (Python runtime) |
 | websockets | 17.1 | BSD-3-Clause | gateway (Python runtime) |

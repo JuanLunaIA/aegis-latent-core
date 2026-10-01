@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "ff92d71c9c8e1c286f00c047902b02222a3be58ff72bde04569fce6699b2839f",
-      "size": 235177
+      "sha256": "b9b4ea60caea372b562bd7c1537aacbda98d055e18fdcca260375f1c07dfa7ef",
+      "size": 235970
     },
     {
       "category": "governed_input",
@@ -189,19 +189,19 @@
     {
       "category": "governed_input",
       "path": "pyproject.toml",
-      "sha256": "a499a8d355a0d005089fa4cac949e8a8cf1ec33651c16d22c302afde93a25d28",
-      "size": 13169
+      "sha256": "4817d7a3b872deb4d5ba839e4e868f4250c1f55ade199c7ba7f7e217b44f8ddf",
+      "size": 13248
     },
     {
       "category": "governed_input",
       "path": "requirements.txt",
-      "sha256": "1466b7cb0cfe4282fcbc3e0cc5f08b050486dd2065331a2a39bfb6196361d191",
-      "size": 1528
+      "sha256": "fb75e8888d3f1d4e9c8ff80232ebb4a99b43523f2440e2539dfe8a6ac77a6146",
+      "size": 1614
     },
     {
       "category": "governed_input",
       "path": "requirements.lock",
-      "sha256": "411915439773e44816b692aab1ede76ad36ac1c97719c986dc59a7e715d51096",
+      "sha256": "985180d4321a11d3d51fc3d6c7f948edc03caae288dbf172287653e58ef99162",
       "size": 95839
     },
     {

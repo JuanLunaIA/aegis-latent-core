@@ -287,6 +287,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the gate is right to refuse it. After the bump, `npm ci`, typecheck, the 6 vitest tests, `next build`,
   `npm audit` (0 vulnerabilities) and the client-bundle secret check all pass locally. No published image
   changes until the next release.
+- **Gateway runtime: `urllib3` `2.7.0` → `2.8.0`** (`REG-D106`). Three advisories against `2.7.0` were published
+  on 2026-09-30 (GHSA-8988-9cw3-xx77, GHSA-gh4c-6fx4-qh6g, GHSA-vxq7-64xx-v4gw). `pip-audit`, which the
+  Security Scan job runs against `requirements.lock`, failed on them on this branch and would fail on `main`.
+  `urllib3` enters only through `requests`, and no `aegis` module imports either, so no gateway request path
+  reaches it; the floor is raised in `requirements.txt` and `pyproject.toml` all the same. The lock was
+  regenerated with CI's toolchain and only `urllib3` changed; its hashes equal the PyPI wheel and sdist.
+  `pip-audit` now reports no known vulnerabilities for the lock and for `requirements.txt`. Evidence:
+  `evidence/registry/reg-d106_closure.txt`.
 
 ### Documentation
 
