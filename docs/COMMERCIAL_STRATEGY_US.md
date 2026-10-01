@@ -5,13 +5,13 @@
 This document describes a US-market positioning and packaging hypothesis for Aegis Latent Core. It is for commercial stakeholders, founders, product owners, procurement and support planners. It is not a binding offer, a forecast, legal advice, or evidence of market validation.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** checked-out source baseline `v5.0.1` with fourteen synchronized anchors — **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a); the previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` — per-surface readbacks, the latest published release and the historical baselines are stated once, and only, in [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1, which is the only document that establishes publication state
+**Release baseline:** checked-out source baseline `v5.0.2` with fourteen synchronized anchors — an Apache-2.0 source target that is **not published**; the most recent published release is `v5.0.1`, **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a); the previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` — per-surface readbacks, the latest published release and the historical baselines are stated once, and only, in [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1, which is the only document that establishes publication state
 **Market scope:** United States, self-hosted enterprise AI infrastructure
 **Positioning decision:** [`docs/architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md`](architecture/ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md)
 
 ## Baseline discipline
 
-The checked-out source baseline is **5.0.1** with 14 synchronized anchors — published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26) (see `docs/RELEASE_STATUS.md` §1.0a); **5.0.0** is the previous release. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` exports, an auxiliary `RustWal` stream segment, and a bounded in-process SSE benchmark. These are checked-out-source implementation and evidence items. They do not establish external lifecycle or production-acceptance state; verify the `v4.1.1` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback. Any proposal must identify the exact deliverable baseline.
+The checked-out source baseline is **5.0.2** with 14 synchronized anchors — an Apache-2.0 source target that is **not published**; the most recent published release is `5.0.1`, published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26) (see `docs/RELEASE_STATUS.md` §1.0a); **5.0.0** is the previous release. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` exports, an auxiliary `RustWal` stream segment, and a bounded in-process SSE benchmark. These are checked-out-source implementation and evidence items. They do not establish external lifecycle or production-acceptance state; verify the `v4.1.1` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback. Any proposal must identify the exact deliverable baseline.
 
 ## Positioning
 
@@ -39,7 +39,7 @@ The sales motion is **local evaluation → evidence replay → controlled pilot 
 
 | Package | Buyer | Included | Hard boundary |
 |---|---|---|---|
-| Community / OSS | Developers and evaluators | AGPL self-hosting, source, tests, public docs and issue tracking | No support, SLA, private onboarding or procurement commitment |
+| Community / OSS | Developers and evaluators | Apache-2.0 self-hosting, source, tests, public docs and issue tracking | No support, SLA, private onboarding or procurement commitment |
 | Team / Pilot | Platform team validating one workload | Time-boxed pilot, bounded architecture review, evidence replay, test plan and limited implementation support | No production SLO, certification or unlimited engineering promise |
 | Production | One enterprise deployment | Commercial self-hosted terms, release updates, deployment guidance, evidence package and named support window | Requires written support capacity and exclusions; not per-token pricing |
 | Enterprise | Multiple environments or regulated procurement | Security review support, architecture assistance, negotiated response targets, private deployment guidance and procurement artifacts | No round-the-clock or sovereign claim without staffing, contract and tested operating model |
@@ -129,7 +129,7 @@ Community support is public and best effort. Pilot support is time-boxed and sco
 
 ## Legal and license boundary
 
-`COMMERCIAL.md` requires counsel review before it states the effect of AGPL network obligations, exemptions, future-version rights, warranty, indemnity, tax, data registration, certificate delivery or redistribution. This strategy is not legal advice and does not change the license.
+`COMMERCIAL.md` requires counsel review before it states the effect of the Apache-2.0 conditions, the treatment of agreements made against releases published under AGPLv3 or a commercial licence, future-version rights, warranty, indemnity, tax, data registration, certificate delivery or redistribution. This strategy is not legal advice and does not change the license.
 
 ## Success metrics
 

@@ -7,9 +7,9 @@ top-k logprobs, computes Shannon entropy, EMA, KL and JS divergence,
 and emits structured alerts when thresholds are exceeded.
 """
 
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 from __future__ import annotations
 
 import logging

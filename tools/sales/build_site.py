@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 """Build the static verification-first sales pages under ``site/``.
 
     python tools/sales/build_site.py            # write site/index.html, site/data-room.html
@@ -143,7 +143,7 @@ def _page(title: str, description: str, body: str, reproduce: str) -> str:
 </main>
 <footer>
 <p>Rebuild this page: <code>{html.escape(reproduce)}</code></p>
-<p>Source: <a href="https://github.com/JuanLunaIA/aegis-latent-core">github.com/JuanLunaIA/aegis-latent-core</a>. Licence: AGPLv3 or commercial.</p>
+<p>Source: <a href="https://github.com/JuanLunaIA/aegis-latent-core">github.com/JuanLunaIA/aegis-latent-core</a>. Licence: Apache-2.0.</p>
 </footer>
 </body>
 </html>

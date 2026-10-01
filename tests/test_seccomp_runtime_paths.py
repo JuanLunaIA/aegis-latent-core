@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 """REG-D103 to REG-D105: features that killed the gateway once the filter loaded.
 
 The seccomp profile was measured on the request path, so it covered the request

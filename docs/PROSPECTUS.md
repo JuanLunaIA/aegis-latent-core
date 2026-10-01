@@ -7,7 +7,7 @@ This prospectus is for US enterprise platform, AppSec, AI engineering, complianc
 
 ## Baseline note
 
-The checked-out source baseline is **5.0.1** with 14 synchronized anchors — published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26) (see `docs/RELEASE_STATUS.md` §1.0a); **5.0.0** is the previous release. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP export, and an auxiliary `RustWal` stream segment. These checked-out-source capabilities do not establish external lifecycle or production-acceptance state, and this paragraph is not evidence about any of them. The most recent published release is published on every surface **except PyPI `aegis-latent-core`**; the per-surface readbacks, the latest published release and the historical baselines are stated once, and only, in [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1 — read them back yourself rather than trusting this note.
+The checked-out source baseline is **5.0.2** with 14 synchronized anchors — an Apache-2.0 source target that is **not published**; the most recent published release is `5.0.1`, published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26) (see `docs/RELEASE_STATUS.md` §1.0a); **5.0.0** is the previous release. It adds bounded SSE with `pending-terminal` evidence, native Anthropic `POST /v1/messages`, Python drop-in and TypeScript provider-native SDK integration, portable MMR proofs, a read-only forensic dashboard, bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP export, and an auxiliary `RustWal` stream segment. These checked-out-source capabilities do not establish external lifecycle or production-acceptance state, and this paragraph is not evidence about any of them. The most recent published release is published on every surface **except PyPI `aegis-latent-core`**; the per-surface readbacks, the latest published release and the historical baselines are stated once, and only, in [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1 — read them back yourself rather than trusting this note.
 
 ## Executive brief
 
@@ -30,7 +30,7 @@ Teams routing AI requests through multiple providers often need a stable interna
 | Egress and rate limiting | Validates endpoint forms and fails closed when the distributed limiter is unavailable in strict mode. | Network policy and Redis/HA behavior remain customer-owned. |
 | Bounded enrichment | Runs optional response analysis in bounded workers after authoritative evidence exists. | Enrichment may be rejected or delayed without weakening evidence. |
 | Key rotation | Supports an atomic versioned HMAC keyring with overlap, expiry and non-secret key IDs. | Three-replica propagation and secret-manager custody require deployment evidence. |
-| Portable proof and forensic export | The checked-out `v5.0.1` source stores portable MMR proofs and provides a read-only dashboard plus bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP export. | A trusted root must come from an independent channel; the PDF is a technical report, not a certification. |
+| Portable proof and forensic export | The checked-out `v5.0.2` source stores portable MMR proofs and provides a read-only dashboard plus bounded JCS/DAG-CBOR/CIDv1/PDF/`VERIFY.sh` ZIP export. | A trusted root must come from an independent channel; the PDF is a technical report, not a certification. |
 
 ## Integration example
 
@@ -47,7 +47,7 @@ The customer must validate the actual provider, model parameters, streaming beha
 
 ## Evidence contract
 
-A non-streaming governed response is returned with `X-Aegis-Evidence-Status: durable` when the authoritative evidence path has completed under the configured contract, and the checked-out `v5.0.1` source can include `X-Aegis-MMR-*` proof headers. A stream instead starts with `X-Aegis-Evidence-Status: pending-terminal`; its bounded relay commits one terminal summary before the protocol terminal marker, and proof retrieval occurs after termination. Request and session identifiers allow correlation. The response-analysis alert count may be preliminary because enrichment runs after the durable commit; authoritative enrichment is read from its evidence store.
+A non-streaming governed response is returned with `X-Aegis-Evidence-Status: durable` when the authoritative evidence path has completed under the configured contract, and the checked-out `v5.0.2` source can include `X-Aegis-MMR-*` proof headers. A stream instead starts with `X-Aegis-Evidence-Status: pending-terminal`; its bounded relay commits one terminal summary before the protocol terminal marker, and proof retrieval occurs after termination. Request and session identifiers allow correlation. The response-analysis alert count may be preliminary because enrichment runs after the durable commit; authoritative enrichment is read from its evidence store.
 
 The ledger supports integrity verification through chain linkage, hashes, signatures, WAL replay and export manifests. The merged-source Python SDK is drop-in through official-client subclasses; TypeScript integration remains provider-native and declares the official provider SDKs as peer dependencies. HMAC-SHA256 is symmetric and classical. Native ML-DSA-65 is configuration-dependent and does not, by itself, establish constant-time execution, FIPS 140 validation or legal admissibility.
 
@@ -57,7 +57,7 @@ The release separates dispatch microbenchmarks, end-to-end proxy behavior, upstr
 
 The in-tree backpressure run offered 2,500 requests at 10,000 RPS offered with a 2 ms injected `fsync` delay and observed 2,500 durable records, zero failures, zero missing IDs, zero duplicate IDs and valid chain integrity, at p99 commit latency of 836.3514210795984 ms (`evidence/execution_2026-08-20/backpressure_stall_report.json`); the current source baseline records p99 51.87 ms (`evidence/execution_2026-09-16/`). A previously published `v3.1.0` pair — 10,000 records at p99 1,189.89 ms — is retracted (`UC-018`): no artifact in this tree produces it. This demonstrates tested correlation under an injected seam; it is not accepted production capacity or an SLO.
 
-The checked-out `v5.0.1` source also retains an in-process bounded SSE benchmark (7 rounds × 1,000 deterministic events). It excludes network, provider and durable-WAL latency and is not capacity or SLO evidence. Its optional native `RustWal` stream segment is auxiliary; the JSONL ledger remains the replay authority.
+The checked-out `v5.0.2` source also retains an in-process bounded SSE benchmark (7 rounds × 1,000 deterministic events). It excludes network, provider and durable-WAL latency and is not capacity or SLO evidence. Its optional native `RustWal` stream segment is auxiliary; the JSONL ledger remains the replay authority.
 
 The local WAF corpus contains 15 malicious and 8 benign cases. The run observed zero bypasses and zero false positives for that pinned corpus, with a wide confidence interval because the corpus is small. HTTP/2 fragmentation and `nuclei-templates/waf-bypass` are not represented by that application-layer result.
 
@@ -75,7 +75,7 @@ The recommended path is local evaluation, evidence replay, controlled pilot, sec
 
 ## Packaging and pricing hypothesis
 
-Aegis is staged as Community/OSS, Team/Pilot, Production, Enterprise and future Sovereign/OEM packages. The commercial strategy includes illustrative pilot and annual ranges for validation only; it does not publish a binding price, unlimited support, automatic AGPL exemption or 24/7 promise. See [`COMMERCIAL.md`](../COMMERCIAL.md) and [`COMMERCIAL_STRATEGY_US.md`](COMMERCIAL_STRATEGY_US.md).
+Aegis is staged as Community/OSS, Team/Pilot, Production, Enterprise and future Sovereign/OEM packages. The commercial strategy includes illustrative pilot and annual ranges for validation only; it does not publish a binding price, unlimited support or 24/7 promise. See [`COMMERCIAL.md`](../COMMERCIAL.md) and [`COMMERCIAL_STRATEGY_US.md`](COMMERCIAL_STRATEGY_US.md).
 
 ## Explicit non-goals
 

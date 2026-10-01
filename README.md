@@ -8,11 +8,11 @@
 [![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
 [![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
 [![coverage](https://img.shields.io/badge/coverage-91.30%25_(2026--09--24)-green)](#real-world-benchmarks)
-[![License](https://img.shields.io/badge/license-AGPLv3%20or%20Commercial-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 Every load-bearing claim in this file carries a locator and a stated boundary; the gates that enforce that discipline run in CI.
 
-> **Current release:** `v5.0.1` — published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26), read back the same day ([Release Status](docs/RELEASE_STATUS.md) §1.0a). The Sigstore-signed tag passes `gitsign verify-tag`; the GitHub Release carries 31 assets and all 15 files listed in its `SHA256SUMS` re-hash to their digests; PyPI `aegis-latent-sdk` `5.0.1` and npm `aegis-latent-sdk` `5.0.1` are byte-identical to the release assets of the same name; and the GHCR gateway and dashboard images pass `cosign verify` and their build-provenance attestations verify, each against the exact publishing workflow identity. **The gateway distribution `aegis-latent-core` reached PyPI at `5.0.1` on 2026-09-26** (run `36224961909` of `publish_pypi_gateway.yml`, read back 2026-09-29, [Release Status](docs/RELEASE_STATUS.md) §1.0b); `pip install aegis-latent-core` resolves to `5.0.1`, and its wheel and sdist match the release assets byte for byte. The GHCR images and the Release assets remain available. The previous release, `v5.0.0`, was published 2026-09-16 on the same surfaces (§1.0). There is no `4.2.0`; the number was skipped.
+> **Current release:** `v5.0.1` — the latest published release (the checked-out source is `v5.0.2`, an Apache-2.0 source target that is **not published**), published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26), read back the same day ([Release Status](docs/RELEASE_STATUS.md) §1.0a). The Sigstore-signed tag passes `gitsign verify-tag`; the GitHub Release carries 31 assets and all 15 files listed in its `SHA256SUMS` re-hash to their digests; PyPI `aegis-latent-sdk` `5.0.1` and npm `aegis-latent-sdk` `5.0.1` are byte-identical to the release assets of the same name; and the GHCR gateway and dashboard images pass `cosign verify` and their build-provenance attestations verify, each against the exact publishing workflow identity. **The gateway distribution `aegis-latent-core` reached PyPI at `5.0.1` on 2026-09-26** (run `36224961909` of `publish_pypi_gateway.yml`, read back 2026-09-29, [Release Status](docs/RELEASE_STATUS.md) §1.0b); `pip install aegis-latent-core` resolves to `5.0.1`, and its wheel and sdist match the release assets byte for byte. The GHCR images and the Release assets remain available. The previous release, `v5.0.0`, was published 2026-09-16 on the same surfaces (§1.0). There is no `4.2.0`; the number was skipped.
 >
 > **First published version with the gateway on PyPI:** `v4.1.2`, read back on 2026-09-04 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images. **`4.1.2` is the first version installable from PyPI as `aegis-latent-core`**; before it the gateway came from source or GHCR only. The npm version list skips `4.1.1`, whose publish step failed. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The two `4.1.2` PyPI gateway artifacts are byte-different from the release assets of the same name — same content, different build host — so `SHA256SUMS` does not cover those downloads; the `5.0.1` PyPI gateway artifacts match it. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
@@ -202,7 +202,7 @@ Two things that snippet does not establish. It shows the bytes match the manifes
 
 ## Support the project
 
-Aegis Latent Core is developed by one maintainer. A donation is voluntary: it buys no licence, support, feature or influence, and it is not tax-deductible. Commercial use is licensed separately ([COMMERCIAL.md](COMMERCIAL.md)).
+Aegis Latent Core is developed by one maintainer. A donation is voluntary: it buys no licence, support, feature or influence, and it is not tax-deductible. The source is licensed under Apache-2.0 for every use, commercial or not ([COMMERCIAL.md](COMMERCIAL.md)).
 
 [![Donate by card](docs/assets/donate/donate-card.svg)](https://donate.stripe.com/dRm6oG6Vpbnf3BB3sOfUQ00)
 [![Donate with PayPal](docs/assets/donate/donate-paypal.svg)](https://www.paypal.com/ncp/payment/PLB-ZBB5SW68AQNM)
@@ -219,4 +219,4 @@ Aegis Latent Core is developed by one maintainer. A donation is voluntary: it bu
 
 ---
 
-<sub>Copyright © 2026 Juan Luna. Licensed under AGPLv3 or a commercial agreement. Full documentation index: <a href="docs/INDEX.md">docs/INDEX.md</a></sub>
+<sub>Copyright © 2026 Juan Luna. Licensed under the Apache License, Version 2.0 from 5.0.2 (releases up to 5.0.1 keep the AGPLv3-or-commercial terms they were published under; see [docs/legal/LICENSE_TRANSITION_5.0.2.md](docs/legal/LICENSE_TRANSITION_5.0.2.md)). Full documentation index: <a href="docs/INDEX.md">docs/INDEX.md</a></sub>

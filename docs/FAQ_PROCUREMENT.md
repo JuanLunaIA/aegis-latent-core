@@ -3,13 +3,13 @@
 This FAQ is for procurement officers, economic buyers, legal teams, CISOs and evaluation committees. It explains what the repository can support, what requires a commercial agreement or customer assessment, and which questions must be answered before a quote. It is not a binding offer or legal advice.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** checked-out source baseline `v5.0.1` with fourteen synchronized anchors — **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a); the previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` — per-surface readbacks, the latest published release and the historical baselines are stated once, and only, in [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1, which is the only document that establishes publication state
+**Release baseline:** checked-out source baseline `v5.0.2` with fourteen synchronized anchors — an Apache-2.0 source target that is **not published**; the most recent published release is `v5.0.1`, **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a); the previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` — per-surface readbacks, the latest published release and the historical baselines are stated once, and only, in [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1, which is the only document that establishes publication state
 **Audience:** Procurement, legal, security and executive sponsors
 **Commercial documents:** [`COMMERCIAL.md`](../COMMERCIAL.md), [`docs/COMMERCIAL_STRATEGY_US.md`](COMMERCIAL_STRATEGY_US.md)
 
 ## Which product baseline is being evaluated?
 
-The checked-out source baseline is **5.0.1** with 14 synchronized anchors — published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26) (see `docs/RELEASE_STATUS.md` §1.0a); **5.0.0** is the previous release. Its bounded SSE `pending-terminal` flow, native Anthropic `POST /v1/messages`, Python and TypeScript SDKs, portable MMR proofs, forensic dashboard and bounded ZIP export are checked-out-source capabilities. They do not establish external lifecycle or production-acceptance state; verify the `v4.1.1` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback. Procurement documents, security evidence and acceptance tests must name one baseline rather than combining them.
+The checked-out source baseline is **5.0.2** with 14 synchronized anchors — an Apache-2.0 source target that is **not published**; the most recent published release is `5.0.1`, published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26) (see `docs/RELEASE_STATUS.md` §1.0a); **5.0.0** is the previous release. Its bounded SSE `pending-terminal` flow, native Anthropic `POST /v1/messages`, Python and TypeScript SDKs, portable MMR proofs, forensic dashboard and bounded ZIP export are checked-out-source capabilities. They do not establish external lifecycle or production-acceptance state; verify the `v4.1.1` tag, GitHub Release, PyPI and npm artifacts, OCI digest, signature, and attestation through independent readback. Procurement documents, security evidence and acceptance tests must name one baseline rather than combining them.
 
 ## What category is this product?
 
@@ -25,7 +25,7 @@ The repository includes source, tests, public documentation, local benchmark har
 
 ## Is commercial licensing available?
 
-The repository states an AGPLv3 plus commercial licensing structure. The actual effect of network-use obligations, exemptions, future-version rights, warranties, indemnities, tax, redistribution and support must be defined in an executed agreement reviewed by customer counsel. `COMMERCIAL.md` is not a substitute for the license text or counsel.
+From 5.0.2 the repository states a single Apache-2.0 licence; releases up to and including 5.0.1 were published under AGPLv3 or a commercial licence and keep those terms (`docs/legal/LICENSE_TRANSITION_5.0.2.md`). The actual effect of the Apache-2.0 conditions, any earlier agreement, warranties, indemnities, tax, redistribution and support must be defined in an executed agreement reviewed by customer counsel. `COMMERCIAL.md` is not a substitute for the license text or counsel.
 
 ## Is pricing fixed?
 
@@ -65,7 +65,7 @@ Procurement can use them as evaluation inputs, not universal promises. The backp
 
 ## What source integration and evidence artifacts are available?
 
-The checked-out `v5.0.1` source supports native Anthropic `POST /v1/messages` in addition to the OpenAI-compatible ingress. The Python SDK is drop-in through official-client subclasses. TypeScript uses provider-native wrappers and options, with the official provider packages as peer dependencies; it does not replace their models or normalize their payloads. Non-streaming responses can return durable status and `X-Aegis-MMR-*` proof headers. Streaming responses begin `pending-terminal`, commit one terminal summary before the protocol terminal marker, and expose post-terminal proof retrieval.
+The checked-out `v5.0.2` source supports native Anthropic `POST /v1/messages` in addition to the OpenAI-compatible ingress. The Python SDK is drop-in through official-client subclasses. TypeScript uses provider-native wrappers and options, with the official provider packages as peer dependencies; it does not replace their models or normalize their payloads. Non-streaming responses can return durable status and `X-Aegis-MMR-*` proof headers. Streaming responses begin `pending-terminal`, commit one terminal summary before the protocol terminal marker, and expose post-terminal proof retrieval.
 
 The read-only forensic dashboard can request a bounded ZIP containing a JCS manifest, canonical DAG-CBOR ledger slice with CIDv1, MMR proof JSON, a technical PDF certificate and `VERIFY.sh`.
 

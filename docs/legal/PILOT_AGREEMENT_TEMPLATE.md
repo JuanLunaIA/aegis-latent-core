@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna. All rights reserved.
-Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+Copyright (c) 2026 Juan Luna.
+SPDX-License-Identifier: Apache-2.0
+Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 -->
 
 # Paid Pilot Agreement: Template
@@ -11,6 +11,8 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 **Boundary:** a template. No pilot has been executed, no customer exists and no price has been validated.
 
 > **[COUNSEL-REVIEW-REQUIRED]** Draft prepared by an AI agent for the owner and qualified counsel. It is not legal advice, has not been reviewed by a lawyer, has not been offered to anyone, and nobody has signed it. Bracketed fields `[●]` are open decisions, not defaults. Do not send it to a counterparty before counsel has reviewed it.
+
+> **[SUPERSEDED-IN-PART — 5.0.2]** The pilot template referred to a commercial licence and the AGPLv3 as the "proceed" and "stop" outcomes. From `5.0.2` the source is Apache-2.0 and what follows a pilot is a support or services agreement. See [Licence Transition 5.0.2](LICENSE_TRANSITION_5.0.2.md).
 
 ## Parties and scope
 
@@ -28,7 +30,7 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 ## 1. Licence during the pilot
 
-The Customer may run the Licensed Software `[tag and commit]` in the named Environments for the duration under a non-exclusive, non-transferable evaluation licence. The AGPLv3 remains available for the same source; the pilot does not gate anything the Customer could run alone.
+The Customer may run the Licensed Software `[tag and commit]` in the named Environments for the duration under a non-exclusive, non-transferable evaluation licence. The licence the source carries (Apache-2.0 for `5.0.2`; the AGPLv3 for a release up to `5.0.1`) remains available for the same source; the pilot does not gate anything the Customer could run alone.
 
 ## 2. Acceptance criteria
 
@@ -52,11 +54,11 @@ The Vendor may name the Customer only with written permission. Granting permissi
 
 ## 7. Exit
 
-At the end date exactly one of these follows, and each is an acceptable outcome: proceed to a commercial licence; stop (the Customer keeps what it learned and the AGPLv3 source); or extend under a new agreement with new criteria. A pilot without a recorded decision at the end date is a failed pilot.
+At the end date exactly one of these follows, and each is an acceptable outcome: proceed to a support or services agreement; stop (the Customer keeps what it learned and the source under its licence); or extend under a new agreement with new criteria. A pilot without a recorded decision at the end date is a failed pilot.
 
 ## 8. Liability and general terms
 
-Cap `[●]`; exclusions `[●]`; governing law `[●]`; forum `[●]`; confidentiality `[mutual, term ●]`. **Counsel:** keep these consistent with the commercial licence so the pilot does not set a precedent the licence must undo.
+Cap `[●]`; exclusions `[●]`; governing law `[●]`; forum `[●]`; confidentiality `[mutual, term ●]`. **Counsel:** keep these consistent with the support/services agreement so the pilot does not set a precedent that agreement must undo.
 
 ## Schedule 1: acceptance criteria
 

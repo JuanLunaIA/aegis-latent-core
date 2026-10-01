@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 """aegis.core.offline_license — Domain 1.3 offline license validation.
 
 Validates HMAC-SHA256-signed license files with no network calls.  The license

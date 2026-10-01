@@ -1,17 +1,18 @@
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 [build-system]
 requires = ["hatchling==1.28.0"]
 build-backend = "hatchling.build"
 
 [project]
 name = "aegis-latent-sdk"
-version = "5.0.1"
+version = "5.0.2"
 description = "Typed Aegis gateway clients and portable MMR proof verification"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "AGPL-3.0-only OR LicenseRef-Proprietary"}
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 authors = [{name = "Juan Luna"}]
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Generate the deterministic manifest for the advisory AI context pack."""
 
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ PUBLISHED_GITHUB_RELEASE_TARGET = "860f14177d94c194e5ae7156017d6fa74264e429"
 # (6469904380218584ae0b5221334bc9a46500f5ba, failed tag workflows) is recorded in
 # 01_CANONICAL_SYMBOL_AND_TYPE_INDEX.tsv as HistoricalLightweightTag.
 PUBLISHED_GITHUB_RELEASE_TAG_KIND = "annotated_signed"
-SOURCE_RELEASE_TARGET_VERSION = "5.0.1"
+SOURCE_RELEASE_TARGET_VERSION = "5.0.2"
 SYNCHRONIZED_VERSION_ANCHORS = 14
 MANIFEST_PATH = ".aegis_ai_context/MANIFEST.json"
 CONTEXT_FILES = (

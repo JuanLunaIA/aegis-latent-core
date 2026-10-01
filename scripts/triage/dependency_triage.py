@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 """Deterministic dependency triage across the Python, Rust and npm trees.
 
 Every dependency the repository actually locks is read from its lock file and
@@ -110,7 +110,7 @@ BUCKET_ORDER: Final[tuple[str, ...]] = (
 #: Buckets that fail the gate while unresolved.
 BLOCKING_BUCKETS: Final[frozenset[str]] = frozenset({BUCKET_CONFIRMED_CVE, BUCKET_LICENSE_BLOCKER})
 
-#: SPDX identifiers that make a component undistributable inside a proprietary
+#: SPDX identifiers that make a component undistributable inside an Apache-2.0
 #: artifact without further analysis. Weak copyleft is handled separately: it
 #: is allowed when dynamically linked and attributed, which is a question about
 #: linkage this script cannot answer, so it is surfaced rather than judged.
@@ -470,7 +470,7 @@ def read_npm_lock(root: Path, relative: str) -> list[Component]:
             continue  # a link: or workspace entry carries no version
         # A `file:` link is this repository's own package resolved through the
         # dashboard's node_modules. It is first-party source under the repo's
-        # own dual licence, not a third-party component to triage.
+        # own Apache-2.0 licence, not a third-party component to triage.
         if entry.get("link") or str(entry.get("resolved", "")).startswith("file:"):
             continue
         # Depth 1 under node_modules with no nesting is a top-level install,
@@ -776,7 +776,7 @@ def classify(
         tokens = {token.strip("() ") for token in re.split(r"\s+(?:AND|OR|WITH)\s+", licence)}
         if tokens & STRONG_COPYLEFT:
             component.bucket = BUCKET_LICENSE_BLOCKER
-            component.action = "quarantine: must not be a hard dependency of the proprietary core"
+            component.action = "quarantine: must not be a hard dependency of the Apache-2.0 core"
             component.evidence = f"lock file declares {licence}"
             return
         if any(token.startswith(WEAK_COPYLEFT_PREFIXES) for token in tokens):

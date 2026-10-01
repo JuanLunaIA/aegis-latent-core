@@ -37,7 +37,7 @@ param zone string = ''
 param dataDiskGb int = 32
 
 @description('Gateway image. Pin a digest (repo@sha256:...) for reproducibility.')
-param image string = 'ghcr.io/juanlunaia/aegis-latent-core:5.0.1'
+param image string = 'ghcr.io/juanlunaia/aegis-latent-core:5.0.2'
 
 @allowed(['openai', 'anthropic', 'gemini', 'openrouter'])
 param provider string = 'openai'

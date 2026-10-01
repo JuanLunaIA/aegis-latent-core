@@ -16,7 +16,7 @@
     {"doc": "Penetration-test report", "status": "missing-human", "reg": "REG-H01", "owner": "Founder, then maintainer", "target": "SOW 2027-03-31; report 2027-06-30"},
     {"doc": "SOC 2 report", "status": "missing-human", "reg": "REG-H02", "owner": "Founder and auditor", "target": "auditor engaged 2027-08-31; report 2027-12-31"},
     {"doc": "Escrow agreement", "status": "missing-human", "reg": "REG-H03", "owner": "Founder", "target": "2027-03-31"},
-    {"doc": "Customer contracts, LOIs, executed commercial licence", "status": "missing-human", "reg": "REG-H06", "owner": "Founder", "target": "2027-05-31 to 2027-09-30"},
+    {"doc": "Customer contracts, LOIs, executed support or services agreement", "status": "missing-human", "reg": "REG-H06", "owner": "Founder", "target": "2027-05-31 to 2027-09-30"},
     {"doc": "Buyer interview notes", "status": "missing-human", "reg": "REG-H06", "owner": "Founder", "target": "2027-01-31"},
     {"doc": "Legal opinions: licence, AI-authorship copyright, MiFID/MAR inputs", "status": "missing-human", "reg": "REG-H04, REG-H10", "owner": "Counsel", "target": "2027-01-31"},
     {"doc": "Corporate formation and IP assignment", "status": "missing-human", "reg": "REG-H09", "owner": "Founder and counsel", "target": "2027-01-31"}

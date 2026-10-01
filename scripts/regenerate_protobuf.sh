@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 # Regenerate aegis/core/audit_node_pb2.py from aegis/core/audit_node.proto.
 #
 # REG-056: the generated module is tracked in the tree and nothing in the
@@ -22,7 +22,7 @@
 #   ! git diff --quiet                      # then review the diff before committing
 #
 # `audit_node_pb2.py` is listed in SKIP_NAMES in scripts/apply_license_headers.py,
-# so it carries the protoc banner rather than this repository's AGPL header.
+# so it carries the protoc banner rather than this repository's Apache-2.0 header.
 
 set -euo pipefail
 

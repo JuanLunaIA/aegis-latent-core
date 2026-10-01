@@ -1,16 +1,17 @@
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 [build-system]
 requires = ["hatchling==1.28.0"]
 build-backend = "hatchling.build"
 
 [project]
 name = "aegis-latent-core"
-version = "5.0.1"
+version = "5.0.2"
 description = "Fail-closed LLM gateway with durable signed forensic evidence and bounded response enrichment"
 readme = "README.md"
-license = { text = "AGPL-3.0-only" }
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.11"
 authors = [{ name = "Juan Luna", email = "juan.c.luna04@gmail.com" }]
 maintainers = [{ name = "Juan Luna", email = "juan.c.luna04@gmail.com" }]
@@ -23,7 +24,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",

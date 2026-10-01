@@ -6,6 +6,10 @@
 # their own contributions while granting the maintainer the license described
 # there; they may be listed below as contributors without affecting the
 # maintainer's sole copyright in the project as a whole.
+#
+# Licence: Apache License, Version 2.0 from version 5.0.2 (see LICENSE and
+# NOTICE). Releases up to and including 5.0.1 were published under AGPLv3 or a
+# commercial licence and keep the terms they were published under.
 
 Sole copyright holder & maintainer:
   Juan Luna <juan.c.luna04@gmail.com>

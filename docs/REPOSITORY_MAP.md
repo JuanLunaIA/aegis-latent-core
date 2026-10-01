@@ -1,13 +1,13 @@
 # Repository Map — Aegis Latent Core
 
-**Last verified:** 2026-09-21 UTC (`REG-D29`) — this page's navigation-aids table was updated for `docs/MODULE_INVENTORY.md`, the generated per-file inventory. The 22 source paths cited below were last re-checked against the tree **as it stood before the 5.0.1 source bump**; re-checking them against the current target is content review, not a date bump, and is tracked by `AUD-37`. The stamp formerly read 2026-08-27 while the page described 2026-09-16 content (`AF-057`)
+**Last verified:** 2026-09-21 UTC (`REG-D29`) — this page's navigation-aids table was updated for `docs/MODULE_INVENTORY.md`, the generated per-file inventory. The 22 source paths cited below were last re-checked against the tree **as it stood before the 5.0.2 source bump**; re-checking them against the current target is content review, not a date bump, and is tracked by `AUD-37`. The stamp formerly read 2026-08-27 while the page described 2026-09-16 content (`AF-057`)
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out source metadata is synchronized at `v5.0.1`; it was published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26). The previous release `v5.0.0` was published 2026-09-16 on every surface except PyPI `aegis-latent-core`; `v4.1.2` was the last version published on every surface before `5.0.1` completed the set on 2026-09-26
+**Source baseline:** checked-out source metadata is synchronized at `v5.0.2`, an Apache-2.0 source target that is **not published**. The most recent published release is `v5.0.1`, published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26). The previous release `v5.0.0` was published 2026-09-16 on every surface except PyPI `aegis-latent-core`; `v4.1.2` was the last version published on every surface before `5.0.1` completed the set on 2026-09-26
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` retains the historical `4.0.0` comparison anchors documented by [`evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md`](../evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md)
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** previously published `v3.1.0` artifacts and retained measurements remain historical
 
-Read the root [`README.md`](../README.md) first. Paths below describe the checked-out `v5.0.1` source baseline unless a row is explicitly historical. Source paths and version metadata do not imply that corresponding packages or images are available from a public registry or that an OCI image has been published.
+Read the root [`README.md`](../README.md) first. Paths below describe the checked-out `v5.0.2` source baseline unless a row is explicitly historical. Source paths and version metadata do not imply that corresponding packages or images are available from a public registry or that an OCI image has been published.
 
 ## Runtime and product surfaces
 

@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna. All rights reserved.
-Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+Copyright (c) 2026 Juan Luna.
+SPDX-License-Identifier: Apache-2.0
+Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 -->
 
 # Software Escrow and Continuity Policy
@@ -19,7 +19,7 @@ What can honestly be said about it:
 
 **Mitigations that already exist**, and can be verified in this repository today:
 
-- The source is **AGPLv3**. A licensee already has the code, the right to run and modify it, and the right to fork. That is a stronger continuity position than most proprietary escrow arrangements deliver, and it does not depend on a trigger event or an agent.
+- The source is open: **Apache-2.0 from `5.0.2`** (a source target, not yet published) and AGPLv3 for published releases up to `5.0.1`. A licensee already has the code, the right to run and modify it, and the right to fork. That is a stronger continuity position than most proprietary escrow arrangements deliver, and it does not depend on a trigger event or an agent.
 - The build is reproducible from the tree: pinned Actions, a hash-locked `requirements.lock`, a committed `Cargo.lock`, and SBOM generation.
 - Release provenance is published — signed tags, uploaded assets, and container images with signature objects present.
 
@@ -76,7 +76,7 @@ Item 3 is the one most often skipped and the one that most often makes an escrow
 Escrow reduces artifact risk. It does not reduce key-person risk. A buyer for whom maintainer continuity is genuinely critical should weigh:
 
 - A support agreement with a third-party engineering firm capable of maintaining the code.
-- Internal capability to maintain their own fork, which AGPLv3 already permits.
+- Internal capability to maintain their own fork, which the licence already permits.
 - Contractual transition-assistance terms.
 
 Presenting escrow as a solution to the underlying concern would be overselling it, and a procurement team that has bought escrow before will know that.

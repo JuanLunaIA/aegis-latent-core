@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 """License inventory and copyleft reconciliation across all three ecosystems.
 
-Aegis is offered under AGPLv3 **or** a proprietary commercial licence. That
-dual offer is what makes this a release gate rather than paperwork: a component
-whose terms are satisfied by the AGPL tier can still be undistributable under
-the proprietary tier, and the second failure is invisible from the first.
+From 5.0.2 Aegis source is licensed under the Apache License, Version 2.0 and
+nothing else. That is what makes this a release gate rather than paperwork:
+Apache-2.0 is permissive, so a strong-copyleft component (GPL, AGPL) cannot be
+shipped inside an Apache-2.0 artifact without imposing its own reciprocal terms
+on the combined work, and that conflict is invisible from the component's own
+metadata.
 
     python scripts/license/license_scan.py --write
 
@@ -34,12 +36,12 @@ Classification
 ``PERMISSIVE``      MIT, Apache-2.0, BSD, ISC, Unlicense, Zlib, CC0 — no
                     reciprocal obligation on the combined work.
 ``WEAK_COPYLEFT``   LGPL, MPL, EPL — reciprocal for the component itself.
-                    Compatible with a proprietary distribution when the
+                    Compatible with an Apache-2.0 distribution when the
                     component is dynamically linked and attributed, which is a
                     question about linkage this script reports rather than
                     decides.
-``STRONG_COPYLEFT`` GPL, AGPL — reciprocal for the combined work. Blocking in
-                    the proprietary tier unless the component is not
+``STRONG_COPYLEFT`` GPL, AGPL — reciprocal for the combined work. Blocking for
+                    an Apache-2.0 artifact unless the component is not
                     distributed with it at all.
 ``UNKNOWN``         no readable identifier; blocking until resolved.
 
@@ -109,8 +111,9 @@ _PERMISSIVE_TOKENS: Final[tuple[str, ...]] = (
 _WEAK_TOKENS: Final[tuple[str, ...]] = ("LGPL", "MPL", "EPL", "CDDL")
 _STRONG_TOKENS: Final[tuple[str, ...]] = ("AGPL", "GPL")
 
-#: This repository's own packages. They carry the project's dual licence by
-#: design and are not third-party components to reconcile. Compared after
+#: This repository's own packages. They carry the project's own licence
+#: (Apache-2.0) by design and are not third-party components to reconcile.
+#: Compared after
 #: normalisation, because the same package is `aegis_rust` to Cargo and
 #: `aegis-rust` to PyPI.
 FIRST_PARTY: Final[frozenset[str]] = frozenset(
@@ -426,31 +429,27 @@ def render_audit(components: Sequence[LicensedComponent], observed: str) -> str:
         lines.append(f"| {name} | {counts[name]} |")
     lines.append("")
 
-    lines.append("## Tier compatibility matrix")
+    lines.append("## Compatibility with Apache-2.0")
     lines.append("")
     lines.append(
-        "The two tiers fail differently. AGPLv3 is itself strong copyleft, so a "
-        "copyleft dependency raises no reciprocity conflict there. The proprietary "
-        "tier is where the same dependency becomes a distribution question."
+        "Aegis source is licensed under Apache-2.0 only. Apache-2.0 is permissive, so "
+        "a copyleft dependency is where a distribution question arises: reciprocal "
+        "terms on a component can extend to the combined work."
     )
     lines.append("")
-    lines.append("| Classification | AGPLv3 Community tier | Proprietary Enterprise tier |")
-    lines.append("| --- | --- | --- |")
+    lines.append("| Classification | Apache-2.0 artifact |")
+    lines.append("| --- | --- |")
+    lines.append("| PERMISSIVE | compatible; attribution required |")
     lines.append(
-        "| PERMISSIVE | compatible; attribution required | compatible; attribution required |"
-    )
-    lines.append(
-        "| WEAK_COPYLEFT | compatible | compatible **only if** the component is "
+        "| WEAK_COPYLEFT | compatible **only if** the component is "
         "dynamically linked or merely aggregated, and attribution plus a source "
         "offer accompany the artifact |"
     )
     lines.append(
-        "| STRONG_COPYLEFT | compatible | **blocking** unless the component is not "
-        "distributed with the proprietary artifact at all |"
+        "| STRONG_COPYLEFT | **blocking** unless the component is not "
+        "distributed with the Apache-2.0 artifact at all |"
     )
-    lines.append(
-        "| UNKNOWN | **blocking** — resolve before release | **blocking** — resolve before release |"
-    )
+    lines.append("| UNKNOWN | **blocking** — resolve before release |")
     lines.append("")
 
     for name in CLASS_ORDER:

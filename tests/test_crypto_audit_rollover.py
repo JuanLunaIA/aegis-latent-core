@@ -18,9 +18,9 @@ The 100,000-node sweep is marked ``slow``; the boundary and detection tests run
 in the default suite at small window sizes, where the same code path executes.
 """
 
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 
 from __future__ import annotations
 

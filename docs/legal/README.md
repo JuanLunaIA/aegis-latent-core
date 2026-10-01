@@ -1,13 +1,13 @@
 <!--
-Copyright (c) 2026 Juan Luna. All rights reserved.
-Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+Copyright (c) 2026 Juan Luna.
+SPDX-License-Identifier: Apache-2.0
+Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 -->
 
 # Legal Stack: Drafts for Counsel
 
 **Audience:** the owner, and the qualified software-licensing and corporate counsel who will review these drafts.
-**Scope:** the documents needed to sell Aegis Latent Core code under a commercial licence: licence, paid pilot, escrow term sheet, founder-to-company IP assignment, an open-core decision memo, and the questions counsel has to answer. Prepared 2026-09-29 (Mission XVI, Phase 2).
+**Scope:** the documents needed to sell Aegis Latent Core under a commercial arrangement: licence, paid pilot, escrow term sheet, founder-to-company IP assignment, an open-core decision memo, and the questions counsel has to answer. Prepared 2026-09-29 (Mission XVI, Phase 2). **From `5.0.2` the source is licensed under Apache-2.0, which supersedes in part the commercial-licence premise of these drafts; see the [Licence Transition 5.0.2](LICENSE_TRANSITION_5.0.2.md) record.**
 **Boundary:** drafts only. Nothing here has been reviewed, offered, signed or filed. The agent that prepared them did not sign anything, engage any party or spend anything. The register items they serve (`REG-H03`, `REG-H04`, `REG-H09`, `REG-H10`) stay open until a human closes them.
 
 > **[COUNSEL-REVIEW-REQUIRED]** Draft prepared by an AI agent for the owner and qualified counsel. It is not legal advice, has not been reviewed by a lawyer, has not been offered to anyone, and nobody has signed it. Bracketed fields `[●]` are open decisions, not defaults. Do not send it to a counterparty before counsel has reviewed it.
@@ -16,8 +16,9 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 | Draft | Serves | Depends on | Owner action to close |
 | --- | --- | --- | --- |
-| [Commercial Licence Template](COMMERCIAL_LICENSE_TEMPLATE.md) | `REG-H04` | Entity formed and IP assigned; open-core decision; counsel questions 1 to 6 | Counsel review, then the owner signs each individual licence |
-| [Paid Pilot Agreement Template](PILOT_AGREEMENT_TEMPLATE.md) | `REG-H06` | Commercial licence terms for the "proceed" outcome | Counsel review; owner signs a pilot with a named customer |
+| [Licence Transition 5.0.2](LICENSE_TRANSITION_5.0.2.md) | `REG-H04` | Owner instruction; counsel question 11 | Counsel confirms the right to relicense; the owner publishes `5.0.2` |
+| [Commercial Licence Template](COMMERCIAL_LICENSE_TEMPLATE.md) (superseded in part) | `REG-H04` | Entity formed and IP assigned; open-core decision; counsel questions 1 to 6 | Counsel review, then the owner signs each individual licence |
+| [Paid Pilot Agreement Template](PILOT_AGREEMENT_TEMPLATE.md) | `REG-H06` | Support/services terms for the "proceed" outcome | Counsel review; owner signs a pilot with a named customer |
 | [Escrow Term Sheet](ESCROW_TERM_SHEET.md) | `REG-H03` | An agent chosen by the owner; support terms | Owner engages an agent; tri-party agreement signed |
 | [IP Assignment Draft](IP_ASSIGNMENT_DRAFT.md) | `REG-H09` | Entity formed | Counsel review; founder and company sign |
 | [Open-core Decision Memo](OPEN_CORE_DECISION_MEMO.md) | `REG-H04` | Owner decision | Owner records the decision; counsel confirms |

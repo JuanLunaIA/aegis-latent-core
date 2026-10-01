@@ -134,7 +134,7 @@ expensive and hard to reverse.
 |---|---|
 | `dependency-vulnerability-triager` | advisories across three ecosystems (Sonatype MCP) |
 | `sbom-provenance-engineer` | SBOM, signing, reproducibility, checksum coverage |
-| `license-compliance-auditor` | AGPL-or-commercial dual model, inbound compatibility |
+| `license-compliance-auditor` | Apache-2.0 outbound licence, inbound compatibility |
 | `secrets-leak-scanner` | credentials, WAL records, build output (read-only) |
 | `github-actions-pin-auditor` | SHA pins, token scopes, injection in expressions |
 | `codeql-finding-resolver` | static findings; never a bare suppression |

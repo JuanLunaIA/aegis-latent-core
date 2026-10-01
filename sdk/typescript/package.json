@@ -1,9 +1,9 @@
 {
   "name": "aegis-latent-sdk",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "description": "Edge-compatible Aegis MMR verification and provider instrumentation",
   "type": "module",
-  "license": "AGPL-3.0-only OR LicenseRef-Proprietary",
+  "license": "Apache-2.0",
   "homepage": "https://github.com/JuanLunaIA/aegis-latent-core#readme",
   "repository": {
     "type": "git",
@@ -31,7 +31,9 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
   "exports": {
     ".": {

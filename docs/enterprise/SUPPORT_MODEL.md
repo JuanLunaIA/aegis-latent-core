@@ -57,7 +57,7 @@ A commercial agreement can change response commitments. It does not change the n
 
 Reasonable mitigations, in rough order of cost:
 
-1. **Pin and vendor.** Pin an exact commit and container digest, and keep a verified copy. The AGPL guarantees your right to the source.
+1. **Pin and vendor.** Pin an exact commit and container digest, and keep a verified copy. The open licence (Apache-2.0 from `5.0.2`; AGPLv3 for published releases up to `5.0.1`) guarantees your right to the source.
 2. **Build internal capability.** Have someone on your side able to read `aegis/core/crypto_audit.py`, `aegis/core/mmr.py` and `aegis/proxy/streaming.py` well enough to patch them.
 3. **Negotiate escrow or continuity terms** in a commercial agreement.
 4. **Accept the risk explicitly**, documented, with a review date.

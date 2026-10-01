@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 # From your workstation: run the VM benchmark over SSH and retrieve the artifact.
 #   SSH_OPTS='-i ~/.ssh/other_key' ./run_remote.sh <kit-dir> [commit]      (commit defaults to this checkout's HEAD; it must be pushed)
 set -euo pipefail

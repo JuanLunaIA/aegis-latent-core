@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 """
 aegis_server.config — Enterprise configuration via environment variables.
 
@@ -150,7 +150,7 @@ class EnterpriseSettings(BaseSettings):
     webhook_url: str = Field(
         default="",
         description=(
-            "**[Not wired in 5.0.1 \u2014 no code path reads this field; setting it enforces nothing (UC-066).]** "
+            "**[Not wired in 5.0.2 \u2014 no code path reads this field; setting it enforces nothing (UC-066).]** "
             "POST alert payloads here (Slack, PagerDuty, SIEM ingest). "
             "Not read by any code path; see AUD-35 in ROADMAP.md."
         ),

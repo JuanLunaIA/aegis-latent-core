@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna. All rights reserved.
-Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+Copyright (c) 2026 Juan Luna.
+SPDX-License-Identifier: Apache-2.0
+Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 -->
 
 # Paid Pilot — Proposal Template
@@ -62,7 +62,7 @@ Written here, agreed before work begins, and evaluated literally. Each is a fals
 - A redaction measurement against their own corpus.
 - A written record of every acceptance criterion and its outcome.
 - Direct access to the maintainer for the duration.
-- **Everything learned, whether or not they proceed.** The source is AGPLv3; the pilot does not gate anything they could not run alone.
+- **Everything learned, whether or not they proceed.** The source is open (Apache-2.0 from `5.0.2`, a source target not yet published; AGPLv3 for published releases up to `5.0.1`); the pilot does not gate anything they could not run alone.
 
 ## 4. What the vendor gets
 
@@ -85,8 +85,8 @@ Stated plainly, because a buyer can see it anyway and pretending otherwise is a 
 
 **At the end date, one of three things happens, and all three are acceptable outcomes:**
 
-1. **Proceed** — move to a commercial agreement. Note that the commercial licence template is `CR-04`, `NOT STARTED`; if the customer needs it, drafting starts now and takes 2–4 weeks.
-2. **Stop** — the customer keeps everything learned and the source under AGPLv3. No renewal pressure.
+1. **Proceed** — move to a support or services agreement. Note that the template is `CR-04`, `NOT STARTED`; if the customer needs it, drafting starts now and takes 2–4 weeks.
+2. **Stop** — the customer keeps everything learned and the source under the licence of the release they received. No renewal pressure.
 3. **Extend** — a new agreement with new criteria, not a drift of this one.
 
 A pilot that ends without a decision is a failed pilot, and the fixed end date exists to prevent it.

@@ -91,7 +91,7 @@ or contradiction. Four qualified:
 
 Six actions in `docs/commercial/COMMERCIAL_READINESS.md`, all **NOT STARTED**,
 all human-executable: penetration test, SOC 2 Type I, software escrow,
-commercial licence terms, design partners, second maintainer. No agent can
+support and services terms, design partners, second maintainer. No agent can
 perform any of them, and no code change substitutes.
 
 ## 5. Residual risks

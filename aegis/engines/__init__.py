@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 
 """Decoupled engine facades over capabilities that already exist in the core.
 
@@ -12,12 +12,14 @@ without adopting the proxy.
     from aegis.engines import VeracityEngine
     engine = VeracityEngine(wal_path="/var/lib/aegis/evidence.jsonl")
 
-Licensing does not gate the AGPLv3 software
--------------------------------------------
+Entitlement checks do not gate the Apache-2.0 software
+-------------------------------------------------------
 
-By default these engines run unlicensed, exactly as the gateway does. The
-AGPLv3 grant is a grant to use, and making import depend on a commercial token
-would both contradict it and break every existing deployment.
+By default these engines run with no entitlement check, exactly as the gateway
+does. The Apache-2.0 licence is a grant to use, and making import depend on an
+entitlement token would both contradict it and break every existing deployment.
+An entitlement token is an opt-in signal for a deployment that wants one (for
+example a support or services agreement); it is not a licence grant.
 
 Gating is opt-in through ``AEGIS_LICENSE_ENFORCEMENT``:
 
@@ -25,9 +27,9 @@ Gating is opt-in through ``AEGIS_LICENSE_ENFORCEMENT``:
     No check. A configured token is still parsed and exposed for reporting.
 ``required``
     Constructing an engine whose module is not granted raises
-    :class:`~aegis.licensing.validator.LicenseError`. Intended for a commercial
-    distribution that wants entitlement mismatches to surface at start rather
-    than in production.
+    :class:`~aegis.licensing.validator.LicenseError`. Intended for a deployment
+    that has chosen to track entitlements and wants mismatches to surface at
+    start rather than in production.
 
 Nothing here contacts a licence server, in either mode.
 """

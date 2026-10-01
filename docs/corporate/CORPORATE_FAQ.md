@@ -100,11 +100,11 @@ See [Enterprise Readiness](../enterprise/ENTERPRISE_READINESS.md) and [Pilot Pla
 
 ## What is the licence?
 
-**Dual: AGPLv3, or a commercial licence.**
+**Apache License, Version 2.0, from `5.0.2`.**
 
-The AGPL is copyleft with a network clause: if you modify the software and let third parties interact with it over a network, you must offer them the corresponding source. That clause is the practical decision point for most organisations. Internal use without modification, or without third-party network exposure, generally does not trigger it — but confirm with counsel for your specific case.
+Apache-2.0 is permissive: use, modification and redistribution, including commercial and closed-source use, are allowed on conditions — a copy of the License and the NOTICE with every distribution, a statement of changes, preserved notices, and a patent-termination clause. It provides the software AS IS and grants no right to the project's name or marks. Confirm with counsel for your specific case.
 
-A commercial licence exists for organisations where the AGPL terms do not fit. See [COMMERCIAL.md](../../COMMERCIAL.md).
+**`5.0.2` is a source target and is not yet published.** Releases up to and including `5.0.1` were published under AGPLv3 (a copyleft licence with a network clause) or a separate commercial agreement, and keep those terms; a published artifact obtained today carries them. See [COMMERCIAL.md](../../COMMERCIAL.md) and [`docs/legal/LICENSE_TRANSITION_5.0.2.md`](../legal/LICENSE_TRANSITION_5.0.2.md).
 
 Dependency licences are enumerated in the SPDX SBOMs published as release assets.
 

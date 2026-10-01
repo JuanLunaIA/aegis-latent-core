@@ -50,7 +50,7 @@ Most questions are answered by existing documentation. Before opening an issue:
 
 ## 4. Commercial support
 
-The project is dual-licensed. A commercial agreement may include support terms; the open-source distribution does not.
+The source is licensed under Apache-2.0 from 5.0.2 and carries no support terms. A separate written support agreement may include them; the open-source distribution does not.
 
 **The open-source project provides no SLA, no guaranteed response time, no dedicated contact, no uptime commitment, and no assurance artifacts.** Any response target, escalation path, or remediation window exists only if it appears in an executed agreement between you and the licensor.
 

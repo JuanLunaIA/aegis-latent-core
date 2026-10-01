@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna. All rights reserved.
-Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+Copyright (c) 2026 Juan Luna.
+SPDX-License-Identifier: Apache-2.0
+Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 -->
 
 # Objection Handling
@@ -28,7 +28,7 @@ This matters more here than in most categories. **The product is evidence integr
 
 **What actually mitigates it, today:**
 
-- **The source is AGPLv3 and complete.** You already have the code, the right to run it, modify it and fork it. No trigger event, no agent, no release condition. That is a stronger position than most proprietary escrow arrangements deliver, and you can verify it in ten seconds.
+- **The source is open and complete** — Apache-2.0 from `5.0.2` (a source target, not yet published; every published release up to `5.0.1` is AGPLv3). You already have the code, the right to run it, modify it and fork it. No trigger event, no agent, no release condition. That is a stronger position than most proprietary escrow arrangements deliver, and you can verify it in ten seconds.
 - **The build is reproducible from the tree** — pinned Actions, hash-locked `requirements.lock`, committed `Cargo.lock`, SBOM generation.
 - **Pin and vendor.** Pin an exact commit and container digest and keep a verified copy.
 
@@ -36,7 +36,7 @@ This matters more here than in most categories. **The product is evidence integr
 
 **The concrete step:** escrow is `CR-03`, **`NOT STARTED`** — policy drafted (`SOFTWARE_ESCROW_POLICY.md`), no agent engaged, no deposit made, 2–4 weeks to execute once a buyer needs it. A second maintainer is `CR-06`, `NOT STARTED`, 2–4 months, and its acceptance test is real: the second engineer ships a security fix end to end without me in the loop. Anything less is bus factor one with extra headcount.
 
-**If continuity is genuinely critical to you,** the honest recommendation is to contract a third-party engineering firm capable of maintaining the code, or build that capability internally. AGPLv3 already permits it. I would rather you do that than buy on the strength of an escrow agreement that would not save you.
+**If continuity is genuinely critical to you,** the honest recommendation is to contract a third-party engineering firm capable of maintaining the code, or build that capability internally. The licence already permits it. I would rather you do that than buy on the strength of an escrow agreement that would not save you.
 
 ## 2. "No SOC 2. No penetration test."
 
@@ -72,20 +72,20 @@ This matters more here than in most categories. **The product is evidence integr
 
 **The concrete step:** read `aegis/core/crypto_audit.py` and `aegis/core/mmr.py` — 3,348 lines between them. If your team reads those and says "a sprint", believe them and build it. That is a legitimate outcome and I would rather you reach it from the code than from my assertion.
 
-**The asymmetry worth naming:** if you build it, you own it forever, including the day a hash-scheme migration threatens every proof you have ever issued. If you adopt it and I disappear, you still have the source. The AGPL makes the downside of the second path bounded in a way the first path's maintenance burden is not.
+**The asymmetry worth naming:** if you build it, you own it forever, including the day a hash-scheme migration threatens every proof you have ever issued. If you adopt it and I disappear, you still have the source. The open licence makes the downside of the second path bounded in a way the first path's maintenance burden is not.
 
 ## 4. "Our legal team will not accept AGPL."
 
-**The truth:** this is the most common hard blocker, and it is a reasonable position. AGPLv3 §13 extends copyleft to network interaction, and many corporate policies restrict it categorically.
+**The truth:** this was the most common hard blocker, and it is a reasonable position. AGPLv3 §13 extends copyleft to network interaction, and many corporate policies restrict it categorically.
 
-**The honest current state, and this is the part that must not be soft-pedalled:** a commercial licence is the intended resolution — it supersedes AGPLv3 for a covered deployment so the network obligations do not attach. **The licence text has not been drafted.** `CR-04` is `NOT STARTED`. If you asked me today to send the agreement, there is nothing to send.
+**The honest current state, and this is the part that must not be soft-pedalled:** the `5.0.2` source is licensed under Apache-2.0, which has no network-copyleft clause, so for that source the objection no longer applies. **`5.0.2` is not yet published**: every published release up to and including `5.0.1` is AGPLv3 (or a commercial agreement, none of which is recorded in this repository), and a buyer pulling a published artifact today receives those terms. The relicence also still needs counsel's written confirmation of title (`CR-04`, `NOT STARTED`).
 
-**The concrete step:** `CR-04`, counsel-drafted commercial licence template, 2–4 weeks, ~$3–5k. It is gated on a buyer who wants it — drafting a licence nobody has asked for is not a good use of the money. **If you are that buyer, say so and it moves to the front.**
+**The concrete step:** `CR-04`, counsel confirmation plus a support/services template, 2–4 weeks, ~$3–5k, then publication of `5.0.2` by the owner. **If you are the buyer waiting on this, say so and it moves to the front.**
 
-**What can be said about the AGPL question meanwhile:**
+**What can be said about the licence question meanwhile:**
 
-- Whether your specific deployment triggers §13 depends on whether you modify the software and convey it over a network to third parties. Many internal deployments do not. **That is your counsel's determination, not mine, and nothing here is legal advice.**
-- The free tier is not crippled. Every engine is importable and fully functional; licence enforcement is off by default. A commercial subscription buys the licence grant, support and services — not access to withheld code.
+- Apache-2.0 conditions are a copy of the License and the NOTICE with every distribution, a statement of changes, preserved notices and the patent-termination clause. **Whether your deployment meets them is your counsel's determination, not mine, and nothing here is legal advice.**
+- The free tier is not crippled. Every engine is importable and fully functional; licence enforcement is off by default. A paid agreement buys support and services — not a licence, and not access to withheld code.
 
 ## 5. "What's your SLA?"
 
@@ -127,7 +127,7 @@ The default chain is signed with HMAC-SHA256, which is **symmetric**. The verifi
 
 **The concrete step:** design partners, 2–3 months to a first signature. The offer to an early buyer is a real one — direct access to the maintainer, influence over the roadmap, and pricing set before there are comparables to anchor against.
 
-**What to weigh:** you would be taking a genuine risk, and the mitigation is not my assurance. It is that the source is yours under AGPLv3 regardless of what happens to me, and that every claim in the corpus has a locator you can check without asking permission. That is a smaller promise than a reference list and a more verifiable one.
+**What to weigh:** you would be taking a genuine risk, and the mitigation is not my assurance. It is that the source is yours under an open licence regardless of what happens to me, and that every claim in the corpus has a locator you can check without asking permission. That is a smaller promise than a reference list and a more verifiable one.
 
 ---
 

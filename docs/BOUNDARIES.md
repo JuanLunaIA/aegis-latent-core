@@ -1,7 +1,7 @@
 # Product and Evidence Boundaries
 
 **Last verified:** 2026-09-01 UTC
-**Release baseline:** checked-out source baseline `v5.0.1` with fourteen synchronized anchors — **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a); the previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)
+**Release baseline:** checked-out source baseline `v5.0.2` with fourteen synchronized anchors — an Apache-2.0 source target that is **not published**; the most recent published release is `v5.0.1`, **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a); the previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)
 
 This document consolidates the boundary statements that apply across Aegis. It exists so that `README.md` and the developer guides can describe mechanisms plainly and link here once, instead of repeating a disclaimer beside every sentence.
 
