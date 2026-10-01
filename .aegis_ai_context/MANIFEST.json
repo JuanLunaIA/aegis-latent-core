@@ -93,38 +93,38 @@
     {
       "category": "governed_input",
       "path": ".github/copilot-instructions.md",
-      "sha256": "e7adb3aee5dc7278f26e0466fe376b556382318f40d5b5f2599fb202241c89f7",
-      "size": 3850
+      "sha256": "b5ff572f268e1faacf8f525184216dde85cfd0b002262e5b88e6766a19890303",
+      "size": 3826
     },
     {
       "category": "governed_input",
       "path": "README.md",
-      "sha256": "a23f02dc3f34e04cb248cb961d218f66a113ededf401ca4b10d6752578fc231c",
-      "size": 18925
+      "sha256": "7a227c54a351880da501e56d6f3165332e9b3e05c0f404377dfbf4eeaa96fab6",
+      "size": 19513
     },
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "2700c3a87f7f27171a1dd21b5018481e53a49b2cbe0e89ebde9d4d8005735af9",
-      "size": 241716
+      "sha256": "da58c25c13e540008a0c399cd2309f22c77b25d5feba013cb944f34376ff9359",
+      "size": 241620
     },
     {
       "category": "governed_input",
       "path": "SECURITY.md",
-      "sha256": "30ed1d17dd2adde60a26c7f8df456557db9d1026fd78b5c0bed01f6236b7cf1e",
-      "size": 13357
+      "sha256": "eeede9a0ab5cad4f36f3111b130379a3f1ce3e6b6d403865f8e2c98c229826ab",
+      "size": 12275
     },
     {
       "category": "governed_input",
       "path": "DEPLOYMENT_GUIDE.md",
-      "sha256": "0a701aa6678996d7229e5e3e4a8eb40bf05034cbda38f3647b6ab04705cf2cf6",
-      "size": 16607
+      "sha256": "74ce534f97419dc8fdc7846afd4c8e824b46436d38913a5ffcd9a466646ca892",
+      "size": 16586
     },
     {
       "category": "governed_input",
       "path": "CONTRIBUTING.md",
-      "sha256": "d0e7d88f435b783d90804500a407b7963dc1f454d9999402f7c70386f05ed31a",
-      "size": 13189
+      "sha256": "f5a0a53773cdb8956e4dc651e45349eeb7b6e7c6f21054a9edc45300b5802baa",
+      "size": 11429
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "e8a124b5fe205be6d36e1aa0019197b9cf39008c0f3204df710641584a67d0fd",
-      "size": 178635
+      "sha256": "8264d448180f6b880505c56a4400f15ce0d4c5202de96b9c2ab6916b8e4908e9",
+      "size": 178619
     },
     {
       "category": "governed_input",
@@ -147,38 +147,38 @@
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_QUICKSTART.md",
-      "sha256": "08c6b6dfc411f36bc72e84941cdb9c508408c50615181c268c224a4669697e7d",
-      "size": 9506
+      "sha256": "814ad85aa136875b9e4a6cde5df1f8613376858f07f40621d686f1be5338d61e",
+      "size": 9464
     },
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_SDK_GUIDE.md",
-      "sha256": "78055006187b8035c31ac9653587a2962079a118cecce329aa541db9b946ae53",
-      "size": 18020
+      "sha256": "5670d45daec1b7ad09e4fb206a94aac2dcdb48cc1f5d40b57f9e2b702a6279f0",
+      "size": 17978
     },
     {
       "category": "governed_input",
       "path": "docs/FAQ_SECURITY.md",
-      "sha256": "8693e49e931084246a6c866c636e8f48663194cd30cd7f693d0b0799082ce0a1",
-      "size": 8366
+      "sha256": "d23ccdf5931cc30497ef2635ab1a9bca4ce73d0a7be3e5fb678bcd6f0d4875e4",
+      "size": 8324
     },
     {
       "category": "governed_input",
       "path": "docs/FAQ_TECHNICAL.md",
-      "sha256": "1a19e7b5ee0cc8c0e612af86e9314249e6ce4f5fd67aa0cecdc6d0c88c9f3a49",
-      "size": 20124
+      "sha256": "be638d078893586b68543b3bae609bf05d583dbc08146ac9049967c8b5cc9911",
+      "size": 20082
     },
     {
       "category": "governed_input",
       "path": "docs/PLATFORM_OPERATOR_GUIDE.md",
-      "sha256": "2bbb15a765dc7175e8b4baca788a97a8c47988d99a97c389fe1a9245789e3ee5",
-      "size": 20398
+      "sha256": "b6b93e74837f7a11f85dfdfdd5adcacc86d1e70acf31d3b4b0b703aa18b47c4f",
+      "size": 20356
     },
     {
       "category": "governed_input",
       "path": "docs/REPOSITORY_MAP.md",
-      "sha256": "399e6c0f638b6038e110448204cd648dfcad01bb57bb0c0f2a15cf1a51669292",
-      "size": 8163
+      "sha256": "9ea38e54eba5fdb4a57f82e7ce76cb772f38b7918de780483209686829e206e1",
+      "size": 8142
     },
     {
       "category": "governed_input",

@@ -19,7 +19,7 @@ What can honestly be said about it:
 
 **Mitigations that already exist**, and can be verified in this repository today:
 
-- The source is open: **Apache-2.0 from `5.0.2`** (a source target, not yet published) and AGPLv3 for published releases up to `5.0.1`. A licensee already has the code, the right to run and modify it, and the right to fork. That is a stronger continuity position than most proprietary escrow arrangements deliver, and it does not depend on a trigger event or an agent.
+- The source is open: **Apache-2.0 from `5.0.2`** (a published release) and AGPLv3 for published releases up to `5.0.1`. A licensee already has the code, the right to run and modify it, and the right to fork. That is a stronger continuity position than most proprietary escrow arrangements deliver, and it does not depend on a trigger event or an agent.
 - The build is reproducible from the tree: pinned Actions, a hash-locked `requirements.lock`, a committed `Cargo.lock`, and SBOM generation.
 - Release provenance is published — signed tags, uploaded assets, and container images with signature objects present.
 

@@ -16,11 +16,11 @@ Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 
 | Artifact | Licence | Basis |
 | --- | --- | --- |
-| Source tree at `5.0.2` (this change, unpublished) | Apache License, Version 2.0 | Owner instruction; `LICENSE`, `NOTICE`, per-file headers, package metadata |
+| Published release `5.0.2` | Apache License, Version 2.0 | Owner instruction; `LICENSE`, `NOTICE`, per-file headers, package metadata |
 | Any published release up to and including `5.0.1` (tags, GitHub Releases, PyPI, npm, GHCR images) | GNU Affero General Public License v3, or the separate commercial licence, **as published** | Those artifacts shipped with the licence text current when they were built; this change does not rewrite them |
 | Any commercial licence or other agreement already executed | Its own terms | A repository edit cannot amend a signed agreement. No such agreement is recorded in this repository |
 
-**`5.0.2` is not published.** The version number, the licence files and the headers exist in the source tree only. No tag, GitHub Release, registry package or image has been created or read back for `5.0.2`, and nothing in the repository should be read as evidence that one has (`docs/RELEASE_STATUS.md`). Apache-2.0 attaches to a copy a recipient actually receives under it, which for `5.0.2` is none until the owner publishes.
+**`5.0.2` is published.** The GitHub Release, PyPI core/SDK and npm publication were read back on 2026-10-01. GHCR was not readable from this environment. Apache-2.0 attaches to the published `5.0.2` copies; earlier releases up to `5.0.1` keep the terms under which they shipped.
 
 ## 2. What changed in the repository
 
@@ -53,11 +53,11 @@ Stated from the repository, not from a legal review:
 4. **Re-derive the commercial model.** The pricing guide and the investor packs were built on a dual-licence assumption, including an "AGPL friction" input that no longer applies and a commercial-licence market (willingness to pay to avoid AGPL obligations) that Apache-2.0 removes for the `5.0.2` source. Under Apache-2.0 only support, pilots, hardening and assurance work remain sellable as such. Every figure stays `[HYPOTHESIS-UNVALIDATED]`; regenerate the packs through their single engine only after the owner has re-derived the inputs.
 5. **Re-run the dependency licence scan in a release-representative environment.** `docs/compliance/LICENSE_AUDIT.md` still records the inventory observed on 2026-09-09 (384 distributed components); only its compatibility matrix was reworded for Apache-2.0. A scan run on 2026-10-01 in a development environment inventoried 462 distributed components with 0 `STRONG_COPYLEFT`, 15 `WEAK_COPYLEFT` and 1 `UNKNOWN`: `spartan2 0.9.0` (optional `zk-spartan` feature) declares `license-file` rather than `license`, the file it ships reads as an MIT licence, and the scanner reads only the `license` field and does not infer. That scan was not committed, because its environment is not the one that produced the committed audit; treat it as a lead for counsel, not a result.
 6. **Decide the trademark position.** Section 6 grants no right to the name or marks; whether any mark is registered is outside this repository.
-7. **Publish `5.0.2`** (signed tag, release workflows, registries), and read back each surface before anything says it is published. The agent that prepared this change does not tag, sign or publish.
+7. **Maintain the `5.0.2` publication record** by reading back each surface and recording any missing OCI or attestation evidence. The agent did not create or sign the release.
 
 ## 5. Statements this record does not support
 
-- That `5.0.2` is released, tagged or available at any registry.
+- That every `5.0.2` surface, including GHCR and attestations, has been independently verified from this environment.
 - That any earlier release was ever Apache-2.0.
 - That relicensing is legally effective, or that the owner's title is clean of third-party or AI-origin claims.
 - That a dependency set is compatible with Apache-2.0 beyond the identifiers upstream projects declare (`docs/compliance/LICENSE_AUDIT.md`).

@@ -118,7 +118,7 @@ What a paid agreement can buy is **support, indemnification (if the owner offers
 
 ## The licence question a legal team will raise
 
-Many corporate legal teams restrict AGPLv3 because of its Section 13 network provision. That objection does not apply to a `5.0.2` source tree, which is Apache-2.0: its conditions are a copy of the License and the NOTICE with every distribution, a statement of changes, preserved notices and the patent-termination clause. It does still apply to a release up to and including `5.0.1`, which was published under AGPLv3 (or a commercial agreement) and keeps those terms. **`5.0.2` is not yet published**, so today a buyer pulling a published artifact receives the AGPLv3 terms.
+Many corporate legal teams restrict AGPLv3 because of its Section 13 network provision. That objection does not apply to a `5.0.2` source tree, which is Apache-2.0: its conditions are a copy of the License and the NOTICE with every distribution, a statement of changes, preserved notices and the patent-termination clause. It does still apply to a release up to and including `5.0.1`, which was published under AGPLv3 (or a commercial agreement) and keeps those terms. **`5.0.2` is published**, so today a buyer pulling a published artifact receives the AGPLv3 terms.
 
 Two cautions for whoever writes the response:
 

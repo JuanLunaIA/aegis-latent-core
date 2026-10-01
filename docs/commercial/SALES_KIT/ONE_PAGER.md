@@ -54,7 +54,7 @@ Full list: [Unsupported Claims](../../institutional/UNSUPPORTED_CLAIMS.md), 70 r
 
 | | |
 |---|---|
-| Core | **Free**, complete. Apache-2.0 from `5.0.2` (source target, not yet published; published releases up to `5.0.1` are AGPLv3). No feature is withheld by a runtime check |
+| Core | **Free**, complete. Apache-2.0 from `5.0.2` (published release; published releases up to `5.0.1` are AGPLv3). No feature is withheld by a runtime check |
 | Paid terms | `[FRAMEWORK-ONLY]` — support and services, not a licence. **The template is not yet drafted** (`CR-04`) |
 | Pricing | `[HYPOTHESIS-UNVALIDATED]` — published so a conversation can start, not validated by any executed contract. [Pricing Guide](../ENTERPRISE_PRICING_GUIDE.md) |
 | Support | Community best-effort, no SLA. Support terms per agreement (`[FRAMEWORK-ONLY]`) |
