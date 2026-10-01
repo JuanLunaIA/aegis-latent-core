@@ -82,6 +82,8 @@ def endpoint_client(request, tmp_path) -> Iterator[tuple[str, TestClient, MagicM
     try:
         app.state.aegis.ledger.close()
     except Exception:
+        # Teardown only: the lifespan shutdown may already have closed the
+        # ledger, and a failure here must not mask the test's own result.
         pass
 
 

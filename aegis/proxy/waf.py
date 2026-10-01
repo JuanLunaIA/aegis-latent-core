@@ -114,6 +114,17 @@ _TAG_DECODE = {cp: cp - 0xE0000 for cp in range(0xE0020, 0xE007F)}
 #
 # Written as escapes, never literals: a literal bidi control in source is the
 # TrojanSource pattern Bandit B613 exists to catch.
+#
+# The two ranges above U+FFFF are built from code points. Written as \U escapes
+# in the same literal, CodeQL's regex model read both as U+FFFD and reported a
+# false overlapping range (alert 770); the matched set is unchanged.
+_INVISIBLE_SUPPLEMENTARY = "".join(
+    f"{chr(first)}-{chr(last)}"
+    for first, last in (
+        (0x1D173, 0x1D17A),  # musical symbol format controls
+        (0xE0000, 0xE0FFF),  # tag controls and variation selectors supplement
+    )
+)
 _INVISIBLE = re.compile(
     "["
     "\u00ad"  # soft hyphen
@@ -131,9 +142,7 @@ _INVISIBLE = re.compile(
     "\ufeff"  # BOM / zero-width no-break space
     "\uffa0"  # halfwidth Hangul filler
     "\ufff9-\ufffb"  # interlinear annotation controls
-    "\U0001d173-\U0001d17a"  # musical symbol format controls
-    "\U000e0000-\U000e0fff"  # tag controls and variation selectors supplement
-    "]"
+    f"{_INVISIBLE_SUPPLEMENTARY}]"
 )
 
 # Combining marks that decorate Latin letters. Stripped after NFKD, they turn

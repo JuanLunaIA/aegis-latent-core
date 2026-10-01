@@ -329,3 +329,21 @@ def profile_with(extra: frozenset[str]) -> SyscallProfile:
         allowed_syscalls=set(base.allowed_syscalls) | set(extra),
         forbidden_syscalls=set(base.forbidden_syscalls) - set(extra),
     )
+
+
+# The public surface. SQLITE_SYSCALLS and the rest are imported by the proxy
+# lifespan and by tests, which a per-module analysis cannot see.
+__all__ = [
+    "IO_URING_ERRNO_SYSCALLS",
+    "PR_SET_NO_NEW_PRIVS",
+    "SCMP_ACT_ALLOW",
+    "SCMP_ACT_KILL",
+    "SCMP_ACT_KILL_PROCESS",
+    "SQLITE_SEQUENCE_STORE_SYSCALLS",
+    "SQLITE_SYSCALLS",
+    "IoUringActiveError",
+    "SeccompGuard",
+    "SyscallProfile",
+    "open_io_uring_fds",
+    "profile_with",
+]
