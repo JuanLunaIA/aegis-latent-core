@@ -139,10 +139,15 @@ def test_segment_sequence_continues_after_restart(tmp_path):
 
 
 def test_a_pre_existing_wal_is_tightened_to_owner_only_on_open(tmp_path):
-    """A WAL left group-readable by an older build is narrowed to 0o600."""
+    """A WAL left with any mode other than 0o600 is reset to 0o600 on open.
+
+    The ledger sets exactly 0o600 whatever it finds, so the fixture starts
+    from an owner-only 0o700: it differs from the target without the test
+    itself ever leaving a file readable by group or others.
+    """
     wal = tmp_path / "loose.wal.jsonl"
     wal.write_bytes(b"")
-    os.chmod(wal, 0o640)
+    os.chmod(wal, 0o700)
     with CryptographicAuditLedger(str(wal), signing_key=_AUDIT_KEY) as ledger:
         assert ledger._wal_handle is not None
         assert stat.S_IMODE(os.stat(wal).st_mode) == 0o600
@@ -160,7 +165,7 @@ def test_the_wal_opens_where_os_has_no_fchmod(tmp_path, monkeypatch):
     monkeypatch.delattr(os, "fchmod", raising=False)
     wal = tmp_path / "nofchmod.wal.jsonl"
     wal.write_bytes(b"")
-    os.chmod(wal, 0o640)
+    os.chmod(wal, 0o700)
     with CryptographicAuditLedger(str(wal), signing_key=_AUDIT_KEY) as ledger:
         assert ledger._wal_handle is not None
         ledger.commit_state("s0000", 1.0, b"payload")
