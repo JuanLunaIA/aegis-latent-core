@@ -32,10 +32,10 @@ Verify yourself with the readback commands in [Release Status §2](../RELEASE_ST
 
 ## 2. Licence
 
-- [ ] **AGPLv3 or a commercial licence.** Decide which applies to you.
-- [ ] **AGPL §13 network clause:** if you modify the software and let third parties interact with it over a network, you must offer them the corresponding source. Confirm with counsel whether your intended use triggers it.
+- [ ] **Which licence applies to your copy.** `5.0.2` source is Apache-2.0; releases up to and including `5.0.1` were published under AGPLv3 or a commercial licence. `5.0.2` is not yet published, so a published artifact obtained today carries the earlier terms.
+- [ ] **Conditions of the licence you hold.** Apache-2.0: ship the License and NOTICE with any distribution, state changes, keep notices, mind the patent-termination clause. AGPLv3 §13: if you modify the software and let third parties interact with it over a network, you must offer them the corresponding source. Confirm with counsel which applies and whether your use meets it.
 - [ ] **Dependency licences.** SBOMs are published as release assets; review them.
-- [ ] **Commercial terms** if AGPL does not fit: see [COMMERCIAL.md](../../COMMERCIAL.md).
+- [ ] **Support and services terms** if you need them: see [COMMERCIAL.md](../../COMMERCIAL.md).
 
 ## 3. Security review
 

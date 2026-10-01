@@ -128,7 +128,7 @@ A report like this records what was run, on one machine, on one date. It is not 
 | 1.10 | npm CVEs | `npm audit --package-lock-only` (dashboard, TS SDK) | **[PASS]** 0 at every severity (243 + 80 packages) |
 | 1.11 | Deprecated / unmaintained | cargo-audit warnings; advisory DB | **[FAIL — accepted]** `bincode` (optional `zk-spartan` only), `paste`, `pqcrypto-*` unmaintained; `chacha20` yanked — all registered (`UC-049`) |
 | 1.12 | Licences — Python lock | installed metadata for all 34 locked packages | **[PASS]** all permissive or MPL-2.0; none unknown |
-| 1.13 | Licences — Rust | `cargo metadata --locked --offline` | **[PASS]** 250 + 7 packages, all permissive except the project's own AGPL crates |
+| 1.13 | Licences — Rust | `cargo metadata --locked --offline` | **[PASS]** 250 + 7 packages, all permissive except the project's own crates (AGPL when this record was written) |
 | 1.14 | Licences — npm | `package-lock.json` licence fields | **[PASS]** LGPL `sharp-libvips` (optional platform binaries) and MPL entries attributed in `LICENSE-THIRD-PARTY.md` |
 | 1.15 | Exact pins — Python manifests | specifier scan | **[FAIL — by design]** ranges (`>=`) in `pyproject.toml`; exact pins live in `requirements.lock` (34/34 `==` with hashes). A library that published exact pins would break every installer — ranges plus a lock is the correct form |
 | 1.16 | Exact pins — Rust manifests | specifier scan | **[FAIL — by design]** caret ranges in `Cargo.toml`; `Cargo.lock` pins, and CI builds with `--locked` |

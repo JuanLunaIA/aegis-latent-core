@@ -1,14 +1,14 @@
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 
-"""The engine facades: they wrap, they do not weaken, and they do not gate AGPL use.
+"""The engine facades: they wrap, they do not weaken, and they do not gate Apache-2.0 use.
 
 Two properties matter most here. First, a facade must not change the guarantee
 of the thing it wraps — a proof issued through ``VeracityEngine`` verifies under
 exactly the same rules, and erasure still leaves the tree unmoved. Second, the
-default posture must let the AGPLv3 software run unlicensed: gating import on a
-commercial token would contradict the licence and break every deployment.
+default posture must let the Apache-2.0 software run with no entitlement token:
+gating import on one would contradict the licence and break every deployment.
 
 Calls with side effects are assigned before being asserted on, never called
 inside the ``assert`` itself (``python -O`` strips asserts; CodeQL flags this as
@@ -384,13 +384,13 @@ class TestSovereignVault:
 
 
 class TestLicenseGating:
-    """The default must not gate AGPLv3 use; ``required`` must fail closed."""
+    """The default must not gate Apache-2.0 use; ``required`` must fail closed."""
 
     def test_the_default_posture_is_off(self):
         assert enforcement_mode({}) == "off"
 
     def test_engines_construct_with_no_license_configured(self, tmp_path):
-        """The ordinary AGPLv3 case: unlicensed, and working."""
+        """The ordinary case: no entitlement token configured, and working."""
 
         with VeracityEngine(str(tmp_path / "e.jsonl"), signing_key=SIGNING_KEY) as engine:
             assert engine.entitlement is None

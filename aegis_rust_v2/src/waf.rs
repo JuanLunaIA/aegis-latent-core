@@ -1,6 +1,6 @@
-// Copyright (c) 2026 Juan Luna. All rights reserved.
-// Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-// Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+// Copyright (c) 2026 Juan Luna.
+// SPDX-License-Identifier: Apache-2.0
+// Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 
 //! Tier-4 WAF: Aho-Corasick SIMD multi-pattern matcher replacing Python `re`.
 //!

@@ -19,16 +19,16 @@ This is an inventory of the licence identifiers upstream projects declare, read 
 | UNKNOWN | 0 |
 | PERMISSIVE | 369 |
 
-## Tier compatibility matrix
+## Compatibility with Apache-2.0
 
-The two tiers fail differently. AGPLv3 is itself strong copyleft, so a copyleft dependency raises no reciprocity conflict there. The proprietary tier is where the same dependency becomes a distribution question.
+Aegis source is licensed under Apache-2.0 only. Apache-2.0 is permissive, so a copyleft dependency is where a distribution question arises: reciprocal terms on a component can extend to the combined work.
 
-| Classification | AGPLv3 Community tier | Proprietary Enterprise tier |
-| --- | --- | --- |
-| PERMISSIVE | compatible; attribution required | compatible; attribution required |
-| WEAK_COPYLEFT | compatible | compatible **only if** the component is dynamically linked or merely aggregated, and attribution plus a source offer accompany the artifact |
-| STRONG_COPYLEFT | compatible | **blocking** unless the component is not distributed with the proprietary artifact at all |
-| UNKNOWN | **blocking** — resolve before release | **blocking** — resolve before release |
+| Classification | Apache-2.0 artifact |
+| --- | --- |
+| PERMISSIVE | compatible; attribution required |
+| WEAK_COPYLEFT | compatible **only if** the component is dynamically linked or merely aggregated, and attribution plus a source offer accompany the artifact |
+| STRONG_COPYLEFT | **blocking** unless the component is not distributed with the Apache-2.0 artifact at all |
+| UNKNOWN | **blocking** — resolve before release |
 
 ## STRONG_COPYLEFT (0)
 

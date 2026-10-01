@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna. All rights reserved.
-Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+Copyright (c) 2026 Juan Luna.
+SPDX-License-Identifier: Apache-2.0
+Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 -->
 
 # Founder-to-Company IP Assignment: Draft
@@ -12,6 +12,8 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 
 > **[COUNSEL-REVIEW-REQUIRED]** Draft prepared by an AI agent for the owner and qualified counsel. It is not legal advice, has not been reviewed by a lawyer, has not been offered to anyone, and nobody has signed it. Bracketed fields `[●]` are open decisions, not defaults. Do not send it to a counterparty before counsel has reviewed it.
 
+> **[SUPERSEDED-IN-PART — 5.0.2]** The facts below were recorded before the relicence. From `5.0.2` file headers carry the Apache-2.0 block (no "All rights reserved" line) and the licence grants already made to the public include Apache-2.0 for the `5.0.2` source once published. See [Licence Transition 5.0.2](LICENSE_TRANSITION_5.0.2.md).
+
 ## Facts the draft relies on
 
 | Fact | Source |
@@ -19,7 +21,7 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 | The founder is stated to be the sole copyright holder | `NOTICE`, `CONTRIBUTING.md` §1 |
 | The repository states no third-party human contributions are known | `CONTRIBUTING.md` §1 |
 | Part of the work was produced with AI-assisted tooling operated by the founder | `CONTRIBUTING.md` §1 |
-| Files carry an "All rights reserved" notice beside the dual-licence grant | licence headers |
+| Files carried an "All rights reserved" notice beside the dual-licence grant (releases up to `5.0.1`); from `5.0.2` they carry the Apache-2.0 header | licence headers |
 | The founder's name appears in the notices as an individual | `NOTICE`, file headers |
 
 Each fact is a repository statement, not a verified legal position. **Counsel:** confirm each before the assignment relies on it.
@@ -35,7 +37,7 @@ Each fact is a repository statement, not a verified legal position. **Counsel:**
 ## Operative terms
 
 1. **Assigned rights.** All right, title and interest in Aegis Latent Core as it exists at the Effective Date, identified by repository `JuanLunaIA/aegis-latent-core` at commit `[●]`, including source, documentation, tests, build tooling, trademarks and names, and goodwill `[scope: counsel]`.
-2. **Existing licences.** The assignment is subject to the AGPLv3 grants already made to the public. It does not withdraw them.
+2. **Existing licences.** The assignment is subject to the licence grants already made to the public (the AGPLv3 or a commercial licence for releases up to `5.0.1`; Apache-2.0 for the `5.0.2` source once published). It does not withdraw them.
 3. **Future work.** Work the founder produces for the project after the Effective Date is assigned or licensed to the company on the terms counsel sets in the founder's services agreement `[●]`.
 4. **Moral rights and waivers** `[jurisdiction-dependent: counsel]`.
 5. **Further assurance.** The founder signs what the company reasonably needs to record or perfect the assignment.

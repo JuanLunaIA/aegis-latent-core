@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 """Documentation currency gates (AUD-19 / REG-D23).
 
 Two classes of drift, both measured in this repository before the gates existed:
@@ -19,9 +19,10 @@ here until every navigation artifact says the same thing, and a stale artifact
 cannot pass by agreeing with another stale artifact.
 
 The repository-wide scan below carries a *superseded-token set* — currently
-`4.1.2` and `5.0.0` — and the set must be extended at each baseline bump: after
-the `5.0.1` bump, `5.0.0` became the version no document may present as the
-checked-out baseline (REG-D56).
+`4.1.2`, `5.0.0` and `5.0.1` — and the set must be extended at each baseline
+bump: after the `5.0.1` bump, `5.0.0` became the version no document may present
+as the checked-out baseline (REG-D56), and after the `5.0.2` bump the same holds
+for `5.0.1`.
 
 Boundaries, stated rather than implied: this pins *agreement on the baseline and
 on coverage*, not the truth of any individual sentence. Historical statements
@@ -168,10 +169,10 @@ def subprocess_listing() -> list[str]:
 # recurred at the next bump (REG-D56): the token set was pinned to `4.1.2`, so
 # `5.0.0` sailed through as the "checked-out baseline" in 50 sentences. The rule
 # that generalises is *framing*: a superseded version — `4.1.2` (the release PyPI
-# still serves for the gateway distribution) or `5.0.0` (previous source target,
-# most recent published release) — may appear as a published, read-back, or
-# historical fact; it may not appear as the checked-out / source / current
-# baseline, because that is `5.0.1`.
+# still serves for the gateway distribution), `5.0.0` (an earlier source target)
+# or `5.0.1` (the previous source target and the most recent published release) —
+# may appear as a published, read-back, or historical fact; it may not appear as
+# the checked-out / source / current baseline, because that is `5.0.2`.
 _FRAMED_WITH = re.compile(
     r"published|read ?back|most recent|latest|historical|prior|remains|still|"
     r"gateway distribution|PyPI|npm|registr(?:y|ies)|4\.0\.|version (?:list|history)|"
@@ -182,14 +183,15 @@ _FRAMED_WITH = re.compile(
     r"re-checked|not the checked-out baseline|20\d\d-\d\d-\d\d",
     re.I,
 )
-_UNFRAMED_AS = re.compile(r"\bv?(?:4\.1\.2|5\.0\.0)\b", re.I)
+_UNFRAMED_AS = re.compile(r"\bv?(?:4\.1\.2|5\.0\.0|5\.0\.1)\b", re.I)
 _PRESENTS_AS_BASELINE = re.compile(r"source|checked-out|current|baseline", re.I)
 
 # The warning-string family found by the same re-verification: user-facing
 # "not wired in <version>" text must name the checked-out release, not a
 # superseded one (REG-D56).
 _STALE_WIRING = re.compile(
-    r"(?:not wired in|not read by any code path in)\s+`?v?(?:4\.1\.2|5\.0\.0)\b", re.I
+    r"(?:not wired in|not read by any code path in)\s+`?v?(?:4\.1\.2|5\.0\.0|5\.0\.1)\b",
+    re.I,
 )
 
 CURRENCY_SCAN_EXEMPT = {
@@ -203,6 +205,8 @@ CURRENCY_SCAN_EXEMPT = {
     "AUDIT_REPORT_v5.0.1_PREP.md",
     "IMPLEMENTATION_LOG_5.0.1.md",  # dated release-process record; quotes the
     # pre-bump state it describes
+    "RELEASE_READINESS_v5.0.1.md",  # dated record of the 5.0.1 release decision; its
+    # subject is that release, so it names 5.0.1 throughout
     "STATE_MANIFEST.md",  # dated measurement snapshot; every value is bound to
     # its commit and time
     "docs/commercial/ARTIFACT_INVENTORY.md",  # self-declared pre-change snapshot;
@@ -242,7 +246,7 @@ def test_repository_wide_no_document_presents_a_superseded_version_as_the_baseli
                     continue
                 offenders.append(f"{relative}:{number}: {sentence.strip()[:170]}")
     assert not offenders, (
-        "documents present a superseded version (`4.1.2` / `5.0.0`) as the "
+        "documents present a superseded version (`4.1.2` / `5.0.0` / `5.0.1`) as the "
         "checked-out/source/current baseline without framing it as the "
         "published/historical release, or name one in a present-tense "
         '"not wired in" warning:\n  ' + "\n  ".join(offenders[:15])
@@ -273,7 +277,9 @@ _BASELINE_DOCS = (
 _STALE_BASELINE_FORMS = (
     "Release baseline:** `v3.1.0`",
     "Release baseline:** `v5.0.0`",
+    "Release baseline:** `v5.0.1`",
     "Línea base de código:** `5.0.0`",
+    "Línea base de código:** `5.0.1`",
 )
 
 

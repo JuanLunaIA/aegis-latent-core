@@ -44,6 +44,6 @@ The investor pack says that at 95% spent the plan is to release the escrow depos
 
 ## 6. What we are not saying
 
-No claim of revenue, customers, certification, audit, penetration testing or court admissibility. The repository baseline is `v5.0.1`; assurance states are in `docs/assurance/ASSURANCE_STATUS.md`.
+No claim of revenue, customers, certification, audit, penetration testing or court admissibility. The repository baseline is `v5.0.2`; assurance states are in `docs/assurance/ASSURANCE_STATUS.md`.
 
 `[Signature block: founder. Not signed by the agent.]`

@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna. All rights reserved.
-Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+Copyright (c) 2026 Juan Luna.
+SPDX-License-Identifier: Apache-2.0
+Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 -->
 
 # Registry — Human Handoff Pack
@@ -84,7 +84,7 @@ Both are stated rather than silently carried, because a handoff pack that passes
 
 **Unblocks:** the bus-factor objection, partially. It addresses artifacts, not maintainer capacity — that is `REG-H05`.
 
-## REG-H04 — Commercial licence counsel + open-core decision
+## REG-H04 — Licence counsel + open-core decision
 
 | | |
 |---|---|
@@ -96,10 +96,10 @@ Both are stated rather than silently carried, because a handoff pack that passes
 
 **Checklist**
 
-1. Draft the commercial licence that sits beside AGPLv3.
+1. Confirm the Apache-2.0 relicence for 5.0.2 and decide what happens to any agreement made against a release published under AGPLv3 or a commercial licence (`docs/legal/LICENSE_TRANSITION_5.0.2.md`). The commercial-licence template is superseded in part.
 2. Decide the open-core boundary — currently **no feature is withheld by a runtime check**, and that is a deliberate legal position worth preserving explicitly.
 
-**Unblocks:** every AGPL-blocked buyer. **Today there is nothing to send them** — the template does not exist, and `ENTERPRISE_PRICING_GUIDE.md` now says so beside the model that depends on it.
+**Unblocks:** the buyers who needed a non-AGPL licence: from 5.0.2 the source is Apache-2.0, so what remains is the counsel confirmation of the right to relicense and a re-derivation of the commercial model in `ENTERPRISE_PRICING_GUIDE.md`.
 
 ## REG-H05 — Second maintainer
 

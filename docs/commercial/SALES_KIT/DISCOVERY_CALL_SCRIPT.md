@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna. All rights reserved.
-Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+Copyright (c) 2026 Juan Luna.
+SPDX-License-Identifier: Apache-2.0
+Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 -->
 
 # Discovery Call Script
@@ -63,7 +63,7 @@ Read these. Do not soften them. A deal that dies here was going to die in month 
 >
 > **It is one maintainer.** Bus factor of one. There is no on-call rotation.
 >
-> **There is no SLA outside an executed agreement, and the commercial licence template is not yet drafted.**
+> **There is no SLA outside an executed agreement, and the support/services agreement template is not yet drafted.**
 >
 > **It is self-hosted. There is no managed service and no roadmap to one** — you run it, you hold the keys, you own the operations."
 

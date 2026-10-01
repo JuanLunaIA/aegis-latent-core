@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna. All rights reserved.
-Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+Copyright (c) 2026 Juan Luna.
+SPDX-License-Identifier: Apache-2.0
+Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 -->
 
 # Aegis Latent Core — Engineering and Market Roadmap
@@ -159,7 +159,7 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 - [x] Define non-binding package hypotheses and support boundaries.
 - [ ] Validate pricing with at least three buyer interviews, cost-to-serve modeling, comparable quotes, and a paid pilot.
 - [ ] Build a support operation before promising contractual response targets, 24/7 coverage, or mission-critical SLA.
-- [ ] Create a customer data/retention/deletion statement and have counsel review AGPL/commercial terms before external sale.
+- [ ] Create a customer data/retention/deletion statement and have counsel review the Apache-2.0 relicence and any earlier agreement before external sale.
 - [ ] Obtain independent security, cryptographic, and deployment assurance appropriate to the target buyer segment.
 
 ## Release gate

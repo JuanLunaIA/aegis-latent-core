@@ -1,12 +1,12 @@
 # Architecture — Aegis Latent Core
 
-This document explains the Aegis request lifecycle, evidence boundary, state machine, trust boundaries, topology choices, and failure semantics in the `5.0.1` source baseline. It is for platform engineers, security reviewers, developers, and buyer technical evaluators. It does not establish package publication, deployment acceptance, global ordering, multi-region availability, a production SLO, or regulatory certification.
+This document explains the Aegis request lifecycle, evidence boundary, state machine, trust boundaries, topology choices, and failure semantics in the `5.0.2` source baseline. It is for platform engineers, security reviewers, developers, and buyer technical evaluators. It does not establish package publication, deployment acceptance, global ordering, multi-region availability, a production SLO, or regulatory certification.
 
 **Last verified:** 2026-08-27 UTC
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out source metadata is synchronized at `v5.0.1` — **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` was the last version published on every surface before `5.0.1` completed the set on 2026-09-26
+**Source baseline:** checked-out source metadata is synchronized at `v5.0.2` — an Apache-2.0 source target that is **not published**; the most recent published release is `v5.0.1`, **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` was the last version published on every surface before `5.0.1` completed the set on 2026-09-26
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
-**Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical; `v5.0.1` source behavior is not attributed to that distribution
+**Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical; `v5.0.2` source behavior is not attributed to that distribution
 **Audience:** Engineering, security and architecture review
 **Decision record:** [`ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md`](ADR-001-AI-GOVERNANCE-EVIDENCE-GATEWAY.md)
 

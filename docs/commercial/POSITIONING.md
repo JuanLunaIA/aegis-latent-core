@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna. All rights reserved.
-Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+Copyright (c) 2026 Juan Luna.
+SPDX-License-Identifier: Apache-2.0
+Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 -->
 
 # Positioning
@@ -92,7 +92,7 @@ Aegis's answers are filled in with their locators. The other columns are for the
 | 2 | Can a third party verify one record **without trusting you and without trusting me**? | Yes — portable MMR inclusion proof, two independent verifiers | `CLM-005`, `CLM-044` |
 | 3 | Who holds the evidence and the signing keys? | The customer. The licensor holds nothing | `README.md` §Security and evidence model |
 | 4 | What happens to traffic when the evidence store fails? | Governed endpoints refuse; `/health` and `/metrics` stay reachable | `CLM-002` |
-| 5 | Can I read the source that produces the evidence? | Yes — AGPLv3, complete | `LICENSE` |
+| 5 | Can I read the source that produces the evidence? | Yes — complete; Apache-2.0 from `5.0.2` (source target, not yet published), AGPLv3 for published releases up to `5.0.1` | `LICENSE`, `NOTICE` |
 | 6 | Where is your published list of what you do **not** claim? | `docs/institutional/UNSUPPORTED_CLAIMS.md`, 70 rows at 2026-09-29 | `UC-001`–`UC-070` |
 
 Question 6 is the one that separates the field, and it costs a vendor nothing to answer if they have one.

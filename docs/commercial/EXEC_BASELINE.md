@@ -61,7 +61,7 @@ Tags: **V** = read back from a primary source or retained artifact today. **M** 
 | Penetration-test report | REG-H01, M4, M6 | Founder, then maintainer | SOW 2027-03-31; report 2027-06-30 |
 | SOC 2 report | REG-H02, M7, M11 | Founder + auditor | engaged 2027-08-31; issued 2027-12-31 |
 | Escrow agreement | REG-H03, M9 | Founder | 2027-03-31 |
-| Customer contracts, LOIs, executed commercial licence | REG-H06, M5, M8, M10 | Founder | 2027-05-31 to 2027-09-30 |
+| Customer contracts, LOIs, executed support or services agreement | REG-H06, M5, M8, M10 | Founder | 2027-05-31 to 2027-09-30 |
 | Buyer interview notes | REG-H06, M2 | Founder | 2027-01-31 |
 | Legal opinions: licence, AI-authorship copyright, MiFID/MAR inputs | REG-H04, REG-H10, M1 | Counsel | 2027-01-31 |
 | Trademark registration | none | Founder | not scheduled |

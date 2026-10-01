@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna. All rights reserved.
-Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+Copyright (c) 2026 Juan Luna.
+SPDX-License-Identifier: Apache-2.0
+Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 -->
 
 # Contributing to Aegis Latent Core
@@ -9,22 +9,25 @@ Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
 This document defines the contribution workflow, DCO sign-off, forward-looking CLA language, test expectations and public-claim review for Aegis. It is for prospective contributors, maintainers and organizations evaluating contribution rights. It is not legal advice.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** current release (`5.0.1`)
-**Source baseline:** `5.0.1` with fourteen synchronized anchors — **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` was the last version published on every surface before `5.0.1` completed the set on 2026-09-26, whose publication was read back on 2026-09-04 and is recorded in `docs/RELEASE_STATUS.md` §1.1
+**Release baseline:** source target (`5.0.2`, Apache-2.0, unpublished); latest published release `5.0.1`
+**Source baseline:** `5.0.2` with fourteen synchronized anchors — an Apache-2.0 source target that is **not published**; the most recent published release is `5.0.1`, **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` was the last version published on every surface before `5.0.1` completed the set on 2026-09-26, whose publication was read back on 2026-09-04 and is recorded in `docs/RELEASE_STATUS.md` §1.1
 **Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 
 Thank you for your interest in contributing. This project is maintained by its
-sole copyright holder, **Juan Luna** (`juan.c.luna04@gmail.com`), and is
-distributed under a **dual-licensing model**: the GNU Affero General Public
-License v3 (AGPLv3) for open-source use, and a separate Proprietary Commercial
-License for closed-source and enterprise use (see [`LICENSE`](LICENSE) and
-[`COMMERCIAL.md`](COMMERCIAL.md)).
+sole copyright holder, **Juan Luna** (`juan.c.luna04@gmail.com`). From
+version `5.0.2` the source is licensed under the **Apache License, Version 2.0**
+(see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE)). Releases up to and including
+`5.0.1` were published under the GNU Affero General Public License v3 (AGPLv3)
+or a separate commercial licence; those published artifacts keep the terms they
+were published under (see
+[`docs/legal/LICENSE_TRANSITION_5.0.2.md`](docs/legal/LICENSE_TRANSITION_5.0.2.md)).
 
-Because the project is dual-licensed, **every contribution must be made under
-terms that allow the maintainer to continue offering the software under both
-licenses.** The framework below — a Developer Certificate of Origin (DCO) plus a
-lightweight Contributor License Agreement (CLA) — exists to make that possible
-while keeping the contribution process fast and low-friction.
+Under Section 5 of the Apache License, a contribution you intentionally submit
+is licensed under the same Apache-2.0 terms unless you state otherwise in
+writing. The framework below — a Developer Certificate of Origin (DCO) plus a
+lightweight Contributor License Agreement (CLA) — records provenance and keeps
+the maintainer able to keep maintaining and releasing the project, while keeping
+the contribution process fast and low-friction.
 
 > **Not legal advice.** This document describes the contribution terms for this
 > repository. It is not legal advice. If you are contributing on behalf of an
@@ -39,7 +42,9 @@ this repository were authored by Juan Luna (including work produced with
 AI-assisted tooling operated by Juan Luna). To the maintainer's knowledge there
 are **no third-party human contributions** in the project history. Accordingly,
 Juan Luna is the **sole copyright holder** of the existing work, and is entitled
-to license it under both the AGPLv3 and the Proprietary Commercial License.
+to license it under the Apache License, Version 2.0 (and was entitled to license
+it under the AGPLv3 and a commercial licence for the releases published before
+`5.0.2`).
 
 This section is a factual statement about the current state of the repository.
 It does not, and cannot, retroactively alter the terms under which any past
@@ -96,9 +101,9 @@ The name and email must be real and must match the commit author.
 
 ## 3. Contributor License Agreement (CLA)
 
-The DCO certifies *provenance*. Because this project is **dual-licensed**, we
-additionally require a lightweight **copyright license grant** so the maintainer
-can keep offering the software commercially. By submitting a contribution (a pull
+The DCO certifies *provenance*. We additionally require a lightweight
+**copyright license grant** so the maintainer can keep maintaining, releasing and
+relicensing the project without chasing every contributor. By submitting a contribution (a pull
 request, patch, or any other work) to this repository, **you agree to the
 following on a forward-looking basis for that contribution:**
 
@@ -109,17 +114,18 @@ non-exclusive, royalty-free, irrevocable, and sublicensable** license to
 reproduce, prepare derivative works of, publicly display, publicly perform,
 sublicense, and distribute your contribution and such derivative works.
 
-### 3.2 Right to relicense and to dual-license
+### 3.2 Licensing of your contribution
 
-You agree that the Maintainer may license and distribute your contribution under
-**any license terms**, including:
+You agree that the Maintainer may license and distribute your contribution under:
 
-- the GNU Affero General Public License v3 (AGPLv3); **and**
-- one or more **proprietary commercial licenses**, on terms set solely by the
-  Maintainer, including the right to **sublicense and to sell** the software as
-  part of a closed-source or commercial offering,
+- the **Apache License, Version 2.0**, which is how the project distributes it
+  from `5.0.2` and how every recipient receives it; **and**
+- any other license terms the Maintainer chooses for later versions of the
+  project (the Maintainer's right to relicense its own future releases),
 
 **without any obligation of accounting, royalty, or further consent to you.**
+A copy of the project that a recipient has already received under the Apache
+License stays available to that recipient under the Apache License.
 
 ### 3.3 Grant of patent license
 
@@ -134,7 +140,7 @@ contribution with the project.
 
 This is a **license grant, not an assignment**. You retain copyright ownership of
 your contribution and may use it elsewhere. The CLA does not transfer title; it
-guarantees the Maintainer the rights needed to operate the dual-license model.
+guarantees the Maintainer the rights needed to keep releasing the project.
 
 ### 3.5 Your representations
 
@@ -237,7 +243,9 @@ copy of the CLA by email before merging.
 
 Unless explicitly stated otherwise in writing, your contributions are accepted
 under the terms above: licensed to the Maintainer per the CLA (§3) and
-distributable by the project under AGPLv3 and the Proprietary Commercial License.
+distributable by the project under the Apache License, Version 2.0 (Section 5 of
+that License: inbound equals outbound). Section 6 of the License grants no right
+to use the project's name or marks; the CLA does not either.
 
 ---
 
@@ -248,6 +256,7 @@ distributable by the project under AGPLv3 and the Proprietary Commercial License
 - [`README.md`](README.md)
 - [`SECURITY.md`](SECURITY.md)
 - [`COMMERCIAL.md`](COMMERCIAL.md)
+- [`docs/legal/LICENSE_TRANSITION_5.0.2.md`](docs/legal/LICENSE_TRANSITION_5.0.2.md)
 - [`docs/CLAIMS_MATRIX.md`](docs/CLAIMS_MATRIX.md)
 - [`docs/DEVELOPER_QUICKSTART.md`](docs/DEVELOPER_QUICKSTART.md)
 - [`tools/docs/verify_documentation.py`](tools/docs/verify_documentation.py)

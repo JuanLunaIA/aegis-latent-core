@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 """Real gateway processes, real Redis, real kill: the multi-replica contract end to end.
 
 Each replica is the ``aegis`` entry point (``main()``) in its own process, with
@@ -249,7 +249,10 @@ def test_active_active_replicas_share_one_verifiable_sequence(
             _until(lambda p=port: _request(p, "GET", "/ready")[0] == 200, proc, 60, "ready")
             # The SQLite store's I/O runs under the production filter, not beside it.
             status = Path(f"/proc/{proc.pid}/status").read_text()
-            assert "Seccomp:\t2" in status, "the replica is not under the seccomp filter"
+            log_tail = Path(proc.log_path).read_text(errors="replace")[-3000:]  # type: ignore[attr-defined]
+            assert "Seccomp:\t2" in status, (
+                f"the replica is not under the seccomp filter; replica log tail:\n{log_tail}"
+            )
         for _ in range(5):
             for port, _proc in replicas:
                 assert _request(port, "POST", "/v1/chat/completions")[0] == 200

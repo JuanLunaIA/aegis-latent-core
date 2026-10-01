@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 
 """Backward compatibility: the public surface a previous release exposed.
 
@@ -18,7 +18,7 @@ published release — with ``git show v4.1.2:<path>``, not restated from memory.
 That tag is the baseline because it is the last surface that reached a
 registry: there is no ``4.2.0`` at any surface, the number having been skipped
 deliberately, so no ``4.2.0`` contract exists to compare against. The tree these
-tests run in is ``5.0.1``, which is unpublished.
+tests run in is ``5.0.2``, which is unpublished.
 
 Direction matters
 -----------------
@@ -304,7 +304,7 @@ class TestLicensingSurface:
 
 
 class TestEnginesRunUnlicensed:
-    """The AGPLv3 software must not require a commercial token to import or run."""
+    """The Apache-2.0 software must not require an entitlement token to import or run."""
 
     def test_the_engine_facades_import_without_a_licence(self, monkeypatch) -> None:
         from aegis.licensing.validator import LICENSE_TOKEN_ENV, ROOT_PUBKEY_ENV

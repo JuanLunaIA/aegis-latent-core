@@ -63,7 +63,7 @@ No SaaS. No managed service. No vendor access to any deployment.
 
 ## Licence
 
-AGPLv3 **or** a commercial licence. The AGPL network clause applies if you modify the software and expose it to third parties over a network. See [COMMERCIAL.md](../../COMMERCIAL.md).
+Apache-2.0 from `5.0.2` (a source target, not yet published). Releases up to and including `5.0.1` were published under AGPLv3 or a commercial licence and keep those terms. See [COMMERCIAL.md](../../COMMERCIAL.md).
 
 ---
 

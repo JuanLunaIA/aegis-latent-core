@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 
-"""Vendor tool: mint and sign a commercial license token.
+"""Vendor tool: mint and sign an entitlement token.
 
 This is the private half of :mod:`aegis.licensing.validator`. It runs on the
 vendor's machine, never in a deployment, and it needs the Ed25519 **private**
@@ -181,7 +181,7 @@ def _public_hex(private_key: Ed25519PrivateKey) -> str:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="generate_commercial_license.py",
-        description="Mint and sign Aegis commercial license tokens (vendor-side).",
+        description="Mint and sign Aegis entitlement tokens (vendor-side).",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -208,7 +208,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--mgt",
         required=True,
         type=int,
-        help="contracted Million Governed Transactions per year (a commercial term; "
+        help="contracted Million Governed Transactions per year (a contractual term; "
         "not enforced at runtime)",
     )
     issue.add_argument("--valid-days", required=True, type=int)

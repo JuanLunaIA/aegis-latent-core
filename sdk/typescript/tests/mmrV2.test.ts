@@ -1,6 +1,6 @@
-// Copyright (c) 2026 Juan Luna. All rights reserved.
-// Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-// Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+// Copyright (c) 2026 Juan Luna.
+// SPDX-License-Identifier: Apache-2.0
+// Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 //
 // The v2 MMR is domain-separated: leaf = SHA-256(0x00 || payload), node =
 // SHA-256(0x01 || left32 || right32), root = SHA-256(0x02 || peaks). This file

@@ -101,7 +101,7 @@ A deposit that a third party can rebuild and verify without the maintainer conta
 2. Vendored Python wheels for the lock (`scripts/vendor_wheels.sh`), so the build does not depend on PyPI remaining available.
 3. The base image digests pinned in `deploy/docker/Dockerfile`, exported with `docker save`.
 4. The release's `SHA256SUMS`, SBOM and GHCR digests as read back.
-5. The access list of §2 and the custody arrangements for the commercial licence key.
+5. The access list of §2 and the custody arrangements for the entitlement-token signing key.
 
 **Verifying the deposit:**
 

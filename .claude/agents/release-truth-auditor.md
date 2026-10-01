@@ -22,16 +22,22 @@ claimed. Reading back one does not establish another.
 Read `AGENTS.md` for the authoritative text before writing anything, and treat it
 as the source of truth over your own memory. The shape of it:
 
-- The checked-out source baseline is **5.0.1** with fourteen synchronized
-  anchors — **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)** (read back 2026-09-21). The most recent
-  published release is **5.0.0**, published on 2026-09-16 to every surface
-  **except** PyPI `aegis-latent-core`.
-- Readback established: the signed annotated tag, a GitHub Release with its
-  assets, PyPI `aegis-latent-sdk` 5.0.0, npm `aegis-latent-sdk` 5.0.0, and GHCR
-  gateway and dashboard digests with cosign signature objects present.
-- **`cosign verify` and `gh attestation verify` were NOT run.** Signature objects
-  being present is not the same as signatures verifying. Never collapse those.
-- The `SHA256SUMS` sweep was not run for 5.0.0.
+- The checked-out source baseline is **5.0.2** with fourteen synchronized
+  anchors. It is an Apache-2.0 source target and is **not published**: no tag,
+  GitHub Release, registry package or image exists for it. The most recent
+  published release is **5.0.1**, published 2026-09-24 to every surface but PyPI
+  `aegis-latent-core`, which followed on 2026-09-26 (read back 2026-09-29).
+  Releases up to and including 5.0.1 were published under AGPLv3 or the
+  commercial licence and keep those terms
+  (`docs/legal/LICENSE_TRANSITION_5.0.2.md`).
+- Readback of 5.0.1 established: the signed annotated tag, a GitHub Release with
+  31 assets and a 15-of-15 `SHA256SUMS` sweep, PyPI `aegis-latent-sdk` 5.0.1,
+  npm `aegis-latent-sdk` 5.0.1, and GHCR gateway and dashboard digests whose
+  `cosign verify` and build-provenance attestations passed against the exact
+  workflow identity. `gh attestation verify` itself was NOT run, and PyPI
+  signature or provenance verification was NOT run. Never collapse those.
+- For 5.0.0 the `cosign verify`, `gh attestation verify` and `SHA256SUMS` checks
+  were not run.
 - **The gateway distribution `aegis-latent-core` was NOT on PyPI at 5.0.0.** It
   reached PyPI at 5.0.1 on 2026-09-26 (`publish_pypi_gateway.yml` run
   `36224961909`), read back 2026-09-29 (`docs/RELEASE_STATUS.md` §1.0b, `CLM-113`).

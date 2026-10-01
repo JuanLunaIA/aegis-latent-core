@@ -59,9 +59,9 @@ Stated here rather than in a footnote, because an executive reading only this pa
 
 ## Commercial path
 
-Dual-licensed: AGPLv3, or a commercial licence. See [COMMERCIAL.md](../../COMMERCIAL.md).
+Licensed under Apache-2.0 from `5.0.2` (a source target, not yet published); releases up to and including `5.0.1` were published under AGPLv3 or a commercial licence and keep those terms. See [COMMERCIAL.md](../../COMMERCIAL.md).
 
-The AGPL network clause is the practical decision point: an organisation that modifies the software and exposes it to third parties over a network must offer them the corresponding source. Organisations for whom that is unacceptable need the commercial licence.
+Apache-2.0 has no network-copyleft clause. What can be sold is support, pilots, hardening and assurance work, not a licence.
 
 Evaluation is self-service — the source, the claims register, and the pilot playbook are all public. See [Pilot Playbook](../enterprise/PILOT_PLAYBOOK.md).
 

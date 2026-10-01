@@ -29,7 +29,7 @@ Two columns. The left is what can be sold today to a buyer who checks; the right
 | **Fail-closed durability** | Remove the signer, fill the volume, break the chain — governed traffic refuses, `/health` stays up | `CLM-002` |
 | **Refusals are evidence** | Trigger a WAF block; the refusal is committed before the error returns | `CLM-060` |
 | **Self-hosted custody** | Read the source. No telemetry, no vendor endpoint, no managed service | `LICENSE` |
-| **Open-source core** | Complete, AGPLv3, no feature withheld by a runtime check | `ENTERPRISE_PRICING_GUIDE.md` §What the free tier keeps |
+| **Open-source core** | Complete, Apache-2.0 from 5.0.2, no feature withheld by a runtime check | `ENTERPRISE_PRICING_GUIDE.md` §What the free tier keeps |
 | **Embedded mode** | `aegis.wrap(client)` — same controls in-process, with its stated boundary | `CLM-061` |
 | **A governed claim surface** | 104 claims with locators (`verify_claims.py`: 104 claims, 0 findings, measured 2026-09-21); 67 published non-claims (`UC-001`…`UC-067`); CI rejects overclaiming prose | `CLAIMS_MATRIX.md`, `UNSUPPORTED_CLAIMS.md` |
 | **A paid pilot** | Fixed scope, written acceptance criteria, real failure tests | [Pilot Proposal](SALES_KIT/PILOT_PROPOSAL.md) |
@@ -43,7 +43,7 @@ Two columns. The left is what can be sold today to a buyer who checks; the right
 | CR-01 | Independent penetration test | Founder | **NOT STARTED** | $15–25k | 4–6 weeks | "Externally assessed" claims; most security questionnaires |
 | CR-02 | SOC 2 Type I | Founder | **NOT STARTED** | $20–80k/yr | 3–6 months | Mid-market and enterprise procurement |
 | CR-03 | Executed software escrow | Founder | **NOT STARTED** | $5–10k | 2–4 weeks | The bus-factor objection, partially |
-| CR-04 | Counsel-reviewed commercial licence | Founder + counsel | **NOT STARTED** | $3–5k | 2–4 weeks | Every AGPL-blocked buyer |
+| CR-04 | Counsel-confirmed relicence + support/services template | Founder + counsel | **NOT STARTED** | $3–5k | 2–4 weeks | The Apache-2.0 title question; any paid support agreement |
 | CR-05 | Design partner / first reference | Founder | **NOT STARTED** | Founder time | 2–3 months | All revenue; all references; **and pricing validation** |
 | CR-06 | Second maintainer | Founder | **NOT STARTED** | $150–250k/yr | 2–4 months | Bus factor = 1; any staffed support commitment |
 | CR-07 | Pricing validation | Founder | **NOT STARTED** | Founder time | Concurrent with CR-05 | Removing `[HYPOTHESIS-UNVALIDATED]` from every figure |
@@ -84,15 +84,15 @@ Two columns. The left is what can be sold today to a buyer who checks; the right
 - **What it would unblock:** The bus-factor objection, partially. `docs/commercial/SOFTWARE_ESCROW_POLICY.md` already sets out the policy; this is the step that makes it real.
 - **Honest note:** Escrow addresses source availability if the maintainer disappears. It does not provide anyone who can *operate* the code — that is CR-06.
 
-## CR-04 — Commercial licence terms
+## CR-04 — Relicence confirmation and support/services terms
 
 - **Owner:** Founder + qualified counsel
-- **Action:** Draft the commercial licence that sits beside AGPLv3 in a dual-licence model.
+- **Action:** Confirm in writing the right to relicense the project under Apache-2.0 from `5.0.2` (authorship, automation-authored commits, AI-assisted material; `docs/legal/LICENSE_TRANSITION_5.0.2.md` §3), decide what happens to any agreement made against a release published under AGPLv3 or a commercial licence, and draft a support/services agreement template. This item replaced the earlier "draft a commercial licence beside AGPLv3" scope, which the relicence made moot.
 - **Estimated cost:** $3,000–5,000
 - **Estimated timeline:** 2–4 weeks
-- **Deliverable:** A signable commercial licence template.
-- **What it would unblock:** Buyers whose legal departments refuse AGPL outright. `COMMERCIAL.md` describes the intent; a template is what lets a deal proceed.
-- **Boundary:** this repository takes no position on whether a given deployment triggers AGPL §13. That is the buyer's counsel's call, and neither this file nor any other in the corpus is legal advice.
+- **Deliverable:** Counsel's written confirmation, and a signable support/services template.
+- **What it would unblock:** The owner's ability to publish `5.0.2` with confidence in its title, and any paid support relationship. `COMMERCIAL.md` describes the intent; a template is what lets a deal proceed.
+- **Boundary:** this repository takes no position on a buyer's obligations under Apache-2.0 or any earlier licence. That is the buyer's counsel's call, and neither this file nor any other in the corpus is legal advice.
 
 ## CR-05 — Design partners
 

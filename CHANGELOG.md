@@ -2,19 +2,72 @@
 
 All notable changes to **Aegis Latent Core** are documented in this file.
 
-**Last verified:** 2026-09-24 UTC
+**Last verified:** 2026-10-01 UTC
+**Source target (unpublished):** `v5.0.2`, fourteen synchronized anchors, **Apache-2.0**. No tag, GitHub Release, registry package or image exists for it (`docs/RELEASE_STATUS.md` §1.0c).
 **Published release (2026-09-24):** `v5.0.1`, fourteen synchronized anchors, **published on every surface except PyPI `aegis-latent-core`, which followed on 2026-09-26 (`docs/RELEASE_STATUS.md` §1.0b)** — the signed tag (`gitsign verify-tag` passed), the GitHub Release with 31 assets (`SHA256SUMS` sweep 15 of 15), PyPI `aegis-latent-sdk` `5.0.1`, npm `aegis-latent-sdk` `5.0.1`, and both GHCR images (`cosign verify` and provenance attestations verified against the exact workflow identity) were read back; see `docs/RELEASE_STATUS.md` §1.0a.
 **Previous release (2026-09-16):** `v5.0.0`, fourteen synchronized anchors, **published on every surface except PyPI `aegis-latent-core`** — signed tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk`, and both GHCR images were read back; the gateway distribution on PyPI remains `4.1.2`. Source metadata does not establish external lifecycle state, which requires independent readback; see `docs/RELEASE_STATUS.md` §1.0 for what was and was not verified. There is no `4.2.0` or `4.4.0`; both numbers were skipped deliberately and no artifact was ever published under either.
 **Most recent published release on every surface (readback 2026-09-04):** `v4.1.2` signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway image `sha256:b3f6aadc…f80710` and dashboard image `sha256:27e1bbc2…d92398`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
-**Release baseline:** `v5.0.1` (fourteen synchronized `5.0.1` anchors), published 2026-09-24 on every surface, with PyPI `aegis-latent-core` `5.0.1` following on 2026-09-26; recorded in `docs/RELEASE_STATUS.md` §1.0a
+**Release baseline:** source `v5.0.2` (fourteen synchronized `5.0.2` anchors, unpublished); the most recent published release is `v5.0.1` (fourteen synchronized `5.0.1` anchors), published 2026-09-24 on every surface, with PyPI `aegis-latent-core` `5.0.1` following on 2026-09-26; recorded in `docs/RELEASE_STATUS.md` §1.0a
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+Nothing yet.
+
+## [5.0.2] — unreleased source target
+
+**Source target, not published.** `5.0.2` moves the source line to the Apache License, Version 2.0. Every release up
+to and including `5.0.1` was published under the GNU Affero General Public License v3 or a separate commercial
+licence and **keeps those terms**; this section changes the licence of nothing already published
+(`docs/legal/LICENSE_TRANSITION_5.0.2.md`, `CLM-122`). The tag, the release workflows and the registry uploads are the
+owner's to run, and no readback exists for `5.0.2`.
+
+### Licence
+
+- **`LICENSE` is now the verbatim Apache License, Version 2.0** (SHA-256 `cfc7749b…c523d30`, pinned by
+  `tests/test_license_files.py`). `NOTICE` carries the Section 4(d) attribution, the licence pointer and the
+  Section 6 trademark reservation. The AGPLv3 text and the "AGPLv3 or commercial" grant are gone from the source
+  tree.
+- **Every first-party source file carries a three-line header** naming `SPDX-License-Identifier: Apache-2.0`,
+  applied and kept idempotent by `scripts/apply_license_headers.py`; the CI "License Headers" job re-runs it and
+  fails on any diff. `evidence/`, `investor_packs/` and `site/` are historical or generated and are not rewritten.
+- **Package metadata declares `Apache-2.0`** for the gateway and the Python SDK (PEP 639 `license` plus
+  `license-files`, with the `License ::` classifier removed), `aegis-rust`, both Cargo crates, the TypeScript SDK and
+  the dashboard lockfile.
+- **The licence travels with every distribution** (Apache-2.0 Section 4(a)): `LICENSE` and `NOTICE` are copied into
+  `sdk/python/` and `sdk/typescript/` (and listed in the npm `files`), and into `/licenses/` in the gateway, air-gap
+  and dashboard images, whose OCI `licenses` label reads `Apache-2.0`.
+- **The dependency policy follows.** `scripts/license/license_scan.py` treats a strong-copyleft (GPL, AGPL)
+  component as **blocking** for an Apache-2.0 artifact unless it is not distributed with it, and an unresolved
+  licence as blocking. The committed inventory in `docs/compliance/LICENSE_AUDIT.md` still reflects 2026-09-09; a
+  scan run on 2026-10-01 in a development environment found one component (`spartan2`, optional `zk-spartan`
+  feature) declaring `license-file` rather than `license`, which the scanner reads as `UNKNOWN`. It is recorded as a
+  lead for counsel, not a result.
+- **What is sold changes.** `COMMERCIAL.md` and the commercial documents describe services (support, pilots,
+  hardening, assurance work), not a second licence tier. The licence-entitlement engine (`aegis/licensing`,
+  `AEGIS_LICENSE_ENFORCEMENT`) keeps its behaviour — it is off by default and its public API is pinned — and is
+  documented as an entitlement signal, not a licence grant.
+- **Not established.** That the owner's right to relicense is confirmed (it rests on the owner's instruction and the
+  repository's own statements; automation-authored commits and AI-assisted authorship are open counsel questions);
+  that any dependency set is Apache-compatible beyond the identifiers upstream projects declare; that the
+  investor-pack valuation inputs (a dual-licence model with an "AGPL friction" haircut) still hold. The packs are
+  left as dated snapshots.
+
+### Version
+
+- All fourteen release-contract anchors, `Cargo.lock`, the `envoy-wasm` crate, the image labels and the active
+  deployment literals read `5.0.2`; `SOURCE_RELEASE_TARGET_VERSION` and the inert-field warnings follow. The
+  deployment defaults that name `ghcr.io/juanlunaia/aegis-latent-core:5.0.2` resolve to nothing until that image is
+  published. The documentation-currency gate now treats `5.0.1` as a superseded baseline.
+- No runtime path changed apart from version strings, headers, docstrings and one reworded licensing-engine error
+  message. Nothing was re-measured for `5.0.2`; the retained measurements are `5.0.1` measurements.
+
+The entries below were recorded under `[Unreleased]` after `5.0.1` and ship with `5.0.2`.
 
 ### Added
 

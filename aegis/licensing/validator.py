@@ -1,8 +1,8 @@
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 
-"""Offline commercial license verification.
+"""Offline entitlement-token verification.
 
 A license token is ``base64url(payload_json || ed25519_signature)``. Verifying
 it needs the vendor's Ed25519 public key and nothing else — no network call, no
@@ -41,7 +41,7 @@ expiry. That is all, and each of the following is outside it:
   detect that. An operator needing tamper-evident expiry needs a trusted time
   source, which is a deployment control rather than a property of this module.
 - *That usage stayed within* ``max_annual_mgt``. The field is carried so the
-  contract can be read off the token; it is a commercial term, not a runtime
+  contract can be read off the token; it is a contractual term, not a runtime
   quota, and nothing here counts or enforces transactions.
 - *Revocation.* There is no CRL and no OCSP. A token is valid until it expires;
   revoking one before then requires rotating the root key and reissuing, which
@@ -265,7 +265,7 @@ def root_public_key_from_env(env: Mapping[str, str] | None = None) -> str:
     value = source.get(ROOT_PUBKEY_ENV, "").strip()
     if not value:
         raise LicenseMalformedError(
-            f"{ROOT_PUBKEY_ENV} is not set. Commercial engine gating needs the vendor's "
+            f"{ROOT_PUBKEY_ENV} is not set. Entitlement gating needs the vendor's "
             f"Ed25519 root public key; there is no default and none is compiled in."
         )
     return value
@@ -277,7 +277,7 @@ def load_entitlement_from_env(
     """Return the entitlement configured in the environment, or ``None``.
 
     ``None`` means *no licence was configured*, which is the ordinary state of
-    the AGPLv3 gateway and is not an error. A token that is present but bad
+    the Apache-2.0 gateway and is not an error. A token that is present but bad
     raises: a deployment that meant to be licensed and is not must find out.
     """
 

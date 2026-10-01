@@ -2,7 +2,7 @@
 
 Every file under the six source roots, with what it is, what reaches it, what tests it, and who owns it. Generated — edit `scripts/generate_module_inventory.py`, not this file. Currency is enforced by `tests/test_module_inventory_current.py`.
 
-`python scripts/generate_module_inventory.py` — 330 files.
+`python scripts/generate_module_inventory.py` — 331 files.
 
 ## What the status column means
 
@@ -18,9 +18,9 @@ Every file under the six source roots, with what it is, what reaches it, what te
 
 ## Coverage and ownership
 
-- **Navigation coverage:** 70 of 330 files (21%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
-- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 69, `roadmap-omit` 34, `unreferenced` 18.
-- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 330 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
+- **Navigation coverage:** 70 of 331 files (21%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
+- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 70, `roadmap-omit` 34, `unreferenced` 18.
+- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 331 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
 
 Tests are the test files that import the module directly, capped at 4 per row; the count is exact, the list is not exhaustive.
 
@@ -219,9 +219,9 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis/engines/veracity.py` | module | Veracity engine — evidence commitment and inclusion proofs, without the proxy. | reachable | — | @JuanLunaIA |
 | `aegis/forensics/__init__.py` | package | Dependency-free forensic query primitives. | reachable | `tests/forensics/test_search.py` | @JuanLunaIA |
 | `aegis/forensics/search.py` | module | Typed metadata-only search over retained audit-node snapshots. | reachable | — | @JuanLunaIA |
-| `aegis/licensing/__init__.py` | package | Offline verification of commercial license tokens. | reachable | `tests/compat/test_public_api_compat.py`, `tests/licensing/test_license_model.py` | @JuanLunaIA |
+| `aegis/licensing/__init__.py` | package | Offline verification of entitlement tokens. | reachable | `tests/compat/test_public_api_compat.py`, `tests/licensing/test_license_model.py` | @JuanLunaIA |
 | `aegis/licensing/model.py` | module | The licence data model, separated from the code that verifies signatures. | reachable | `tests/licensing/test_license_model.py` | @JuanLunaIA |
-| `aegis/licensing/validator.py` | module | Offline commercial license verification. | reachable | `tests/compat/test_public_api_compat.py`, `tests/engines/test_modular_engines.py`, `tests/licensing/test_license_validator.py` | @JuanLunaIA |
+| `aegis/licensing/validator.py` | module | Offline entitlement-token verification. | reachable | `tests/compat/test_public_api_compat.py`, `tests/engines/test_modular_engines.py`, `tests/licensing/test_license_validator.py` | @JuanLunaIA |
 | `aegis/providers/__init__.py` | package | aegis.providers — Multi-provider adapter registry. | reachable | `tests/test_providers.py` | @JuanLunaIA |
 | `aegis/providers/anthropic_provider.py` | module | aegis.providers.anthropic_provider — Anthropic Claude adapter. | reachable | `tests/test_forwarder_deep.py`, `tests/test_forwarder_extra.py`, `tests/test_forwarder_new.py`, `tests/test_forwarder_sse_framing.py`, … (+3 more)` | @JuanLunaIA |
 | `aegis/providers/base.py` | module | aegis.providers.base — Abstract provider adapter interface. | reachable | `tests/test_provider_contracts.py`, `tests/test_upstream_url_join.py` | @JuanLunaIA |
@@ -282,7 +282,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `integrations/__init__.py` | package | — | allowlisted | — | @JuanLunaIA |
 | `integrations/huggingface_plugin.py` | module | integrations.huggingface_plugin — HuggingFace Transformers hook for Aegis. | allowlisted | — | @JuanLunaIA |
 | `integrations/vllm_plugin.py` | module | integrations.vllm_plugin — vLLM forward hook for full logit + MoE gate extraction. | allowlisted | — | @JuanLunaIA |
-| `scripts/apply_license_headers.py` | module | Apply copyright + AGPLv3 / Commercial dual-license headers to source files. | referenced | — | @JuanLunaIA |
+| `scripts/apply_license_headers.py` | module | Apply copyright + Apache-2.0 headers to source files. | referenced | — | @JuanLunaIA |
 | `scripts/audit_documentation_corpus.py` | module | Create a deterministic inventory and documentation-integrity audit. | referenced | — | @JuanLunaIA |
 | `scripts/build_embedded.sh` | shell script | Build Aegis Rust extension with embedded profile (minimized for edge/OT deployment) | unreferenced | — | @JuanLunaIA |
 | `scripts/build_execution_manifest.py` | module | Build the 2026-08-20 execution provenance envelope. | unreferenced | — | @JuanLunaIA |
@@ -294,14 +294,14 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `scripts/create_github_release.py` | module | Create one GitHub Release through a create-only, integrity-checked gh CLI surface. | referenced | — | @JuanLunaIA |
 | `scripts/extract_release_notes.py` | module | Extract one exact, non-empty stable-version section from CHANGELOG.md. | referenced | — | @JuanLunaIA |
 | `scripts/generate_ai_context_manifest.py` | module | Generate the deterministic manifest for the advisory AI context pack. | referenced | — | @JuanLunaIA |
-| `scripts/generate_commercial_license.py` | module | Vendor tool: mint and sign a commercial license token. | referenced | — | @JuanLunaIA |
+| `scripts/generate_commercial_license.py` | module | Vendor tool: mint and sign an entitlement token. | referenced | — | @JuanLunaIA |
 | `scripts/generate_license_key.py` | module | generate_license_key.py — HMAC-SHA256 license key generator for Aegis v4.1.0. | referenced | — | @JuanLunaIA |
 | `scripts/generate_mmr_vectors.py` | module | — | referenced | — | @JuanLunaIA |
 | `scripts/generate_module_inventory.py` | module | Generate ``docs/MODULE_INVENTORY.md`` — the per-file inventory AUD-25 asked for. | referenced | — | @JuanLunaIA |
 | `scripts/generate_sbom.sh` | shell script | Aegis Latent Core — SBOM Generation Script | referenced | — | @JuanLunaIA |
 | `scripts/generate_sdk_bundle_fixture.py` | module | Write the gateway-issued forensic bundle the Python SDK's tests verify. | referenced | — | @JuanLunaIA |
 | `scripts/import_reachability_allowlist.txt` | text/data | — | referenced | — | @JuanLunaIA |
-| `scripts/install_aegis.sh` | shell script | install_aegis.sh — Zero-touch POSIX installer for Aegis Latent Core v5.0.1 | unreferenced | — | @JuanLunaIA |
+| `scripts/install_aegis.sh` | shell script | install_aegis.sh — Zero-touch POSIX installer for Aegis Latent Core v5.0.2 | unreferenced | — | @JuanLunaIA |
 | `scripts/install_gitsign.sh` | shell script | — | referenced | — | @JuanLunaIA |
 | `scripts/integration_test_mock.py` | module | integration_test_mock.py — comprehensive local verification harness for Aegis v4.1.0. | unreferenced | — | @JuanLunaIA |
 | `scripts/license/license_scan.py` | module | License inventory and copyleft reconciliation across all three ecosystems. | referenced | — | @JuanLunaIA |
@@ -314,6 +314,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `scripts/triage/parse_socket_report.py` | module | Normalize a Socket.dev PDF report into machine-readable alert rows. | referenced | — | @JuanLunaIA |
 | `scripts/vendor_wheels.sh` | shell script | vendor_wheels.sh — Pre-download all Python wheels for the air-gapped build. | referenced | — | @JuanLunaIA |
 | `scripts/verify_ai_context_manifest.py` | module | Verify the deterministic manifest for the advisory AI context pack. | referenced | — | @JuanLunaIA |
+| `scripts/verify_all.sh` | shell script | One command for the licence + version + documentation gates. | unreferenced | — | @JuanLunaIA |
 | `scripts/verify_claims.py` | module | Claim-control consistency checks for ``docs/CLAIMS_MATRIX.md``. | referenced | — | @JuanLunaIA |
 | `scripts/verify_docs.py` | module | Structural verification for the documentation corpus. | referenced | — | @JuanLunaIA |
 | `scripts/verify_formal_artifacts.sh` | shell script | The formal gate. Every check here has to be able to fail: | referenced | — | @JuanLunaIA |
@@ -345,7 +346,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `tools/raise/terms.json` | text/data | — | referenced | — | @JuanLunaIA |
 | `tools/raise/tranche_gate.py` | module | Evaluate the tranche gates of the SAFE round against facts the owner recorded. | referenced | — | @JuanLunaIA |
 | `tools/sales/README.md` | text/data | — | referenced | — | @JuanLunaIA |
-| `tools/sales/build_site.py` | module | Build the static verification-first sales pages under ``site/``. | unreferenced | — | @JuanLunaIA |
+| `tools/sales/build_site.py` | module | Build the static verification-first sales pages under ``site/``. | referenced | — | @JuanLunaIA |
 | `tools/sales/build_verifier_kit.py` | module | Package the verifier kit as one zip an external auditor can run without this repository. | referenced | — | @JuanLunaIA |
 | `tools/sales/data_room.json` | text/data | — | referenced | — | @JuanLunaIA |
 | `tools/sales/prove_it/TRUSTED_ROOT.txt` | text/data | — | unreferenced | — | @JuanLunaIA |

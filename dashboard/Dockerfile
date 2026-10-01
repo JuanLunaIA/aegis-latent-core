@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 # syntax=docker/dockerfile:1.7
 
 ARG NODE_IMAGE=node:22.18.0-bookworm-slim@sha256:752ea8a2f758c34002a0461bd9f1cee4f9a3c36d48494586f60ffce1fc708e0e
@@ -40,6 +40,9 @@ RUN groupadd --system --gid 10001 nextjs \
 
 COPY --from=builder --chown=nextjs:nextjs /workspace/dashboard/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /workspace/dashboard/.next/static ./dashboard/.next/static
+
+# Licence texts travel with every image (Apache-2.0 section 4(a), 4(d))
+COPY LICENSE NOTICE /licenses/
 
 USER 10001:10001
 EXPOSE 3000

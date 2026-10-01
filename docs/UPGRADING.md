@@ -84,7 +84,7 @@ The asymmetry to plan around is the reverse: nothing retroactively seals records
 
 ## 8. `AEGIS_MAX_FORENSIC_BYTES` now takes effect — and refuses values above 65,536 (`5.0.1` target)
 
-`.env.example` has set `AEGIS_MAX_FORENSIC_BYTES=1048576` since `3.0.1`, but no setting read it: every gateway used a 65,536-byte preview cap whatever the variable said. From the `5.0.1` source target a setting reads it (`REG-D59`), with a range of `0`–`65,536`. **If your environment still carries `1048576` from the old example, startup now refuses with a validation error** rather than silently growing every leaf sixteen-fold. Remove the variable to keep today's behaviour, or set a value in range.
+`.env.example` has set `AEGIS_MAX_FORENSIC_BYTES=1048576` since `3.0.1`, but no setting read it: every gateway used a 65,536-byte preview cap whatever the variable said. Since the published `5.0.1` release (2026-09-24) a setting reads it (`REG-D59`), with a range of `0`–`65,536`. **If your environment still carries `1048576` from the old example, startup now refuses with a validation error** rather than silently growing every leaf sixteen-fold. Remove the variable to keep today's behaviour, or set a value in range.
 
 Lowering the cap shrinks request and response previews in new leaves only; existing leaves, signatures and proofs are untouched. It is the precondition for zero-knowledge inclusion proofs (`DOC-08` §6.3), and it costs the preview evidence those bytes carry.
 
@@ -143,6 +143,26 @@ To keep trusted-time anchoring alongside the filter, unset `AEGIS_TSA_URL` on th
 A tool description or metadata string that contains a Layer-2 phrase can now cause a refusal. Check your tool schemas against `/v1/chat/completions` in development mode before upgrading.
 
 **WAL rotation, S3 archival and cryptographic shredding now run behind the filter.** Nothing to configure. They were killed with SIGSYS on first use before (`CLM-119`). The larger profile is loaded only when archival, shredding or the SQLite HA sequence store is configured.
+
+## 11. The licence changes to Apache-2.0 (`5.0.2` source target, unpublished)
+
+**What changed.** The `5.0.2` source is licensed under the Apache License, Version 2.0. Releases up to and including `5.0.1` were published under the GNU Affero General Public License v3 or a separate commercial licence and keep those terms. The licence of a copy is the licence it was published under, and an executed agreement keeps its own terms; a repository edit amends neither. `5.0.2` is not published, so no copy exists yet that carries the new terms ([Release Status](RELEASE_STATUS.md) §1.0c).
+
+**What it means for you, stated as obligations of the licence text, not as legal advice.** Apache-2.0 asks a redistributor to give recipients a copy of the licence, to keep the `NOTICE` attribution, to mark files it changed, and to keep copyright, patent and attribution notices. It does not carry the AGPLv3 network-use clause, so running a modified copy as a service does not by itself oblige you to offer its source. It grants no right to the name or marks (Section 6) and provides the software as is (Section 7). Whether a particular use or distribution complies is a question for your counsel.
+
+**What does not change.** The runtime, the wire formats, the configuration surface and the evidence schema are unchanged; apart from the version strings, headers and one reworded licensing-engine error message, no code path moved. A `5.0.1` gateway and a `5.0.2` gateway behave the same.
+
+**What you may notice.**
+
+- Package metadata reads `Apache-2.0` (PEP 639 `License-Expression`); the AGPL trove classifier is gone. Tools that classify by licence will see the change.
+- The Python SDK, the TypeScript SDK and all three container images carry `LICENSE` and `NOTICE` (the images under `/licenses/`), and the OCI `licenses` label reads `Apache-2.0`.
+- Each source file opens with a three-line header naming `SPDX-License-Identifier: Apache-2.0`.
+- The licence-entitlement engine is unchanged: it is off by default, `AEGIS_LICENSE_ENFORCEMENT` still gates only the optional engine facades, and it is an entitlement signal, not a licence grant.
+- The deployment defaults that name `ghcr.io/juanlunaia/aegis-latent-core:5.0.2` resolve to nothing until that image is published; pin `5.0.1` if you must deploy before then.
+
+**Migration.** None is required to keep running `5.0.1`. If you consume the source or a future `5.0.2` artifact, review the licence conditions above; if you hold a commercial agreement, its terms still govern your copy. See [`legal/LICENSE_TRANSITION_5.0.2.md`](legal/LICENSE_TRANSITION_5.0.2.md).
+
+---
 
 ## Upgrade order
 

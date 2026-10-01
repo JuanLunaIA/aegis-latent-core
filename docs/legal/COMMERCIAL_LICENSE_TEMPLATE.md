@@ -1,16 +1,18 @@
 <!--
-Copyright (c) 2026 Juan Luna. All rights reserved.
-Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+Copyright (c) 2026 Juan Luna.
+SPDX-License-Identifier: Apache-2.0
+Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 -->
 
 # Commercial Licence: Template
 
-**Audience:** counsel drafting the licence that sits beside the AGPLv3 grant, and the owner deciding its open terms.
-**Scope:** a licence for one licensee to use Aegis Latent Core under terms other than the AGPLv3.
+**Audience:** counsel adapting a licence drafted to sit beside the AGPLv3 grant of releases up to `5.0.1`, and the owner deciding its open terms.
+**Scope:** a licence for one licensee to use a release of Aegis Latent Core published under the AGPLv3 (up to `5.0.1`) on terms other than the AGPLv3. Superseded in part for the Apache-2.0 `5.0.2` source (see the note below).
 **Boundary:** a template with open fields. It is not an offer until counsel finalises it, the fields are filled and the licensor signs.
 
 > **[COUNSEL-REVIEW-REQUIRED]** Draft prepared by an AI agent for the owner and qualified counsel. It is not legal advice, has not been reviewed by a lawyer, has not been offered to anyone, and nobody has signed it. Bracketed fields `[●]` are open decisions, not defaults. Do not send it to a counterparty before counsel has reviewed it.
+
+> **[SUPERSEDED-IN-PART — 5.0.2]** This template was drafted to sit beside the AGPLv3 grant. From `5.0.2` the source is Apache-2.0, so a licence "without the obligations the AGPLv3 places on a licensee" has nothing to supersede for that source. The template remains useful for an agreement made against a release up to `5.0.1` and as a starting point for a support/services agreement (term, fees, liability, general terms); clause 1 would be replaced. See [Licence Transition 5.0.2](LICENSE_TRANSITION_5.0.2.md).
 
 ## How to read this draft
 
@@ -31,13 +33,13 @@ Text in plain type is proposed wording. Notes marked **Counsel** state the decis
 
 ## 1. Grant
 
-1.1 The Licensor grants the Licensee a non-exclusive, non-transferable licence during the Term to install, run and, for its own internal use, modify the Licensed Software in the named Environments, without the obligations the AGPLv3 places on a licensee who conveys or offers network access to a modified version.
+1.1 The Licensor grants the Licensee a non-exclusive, non-transferable licence during the Term to install, run and, for its own internal use, modify the Licensed Software in the named Environments, without the obligations the AGPLv3 places on a licensee who conveys or offers network access to a modified version (a version published under the AGPLv3).
 
 1.2 The licence does not cover: redistribution or sublicensing `[unless Schedule B: OEM]`; use in environments not named; versions after the Licensed Software unless the Licensor supplies them under this agreement.
 
 **Counsel:** decide whether a licensee that never modifies the software needs this licence at all, and how the AGPLv3 network-use clause applies to a gateway that other services call. See question 2 in [Questions for Counsel](COUNSEL_QUESTIONS.md).
 
-1.3 The Licensor keeps all rights not granted. The AGPLv3 remains available to anyone, including the Licensee, for the same source; this agreement does not withdraw it.
+1.3 The Licensor keeps all rights not granted. The licence the same source was published under (the AGPLv3 for a release up to `5.0.1`; Apache-2.0 for `5.0.2`) remains available to anyone, including the Licensee; this agreement does not withdraw it.
 
 ## 2. Entitlement token
 
@@ -92,7 +94,7 @@ Text in plain type is proposed wording. Notes marked **Counsel** state the decis
 
 ## 8. Term and termination
 
-8.1 Ends at expiry, or on notice for uncured material breach after `[●]` days. On end, the Licensee stops using the Licensed Software under this agreement; the AGPLv3 remains available for versions it may lawfully use under that licence.
+8.1 Ends at expiry, or on notice for uncured material breach after `[●]` days. On end, the Licensee stops using the Licensed Software under this agreement; the licence the version was published under remains available for versions the Licensee may lawfully use under it.
 
 ## 9. Data and security
 

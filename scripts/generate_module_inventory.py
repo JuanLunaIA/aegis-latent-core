@@ -26,9 +26,9 @@ assert byte-equality: ``tests/test_module_inventory_current.py``.
 Run: ``python scripts/generate_module_inventory.py`` (``--check`` verifies only).
 """
 
-# Copyright (c) 2026 Juan Luna. All rights reserved.
-# Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a
-# Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms.
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 
 from __future__ import annotations
 
@@ -255,7 +255,13 @@ def _purpose(path: Path) -> str:
     if path.suffix == ".sh":
         # Skip the shebang and the licence header every script carries, or the
         # "purpose" of every shell script is the same copyright line.
-        skip = ("Copyright (c)", "Licensed under", "Proprietary Commercial", "See LICENSE")
+        skip = (
+            "Copyright (c)",
+            "SPDX-License-Identifier",
+            "Licensed under",
+            "Proprietary Commercial",
+            "See LICENSE",
+        )
         for line in text.splitlines():
             if line.startswith("#") and not line.startswith("#!"):
                 candidate = line.lstrip("# ").strip()

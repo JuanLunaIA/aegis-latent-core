@@ -1,4 +1,4 @@
-# Aegis Latent Core 5.0.1 strict deployment
+# Aegis Latent Core 5.0.2 strict deployment
 # This compose file intentionally fails when required secrets and infrastructure
 # variables are absent. It does not provision an insecure plaintext Redis.
 #
@@ -20,7 +20,7 @@
 #     "<client key>": {"tenant_id": "team-a", "roles": ["proxy_user"],   "scopes": ["proxy:completions"]},
 #     "<audit key>":  {"tenant_id": "team-a", "roles": ["audit_reader"], "scopes": ["audit:read"]}
 #   }' | docker run --rm -i --network none -e AEGIS_AUTH_IDENTITY_HMAC_KEY \
-#       --entrypoint python ghcr.io/juanlunaia/aegis-latent-core:5.0.1 -m aegis.auth.principal)"
+#       --entrypoint python ghcr.io/juanlunaia/aegis-latent-core:5.0.2 -m aegis.auth.principal)"
 #
 # Load the AppArmor profile on the host first:
 #   sudo apparmor_parser -r -W deploy/apparmor/aegis.profile
@@ -31,7 +31,7 @@
 
 services:
   aegis:
-    image: ghcr.io/juanlunaia/aegis-latent-core:5.0.1
+    image: ghcr.io/juanlunaia/aegis-latent-core:5.0.2
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
