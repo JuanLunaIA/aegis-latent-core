@@ -21,11 +21,13 @@ Nothing yet.
 
 ## [5.0.2] — unreleased source target
 
-**Source target, not published.** `5.0.2` moves the source line to the Apache License, Version 2.0. Every release up
-to and including `5.0.1` was published under the GNU Affero General Public License v3 or a separate commercial
-licence and **keeps those terms**; this section changes the licence of nothing already published
-(`docs/legal/LICENSE_TRANSITION_5.0.2.md`, `CLM-122`). The tag, the release workflows and the registry uploads are the
-owner's to run, and no readback exists for `5.0.2`.
+`5.0.2` moves the source line to the Apache License, Version 2.0. Every release up to and including `5.0.1` was
+published under the GNU Affero General Public License v3 or a separate commercial licence and **keeps those terms**;
+this release changes the licence of nothing already published (`docs/legal/LICENSE_TRANSITION_5.0.2.md`, `CLM-122`).
+The signed tag, the GitHub Release assets (`SHA256SUMS`, SBOM, build-provenance attestations) and the registry and
+image artifacts are produced by the release workflows from this exact commit; verify them against `SHA256SUMS` and the
+attestations rather than this text. Benchmark figures in the documentation are `5.0.1` measurements; none was
+re-run for `5.0.2`.
 
 ### Licence
 
