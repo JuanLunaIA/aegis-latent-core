@@ -205,6 +205,43 @@ def test_segments_archive_behind_the_sqlite_profile(tmp_path: Path) -> None:
     assert int(result.stdout.strip()) > 0
 
 
+# ── REG-D107: glibc qsort after lockdown ──────────────────────────────────────
+
+QSORT = _LOCK + textwrap.dedent(
+    """
+    import ctypes
+
+    libc = ctypes.CDLL(None)
+    libc.get_phys_pages.restype = ctypes.c_long
+    values = (ctypes.c_int * 512)(*range(512, 0, -1))
+    # The callback is built before lockdown: libffi may map memory for it.
+    compare = ctypes.CFUNCTYPE(
+        ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)
+    )(lambda a, b: a[0] - b[0])
+    lock()
+    # glibc before 2.37 calls get_phys_pages() on the first qsort of 1 KiB or
+    # more; calling it directly issues the same sysinfo() on every glibc.
+    pages = libc.get_phys_pages()
+    libc.qsort(values, len(values), ctypes.sizeof(ctypes.c_int), compare)
+    print(pages > 0, values[0], values[-1])
+    """
+)
+
+
+@needs_filter
+def test_a_large_qsort_after_lockdown_is_not_killed(tmp_path: Path) -> None:
+    """OpenSSL sorts on a cipher's first use, and old glibc then calls sysinfo.
+
+    On Ubuntu 22.04 (glibc 2.35) this killed the first shredded commit: the
+    stack was cryptography's bundled OpenSSL, ``qsort_r``, ``get_phys_pages``,
+    ``sysinfo``. Newer glibc no longer makes the call from ``qsort``, so the
+    test calls ``get_phys_pages`` itself to reach the syscall on any host.
+    """
+    result = _run(QSORT, "default", tmp_path / "unused")
+    assert result.returncode == 0, (result.returncode, result.stderr[-2000:])
+    assert result.stdout.split() == ["True", "1", "512"]
+
+
 # ── the lifespan chooses the profile the configuration needs ──────────────────
 
 

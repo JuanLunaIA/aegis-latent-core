@@ -181,6 +181,13 @@ class SeccompGuard:
             # unconditional mkdir it used to issue killed the gateway on its
             # first rotation. fchmod reaches only a file already open here.
             "fchmod",
+            # ── glibc qsort (REG-D107). Before glibc 2.37, the first qsort of
+            # 1 KiB or more in a process calls get_phys_pages(), which is
+            # sysinfo(). OpenSSL inside cryptography sorts on its first use of
+            # a cipher, so on Ubuntu 22.04 the first shredded commit after
+            # lockdown was killed. Read-only: uptime, load and memory totals,
+            # which /proc already shows to the allowed openat.
+            "sysinfo",
             # clone is added separately and only with CLONE_THREAD: the ASGI
             # threadpool (sync endpoints, to_thread) spawns threads per request;
             # process creation stays impossible.

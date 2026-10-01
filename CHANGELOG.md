@@ -147,6 +147,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only there, the ledger keeps the path-based `chmod` (no seccomp filter exists on that platform). The first
   version of this fix called `os.fchmod` unconditionally, and the Windows CI job caught every ledger failing
   to open with `AttributeError`. `tests/test_wal_rotation.py` now covers a host without `os.fchmod`.
+- **On Python 3.13 with glibc older than 2.37, the first shredded commit was still killed** (`REG-D107`,
+  `CLM-119`). The fix above was tested on glibc 2.39. Before glibc 2.37, `qsort` calls `sysinfo` once per
+  process, on its first sort of 1 KiB or more, and OpenSSL inside `cryptography` sorts on a cipher's first
+  use. CI's "Test (Python 3.13)" job on Ubuntu 22.04 (glibc 2.35) caught the kill. Python 3.11 and 3.12 sort
+  their own sysconf table at start-up, before lockdown, which hid the call. The default profile now allows
+  `sysinfo`, which only reads uptime, load and memory totals; the container profile already allowed it. The
+  root cause was traced on CI's own Python builds in an Ubuntu 22.04 rootfs, and a new test calls the
+  syscall directly, so it fails without the fix on any glibc. Evidence: `evidence/registry/reg-d107_closure.txt`.
 - **Five malformed-body classes answered `500`** (`REG-D98`). One parser now answers `400` at all three
   model endpoints (see Changed). A chat text block whose `text` is null or a list no longer raises in the
   WAF.
