@@ -38,7 +38,13 @@ Why Python 3.11 and 3.12 passed (same rootfs, CI's Python 3.12.14 toolcache buil
   CPython 3.12's posix module sorts its sysconf name table at import, which caches phys_pages, so
   OpenSSL's later sort makes no syscall. On 3.13 no sysinfo occurs before lockdown; the first one is
   OpenSSL's, after the filter loads (trace line 258, after the seccomp(SECCOMP_SET_MODE_FILTER) at
-  line 238). Python 3.11 was not traced; it passed on CI.
+  line 238). Python 3.11 behaves like 3.12: CI's 3.11.16 toolcache build for Ubuntu 22.04 issues
+  one sysinfo from setup_confname_table at start-up.
+
+  sysinfo calls at a bare interpreter start (python3 -c "import sys"), same rootfs:
+    3.11.16  1
+    3.12.14  1
+    3.13.15  0
 
 Shipped images: deploy/docker/Dockerfile defaults to python:3.12-slim and Dockerfile.airgap uses
 python:3.11-slim, so the published images most likely did not hit this. The Dockerfile takes the
