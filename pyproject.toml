@@ -34,6 +34,9 @@ classifiers = [
 dependencies = [
     "fastapi>=0.111.0",
     "uvicorn[standard]>=0.29.0",
+    # uvloop 0.23.0 (2026-10-01) opens an io_uring instance even with
+    # UV_USE_IO_URING=0, so SeccompGuard refuses to load the filter (REG-D67).
+    "uvloop<0.23; sys_platform != 'win32'",
     "httpx>=0.27.0",
     "pydantic>=2.7.0",
     "pydantic-settings>=2.3.0",
