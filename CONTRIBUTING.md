@@ -101,84 +101,31 @@ The name and email must be real and must match the commit author.
 
 ## 3. Contributor License Agreement (CLA)
 
-The DCO certifies *provenance*. We additionally require a lightweight
-**copyright license grant** so the maintainer can keep maintaining, releasing and
-relicensing the project without chasing every contributor. By submitting a contribution (a pull
-request, patch, or any other work) to this repository, **you agree to the
-following on a forward-looking basis for that contribution:**
+The canonical, full Contributor License Agreement is [`CLA.md`](CLA.md). It
+contains the copyright and patent grants, ownership preservation, contributor
+and employer representations, third-party and AI-assisted material rules,
+security and privacy boundaries, acceptance protocol, corporate acceptance
+block, termination terms, and legal limitations.
 
-### 3.1 Grant of copyright license
+The CLA is forward-looking: it applies to Contributions intentionally submitted
+after the published CLA version is accepted. It does not retroactively change
+the terms of an earlier contribution or an artifact already distributed under
+its applicable licence. The current Project release is `5.0.2` under
+Apache-2.0. The CLA does not create a commercial licence, compensation right,
+merge obligation, support commitment, certification, or warranty.
 
-You hereby grant to **Juan Luna** (the "Maintainer") a **perpetual, worldwide,
-non-exclusive, royalty-free, irrevocable, and sublicensable** license to
-reproduce, prepare derivative works of, publicly display, publicly perform,
-sublicense, and distribute your contribution and such derivative works.
+The DCO and CLA serve different purposes:
 
-### 3.2 Licensing of your contribution
+- The **DCO** records provenance and the signer’s right to submit the work.
+- The **CLA** grants the Maintainer the copyright and patent rights needed to
+  maintain, distribute, and lawfully evolve the Project.
 
-You agree that the Maintainer may license and distribute your contribution under:
-
-- the **Apache License, Version 2.0**, which is how the project distributes it
-  from `5.0.2` and how every recipient receives it; **and**
-- any other license terms the Maintainer chooses for later versions of the
-  project (the Maintainer's right to relicense its own future releases),
-
-**without any obligation of accounting, royalty, or further consent to you.**
-A copy of the project that a recipient has already received under the Apache
-License stays available to that recipient under the Apache License.
-
-### 3.3 Grant of patent license
-
-You grant the Maintainer and all recipients of the software a perpetual,
-worldwide, non-exclusive, royalty-free, irrevocable patent license to make, have
-made, use, offer to sell, sell, import, and otherwise transfer your contribution,
-where such license applies only to those patent claims licensable by you that are
-necessarily infringed by your contribution alone or by combination of your
-contribution with the project.
-
-### 3.4 You retain your ownership
-
-This is a **license grant, not an assignment**. You retain copyright ownership of
-your contribution and may use it elsewhere. The CLA does not transfer title; it
-guarantees the Maintainer the rights needed to keep releasing the project.
-
-### 3.5 Your representations
-
-By contributing, you represent that:
-
-1. Each contribution is your original creation, or you have sufficient rights to
-   submit it under these terms;
-2. Your contribution does not knowingly violate any third party's intellectual
-   property rights; and
-3. If your employer has rights to intellectual property you create, you have
-   received permission to make the contribution on behalf of that employer, or
-   your employer has waived such rights for this contribution.
-
-### 3.6 Scope
-
-This CLA applies to **contributions you submit after the publication of this
-document**. It is forward-looking. It does not retroactively change the terms of
-any contribution already merged; as stated in §1, all existing work is already
-solely owned by the Maintainer.
-
-### 3.7 How you accept
-
-You accept this CLA by either:
-
-- including the DCO `Signed-off-by` line **and** the following line in your pull
-  request description:
-
-  ```
-  I have read CONTRIBUTING.md and I agree to the Contributor License Agreement.
-  ```
-
-- or replying `I agree to the CLA` on your pull request when asked by a
-  maintainer.
-
-For substantial or corporate contributions, the Maintainer may request a signed
-copy of the CLA by email before merging.
-
----
+Unless the Maintainer approves another written method, contributors must provide
+both a `Signed-off-by` line and the explicit CLA acceptance statement described
+in [`CLA.md` §10](CLA.md#10-submission-procedure-and-acceptance-record). A CLA
+service, pull-request record, or signed counterpart may be used as the durable
+acceptance record. A pull-request comment is not a substitute for the configured
+CLA service unless the Maintainer accepts that method for the repository.
 
 ## 4. Development workflow
 
@@ -230,8 +177,8 @@ copy of the CLA by email before merging.
 5. **Document new claims.** Any new performance claim must ship with a benchmark
    in `benchmarks/` and a results entry in `docs/BENCHMARKS.md`. Any change to the
    audit chain or WAL must pass `tests/test_security_fixes.py`.
-6. **Sign off and open a PR** (`git commit -s`), including the CLA acceptance line
-   from §3.7.
+6. **Sign off and open a PR** (`git commit -s`), including the CLA acceptance record
+   from [`CLA.md`](CLA.md).
 7. **Run documentation QA** when public claims, paths, benchmarks, or buyer language change:
    ```bash
    python tools/docs/verify_documentation.py --root .
@@ -253,6 +200,7 @@ to use the project's name or marks; the CLA does not either.
 
 ## Related documents
 
+- [`CLA.md`](CLA.md) — canonical Contributor License Agreement
 - [`README.md`](README.md)
 - [`SECURITY.md`](SECURITY.md)
 - [`COMMERCIAL.md`](COMMERCIAL.md)
