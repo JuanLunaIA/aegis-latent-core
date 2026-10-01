@@ -40,6 +40,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   2026-09-30 WAL crash-soak re-run (28,753 acknowledged commits, 0 lost, 0 torn tails) and the WAF
   red-team findings the 23-case corpus had missed.
 
+- **Investor pack refreshed a second time (2026-09-30, both editions).** The same three verified inputs
+  updated again (tests 7,891 passed / 38 skipped / 0 failed at `fd6b435`, claims 121, test-to-source ratio
+  1.29); five TRL rows extended with the security pass (`REG-D88`–`REG-D105`), the WAL soak re-run, the HA
+  epoch fix (`REG-D91`, which leaves the HA gap as chaos tests and a pilot) and the Azure list-price
+  readback; D9 objection 4 answered with the certification scope (`CLM-120`); section U2 added. No TRL
+  level, cost-to-close figure, chart or model number moved; signatures and provenance were not re-verified.
+
 - **Behaviour change: unusable request bodies answer `400`, not `500`** (`REG-D98`, `CLM-118`). At
   `/v1/chat/completions`, `/v1/completions` and `/v1/messages`, invalid UTF-8, an integer past Python's digit
   limit, a body that is not a JSON object, and nesting deeper than 32 levels are refused `400` before

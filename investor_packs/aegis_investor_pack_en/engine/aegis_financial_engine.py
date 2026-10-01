@@ -128,19 +128,23 @@ COMMIT_P99_MS = inp(
 )
 TESTS_PASSED = inp(
     "tests_passed",
-    7673,
+    7891,
     "VERIFIED",
-    "pytest -n auto on main at 861c88b, 2026-09-30: 7,673 passed, 42 skipped, 0 failed "
-    "(previous figure, 5.0.1 tree, 2026-09-24: 7,550 passed, 41 skipped, 0 failed)",
-    "pytest -n auto sobre main en 861c88b, 30/09/2026: 7.673 aprobadas, 42 omitidas, 0 fallidas "
-    "(cifra anterior, árbol 5.0.1, 24/09/2026: 7.550 aprobadas, 41 omitidas, 0 fallidas)",
+    "pytest -n auto on branch claude/aegis-v4-comprehensive-audit-m2qyka at fd6b435, 2026-09-30: "
+    "7,891 passed, 38 skipped, 0 failed (earlier the same day, main at 861c88b: 7,673 passed, 42 skipped; "
+    "5.0.1 tree, 2026-09-24: 7,550 passed, 41 skipped)",
+    "pytest -n auto sobre la rama claude/aegis-v4-comprehensive-audit-m2qyka en fd6b435, 30/09/2026: "
+    "7.891 aprobadas, 38 omitidas, 0 fallidas (más temprano el mismo día, main en 861c88b: 7.673 aprobadas, "
+    "42 omitidas; árbol 5.0.1, 24/09/2026: 7.550 aprobadas, 41 omitidas)",
 )
 CLAIMS = inp(
     "claims_registered",
-    113,
+    121,
     "VERIFIED",
-    "scripts/verify_claims.py, 2026-09-30: 0 findings (was 112 on 2026-09-25; CLM-113 added)",
-    "scripts/verify_claims.py, 30/09/2026: 0 hallazgos (eran 112 el 25/09/2026; se agregó CLM-113)",
+    "scripts/verify_claims.py at fd6b435, 2026-09-30: 0 findings (113 earlier the same day; CLM-114 to CLM-121 "
+    "added by the formal-methods and core security pass)",
+    "scripts/verify_claims.py en fd6b435, 30/09/2026: 0 hallazgos (113 más temprano el mismo día; CLM-114 a "
+    "CLM-121 agregadas por la revisión de métodos formales y de seguridad del núcleo)",
 )
 UNSUPPORTED = inp(
     "claims_refused",
@@ -151,10 +155,10 @@ UNSUPPORTED = inp(
 )
 TEST_SRC = inp(
     "test_to_source_loc",
-    1.26,
+    1.29,
     "VERIFIED",
-    "89,225 test LOC / 70,680 Python source LOC (aegis + aegis_server), git tree at 861c88b, 2026-09-30",
-    "89.225 líneas de prueba / 70.680 líneas de código Python (aegis + aegis_server), árbol git en 861c88b, 30/09/2026",
+    "91,701 test LOC / 71,362 Python source LOC (aegis + aegis_server), git tree at fd6b435, 2026-09-30",
+    "91.701 líneas de prueba / 71.362 líneas de código Python (aegis + aegis_server), árbol git en fd6b435, 30/09/2026",
 )
 ORPHANS = inp(
     "orphan_modules_disclosed",
@@ -1085,7 +1089,8 @@ TRL = [
         "Gateway core",
         6,
         7,
-        "7,673 tests pass (2026-09-30); shipped image smoke-tested in hardened posture (CLM-109); signed 5.0.1 release; "
+        "7,891 tests pass (2026-09-30); a formal-methods and red-team pass the same day found and fixed 18 defects "
+        "(REG-D88 to REG-D105); shipped image smoke-tested in hardened posture (CLM-109); signed 5.0.1 release; "
         "gateway on PyPI at 5.0.1 since 2026-09-26, wheel and sdist equal to the Release assets",
         "operational pilot at a design partner",
         8,
@@ -1096,7 +1101,8 @@ TRL = [
         6,
         7,
         "commit p50 0.62 ms / p99 1.22 ms incl. fsync; 1,482 commits/s @100 threads on 4 vCPU; "
-        "SIGKILL soak 2026-09-29: 60 rounds, 27,735 acknowledged commits, 0 lost (process kill, not a power cut)",
+        "SIGKILL soak 2026-09-29: 60 rounds, 27,735 acknowledged commits, 0 lost (process kill, not a power cut); "
+        "re-run 2026-09-30: 60 rounds, 28,753 acknowledged, 0 lost, 0 torn tails",
         "30-day soak + power-loss test on target storage",
         3,
         1_000,
@@ -1125,7 +1131,9 @@ TRL = [
         5,
         6,
         "corpus-tested normalisation; finite pattern set (UC-042); 23-case corpus run 2026-09-29: 15 malicious blocked, "
-        "8 benign passed, Wilson 95% upper bound on the bypass rate 20.4%, a sample too small to support a detection-rate claim",
+        "8 benign passed, Wilson 95% upper bound on the bypass rate 20.4%, a sample too small to support a detection-rate claim; "
+        "an HTTP red team on 2026-09-30 found evasions and false refusals the corpus missed, fixed under 70 tests "
+        "(REG-D94 to REG-D101); the evasions that remain are listed in CLM-117",
         "published adversarial eval + pen test coverage",
         4,
         0,
@@ -1145,8 +1153,9 @@ TRL = [
         6,
         "CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108); partition test against real Redis 2026-09-29: "
         "never two writers at any sample; a separate Redis-restart test showed that a restart without persistence resets "
-        "the epoch counter and the sequence fence then refuses appends (an availability incident, not a fork; fix undecided)",
-        "decide Redis-restart epoch behaviour; chaos tests on target infrastructure + pilot",
+        "the epoch counter and the sequence fence then refuses appends (an availability incident, not a fork); fixed "
+        "2026-09-30: the new holder lifts its epoch above the highest handover its WAL records (REG-D91)",
+        "chaos tests on target infrastructure + pilot",
         6,
         2_000,
     ),
@@ -1193,7 +1202,8 @@ TRL = [
         4,
         6,
         "VM kit deployed and measured once (Standard_B2als_v2, Chile Central, 2026-09-26): "
-        "strict mode started, verify.sh passed, one signed record committed (REG-H07)",
+        "strict mode started, verify.sh passed, one signed record committed (REG-H07); list-price readback 2026-09-30: "
+        "the four VERIFIED Azure prices matched the public Retail Prices API (00_query_prices.sh)",
         "run phase0_guardrails.sh end to end, observe a budget alert fire, repeat on a second size/region",
         1,
         200,
@@ -1202,14 +1212,17 @@ TRL = [
 TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     "Gateway core": (
         "Núcleo del gateway",
-        "7.673 pruebas aprobadas (30/09/2026); la imagen publicada se probó con la postura endurecida (CLM-109); release 5.0.1 firmado; "
+        "7.891 pruebas aprobadas (30/09/2026); una revisión de métodos formales y red team del mismo día encontró y "
+        "corrigió 18 defectos (REG-D88 a REG-D105); la imagen publicada se probó con la postura endurecida (CLM-109); "
+        "release 5.0.1 firmado; "
         "gateway en PyPI en la 5.0.1 desde el 26/09/2026, con wheel y sdist iguales a los archivos del release",
         "piloto operativo en un cliente de diseño",
     ),
     "WAL + group commit": (
         "WAL + commit agrupado",
         "commit p50 0,62 ms / p99 1,22 ms con fsync; 1.482 commits/s @100 hilos en 4 vCPU; "
-        "prueba de resistencia con SIGKILL 29/09/2026: 60 rondas, 27.735 commits confirmados, 0 perdidos (se mata el proceso; no es un corte de energía)",
+        "prueba de resistencia con SIGKILL 29/09/2026: 60 rondas, 27.735 commits confirmados, 0 perdidos (se mata el proceso; no es un corte de energía); "
+        "repetida el 30/09/2026: 60 rondas, 28.753 confirmados, 0 perdidos, 0 colas truncadas",
         "prueba de resistencia de 30 días + prueba de corte de energía en el almacenamiento destino",
     ),
     "MMR v2 proofs": (
@@ -1226,7 +1239,9 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     "WAF L1/L2": (
         "WAF L1/L2",
         "normalización probada contra un corpus; conjunto finito de patrones (UC-042); corpus de 23 casos el 29/09/2026: 15 maliciosos bloqueados, "
-        "8 benignos aprobados, cota superior de Wilson al 95 % de la tasa de evasión: 20,4 %, muestra demasiado chica para afirmar una tasa de detección",
+        "8 benignos aprobados, cota superior de Wilson al 95 % de la tasa de evasión: 20,4 %, muestra demasiado chica para afirmar una tasa de detección; "
+        "un red team por HTTP del 30/09/2026 encontró evasiones y rechazos indebidos que el corpus no había detectado, "
+        "corregidos con 70 pruebas (REG-D94 a REG-D101); las evasiones que quedan figuran en CLM-117",
         "evaluación adversarial publicada + cobertura del pentest",
     ),
     "Crypto-shredding": (
@@ -1238,8 +1253,9 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
         "Lease de HA + secuencia global",
         "CI contra Redis/PostgreSQL reales; failover por SIGKILL en 4,2-5,2 s (CLM-108); prueba de partición contra Redis real el 29/09/2026: "
         "nunca hubo dos escritores en ninguna muestra; una prueba aparte de reinicio de Redis mostró que un reinicio sin persistencia reinicia "
-        "el contador de épocas y el cerco de secuencia rechaza los appends (una caída de disponibilidad, no una bifurcación; arreglo sin decidir)",
-        "decidir el comportamiento de épocas tras un reinicio de Redis; pruebas de caos en la infraestructura destino + piloto",
+        "el contador de épocas y el cerco de secuencia rechaza los appends (una caída de disponibilidad, no una bifurcación); "
+        "corregido el 30/09/2026: el nuevo titular sube su época por encima del traspaso más alto que registra su WAL (REG-D91)",
+        "pruebas de caos en la infraestructura destino + piloto",
     ),
     "ZK circuit": (
         "Circuito ZK",
@@ -1266,7 +1282,8 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     "Azure deployment kit": (
         "Kit de despliegue en Azure",
         "kit de VM desplegado y medido una vez (Standard_B2als_v2, Chile Central, 26/09/2026): "
-        "modo estricto activo, verify.sh aprobado, un registro firmado confirmado (REG-H07)",
+        "modo estricto activo, verify.sh aprobado, un registro firmado confirmado (REG-H07); lectura de precios de lista "
+        "del 30/09/2026: los cuatro precios VERIFIED de Azure coincidieron con la API pública Retail Prices (00_query_prices.sh)",
         "correr phase0_guardrails.sh de punta a punta, observar una alerta de presupuesto disparada, "
         "repetir en un segundo tamaño/región",
     ),
