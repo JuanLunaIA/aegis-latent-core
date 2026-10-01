@@ -1,8 +1,12 @@
 # Aegis Latent Core
 
-**AI Governance and Cryptographic Evidence Gateway**
+**The evidence gateway for AI systems that must be explainable after the fact.**
 
-**Aegis Latent Core commits signed, hash-linked evidence of every governed AI call — before the response reaches the caller — and issues a portable proof that a third party verifies without trusting the gateway, us, or you.**
+Aegis sits between your application and one or more LLM providers. It admits, bounds, redacts, forwards and records governed calls, then emits portable cryptographic evidence that an independent verifier can check offline. The core promise is deliberately narrow: **a response is not released until the governed evidence path has reached its declared commit point**. That turns “we think the logs are intact” into a reproducible verification workflow.
+
+**Built for:** AI platform teams, security engineers, regulated operators, incident responders and auditors who need a self-hosted control plane for provider calls — not another model, hosted observability dashboard or compliance badge.
+
+**What makes it different:** fail-closed admission, append-only Merkle Mountain Range evidence, signed records, offline Python/TypeScript proof verification, bounded streaming semantics, and explicit claim boundaries. **What it is not:** a model, a universal WAF, a certification, a guarantee that model output is true, or a substitute for your identity, retention, privacy or regulatory program.
 
 [![release](https://img.shields.io/badge/release-v5.0.1-blue)](docs/RELEASE_STATUS.md)
 [![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
@@ -11,6 +15,8 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 Every load-bearing claim in this file carries a locator and a stated boundary; the gates that enforce that discipline run in CI.
+
+> **Start here:** [prove an evidence record yourself](docs/PROVE_IT.md) · [choose a deployment profile](docs/operations/DEPLOYMENT_PROFILES.md) · [read the threat model](docs/security/THREAT_MODEL.md) · [inspect the claims matrix](docs/CLAIMS_MATRIX.md)
 
 > **Current release:** `v5.0.1` — the latest published release (the checked-out source is `v5.0.2`, an Apache-2.0 source target that is **not published**), published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26), read back the same day ([Release Status](docs/RELEASE_STATUS.md) §1.0a). The Sigstore-signed tag passes `gitsign verify-tag`; the GitHub Release carries 31 assets and all 15 files listed in its `SHA256SUMS` re-hash to their digests; PyPI `aegis-latent-sdk` `5.0.1` and npm `aegis-latent-sdk` `5.0.1` are byte-identical to the release assets of the same name; and the GHCR gateway and dashboard images pass `cosign verify` and their build-provenance attestations verify, each against the exact publishing workflow identity. **The gateway distribution `aegis-latent-core` reached PyPI at `5.0.1` on 2026-09-26** (run `36224961909` of `publish_pypi_gateway.yml`, read back 2026-09-29, [Release Status](docs/RELEASE_STATUS.md) §1.0b); `pip install aegis-latent-core` resolves to `5.0.1`, and its wheel and sdist match the release assets byte for byte. The GHCR images and the Release assets remain available. The previous release, `v5.0.0`, was published 2026-09-16 on the same surfaces (§1.0). There is no `4.2.0`; the number was skipped.
 >
