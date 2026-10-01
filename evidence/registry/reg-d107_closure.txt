@@ -1,0 +1,100 @@
+REG-D107 closure: sysinfo after lockdown (glibc qsort before 2.37) killed the first shredded commit
+==================================================================================================
+
+Found:     2026-10-01, by CI on pull request #226, head 663c0fa: "Test (Python 3.13)" failed
+           tests/test_seccomp_runtime_paths.py::test_shredded_commits_need_the_sqlite_syscalls with
+           returncode -31 (SIGSYS, the filter's SCMP_ACT_KILL_PROCESS). The same test passed on
+           Python 3.11 and 3.12 in the same run, and on this host on every version.
+Severity:  P1. The default action is to kill the process, so a gateway that hits it stops serving.
+Scope:     Python 3.13 on glibc older than 2.37 (for example Ubuntu 22.04, glibc 2.35), with the
+           seccomp filter loaded and a code path that sorts 1 KiB or more after lockdown. The path
+           reproduced is cryptographic shredding: the first AES-GCM seal after lockdown.
+
+Root cause (strace -f -k -e trace=sysinfo, CI's own Python 3.13.15 toolcache build, Ubuntu 22.04.5
+rootfs, glibc 2.35-0ubuntu3.8, cryptography 50.0.2, no filter fault because sysinfo was allowed):
+
+  sysinfo(...) = 0
+   > libc.so.6(sysinfo+0xb)
+   > libc.so.6(get_phys_pages+0x25)
+   > libc.so.6(qsort_r+0x32a)
+   > cryptography/hazmat/bindings/_rust.abi3.so()        (cryptography's bundled OpenSSL)
+
+  Before glibc 2.37, qsort/qsort_r calls __sysconf(_SC_PHYS_PAGES) once per process, on the first
+  sort of 1 KiB or more, and caches the answer. __sysconf(_SC_PHYS_PAGES) is get_phys_pages(), which
+  is the sysinfo syscall. sysinfo was not in DEFAULT_PROFILE, so the first such sort after lockdown
+  was killed. glibc 2.37 and later no longer make this call from qsort; get_phys_pages() itself still
+  issues sysinfo on every glibc.
+
+Why Python 3.11 and 3.12 passed (same rootfs, CI's Python 3.12.14 toolcache build):
+
+  On 3.12 the only sysinfo of the process happens during interpreter start-up, before lockdown:
+
+   > libc.so.6(qsort_r+0x32a)
+   > libpython3.12.so.1.0(setup_confname_table+0x29)
+   > libpython3.12.so.1.0(posixmodule_exec+0x11ae)
+   ...
+   > libpython3.12.so.1.0(Py_InitializeFromConfig+0x86)
+
+  CPython 3.12's posix module sorts its sysconf name table at import, which caches phys_pages, so
+  OpenSSL's later sort makes no syscall. On 3.13 no sysinfo occurs before lockdown; the first one is
+  OpenSSL's, after the filter loads (trace line 258, after the seccomp(SECCOMP_SET_MODE_FILTER) at
+  line 238). Python 3.11 behaves like 3.12: CI's 3.11.16 toolcache build for Ubuntu 22.04 issues
+  one sysinfo from setup_confname_table at start-up.
+
+  sysinfo calls at a bare interpreter start (python3 -c "import sys"), same rootfs:
+    3.11.16  1
+    3.12.14  1
+    3.13.15  0
+
+Shipped images: deploy/docker/Dockerfile defaults to python:3.12-slim and Dockerfile.airgap uses
+python:3.11-slim, so the published images most likely did not hit this. The Dockerfile takes the
+base image as a build argument, so a 3.13 build on an older glibc would. Not demonstrated against a
+published image. The container-level profile deploy/seccomp/aegis.json already allows sysinfo; only
+the gateway's in-process filter lacked it.
+
+Fix:
+  aegis/core/seccomp_guard.py   "sysinfo" added to DEFAULT_PROFILE allowed_syscalls, with a comment
+                                naming REG-D107. The call is read-only: it returns uptime, load
+                                averages and memory totals, which /proc already exposes to the
+                                allowed openat. It cannot write, map, execute or create anything.
+  tests/test_seccomp_runtime_paths.py
+                                test_a_large_qsort_after_lockdown_is_not_killed: under the real
+                                default filter, calls get_phys_pages() and a 2 KiB qsort after
+                                lockdown. Calling get_phys_pages directly reaches the syscall on any
+                                glibc, so the test fails on hosts with glibc 2.37 or later too, where
+                                qsort alone would not.
+
+Before and after (pytest, real SCMP_ACT_KILL_PROCESS filter):
+
+  Ubuntu 22.04.5 chroot, glibc 2.35, kernel 6.18.44, CI's Python builds, cryptography 50.0.2,
+  tests selected: shredded_commits, large_qsort, archive, rotates
+    == python 3.13.15, seccomp_guard.py at 663c0fa
+    FAILED test_shredded_commits_need_the_sqlite_syscalls   (assert -31 == 0; the CI failure)
+    FAILED test_a_large_qsort_after_lockdown_is_not_killed  (assert -31 == 0)
+    2 failed, 2 passed
+    == python 3.13.15, with the fix
+    4 passed
+    == python 3.12.14, seccomp_guard.py at 663c0fa
+    FAILED test_a_large_qsort_after_lockdown_is_not_killed  (assert -31 == 0)
+    1 failed, 3 passed            (the shredding test passes, as on CI)
+    == python 3.12.14, with the fix
+    4 passed
+
+  This host, glibc 2.39, Python 3.11.15, whole file:
+    == seccomp_guard.py at 663c0fa
+    FAILED test_a_large_qsort_after_lockdown_is_not_killed
+    1 failed, 7 passed
+    == with the fix (tests/test_seccomp_runtime_paths.py tests/test_wal_rotation.py)
+    16 passed
+
+  Full serial suite in the chroot on Python 3.13.15 with the fix, CI's forensic command
+  (python -X faulthandler -m pytest -q --tb=short -o faulthandler_timeout=180):
+    8 failed, 7711 passed, 152 skipped. No seccomp test failed. The 8 failures are the chroot's:
+    no git binary (6 tests that list tracked files), no network for pip-audit (1), and one
+    subprocess started with a cleared environment that cannot find libpython3.13 (1).
+
+Boundary: one post-lockdown path (shredding) was reproduced and the fix allows the syscall for all
+of them. Other code that sorts 1 KiB or more after lockdown (for example a first TLS handshake
+through the system OpenSSL) was not enumerated; it is covered by the same allowance, not by a test of
+its own. One kernel (6.18.44, x86_64) and two glibc versions (2.35, 2.39) were exercised. No
+published image was run with Python 3.13.

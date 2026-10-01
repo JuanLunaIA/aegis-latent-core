@@ -69,6 +69,7 @@ class LLMGuardLocal:
             "SGVsbG8=",  # "Hello" in base64
             "ROT13",
             "Cesar cipher",
+            "Caesar cipher",
         ]
 
     def _decode_obfuscation(self, text: str) -> str:
@@ -114,8 +115,11 @@ class LLMGuardLocal:
                     detected_types.add(category)
 
         # Stage 3: Obfuscation Detection
+        # full_text is lowercased, so each marker is too. Compared as written,
+        # the mixed-case markers could never match and this stage was dead
+        # (REG-D101).
         for marker in self.obfuscation_markers:
-            if marker in full_text:
+            if marker.lower() in full_text:
                 score += 0.5
                 detected_types.add("OBFUSCATION")
 

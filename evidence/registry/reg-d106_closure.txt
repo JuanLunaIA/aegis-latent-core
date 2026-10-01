@@ -1,0 +1,58 @@
+REG-D106 closure: urllib3 2.7.0 -> 2.8.0 (three advisories published 2026-09-30)
+================================================================================
+
+Found:     2026-10-01, running `pip-audit` (the CI "Dependency Audit" job's tool) before opening the
+           follow-up pull request from branch claude/aegis-v4-comprehensive-audit-m2qyka at 2eeb734.
+           requirements.lock is identical on main 3d7bc69, so main carries the same exposure.
+Severity:  P1 (runtime dependency of the gateway image, installed from requirements.lock).
+
+Advisories (OSV, queried 2026-10-01 for urllib3 2.7.0; all fixed in 2.8.0):
+  GHSA-8988-9cw3-xx77 / CVE-2026-97687  HTTPS proxy TLS configuration may be ignored or overridden
+  GHSA-gh4c-6fx4-qh6g / CVE-2026-97688  chunked Deflate streaming can enter an infinite loop
+  GHSA-vxq7-64xx-v4gw / CVE-2026-97689  HTTPResponse.stream()/read_chunked() buffers an unbounded
+                                        chunk-size line into memory
+
+Reachability: in requirements.lock urllib3 is required only by `requests` ("# via -r requirements.txt,
+requests"), and no module under aegis/ or aegis_server/ imports requests or urllib3 (grep, 2026-10-01;
+REG-055). The gateway's own HTTP client is httpx. A deployer who installs another package that uses
+urllib3 (for example an AWS SDK) would reach it; the pyproject floor covers that install. No exploit
+path through the gateway was demonstrated or attempted; the floor is raised because the package ships
+in the image and the CI audit fails on any finding.
+
+urllib3 2.8.0 on PyPI (read 2026-10-01): requires_python >=3.10, licence MIT,
+  wheel  urllib3-2.8.0-py3-none-any.whl  sha256 0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3
+  sdist  urllib3-2.8.0.tar.gz            sha256 63bf2ead4c879426ebf22ef2a781eeb4aa3b4ae798a0435506f8687fd5bb9b63
+
+Change:
+  requirements.txt   urllib3>=2.7.0 -> urllib3>=2.8.0 (security-floor comment names the three GHSAs)
+  pyproject.toml     "urllib3>=2.7.0" -> "urllib3>=2.8.0"
+  requirements.lock  regenerated with the CI "Lock File Integrity" toolchain (Python 3.12.3,
+                     pip 25.2, pip-tools 7.5.2), seeded from the reviewed lock:
+                       cp requirements.lock requirements.lock.new
+                       pip-compile --generate-hashes --output-file=requirements.lock.new requirements.txt
+                     The only difference is the urllib3 entry (below); a second run seeded from the new
+                     lock is byte-identical (no drift).
+  LICENSE-THIRD-PARTY.md  urllib3 row 2.7.0 -> 2.8.0 (licence unchanged, MIT)
+
+Lock diff:
+894,896c894,896
+< urllib3==2.7.0 \
+<     --hash=sha256:231e0ec3b63ceb14667c67be60f2f2c40a518cb38b03af60abc813da26505f4c \
+<     --hash=sha256:9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897
+---
+> urllib3==2.8.0 \
+>     --hash=sha256:0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3 \
+>     --hash=sha256:63bf2ead4c879426ebf22ef2a781eeb4aa3b4ae798a0435506f8687fd5bb9b63
+
+Before and after:
+== before: pip-audit -r requirements.lock (HEAD 2eeb734) --require-hashes --disable-pip
+Found 3 known vulnerabilities in 1 package
+Name    Version ID             Fix Versions
+------- ------- -------------- ------------
+urllib3 2.7.0   CVE-2026-97687 2.8.0
+urllib3 2.7.0   CVE-2026-97688 2.8.0
+urllib3 2.7.0   CVE-2026-97689 2.8.0
+== after: pip-audit -r requirements.lock --require-hashes --disable-pip
+No known vulnerabilities found
+== after: python -m pip_audit -r requirements.txt (the CI Dependency Audit command)
+No known vulnerabilities found

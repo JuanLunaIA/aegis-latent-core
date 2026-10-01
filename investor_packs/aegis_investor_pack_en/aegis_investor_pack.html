@@ -158,9 +158,9 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
     <span class="chip ma">M·A</span> MODEL from the [AUDIT] input
     <span class="chip h">H</span> HYPOTHESIS: experiment named in D10
   </div>
-  <p class="note">Every figure in D3–D7 and all six charts come from one script, <code>aegis_financial_engine.py</code> (seed 42, reproduced byte-for-byte in D8). Nine §0 inputs were corrected or downgraded when checked against the repository and primary sources; the conflict log is D10.4. Updated 30 Sep 2026: section U lists what changed, and no model number moved.</p>
+  <p class="note">Every figure in D3–D7 and all six charts come from one script, <code>aegis_financial_engine.py</code> (seed 42, reproduced byte-for-byte in D8). Nine §0 inputs were corrected or downgraded when checked against the repository and primary sources; the conflict log is D10.4. Updated 30 Sep 2026: section U lists what changed, and no model number moved. A second update the same day, section U2, adds a security pass over the core, a certification scope and an Azure price readback.</p>
   <nav class="toc" aria-label="Deliverables">
-    <a href="#d1">D1 Memo</a><a href="#d1es">D1 ES-AR</a><a href="#d2">D2 TRL</a><a href="#d3">D3 Unit economics</a><a href="#d4">D4 3-statement</a><a href="#d5">D5 Burn &amp; runway</a><a href="#d6">D6 Valuation</a><a href="#d7">D7 Funds &amp; gates</a><a href="#d8">D8 Visual pack</a><a href="#d9">D9 Objections</a><a href="#d10">D10 Data room</a><a href="#update">U Update</a><a href="#ask">ASK</a>
+    <a href="#d1">D1 Memo</a><a href="#d1es">D1 ES-AR</a><a href="#d2">D2 TRL</a><a href="#d3">D3 Unit economics</a><a href="#d4">D4 3-statement</a><a href="#d5">D5 Burn &amp; runway</a><a href="#d6">D6 Valuation</a><a href="#d7">D7 Funds &amp; gates</a><a href="#d8">D8 Visual pack</a><a href="#d9">D9 Objections</a><a href="#d10">D10 Data room</a><a href="#update">U Update</a><a href="#update2">U2 Update</a><a href="#ask">ASK</a>
   </nav>
 </header>
 
@@ -179,7 +179,7 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 </ol>
 
 <h3>What exists today, read back</h3>
-<p>Version 5.0.1 was published on 24 Sep 2026<span class="chip v" title="VERIFIED">V</span> and every surface was read back: the Sigstore-signed tag, the GitHub Release (15<span class="chip v" title="VERIFIED">V</span> of 15<span class="chip v" title="VERIFIED">V</span> checksummed files re-hashed), SDKs on PyPI and npm byte-identical to the release, the gateway itself on PyPI at 5.0.1 with wheel and sdist equal to the release assets, and container images whose signatures and build provenance verify against the publishing workflow (per the repository's release record; not re-run in the 30 Sep update). 7,673<span class="chip v" title="VERIFIED">V</span> tests pass (full suite, 30 Sep). The claims register holds 113<span class="chip v" title="VERIFIED">V</span> claims with 0<span class="chip v" title="VERIFIED">V</span> findings and refuses 70<span class="chip v" title="VERIFIED">V</span> unsupported ones. The evidence commit, durable disk write included, measures p50 0.62 ms<span class="chip v" title="VERIFIED">V</span> and p99 1.22 ms<span class="chip v" title="VERIFIED">V</span> on a 4<span class="chip v" title="VERIFIED">V</span>-vCPU shared VM.</p>
+<p>Version 5.0.1 was published on 24 Sep 2026<span class="chip v" title="VERIFIED">V</span> and every surface was read back: the Sigstore-signed tag, the GitHub Release (15<span class="chip v" title="VERIFIED">V</span> of 15<span class="chip v" title="VERIFIED">V</span> checksummed files re-hashed), SDKs on PyPI and npm byte-identical to the release, the gateway itself on PyPI at 5.0.1 with wheel and sdist equal to the release assets, and container images whose signatures and build provenance verify against the publishing workflow (per the repository's release record; not re-run in the 30 Sep update). 7,891<span class="chip v" title="VERIFIED">V</span> tests pass (full suite, 30 Sep). The claims register holds 121<span class="chip v" title="VERIFIED">V</span> claims with 0<span class="chip v" title="VERIFIED">V</span> findings and refuses 70<span class="chip v" title="VERIFIED">V</span> unsupported ones. The evidence commit, durable disk write included, measures p50 0.62 ms<span class="chip v" title="VERIFIED">V</span> and p99 1.22 ms<span class="chip v" title="VERIFIED">V</span> on a 4<span class="chip v" title="VERIFIED">V</span>-vCPU shared VM.</p>
 
 <h3>Frame A: the clocks are already running</h3>
 <p>The EU AI Act applies from 2 Aug 2026<span class="chip vp" title="VERIFIED-PRIMARY">V·P</span>; its prohibitions have applied since 2 Feb 2025<span class="chip vp" title="VERIFIED-PRIMARY">V·P</span> and Annex-I obligations follow on 2 Aug 2027<span class="chip vp" title="VERIFIED-PRIMARY">V·P</span>. Compliance with the SEC's Rule 17a-4(f) audit-trail alternative has been required since 3 May 2023<span class="chip vp" title="VERIFIED-PRIMARY">V·P</span>. MiFID II Art 16(7) records are kept 5 years<span class="chip vp" title="VERIFIED-PRIMARY">V·P</span>, 7<span class="chip vp" title="VERIFIED-PRIMARY">V·P</span> on request. A regulated firm that cannot show what a model was asked, and prove the record was not edited, takes that loss at examination, long after the purchase decision.</p>
@@ -217,7 +217,7 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
   <li>Tramo 3: US$200k<span class="chip m" title="MODEL">M</span> con dos clientes de diseño firmados, los hallazgos críticos del pentest corregidos y un auditor de SOC 2 Tipo I contratado. Tope US$10M<span class="chip m" title="MODEL">M</span>.</li>
 </ul>
 <p><strong>Lo que tenés que saber antes que nada.</strong> Todavía no hay ventas ni entrevistas con compradores. El código lo mantiene una sola persona; el 20%<span class="chip m" title="MODEL">M</span> de los fondos (US$147k<span class="chip m" title="MODEL">M</span>) paga un segundo mantenedor. No hay pentest ni informe SOC 2 todavía; están atados a los tramos 2 y 3. Los métodos basados en flujo de caja valúan la empresa entre US$0 y US$3,2M<span class="chip m" title="MODEL">M</span>; los de mercado, entre US$6,2M y US$10,8M<span class="chip m" title="MODEL">M</span>. Por eso el tope sube a medida que aparece evidencia, en vez de fijarse alto desde el primer día.</p>
-<p><strong>Lo que ya existe y se puede comprobar.</strong> La versión 5.0.1 se publicó el 24/09/2026<span class="chip v" title="VERIFIED">V</span>. Verificamos la firma de la etiqueta, los 15<span class="chip v" title="VERIFIED">V</span> archivos del release contra sus checksums, los SDK en PyPI y npm (idénticos byte a byte al release), el gateway en PyPI en la 5.0.1 (wheel y sdist iguales a los del release) y la procedencia de las imágenes de contenedor (según el registro de release del repositorio; no se repitió el 30/9). Pasan 7.673<span class="chip v" title="VERIFIED">V</span> tests (suite completa al 30/9). El registro de afirmaciones tiene 113<span class="chip v" title="VERIFIED">V</span> entradas sin hallazgos y rechaza 70<span class="chip v" title="VERIFIED">V</span> afirmaciones que no se pueden respaldar.</p>
+<p><strong>Lo que ya existe y se puede comprobar.</strong> La versión 5.0.1 se publicó el 24/09/2026<span class="chip v" title="VERIFIED">V</span>. Verificamos la firma de la etiqueta, los 15<span class="chip v" title="VERIFIED">V</span> archivos del release contra sus checksums, los SDK en PyPI y npm (idénticos byte a byte al release), el gateway en PyPI en la 5.0.1 (wheel y sdist iguales a los del release) y la procedencia de las imágenes de contenedor (según el registro de release del repositorio; no se repitió el 30/9). Pasan 7.891<span class="chip v" title="VERIFIED">V</span> tests (suite completa al 30/9). El registro de afirmaciones tiene 121<span class="chip v" title="VERIFIED">V</span> entradas sin hallazgos y rechaza 70<span class="chip v" title="VERIFIED">V</span> afirmaciones que no se pueden respaldar.</p>
 <p><strong>Por qué ahora.</strong> La Ley de IA de la UE rige desde el 2/8/2026<span class="chip vp" title="VERIFIED-PRIMARY">V·P</span>, y la alternativa de audit trail de la regla 17a-4(f) de la SEC se exige desde el 3/5/2023<span class="chip vp" title="VERIFIED-PRIMARY">V·P</span>. Las empresas reguladas van a tener que mostrar qué se le pidió a un modelo y probar que ese registro no se tocó. <em>Qué lo refutaría:</em> que los responsables de cumplimiento que entrevistemos digan que su almacenamiento WORM y su SIEM ya les alcanzan.</p>
 <p><strong>Riesgo cambiario y jurisdicción.</strong> El fundador vive en Argentina. El plan crea una sociedad en Delaware, le cede la propiedad intelectual y factura en dólares (hito M1).</p>
 <p><strong>Escenarios a 5 años.</strong> Base: ARR de US$1,2M<span class="chip h" title="HYPOTHESIS">H</span> en el año 5, con otra ronda de unos US$0,7M<span class="chip m" title="MODEL">M</span> a mitad del año 3. Pesimista (probabilidad 45%<span class="chip m" title="MODEL">M</span>): los fondos alcanzan unos 18 meses<span class="chip m" title="MODEL">M</span> y se sale vendiendo los activos. Optimista (15%<span class="chip m" title="MODEL">M</span>): flujo de caja positivo desde el año 3.</p>
@@ -235,18 +235,18 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 </ul>
 <div class="tablewrap"><table><caption>D2 TRL matrix <span class="chip m">M</span></caption>
 <thead><tr><th>Component</th><th>TRL now</th><th>Evidence</th><th>Gap to TRL+1</th><th>Eng weeks</th><th>External $</th><th>Cost to close</th></tr></thead><tbody>
-<tr><td>Gateway core</td><td class="num">6</td><td>7,673 tests pass (2026-09-30); shipped image smoke-tested in hardened posture (CLM-109); signed 5.0.1 release; gateway on PyPI at 5.0.1 since 2026-09-26, wheel and sdist equal to the Release assets</td><td>operational pilot at a design partner</td><td class="num">8</td><td class="num">$0</td><td class="num">$18,400</td></tr>
-<tr><td>WAL + group commit</td><td class="num">6</td><td>commit p50 0.62 ms / p99 1.22 ms incl. fsync; 1,482 commits/s @100 threads on 4 vCPU; SIGKILL soak 2026-09-29: 60 rounds, 27,735 acknowledged commits, 0 lost (process kill, not a power cut)</td><td>30-day soak + power-loss test on target storage</td><td class="num">3</td><td class="num">$1,000</td><td class="num">$7,900</td></tr>
+<tr><td>Gateway core</td><td class="num">6</td><td>7,891 tests pass (2026-09-30); a formal-methods and red-team pass the same day found and fixed 18 defects (REG-D88 to REG-D105); shipped image smoke-tested in hardened posture (CLM-109); signed 5.0.1 release; gateway on PyPI at 5.0.1 since 2026-09-26, wheel and sdist equal to the Release assets</td><td>operational pilot at a design partner</td><td class="num">8</td><td class="num">$0</td><td class="num">$18,400</td></tr>
+<tr><td>WAL + group commit</td><td class="num">6</td><td>commit p50 0.62 ms / p99 1.22 ms incl. fsync; 1,482 commits/s @100 threads on 4 vCPU; SIGKILL soak 2026-09-29: 60 rounds, 27,735 acknowledged commits, 0 lost (process kill, not a power cut); re-run 2026-09-30: 60 rounds, 28,753 acknowledged, 0 lost, 0 torn tails</td><td>30-day soak + power-loss test on target storage</td><td class="num">3</td><td class="num">$1,000</td><td class="num">$7,900</td></tr>
 <tr><td>MMR v2 proofs</td><td class="num">6</td><td>Rust/Python root agreement; portable inclusion proofs (CLM-064)</td><td>third-party verification in a pilot</td><td class="num">2</td><td class="num">$0</td><td class="num">$4,600</td></tr>
 <tr><td>SDK verifiers</td><td class="num">6</td><td>PyPI/npm SDKs 5.0.1 byte-identical to Release assets (2026-09-24 readback); signature and provenance checks are recorded in docs/RELEASE_STATUS.md and were not re-run for the 2026-09-30 update</td><td>external auditor runs aegis-sdk verify in a pilot</td><td class="num">2</td><td class="num">$0</td><td class="num">$4,600</td></tr>
-<tr><td>WAF L1/L2</td><td class="num">5</td><td>corpus-tested normalisation; finite pattern set (UC-042); 23-case corpus run 2026-09-29: 15 malicious blocked, 8 benign passed, Wilson 95% upper bound on the bypass rate 20.4%, a sample too small to support a detection-rate claim</td><td>published adversarial eval + pen test coverage</td><td class="num">4</td><td class="num">$0</td><td class="num">$9,200</td></tr>
+<tr><td>WAF L1/L2</td><td class="num">5</td><td>corpus-tested normalisation; finite pattern set (UC-042); 23-case corpus run 2026-09-29: 15 malicious blocked, 8 benign passed, Wilson 95% upper bound on the bypass rate 20.4%, a sample too small to support a detection-rate claim; an HTTP red team on 2026-09-30 found evasions and false refusals the corpus missed, fixed under 70 tests (REG-D94 to REG-D101); the evasions that remain are listed in CLM-117</td><td>published adversarial eval + pen test coverage</td><td class="num">4</td><td class="num">$0</td><td class="num">$9,200</td></tr>
 <tr><td>Crypto-shredding</td><td class="num">5</td><td>wired into commit path; keyed digests (CLM-098)</td><td>counsel review of erasure semantics + pilot</td><td class="num">3</td><td class="num">$3,000</td><td class="num">$9,900</td></tr>
-<tr><td>HA lease + global sequence</td><td class="num">5</td><td>CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108); partition test against real Redis 2026-09-29: never two writers at any sample; a separate Redis-restart test showed that a restart without persistence resets the epoch counter and the sequence fence then refuses appends (an availability incident, not a fork; fix undecided)</td><td>decide Redis-restart epoch behaviour; chaos tests on target infrastructure + pilot</td><td class="num">6</td><td class="num">$2,000</td><td class="num">$15,800</td></tr>
+<tr><td>HA lease + global sequence</td><td class="num">5</td><td>CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108); partition test against real Redis 2026-09-29: never two writers at any sample; a separate Redis-restart test showed that a restart without persistence resets the epoch counter and the sequence fence then refuses appends (an availability incident, not a fork); fixed 2026-09-30: the new holder lifts its epoch above the highest handover its WAL records (REG-D91)</td><td>chaos tests on target infrastructure + pilot</td><td class="num">6</td><td class="num">$2,000</td><td class="num">$15,800</td></tr>
 <tr><td>ZK circuit</td><td class="num">4</td><td>preview guard; not on the request path</td><td>proving-system audit; deferred</td><td class="num">12</td><td class="num">$40,000</td><td class="num">$67,600</td></tr>
 <tr><td>Raft / consensus</td><td class="num">2</td><td>orphan module; superseded by AD-17 lease design</td><td>not on roadmap</td><td class="num">0</td><td class="num">$0</td><td class="num">$0</td></tr>
 <tr><td>HSM / PQC signing</td><td class="num">4</td><td>PKCS#11 path exercised against SoftHSM 2.6.1 (a software token, not an HSM) 2026-09-29; ML-DSA-65 sign 173 us / verify 62 us; Managed HSM excluded ($2,342/mo)</td><td>Key Vault Premium HSM-backed key integration test</td><td class="num">4</td><td class="num">$500</td><td class="num">$9,700</td></tr>
 <tr><td>OTel / metrics</td><td class="num">6</td><td>/metrics verified in the shipped image by the evidence collector (REG-D86); 14 alert rules and a 12-panel dashboard shipped in deploy/observability and checked statically by tests, not run against a live Prometheus or Grafana</td><td>pilot dashboards + alert runbook exercised</td><td class="num">1</td><td class="num">$0</td><td class="num">$2,300</td></tr>
-<tr><td>Azure deployment kit</td><td class="num">4</td><td>VM kit deployed and measured once (Standard_B2als_v2, Chile Central, 2026-09-26): strict mode started, verify.sh passed, one signed record committed (REG-H07)</td><td>run phase0_guardrails.sh end to end, observe a budget alert fire, repeat on a second size/region</td><td class="num">1</td><td class="num">$200</td><td class="num">$2,500</td></tr>
+<tr><td>Azure deployment kit</td><td class="num">4</td><td>VM kit deployed and measured once (Standard_B2als_v2, Chile Central, 2026-09-26): strict mode started, verify.sh passed, one signed record committed (REG-H07); list-price readback 2026-09-30: the four VERIFIED Azure prices matched the public Retail Prices API (00_query_prices.sh)</td><td>run phase0_guardrails.sh end to end, observe a budget alert fire, repeat on a second size/region</td><td class="num">1</td><td class="num">$200</td><td class="num">$2,500</td></tr>
 </tbody></table></div>
 <p>Closing every gap to the next level costs $84,900<span class="chip m" title="MODEL">M</span> over 34<span class="chip m" title="MODEL">M</span> engineering weeks, excluding the deferred ZK proving-system audit ($67,600<span class="chip m" title="MODEL">M</span>). The engineering week is costed at $2,300<span class="chip m" title="MODEL">M</span>.</p>
 <figure class="plate"><img src="img/04_trl_heatmap.png" alt="TRL heatmap: filled cells are levels achieved with cited evidence; hatched cells are 12-month targets." loading="lazy"><figcaption>TRL heatmap: filled cells are levels achieved with cited evidence; hatched cells are 12-month targets.</figcaption></figure>
@@ -325,10 +325,10 @@ details.code code { background: none; padding: 0; font-size: 0.74rem; line-heigh
 <tr><td><code>commits_per_s_100_threads</code></td><td class="num">1,482.37</td><td><span class="chip v">V</span></td><td>evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json, 4 vCPU shared VM, commit_forensic incl. MMR append + HMAC + WAL fsync</td></tr>
 <tr><td><code>commit_p50_ms</code></td><td class="num">0.617</td><td><span class="chip v">V</span></td><td>same artifact, n=1000</td></tr>
 <tr><td><code>commit_p99_ms</code></td><td class="num">1.216</td><td><span class="chip v">V</span></td><td>same artifact, n=1000</td></tr>
-<tr><td><code>tests_passed</code></td><td class="num">7,673</td><td><span class="chip v">V</span></td><td>pytest -n auto on main at 861c88b, 2026-09-30: 7,673 passed, 42 skipped, 0 failed (previous figure, 5.0.1 tree, 2026-09-24: 7,550 passed, 41 skipped, 0 failed)</td></tr>
-<tr><td><code>claims_registered</code></td><td class="num">113</td><td><span class="chip v">V</span></td><td>scripts/verify_claims.py, 2026-09-30: 0 findings (was 112 on 2026-09-25; CLM-113 added)</td></tr>
+<tr><td><code>tests_passed</code></td><td class="num">7,891</td><td><span class="chip v">V</span></td><td>pytest -n auto on branch claude/aegis-v4-comprehensive-audit-m2qyka at fd6b435, 2026-09-30: 7,891 passed, 38 skipped, 0 failed (earlier the same day, main at 861c88b: 7,673 passed, 42 skipped; 5.0.1 tree, 2026-09-24: 7,550 passed, 41 skipped)</td></tr>
+<tr><td><code>claims_registered</code></td><td class="num">121</td><td><span class="chip v">V</span></td><td>scripts/verify_claims.py at fd6b435, 2026-09-30: 0 findings (113 earlier the same day; CLM-114 to CLM-121 added by the formal-methods and core security pass)</td></tr>
 <tr><td><code>claims_refused</code></td><td class="num">70</td><td><span class="chip v">V</span></td><td>docs/institutional/UNSUPPORTED_CLAIMS.md rows</td></tr>
-<tr><td><code>test_to_source_loc</code></td><td class="num">1.26</td><td><span class="chip v">V</span></td><td>89,225 test LOC / 70,680 Python source LOC (aegis + aegis_server), git tree at 861c88b, 2026-09-30</td></tr>
+<tr><td><code>test_to_source_loc</code></td><td class="num">1.29</td><td><span class="chip v">V</span></td><td>91,701 test LOC / 71,362 Python source LOC (aegis + aegis_server), git tree at fd6b435, 2026-09-30</td></tr>
 <tr><td><code>orphan_modules_disclosed</code></td><td class="num">77</td><td><span class="chip v">V</span></td><td>scripts/import_reachability_allowlist.txt entries, of ~207 aegis modules</td></tr>
 <tr><td><code>azure_typical_month_usd</code></td><td class="num">17.54</td><td><span class="chip m">M</span></td><td>owner-supplied planning input; cited evidence file is absent from the repo (docs/REGISTRY_HUMAN_PACK.md) -&gt; downgraded from VERIFIED</td></tr>
 <tr><td><code>azure_worst_month_usd</code></td><td class="num">44.77</td><td><span class="chip m">M</span></td><td>owner-supplied, same status</td></tr>
@@ -765,19 +765,23 @@ COMMIT_P99_MS = inp(
 )
 TESTS_PASSED = inp(
     &quot;tests_passed&quot;,
-    7673,
+    7891,
     &quot;VERIFIED&quot;,
-    &quot;pytest -n auto on main at 861c88b, 2026-09-30: 7,673 passed, 42 skipped, 0 failed &quot;
-    &quot;(previous figure, 5.0.1 tree, 2026-09-24: 7,550 passed, 41 skipped, 0 failed)&quot;,
-    &quot;pytest -n auto sobre main en 861c88b, 30/09/2026: 7.673 aprobadas, 42 omitidas, 0 fallidas &quot;
-    &quot;(cifra anterior, árbol 5.0.1, 24/09/2026: 7.550 aprobadas, 41 omitidas, 0 fallidas)&quot;,
+    &quot;pytest -n auto on branch claude/aegis-v4-comprehensive-audit-m2qyka at fd6b435, 2026-09-30: &quot;
+    &quot;7,891 passed, 38 skipped, 0 failed (earlier the same day, main at 861c88b: 7,673 passed, 42 skipped; &quot;
+    &quot;5.0.1 tree, 2026-09-24: 7,550 passed, 41 skipped)&quot;,
+    &quot;pytest -n auto sobre la rama claude/aegis-v4-comprehensive-audit-m2qyka en fd6b435, 30/09/2026: &quot;
+    &quot;7.891 aprobadas, 38 omitidas, 0 fallidas (más temprano el mismo día, main en 861c88b: 7.673 aprobadas, &quot;
+    &quot;42 omitidas; árbol 5.0.1, 24/09/2026: 7.550 aprobadas, 41 omitidas)&quot;,
 )
 CLAIMS = inp(
     &quot;claims_registered&quot;,
-    113,
+    121,
     &quot;VERIFIED&quot;,
-    &quot;scripts/verify_claims.py, 2026-09-30: 0 findings (was 112 on 2026-09-25; CLM-113 added)&quot;,
-    &quot;scripts/verify_claims.py, 30/09/2026: 0 hallazgos (eran 112 el 25/09/2026; se agregó CLM-113)&quot;,
+    &quot;scripts/verify_claims.py at fd6b435, 2026-09-30: 0 findings (113 earlier the same day; CLM-114 to CLM-121 &quot;
+    &quot;added by the formal-methods and core security pass)&quot;,
+    &quot;scripts/verify_claims.py en fd6b435, 30/09/2026: 0 hallazgos (113 más temprano el mismo día; CLM-114 a &quot;
+    &quot;CLM-121 agregadas por la revisión de métodos formales y de seguridad del núcleo)&quot;,
 )
 UNSUPPORTED = inp(
     &quot;claims_refused&quot;,
@@ -788,10 +792,10 @@ UNSUPPORTED = inp(
 )
 TEST_SRC = inp(
     &quot;test_to_source_loc&quot;,
-    1.26,
+    1.29,
     &quot;VERIFIED&quot;,
-    &quot;89,225 test LOC / 70,680 Python source LOC (aegis + aegis_server), git tree at 861c88b, 2026-09-30&quot;,
-    &quot;89.225 líneas de prueba / 70.680 líneas de código Python (aegis + aegis_server), árbol git en 861c88b, 30/09/2026&quot;,
+    &quot;91,701 test LOC / 71,362 Python source LOC (aegis + aegis_server), git tree at fd6b435, 2026-09-30&quot;,
+    &quot;91.701 líneas de prueba / 71.362 líneas de código Python (aegis + aegis_server), árbol git en fd6b435, 30/09/2026&quot;,
 )
 ORPHANS = inp(
     &quot;orphan_modules_disclosed&quot;,
@@ -1722,7 +1726,8 @@ TRL = [
         &quot;Gateway core&quot;,
         6,
         7,
-        &quot;7,673 tests pass (2026-09-30); shipped image smoke-tested in hardened posture (CLM-109); signed 5.0.1 release; &quot;
+        &quot;7,891 tests pass (2026-09-30); a formal-methods and red-team pass the same day found and fixed 18 defects &quot;
+        &quot;(REG-D88 to REG-D105); shipped image smoke-tested in hardened posture (CLM-109); signed 5.0.1 release; &quot;
         &quot;gateway on PyPI at 5.0.1 since 2026-09-26, wheel and sdist equal to the Release assets&quot;,
         &quot;operational pilot at a design partner&quot;,
         8,
@@ -1733,7 +1738,8 @@ TRL = [
         6,
         7,
         &quot;commit p50 0.62 ms / p99 1.22 ms incl. fsync; 1,482 commits/s @100 threads on 4 vCPU; &quot;
-        &quot;SIGKILL soak 2026-09-29: 60 rounds, 27,735 acknowledged commits, 0 lost (process kill, not a power cut)&quot;,
+        &quot;SIGKILL soak 2026-09-29: 60 rounds, 27,735 acknowledged commits, 0 lost (process kill, not a power cut); &quot;
+        &quot;re-run 2026-09-30: 60 rounds, 28,753 acknowledged, 0 lost, 0 torn tails&quot;,
         &quot;30-day soak + power-loss test on target storage&quot;,
         3,
         1_000,
@@ -1762,7 +1768,9 @@ TRL = [
         5,
         6,
         &quot;corpus-tested normalisation; finite pattern set (UC-042); 23-case corpus run 2026-09-29: 15 malicious blocked, &quot;
-        &quot;8 benign passed, Wilson 95% upper bound on the bypass rate 20.4%, a sample too small to support a detection-rate claim&quot;,
+        &quot;8 benign passed, Wilson 95% upper bound on the bypass rate 20.4%, a sample too small to support a detection-rate claim; &quot;
+        &quot;an HTTP red team on 2026-09-30 found evasions and false refusals the corpus missed, fixed under 70 tests &quot;
+        &quot;(REG-D94 to REG-D101); the evasions that remain are listed in CLM-117&quot;,
         &quot;published adversarial eval + pen test coverage&quot;,
         4,
         0,
@@ -1782,8 +1790,9 @@ TRL = [
         6,
         &quot;CI vs real Redis/PostgreSQL; SIGKILL failover 4.2-5.2 s (CLM-108); partition test against real Redis 2026-09-29: &quot;
         &quot;never two writers at any sample; a separate Redis-restart test showed that a restart without persistence resets &quot;
-        &quot;the epoch counter and the sequence fence then refuses appends (an availability incident, not a fork; fix undecided)&quot;,
-        &quot;decide Redis-restart epoch behaviour; chaos tests on target infrastructure + pilot&quot;,
+        &quot;the epoch counter and the sequence fence then refuses appends (an availability incident, not a fork); fixed &quot;
+        &quot;2026-09-30: the new holder lifts its epoch above the highest handover its WAL records (REG-D91)&quot;,
+        &quot;chaos tests on target infrastructure + pilot&quot;,
         6,
         2_000,
     ),
@@ -1830,7 +1839,8 @@ TRL = [
         4,
         6,
         &quot;VM kit deployed and measured once (Standard_B2als_v2, Chile Central, 2026-09-26): &quot;
-        &quot;strict mode started, verify.sh passed, one signed record committed (REG-H07)&quot;,
+        &quot;strict mode started, verify.sh passed, one signed record committed (REG-H07); list-price readback 2026-09-30: &quot;
+        &quot;the four VERIFIED Azure prices matched the public Retail Prices API (00_query_prices.sh)&quot;,
         &quot;run phase0_guardrails.sh end to end, observe a budget alert fire, repeat on a second size/region&quot;,
         1,
         200,
@@ -1839,14 +1849,17 @@ TRL = [
 TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     &quot;Gateway core&quot;: (
         &quot;Núcleo del gateway&quot;,
-        &quot;7.673 pruebas aprobadas (30/09/2026); la imagen publicada se probó con la postura endurecida (CLM-109); release 5.0.1 firmado; &quot;
+        &quot;7.891 pruebas aprobadas (30/09/2026); una revisión de métodos formales y red team del mismo día encontró y &quot;
+        &quot;corrigió 18 defectos (REG-D88 a REG-D105); la imagen publicada se probó con la postura endurecida (CLM-109); &quot;
+        &quot;release 5.0.1 firmado; &quot;
         &quot;gateway en PyPI en la 5.0.1 desde el 26/09/2026, con wheel y sdist iguales a los archivos del release&quot;,
         &quot;piloto operativo en un cliente de diseño&quot;,
     ),
     &quot;WAL + group commit&quot;: (
         &quot;WAL + commit agrupado&quot;,
         &quot;commit p50 0,62 ms / p99 1,22 ms con fsync; 1.482 commits/s @100 hilos en 4 vCPU; &quot;
-        &quot;prueba de resistencia con SIGKILL 29/09/2026: 60 rondas, 27.735 commits confirmados, 0 perdidos (se mata el proceso; no es un corte de energía)&quot;,
+        &quot;prueba de resistencia con SIGKILL 29/09/2026: 60 rondas, 27.735 commits confirmados, 0 perdidos (se mata el proceso; no es un corte de energía); &quot;
+        &quot;repetida el 30/09/2026: 60 rondas, 28.753 confirmados, 0 perdidos, 0 colas truncadas&quot;,
         &quot;prueba de resistencia de 30 días + prueba de corte de energía en el almacenamiento destino&quot;,
     ),
     &quot;MMR v2 proofs&quot;: (
@@ -1863,7 +1876,9 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     &quot;WAF L1/L2&quot;: (
         &quot;WAF L1/L2&quot;,
         &quot;normalización probada contra un corpus; conjunto finito de patrones (UC-042); corpus de 23 casos el 29/09/2026: 15 maliciosos bloqueados, &quot;
-        &quot;8 benignos aprobados, cota superior de Wilson al 95 % de la tasa de evasión: 20,4 %, muestra demasiado chica para afirmar una tasa de detección&quot;,
+        &quot;8 benignos aprobados, cota superior de Wilson al 95 % de la tasa de evasión: 20,4 %, muestra demasiado chica para afirmar una tasa de detección; &quot;
+        &quot;un red team por HTTP del 30/09/2026 encontró evasiones y rechazos indebidos que el corpus no había detectado, &quot;
+        &quot;corregidos con 70 pruebas (REG-D94 a REG-D101); las evasiones que quedan figuran en CLM-117&quot;,
         &quot;evaluación adversarial publicada + cobertura del pentest&quot;,
     ),
     &quot;Crypto-shredding&quot;: (
@@ -1875,8 +1890,9 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
         &quot;Lease de HA + secuencia global&quot;,
         &quot;CI contra Redis/PostgreSQL reales; failover por SIGKILL en 4,2-5,2 s (CLM-108); prueba de partición contra Redis real el 29/09/2026: &quot;
         &quot;nunca hubo dos escritores en ninguna muestra; una prueba aparte de reinicio de Redis mostró que un reinicio sin persistencia reinicia &quot;
-        &quot;el contador de épocas y el cerco de secuencia rechaza los appends (una caída de disponibilidad, no una bifurcación; arreglo sin decidir)&quot;,
-        &quot;decidir el comportamiento de épocas tras un reinicio de Redis; pruebas de caos en la infraestructura destino + piloto&quot;,
+        &quot;el contador de épocas y el cerco de secuencia rechaza los appends (una caída de disponibilidad, no una bifurcación); &quot;
+        &quot;corregido el 30/09/2026: el nuevo titular sube su época por encima del traspaso más alto que registra su WAL (REG-D91)&quot;,
+        &quot;pruebas de caos en la infraestructura destino + piloto&quot;,
     ),
     &quot;ZK circuit&quot;: (
         &quot;Circuito ZK&quot;,
@@ -1903,7 +1919,8 @@ TRL_ES = {  # component: (name, evidence, gap); {hsm} is filled at render time
     &quot;Azure deployment kit&quot;: (
         &quot;Kit de despliegue en Azure&quot;,
         &quot;kit de VM desplegado y medido una vez (Standard_B2als_v2, Chile Central, 26/09/2026): &quot;
-        &quot;modo estricto activo, verify.sh aprobado, un registro firmado confirmado (REG-H07)&quot;,
+        &quot;modo estricto activo, verify.sh aprobado, un registro firmado confirmado (REG-H07); lectura de precios de lista &quot;
+        &quot;del 30/09/2026: los cuatro precios VERIFIED de Azure coincidieron con la API pública Retail Prices (00_query_prices.sh)&quot;,
         &quot;correr phase0_guardrails.sh de punta a punta, observar una alerta de presupuesto disparada, &quot;
         &quot;repetir en un segundo tamaño/región&quot;,
     ),
@@ -2891,9 +2908,9 @@ if __name__ == &quot;__main__&quot;:
 </div>
 <div class="obj">
 <h3>4 · "No SOC 2."</h3>
-<p><b>Answer.</b> Correct. Engaging a Type I auditor is a Gate-3 condition, with $35k<span class="chip m" title="MODEL">M</span> budgeted. An audit-readiness package already maps controls to code for SOC 2, ISO 27001 Annex A and HIPAA §164.312.</p>
-<p><b>Evidence.</b> <code>docs/compliance/AUDIT_READINESS.md</code>; REG-H02.</p>
-<p class="concede"><b>We do not claim</b> any SOC 2 report or compliance outcome. For self-hosted software, most controls are the customer's to operate.</p>
+<p><b>Answer.</b> Correct. Engaging a Type I auditor is a Gate-3 condition, with $35k<span class="chip m" title="MODEL">M</span> budgeted. SOC 2 attests an organisation, so a self-hosted deployment sits inside the buyer's own SOC 2 scope; a vendor report matters once the vendor operates a hosted service. An audit-readiness package already maps controls to code for SOC 2, ISO 27001 Annex A and HIPAA §164.312. For HIPAA, GDPR and the EU AI Act there is no certificate this gateway could hold, so the pack states the functions the gateway provides instead (U2).</p>
+<p><b>Evidence.</b> <code>docs/compliance/AUDIT_READINESS.md</code>; <code>docs/compliance/CERTIFICATION_SCOPE.md</code> (<code>CLM-120</code>); REG-H02.</p>
+<p class="concede"><b>We do not claim</b> any SOC 2 report, FIPS 140-3 validation, Common Criteria evaluation or compliance outcome, and no counsel has reviewed the certification classification. For self-hosted software, most controls are the customer's to operate.</p>
 </div>
 <div class="obj">
 <h3>5 · "Argentina and FX risk."</h3>
@@ -2910,14 +2927,14 @@ if __name__ == &quot;__main__&quot;:
 <div class="obj">
 <h3>7 · "Your WAF will be bypassed."</h3>
 <p><b>Answer.</b> Yes. It is a finite pattern set with normalisation layers, and the pen test is scoped to the evidence path rather than the WAF. The product's value is the evidence record, and a bypass is recorded like any other call.</p>
-<p><b>Evidence.</b> <code>UC-042</code>; REG-H01 scope.</p>
+<p><b>Evidence.</b> <code>UC-042</code>; REG-H01 scope; <code>CLM-117</code> lists what the 30 Sep red team fixed and what still passes.</p>
 <p class="concede"><b>We do not claim</b> the WAF blocks prompt injection.</p>
 </div>
 <div class="obj">
 <h3>8 · "Single node, no HA."</h3>
 <p><b>Answer.</b> Corrected since the brief: v5.0.1 ships active-passive mode (a Redis writer lease with epoch fencing) and active-active mode (a hash-linked global sequence in PostgreSQL). Both are tested in CI against real Redis and PostgreSQL, with SIGKILL failover at 4.2–5.2 s<span class="chip v" title="VERIFIED">V</span>. That puts it at TRL 5<span class="chip m" title="MODEL">M</span>; Raft remains orphan code at TRL 2<span class="chip m" title="MODEL">M</span>.</p>
 <p><b>Evidence.</b> <code>CLM-108</code>; <code>docs/operations/HIGH_AVAILABILITY.md</code>; D2.</p>
-<p class="concede"><b>We do not claim</b> production HA: separate HA fault-injection work has run (29 Sep 2026): one partition test against a single Redis, and an independent Redis-restart-without-persistence test that exposed that the restart resets the epoch counter, after which the sequence fence refuses appends. Nothing has run under database failover, real shared storage or production load.</p>
+<p class="concede"><b>We do not claim</b> production HA: separate HA fault-injection work has run (29 Sep 2026): one partition test against a single Redis, and an independent Redis-restart-without-persistence test that exposed that the restart resets the epoch counter, after which the sequence fence refuses appends. That was fixed on 30 Sep (<code>REG-D91</code>): a new writer now lifts its epoch above the highest handover its WAL records. Nothing has run under database failover, real shared storage or production load.</p>
 </div>
 <div class="obj">
 <h3>9 · "That valuation, with zero revenue?"</h3>
@@ -2946,6 +2963,8 @@ if __name__ == &quot;__main__&quot;:
 <tr><td>Security policy and threat model</td><td class="ok">Exists</td><td><code>SECURITY.md</code>; <code>docs/security/THREAT_MODEL.md</code></td></tr>
 <tr><td>SBOM and third-party licences</td><td class="ok">Exists</td><td>Release asset <code>aegis-latent-core-5.0.1.spdx.json</code>; <code>LICENSE-THIRD-PARTY.md</code></td></tr>
 <tr><td>Audit-readiness package and control mappings</td><td class="ok">Exists</td><td><code>docs/compliance/AUDIT_READINESS.md</code>; <code>docs/compliance/COMPLIANCE_MAPPING.md</code></td></tr>
+<tr><td>Certification scope: which frameworks have a certificate, and the function statement where none exists</td><td class="ok">Exists</td><td><code>docs/compliance/CERTIFICATION_SCOPE.md</code> (<code>CLM-120</code>; not reviewed by counsel)</td></tr>
+<tr><td>Formal models and the 30 Sep security-pass closure record</td><td class="ok">Exists</td><td><code>specs/</code>; <code>docs/assurance/TRL_CLOSURE.md</code>; <code>evidence/registry/reg-d94_d105_closure.txt</code></td></tr>
 <tr><td>Maintainer handbook (continuity, escrow contents)</td><td class="ok">Exists</td><td><code>docs/MAINTAINER_HANDBOOK.md</code></td></tr>
 <tr><td>Licences and pricing hypotheses</td><td class="ok">Exists</td><td><code>LICENSE</code>; <code>COMMERCIAL.md</code>; <code>docs/commercial/ENTERPRISE_PRICING_GUIDE.md</code></td></tr>
 <tr><td>Benchmarks</td><td class="ok">Exists</td><td><code>evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json</code>; <code>docs/BENCHMARKS.md</code></td></tr>
@@ -2962,7 +2981,7 @@ if __name__ == &quot;__main__&quot;:
 <tr><td>Trademark registration</td><td class="miss">Missing</td><td>Founder</td></tr>
 <tr><td>Financial statements and tax filings</td><td class="miss">Missing</td><td>No company yet (M1)</td></tr>
 <tr><td>Cyber and E&amp;O insurance</td><td class="miss">Missing</td><td>Budgeted $6k/yr<span class="chip m" title="MODEL">M</span></td></tr>
-<tr><td>Azure phase-0 script and budget Bicep (<code>deploy/azure/phase0/</code>)</td><td class="ok">Exists</td><td>Committed 2026-09-26; not yet run end to end, so no budget alert has fired (REG-H07)</td></tr>
+<tr><td>Azure phase-0 script and budget Bicep (<code>deploy/azure/phase0/</code>)</td><td class="ok">Exists</td><td>Committed 2026-09-26; not yet run end to end, so no budget alert has fired (REG-H07). The read-only list-price readback, <code>00_query_prices.sh</code>, matched all four VERIFIED prices on 2026-09-30 (<code>CLM-121</code>)</td></tr>
 <tr><td>Founder's own monthly Azure burn, verified ($17.54/$44.77 in §0)</td><td class="miss">Missing</td><td>Still owner-supplied and unmeasured; REG-H07</td></tr>
 <tr><td>Employment or contractor agreements</td><td class="miss">Missing</td><td>M3</td></tr>
 </tbody></table></div>
@@ -3057,6 +3076,50 @@ if __name__ == &quot;__main__&quot;:
 <tr><td>Operating cadence</td><td><code>docs/cadence/</code>, <code>tools/cadence/</code></td><td>Weekly report, monthly recompute, kill-switch register, wind-down path</td></tr>
 </tbody></table></div>
 <p class="census"><span class="lbl">Tag census</span> <span class="chip v">V</span> 22 · <span class="chip m">M</span> 0 · <span class="chip h">H</span> 0</p>
+</section>
+
+<section id="update2">
+<h2><span class="dnum">U2</span> Second update of 30 Sep 2026: security pass, certification scope, price readback</h2>
+<p class="meta">Engine re-run (seed 42); all six charts byte-identical; three inputs refreshed; no model number moved</p>
+<p>After section U was written, a formal-methods and security pass ran over the core the same day. This section records what it found and fixed, the certification analysis regulated buyers ask for, and a readback of the Azure list prices. It does not re-price the company or change a TRL level. Section U is kept as written; where this section supersedes it, it says so.</p>
+<h3>Refreshed facts</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Item</th><th>Section U</th><th>This update</th><th>Source</th></tr></thead>
+<tbody>
+<tr><td>Tests passing</td><td>7,673<span class="chip v" title="VERIFIED">V</span> passed, 42<span class="chip v" title="VERIFIED">V</span> skipped</td><td>7,891<span class="chip v" title="VERIFIED">V</span> passed, 38<span class="chip v" title="VERIFIED">V</span> skipped, 0<span class="chip v" title="VERIFIED">V</span> failed</td><td>Full suite, <code>pytest -n auto</code>, branch <code>claude/aegis-v4-comprehensive-audit-m2qyka</code> at <code>fd6b435</code></td></tr>
+<tr><td>Claims registered</td><td>113<span class="chip v" title="VERIFIED">V</span></td><td>121<span class="chip v" title="VERIFIED">V</span>, 0<span class="chip v" title="VERIFIED">V</span> findings</td><td><code>scripts/verify_claims.py</code>; <code>CLM-114</code> to <code>CLM-121</code> are new</td></tr>
+<tr><td>Test-to-source ratio</td><td>1.26<span class="chip v" title="VERIFIED">V</span></td><td>1.29<span class="chip v" title="VERIFIED">V</span></td><td>91,701<span class="chip v" title="VERIFIED">V</span> test lines over 71,362<span class="chip v" title="VERIFIED">V</span> source lines</td></tr>
+<tr><td>Defects found and fixed</td><td>—</td><td>18<span class="chip v" title="VERIFIED">V</span>: 12<span class="chip v" title="VERIFIED">V</span> P1, 5<span class="chip v" title="VERIFIED">V</span> P2, 1<span class="chip v" title="VERIFIED">V</span> P3, each with a test</td><td><code>docs/REGISTRY.md</code>, <code>REG-D88</code> to <code>REG-D105</code></td></tr>
+</tbody></table></div>
+<h3>New evidence, no TRL change</h3>
+<ul>
+<li><strong>Formal checks that can fail (<code>REG-D92</code>).</strong> The formal artifacts could pass without checking anything: one SMT file asserted a contradiction, and no TLA+ configuration was able to violate an invariant. Every SMT check now declares its expected answer and the gate compares Z3's whole output; every TLA+ model has a configuration that must be violated. These remain bounded abstractions, not proofs of the Python code (<code>CLM-026</code>).</li>
+<li><strong>Two ledger defects the models exposed.</strong> The ledger could commit after a torn write had latched a fault, so a record reported durable could be lost to every later verifier; every commit is now refused while the ledger is faulted (<code>REG-D88</code>, <code>CLM-114</code>). An ML-DSA signature was checked against the key the record carried, so a chain re-signed under an attacker's own key verified as genuine; signing keys are now pinned (<code>REG-D89</code>, <code>CLM-115</code>).</li>
+<li><strong>High availability (<code>REG-D91</code>).</strong> This supersedes the "fix is not decided" sentence in section U. A replica that takes the writer lease now lifts its epoch above the highest handover its WAL records, shown against a real Redis restarted without persistence (<code>CLM-116</code>). A WAL restored from a backup older than the sequence still meets the sequence fence, which stays fail-closed.</li>
+<li><strong>Injection-filter red team (<code>REG-D94</code>–<code>REG-D101</code>).</strong> Run over HTTP, it confirmed that the 23-case corpus was too small. Invisible characters, separator runs, base64, a phrase placed outside <code>messages</code>, and a Layer-2 stage that could never fire all reached the provider; one quadratic pattern let a single request hold a worker for about an hour; and 8<span class="chip v" title="VERIFIED">V</span> of 24<span class="chip v" title="VERIFIED">V</span> benign regulated sentences (clinical, legal, finance) were refused. All are fixed under 70<span class="chip v" title="VERIFIED">V</span> tests (<code>CLM-117</code>). Alternating separators, other encodings, a phrase split across two fields and paraphrase still pass Layer 1. The filter remains a pattern filter, not an injection boundary (<code>UC-042</code>).</li>
+<li><strong>Malformed bodies (<code>REG-D98</code>).</strong> Five classes of unusable request body that answered 500 now answer 400 without calling the provider (<code>CLM-118</code>).</li>
+<li><strong>Kernel filter (<code>REG-D103</code>–<code>REG-D105</code>).</strong> WAL rotation, S3 archival and cryptographic shredding were killed by the gateway's own seccomp filter on first use; they now run under it (<code>CLM-119</code>). RFC 3161 anchoring needs <code>execve</code>, so a strict gateway now refuses <code>tsa_url</code> at startup instead of dying on its first anchor: trusted time runs outside the hardened gateway.</li>
+<li><strong>Write-ahead log.</strong> The kill-and-recover soak was re-run with its torn-tail repair step: 60<span class="chip v" title="VERIFIED">V</span> rounds, 28,753<span class="chip v" title="VERIFIED">V</span> acknowledged commits, 0<span class="chip v" title="VERIFIED">V</span> lost. No kill landed inside a write, so the repair step was present but not exercised; its own tests cover it. It is still a process kill, not a power cut.</li>
+<li><strong>Azure list prices (<code>CLM-121</code>).</strong> <code>deploy/azure/phase0/00_query_prices.sh</code> re-reads, from the public Azure Retail Prices API, the four list prices the engine tags VERIFIED. All 4<span class="chip v" title="VERIFIED">V</span> matched on 30 Sep, and nothing billable was created. It checks list prices, not what any account pays, so the founder's monthly figures stay MODEL.</li>
+</ul>
+<h3>Certification: which frameworks have a certificate at all</h3>
+<p>Regulated buyers ask about certification. For most of the frameworks they name, no certificate exists that any software product could hold, so answering "no certificate" reads as a missing step that does not exist. <code>docs/compliance/CERTIFICATION_SCOPE.md</code> (<code>CLM-120</code>) sorts each framework into one of three classes and, for the first, states clause by clause what the gateway provides, what it provides in part, and what only the deploying organisation can supply.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Class</th><th>Frameworks</th><th>What the product can say</th><th>State</th></tr></thead>
+<tbody>
+<tr><td>F: no certificate exists for a software component</td><td>HIPAA §164.312; GDPR; EU AI Act; US FRE 902(14); SEC 17a-4(f); MiFID II; NIST AI RMF, CSF 2.0 and SP 800-53; OWASP Top 10 for LLM; ISO/IEC 27037</td><td>The function statement, for example: "Aegis provides the audit-control, integrity, authentication and transmission-security functions of 45 CFR §164.312(b), (c), (d) and (e)(1) for the calls it governs."</td><td>Nothing to obtain. Compliance, admissibility and conformity stay with the deploying organisation, a court or the system's provider</td></tr>
+<tr><td>O: the certificate attests an organisation</td><td>SOC 2, ISO/IEC 27001, ISO/IEC 42001, HITRUST; PCI DSS does not apply to the product, and FedRAMP does not while it is self-hosted</td><td>"The gateway supplies these controls to your programme."</td><td>None held. A vendor SOC 2 report matters once the vendor operates a hosted service (<code>REG-H02</code>, Gate 3)</td></tr>
+<tr><td>P: the product or its module must be validated</td><td>FIPS 140-3, CAVP, Common Criteria; FDA or MDR only if marketed for a medical purpose</td><td>"Not FIPS 140-3 validated. Uses FIPS-approved algorithms."</td><td>None. The gateway has no cryptographic module of its own, and the Rust <code>ml-dsa</code> crate is not validated</td></tr>
+</tbody></table></div>
+<h3>Limits of this update</h3>
+<ul>
+<li>Signatures and provenance were still not re-verified here: <code>cosign</code>, <code>gitsign</code> and <code>gh</code> are not installed in this environment.</li>
+<li>The certification classification is <code>LEGAL-REVIEW-REQUIRED</code>. It reads public schemes as of 30 Sep 2026, it is not legal advice, and no counsel has reviewed it.</li>
+<li>The HA fix removes one item from D2's gap; the engineering weeks and the cost to close are not re-estimated.</li>
+<li><code>REG-D88</code>–<code>REG-D93</code> are on <code>main</code> (merged as <code>3d7bc69</code>). <code>REG-D94</code>–<code>REG-D105</code>, the certification scope and the price readback are on the branch named above and reach <code>main</code> when its follow-up pull request merges; the test count above was measured on that branch.</li>
+<li>Revenue is still zero. The rows marked Missing in D10.1 are founder actions and remain missing.</li>
+</ul>
+<p class="census"><span class="lbl">Tag census</span> <span class="chip v">V</span> 23 · <span class="chip m">M</span> 0 · <span class="chip h">H</span> 0</p>
 </section>
 
 <section id="ask" class="ask">

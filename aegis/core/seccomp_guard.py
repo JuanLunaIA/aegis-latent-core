@@ -174,6 +174,20 @@ class SeccompGuard:
             # the lifespan had finished. A connected local pair only — no
             # address, no network reach.
             "socketpair",
+            # ── WAL rotation (REG-D103). With max_wal_bytes > 0 (required for
+            # S3 archival) the ledger renames the active WAL and reopens a new
+            # one after lockdown. The reopen tightens the file to 0o600 through
+            # the descriptor it holds; the path-based chmod and the
+            # unconditional mkdir it used to issue killed the gateway on its
+            # first rotation. fchmod reaches only a file already open here.
+            "fchmod",
+            # ── glibc qsort (REG-D107). Before glibc 2.37, the first qsort of
+            # 1 KiB or more in a process calls get_phys_pages(), which is
+            # sysinfo(). OpenSSL inside cryptography sorts on its first use of
+            # a cipher, so on Ubuntu 22.04 the first shredded commit after
+            # lockdown was killed. Read-only: uptime, load and memory totals,
+            # which /proc already shows to the allowed openat.
+            "sysinfo",
             # clone is added separately and only with CLONE_THREAD: the ASGI
             # threadpool (sync endpoints, to_thread) spawns threads per request;
             # process creation stays impossible.
@@ -304,6 +318,15 @@ class SeccompGuard:
 # profile (PostgreSQL store) is unchanged.
 SQLITE_SEQUENCE_STORE_SYSCALLS: frozenset[str] = frozenset({"pread64", "pwrite64", "ftruncate"})
 
+# Every SQLite database the gateway reads or writes after lockdown (REG-D104):
+# the sequence store above, the S3 archiver's journal, and the shredding key
+# vault. The last two open their -journal/-wal/-shm files after lockdown, which
+# the sequence store (one connection, opened before) never did. SQLite checks
+# its effective uid on that open and, only as root, re-owns the new file to
+# match the database. Found by adding each killing syscall under the loaded
+# filter until archival and shredded commits ran clean; these five were all.
+SQLITE_SYSCALLS: frozenset[str] = SQLITE_SEQUENCE_STORE_SYSCALLS | frozenset({"geteuid", "fchown"})
+
 
 def profile_with(extra: frozenset[str]) -> SyscallProfile:
     """The default profile plus *extra* allowed syscalls (never minus anything)."""
@@ -313,3 +336,21 @@ def profile_with(extra: frozenset[str]) -> SyscallProfile:
         allowed_syscalls=set(base.allowed_syscalls) | set(extra),
         forbidden_syscalls=set(base.forbidden_syscalls) - set(extra),
     )
+
+
+# The public surface. SQLITE_SYSCALLS and the rest are imported by the proxy
+# lifespan and by tests, which a per-module analysis cannot see.
+__all__ = [
+    "IO_URING_ERRNO_SYSCALLS",
+    "PR_SET_NO_NEW_PRIVS",
+    "SCMP_ACT_ALLOW",
+    "SCMP_ACT_KILL",
+    "SCMP_ACT_KILL_PROCESS",
+    "SQLITE_SEQUENCE_STORE_SYSCALLS",
+    "SQLITE_SYSCALLS",
+    "IoUringActiveError",
+    "SeccompGuard",
+    "SyscallProfile",
+    "open_io_uring_fds",
+    "profile_with",
+]

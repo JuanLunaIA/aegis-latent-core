@@ -16,8 +16,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`docs/compliance/CERTIFICATION_SCOPE.md`** (`CLM-120`, `LEGAL-REVIEW-REQUIRED`). For each framework a
+  regulated buyer names, it says whether any certificate exists and who receives it. Class F frameworks have
+  no certificate a software component could hold: HIPAA, GDPR, the EU AI Act, FRE 902(14), SEC 17a-4, NIST
+  AI RMF, CSF and SP 800-53, and OWASP LLM. For them it states, clause by clause, which functions the gateway
+  provides, which it provides in part, and which only the deployer can supply. Class O certificates attest an
+  organisation (SOC 2, ISO/IEC 27001 and 42001, HITRUST, PCI DSS, FedRAMP). Class P needs the product or its
+  module validated (FIPS 140-3, CAVP, Common Criteria, FDA/MDR). Class O and P stay "none". It is not legal
+  advice and no counsel has reviewed it.
+- **`deploy/azure/phase0/00_query_prices.sh`** (`CLM-121`, `EXEC_BASELINE` G12). A read-only readback of
+  the four Azure list prices the investor pack tags `VERIFIED`, from the public Retail Prices API. It exits
+  `3` when a price has moved and `4` when a meter no longer answers. All four matched on 2026-09-30
+  (`evidence/benchmarks/azure/prices_verified_2026-09-30.json`); `tests/test_azure_price_readback.py` checks
+  it offline and keeps its expected values equal to the engine's.
+
 ### Changed
 
+- `docs/compliance/AUDIT_READINESS.md` and `docs/DEVELOPER_INTEGRATIONS_GUIDE.md` no longer advise
+  configuring `tsa_url` for trusted time in the hardened posture: a strict gateway now refuses it
+  (`REG-D105`), and no out-of-process anchoring tool ships. `docs/assurance/TRL_CLOSURE.md` records the
+  2026-09-30 WAL crash-soak re-run (28,753 acknowledged commits, 0 lost, 0 torn tails) and the WAF
+  red-team findings the 23-case corpus had missed.
+
+- **Investor pack refreshed a second time (2026-09-30, both editions).** The same three verified inputs
+  updated again (tests 7,891 passed / 38 skipped / 0 failed at `fd6b435`, claims 121, test-to-source ratio
+  1.29); five TRL rows extended with the security pass (`REG-D88`–`REG-D105`), the WAL soak re-run, the HA
+  epoch fix (`REG-D91`, which leaves the HA gap as chaos tests and a pilot) and the Azure list-price
+  readback; D9 objection 4 answered with the certification scope (`CLM-120`); section U2 added. No TRL
+  level, cost-to-close figure, chart or model number moved; signatures and provenance were not re-verified.
+
+- **Behaviour change: unusable request bodies answer `400`, not `500`** (`REG-D98`, `CLM-118`). At
+  `/v1/chat/completions`, `/v1/completions` and `/v1/messages`, invalid UTF-8, an integer past Python's digit
+  limit, a body that is not a JSON object, and nesting deeper than 32 levels are refused `400` before
+  canonicalisation. The details are `Invalid JSON`, `Request body must be a JSON object` and
+  `JSON nesting exceeds 32 levels`. A body nested 33 levels or more was a `403` from the WAF depth guard and
+  is now a `400`; it is still recorded as a rejection node. `/v1/messages` answers a non-object body with the
+  new shared detail instead of `Anthropic request must be an object`. See `docs/UPGRADING.md`.
+- **Behaviour change: a strict gateway refuses `tsa_url`** (`REG-D105`, `CLM-119`). RFC 3161 verification
+  runs the `openssl` binary, which the seccomp profile forbids, so the first anchor used to kill the
+  process. The lifespan now refuses the combination before the filter loads. Strict mode with
+  `require_seccomp` fails startup; development mode warns and runs without the filter. Anchor archived
+  segment manifests out of process instead.
+- **Behaviour change: the WAF no longer refuses ordinary prose containing "dan" or "disregard previous"**
+  (`REG-D94`). "clinical guidance", "in accordance with", "Jordan", "Dante" and "disregard previous
+  correspondence" now pass. The DAN family needs a word boundary, and "disregard" needs an instruction
+  object, in both Layer 1 and the Rust pre-filter. Every DAN and disregard attack form in the tests is still
+  refused.
 - **Behaviour change: `pqc-ml-dsa` signatures are verified only against pinned keys.** A verifier pins
   the public half of its own ML-DSA identity and the keys in the new `AEGIS_TRUSTED_SIGNING_PUBLIC_KEYS`
   (comma-separated hex). While that set is non-empty, a node signed under any other key reads `invalid` and
@@ -89,6 +135,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The gateway killed itself the first time a post-lockdown feature ran** (`REG-D103`, `REG-D104`,
+  `CLM-119`). The seccomp profile had been measured on the request path. WAL rotation, which S3 archival
+  requires, called `chmod` on a path, and `mkdir` on a directory that already existed. S3 archival and
+  cryptographic shredding write SQLite databases whose syscalls were loaded only for the HA sequence store.
+  Each feature was killed with SIGSYS on first use; this was reproduced with the real filter at `8e03b31`.
+  Rotation now uses `fchmod` on the open descriptor and creates directories only when missing. The lifespan
+  loads `SQLITE_SYSCALLS` (`fchown`, `ftruncate`, `geteuid`, `pread64`, `pwrite64`) only when archival,
+  shredding or the SQLite sequence store is configured. `tests/test_seccomp_runtime_paths.py` runs each flow
+  under the real filter in a child interpreter. Windows before Python 3.13 has no `os.fchmod`; there, and
+  only there, the ledger keeps the path-based `chmod` (no seccomp filter exists on that platform). The first
+  version of this fix called `os.fchmod` unconditionally, and the Windows CI job caught every ledger failing
+  to open with `AttributeError`. `tests/test_wal_rotation.py` now covers a host without `os.fchmod`.
+- **On Python 3.13 with glibc older than 2.37, the first shredded commit was still killed** (`REG-D107`,
+  `CLM-119`). The fix above was tested on glibc 2.39. Before glibc 2.37, `qsort` calls `sysinfo` once per
+  process, on its first sort of 1 KiB or more, and OpenSSL inside `cryptography` sorts on a cipher's first
+  use. CI's "Test (Python 3.13)" job on Ubuntu 22.04 (glibc 2.35) caught the kill. Python 3.11 and 3.12 sort
+  their own sysconf table at start-up, before lockdown, which hid the call. The default profile now allows
+  `sysinfo`, which only reads uptime, load and memory totals; the container profile already allowed it. The
+  root cause was traced on CI's own Python builds in an Ubuntu 22.04 rootfs, and a new test calls the
+  syscall directly, so it fails without the fix on any glibc. Evidence: `evidence/registry/reg-d107_closure.txt`.
+- **Five malformed-body classes answered `500`** (`REG-D98`). One parser now answers `400` at all three
+  model endpoints (see Changed). A chat text block whose `text` is null or a list no longer raises in the
+  WAF.
+- **The YARA rule-header regex was cubic on a run of spaces** (`REG-D102`). 2000 spaces took 2.3 s and now
+  take 0.00006 s. `aegis/core/yara_engine.py` is not on the gateway path.
 - **A commit could be reported durable and then never replay.** `specs/aegis_invariants.tla`, rewritten to
   model write failures, torn tails, crashes, replay and repair, found it: request A's write tears part-way
   through a line and latches `wal_persist_failed`; request B, admitted by the gateway before the latch,
@@ -204,6 +275,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **WAF evasions closed, each reproduced over HTTP first** (`REG-D95`–`REG-D97`, `REG-D99`–`REG-D101`,
+  `CLM-117`). Every payload below reached the provider before this fix:
+  - Unicode tag characters, a word joiner, bidi isolates, variation selectors and combining marks, each
+    splitting "ignore previous instructions".
+  - Star, slash, pipe and padded letter-spacing, and phrases written with no spaces at all.
+  - Base64-wrapped Layer-1 phrases.
+  - Layer-2-only phrases placed in `prompt` or `system` instead of `messages`.
+
+  Also fixed:
+  - The template pattern was quadratic on unclosed `{{`. 32 KB took 3.45 s, and a 1 MiB body could hold a
+    worker for about an hour; it now takes 0.031 s.
+  - The Layer-2 obfuscation markers never matched.
+
+  Each fix counters one named encoding. Alternating separators, other encodings, split fields and
+  paraphrase still pass Layer 1, and the WAF remains detection, not an injection boundary (`UC-042`).
+  Layer 2 now scores tool descriptions and metadata, so it can refuse benign ones.
 - **Audit dashboard: `next` `16.3.4` → `16.3.8` (GHSA-vcvr-r3jv-pc5j, critical).** The advisory covers remote
   code execution through `next/og` `ImageResponse` in `16.2.0`–`16.3.5` and was published while this branch
   was open; `npm audit --audit-level=high` in the Audit Dashboard job failed on it. The dashboard does not
@@ -211,6 +298,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the gate is right to refuse it. After the bump, `npm ci`, typecheck, the 6 vitest tests, `next build`,
   `npm audit` (0 vulnerabilities) and the client-bundle secret check all pass locally. No published image
   changes until the next release.
+- **Gateway runtime: `urllib3` `2.7.0` → `2.8.0`** (`REG-D106`). Three advisories against `2.7.0` were published
+  on 2026-09-30 (GHSA-8988-9cw3-xx77, GHSA-gh4c-6fx4-qh6g, GHSA-vxq7-64xx-v4gw). `pip-audit`, which the
+  Security Scan job runs against `requirements.lock`, failed on them on this branch and would fail on `main`.
+  `urllib3` enters only through `requests`, and no `aegis` module imports either, so no gateway request path
+  reaches it; the floor is raised in `requirements.txt` and `pyproject.toml` all the same. The lock was
+  regenerated with CI's toolchain and only `urllib3` changed; its hashes equal the PyPI wheel and sdist.
+  `pip-audit` now reports no known vulnerabilities for the lock and for `requirements.txt`. Evidence:
+  `evidence/registry/reg-d106_closure.txt`.
 
 ### Documentation
 

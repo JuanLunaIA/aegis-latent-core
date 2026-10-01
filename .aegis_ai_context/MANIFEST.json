@@ -105,8 +105,8 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "2a7f51b5a28def77b98a6cfbf5d2667b5160679bbabf0de4daa97281c26351a9",
-      "size": 228863
+      "sha256": "d631959b34a09deed041d25a31d98a38acc0e2d3755b94b215477e2a53b4e339",
+      "size": 237205
     },
     {
       "category": "governed_input",
@@ -135,14 +135,14 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "c5dab4a0982086de4b919295dd9bba6f981be8da3bee255bbb5b99180fa07acf",
-      "size": 165618
+      "sha256": "d32c88850acf4bdee3e3a1c84f0e6bced056f0bca296c39a51a9afc2652e3247",
+      "size": 175958
     },
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_INTEGRATIONS_GUIDE.md",
-      "sha256": "909617d989dd66b1bc394ea57e7b622f150c5fb7015f9b450bf8911f211b5543",
-      "size": 10835
+      "sha256": "50659569ea703eca89ec2f69349e9a8ffc20096420a517da8afee49930972496",
+      "size": 11212
     },
     {
       "category": "governed_input",
@@ -189,19 +189,19 @@
     {
       "category": "governed_input",
       "path": "pyproject.toml",
-      "sha256": "a499a8d355a0d005089fa4cac949e8a8cf1ec33651c16d22c302afde93a25d28",
-      "size": 13169
+      "sha256": "4817d7a3b872deb4d5ba839e4e868f4250c1f55ade199c7ba7f7e217b44f8ddf",
+      "size": 13248
     },
     {
       "category": "governed_input",
       "path": "requirements.txt",
-      "sha256": "1466b7cb0cfe4282fcbc3e0cc5f08b050486dd2065331a2a39bfb6196361d191",
-      "size": 1528
+      "sha256": "fb75e8888d3f1d4e9c8ff80232ebb4a99b43523f2440e2539dfe8a6ac77a6146",
+      "size": 1614
     },
     {
       "category": "governed_input",
       "path": "requirements.lock",
-      "sha256": "411915439773e44816b692aab1ede76ad36ac1c97719c986dc59a7e715d51096",
+      "sha256": "985180d4321a11d3d51fc3d6c7f948edc03caae288dbf172287653e58ef99162",
       "size": 95839
     },
     {

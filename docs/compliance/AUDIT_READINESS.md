@@ -37,7 +37,7 @@ Set `AEGIS_SECURITY_ENFORCEMENT_MODE=strict`. Strict startup **refuses** the uns
 | Posture monitoring | Shipped image (the `metrics` dependency is locked in since `REG-D86`) | — | `aegis_security_enforcement_mode 1.0` on `/metrics` |
 | Retention and immutability | `AEGIS_MAX_WAL_BYTES` rotation; `AEGIS_S3_ARCHIVE_*` with object lock `COMPLIANCE` and `AEGIS_S3_ARCHIVE_RETENTION_DAYS` | — | Bucket object-lock configuration; [Data Retention](../privacy/DATA_RETENTION.md) |
 | Erasure without breaking the chain | `AEGIS_ENABLE_CRYPTOGRAPHIC_SHREDDING=true` (off by default; `AD-14`) | — | `CLM-068`; shredder tests |
-| Trusted time | `AEGIS_TSA_URL` (RFC 3161) | — | Timestamp tokens in `AEGIS_TSA_EVIDENCE_DIR`. **Without it, every time is the host's own clock** |
+| Trusted time | `AEGIS_TSA_URL` (RFC 3161) | **Refused by a strict gateway that requires the seccomp filter (the default)**: verification runs `openssl`, which the filter forbids (`REG-D105`, `CLM-119`) | Timestamp tokens in `AEGIS_TSA_EVIDENCE_DIR`, only on a gateway that runs without the filter. **Otherwise every time is the host's own clock** |
 | Availability | `AEGIS_HA_MODE` (`active_passive` / `active_active`) with Redis and PostgreSQL | Refuses shapes that would fork evidence | `/health` `ha` block; `python -m aegis.core.ha verify` ([High Availability](../operations/HIGH_AVAILABILITY.md)) |
 
 ## 3. Producing the evidence
@@ -167,7 +167,7 @@ PHI redaction is pattern-based and **not de-identification** ([HIPAA inputs](HIP
 | 8.12 data leakage prevention | Streaming and non-streaming redaction; digests in evidence | [PII Redaction Boundaries](../privacy/PII_REDACTION_BOUNDARIES.md) |
 | 8.13 information backup; 8.14 redundancy | Backup procedure; HA modes | [Backup and Restore](../operations/BACKUP_RESTORE.md); [High Availability](../operations/HIGH_AVAILABILITY.md) |
 | 8.15 logging; 8.16 monitoring activities | The evidence chain; metrics with posture and rejection counters | §3.3, §3.4 |
-| 8.17 clock synchronization | RFC 3161 timestamp tokens when `AEGIS_TSA_URL` is set. `aegis/core/clock_integrity.py` can assert NTP synchronisation but is **not wired into gateway startup**; host clock discipline is the organisation's | `aegis/core/rfc3161_timestamper.py` |
+| 8.17 clock synchronization | RFC 3161 timestamp tokens when `AEGIS_TSA_URL` is set, which a strict gateway with the seccomp filter refuses (`REG-D105`). `aegis/core/clock_integrity.py` can assert NTP synchronisation but is **not wired into gateway startup**; host clock discipline is the organisation's | `aegis/core/rfc3161_timestamper.py` |
 | 8.20 networks security; 8.22 segregation | Source-IP admission; `NetworkPolicy` | Helm chart |
 | 8.24 use of cryptography | HMAC-SHA256, ML-DSA-65, PKCS#11 signing tiers; AES-256-GCM sealing; no hand-rolled primitives (`AD-14`) | `aegis/core/crypto_audit.py` |
 | 8.25 secure development life cycle; 8.28 secure coding; 8.29 security testing | CI gates on every change: ruff, `mypy --strict`, Bandit and CodeQL, property-based (Hypothesis) and adversarial test suites, Kani and Miri on the Rust core, container smoke | `.github/workflows/ci.yml` |
@@ -193,7 +193,7 @@ See [MiFID II inputs](MIFID_II_TECHNICAL_INPUTS.md): the Article 16(6)/(7) and M
 | Finding | Why it stands | Mitigation available now |
 | --- | --- | --- |
 | Default signing is symmetric (`SYMMETRIC_AUTHENTICATED`) | HMAC verifiers can also sign | Configure ML-DSA (`ASYMMETRIC_SOFTWARE`) or PKCS#11 (`ASYMMETRIC_HARDWARE_ATTESTED`) |
-| No trusted time by default | Timestamps are the host clock | Configure RFC 3161 (`AEGIS_TSA_URL`) |
+| No trusted time in the hardened posture | Timestamps are the host clock. `AEGIS_TSA_URL` cannot be combined with the required seccomp filter (`REG-D105`), and no out-of-process anchoring tool ships | Host clock discipline (NTP/PTP) under the organisation's control; or run RFC 3161 anchoring from a separate process against the archived segment manifests, which is the operator's to build |
 | `/v1/audit/integrity` reports whole-chain count and tail to any `audit:read` holder | The public JSON contract (`CLM-090`) | One chain per team ([High Availability](../operations/HIGH_AVAILABILITY.md) §6) |
 | No emergency-access (break-glass) path | Not implemented | An organisational procedure outside the gateway |
 | `/metrics` is unauthenticated | Standard for Prometheus scraping | Source-IP admission and `NetworkPolicy` |

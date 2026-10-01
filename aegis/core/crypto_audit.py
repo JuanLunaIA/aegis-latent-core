@@ -287,6 +287,21 @@ def _windows_lock_region(fd: int, mode: int) -> None:
         os.lseek(fd, saved, os.SEEK_SET)
 
 
+def _ensure_directory(directory: str) -> None:
+    """Create *directory* if it is missing, without a syscall when it exists.
+
+    ``os.makedirs(..., exist_ok=True)`` always issues ``mkdir`` and treats
+    ``EEXIST`` as success. The seccomp profile does not allow ``mkdir``, so
+    under the filter that call is a SIGSYS rather than an ``EEXIST``, and WAL
+    rotation reached it on every reopen (REG-D103). The directory normally
+    exists by then, so a ``stat`` first keeps the steady state inside the
+    profile; a directory that genuinely has to be created is created before
+    the lockdown, when the ledger is constructed.
+    """
+    if not os.path.isdir(directory):
+        os.makedirs(directory, exist_ok=True)
+
+
 def _lock_wal_fd(fd: int, path: str) -> None:
     """Take an exclusive, non-blocking lock on an open WAL fd.
 
@@ -2204,7 +2219,7 @@ class CryptographicAuditLedger:
         if self._wal_handle is not None:
             return
         try:
-            os.makedirs(os.path.dirname(os.path.abspath(self.persistence_path)), exist_ok=True)
+            _ensure_directory(os.path.dirname(os.path.abspath(self.persistence_path)))
             # Create with owner-only permissions (0o600): the WAL holds forensic
             # audit metadata (tenant_id, model, request/response hashes, sampling
             # params). umask-default modes can leave it group/other-readable.
@@ -2221,8 +2236,16 @@ class CryptographicAuditLedger:
                 os.close(fd)
                 raise
             # Tighten a pre-existing WAL whose mode predates this hardening.
+            # Through the descriptor, not the path (REG-D103): rotation reopens
+            # the WAL after the seccomp lockdown, whose profile allows fchmod on
+            # a descriptor the process already holds but not chmod on a path.
+            # Windows has no os.fchmod before Python 3.13; it also has no
+            # seccomp filter, so the path form is safe there.
             try:
-                os.chmod(self.persistence_path, 0o600)
+                if hasattr(os, "fchmod"):
+                    os.fchmod(fd, 0o600)
+                else:
+                    os.chmod(self.persistence_path, 0o600)
             except OSError:
                 # Swallowed deliberately: tightening a pre-existing WAL's mode
                 # is opportunistic. A filesystem that refuses chmod (a mounted
@@ -2332,14 +2355,12 @@ class CryptographicAuditLedger:
         seq = self._next_segment_seq()
         segment_path = f"{self.persistence_path}.{seq:06d}"
         try:
+            # No chmod on the segment (REG-D103). It is the same inode as the
+            # active WAL, which _open_wal set to 0o600 through its descriptor,
+            # and a rename keeps the mode. The path-based chmod that used to
+            # re-assert it is outside the seccomp profile, so the first
+            # rotation after lockdown killed the gateway with SIGSYS.
             os.rename(self.persistence_path, segment_path)
-            try:
-                os.chmod(segment_path, 0o600)
-            except OSError:
-                # Swallowed deliberately: the segment inherits the active WAL's
-                # 0o600 through the rename, so this only re-asserts it. Failing
-                # rotation over it would be worse than the mode it cannot fix.
-                pass
             logger.info("Rotated WAL into archived segment %s", segment_path)
         except OSError as exc:
             logger.error("WAL rotation failed (%s) — continuing on active WAL", exc)
@@ -2755,7 +2776,7 @@ class CryptographicAuditLedger:
         else:
             # Safety fallback: _open_wal() failed at init time.
             try:
-                os.makedirs(os.path.dirname(os.path.abspath(self.persistence_path)), exist_ok=True)
+                _ensure_directory(os.path.dirname(os.path.abspath(self.persistence_path)))
             except OSError:
                 # Swallowed deliberately: this is already the fallback path for
                 # an _open_wal that failed. The os.open below is what decides

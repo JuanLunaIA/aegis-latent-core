@@ -16,7 +16,8 @@ The one deliberate exception is optional enrichment, which may be dropped withou
 
 | # | Failure | Caller observes | Evidence afterwards | Fail-closed? |
 | --- | --- | --- | --- | --- |
-| 1 | Admission rejected (auth, scope, bounds, WAF, rate limit) | `401` / `403` / `413` / `429` | A rejection record; **no governed evidence record** | Yes |
+| 1 | Admission rejected by the WAF, the retrieved-content scan or the rate limit | `403` / `429` | A rejection record, unless the ledger is faulted or the commit fails (`X-Aegis-Evidence-Status` says which); **no governed evidence record** | Yes |
+| 1a | Admission rejected by authentication, scope or the body-size bound | `401` / `403` / `413` | **No record of any kind** | Yes |
 | 2 | Upstream failure | `502` / `504`, or a terminal error response | Durable record of the governed outcome | Yes |
 | 3 | WAL append failure | `503`; the response is not returned | No record for this call | Yes |
 | 4 | `fsync` failure | `503` | Not durable, but the bytes are already in the WAL and replay reads them back as committed; see §3 | Yes |
@@ -30,12 +31,16 @@ The one deliberate exception is optional enrichment, which may be dropped withou
 | 12 | WAL replay finds corruption | Startup completes; health reports `wal_corrupt`; governed requests are refused with `503` | Chain truncated at the bad line; no further nodes appended | **Yes — see §4** |
 | 13 | MMR checkpoint absent, unreadable, stale or failing its checksum | Nothing; startup is slower | Full WAL replay reconstructs the same accumulator | Yes — see §7.1 |
 | 14 | MMR checkpoint restores to a root the WAL does not attest | Nothing; startup is slower | The fast-path accumulator is discarded and every leaf replayed | Yes — see §7.1 |
+| 15 | Request body unusable: invalid UTF-8 or JSON, an integer past Python's digit limit, not a JSON object, or nested more than 32 levels | `400` before the WAF; nothing forwarded | A rejection record for a depth refusal only; none for a body that does not parse or is not an object | Yes — see §1 |
+| 16 | A feature that runs after the seccomp lockdown needs a syscall outside the profile | The kernel kills the process (`SIGSYS`); in-flight requests get no response | Every node committed before the kill replays; the call being served has no record | Yes — see §7.2 |
 
 ---
 
 ## 1. Admission rejection
 
-A rejected request never reaches the upstream and never produces a governed evidence record. It produces a rejection record.
+A rejected request never reaches the upstream and never produces a governed evidence record. The WAF, the retrieved-content scan, the rate limit and the request-body depth bound also commit a rejection record (`CLM-060`, `CLM-118`). Authentication, scope and body-size refusals commit nothing, and neither does a body that does not parse: those happen before the gateway knows whose request it is or what it says. Earlier revisions of this document said every admission refusal produced a rejection record; that was never true of `401`, `413` or unparseable bodies.
+
+**Unusable bodies are `400`, not `500`** (`REG-D98`). The three model endpoints parse with one helper: invalid UTF-8, an integer past Python's digit limit and a parser recursion failure answer `Invalid JSON`; valid JSON that is not an object answers `Request body must be a JSON object`; nesting past 32 levels, measured iteratively before canonicalisation, answers `JSON nesting exceeds 32 levels` and is recorded, as the WAF depth guard recorded it before the bound existed. Before this, all five classes escaped as `500`, which tells an attacker where the parser gives way and counts a client error as a server fault.
 
 This distinction matters when reconciling counts: `aegis_requests_total` for `4xx` will exceed the number of governed evidence records, and that is correct rather than a gap. Do not build a reconciliation that expects one evidence record per received request.
 
@@ -110,6 +115,7 @@ Strict mode refuses to bind rather than starting degraded:
 | Identity HMAC key under 32 bytes | Refuses |
 | Configured PKCS#11 backend unavailable | Refuses |
 | WAL path already locked by another writer | Refuses with `WalWriterConflictError` |
+| `tsa_url` set while the seccomp filter is about to load | Refuses: RFC 3161 verification runs the `openssl` binary, which the profile forbids (`REG-D105`) |
 
 A refusal to start is the system working. The correct response is to read the error and fix the configuration, not to relax the setting that produced it.
 
@@ -120,6 +126,18 @@ A refusal to start is the system working. The correct response is to read the er
 The part that makes it safe rather than merely tolerant is the acceptance test. After restoring the checkpointed prefix and replaying the leaves committed after it, the result is accepted **only if the final root equals the root the last committed node recorded in the WAL**. Any disagreement discards the fast-path accumulator entirely and replays every leaf. A tampered or stale checkpoint therefore cannot introduce a root the WAL does not already attest — it can only make startup slower.
 
 The fast path is opt-in (`mmr_fast_restore=True`) because it trades away in-memory proofs for leaves it summarises; the file is written either way, so enabling it needs no migration. See [DOC-02 §6.1](../institutional/DOC-02_CRYPTOGRAPHIC_FORENSIC_BLUEPRINT.md).
+
+### 7.2 Features that run after the seccomp lockdown
+
+The seccomp filter's default action is `SCMP_ACT_KILL_PROCESS`. A syscall outside the profile does not return an error; the kernel kills the whole process. The profile was first measured on the request path, and three configured features that run only later were each killed the first time they ran (`REG-D103`–`REG-D105`, `CLM-119`):
+
+| Feature | What killed it | Now |
+|---|---|---|
+| WAL rotation (`max_wal_bytes > 0`, required by S3 archival) | `chmod` on the segment path; `mkdir` on a directory that already existed | `fchmod` on the open descriptor (in the default profile); `mkdir` only when the directory is missing |
+| S3 archival journal, cryptographic-shredding vault | SQLite's `pread64`, `pwrite64`, `ftruncate`, `geteuid`, and `fchown` when running as root | The lifespan loads `SQLITE_SYSCALLS` when archival, shredding or the SQLite HA sequence store is configured |
+| RFC 3161 anchoring | `execve` of the `openssl` binary | Refused at startup (§7); not supported behind the filter |
+
+A kill leaves the chain in the same state as any crash: every node whose `fsync` completed replays, and the call in flight has no record (row 16). The profile covers the flows that have been driven under the real filter; a path none of them reaches can still be outside it. `tests/test_seccomp_runtime_paths.py` runs each flow under the real filter in a child interpreter, because the filter is skipped inside pytest.
 
 ## 8. Recovery
 
@@ -135,7 +153,7 @@ The fast path is opt-in (`mmr_fast_restore=True`) because it trades away in-memo
 
 - **Byzantine storage** that acknowledges writes it discards.
 - **Operator tampering.** Detected on read, not prevented.
-- **Cross-replica consistency.** No such guarantee exists.
+- **Cross-replica consistency beyond the HA modes.** Without `AEGIS_HA_MODE`, replicas share nothing. With `active_passive` or `active_active`, a writer lease and a global sequence order the chains (`CLM-108`), and **their Redis or PostgreSQL outage stops admission**; this is not consensus over content, and it is untested against real storage classes, partitions or backend failover.
 - **Network partition between gateway and storage** beyond what the filesystem surfaces.
 - **Upstream correctness.** The gateway records what the provider returned; it does not evaluate it.
 

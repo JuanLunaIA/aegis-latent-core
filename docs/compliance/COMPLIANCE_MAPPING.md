@@ -132,6 +132,7 @@ A qualified reviewer should confirm the deployment scope, legal role, data categ
 ## Related documents
 
 - [`docs/CLAIMS_MATRIX.md`](../CLAIMS_MATRIX.md)
+- [`docs/compliance/CERTIFICATION_SCOPE.md`](CERTIFICATION_SCOPE.md): which frameworks have a certificate, and the function statement for those that have none
 - [`docs/privacy/DATA_RETENTION.md`](../privacy/DATA_RETENTION.md)
 - [`docs/security/THREAT_MODEL.md`](../security/THREAT_MODEL.md)
 - [`docs/BUYER_GUIDE_US.md`](../BUYER_GUIDE_US.md)
