@@ -136,3 +136,38 @@ def test_segment_sequence_continues_after_restart(tmp_path):
         assert len(all_segments) > len(first_round)
     finally:
         reopened.close()
+
+
+def test_a_pre_existing_wal_is_tightened_to_owner_only_on_open(tmp_path):
+    """A WAL left group/other-readable by an older build is narrowed to 0o600."""
+    wal = tmp_path / "loose.wal.jsonl"
+    wal.write_bytes(b"")
+    os.chmod(wal, 0o644)
+    ledger = CryptographicAuditLedger(str(wal), signing_key=_AUDIT_KEY)
+    try:
+        assert ledger._wal_handle is not None
+        assert stat.S_IMODE(os.stat(wal).st_mode) == 0o600
+    finally:
+        ledger.close()
+
+
+def test_the_wal_opens_where_os_has_no_fchmod(tmp_path, monkeypatch):
+    """Windows before Python 3.13 has no ``os.fchmod``; the ledger must still open.
+
+    REG-D103 moved the mode tightening onto the descriptor so it stays inside
+    the Linux seccomp profile. On Windows CPython 3.12 that call raised
+    ``AttributeError``, which the ``OSError`` guard did not catch, so every
+    ledger construction failed there. Without ``fchmod`` the path form is used:
+    those platforms have no seccomp filter to forbid it.
+    """
+    monkeypatch.delattr(os, "fchmod", raising=False)
+    wal = tmp_path / "nofchmod.wal.jsonl"
+    wal.write_bytes(b"")
+    os.chmod(wal, 0o644)
+    ledger = CryptographicAuditLedger(str(wal), signing_key=_AUDIT_KEY)
+    try:
+        assert ledger._wal_handle is not None
+        ledger.commit_state("s0000", 1.0, b"payload")
+        assert stat.S_IMODE(os.stat(wal).st_mode) == 0o600
+    finally:
+        ledger.close()

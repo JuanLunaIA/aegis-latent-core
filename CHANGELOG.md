@@ -143,7 +143,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Rotation now uses `fchmod` on the open descriptor and creates directories only when missing. The lifespan
   loads `SQLITE_SYSCALLS` (`fchown`, `ftruncate`, `geteuid`, `pread64`, `pwrite64`) only when archival,
   shredding or the SQLite sequence store is configured. `tests/test_seccomp_runtime_paths.py` runs each flow
-  under the real filter in a child interpreter.
+  under the real filter in a child interpreter. Windows before Python 3.13 has no `os.fchmod`; there, and
+  only there, the ledger keeps the path-based `chmod` (no seccomp filter exists on that platform). The first
+  version of this fix called `os.fchmod` unconditionally, and the Windows CI job caught every ledger failing
+  to open with `AttributeError`. `tests/test_wal_rotation.py` now covers a host without `os.fchmod`.
 - **Five malformed-body classes answered `500`** (`REG-D98`). One parser now answers `400` at all three
   model endpoints (see Changed). A chat text block whose `text` is null or a list no longer raises in the
   WAF.

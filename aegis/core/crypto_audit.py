@@ -2239,8 +2239,13 @@ class CryptographicAuditLedger:
             # Through the descriptor, not the path (REG-D103): rotation reopens
             # the WAL after the seccomp lockdown, whose profile allows fchmod on
             # a descriptor the process already holds but not chmod on a path.
+            # Windows has no os.fchmod before Python 3.13; it also has no
+            # seccomp filter, so the path form is safe there.
             try:
-                os.fchmod(fd, 0o600)
+                if hasattr(os, "fchmod"):
+                    os.fchmod(fd, 0o600)
+                else:
+                    os.chmod(self.persistence_path, 0o600)
             except OSError:
                 # Swallowed deliberately: tightening a pre-existing WAL's mode
                 # is opportunistic. A filesystem that refuses chmod (a mounted
