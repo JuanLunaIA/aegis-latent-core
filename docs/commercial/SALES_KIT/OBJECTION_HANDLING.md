@@ -28,7 +28,7 @@ This matters more here than in most categories. **The product is evidence integr
 
 **What actually mitigates it, today:**
 
-- **The source is open and complete** — Apache-2.0 from `5.0.2` (a source target, not yet published; every published release up to `5.0.1` is AGPLv3). You already have the code, the right to run it, modify it and fork it. No trigger event, no agent, no release condition. That is a stronger position than most proprietary escrow arrangements deliver, and you can verify it in ten seconds.
+- **The source is open and complete** — Apache-2.0 from `5.0.2` (a published release; every published release up to `5.0.1` is AGPLv3). You already have the code, the right to run it, modify it and fork it. No trigger event, no agent, no release condition. That is a stronger position than most proprietary escrow arrangements deliver, and you can verify it in ten seconds.
 - **The build is reproducible from the tree** — pinned Actions, hash-locked `requirements.lock`, committed `Cargo.lock`, SBOM generation.
 - **Pin and vendor.** Pin an exact commit and container digest and keep a verified copy.
 
@@ -78,7 +78,7 @@ This matters more here than in most categories. **The product is evidence integr
 
 **The truth:** this was the most common hard blocker, and it is a reasonable position. AGPLv3 §13 extends copyleft to network interaction, and many corporate policies restrict it categorically.
 
-**The honest current state, and this is the part that must not be soft-pedalled:** the `5.0.2` source is licensed under Apache-2.0, which has no network-copyleft clause, so for that source the objection no longer applies. **`5.0.2` is not yet published**: every published release up to and including `5.0.1` is AGPLv3 (or a commercial agreement, none of which is recorded in this repository), and a buyer pulling a published artifact today receives those terms. The relicence also still needs counsel's written confirmation of title (`CR-04`, `NOT STARTED`).
+**The honest current state, and this is the part that must not be soft-pedalled:** the `5.0.2` source is licensed under Apache-2.0, which has no network-copyleft clause, so for that source the objection no longer applies. **`5.0.2` is published**: every published release up to and including `5.0.1` is AGPLv3 (or a commercial agreement, none of which is recorded in this repository), and a buyer pulling a published artifact today receives those terms. The relicence also still needs counsel's written confirmation of title (`CR-04`, `NOT STARTED`).
 
 **The concrete step:** `CR-04`, counsel confirmation plus a support/services template, 2–4 weeks, ~$3–5k, then publication of `5.0.2` by the owner. **If you are the buyer waiting on this, say so and it moves to the front.**
 

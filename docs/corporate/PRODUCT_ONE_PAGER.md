@@ -63,7 +63,7 @@ No SaaS. No managed service. No vendor access to any deployment.
 
 ## Licence
 
-Apache-2.0 from `5.0.2` (a source target, not yet published). Releases up to and including `5.0.1` were published under AGPLv3 or a commercial licence and keep those terms. See [COMMERCIAL.md](../../COMMERCIAL.md).
+Apache-2.0 from the published `5.0.2` release. Releases up to and including `5.0.1` were published under AGPLv3 or a commercial licence and keep those terms. See [COMMERCIAL.md](../../COMMERCIAL.md).
 
 ---
 

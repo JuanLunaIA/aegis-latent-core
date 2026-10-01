@@ -107,7 +107,7 @@ Stated plainly, because a readiness document that omits these is not useful.
 
 | Artifact | Available |
 | --- | --- |
-| Source code under Apache-2.0 (`5.0.2` source target, not yet published; published releases up to `5.0.1` are AGPLv3 or commercial) | Yes |
+| Source code under Apache-2.0 (`5.0.2` published release; published releases up to `5.0.1` are AGPLv3 or commercial) | Yes |
 | SBOM (SPDX) | Yes, as release assets |
 | Build provenance attestations | Yes |
 | Signed release tag and signed images | Yes, verified per [Release Status](../RELEASE_STATUS.md) |

@@ -62,7 +62,7 @@ Written here, agreed before work begins, and evaluated literally. Each is a fals
 - A redaction measurement against their own corpus.
 - A written record of every acceptance criterion and its outcome.
 - Direct access to the maintainer for the duration.
-- **Everything learned, whether or not they proceed.** The source is open (Apache-2.0 from `5.0.2`, a source target not yet published; AGPLv3 for published releases up to `5.0.1`); the pilot does not gate anything they could not run alone.
+- **Everything learned, whether or not they proceed.** The source is open (Apache-2.0 from `5.0.2`, a published release; AGPLv3 for published releases up to `5.0.1`); the pilot does not gate anything they could not run alone.
 
 ## 4. What the vendor gets
 

@@ -1,7 +1,7 @@
 # Storage Requirements for the Evidence Path
 
 **Last verified:** 2026-09-21 UTC
-**Release baseline:** checked-out source baseline `v5.0.2` with fourteen synchronized anchors — an Apache-2.0 source target that is **not published**; the most recent published release is `v5.0.1`, **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a); the previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)
+**Release baseline:** checked-out source baseline `v5.0.2` with fourteen synchronized anchors — the published Apache-2.0 release; the most recent published release is `v5.0.1`, **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a); the previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0)
 
 The evidence guarantee Aegis offers is *commit before response*: for a governed non-streaming call the record is written, flushed, and synchronized before the response returns, and for an admitted stream one terminal summary is committed before the terminal marker is emitted. That guarantee is only as strong as the storage underneath it. This document states what the gateway actually does, what the substrate must provide, and how to choose one.
 

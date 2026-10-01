@@ -104,7 +104,7 @@ See [Enterprise Readiness](../enterprise/ENTERPRISE_READINESS.md) and [Pilot Pla
 
 Apache-2.0 is permissive: use, modification and redistribution, including commercial and closed-source use, are allowed on conditions — a copy of the License and the NOTICE with every distribution, a statement of changes, preserved notices, and a patent-termination clause. It provides the software AS IS and grants no right to the project's name or marks. Confirm with counsel for your specific case.
 
-**`5.0.2` is a source target and is not yet published.** Releases up to and including `5.0.1` were published under AGPLv3 (a copyleft licence with a network clause) or a separate commercial agreement, and keep those terms; a published artifact obtained today carries them. See [COMMERCIAL.md](../../COMMERCIAL.md) and [`docs/legal/LICENSE_TRANSITION_5.0.2.md`](../legal/LICENSE_TRANSITION_5.0.2.md).
+**`5.0.2` is the published Apache-2.0 release.** Releases up to and including `5.0.1` were published under AGPLv3 (a copyleft licence with a network clause) or a separate commercial agreement, and keep those terms; a published artifact obtained today carries them. See [COMMERCIAL.md](../../COMMERCIAL.md) and [`docs/legal/LICENSE_TRANSITION_5.0.2.md`](../legal/LICENSE_TRANSITION_5.0.2.md).
 
 Dependency licences are enumerated in the SPDX SBOMs published as release assets.
 

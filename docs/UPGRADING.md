@@ -144,9 +144,9 @@ A tool description or metadata string that contains a Layer-2 phrase can now cau
 
 **WAL rotation, S3 archival and cryptographic shredding now run behind the filter.** Nothing to configure. They were killed with SIGSYS on first use before (`CLM-119`). The larger profile is loaded only when archival, shredding or the SQLite HA sequence store is configured.
 
-## 11. The licence changes to Apache-2.0 (`5.0.2` source target, unpublished)
+## 11. The licence changes to Apache-2.0 (`5.0.2` published release)
 
-**What changed.** The `5.0.2` source is licensed under the Apache License, Version 2.0. Releases up to and including `5.0.1` were published under the GNU Affero General Public License v3 or a separate commercial licence and keep those terms. The licence of a copy is the licence it was published under, and an executed agreement keeps its own terms; a repository edit amends neither. `5.0.2` is not published, so no copy exists yet that carries the new terms ([Release Status](RELEASE_STATUS.md) §1.0c).
+**What changed.** The `5.0.2` source is licensed under the Apache License, Version 2.0. Releases up to and including `5.0.1` were published under the GNU Affero General Public License v3 or a separate commercial licence and keep those terms. The licence of a copy is the licence it was published under, and an executed agreement keeps its own terms; a repository edit amends neither. `5.0.2` is published, so no copy exists yet that carries the new terms ([Release Status](RELEASE_STATUS.md) §1.0c).
 
 **What it means for you, stated as obligations of the licence text, not as legal advice.** Apache-2.0 asks a redistributor to give recipients a copy of the licence, to keep the `NOTICE` attribution, to mark files it changed, and to keep copyright, patent and attribution notices. It does not carry the AGPLv3 network-use clause, so running a modified copy as a service does not by itself oblige you to offer its source. It grants no right to the name or marks (Section 6) and provides the software as is (Section 7). Whether a particular use or distribution complies is a question for your counsel.
 

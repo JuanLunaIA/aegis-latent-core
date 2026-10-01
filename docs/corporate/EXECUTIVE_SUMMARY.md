@@ -59,7 +59,7 @@ Stated here rather than in a footnote, because an executive reading only this pa
 
 ## Commercial path
 
-Licensed under Apache-2.0 from `5.0.2` (a source target, not yet published); releases up to and including `5.0.1` were published under AGPLv3 or a commercial licence and keep those terms. See [COMMERCIAL.md](../../COMMERCIAL.md).
+Licensed under Apache-2.0 from the published `5.0.2` release; releases up to and including `5.0.1` were published under AGPLv3 or a commercial licence and keep those terms. See [COMMERCIAL.md](../../COMMERCIAL.md).
 
 Apache-2.0 has no network-copyleft clause. What can be sold is support, pilots, hardening and assurance work, not a licence.
 
