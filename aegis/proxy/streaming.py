@@ -115,6 +115,16 @@ class TerminalCommitHandoff:
         self._dropped = 0
         self._outbox: TerminalOutbox | None = None
         self._landed: Callable[[str], bool] | None = None
+        self._outstanding = 0
+        self._admission_fault = ""
+
+    def admission_error(self, *, active_streams: int) -> str | None:
+        """Reserve teardown slots, including in-flight commits; latch failures."""
+        if self._admission_fault:
+            return self._admission_fault
+        if active_streams + self._outstanding >= self._max_pending:
+            return "terminal evidence handoff capacity exhausted"
+        return None
 
     @property
     def running(self) -> bool:
@@ -188,6 +198,8 @@ class TerminalCommitHandoff:
         spool_id = None
         if self._outbox is not None and replay is not None:
             spool_id = self._outbox.record(replay, summary)
+            if spool_id is None:
+                self._admission_fault = "terminal evidence spool unavailable"
         if not self.running:
             # Fallback for a caller that never started the worker (a test or a
             # library user).  The lifespan start is still the right home: this
@@ -197,6 +209,7 @@ class TerminalCommitHandoff:
         try:
             self._queue.put_nowait((commit, summary, spool_id))
         except asyncio.QueueFull:
+            self._admission_fault = "terminal evidence handoff overflow"
             self._dropped += 1
             observability.AUDIT_HANDOFF_DROPPED.inc()
             logger.error(
@@ -208,6 +221,7 @@ class TerminalCommitHandoff:
                 spool_id is not None,
             )
             return False
+        self._outstanding += 1
         return True
 
     async def stop(self, *, timeout: float) -> None:
@@ -252,9 +266,9 @@ class TerminalCommitHandoff:
                     await outbox.sync()
                 await commit(summary)
             except asyncio.CancelledError:
-                self._queue.task_done()
                 raise
             except Exception:
+                self._admission_fault = "terminal evidence commit failed"
                 observability.AUDIT_COMMIT_ERRORS.inc()
                 logger.exception(
                     "handed-off terminal commit failed (outcome=%s)", summary.terminal_outcome
@@ -269,6 +283,7 @@ class TerminalCommitHandoff:
                 if outbox is not None and spool_id is not None:
                     outbox.mark_done(spool_id)
             finally:
+                self._outstanding -= 1
                 self._queue.task_done()
 
 

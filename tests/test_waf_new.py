@@ -69,7 +69,7 @@ def test_inspect_payload_layer2_block():
     assert result.score == 0.95
 
 
-def test_inspect_payload_layer2_exception_allows():
+def test_inspect_payload_layer2_exception_refuses():
     waf = AegisWAF()
 
     mock_guard = MagicMock()
@@ -78,7 +78,8 @@ def test_inspect_payload_layer2_exception_allows():
 
     body = {"messages": [{"role": "user", "content": "benign text"}]}
     result = waf.inspect_payload(body)
-    assert result.allowed is True
+    assert result.allowed is False
+    assert "unavailable" in result.reason
 
 
 def test_inspect_payload_layer2_not_malicious_allows():
@@ -230,10 +231,10 @@ class TestWAFShadowMode:
         assert result.shadow_blocked is True
 
 
-# ── except Exception audit: WAF layer-2 fail-open log level ──────────────────
+# ── except Exception audit: WAF layer-2 failure policy and logging ────────────
 
 
-class TestWAFLayer2FailOpen:
+class TestWAFLayer2FailClosed:
     """Layer-2 (LLMGuard) errors must be logged at WARNING, not suppressed at DEBUG."""
 
     def test_layer2_exception_is_warning_not_debug(self, caplog):
@@ -249,13 +250,13 @@ class TestWAFLayer2FailOpen:
         with caplog.at_level(logging.WARNING, logger="aegis.proxy.waf"):
             result = waf.inspect_payload({"messages": [{"role": "user", "content": "hello"}]})
 
-        # Request still allowed (fail-open policy)
-        assert result.allowed is True
+        # An evaluation failure cannot be interpreted as a clean score.
+        assert result.allowed is False
         # But a WARNING-level record must exist
         warning_msgs = [r.message for r in caplog.records if r.levelno >= logging.WARNING]
         assert any("fail-open" in m.lower() or "layer-2" in m.lower() for m in warning_msgs)
 
-    def test_layer2_exception_allows_request(self):
+    def test_layer2_exception_refuses_request(self):
         from unittest.mock import MagicMock
 
         guard = MagicMock()
@@ -265,4 +266,4 @@ class TestWAFLayer2FailOpen:
         waf._guard = guard
 
         result = waf.inspect_payload({"messages": [{"role": "user", "content": "harmless"}]})
-        assert result.allowed is True
+        assert result.allowed is False

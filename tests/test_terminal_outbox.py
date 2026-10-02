@@ -541,7 +541,8 @@ async def test_a_full_queue_defers_the_commit_to_the_next_start(tmp_path: Path) 
 
 async def test_a_full_spool_costs_durability_not_the_in_memory_commit(tmp_path: Path) -> None:
     outbox = _open(tmp_path / "outbox.jsonl", max_bytes=1)
-    outbox.record(_context("fills"), _summary())  # size is now past the cap
+    assert outbox.record(_context("fills"), _summary()) is None
+    assert outbox.path.stat().st_size == 0  # even the first record must fit
     handoff = TerminalCommitHandoff()
     handoff.attach_outbox(outbox)
     handoff.start()
@@ -553,7 +554,7 @@ async def test_a_full_spool_costs_durability_not_the_in_memory_commit(tmp_path: 
     assert handoff.submit(commit, _summary(), replay=_context("over-1")) is True
     await handoff.stop(timeout=5.0)
 
-    assert outbox.skipped == 1
+    assert outbox.skipped == 2  # both records exceeded the one-byte budget
     assert len(landed) == 1
     outbox.close()
 

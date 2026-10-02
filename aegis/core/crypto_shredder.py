@@ -218,12 +218,24 @@ class CryptoShredder:
         if existing is not None:
             return existing
         key = AESGCM.generate_key(bit_length=256)
-        self._db.execute(
-            "INSERT INTO subject_keys (subject_id, key) VALUES (?, ?)",
-            (subject_id, key),
-        )
-        self._db.commit()
+        try:
+            self._db.execute(
+                "INSERT INTO subject_keys (subject_id, key) VALUES (?, ?)",
+                (subject_id, key),
+            )
+            self._db.commit()
+        except BaseException:
+            self._rollback_or_close()
+            raise
         return key
+
+    def _rollback_or_close(self) -> None:
+        """Never reuse an indeterminate transaction after a vault write fails."""
+        try:
+            self._db.rollback()
+        except BaseException:
+            self._db.close()
+            raise
 
     # ── public surface ──────────────────────────────────────────────────
 
@@ -318,8 +330,12 @@ class CryptoShredder:
                 scratch[i] = 0
             del scratch
 
-            self._db.execute("DELETE FROM subject_keys WHERE subject_id = ?", (subject_id,))
-            self._db.commit()
+            try:
+                self._db.execute("DELETE FROM subject_keys WHERE subject_id = ?", (subject_id,))
+                self._db.commit()
+            except BaseException:
+                self._rollback_or_close()
+                raise
             # Rewrites the database file, dropping the freed page that held the
             # key rather than leaving it allocated. This is a smaller claim
             # than sanitisation: see the module docstring.

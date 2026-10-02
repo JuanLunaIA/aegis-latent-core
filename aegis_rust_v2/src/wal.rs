@@ -255,6 +255,11 @@ impl RustWal {
     /// Returns the byte offset of the written frame.
     pub fn append(&self, payload: &str) -> PyResult<u64> {
         let data = payload.as_bytes();
+        if data.is_empty() {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "RustWal empty payload is reserved for the recovery terminator",
+            ));
+        }
         let payload_len = u32::try_from(data.len()).map_err(|_| {
             PyErr::new::<pyo3::exceptions::PyOverflowError, _>(
                 "RustWal payload exceeds the u32 frame-length limit",
@@ -522,6 +527,20 @@ mod tests {
         assert!(wal.append("5").is_err());
         assert_eq!(wal.write_pos(), committed);
         assert_eq!(wal.read_all().unwrap(), vec!["1234".to_string()]);
+    }
+
+    #[test]
+    fn empty_append_cannot_hide_later_committed_records() {
+        pyo3::Python::initialize();
+        let file = NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap();
+        let wal = RustWal::open(path, Some(4096)).unwrap();
+        assert!(wal.append("").is_err());
+        assert_eq!(wal.write_pos(), 0);
+        wal.append("committed").unwrap();
+        drop(wal);
+        let recovered = RustWal::open(path, Some(4096)).unwrap();
+        assert_eq!(recovered.read_all().unwrap(), vec!["committed".to_string()]);
     }
 
     #[test]

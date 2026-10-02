@@ -426,9 +426,21 @@ class TerminalOutbox:
     def _append(self, data: bytes) -> None:
         if self._fd is None:
             raise OSError("terminal outbox is closed")
-        written = os.write(self._fd, data)
-        if written != len(data):
-            raise OSError(f"short write to terminal outbox ({written}/{len(data)} bytes)")
+        # Calls are serialized on the event-loop thread. Restore the complete
+        # prefix on a partial write so the next record cannot join a torn line.
+        start = os.fstat(self._fd).st_size
+        try:
+            written = os.write(self._fd, data)
+            if written != len(data):
+                raise OSError(f"short write to terminal outbox ({written}/{len(data)} bytes)")
+        except OSError:
+            try:
+                os.ftruncate(self._fd, start)
+                os.fsync(self._fd)
+            except OSError:
+                # An indeterminate tail must never be extended in this process.
+                self.close()
+            raise
         self._size += written
 
     def record(self, context: TerminalReplayContext, summary: TerminalSummary) -> str | None:
@@ -459,7 +471,15 @@ class TerminalOutbox:
                     redaction_hits=dict(summary.redaction_hits),
                 ),
             )
-            self._append(self._pending_line(entry))
+            line = self._pending_line(entry)
+            if self._size + len(line) > self._max_bytes:
+                self.compact()
+            if self._size + len(line) > self._max_bytes:
+                self.skipped += 1
+                observability.TERMINAL_OUTBOX_ERRORS.inc()
+                logger.error("terminal outbox record exceeds remaining byte budget")
+                return None
+            self._append(line)
         except Exception:  # teardown must never lose the in-memory commit to a spool error
             self.errors += 1
             observability.TERMINAL_OUTBOX_ERRORS.inc()
@@ -486,7 +506,13 @@ class TerminalOutbox:
         if self._pending.pop(entry_id, None) is None:
             return
         try:
-            self._append(self._line({"v": RECORD_VERSION, "op": "done", "id": entry_id}))
+            line = self._line({"v": RECORD_VERSION, "op": "done", "id": entry_id})
+            if self._size + len(line) > self._max_bytes:
+                # The pending set already omits this completed record. Atomic
+                # compaction can persist that fact without exceeding the cap.
+                self.compact()
+                return
+            self._append(line)
             if self._size >= self._compact_at:
                 self.compact()
         except Exception:
@@ -525,29 +551,32 @@ class TerminalOutbox:
             return
         tmp = self._path.with_name(self._path.name + ".compact")
         data = b"".join(self._pending_line(entry) for entry in self._pending.values())
+        new_fd: int | None = None
         try:
-            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-            try:
-                view = memoryview(data)
-                while view:
-                    view = view[os.write(fd, view) :]
-                os.fsync(fd)
-            finally:
-                os.close(fd)
+            # Keep the replacement descriptor open across rename; otherwise a
+            # failed directory fsync/reopen leaves _fd pointing at the unlinked
+            # old inode and later record() falsely reports persistent success.
+            new_fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_APPEND, 0o600)
+            view = memoryview(data)
+            while view:
+                written = os.write(new_fd, view)
+                if written <= 0:
+                    raise OSError("zero-length write during outbox compaction")
+                view = view[written:]
+            os.fsync(new_fd)
             os.replace(tmp, self._path)
+            old_fd, self._fd = self._fd, new_fd
+            new_fd = None  # ownership transferred even if the barrier fails
+            self._size = len(data)
+            os.close(old_fd)
             _fsync_directory(self._path.parent)
-            new_fd = os.open(self._path, os.O_WRONLY | os.O_APPEND)
         except Exception:
             self.errors += 1
             observability.TERMINAL_OUTBOX_ERRORS.inc()
-            logger.exception("terminal outbox compaction failed; continuing on the old spool")
-            return
-        old_fd, self._fd = self._fd, new_fd
-        self._size = len(data)
-        try:
-            os.close(old_fd)
-        except OSError:
-            logger.warning("terminal outbox: closing the pre-compaction descriptor failed")
+            logger.exception("terminal outbox compaction failed; durability not established")
+        finally:
+            if new_fd is not None:
+                os.close(new_fd)
 
     def close(self) -> None:
         if self._fd is not None:

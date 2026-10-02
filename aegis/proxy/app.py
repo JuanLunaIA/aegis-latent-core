@@ -1513,6 +1513,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             try:
                 from aegis.core.seccomp_guard import (
                     SQLITE_SYSCALLS,
+                    TERMINAL_OUTBOX_SYSCALLS,
                     SeccompGuard,
                     profile_with,
                 )
@@ -1525,10 +1526,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     or cfg.s3_archive_enabled
                     or cfg.enable_cryptographic_shredding
                 )
+                extra_syscalls = SQLITE_SYSCALLS if sqlite_after_lockdown else frozenset()
+                if cfg.terminal_outbox_enabled:
+                    extra_syscalls |= TERMINAL_OUTBOX_SYSCALLS
                 guard = (
-                    SeccompGuard(profile_with(SQLITE_SYSCALLS))
-                    if sqlite_after_lockdown
-                    else SeccompGuard()
+                    SeccompGuard(profile_with(extra_syscalls)) if extra_syscalls else SeccompGuard()
                 )
                 if cfg.tsa_url and not guard.is_sandbox:
                     # REG-D105: RFC 3161 verification runs the openssl binary,
@@ -1818,6 +1820,31 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             ),
         }
 
+    async def _validated_session(
+        request: Request, candidate: object, body: dict[str, Any], tenant_id: str
+    ) -> str:
+        # Session IDs are echoed as HTTP headers and used as mapping keys.
+        # Reject invalid values before quota, forwarding, or accepted evidence.
+        if (
+            isinstance(candidate, str)
+            and 1 <= len(candidate) <= 256
+            and all(0x21 <= ord(char) <= 0x7E for char in candidate)
+        ):
+            return candidate
+        evidence = await _commit_rejection_evidence(
+            state,
+            rejection_code=422,
+            reason_category="invalid_session_id",
+            request_bytes=_rejection_evidence_bytes(body),
+            tenant_id=tenant_id,
+            endpoint=request.url.path,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail="Session ID must contain 1..256 visible ASCII characters",
+            headers=evidence,
+        )
+
     def _requested_output_tokens(body: dict[str, Any]) -> int:
         value = body.get("max_completion_tokens", body.get("max_tokens"))
         if value is None:
@@ -1959,6 +1986,46 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         )
         error_response.headers.update(_proof_headers(node))
         return error_response
+
+    async def _settle_or_refuse(
+        reservation: TokenReservation,
+        response_json: object,
+        *,
+        provider: str,
+        request_id: str,
+        session_id: str,
+        raw_body: bytes,
+        model: str,
+        request_start: float,
+        endpoint: str,
+        tenant_id: str,
+    ) -> RateLimitDecision | Response | None:
+        """Do not expose provider output when final quota accounting fails."""
+        try:
+            decision = await _settle_budget(reservation, response_json, provider=provider)
+        except (RateLimitBackendUnavailableError, LegacyRateLimitBackendUnavailable):
+            observability.RATELIMIT_BACKEND_ERRORS.inc()
+            code = status.HTTP_503_SERVICE_UNAVAILABLE
+            content = b'{"detail":"Rate-limit settlement unavailable; response withheld"}'
+        else:
+            if decision is None or decision.allowed:
+                return decision
+            observability.RATELIMIT_REJECTIONS.inc()
+            code = status.HTTP_429_TOO_MANY_REQUESTS
+            content = b'{"detail":"Generated-token quota exceeded; response withheld"}'
+        # This is a post-forwarding terminal error, not a pre-admission
+        # rejection. The durable record covers the bytes actually returned.
+        return await _durable_error_response(
+            request_id=request_id,
+            session_id=session_id,
+            raw_body=raw_body,
+            model=model,
+            request_start=request_start,
+            status_code=code,
+            content=content,
+            endpoint=endpoint,
+            tenant_id=tenant_id,
+        )
 
     def _enqueue_analysis(
         rid: str,
@@ -2133,6 +2200,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             or body.get("user")
             or str(uuid.uuid4())
         )
+        session_id = await _validated_session(request, session_id, body, principal.tenant_id)
         tenant_id = principal.tenant_id
         request_id = str(uuid.uuid4())
 
@@ -2298,6 +2366,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                         "has memory for it."
                     ),
                 ) from exc
+            handoff_error = state.terminal_handoff.admission_error(
+                active_streams=state.stream_gate.active - 1
+            )
+            if handoff_error:
+                state.stream_gate.release()
+                raise HTTPException(status_code=503, detail=handoff_error)
             return StreamingResponse(
                 guarded_stream(bounded_stream, state.stream_gate),
                 media_type="text/event-stream",
@@ -2368,7 +2442,20 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
 
         resp_json = upstream.json()
-        settled = await _settle_budget(reservation, resp_json, provider="openai")
+        settled = await _settle_or_refuse(
+            reservation,
+            resp_json,
+            provider="openai",
+            request_id=request_id,
+            session_id=session_id,
+            raw_body=raw_body,
+            model=body.get("model", "unknown"),
+            request_start=request_start,
+            endpoint="chat.completions",
+            tenant_id=tenant_id,
+        )
+        if isinstance(settled, Response):
+            return settled
         response_rate_decision = settled or rate_decision
         # PHI de-identification on the hot response path: scrub before returning to client.
         resp_json = _apply_phi_scrub_response(resp_json, state)
@@ -2479,6 +2566,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             or request.headers.get("x-session-id")
             or str(uuid.uuid4())
         )
+        session_id = await _validated_session(request, session_id, body, principal.tenant_id)
         tenant_id = principal.tenant_id
         request_id = str(uuid.uuid4())
         rate_decision, reservation = await _reserve_budget(principal, body)
@@ -2610,6 +2698,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                         "has memory for it."
                     ),
                 ) from exc
+            handoff_error = state.terminal_handoff.admission_error(
+                active_streams=state.stream_gate.active - 1
+            )
+            if handoff_error:
+                state.stream_gate.release()
+                raise HTTPException(status_code=503, detail=handoff_error)
             return StreamingResponse(
                 guarded_stream(bounded, state.stream_gate),
                 media_type="text/event-stream",
@@ -2671,7 +2765,20 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 endpoint="anthropic.messages",
                 tenant_id=tenant_id,
             )
-        settled = await _settle_budget(reservation, response_json, provider="anthropic")
+        settled = await _settle_or_refuse(
+            reservation,
+            response_json,
+            provider="anthropic",
+            request_id=request_id,
+            session_id=session_id,
+            raw_body=raw_body,
+            model=body["model"],
+            request_start=request_start,
+            endpoint="anthropic.messages",
+            tenant_id=tenant_id,
+        )
+        if isinstance(settled, Response):
+            return settled
         response_rate_decision = settled or rate_decision
         response_json, response_scrubbed, response_scrub_method = _scrub_anthropic_payload(
             response_json, state
@@ -2757,6 +2864,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             or request.headers.get("x-session-id")
             or str(uuid.uuid4())
         )
+        session_id = await _validated_session(request, session_id, body, principal.tenant_id)
         tenant_id = principal.tenant_id
         request_id = str(uuid.uuid4())
 
@@ -2833,7 +2941,20 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             response_json = upstream.json()
         except Exception:
             response_json = None
-        settled = await _settle_budget(reservation, response_json, provider="openai")
+        settled = await _settle_or_refuse(
+            reservation,
+            response_json,
+            provider="openai",
+            request_id=request_id,
+            session_id=session_id,
+            raw_body=raw_body,
+            model=body.get("model", "unknown"),
+            request_start=completions_start,
+            endpoint="completions",
+            tenant_id=tenant_id,
+        )
+        if isinstance(settled, Response):
+            return settled
         response_rate_decision = settled or rate_decision
         evidence_node = await _commit_evidence(
             request_id,

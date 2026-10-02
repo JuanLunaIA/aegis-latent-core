@@ -58,6 +58,8 @@ from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any, Protocol
 
+import anyio
+
 if TYPE_CHECKING:
     from aegis.config import AegisSettings
     from aegis.core.crypto_audit import AuditNode
@@ -784,8 +786,11 @@ class SQLiteSequenceStore:
         self, chain_id: str, epoch: int, items: Sequence[PendingNode]
     ) -> list[SequenceEntry]:
         async with self._lock:
-            await self._db.execute("BEGIN IMMEDIATE")
+            db = self._db
             try:
+                # aiosqlite's worker may execute BEGIN after the awaiting
+                # coroutine is cancelled. Cleanup must cover BEGIN itself.
+                await db.execute("BEGIN IMMEDIATE")
                 todo = plan_append(await self._last(chain_id), epoch, items)
                 cursor = await self._db.execute(_SQLITE_TIP)
                 row = await cursor.fetchone()
@@ -799,7 +804,30 @@ class SQLiteSequenceStore:
                 await self._db.execute("COMMIT")
                 return entries
             except BaseException:
-                await self._db.execute("ROLLBACK")
+                # rollback() is a no-op after an acknowledged or indeterminate
+                # COMMIT; unlike SQL ROLLBACK it does not mask cancellation with
+                # "no transaction is active". Its worker queue also orders it
+                # after a still-pending BEGIN/COMMIT.
+                async def cleanup() -> None:
+                    try:
+                        await db.rollback()
+                    except BaseException:
+                        # Never reuse a connection with unknown transaction
+                        # state. Closing SQLite rolls back an active transaction.
+                        self._db = None
+                        await db.close()
+                        raise
+
+                with anyio.CancelScope(shield=True):
+                    cleanup_task = asyncio.create_task(cleanup())
+                    while not cleanup_task.done():
+                        try:
+                            await asyncio.shield(cleanup_task)
+                        except asyncio.CancelledError:
+                            # Repeated Task.cancel() must not release the store
+                            # lock while its worker still owns a transaction.
+                            continue
+                    cleanup_task.result()
                 raise
 
     async def entries(self, after_seq: int = 0, limit: int = 1000) -> list[SequenceEntry]:
@@ -1010,28 +1038,55 @@ class GlobalSequencer:
         self._diverged = ""
         self._last_error = ""
         self._sequenced = 0
+        self._stopped = False
         self._loop: asyncio.AbstractEventLoop | None = None
         self._wake: asyncio.Event | None = None
         self._task: asyncio.Task[None] | None = None
 
     def notify(self, node: AuditNode) -> None:
         with self._pending_lock:
+            if self._stopped:
+                return  # The WAL is authoritative; a later start backfills it.
+            previous = self._pending.get(node.prev_hash)
+            if previous is not None and previous[0] != node.node_hash:
+                self._diverged = "conflicting nodes share a predecessor"
+                return
             self._pending[node.prev_hash] = (node.node_hash, node.timestamp)
         loop, wake = self._loop, self._wake
         if loop is not None and wake is not None:
-            loop.call_soon_threadsafe(wake.set)
+            try:
+                loop.call_soon_threadsafe(wake.set)
+            except RuntimeError:
+                # The loop can close between taking the reference and enqueueing.
+                # Preserve pending state for restart, but never affect a commit.
+                self._last_error = "sequencer event loop is closed"
 
     async def start(self, wal_nodes: Callable[[], Iterable[AuditNode]]) -> None:
         """Open the store, sequence everything the WAL has that the sequence lacks,
         then keep following. Admission stays refused until the backlog is within
         the lag bound."""
+        if self._task is not None:
+            raise RuntimeError("global sequencer is already started")
+        with self._pending_lock:
+            self._stopped = False
+        self._backfilled = False
         self._loop = asyncio.get_running_loop()
         self._wake = asyncio.Event()
-        await self._store.open()
-        await self._backfill(wal_nodes)
+        try:
+            await self._store.open()
+            await self._backfill(wal_nodes)
+        except BaseException:
+            with anyio.CancelScope(shield=True):
+                await self.stop()
+            raise
         self._task = asyncio.create_task(self._run(), name=f"aegis-sequencer-{self._chain_id}")
 
     async def stop(self) -> None:
+        with self._pending_lock:
+            self._stopped = True
+            self._pending.clear()
+        self._backfilled = False
+        self._loop = None
         if self._task is not None:
             self._task.cancel()
             try:
@@ -1040,6 +1095,7 @@ class GlobalSequencer:
                 pass  # we cancelled it: this is the expected way for the task to end
             self._task = None
         await self._store.close()
+        self._wake = None
 
     async def _backfill(self, wal_nodes: Callable[[], Iterable[AuditNode]]) -> None:
         last = await self._store.last_for_chain(self._chain_id)
@@ -1141,6 +1197,8 @@ class GlobalSequencer:
         return max(0.0, self._wall_clock() - oldest)
 
     def admission_error(self) -> str | None:
+        if self._stopped:
+            return "global sequencer is stopped"
         if self._diverged:
             return f"global sequence diverged: {self._diverged}"
         if not self._backfilled:
