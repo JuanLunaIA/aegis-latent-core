@@ -404,7 +404,7 @@ def hypothesis_strategy() -> Any:
 
     transforms = list(EvasionTransform)
 
-    @st.composite  # type: ignore[untyped-decorator]
+    @st.composite
     def _strategy(draw: Any) -> str:
         seed = draw(st.sampled_from(_SEEDS))
         transform = draw(st.sampled_from(transforms))
