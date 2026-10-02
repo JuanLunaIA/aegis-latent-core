@@ -327,7 +327,13 @@ def verify_seal(package_dict: dict[str, Any]) -> bool:
         ``integrity_seal``; ``False`` on any mismatch or missing field.
     """
     stored = package_dict.get("integrity_seal", "")
-    if not stored:
+    # A SHA-256 hexdigest is exactly 64 lowercase ASCII hex characters.
+    # Reject malformed JSON field types and surrogates before encoding them.
+    if (
+        not isinstance(stored, str)
+        or len(stored) != 64
+        or any(char not in "0123456789abcdef" for char in stored)
+    ):
         return False
     return hmac_safe_compare(stored, _compute_seal(package_dict))
 

@@ -73,10 +73,11 @@ class RateLimitBackend(Protocol):
 class _BucketState:
     tokens: float
     updated_at: float
+    spec: BucketSpec
 
 
 class LocalRateLimitBackend:
-    """Deterministic lock-protected backend with bounded LRU cardinality."""
+    """Bounded backend; only fully replenished LRU buckets may be reclaimed."""
 
     def __init__(self, *, max_buckets: int = 10_000) -> None:
         if max_buckets < 2:
@@ -96,7 +97,20 @@ class LocalRateLimitBackend:
             missing = sum(charge.key not in self._buckets for charge in charges)
             protected = {charge.key for charge in charges}
             while len(self._buckets) + missing > self.max_buckets:
-                evictable = next((key for key in self._buckets if key not in protected), None)
+                # Forgetting a depleted bucket would grant its capacity again on
+                # the next request. Reject cardinality pressure instead of
+                # turning an LRU cache miss into a quota reset.
+                evictable = next(
+                    (
+                        key
+                        for key, state in self._buckets.items()
+                        if key not in protected
+                        and state.tokens
+                        + max(0.0, now - state.updated_at) * state.spec.refill_per_second
+                        >= state.spec.capacity
+                    ),
+                    None,
+                )
                 if evictable is None:
                     return tuple(BucketResult(False, 0.0, math.inf) for _charge in charges)
                 del self._buckets[evictable]
@@ -122,7 +136,9 @@ class LocalRateLimitBackend:
                     new_tokens = min(charge.spec.capacity, max(0.0, tokens - charge.amount))
                 else:
                     new_tokens = tokens
-                self._buckets[charge.key] = _BucketState(new_tokens, now)
+                previous = self._buckets.get(charge.key)
+                updated_at = max(now, previous.updated_at) if previous is not None else now
+                self._buckets[charge.key] = _BucketState(new_tokens, updated_at, charge.spec)
                 self._buckets.move_to_end(charge.key)
                 deficit = max(0.0, charge.amount - tokens) if charge.amount > 0 else 0.0
                 retry_after = (
@@ -160,6 +176,7 @@ local now_parts = redis.call('TIME')
 local now = tonumber(now_parts[1]) + tonumber(now_parts[2]) / 1000000
 local count = #KEYS
 local available = {}
+local updated_times = {}
 local allowed = 1
 for i = 1, count do
   local offset = (i - 1) * 3
@@ -168,10 +185,13 @@ for i = 1, count do
   local amount = tonumber(ARGV[offset + 3])
   local values = redis.call('HMGET', KEYS[i], 'tokens', 'updated_at')
   local tokens = capacity
+  local updated_at = now
   if values[1] and values[2] then
+    updated_at = math.max(now, tonumber(values[2]))
     local elapsed = math.max(0, now - tonumber(values[2]))
     tokens = math.min(capacity, tonumber(values[1]) + elapsed * refill)
   end
+  updated_times[i] = updated_at
   available[i] = tokens
   if amount > 0 and tokens + 0.000000000001 < amount then allowed = 0 end
 end
@@ -190,12 +210,22 @@ for i = 1, count do
   if deficit > 0 then
     if refill > 0 then retry = deficit / refill else retry = -1 end
   end
-  redis.call('HSET', KEYS[i], 'tokens', updated, 'updated_at', now)
-  local ttl = 3600
-  if refill > 0 then ttl = math.max(1, math.ceil((capacity / refill) * 2)) end
-  redis.call('EXPIRE', KEYS[i], ttl)
-  table.insert(result, updated)
-  table.insert(result, retry)
+  if retry == math.huge then retry = -1 end
+  redis.call('HSET', KEYS[i], 'tokens', updated, 'updated_at', updated_times[i])
+  -- No refill means no safe expiry. Oversized TTLs must not cause EXPIRE
+  -- to error after HSET (Lua execution is atomic, but errors do not roll back).
+  local ttl = math.huge
+  if refill > 0 then
+    ttl = math.max(1, math.ceil((capacity / refill) * 2 + updated_times[i] - now))
+  end
+  if ttl <= 2147483647 then
+    redis.call('EXPIRE', KEYS[i], ttl)
+  else
+    redis.call('PERSIST', KEYS[i])
+  end
+  -- RESP2 converts Lua numbers to integers. Bulk strings preserve fractions.
+  table.insert(result, string.format('%.17g', updated))
+  table.insert(result, string.format('%.17g', retry))
 end
 return result
 """
@@ -236,13 +266,27 @@ return result
             raise RateLimitBackendUnavailableError(
                 "distributed rate-limit backend returned invalid data"
             )
-        allowed = int(raw[0]) == 1
-        results: list[BucketResult] = []
-        for index in range(len(charges)):
-            remaining = float(raw[1 + index * 2])
-            retry_value = float(raw[2 + index * 2])
-            retry_after = math.inf if retry_value < 0 else retry_value
-            results.append(BucketResult(allowed, remaining, retry_after))
+        try:
+            flag = float(raw[0])
+            if flag not in (0.0, 1.0):
+                raise ValueError("invalid admission flag")
+            allowed = flag == 1.0
+            results: list[BucketResult] = []
+            for index, charge in enumerate(charges):
+                remaining = float(raw[1 + index * 2])
+                retry_value = float(raw[2 + index * 2])
+                if not math.isfinite(remaining) or not 0 <= remaining <= charge.spec.capacity:
+                    raise ValueError("invalid remaining quota")
+                if not math.isfinite(retry_value) or (retry_value < 0 and retry_value != -1):
+                    raise ValueError("invalid retry interval")
+                if allowed and retry_value != 0:
+                    raise ValueError("admitted charge with a retry interval")
+                retry_after = math.inf if retry_value == -1 else retry_value
+                results.append(BucketResult(allowed, remaining, retry_after))
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise RateLimitBackendUnavailableError(
+                "distributed rate-limit backend returned invalid data"
+            ) from exc
         return tuple(results)
 
     async def close(self) -> None:
@@ -347,10 +391,11 @@ class TokenReservation:
                 raise RuntimeError("token reservation is already closed")
             if actual_tokens < self._charged:
                 raise ValueError("actual token count cannot be below observed streamed usage")
-            overage = max(0, actual_tokens - self.reserved)
-            refund = max(0, self.reserved - actual_tokens)
+            # Stream charges have already paid any observed overage. Settle
+            # against the amount actually debited, not the initial reservation.
+            already_debited = max(self.reserved, self._charged)
             decision = await self._limiter._charge_tokens(
-                self.tenant_id, self.credential_id, overage - refund
+                self.tenant_id, self.credential_id, actual_tokens - already_debited
             )
             if decision.allowed:
                 self._charged = actual_tokens

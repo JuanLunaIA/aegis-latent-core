@@ -17,7 +17,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Durability barriers during WAL rotation (`aegis/core/crypto_audit.py`)**: Fsync failures during segment rotation now immediately abort the rotation and latch failure onto the commit engine (`_commit_engine.fail`), preventing unfsynced segments from being renamed. On POSIX systems, directory fsync is enforced after segment creation/rename to guarantee filesystem namespace persistence prior to notifying waiters.
+- **Fail-closed WAF Layer-2 evaluation & mixed-spacing evasion detection (`aegis/proxy/waf.py`)**: Unhandled exceptions in layer-2 WAF scoring now fail closed (`allowed=False`, `reason="Layer-2 evaluation unavailable"`), eliminating silent bypasses unless explicitly configured in shadow mode. Added `_MIXED_SPACED_RUN` regular expression to detect prompt injection evasion using mixed punctuation delimiters.
+- **O(log N) MMR consistency proof reconstruction & strict root validation (`aegis/core/mmr.py`)**: `get_consistency_proof` now descends only the mountain straddling the prefix boundary in O(log N) rather than scanning all nodes. Strictly validates `old_count` within bounds, verifies `old_root == "0"*64` for empty accumulators, and raises `ValueError` on root mismatch or pruned nodes. `verify_inclusion` now constructs and validates canonical `MMRInclusionProofV1`.
+- **CryptoShredder transactional safety (`aegis/core/crypto_shredder.py`)**: Automatic transaction rollback and connection closure on subject key generation or shred deletion errors, preventing reuse of indeterminate database states.
+- **RFC 3161 PKIStatus validation (`aegis/core/rfc3161_timestamper.py`)**: Strictly enforces single-octet DER INTEGER encodings within 0..5, preventing empty octets from parsing as status 0.
+- **ISO 27037 integrity seal format validation (`aegis/core/iso27037_evidence.py`)**: Strictly verifies 64-character lowercase hexadecimal format before constant-time comparison.
+- **Terminal outbox durability & compaction hardening (`aegis/proxy/terminal_outbox.py`, `aegis/core/seccomp_guard.py`)**: Atomically rolls back prefix on short writes via `ftruncate`, enforces byte budgets with pre-append compaction, preserves active file descriptors across replace, and adds `TERMINAL_OUTBOX_SYSCALLS` (`ftruncate`, `dup`, `dup3`, `chmod`, `fchmodat`) to the seccomp profile.
+- **GlobalSequencer divergence detection & lifecycle hardening (`aegis/core/ha.py`)**: Detects conflicting nodes sharing a predecessor (`prev_hash`) and marks sequence as diverged; safely handles closed event loops and stopped states during admission.
+- **RustWal payload validation (`aegis_rust_v2/src/wal.rs`)**: Explicitly rejects empty string payloads to reserve empty frames for the recovery terminator.
+- **Comprehensive hardening test suites**: 16 dedicated test suites covering app budgets, timestamp verification, cryptographic vault isolation, HA sequencer divergence, stream admission, input policies, and WAL durability barriers.
+
 
 ## [5.0.2] — 2026-10-01
 

@@ -70,40 +70,33 @@ class TestConsistencyProofBranches:
     def test_old_count_zero_returns_empty_proof(self):
         """Trivial case: old_count=0 → (current_root, [])."""
         mmr = _mmr_with_leaves(b"X", b"Y")
-        current_root, proof = mmr.get_consistency_proof("ignored", 0)
+        current_root, proof = mmr.get_consistency_proof("0" * 64, 0)
         assert current_root == mmr.get_root_hash()
         assert proof == []
 
     def test_old_count_equals_current_returns_current_peaks(self):
         """Trivial case: old_count == leaf_count → proof is current peaks."""
         mmr = _mmr_with_leaves(b"P", b"Q", b"R")
-        root, proof = mmr.get_consistency_proof("ignored", mmr._leaf_count)
+        root, proof = mmr.get_consistency_proof(mmr.get_root_hash(), mmr._leaf_count)
         assert root == mmr.get_root_hash()
         assert proof == [p.hash for p in mmr.peaks]
 
-    def test_old_root_mismatch_logs_warning(self, caplog):
-        """When reconstructed old_root ≠ provided old_root → warning is logged."""
-        import logging
-
+    def test_old_root_mismatch_is_rejected(self):
+        """Wrong prefix roots are errors, never advisory warnings."""
         mmr = _mmr_with_leaves(b"A", b"B", b"C", b"D")
-        with caplog.at_level(logging.WARNING, logger="aegis.core.mmr"):
+        with pytest.raises(ValueError, match="old_root mismatch"):
             _, _ = mmr.get_consistency_proof("wrong_root_hash" * 4, 2)
-        assert any("old_root mismatch" in r.message for r in caplog.records)
 
-    def test_reconstruct_fails_fallback_to_current_peaks(self, monkeypatch):
-        """
-        If _reconstruct_peaks_at raises, the except block falls back to
-        current peaks (lines ~203-206).
-        """
+    def test_reconstruct_failure_is_rejected(self, monkeypatch):
+        """Unavailable prefix history must not return current peaks as proof."""
         mmr = _mmr_with_leaves(b"A", b"B", b"C", b"D")
 
         def _raise(*_a: Any, **_kw: Any) -> None:
             raise RuntimeError("simulated reconstruction failure")
 
         monkeypatch.setattr(mmr, "_reconstruct_peaks_at", _raise)
-        root, proof = mmr.get_consistency_proof("any", 2)
-        assert root == mmr.get_root_hash()
-        assert proof == [p.hash for p in mmr.peaks]
+        with pytest.raises(ValueError, match="Cannot reconstruct"):
+            mmr.get_consistency_proof("any", 2)
 
 
 # ── _reconstruct_peaks_at — ValueError branch (line ~242) ────────────────────
@@ -215,8 +208,10 @@ class TestRustBackedMMR:
             pytest.skip("RustBackedMMR not defined after reload")
         rbm = rust_backed_module.RustBackedMMR()
         rbm.add_leaf(b"A")
+        # Native backend here is a mock; use the real Python prefix root,
+        # captured at the count the consistency request actually names.
+        root = rbm._py.get_root_hash()
         rbm.add_leaf(b"B")
-        root = rbm.get_root_hash()
         _, proof = rbm.get_consistency_proof(root, 1)
         assert isinstance(proof, list)
 

@@ -2302,8 +2302,9 @@ class CryptographicAuditLedger:
 
         Must be called under ``self._lock``. Forensic invariant: rotation never
         drops nodes — every committed record is preserved in an archived
-        segment (0o600) and replayed on the next startup. Failures degrade
-        gracefully: the ledger keeps writing to the current/active WAL.
+        segment (0o600) and replayed on the next startup. Failed durability
+        barriers latch a collective failure; a failed rename preserves the
+        active file and can be retried without discarding it.
 
         Takes ``_sync_lock`` for its whole body, because it is the one thing
         that replaces the descriptor a group-commit syncer may be inside an
@@ -2325,22 +2326,10 @@ class CryptographicAuditLedger:
                 self._wal_handle.flush()
                 self._fsync(self._wal_handle.fileno())
             except OSError as exc:
-                # Rotation itself still proceeds — abandoning it would leave the
-                # active WAL growing past its threshold — but the failure is NOT
-                # swallowed any more. This fsync is what would have made every
-                # pending group-commit ticket durable, so if it failed those
-                # records are not on the disk and their commits must not be
-                # allowed to report success.
                 self._commit_engine.fail(exc)
-                logger.error(
-                    "WAL rotation could not fsync the outgoing segment (%s); "
-                    "pending commits will fail closed",
-                    exc,
-                )
-            else:
-                # The outgoing segment is on stable storage, and with it every
-                # record written to this descriptor. Waiters can go.
-                self._commit_engine.note_external_sync()
+                # Keep the descriptor/path intact for recovery. Continuing the
+                # rename after a failed barrier hides an indeterminate segment.
+                raise
             # Release before the rename: on Windows the lock is mandatory and
             # the same process is about to reopen this path.
             _unlock_wal_fd(self._wal_handle.fileno())
@@ -2350,7 +2339,9 @@ class CryptographicAuditLedger:
         if not os.path.exists(self.persistence_path):
             self._wal_bytes = 0
             self._open_wal()
-            return
+            exc = OSError("WAL disappeared during rotation")
+            self._commit_engine.fail(exc)
+            raise exc
 
         seq = self._next_segment_seq()
         segment_path = f"{self.persistence_path}.{seq:06d}"
@@ -2365,10 +2356,28 @@ class CryptographicAuditLedger:
         except OSError as exc:
             logger.error("WAL rotation failed (%s) — continuing on active WAL", exc)
             self._open_wal()
+            # No namespace change occurred; the outgoing file was fsynced.
+            self._commit_engine.note_external_sync()
             return
 
         self._wal_bytes = 0
         self._open_wal()
+        try:
+            if self._wal_handle is None:
+                raise OSError("could not open the new active WAL after rotation")
+            if os.name == "posix":
+                # File fsync alone does not persist rename/create directory
+                # entries. Publish tickets only after the namespace barrier.
+                directory = os.path.dirname(os.path.abspath(self.persistence_path))
+                dir_fd = os.open(directory, os.O_RDONLY)
+                try:
+                    self._fsync(dir_fd)
+                finally:
+                    os.close(dir_fd)
+        except OSError as exc:
+            self._commit_engine.fail(exc)
+            raise
+        self._commit_engine.note_external_sync()
 
     def _sign_bound(
         self, build_payload: Callable[[str], bytes]

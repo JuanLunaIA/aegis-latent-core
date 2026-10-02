@@ -239,6 +239,11 @@ def parse_pki_status(response_bytes: bytes) -> int:
     tag, status_val, _ = _parse_tlv(pki_info_val, 0)
     if tag != 0x02:
         raise ValueError(f"Expected INTEGER for PKIStatus, got 0x{tag:02X}")
+    # RFC 3161 defines exactly six non-negative PKIStatus values (0..5).
+    # Each has a one-octet DER INTEGER encoding. In particular, an empty
+    # INTEGER must not become status 0 through int.from_bytes(b"", "big").
+    if len(status_val) != 1 or status_val[0] not in range(6):
+        raise ValueError("Invalid PKIStatus: expected a DER INTEGER in range 0..5")
     return int.from_bytes(status_val, "big")
 
 

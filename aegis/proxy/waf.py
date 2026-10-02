@@ -80,6 +80,7 @@ _SPACED_RUN = re.compile(
     r"\b\w(?P<sep>[ .\-_*/|+~,:;\u00b7\u2022]| ?[.\-_*/|+~\u00b7\u2022] ?)(?:\w(?P=sep)){2,}\w\b"
 )
 _SPACING_SEPARATORS = re.compile(r"[ .\-_*/|+~,:;\u00b7\u2022]")
+_MIXED_SPACED_RUN = re.compile(r"\b\w(?:[.\-_*/|+~,:;\u00b7\u2022]\w){3,}\b")
 
 # Leet substitutions seen in the demonstrated bypasses. Deliberately narrow:
 # each entry is a glyph chosen because it *looks like* the letter, so folding
@@ -404,9 +405,10 @@ class AegisWAF:
                                 score=guard_result.confidence,
                             )
                 except Exception as exc:
-                    # Fail-open: a WAF evaluation error must not block a legitimate request,
-                    # but it is a security-relevant event that must be visible in production.
-                    logger.warning("AegisWAF layer-2 error (fail-open, request allowed): %s", exc)
+                    # Scoring failure is not a negative detection. Only the
+                    # explicitly configured shadow policy may suppress refusal.
+                    logger.warning("AegisWAF layer-2 unavailable; request refused: %s", exc)
+                    return WAFResult(allowed=False, reason="Layer-2 evaluation unavailable", score=1.0)
 
         return WAFResult(allowed=True)
 
@@ -578,6 +580,12 @@ class AegisWAF:
             variants.update(
                 (base, collapsed, cls._fold_leetspeak(base), cls._fold_leetspeak(collapsed))
             )
+            # Additive matching only: retain every old variant, including its
+            # word boundaries, when mixed punctuation appears elsewhere.
+            mixed = _MIXED_SPACED_RUN.sub(
+                lambda match: _SPACING_SEPARATORS.sub("", match.group(0)), base
+            )
+            variants.update((mixed, cls._collapse_letter_spacing(mixed)))
         decoded = cls._decoded_base64(normalized)
         if decoded:
             variants.add(decoded)

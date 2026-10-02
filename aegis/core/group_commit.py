@@ -240,6 +240,10 @@ class CoalescedCommitEngine:
 
         with self._condition:
             self._syncing = False
+            # An external failure can latch while sync() runs without the
+            # condition held. A successful syscall cannot erase that failure.
+            self._condition.notify_all()
+            self._raise_if_failed()
             retired = high_water - self._durable
             if retired > 0:
                 self._durable = high_water

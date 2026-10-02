@@ -186,7 +186,7 @@ The token-boundary split row in §5.2 describes `StreamingDeidentifier`, reached
 
 | Signal | Detection source | Required response |
 |---|---|---|
-| WAF block, shadow block, or layer-2 evaluation error | WAF decision, `WAF_BLOCKS`, warning logs (`aegis/proxy/waf.py:163-186,227-247`) | Correlate by request/session without logging raw secrets; investigate novel variants and add minimized regression cases. A layer-2 exception is fail-open and must alert. |
+| WAF block, shadow block, or layer-2 evaluation error | WAF decision, `WAF_BLOCKS`, warning logs (`aegis/proxy/waf.py:163-186,227-247`) | Correlate by request/session without logging raw secrets; investigate novel variants and add minimized regression cases. A layer-2 exception is fail-closed (request refused) unless shadow mode is configured, and must alert. |
 | Critical corpus bypass or benign regression | Pinned corpus report | Stop release and governed traffic for the affected route until classification and rule change are reviewed. |
 | Duplicate/ambiguous HTTP headers or body oversize | 400/413 admission metrics | Review ingress parser logs and source; repeated events may indicate smuggling or resource probing. |
 | Egress denial or undeclared destination | `EGRESS BLOCKED` warning plus network-policy deny telemetry | Stop the initiating workflow; verify destination, DNS resolution, and credential exposure. |

@@ -327,6 +327,10 @@ SQLITE_SEQUENCE_STORE_SYSCALLS: frozenset[str] = frozenset({"pread64", "pwrite64
 # filter until archival and shredded commits ran clean; these five were all.
 SQLITE_SYSCALLS: frozenset[str] = SQLITE_SEQUENCE_STORE_SYSCALLS | frozenset({"geteuid", "fchown"})
 
+# Authenticated terminal spool: rollback partial appends, duplicate the fsync
+# descriptor, and chmod on reopen. Enabled only when the outbox is configured.
+TERMINAL_OUTBOX_SYSCALLS: frozenset[str] = frozenset({"ftruncate", "dup", "dup3", "chmod", "fchmodat"})
+
 
 def profile_with(extra: frozenset[str]) -> SyscallProfile:
     """The default profile plus *extra* allowed syscalls (never minus anything)."""

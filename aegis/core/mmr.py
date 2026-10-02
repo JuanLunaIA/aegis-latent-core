@@ -14,7 +14,7 @@ import binascii
 import hashlib
 import logging
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -208,6 +208,7 @@ class MMRAppendCheckpoint:
     leaf_node_index_count: int
     leaf_count: int
     peaks: tuple[MMRNode, ...]
+    _owner: object | None = field(default=None, repr=False, compare=False)
 
 
 @dataclass(frozen=True)
@@ -279,9 +280,9 @@ class MMRInclusionProofV1:
         #
         # `bool` is excluded explicitly because it is an `int` subclass, so
         # `True` would otherwise pass as a leaf index of 1.
-        for field in ("leaf_index", "leaf_count", "peak_index"):
-            if not isinstance(value[field], int) or isinstance(value[field], bool):
-                raise ValueError(f"MMR proof field {field!r} must be an integer")
+        for field_name in ("leaf_index", "leaf_count", "peak_index"):
+            if not isinstance(value[field_name], int) or isinstance(value[field_name], bool):
+                raise ValueError(f"MMR proof field {field_name!r} must be an integer")
         # v2 transmits digests as unpadded base64url; decode back to the hex the
         # dataclass and every downstream check use. An undecodable digest raises
         # here rather than surviving as a value that silently fails to verify.
@@ -330,6 +331,7 @@ class MerkleMountainRange:
         # the leaves below it are summarised by the restored peak hashes and
         # are not individually addressable in memory. See that method.
         self._leaf_index_base = 0
+        self._checkpoint_owner = object()
 
     @property
     def leaf_index_base(self) -> int:
@@ -495,6 +497,7 @@ class MerkleMountainRange:
             leaf_node_index_count=len(self._leaf_node_indices),
             leaf_count=self._leaf_count,
             peaks=tuple(self.peaks),
+            _owner=self._checkpoint_owner,
         )
 
     def rollback_to(self, checkpoint: MMRAppendCheckpoint) -> None:
@@ -512,9 +515,19 @@ class MerkleMountainRange:
                 or the MMR was truncated behind it.
         """
         if (
-            checkpoint.node_count > len(self.nodes)
+            checkpoint._owner is not self._checkpoint_owner
+            or checkpoint.node_count < 0
+            or checkpoint.leaf_node_index_count < 0
+            or checkpoint.leaf_count < self._leaf_index_base
+            or checkpoint.node_count > len(self.nodes)
             or checkpoint.leaf_node_index_count > len(self._leaf_node_indices)
             or checkpoint.leaf_count > self._leaf_count
+            or any(
+                peak.index < 0
+                or peak.index >= checkpoint.node_count
+                or self.nodes[peak.index] is not peak
+                for peak in checkpoint.peaks
+            )
         ):
             raise ValueError("MMR checkpoint does not describe a prefix of the current state")
         del self.nodes[checkpoint.node_count :]
@@ -732,34 +745,39 @@ class MerkleMountainRange:
     def verify_inclusion(
         self, leaf_data: bytes, leaf_index: int, proof: list[tuple[str, str]], root: str
     ) -> bool:
-        """
-        Verifies that leaf_data is part of the MMR root.
-        """
-        if leaf_index < 0 or leaf_index >= self._leaf_count or not _is_sha256_hex(root):
+        """Verify scheme, leaf position, path shape and root through one verifier."""
+        if (
+            isinstance(leaf_index, bool)
+            or not isinstance(leaf_index, int)
+            or not 0 <= leaf_index < self._leaf_count
+            or not _is_sha256_hex(root)
+        ):
             return False
-        current_hash = hashlib.sha256(leaf_data).hexdigest()
-
-        for sibling_hash, direction in proof:
-            if not _is_sha256_hex(sibling_hash) or direction not in {"L", "R"}:
-                return False
-            if direction == "R":
-                combined = (current_hash + sibling_hash).encode()
-            elif direction == "L":
-                combined = (sibling_hash + current_hash).encode()
-            current_hash = hashlib.sha256(combined).hexdigest()
-
-        # In an MMR, the leaf's proof leads to one of the peaks.
-        # We check if the resulting hash is one of the current peaks.
-        peak_hashes = {p.hash for p in self.peaks}
-        if current_hash not in peak_hashes:
+        peaks = sorted(self.peaks, key=lambda peak: peak.height, reverse=True)
+        if not peaks:
             return False
-
-        # Finally, verify that the set of peaks produces the provided root.
-        sorted_peaks = sorted(self.peaks, key=lambda p: p.height, reverse=True)
-        combined = "".join([p.hash for p in sorted_peaks]).encode()
-        actual_root = hashlib.sha256(combined).hexdigest()
-
-        return actual_root == root
+        peak_index = 0
+        start = 0
+        for peak_index, peak in enumerate(peaks):
+            if leaf_index < start + (1 << peak.height):
+                break
+            start += 1 << peak.height
+        try:
+            path = tuple(MMRProofStep(sibling, direction) for sibling, direction in proof)
+        except (TypeError, ValueError):
+            return False
+        v2 = self.hash_scheme == HASH_SCHEME_V2
+        portable = MMRInclusionProofV1(
+            version=MMR_PROOF_VERSION_V2 if v2 else MMR_PROOF_VERSION_V1,
+            algorithm=MMR_ALGORITHM_V2 if v2 else MMR_ALGORITHM_V1,
+            leaf_index=leaf_index,
+            leaf_count=self._leaf_count,
+            peak_index=peak_index,
+            path=path,
+            peaks=tuple(MMRPeak(peak.height, peak.hash) for peak in peaks),
+            root=self.get_root_hash(),
+        )
+        return self.verify_portable_inclusion(leaf_data, portable, root)
 
     def get_consistency_proof(self, old_root: str, old_count: int) -> tuple[str, list[str]]:
         """
@@ -796,89 +814,65 @@ class MerkleMountainRange:
         """
         current_count = self._leaf_count
 
-        if old_count < 0 or old_count > current_count:
+        if isinstance(old_count, bool) or not isinstance(old_count, int) or not 0 <= old_count <= current_count:
             raise ValueError(f"old_count={old_count} out of valid range [0, {current_count}]")
 
         current_root = self.get_root_hash()
 
         # Trivial cases
         if old_count == 0:
+            if old_root != "0" * 64:
+                raise ValueError("old_root mismatch for the empty accumulator")
             return current_root, []
         if old_count == current_count:
+            if old_root != current_root:
+                raise ValueError("old_root mismatch for the current accumulator")
             return current_root, [p.hash for p in self.peaks]
 
-        # Reconstruct the peaks at old_count by scanning the node list.
-        # At old_count N, the peaks correspond to complete binary subtrees
-        # whose sizes are the set bits in N's binary representation.
-        # We can identify them by walking the node list up to old_count leaves.
-        old_peaks: list[str] = []
+        # Walk complete subtrees left-to-right, descending only into the
+        # mountain straddling the prefix boundary. No scan of all nodes.
         try:
             old_peaks = self._reconstruct_peaks_at(old_count)
-        except Exception:
-            # If reconstruction fails (e.g. nodes pruned), fall back to
-            # returning current peaks with the [PARTIAL] flag in the tuple.
-            old_peaks = [p.hash for p in self.peaks]
-
-        # Validate the old_root matches what we reconstruct
-        if old_peaks:
-            reconstructed_old_root = hashlib.sha256("".join(old_peaks).encode()).hexdigest()
-            if reconstructed_old_root != old_root:
-                # The provided old_root doesn't match our reconstruction.
-                # The proof is still valid (we return the peaks), but the
-                # caller should treat this as a potential tampering signal.
-                logger.warning(
-                    "get_consistency_proof: old_root mismatch "
-                    "(provided=%s…, reconstructed=%s…); "
-                    "peaks may have been computed with different ordering",
-                    old_root[:16],
-                    reconstructed_old_root[:16],
-                )
+        except (LookupError, RuntimeError, ValueError) as exc:
+            raise ValueError("Cannot reconstruct peaks for the requested prefix") from exc
+        reconstructed_old_root = (
+            v2_bagged_root([bytes.fromhex(value) for value in old_peaks]).hex()
+            if self.hash_scheme == HASH_SCHEME_V2
+            else hashlib.sha256("".join(old_peaks).encode()).hexdigest()
+        )
+        if reconstructed_old_root != old_root:
+            raise ValueError("old_root mismatch for the requested prefix")
 
         return current_root, old_peaks
 
     def _reconstruct_peaks_at(self, target_count: int) -> list[str]:
         """
-        Reconstruct the ordered peak hashes of the MMR at ``target_count`` leaves
-        by replaying the peak-merging algorithm over the node list.
-
-        This works because the node list is append-only and the peak structure
-        at any count N is fully determined by the first ``node_count(N)`` nodes,
-        where node_count(N) = 2*N - popcount(N).
+        Reconstruct prefix peaks in O(log N) by descending the one mountain
+        that straddles the boundary. A restored peak cannot be split unless
+        its interior is retained; refuse instead of fabricating that history.
 
         Returns peak hashes ordered by height descending (canonical order for root).
         """
-        # Number of internal + leaf nodes at target_count leaves:
-        # For an MMR, total nodes = 2*leaf_count - popcount(leaf_count)
-        popcount = bin(target_count).count("1")
-        total_nodes_at_target = 2 * target_count - popcount
-
-        if total_nodes_at_target > len(self.nodes):
-            raise ValueError(
-                f"Cannot reconstruct peaks at count={target_count}: "
-                f"need {total_nodes_at_target} nodes, have {len(self.nodes)}"
-            )
-
-        # Replay peak-merging on the first total_nodes_at_target nodes
-        replay_peaks: list[MMRNode] = []
-        leaf_idx = 0
-        for idx in range(total_nodes_at_target):
-            node = self.nodes[idx]
-            if node.height == 0:
-                # Leaf node
-                replay_peaks.append(node)
-                leaf_idx += 1
-                # Merge identical-height peaks (same as add_leaf logic)
-                while len(replay_peaks) >= 2 and replay_peaks[-1].height == replay_peaks[-2].height:
-                    right = replay_peaks.pop()
-                    left = replay_peaks.pop()
-                    # Find the parent node in our node list
-                    for candidate in self.nodes[idx + 1 :]:
-                        if candidate.left == left.index and candidate.right == right.index:
-                            replay_peaks.append(candidate)
-                            break
-
-        sorted_peaks = sorted(replay_peaks, key=lambda p: p.height, reverse=True)
-        return [p.hash for p in sorted_peaks]
+        if not 0 <= target_count <= self._leaf_count:
+            raise ValueError("Cannot reconstruct peaks outside the current tree")
+        remaining = target_count
+        result: list[str] = []
+        stack = list(reversed(self.peaks))
+        while remaining and stack:
+            node = stack.pop()
+            if node.index >= len(self.nodes) or self.nodes[node.index] is not node:
+                raise ValueError("Cannot reconstruct peaks from detached nodes")
+            size = 1 << node.height
+            if size <= remaining:
+                result.append(node.hash)
+                remaining -= size
+            else:
+                if node.left is None or node.right is None:
+                    raise ValueError("Cannot reconstruct peaks inside a pruned mountain")
+                stack.extend((self.nodes[node.right], self.nodes[node.left]))
+        if remaining:
+            raise ValueError("Cannot reconstruct peaks from an incomplete tree")
+        return result
 
 
 # Prefer Rust-backed MMR when the optional aegis_rust extension is available.
