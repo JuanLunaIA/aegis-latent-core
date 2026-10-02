@@ -408,7 +408,9 @@ class AegisWAF:
                     # Scoring failure is not a negative detection. Only the
                     # explicitly configured shadow policy may suppress refusal.
                     logger.warning("AegisWAF layer-2 unavailable; request refused: %s", exc)
-                    return WAFResult(allowed=False, reason="Layer-2 evaluation unavailable", score=1.0)
+                    return WAFResult(
+                        allowed=False, reason="Layer-2 evaluation unavailable", score=1.0
+                    )
 
         return WAFResult(allowed=True)
 

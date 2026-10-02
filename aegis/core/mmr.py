@@ -814,7 +814,11 @@ class MerkleMountainRange:
         """
         current_count = self._leaf_count
 
-        if isinstance(old_count, bool) or not isinstance(old_count, int) or not 0 <= old_count <= current_count:
+        if (
+            isinstance(old_count, bool)
+            or not isinstance(old_count, int)
+            or not 0 <= old_count <= current_count
+        ):
             raise ValueError(f"old_count={old_count} out of valid range [0, {current_count}]")
 
         current_root = self.get_root_hash()

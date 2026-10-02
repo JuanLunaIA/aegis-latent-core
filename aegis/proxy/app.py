@@ -1529,7 +1529,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 extra_syscalls = SQLITE_SYSCALLS if sqlite_after_lockdown else frozenset()
                 if cfg.terminal_outbox_enabled:
                     extra_syscalls |= TERMINAL_OUTBOX_SYSCALLS
-                guard = SeccompGuard(profile_with(extra_syscalls)) if extra_syscalls else SeccompGuard()
+                guard = (
+                    SeccompGuard(profile_with(extra_syscalls)) if extra_syscalls else SeccompGuard()
+                )
                 if cfg.tsa_url and not guard.is_sandbox:
                     # REG-D105: RFC 3161 verification runs the openssl binary,
                     # and the profile forbids execve and process creation. The
@@ -1823,8 +1825,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     ) -> str:
         # Session IDs are echoed as HTTP headers and used as mapping keys.
         # Reject invalid values before quota, forwarding, or accepted evidence.
-        if isinstance(candidate, str) and 1 <= len(candidate) <= 256 and all(
-            0x21 <= ord(char) <= 0x7E for char in candidate
+        if (
+            isinstance(candidate, str)
+            and 1 <= len(candidate) <= 256
+            and all(0x21 <= ord(char) <= 0x7E for char in candidate)
         ):
             return candidate
         evidence = await _commit_rejection_evidence(

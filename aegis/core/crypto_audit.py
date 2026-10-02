@@ -2339,9 +2339,9 @@ class CryptographicAuditLedger:
         if not os.path.exists(self.persistence_path):
             self._wal_bytes = 0
             self._open_wal()
-            exc = OSError("WAL disappeared during rotation")
-            self._commit_engine.fail(exc)
-            raise exc
+            wal_exc = OSError("WAL disappeared during rotation")
+            self._commit_engine.fail(wal_exc)
+            raise wal_exc
 
         seq = self._next_segment_seq()
         segment_path = f"{self.persistence_path}.{seq:06d}"

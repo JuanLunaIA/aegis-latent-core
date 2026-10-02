@@ -1,6 +1,7 @@
 # Copyright (c) 2026 Juan Luna.
 # SPDX-License-Identifier: Apache-2.0
 """MMR scheme/index binding, strict prefix validation and checkpoint ownership."""
+
 from __future__ import annotations
 
 import pytest
@@ -51,7 +52,10 @@ def test_discarded_branch_checkpoint_is_rejected():
 
 
 @settings(max_examples=50, deadline=None)
-@given(st.lists(st.binary(max_size=32), min_size=2, max_size=32), st.sampled_from([HASH_SCHEME_V1, HASH_SCHEME_V2]))
+@given(
+    st.lists(st.binary(max_size=32), min_size=2, max_size=32),
+    st.sampled_from([HASH_SCHEME_V1, HASH_SCHEME_V2]),
+)
 def test_valid_prefix_and_restore_rollback(leaves, scheme):
     prefix = MerkleMountainRange(hash_scheme=scheme)
     for value in leaves[:-1]:
@@ -59,10 +63,12 @@ def test_valid_prefix_and_restore_rollback(leaves, scheme):
     root = prefix.get_root_hash()
     expected = [p.hash for p in prefix.peaks]
     restored = MerkleMountainRange(hash_scheme=scheme)
-    restored.restore_from_peaks(leaf_count=len(leaves)-1, peaks=[MMRPeak(p.height, p.hash) for p in prefix.peaks])
+    restored.restore_from_peaks(
+        leaf_count=len(leaves) - 1, peaks=[MMRPeak(p.height, p.hash) for p in prefix.peaks]
+    )
     checkpoint = restored.checkpoint()
     restored.add_leaf(leaves[-1])
     restored.rollback_to(checkpoint)
     assert restored.get_root_hash() == root
     prefix.add_leaf(leaves[-1])
-    assert prefix.get_consistency_proof(root, len(leaves)-1)[1] == expected
+    assert prefix.get_consistency_proof(root, len(leaves) - 1)[1] == expected

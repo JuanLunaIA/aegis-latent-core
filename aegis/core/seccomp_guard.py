@@ -329,7 +329,9 @@ SQLITE_SYSCALLS: frozenset[str] = SQLITE_SEQUENCE_STORE_SYSCALLS | frozenset({"g
 
 # Authenticated terminal spool: rollback partial appends, duplicate the fsync
 # descriptor, and chmod on reopen. Enabled only when the outbox is configured.
-TERMINAL_OUTBOX_SYSCALLS: frozenset[str] = frozenset({"ftruncate", "dup", "dup3", "chmod", "fchmodat"})
+TERMINAL_OUTBOX_SYSCALLS: frozenset[str] = frozenset(
+    {"ftruncate", "dup", "dup3", "chmod", "fchmodat"}
+)
 
 
 def profile_with(extra: frozenset[str]) -> SyscallProfile:

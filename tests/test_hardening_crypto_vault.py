@@ -1,6 +1,7 @@
 # Copyright (c) 2026 Juan Luna.
 # SPDX-License-Identifier: Apache-2.0
 """Failed key-vault commits must not leak uncommitted state to later calls."""
+
 from __future__ import annotations
 
 import sqlite3

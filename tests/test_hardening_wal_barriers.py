@@ -1,6 +1,7 @@
 # Copyright (c) 2026 Juan Luna.
 # SPDX-License-Identifier: Apache-2.0
 """Barrier ordering and externally latched group-commit failure regressions."""
+
 from __future__ import annotations
 
 import os
@@ -16,8 +17,10 @@ from aegis.core.group_commit import CoalescedCommitEngine, WalDurabilityError
 def test_external_failure_during_sync_prevents_success() -> None:
     engine = CoalescedCommitEngine(linger_seconds=0)
     ticket = engine.enqueue()
+
     def sync() -> None:
         engine.fail(OSError("concurrent descriptor/rotation failure"))
+
     with pytest.raises(WalDurabilityError):
         engine.await_durable(ticket, sync)
     assert engine.stats.batches == 0

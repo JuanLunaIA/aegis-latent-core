@@ -27,7 +27,7 @@ from aegis.proxy.app import create_app
     ("value", "expected"),
     [
         ({"z": 1, "a": [True, False, None]}, b'{"a":[true,false,null],"z":1}'),
-        ({"s": "\b\t\n\f\r\u0000\"\\/"}, b'{"s":"\\b\\t\\n\\f\\r\\u0000\\\"\\\\/"}'),
+        ({"s": '\b\t\n\f\r\u0000"\\/'}, b'{"s":"\\b\\t\\n\\f\\r\\u0000\\"\\\\/"}'),
         ({"s": "\u00e9\U0001f600\u2028"}, '{"s":"\u00e9\U0001f600\u2028"}'.encode()),
         ({"n": 9007199254740991}, b'{"n":9007199254740991}'),
     ],
@@ -93,7 +93,11 @@ def _post(client, session):
     return client.post(
         "/v1/chat/completions",
         headers={"Authorization": "Bearer sk-valid"},
-        json={"model": "synthetic", "messages": [{"role": "user", "content": "hi"}], "user": session},
+        json={
+            "model": "synthetic",
+            "messages": [{"role": "user", "content": "hi"}],
+            "user": session,
+        },
     )
 
 
@@ -110,7 +114,9 @@ def test_ascii_session_preserves_proof_header_consistency(local_app):
     print("ASCII headers:", json.dumps(dict(response.headers), sort_keys=True))
 
 
-@pytest.mark.parametrize("session", ["\u2603", "synthetic\r\nX-Synthetic: 1", ["unhashable"], "x" * 257])
+@pytest.mark.parametrize(
+    "session", ["\u2603", "synthetic\r\nX-Synthetic: 1", ["unhashable"], "x" * 257]
+)
 def test_invalid_body_user_is_rejected_before_forwarding(local_app, session):
     app, client, forwarder = local_app
     response = _post(client, session)

@@ -1,6 +1,7 @@
 # Copyright (c) 2026 Juan Luna.
 # SPDX-License-Identifier: Apache-2.0
 """Real post-lockdown terminal outbox lifecycle in an isolated interpreter."""
+
 from __future__ import annotations
 
 import subprocess
@@ -12,7 +13,9 @@ from test_seccomp_runtime_paths import _LOCK, needs_filter
 
 @needs_filter
 def test_terminal_outbox_under_selected_filter(tmp_path: Path) -> None:
-    script = _LOCK + '''
+    script = (
+        _LOCK
+        + """
 import asyncio
 from aegis.core.seccomp_guard import SeccompGuard, profile_with, TERMINAL_OUTBOX_SYSCALLS
 from aegis.proxy.terminal_outbox import TerminalOutbox, TerminalReplayContext, SpooledSummary
@@ -38,11 +41,14 @@ async def main():
     outbox.close()
     print("OUTBOX_OK")
 asyncio.run(main())
-'''
+"""
+    )
     # Fixed interpreter and inline fixture code; no external input is executed.
     result = subprocess.run(  # noqa: S603
         [sys.executable, "-c", script, "outbox", str(tmp_path / "outbox")],
-        capture_output=True, text=True, timeout=30,
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
     assert result.returncode == 0, result.stderr
     assert "OUTBOX_OK" in result.stdout

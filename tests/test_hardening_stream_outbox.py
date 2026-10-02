@@ -1,6 +1,7 @@
 # Copyright (c) 2026 Juan Luna.
 # SPDX-License-Identifier: Apache-2.0
 """Fault injection at outbox descriptor and handoff accounting boundaries."""
+
 from __future__ import annotations
 
 import asyncio
@@ -60,7 +61,9 @@ def test_short_write_does_not_poison_next_record(tmp_path: Path, monkeypatch) ->
         reopened.close()
 
 
-def test_compaction_directory_failure_does_not_write_unlinked_inode(tmp_path: Path, monkeypatch) -> None:
+def test_compaction_directory_failure_does_not_write_unlinked_inode(
+    tmp_path: Path, monkeypatch
+) -> None:
     path = tmp_path / "outbox"
     outbox = _open(path)
     assert outbox.record(_context("before"), _summary())
@@ -78,7 +81,10 @@ def test_compaction_directory_failure_does_not_write_unlinked_inode(tmp_path: Pa
         outbox.close()
     reopened = _open(path)
     try:
-        assert {entry.context.state_id for entry in reopened.pending_entries()} == {"before", "after"}
+        assert {entry.context.state_id for entry in reopened.pending_entries()} == {
+            "before",
+            "after",
+        }
     finally:
         reopened.close()
 
