@@ -130,6 +130,14 @@ dev = [
     # registry test CLM-102's evidence cell cites as its LOCALLY TESTED proof.
     # The `metrics` extra is installed by no job, so every one of those skipped.
     "prometheus-client>=0.20.0",
+    # The SDK's client tests (sdk/python/tests) import the provider SDKs
+    # directly, so a dev environment without them fails collection instead of
+    # exercising the adapter. Declared here for the same reason as pyarrow
+    # above: the gate must run the code, not report it green while skipping it.
+    # The SDK package itself is installed with `pip install -e sdk/python`.
+    "openai>=3.35",
+    "anthropic>=1.17",
+    "llama-index-core>=0.14",
 ]
 # ── Full install (all optional runtime extras) ───────────────────────────────
 # `dev` is deliberately absent (REG-D74): `[all]` used to pull pytest, ruff,
