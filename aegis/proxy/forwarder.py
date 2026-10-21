@@ -335,9 +335,18 @@ class LLMForwarder:
                             f"upstream response body exceeds the configured limit of {cap} bytes"
                         )
                     chunks.append(chunk)
+                # aiter_bytes() yields DECODED bytes. Re-attaching the upstream
+                # content-encoding makes httpx decode a second time and raise
+                # DecodingError ("incorrect header check") for any provider that
+                # compresses (DeepSeek does). Drop the framing headers that no
+                # longer describe this body; httpx recomputes content-length.
+                response_headers = dict(streamed.headers)
+                response_headers.pop("content-encoding", None)
+                response_headers.pop("content-length", None)
+                response_headers.pop("transfer-encoding", None)
                 raw_resp = httpx.Response(
                     status_code=streamed.status_code,
-                    headers=dict(streamed.headers),
+                    headers=response_headers,
                     content=b"".join(chunks),
                 )
         except (httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError):

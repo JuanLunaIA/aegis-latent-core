@@ -120,3 +120,40 @@ async def test_the_bound_is_read_at_call_time() -> None:
 
     with pytest.raises(RuntimeError, match="exceeds the configured limit"):
         await forwarder.forward_json("/v1/chat/completions", {"model": "m"})
+
+
+async def test_gzip_compressed_upstream_is_decoded_once() -> None:
+    """Compressed providers (DeepSeek does this) must not be decoded twice.
+
+    ``aiter_bytes()`` yields decoded bytes. The relay used to copy the upstream
+    ``content-encoding: gzip`` onto the reconstructed response, so httpx decoded
+    the already-decoded body again and raised ``DecodingError: incorrect header
+    check`` — every real compressed provider answered 503 while the uncompressed
+    mock in CI stayed green.
+    """
+    import gzip
+    import json
+
+    payload = {"choices": [{"message": {"content": "hola"}}]}
+    raw = json.dumps(payload).encode()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "application/json", "content-encoding": "gzip"},
+            content=gzip.compress(raw),
+        )
+
+    forwarder = LLMForwarder(settings=_settings())
+    forwarder._client = httpx.AsyncClient(
+        base_url="http://upstream.test", transport=httpx.MockTransport(handler)
+    )
+    forwarder._rust_forwarder = None
+    try:
+        response = await forwarder.forward_json("/v1/chat/completions", {"model": "m"})
+        assert response.status_code == 200
+        assert response.json() == payload
+        assert "content-encoding" not in response.headers
+        assert response.content == raw
+    finally:
+        await forwarder._client.aclose()
