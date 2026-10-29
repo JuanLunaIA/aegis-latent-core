@@ -13,8 +13,7 @@ invoice a customer, or employ anyone.
 entity has been formed for this product, no tax registration has been obtained
 for a company, and no revenue has been recognised.
 
-> **[COUNSEL-REVIEW-REQUIRED]** Draft prepared by an AI agent. It is not legal
-> or tax advice. Do not file, incorporate, or issue an invoice from this memo.
+> **[COUNSEL-REVIEW-REQUIRED]** Draft prepared by an AI agent. It is **not legal advice** and not tax advice. Do not file, incorporate, or issue an invoice from this memo.
 
 ## 1. Current facts (verified)
 

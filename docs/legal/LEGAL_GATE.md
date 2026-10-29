@@ -13,11 +13,11 @@ ready.
 **Boundary:** a gate record. It does not provide legal advice and does not
 substitute for the signed opinions in `COUNSEL_REVIEW_LOG.md`.
 
-> **LEGAL GATE: BLOCKED**
+> **[COUNSEL-REVIEW-REQUIRED]** **LEGAL GATE: BLOCKED**
 >
-> No document in `docs/legal/` has been reviewed by a lawyer. No entity has been
-> formed for the product. No export classification has been obtained. The
-> licence and terms are drafts.
+> This record is **not legal advice**. No document in `docs/legal/` has been
+> reviewed by a lawyer. No entity has been formed for the product. No export
+> classification has been obtained. The licence and terms are drafts.
 
 ## Why it is blocked
 

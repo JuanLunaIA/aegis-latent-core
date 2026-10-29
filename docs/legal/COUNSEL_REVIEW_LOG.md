@@ -13,7 +13,7 @@ answer that would close it.
 lawyer has returned a dated written opinion covering that document.
 
 > **[COUNSEL-REVIEW-REQUIRED]** This log records that review is absent. It does
-> not itself provide review.
+> not itself provide review and is **not legal advice**.
 
 ## Status
 

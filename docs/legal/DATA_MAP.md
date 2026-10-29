@@ -15,7 +15,8 @@ conclusion. It does not establish that a deployment is configured this way, and
 it does not replace a DPA or a transfer assessment.
 
 > **[COUNSEL-REVIEW-REQUIRED]** Draft prepared by an AI agent. It has not been
-> reviewed by a privacy lawyer. Bracketed fields are open items.
+> reviewed by a privacy lawyer and is **not legal advice**. Bracketed fields are
+> open items.
 
 ## 1. Two products, two data paths
 

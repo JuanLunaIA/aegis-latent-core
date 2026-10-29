@@ -12,8 +12,7 @@ current state of each.
 **Boundary:** a decision record with open fields. No policy has been quoted or
 bound, and no escrow agreement exists.
 
-> **[COUNSEL-REVIEW-REQUIRED]** Draft prepared by an AI agent. Not insurance
-> or legal advice.
+> **[COUNSEL-REVIEW-REQUIRED]** Draft prepared by an AI agent. This is **not legal advice** and not insurance advice.
 
 ## 1. Current state
 
