@@ -47,8 +47,9 @@ certification.
 - A public price list presented as an offer, or a checkout that takes money
   before an entity and tax decision exist.
 - A customer logo, quote, or case study without a signed release.
-- Any claim of a certification, audit, compliance status, assurance,
-  penetration test, production readiness, uptime figure, or staffed 24/7 support.
+- Any claim of a certification, audit, compliance status, assurance, a
+  completed penetration test, production readiness, an uptime figure, or
+  staffed support.
 - A discount that implies a certification or a support level that does not
   exist.
 - An invoice from an individual if the contract names a company, or vice versa.
