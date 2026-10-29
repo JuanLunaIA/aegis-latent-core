@@ -1,6 +1,6 @@
 # Aegis Latent Core: Seed Investor Pack (English)
 
-**Date created:** 25 September 2026 (2026-09-25). **Updated:** 30 September 2026 (2026-09-30), twice; see sections U and U2 of the page.
+**Date created:** 25 September 2026 (2026-09-25). **Updated:** 29 October 2026 (2026-10-29): evidence update and one-page A4 sheet; the financial model is unchanged since 30 September 2026.
 
 This folder is the English edition of the Mission Order XV investor pack: deliverables D1–D10 and the one-screen ask. A separate folder, `paquete_inversor_aegis_es/`, holds the Rioplatense Spanish edition, with peso amounts in parentheses. Both editions come from the same engine and the same numbers.
 
@@ -42,3 +42,14 @@ With numpy 2.4.6, matplotlib 3.11.2 and Python 3.11, the engine reproduced every
 - **Update of 2026-09-30.** Three VERIFIED inputs were refreshed (`tests_passed` 7,673 passed / 42 skipped / 0 failed, `claims_registered` 113, `test_to_source_loc` 1.26) and the evidence and gap text of seven TRL rows was extended with the qualification runs of 2026-09-29 (WAL kill soak, injection-filter corpus, HA partition test and the Redis-restart limit, SoftHSM, observability assets). No TRL, cost-to-close figure, chart or model number changed: the six PNGs are byte-identical to the 2026-09-25 versions in both editions, and `model_outputs.json` differs only in those three inputs and the TRL text. The wind-down wording and the T1 issuer precondition were corrected and section U was added to the page. Signatures and provenance were not re-verified in this update.
 - **Second update of 2026-09-30.** After a formal-methods and security pass over the core the same day (`REG-D88` to `REG-D105`, 18 defects fixed), the same three inputs were refreshed again (`tests_passed` 7,891 passed / 38 skipped / 0 failed at `fd6b435`, `claims_registered` 121, `test_to_source_loc` 1.29) and the evidence text of five TRL rows was extended: gateway core, WAL (soak re-run), WAF (HTTP red team, `CLM-117`), HA (the Redis-restart epoch fix, `REG-D91`, which also removes "decide Redis-restart epoch behaviour" from that row's gap) and the Azure kit (list-price readback, `CLM-121`). No TRL level, engineering week, cost-to-close figure, chart or model number changed; the six PNGs are again byte-identical in both editions. On the page, section U2 records the pass and the certification classification (`docs/compliance/CERTIFICATION_SCOPE.md`, `CLM-120`, not reviewed by counsel); D1, D9 objections 4, 7 and 8, and two D10.1 rows were updated. Section U is kept as written. Signatures and provenance were not re-verified.
 - **Handling.** These are fundraising materials, committed to the `aegis-latent-core` repository at the owner's request on 2026-09-25. They are not product documentation; `docs/CLAIMS_MATRIX.md` remains the only source of product capability claims.
+
+## Update, 29 October 2026
+
+The financial model is unchanged since 30 September 2026. The product evidence is
+new: the control plane runs on AWS with a verified email round trip, a measured
+50 requests per second at p50 19.7 ms, 17/17 gates on a clean tree and a unit cost
+of $19.47 per million requests.
+
+The one-page A4 sheet for a first meeting is `aegis-one-page-en.pdf` in this
+folder, built from the same measurements by `../one_page/build.py`. Its Spanish
+counterpart is `../one_page/out/aegis-one-page-es.pdf`.

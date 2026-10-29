@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Aegis Latent Core — Seed · October 2026</title>
+<style>
+@font-face{font-family:'Geist';src:url('file:///home/luna/AEGIS-LATENT-CORE/aegisweb/.vercel/output/static/assets/geist-latin-ext-wght-normal-DC-KSUi6.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:block}
+@font-face{font-family:'Instrument';src:url('file:///home/luna/AEGIS-LATENT-CORE/aegisweb/.vercel/output/static/assets/instrument-serif-latin-400-normal-DnYpCC2O.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:block}
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 210mm; height: 297mm; }
+body { font-family: 'Geist', 'Liberation Sans', sans-serif; color: #14130f; background: #fbf9f3;
+        font-size: 9.25pt; line-height: 1.44; -webkit-font-smoothing: antialiased; }
+.sheet { width: 210mm; height: 297mm; padding: 11mm 12mm 8mm; display: flex; flex-direction: column; }
+header { display: flex; justify-content: space-between; align-items: flex-end;
+          border-bottom: 1.6pt solid #14130f; padding-bottom: 2.4mm; }
+.mark { font-family: 'Instrument', 'DejaVu Serif', serif; font-size: 23pt; letter-spacing: -0.01em; }
+.mark small { display: block; font-family: 'Geist', sans-serif; font-size: 6.6pt; letter-spacing: .18em;
+               text-transform: uppercase; color: #8a6d1f; margin-top: 1.2mm; }
+.contact { text-align: right; font-size: 7pt; color: #4b4841; line-height: 1.55; }
+.contact b { color: #14130f; font-weight: 600; }
+.claim { font-size: 12.5pt; line-height: 1.32; margin: 4.2mm 0 3.2mm; max-width: 182mm; letter-spacing: -0.006em; }
+.columns { display: flex; gap: 7mm; flex: 1; }
+.col { flex: 1; }
+h2 { font-size: 6.9pt; letter-spacing: .17em; text-transform: uppercase; color: #8a6d1f;
+      margin: 3.6mm 0 1.5mm; font-weight: 600; }
+p { color: #2c2a25; }
+.rows { border-top: .6pt solid #d9d2be; }
+.row { display: flex; gap: 3.2mm; padding: 2.2mm 0; border-bottom: .6pt solid #d9d2be; }
+.row .num { width: 26mm; flex: none; font-weight: 650; font-size: 9pt; letter-spacing: -0.012em; }
+.row .body { font-size: 8.05pt; color: #3a3731; }
+.flow { display: flex; margin: 0 0 4.4mm; border-top: .9pt solid #14130f; border-bottom: .6pt solid #d9d2be; }
+.flow div { flex: 1; padding: 2.4mm 3.2mm 2.6mm 0; }
+.flow div + div { border-left: .6pt solid #d9d2be; padding-left: 3.2mm; }
+.flow b { display: block; font-size: 6.7pt; letter-spacing: .16em; text-transform: uppercase;
+           color: #8a6d1f; margin-bottom: 1.1mm; }
+.flow p { font-size: 7.75pt; color: #33302a; }
+.milestone-band { border-top: .6pt solid #d9d2be; margin-top: 2.2mm; padding-top: 1.6mm; }
+.milestones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 4mm; margin-top: 0.4mm; }
+.milestones span { font-size: 7.2pt; color: #3a3731; padding-left: 4.2mm; position: relative; }
+.milestones span::before { content: ""; position: absolute; left: 0; top: 1.1mm;
+                            width: 1.8mm; height: 1.8mm; border: .8pt solid #8a6d1f; }
+.ask { margin-top: 2.8mm; padding: 2.8mm 3.2mm; background: #14130f; color: #f3eee1; }
+.ask h2 { color: #d3b56a; margin-top: 0; }
+.ask p { color: #e9e2d1; font-size: 8.15pt; }
+.ask .amount { font-family: 'Instrument', 'DejaVu Serif', serif; font-size: 17pt; color: #fff;
+                margin: 0.8mm 0 1.2mm; }
+.bars { margin-top: 1.4mm; }
+.bar { display: flex; align-items: center; gap: 2.2mm; font-size: 7.1pt; color: #3a3731; margin-top: 1.2mm; }
+.bar .lab { width: 30mm; flex: none; }
+.bar .track { flex: 1; height: 2.2mm; background: #ece5d3; }
+.bar .track i { display: block; height: 100%; background: #8a6d1f; }
+.bar .track i.full { width: 100%; background: #14130f; }
+.bar .val { width: 20mm; text-align: right; flex: none; font-variant-numeric: tabular-nums; }
+.note { font-size: 7.1pt; color: #4b4841; margin-top: 1.3mm; }
+.limits { margin-top: 2.6mm; border-left: 1.6pt solid #8a6d1f; padding-left: 2.8mm; }
+.limits p { font-size: 7.7pt; color: #4b4841; }
+footer { margin-top: auto; border-top: .6pt solid #cfc7b2; padding-top: 1.8mm;
+          display: flex; justify-content: space-between; font-size: 6.2pt; color: #6a655b; }
+</style></head>
+<body><div class="sheet">
+<header>
+  <div class="mark">Aegis Latent Core<small>Seed · October 2026</small></div>
+  <div class="contact"><b>Juan Luna</b><br>juan.c.luna04@gmail.com<br>aegislatent.com</div>
+</header>
+<div class="claim">A gateway for AI traffic that writes every request to an append-only ledger, and a pack the buyer can verify without trusting us.</div>
+<div class="flow"><div><b>01 · Request</b><p>A key names a tenant, a quota and a route. The gateway enforces all three before the upstream call.</p></div><div><b>02 · Ledger</b><p>The request and the response digest enter an append-only log; each entry carries the previous hash.</p></div><div><b>03 · Proof</b><p>The customer exports a signed pack and verifies inclusion offline. Our credentials are not part of the proof.</p></div></div>
+<div class="columns">
+  <div class="col">
+    <h2>Why now</h2><p>AI calls move regulated data, but the evidence is still a vendor log line. Buyers who answer to auditors need proofs they can check offline, not a dashboard that asks to be believed.</p>
+    <h2>What exists today</h2><p>A gateway with keys, quotas and routing; an append-only ledger with Merkle inclusion proofs; a signed export and a verifier that runs on the customer&#x27;s machine. Self-serve billing, thirteen languages, one API.</p>
+    <h2>Measured, not estimated</h2><div class="rows"><div class="row"><div class="num">201 → 200 → 201</div>
+        <div class="body">Signup, SES delivery and email verification, then the first API key, executed end to end on AWS on 29 October 2026.</div></div>
+<div class="row"><div class="num">19.7 ms p50</div>
+        <div class="body">50 requests per second through the Function URL: p95 26.5 ms, 1,000 of 1,000 answered. Single-instance database pool.</div></div>
+<div class="row"><div class="num">17 / 17 gates</div>
+        <div class="body">Full suite on a clean tree, zero cached lanes, 262 s. 121 declared tests across the control plane and both SDKs.</div></div>
+<div class="row"><div class="num">$19.47 / month</div>
+        <div class="body">Unit cost at one million requests, computed from list prices: Lambda, Postgres, NAT, logs. A model, not an invoice.</div></div>
+<div class="row"><div class="num">24 · 9 · 13</div>
+        <div class="body">HTTP routes, migrations and shipped locales. The catalogue, the schema and the language set are checked by gates.</div></div></div>
+  </div>
+  <div class="col">
+    <h2>Business, as a model</h2><div class="rows"><div class="row"><div class="num">$249 · $899 · $3,900</div>
+        <div class="body">Published list per month: Team, Business, Enterprise floor. Aligned across site, database and documents by a checker that fails on drift.</div></div>
+<div class="row"><div class="num">$50,000 ACV</div>
+        <div class="body">Mid-market contract value; 3.3-month payback and 9.1 LTV/CAC at a 40-month life. Model, tagged as such in the pack.</div></div></div>
+    <h2>Margin at list</h2>
+    <div class="bars">
+      <div class="bar"><span class="lab">Unit cost</span><span class="track"><i style="width:3.9%"></i></span><span class="val">$19.47</span></div>
+      <div class="bar"><span class="lab">List price, 1M requests</span><span class="track"><i class="full"></i></span><span class="val">$498</span></div>
+    </div>
+    <p class="note">Team lists 500,000 requests for $249. Two blocks minus the $19.47 unit cost is a 96.1% gross margin. A model built from published prices, not a booking.</p>
+    <div class="ask">
+      <h2>The raise</h2>
+      <div class="amount">$750,000</div>
+      <p>$750,000 in three tranches tied to milestones — $300k, $250k, $200k — against an 18-month plan, $33.9k monthly operating cost and a 22–28-month runway after closing.</p>
+      <h2>Use of funds</h2>
+      <p>Engineering continuity 146.7k · go-to-market 130.0k · assurance 76.5k · legal 39.5k · founder 66.0k · infrastructure 35.0k · recruiting 16.0k · contingency 51.0k.</p>
+    </div>
+    <div class="limits"><h2 style="margin-top:1.2mm">What we do not claim</h2><p>No certifications, no paying customers, no SLA, a single-AZ database and no restore drill executed. Each is a milestone with an owner, not a footnote.</p></div>
+
+  </div>
+</div>
+<div class="milestone-band"><h2>Next four milestones</h2><div class="milestones"><span>Restore drill, executed and timed</span><span>Multi-AZ database and a second region</span><span>Stripe live with a real test-card charge</span><span>SDKs published to PyPI and npm</span></div></div>
+<footer><span>Every figure above is produced by a command; the pack reproduces them and the checksums travel with this PDF.</span><span>aegislatent.com · Seed · October 2026</span></footer>
+</div></body></html>

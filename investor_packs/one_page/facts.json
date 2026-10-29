@@ -1,0 +1,163 @@
+{
+  "version": "2026-10-29",
+  "page": {
+    "format": "A4",
+    "orientation": "portrait",
+    "pages": 1
+  },
+  "contact": {
+    "name": "Juan Luna",
+    "email": "juan.c.luna04@gmail.com",
+    "site": "aegislatent.com"
+  },
+  "en": {
+    "eyebrow": "Seed · {month_year}",
+    "wordmark": "Aegis Latent Core",
+    "claim": "A gateway for AI traffic that writes every request to an append-only ledger, and a pack the buyer can verify without trusting us.",
+    "why_title": "Why now",
+    "why": "AI calls move regulated data, but the evidence is still a vendor log line. Buyers who answer to auditors need proofs they can check offline, not a dashboard that asks to be believed.",
+    "product_title": "What exists today",
+    "product": "A gateway with keys, quotas and routing; an append-only ledger with Merkle inclusion proofs; a signed export and a verifier that runs on the customer's machine. Self-serve billing, thirteen languages, one API.",
+    "proof_title": "Measured, not estimated",
+    "proof": [
+      [
+        "201 → 200 → 201",
+        "Signup, SES delivery and email verification, then the first API key, executed end to end on AWS on {date_long}."
+      ],
+      [
+        "{p50} p50",
+        "{rate} requests per second through the Function URL: p95 {p95}, {answered} answered. Single-instance database pool."
+      ],
+      [
+        "{gates} gates",
+        "Full suite on a clean tree, zero cached lanes, {gates_s}. {tests} declared tests across the control plane and both SDKs."
+      ],
+      [
+        "{cost} / month",
+        "Unit cost at one million requests, computed from list prices: Lambda, Postgres, NAT, logs. A model, not an invoice."
+      ],
+      [
+        "{routes} · {migrations} · {locales}",
+        "HTTP routes, migrations and shipped locales. The catalogue, the schema and the language set are checked by gates."
+      ]
+    ],
+    "business_title": "Business, as a model",
+    "business": [
+      [
+        "{team} · {business} · {enterprise}",
+        "Published list per month: Team, Business, Enterprise floor. Aligned across site, database and documents by a checker that fails on drift."
+      ],
+      [
+        "{acv} ACV",
+        "Mid-market contract value; {payback}-month payback and {ltvcac} LTV/CAC at a 40-month life. Model, tagged as such in the pack."
+      ]
+    ],
+    "raise_title": "The raise",
+    "raise": "{raise} in three tranches tied to milestones — {t1}, {t2}, {t3} — against an 18-month plan, {opex} monthly operating cost and a {runway}-month runway after closing.",
+    "funds_title": "Use of funds",
+    "funds": "Engineering continuity {fund_engineer} · go-to-market {fund_gtm} · assurance {fund_assurance} · legal {fund_legal} · founder {fund_founder} · infrastructure {fund_infra} · recruiting {fund_recruit} · contingency {fund_contingency}.",
+    "limits_title": "What we do not claim",
+    "limits": "No certifications, no paying customers, no SLA, a single-AZ database and no restore drill executed. Each is a milestone with an owner, not a footnote.",
+    "footer": "Every figure above is produced by a command; the pack reproduces them and the checksums travel with this PDF.",
+    "flow": [
+      [
+        "01 · Request",
+        "A key names a tenant, a quota and a route. The gateway enforces all three before the upstream call."
+      ],
+      [
+        "02 · Ledger",
+        "The request and the response digest enter an append-only log; each entry carries the previous hash."
+      ],
+      [
+        "03 · Proof",
+        "The customer exports a signed pack and verifies inclusion offline. Our credentials are not part of the proof."
+      ]
+    ],
+    "milestones_title": "Next four milestones",
+    "milestones": [
+      "Restore drill, executed and timed",
+      "Multi-AZ database and a second region",
+      "Stripe live with a real test-card charge",
+      "SDKs published to PyPI and npm"
+    ],
+    "margin_title": "Margin at list",
+    "margin_cost": "Unit cost",
+    "margin_price": "List price, 1M requests",
+    "margin_note": "Team lists 500,000 requests for {team}. Two blocks minus the {cost} unit cost is a {margin} gross margin. A model built from published prices, not a booking."
+  },
+  "es": {
+    "eyebrow": "Seed · {month_year}",
+    "wordmark": "Aegis Latent Core",
+    "claim": "Una puerta de enlace para el tráfico de IA que escribe cada petición en un libro append-only, y un paquete que el comprador puede verificar sin confiar en nosotros.",
+    "why_title": "Por qué ahora",
+    "why": "Las llamadas de IA mueven datos regulados, pero la evidencia sigue siendo una línea de log del proveedor. Quien responde ante un auditor necesita pruebas que pueda comprobar sin conexión, no un panel que pida confianza.",
+    "product_title": "Lo que existe hoy",
+    "product": "Una puerta de enlace con claves, cuotas y ruteo; un libro append-only con pruebas de inclusión Merkle; exportación firmada y un verificador que corre en la máquina del cliente. Facturación self-serve, trece idiomas, una API.",
+    "proof_title": "Medido, no estimado",
+    "proof": [
+      [
+        "201 → 200 → 201",
+        "Alta, entrega por SES y verificación de correo, y luego la primera clave de API, ejecutado de punta a punta en AWS el {date_long}."
+      ],
+      [
+        "{p50} p50",
+        "{rate} peticiones por segundo contra la Function URL: p95 {p95}, {answered} respondidas. Pool de base de datos de una instancia."
+      ],
+      [
+        "{gates} gates",
+        "Suite completa sobre árbol limpio, cero lanes en caché, {gates_s}. {tests} pruebas declaradas entre el plano de control y ambos SDK."
+      ],
+      [
+        "{cost} / mes",
+        "Costo unitario a un millón de peticiones, calculado con precios de lista: Lambda, Postgres, NAT, logs. Un modelo, no una factura."
+      ],
+      [
+        "{routes} · {migrations} · {locales}",
+        "Rutas HTTP, migraciones e idiomas publicados. El catálogo, el esquema y el conjunto de idiomas están verificados por gates."
+      ]
+    ],
+    "business_title": "Negocio, como modelo",
+    "business": [
+      [
+        "{team} · {business} · {enterprise}",
+        "Lista publicada por mes: Team, Business, Enterprise como piso. Alineada entre sitio, base de datos y documentos por un verificador que falla ante cualquier drift."
+      ],
+      [
+        "ACV {acv}",
+        "Valor de contrato mid-market; recupero en {payback} meses y LTV/CAC de {ltvcac} a 40 meses de vida. Modelo, etiquetado como tal en el paquete."
+      ]
+    ],
+    "raise_title": "La ronda",
+    "raise": "{raise} en tres tramos atados a hitos —{t1}, {t2}, {t3}— contra un plan de 18 meses, un costo operativo de {opex} por mes y una pista de {runway} meses después del cierre.",
+    "funds_title": "Uso de fondos",
+    "funds": "Continuidad de ingeniería {fund_engineer} · go-to-market {fund_gtm} · assurance {fund_assurance} · legal {fund_legal} · fundador {fund_founder} · infraestructura {fund_infra} · recruiting {fund_recruit} · contingencia {fund_contingency}.",
+    "limits_title": "Lo que no afirmamos",
+    "limits": "Sin certificaciones, sin clientes pagos, sin SLA, base de datos en una sola zona y ninguna prueba de restore ejecutada. Cada punto es un hito con responsable, no una nota al pie.",
+    "footer": "Cada cifra de esta hoja sale de un comando; el paquete las reproduce y los checksums viajan con este PDF.",
+    "flow": [
+      [
+        "01 · Petición",
+        "Una clave nombra un tenant, una cuota y una ruta. La puerta de enlace aplica las tres antes de llamar al proveedor."
+      ],
+      [
+        "02 · Libro",
+        "La petición y el digest de la respuesta entran en un log append-only; cada entrada lleva el hash anterior."
+      ],
+      [
+        "03 · Prueba",
+        "El cliente exporta un paquete firmado y verifica la inclusión sin conexión. Nuestras credenciales no forman parte de la prueba."
+      ]
+    ],
+    "milestones_title": "Los próximos cuatro hitos",
+    "milestones": [
+      "Prueba de restore ejecutada y cronometrada",
+      "Base multi-AZ y una segunda región",
+      "Stripe en vivo con un cargo de prueba real",
+      "SDK publicados en PyPI y npm"
+    ],
+    "margin_title": "Margen a lista",
+    "margin_cost": "Costo unitario",
+    "margin_price": "Precio de lista, 1M peticiones",
+    "margin_note": "Team lista 500.000 peticiones por {team}. Dos bloques menos el costo unitario de {cost} dan un margen bruto de {margin}. Un modelo con precios publicados, no una reserva."
+  }
+}
