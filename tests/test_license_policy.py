@@ -75,7 +75,8 @@ def test_notice_states_the_boundary_and_the_sdk_exception() -> None:
     notice = read("NOTICE")
     assert "Aegis Commercial License 1.0" in notice
     assert "v5.0.2 under Apache-2.0" in notice
-    assert "sdk/python" in notice and "sdk/typescript" in notice
+    assert "sdk/python" in notice
+    assert "sdk/typescript" in notice
 
 
 def test_sdk_packages_stay_apache_and_ship_their_own_notice() -> None:
@@ -115,7 +116,11 @@ def test_no_commercial_tree_source_carries_an_apache_header() -> None:
                 continue
             if any(part in EXCLUDED_PARTS for part in path.parts):
                 continue
-            if path.name in {"apply_license_headers.py", "test_license_headers.py", "test_license_policy.py"}:
+            if path.name in {
+                "apply_license_headers.py",
+                "test_license_headers.py",
+                "test_license_policy.py",
+            }:
                 # These files define or assert both profiles; their own headers
                 # are commercial, but the Apache literal is test data.
                 continue

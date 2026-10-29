@@ -13,7 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location(
     "apply_license_headers", ROOT / "scripts" / "apply_license_headers.py"
 )
-assert SPEC and SPEC.loader
+assert SPEC
+assert SPEC.loader
 headers = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = headers
 SPEC.loader.exec_module(headers)
@@ -55,6 +56,20 @@ def test_insert_python_keeps_the_module_docstring_first() -> None:
     assert result.startswith('"""Module docs."""')
     assert "LicenseRef-Aegis-Commercial-1.0" in result
     assert result.index("LicenseRef") < result.index("VALUE = 1")
+
+
+def test_inserted_licence_line_carries_the_comment_marker() -> None:
+    """Regression: lstrip() removed whitespace, not '#', and emitted bare code."""
+    result = headers._rewrite(
+        APACHE_BLOCK.splitlines(keepends=True)[:2]
+        and "# Copyright (c) 2026 Juan Luna.\n# SPDX-License-Identifier: Apache-2.0\n",
+        headers.COMMERCIAL,
+        None,
+    )
+    assert result is not None
+    for line in result.splitlines()[:3]:
+        assert line.startswith("# "), line
+    compile(result, "<header-test>", "exec")
 
 
 def test_insert_python_keeps_the_shebang_first() -> None:

@@ -61,9 +61,7 @@ LEGACY_LICENSE_LINE_1 = (
     "Licensed under the GNU Affero General Public License v3 (AGPLv3) OR under a"
 )
 LEGACY_LICENSE_MARKER = "Licensed under the GNU Affero General Public License v3"
-LEGACY_LICENSE_LINE_2 = (
-    "Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms."
-)
+LEGACY_LICENSE_LINE_2 = "Proprietary Commercial License. See LICENSE and COMMERCIAL.md for terms."
 
 HASH = "#"
 SLASH = "//"
@@ -78,10 +76,12 @@ INSERT_SUFFIXES = {".py", ".rs", ".toml", ".sh"}
 
 #: Suffixes that already carry a header in some files. A mismatched header is
 #: rewritten, but a file without one is left alone: a leading comment is not
-#: always harmless to the tool that reads it.
+#: always harmless to the tool that reads it.  Multi-line block comments such as
+#: TLA+'s ``(* ... *)`` are excluded: a line-oriented rewriter cannot preserve
+#: the closing delimiter, and it silently produced invalid specs once.
 MIGRATE_SUFFIXES = {
     ".yml", ".yaml", ".ts", ".tsx", ".mjs", ".js", ".cjs", ".md", ".env",
-    ".tla", ".smt2", ".lean", ".proto", ".cfg", ".html",
+    ".smt2", ".lean", ".proto", ".cfg", ".html",
 }  # fmt: skip
 
 EXCLUDED_PARTS = {
@@ -104,11 +104,17 @@ def profile_for(rel: Path) -> Header:
 
 
 def _comment_prefix(line: str) -> str:
+    """Return the indentation plus the comment marker that opens *line*.
+
+    ``lstrip`` removes whitespace, not the marker, so the earlier version
+    returned the empty string for every top-level comment and inserted a bare
+    licence line into 13 Python files.  The marker is part of the prefix.
+    """
     stripped = line.lstrip()
-    if stripped.startswith(("//", "/*", "*", ";")):
-        return line[: len(line) - len(stripped)]
-    if stripped.startswith("#"):
-        return line[: len(line) - len(stripped)]
+    indent = line[: len(line) - len(stripped)]
+    for marker in ("//", "/*", "*", ";", "#"):
+        if stripped.startswith(marker):
+            return indent + marker
     return ""
 
 
@@ -118,11 +124,7 @@ def _lead(prefix: str) -> str:
 
 def _block(prefix: str, header: Header) -> str:
     lead = _lead(prefix)
-    return (
-        f"{lead}{header.copyright}\n"
-        f"{lead}{header.spdx}\n"
-        f"{lead}{header.licence}\n"
-    )
+    return f"{lead}{header.copyright}\n{lead}{header.spdx}\n{lead}{header.licence}\n"
 
 
 def _insert_python(text: str, block: str) -> str:
@@ -197,13 +199,11 @@ def _rewrite(text: str, header: Header, top_lines: int | None) -> str | None:
     prefix = _comment_prefix(lines[index])
     lead = _lead(prefix)
     new = list(lines)
-    new[index] = _replace_in_line(
-        new[index], "SPDX-License-Identifier:", f"{header.spdx}"
-    )
+    new[index] = f"{lead}{header.spdx}\n"
     for offset in (1, 2, 3):
         before = index - offset
         if before >= 0 and "Copyright" in new[before]:
-            new[before] = _replace_in_line(new[before], "Copyright", header.copyright)
+            new[before] = f"{lead}{header.copyright}\n"
             break
     licence_at = None
     for offset in (1, 2):
@@ -212,7 +212,7 @@ def _rewrite(text: str, header: Header, top_lines: int | None) -> str | None:
             licence_at = after
             break
     if licence_at is not None:
-        new[licence_at] = _replace_in_line(new[licence_at], "Licensed under", header.licence)
+        new[licence_at] = f"{lead}{header.licence}\n"
     else:
         new.insert(index + 1, f"{lead}{header.licence}\n")
     return "".join(new)
@@ -235,7 +235,9 @@ def _replace_legacy(text: str, header: Header, top_lines: int | None) -> str | N
                 lines[index + 1], LEGACY_LICENSE_LINE_2, header.licence
             )
         if index > 0 and LEGACY_COPYRIGHT in lines[index - 1]:
-            lines[index - 1] = _replace_in_line(lines[index - 1], LEGACY_COPYRIGHT, header.copyright)
+            lines[index - 1] = _replace_in_line(
+                lines[index - 1], LEGACY_COPYRIGHT, header.copyright
+            )
         else:
             lines.insert(index, f"{lead}{header.copyright}\n")
         return "".join(lines)
