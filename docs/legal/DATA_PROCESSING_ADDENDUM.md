@@ -6,6 +6,9 @@ Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 # Data Processing Addendum (DPA)
 
+> **Draft for counsel review.** `[COUNSEL-REVIEW-REQUIRED]` This document is not legal advice and is not an offer; it is prepared for review by qualified counsel.
+
+
 **Version:** 1.0-draft · **Status:** `[COUNSEL-REVIEW-REQUIRED]`
 This DPA forms part of the Terms of Service when the customer processes personal
 data through the hosted Service and the parties sign it. It does not apply to a

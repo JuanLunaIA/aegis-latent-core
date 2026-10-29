@@ -6,6 +6,9 @@ Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 # AI-assisted contributions
 
+> **Draft for counsel review.** `[COUNSEL-REVIEW-REQUIRED]` This document is not legal advice and is not an offer; it is prepared for review by qualified counsel.
+
+
 **Status:** factual record for counsel. Not a legal opinion.
 
 ## What the history shows

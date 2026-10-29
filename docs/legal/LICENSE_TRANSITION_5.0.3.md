@@ -6,6 +6,9 @@ Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 # Licence transition: Apache-2.0 to Aegis Commercial License 1.0 (v5.0.3)
 
+> **Draft for counsel review.** `[COUNSEL-REVIEW-REQUIRED]` This document is not legal advice and is not an offer; it is prepared for review by qualified counsel.
+
+
 **Audience:** owner, counsel, procurement reviewers, and anyone deciding which
 terms apply to a given copy of Aegis Latent Core.
 **Scope:** what changes from v5.0.3, which published copies keep which terms, what

@@ -6,6 +6,9 @@ Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 # Refund Policy
 
+> **Draft for counsel review.** `[COUNSEL-REVIEW-REQUIRED]` This document is not legal advice and is not an offer; it is prepared for review by qualified counsel.
+
+
 **Version:** 1.0-draft · **Status:** `[COUNSEL-REVIEW-REQUIRED]`
 
 ## 1. First purchase

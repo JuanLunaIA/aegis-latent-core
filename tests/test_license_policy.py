@@ -55,6 +55,11 @@ BOUNDARY_OR_THIRD_PARTY = {
     "docs/legal/COUNSEL_QUESTIONS.md",
     "docs/security/DEPENDENCY_RISK_REGISTER.md",
     "docs/security/DEPENDENCY_TRIAGE.md",
+    "docs/DOCUMENTATION_INDEX.md",
+    ".aegis_ai_context/02_OPERATIONAL_INVARIANTS_MATRIX.md",
+    ".aegis_ai_context/04_FORMAL_SPECIFICATIONS_MAPPING.md",
+    ".aegis_ai_context/05_DETERMINISTIC_RECIPES_PLAYBOOK.md",
+    ".aegis_ai_context/08_COMPONENT_PACKAGE_WORKFLOW_MATRIX.md",
 }
 
 

@@ -9,56 +9,56 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/00_CORE_ONTOLOGY_AND_BOUNDARIES.xml",
-      "sha256": "bee76ede3d11696d0439f46175087653b40853a4a3413002a878462defcb9183",
-      "size": 6735
+      "sha256": "abc65518e67573f18a1f968767cf74b5e39213e567ce4f7e5078969ba22da51f",
+      "size": 6761
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/01_CANONICAL_SYMBOL_AND_TYPE_INDEX.tsv",
-      "sha256": "89fc4cf71aff20de444bf4401373c8be3cb14c0c75977e1d6ae8ee4629ab2d5a",
-      "size": 7252
+      "sha256": "d404f79cf62688e8f7043f94c3b977917eb36fc501fcf8a04a086636295d052c",
+      "size": 7167
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/02_OPERATIONAL_INVARIANTS_MATRIX.md",
-      "sha256": "95c7f0e5dbdae1595936467e0d79e494f5dc28263daefac1d10d0ddcc111175c",
-      "size": 8308
+      "sha256": "d4d45b567b572baece4f909581393579066129a2300f5b23601ebb5ce87417b0",
+      "size": 8285
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/03_STATE_MACHINES_AND_DAGS.mermaid",
-      "sha256": "6ba79cd2d8cfc09a417be3e8c96454828104639ca2fc66171078c10517696b16",
-      "size": 2956
+      "sha256": "a97125af7b9342f01d750d473495f39ff74de1ec64c0574e3f5326dc68dfd3dd",
+      "size": 2934
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/04_FORMAL_SPECIFICATIONS_MAPPING.md",
-      "sha256": "dd474a7c4f23620975f9510c772806b80a3f9d37856e6c0189f664d58f9f19c9",
-      "size": 6706
+      "sha256": "df1ce2f74373a420dd5ada16a3e99ad8377d9ae417c94c4589a811d756fa4088",
+      "size": 6683
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/05_DETERMINISTIC_RECIPES_PLAYBOOK.md",
-      "sha256": "358617663d9e05946da6ae37450d03bbf3e94684366034fa07d7022004def28c",
-      "size": 8947
+      "sha256": "e2be04c76e4bfc15752f6c4a900f7c218021583b209fa0ee26c2daa38a479656",
+      "size": 8883
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/06_SECURITY_AND_SUPPLY_CHAIN_MANIFEST.xml",
-      "sha256": "efbd9913823c729d385676357fb18affd8cae3d720aad44a308bb1f7a7d5512a",
-      "size": 6907
+      "sha256": "3e590314adcaf0f82930af4eaeba744666dace946b36d7d0c89823aa3dac04dd",
+      "size": 7063
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/07_SYSTEM_COMPACT_KERNEL.xml",
-      "sha256": "2025e92a610834ffd156861e50b4d315975576530c8f92de375c96b24bf18df4",
-      "size": 8918
+      "sha256": "325667faf5661d76b309fbc5a614e49a00df73c3a5d7c606206fe2086eb2867f",
+      "size": 8944
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/08_COMPONENT_PACKAGE_WORKFLOW_MATRIX.md",
-      "sha256": "68178f3a52ddf3203fac1e4973f4f101459861a9c65a67c913371505dda3de77",
-      "size": 10322
+      "sha256": "3008376e26e234f33be4c1b6a90a028a3cca4f6cd9fb47dbdf8562c227b0d433",
+      "size": 10365
     },
     {
       "category": "context",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "dfffe350638f47454955cc57d126a3e8458aec68c6486bb33821267566242d72",
-      "size": 178648
+      "sha256": "839a2e9ae75c395e6e1a4c75650646a3a6d3e55606f7b0f4e055a2711db66b9f",
+      "size": 178755
     },
     {
       "category": "governed_input",

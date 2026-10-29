@@ -25,6 +25,21 @@
 
 ---
 
+## Legal drafts
+
+Drafts prepared for counsel. Every one says on its face that it is not legal advice and carries `[COUNSEL-REVIEW-REQUIRED]`; none is an offer.
+
+| Document | Status |
+| --- | --- |
+| [Terms of Service](legal/TERMS_OF_SERVICE.md) | draft 1.0, effective only on the first paid Order |
+| [Privacy Policy](legal/PRIVACY_POLICY.md) | draft, subprocessor table in the same folder |
+| [Data Processing Addendum](legal/DATA_PROCESSING_ADDENDUM.md) | draft, controller/processor roles |
+| [Subprocessors](legal/SUBPROCESSORS.md) | current list: AWS, Stripe, Vercel, GitHub |
+| [Refund Policy](legal/REFUND_POLICY.md) | draft, first purchase and renewals |
+| [Licence Transition 5.0.3](legal/LICENSE_TRANSITION_5.0.3.md) | which copies keep which terms |
+| [AI Contributions](legal/AI_CONTRIBUTIONS.md) | factual record of agent-authored commits |
+| [Counsel Questions](legal/COUNSEL_QUESTIONS.md) | the questions only counsel can answer; blocks a public release |
+
 ## Claim control
 
 The documents that decide what may be said, and on what evidence.

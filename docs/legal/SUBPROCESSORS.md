@@ -6,6 +6,9 @@ Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 # Subprocessors
 
+> **Draft for counsel review.** `[COUNSEL-REVIEW-REQUIRED]` This document is not legal advice and is not an offer; it is prepared for review by qualified counsel.
+
+
 **Version:** 1.0 · **Last reviewed:** 2026-10-29
 This list accompanies `PRIVACY_POLICY.md` and `DATA_PROCESSING_ADDENDUM.md`. It
 names every third party that can process customer data for the hosted Service.
