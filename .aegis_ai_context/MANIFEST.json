@@ -225,26 +225,26 @@
     {
       "category": "governed_input",
       "path": "sdk/typescript/package.json",
-      "sha256": "f9507b3ee2402fb1e058f99c4ead703006347d097de5896ded6e7ccee46c56fb",
-      "size": 2207
+      "sha256": "4547698cabae620b2e2384a079f4d226785f72a06f1d4829ed45ef9dec7ace2c",
+      "size": 2230
     },
     {
       "category": "governed_input",
       "path": "sdk/typescript/package-lock.json",
-      "sha256": "86a9b71b89940823de3580c57a522005082dc7d717c71736e166255e6fcb36f4",
-      "size": 44320
+      "sha256": "7173a92426c6f7d877b95ac339233196f9f96b28c2de382b893251ac9992c5bd",
+      "size": 44642
     },
     {
       "category": "governed_input",
       "path": "dashboard/package.json",
-      "sha256": "027aa69d841b1b8f6b510ceb34904c5f42e488277dbc360e2588e8153ad0038d",
-      "size": 1120
+      "sha256": "c09922cd22e4d8e3c3533dfc8ea9ee36505888216896779a9b043ed9f9f0e043",
+      "size": 1145
     },
     {
       "category": "governed_input",
       "path": "dashboard/package-lock.json",
-      "sha256": "dac5f9930465a15ce658dffec824de8056d4c0a41556a0d35f4e2e25d59255af",
-      "size": 123580
+      "sha256": "4c756718f2aa1983c0d43096ee189a1bd6b9ab862cf27518b18d75ce6b003536",
+      "size": 124802
     },
     {
       "category": "governed_input",
@@ -261,7 +261,7 @@
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/Cargo.lock",
-      "sha256": "5c036e959e90403fee69a1ecf9bdc9b7dab3305254228aeaaea688ee24b56272",
+      "sha256": "5c49bdac476da77d98d43a9f4f87ad1eb96f356a5796d276e9020795c33cc1ba",
       "size": 80446
     },
     {
