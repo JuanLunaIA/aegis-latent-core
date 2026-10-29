@@ -24,14 +24,13 @@ import hashlib
 import html
 import json
 import re
-import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-GATEWAY = HERE.parents[1]           # aegis-latent-core
-WORKSPACE = HERE.parents[2]         # repository container
+GATEWAY = HERE.parents[1]  # aegis-latent-core
+WORKSPACE = HERE.parents[2]  # repository container
 OUT = HERE / "out"
 
 FACTS = WORKSPACE / "docs/investor/facts.json"
@@ -50,10 +49,34 @@ CHROME_CANDIDATES = (
 )
 
 MONTHS = {
-    "en": ["January", "February", "March", "April", "May", "June", "July",
-           "August", "September", "October", "November", "December"],
-    "es": ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
-           "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+    "en": [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ],
+    "es": [
+        "enero",
+        "febrero",
+        "marzo",
+        "abril",
+        "mayo",
+        "junio",
+        "julio",
+        "agosto",
+        "septiembre",
+        "octubre",
+        "noviembre",
+        "diciembre",
+    ],
 }
 
 
@@ -135,7 +158,8 @@ def metrics() -> dict[str, dict[str, str]]:
             "p95": f"{money(float(load.group(2)), locale, 1)} ms",
             "rate": money(rate_value, locale),
             "answered": f"{money(done_value, locale)} of {money(sent_value, locale)}"
-                        if locale == "en" else f"{money(done_value, locale)} de {money(sent_value, locale)}",
+            if locale == "en"
+            else f"{money(done_value, locale)} de {money(sent_value, locale)}",
             "gates": f"{gates_passed} / {gates_total}",
             "gates_s": f"{money(gates_seconds, locale, 0)} s",
             "tests": money(tests, locale),
@@ -146,20 +170,42 @@ def metrics() -> dict[str, dict[str, str]]:
             "team": "$" + money(prices["team"], locale),
             "business": "$" + money(prices["business"], locale),
             "enterprise": "$" + money(prices["enterprise"], locale),
-            "acv": ("$" + money(mid["acv"], locale)) if locale == "en" else ("USD " + money(mid["acv"], locale)),
+            "acv": ("$" + money(mid["acv"], locale))
+            if locale == "en"
+            else ("USD " + money(mid["acv"], locale)),
             "payback": money(float(mid["payback_months"]), locale, 1),
             "ltvcac": money(float(mid["ltv_cac_40"]), locale, 1),
-            "raise": ("$" + money(raise_value, locale)) if locale == "en" else ("USD " + money(raise_value, locale)),
-            "t1": ("$" + compact(tranches["T1"], locale, 0)) if locale == "en" else ("USD " + compact(tranches["T1"], locale, 0)),
-            "t2": ("$" + compact(tranches["T2"], locale, 0)) if locale == "en" else ("USD " + compact(tranches["T2"], locale, 0)),
-            "t3": ("$" + compact(tranches["T3"], locale, 0)) if locale == "en" else ("USD " + compact(tranches["T3"], locale, 0)),
-            "opex": ("$" + compact(opex, locale)) if locale == "en" else ("USD " + compact(opex, locale)),
+            "raise": ("$" + money(raise_value, locale))
+            if locale == "en"
+            else ("USD " + money(raise_value, locale)),
+            "t1": ("$" + compact(tranches["T1"], locale, 0))
+            if locale == "en"
+            else ("USD " + compact(tranches["T1"], locale, 0)),
+            "t2": ("$" + compact(tranches["T2"], locale, 0))
+            if locale == "en"
+            else ("USD " + compact(tranches["T2"], locale, 0)),
+            "t3": ("$" + compact(tranches["T3"], locale, 0))
+            if locale == "en"
+            else ("USD " + compact(tranches["T3"], locale, 0)),
+            "opex": ("$" + compact(opex, locale))
+            if locale == "en"
+            else ("USD " + compact(opex, locale)),
             "runway": f"{min(runway.values())}{dash}{max(runway.values())}",
-            "margin": money((2 * prices["team"] - 19.47) / (2 * prices["team"]) * 100, locale, 1) + "%",
-            "fund_engineer": compact(funds["Engineering continuity (2nd maintainer, 16 mo)"], locale),
-            "fund_gtm": compact(funds["Go-to-market (solutions engineer 12 mo + design-partner program)"], locale),
-            "fund_assurance": compact(funds["Assurance (pen test + retest, SOC 2 Type I, escrow)"], locale),
-            "fund_legal": compact(funds["Legal & corporate (entity, IP, licence, regulatory, AI-authorship opinion)"], locale),
+            "margin": money((2 * prices["team"] - 19.47) / (2 * prices["team"]) * 100, locale, 1)
+            + "%",
+            "fund_engineer": compact(
+                funds["Engineering continuity (2nd maintainer, 16 mo)"], locale
+            ),
+            "fund_gtm": compact(
+                funds["Go-to-market (solutions engineer 12 mo + design-partner program)"], locale
+            ),
+            "fund_assurance": compact(
+                funds["Assurance (pen test + retest, SOC 2 Type I, escrow)"], locale
+            ),
+            "fund_legal": compact(
+                funds["Legal & corporate (entity, IP, licence, regulatory, AI-authorship opinion)"],
+                locale,
+            ),
             "fund_founder": compact(funds["Founder salary (18 mo)"], locale),
             "fund_infra": compact(funds["Infra, tools, insurance, accounting (18 mo)"], locale),
             "fund_recruit": compact(funds["Recruiting"], locale),
@@ -185,9 +231,8 @@ def font_face(path: Path, family: str) -> str:
     if not path.is_file():
         return ""
     return (
-        "@font-face{font-family:'%s';src:url('file://%s') format('woff2');"
+        f"@font-face{{font-family:'{family}';src:url('file://{path}') format('woff2');"
         "font-weight:100 900;font-style:normal;font-display:block}"
-        % (family, path)
     )
 
 
@@ -218,19 +263,19 @@ def render(locale: str, copy: dict, values: dict[str, str], contact: dict[str, s
         for item in copy["milestones"]
     )
     proof_rows = "\n".join(
-        f"""<div class="row"><div class="num">{html.escape(fill(str(head), values, locale + '.proof'))}</div>
-        <div class="body">{html.escape(fill(str(body), values, locale + '.proof'))}</div></div>"""
+        f"""<div class="row"><div class="num">{html.escape(fill(str(head), values, locale + ".proof"))}</div>
+        <div class="body">{html.escape(fill(str(body), values, locale + ".proof"))}</div></div>"""
         for head, body in copy["proof"]
     )
     business_rows = "\n".join(
-        f"""<div class="row"><div class="num">{html.escape(fill(str(head), values, locale + '.business'))}</div>
-        <div class="body">{html.escape(fill(str(body), values, locale + '.business'))}</div></div>"""
+        f"""<div class="row"><div class="num">{html.escape(fill(str(head), values, locale + ".business"))}</div>
+        <div class="body">{html.escape(fill(str(body), values, locale + ".business"))}</div></div>"""
         for head, body in copy["business"]
     )
     sans = font_face(SANS, "Geist")
     serif = font_face(SERIF, "Instrument")
     return f"""<!doctype html>
-<html lang="{locale}"><head><meta charset="utf-8"><title>Aegis Latent Core — {t('eyebrow')}</title>
+<html lang="{locale}"><head><meta charset="utf-8"><title>Aegis Latent Core — {t("eyebrow")}</title>
 <style>
 {sans}
 {serif}
@@ -288,38 +333,38 @@ footer {{ margin-top: auto; border-top: .6pt solid #cfc7b2; padding-top: 1.8mm;
 </style></head>
 <body><div class="sheet">
 <header>
-  <div class="mark">{t('wordmark')}<small>{t('eyebrow')}</small></div>
-  <div class="contact"><b>{html.escape(contact['name'])}</b><br>{html.escape(contact['email'])}<br>{html.escape(contact['site'])}</div>
+  <div class="mark">{t("wordmark")}<small>{t("eyebrow")}</small></div>
+  <div class="contact"><b>{html.escape(contact["name"])}</b><br>{html.escape(contact["email"])}<br>{html.escape(contact["site"])}</div>
 </header>
-<div class="claim">{t('claim')}</div>
+<div class="claim">{t("claim")}</div>
 <div class="flow">{flow_cells}</div>
 <div class="columns">
   <div class="col">
-    <h2>{t('why_title')}</h2><p>{t('why')}</p>
-    <h2>{t('product_title')}</h2><p>{t('product')}</p>
-    <h2>{t('proof_title')}</h2><div class="rows">{proof_rows}</div>
+    <h2>{t("why_title")}</h2><p>{t("why")}</p>
+    <h2>{t("product_title")}</h2><p>{t("product")}</p>
+    <h2>{t("proof_title")}</h2><div class="rows">{proof_rows}</div>
   </div>
   <div class="col">
-    <h2>{t('business_title')}</h2><div class="rows">{business_rows}</div>
-    <h2>{t('margin_title')}</h2>
+    <h2>{t("business_title")}</h2><div class="rows">{business_rows}</div>
+    <h2>{t("margin_title")}</h2>
     <div class="bars">
-      <div class="bar"><span class="lab">{t('margin_cost')}</span><span class="track"><i style="width:{cost_bar}%"></i></span><span class="val">{values['cost']}</span></div>
-      <div class="bar"><span class="lab">{t('margin_price')}</span><span class="track"><i class="full"></i></span><span class="val">{price_bar}</span></div>
+      <div class="bar"><span class="lab">{t("margin_cost")}</span><span class="track"><i style="width:{cost_bar}%"></i></span><span class="val">{values["cost"]}</span></div>
+      <div class="bar"><span class="lab">{t("margin_price")}</span><span class="track"><i class="full"></i></span><span class="val">{price_bar}</span></div>
     </div>
-    <p class="note">{t('margin_note')}</p>
+    <p class="note">{t("margin_note")}</p>
     <div class="ask">
-      <h2>{t('raise_title')}</h2>
-      <div class="amount">{values['raise'] if locale == 'en' else 'USD ' + values['raise'].split(' ', 1)[-1]}</div>
-      <p>{t('raise')}</p>
-      <h2>{t('funds_title')}</h2>
-      <p>{t('funds')}</p>
+      <h2>{t("raise_title")}</h2>
+      <div class="amount">{values["raise"] if locale == "en" else "USD " + values["raise"].split(" ", 1)[-1]}</div>
+      <p>{t("raise")}</p>
+      <h2>{t("funds_title")}</h2>
+      <p>{t("funds")}</p>
     </div>
-    <div class="limits"><h2 style="margin-top:1.2mm">{t('limits_title')}</h2><p>{t('limits')}</p></div>
+    <div class="limits"><h2 style="margin-top:1.2mm">{t("limits_title")}</h2><p>{t("limits")}</p></div>
 
   </div>
 </div>
-<div class="milestone-band"><h2>{t('milestones_title')}</h2><div class="milestones">{milestone_cells}</div></div>
-<footer><span>{t('footer')}</span><span>{html.escape(contact['site'])} · {t('eyebrow')}</span></footer>
+<div class="milestone-band"><h2>{t("milestones_title")}</h2><div class="milestones">{milestone_cells}</div></div>
+<footer><span>{t("footer")}</span><span>{html.escape(contact["site"])} · {t("eyebrow")}</span></footer>
 </div></body></html>
 """
 
@@ -336,16 +381,24 @@ def chrome() -> str:
 def print_pdf(source: Path, target: Path) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     command = [
-        chrome(), "--headless", "--no-sandbox", "--disable-gpu", "--no-pdf-header-footer",
-        f"--print-to-pdf={target}", "--virtual-time-budget=5000", source.as_uri(),
+        chrome(),
+        "--headless",
+        "--no-sandbox",
+        "--disable-gpu",
+        "--no-pdf-header-footer",
+        f"--print-to-pdf={target}",
+        "--virtual-time-budget=5000",
+        source.as_uri(),
     ]
-    done = subprocess.run(command, capture_output=True, text=True, timeout=180)
+    done = subprocess.run(command, capture_output=True, text=True, timeout=180)  # noqa: S603 - fixed argv
     if not target.is_file():
         fail(f"chromium did not write {target}: {done.stderr[-400:]}")
 
 
 def pdf_info(path: Path) -> tuple[int, float, float]:
-    text = subprocess.run(["pdfinfo", str(path)], capture_output=True, text=True, check=True).stdout
+    text = subprocess.run(  # noqa: S603 - fixed argv, our own file
+        ["pdfinfo", str(path)], capture_output=True, text=True, check=True
+    ).stdout
     pages_match = re.search(r"Pages:\s+(\d+)", text)
     if not pages_match:
         fail(f"cannot read page count of {path}")
@@ -364,7 +417,10 @@ def verify_pdf(path: Path, locale: str, copy: dict) -> None:
         fail(f"{path.name} is {width}x{height} pt, expected A4 (595x842)")
     # -raw keeps every span in content order; the default mode reorders columns
     # and can drop a small-caps heading, which would read as a clipped page.
-    text = subprocess.run(["pdftotext", "-raw", str(path), "-"], capture_output=True, text=True, check=True).stdout
+    text = subprocess.run(  # noqa: S603 - fixed argv, our own file
+        ["pdftotext", "-raw", str(path), "-"], capture_output=True, text=True, check=True
+    ).stdout
+
     # Kerning can collapse the space between words in extraction ("AegisLatentCore"),
     # so compare with whitespace removed rather than pretending the text is absent.
     def normalise(value: str) -> str:
@@ -376,7 +432,9 @@ def verify_pdf(path: Path, locale: str, copy: dict) -> None:
             fail(f"{path.name} is missing {needle!r}; content may be clipped")
     if re.search(r"\{[a-z0-9_]+\}", text):
         fail(f"{path.name} still contains a template token")
-    fonts = subprocess.run(["pdffonts", str(path)], capture_output=True, text=True, check=True).stdout
+    fonts = subprocess.run(  # noqa: S603 - fixed argv, our own file
+        ["pdffonts", str(path)], capture_output=True, text=True, check=True
+    ).stdout
     for row in fonts.splitlines()[2:]:
         columns = row.split()
         if len(columns) >= 5 and columns[4] == "no":
@@ -396,7 +454,9 @@ def build() -> int:
         print_pdf(html_path, pdf_path)
         verify_pdf(pdf_path, locale, facts[locale])
         outputs.append(pdf_path)
-        print(f"wrote {pdf_path.relative_to(HERE)} ({pdf_path.stat().st_size / 1024:.0f} KiB, A4, 1 page)")
+        print(
+            f"wrote {pdf_path.relative_to(HERE)} ({pdf_path.stat().st_size / 1024:.0f} KiB, A4, 1 page)"
+        )
 
     sums = []
     for path in sorted(OUT.iterdir()):
@@ -433,7 +493,7 @@ def check() -> int:
             verify_pdf(path, locale, facts[locale])
     if problems:
         return 1
-    print(f"one-page: OK — 2 PDFs, A4, one page each, checksums verified")
+    print("one-page: OK — 2 PDFs, A4, one page each, checksums verified")
     return 0
 
 

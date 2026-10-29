@@ -9,7 +9,6 @@ rewriting history, and points at the A4 sheet built from today's measurements.
 from __future__ import annotations
 
 import hashlib
-import json
 import shutil
 from pathlib import Path
 
@@ -79,7 +78,6 @@ def rewrite_sums(folder: Path) -> int:
 
 
 def main() -> int:
-    facts = json.loads((HERE / "one_page/facts.json").read_text(encoding="utf-8"))
     for locale, folder in PACKS.items():
         html_path = next(folder.glob("*.html"))
         html = html_path.read_text(encoding="utf-8")
@@ -94,12 +92,19 @@ def main() -> int:
 
         readme = folder / "README.md"
         body = readme.read_text(encoding="utf-8")
-        if "## Update, 29 October 2026" not in body and "## Actualización, 29 de octubre de 2026" not in body:
+        if (
+            "## Update, 29 October 2026" not in body
+            and "## Actualización, 29 de octubre de 2026" not in body
+        ):
             body = body.rstrip() + "\n" + README_SECTION[locale]
-        body = body.replace("**Updated:** 30 September 2026 (2026-09-30), twice; see sections U and U2 of the page.",
-                            "**Updated:** 29 October 2026 (2026-10-29): evidence update and one-page A4 sheet; the financial model is unchanged since 30 September 2026.")
-        body = body.replace("**Actualizado:** 30 de septiembre de 2026 (2026-09-30), dos veces; ver secciones U y U2 de la página.",
-                            "**Actualizado:** 29 de octubre de 2026 (2026-10-29): actualización de evidencia y hoja A4 de una página; el modelo financiero no cambió desde el 30 de septiembre de 2026.")
+        body = body.replace(
+            "**Updated:** 30 September 2026 (2026-09-30), twice; see sections U and U2 of the page.",
+            "**Updated:** 29 October 2026 (2026-10-29): evidence update and one-page A4 sheet; the financial model is unchanged since 30 September 2026.",
+        )
+        body = body.replace(
+            "**Actualizado:** 30 de septiembre de 2026 (2026-09-30), dos veces; ver secciones U y U2 de la página.",
+            "**Actualizado:** 29 de octubre de 2026 (2026-10-29): actualización de evidencia y hoja A4 de una página; el modelo financiero no cambió desde el 30 de septiembre de 2026.",
+        )
         readme.write_text(body, encoding="utf-8")
 
         shutil.copy2(ONE / f"aegis-one-page-{locale}.pdf", folder / f"aegis-one-page-{locale}.pdf")
