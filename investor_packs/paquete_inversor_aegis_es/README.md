@@ -1,6 +1,6 @@
 # Aegis Latent Core: paquete para inversores semilla (castellano rioplatense)
 
-**Fecha de creación:** 25 de septiembre de 2026 (2026-09-25). **Actualizado:** 30 de septiembre de 2026 (2026-09-30), dos veces; ver las secciones A y A2 de la página.
+**Fecha de creación:** 25 de septiembre de 2026 (2026-09-25). **Actualizado:** 29 de octubre de 2026 (2026-10-29): actualización de evidencia y hoja A4 de una página; el modelo financiero no cambió desde el 30 de septiembre de 2026.
 
 Esta carpeta es la edición en castellano rioplatense del paquete para inversores de la Orden de Misión XV: los entregables D1 a D10 y la propuesta en una pantalla. La edición en inglés está en otra carpeta, `aegis_investor_pack_en/`. Las dos salen del mismo motor y usan los mismos números.
 
