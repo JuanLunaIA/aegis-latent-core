@@ -10,9 +10,9 @@ index was generated. The index records what the documentation set contains; it
 does not establish publication, deployment, or external acceptance. See
 [Release Status](RELEASE_STATUS.md) and [Boundaries](BOUNDARIES.md).
 
-- Pages indexed: 154
-- Directory groups: 21
-- Relative links in indexed pages: 1463
+- Pages indexed: 156
+- Directory groups: 22
+- Relative links in indexed pages: 1465
 - Broken relative links in indexed pages: 0
 
 ## docs/
@@ -231,3 +231,8 @@ does not establish publication, deployment, or external acceptance. See
 - **[Vulnerability Disclosure](security/VULNERABILITY_DISCLOSURE.md)** — Audience: security researchers, users reporting a suspected vulnerability. Scope: how to report a vulnerability in this software, what happens next, and what coordination to expect. Boundary: remediation targets here are best-effort intent…
 - **[WAF Testing and Evasion Boundaries](security/WAF_TESTING.md)** — This document defines the application-layer WAF corpus, metrics, reproduction method and ingress boundary for security reviewers. It does not provide universal prompt-injection detection, HTTP/2 parser coverage, or a production WAF…
 - **[Native WAL Concurrency Hardening — 2026-08-20](security/WAL_HARDENING_2026-08-20.md)** — Epistemic tag: \[HIGH_CONFIDENCE_INFERENCE\] for the diagnosed pre-patch race mechanism; \[ESTABLISHED_EMPIRICAL\] for the executed regression results Affected component: aegis_rust_v2/src/wal.rs Operational scope: One process, multiple…
+
+## docs/truth/
+
+- **[Public surface map](truth/PUBLIC_SURFACE_MAP.md)** — One row per surface that a customer, investor, auditor, or agent can read. A surface with no canonical source does not get to publish the claim.
+- **[Truth surfaces](truth/README.md)** — This directory answers one question: where does a public claim live, what canonical source can prove it, and which gate stops it from drifting?

@@ -75,8 +75,8 @@
     {
       "category": "governed_input",
       "path": "AGENTS.md",
-      "sha256": "d612229e17e7cfdf56dc73b99e2d64466dc28ac9e2973e41b47ec9e3f45a2ab5",
-      "size": 7884
+      "sha256": "e9954547c5c9a0c81635b1d69d09bc820ccea7f3c6cff138fa6d543bb0137aed",
+      "size": 4721
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "839a2e9ae75c395e6e1a4c75650646a3a6d3e55606f7b0f4e055a2711db66b9f",
-      "size": 178755
+      "sha256": "f51838f257e8aaa965947f6e9841ec4ae315c54a6161b14a3aa0b6c5b272dfb5",
+      "size": 179569
     },
     {
       "category": "governed_input",
