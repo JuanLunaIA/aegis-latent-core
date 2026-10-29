@@ -47,6 +47,9 @@ The documents that decide what may be said, and on what evidence.
 | Document | Purpose |
 | --- | --- |
 | [Claims Matrix](CLAIMS_MATRIX.md) | The public claims register: claim, state, evidence locator, boundary, owner. |
+| [Truth surfaces](truth/README.md) | How a claim is traced to a canonical source, an owner, and a gate. |
+| [Public surface map](truth/PUBLIC_SURFACE_MAP.md) | One row per surface that can make a public claim, plus the withdrawn claims. |
+| [Truth gate](truth/TRUTH_GATE.md) | The dated freeze record for the 5.0.3 launch: commits, commands, exceptions. |
 | [Boundaries](BOUNDARIES.md) | Consolidated product and evidence boundaries. |
 | [Release Status](RELEASE_STATUS.md) | The only place publication state is stated. Readback commands included. |
 | [Unsupported Claims](institutional/UNSUPPORTED_CLAIMS.md) | Claims that must not be made, and why. |
