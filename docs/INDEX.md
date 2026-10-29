@@ -214,6 +214,10 @@ The documents that decide what may be said, and on what evidence.
 | [Buyer Interview Script](commercial/validation/INTERVIEW_SCRIPT.md) | Script and note template for the three buyer interviews. |
 | [Commercialization Execution Baseline](commercial/EXEC_BASELINE.md) | Mission XVI Phase 0 readback: gates, data-room diff, open conflicts. |
 | [Commercial Readiness](commercial/COMMERCIAL_READINESS.md) | What stands between this repository and an enterprise sale. |
+| [ICP and Disqualifiers](commercial/ICP_AND_DISQUALIFIERS.md) | Who fits, who does not, and the ten discovery questions. |
+| [Competitive Matrix](commercial/COMPETITIVE_MATRIX.md) | Categories, differentiation, and where Aegis loses. |
+| [Case Study Template](commercial/CASE_STUDY_TEMPLATE.md) | A reference template that cannot be published without a signed release. |
+| [Commercial Gate](commercial/COMMERCIAL_GATE.md) | What may ship before an entity, counsel, insurance and a paid Order. |
 | [Revenue Artifact Inventory](commercial/ARTIFACT_INVENTORY.md) | Inventory of the commercial artifacts and their state. |
 | [Sales Claim Ledger](commercial/CLAIM_LEDGER.md) | Claims sales may and may not make, with their evidence. |
 | [Connector Ecosystem](commercial/CONNECTOR_ECOSYSTEM.md) | The connector surfaces and their boundaries. |
