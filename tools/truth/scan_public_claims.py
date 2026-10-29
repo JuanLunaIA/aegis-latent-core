@@ -17,8 +17,8 @@ import json
 import pathlib
 import re
 import sys
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Iterable, Sequence
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 
@@ -145,11 +145,19 @@ def scan_text(text: str, path: str = "<memory>") -> list[Hit]:
         ):
             hits.append(Hit(path, number, "CERTIFICATION_CLAIM", stripped[:240]))
 
-        if OPEN_SOURCE.search(line) and not _is_historical_license(line) and not THIRD_PARTY.search(line):
+        if (
+            OPEN_SOURCE.search(line)
+            and not _is_historical_license(line)
+            and not THIRD_PARTY.search(line)
+        ):
             if not _is_negated(line):
                 hits.append(Hit(path, number, "OPEN_SOURCE_CURRENT", stripped[:240]))
 
-        if STALE_VERSION.search(line) and CURRENT_RELEASE.search(line) and not _is_historical_release(line):
+        if (
+            STALE_VERSION.search(line)
+            and CURRENT_RELEASE.search(line)
+            and not _is_historical_release(line)
+        ):
             hits.append(Hit(path, number, "STALE_CURRENT_VERSION", stripped[:240]))
 
         if (
@@ -219,18 +227,27 @@ def _iter_documents(root: pathlib.Path, paths: Iterable[str]) -> Iterable[pathli
             rel = path.relative_to(root).as_posix()
             if any(rel == item or rel.startswith(item) for item in HISTORICAL_PATHS):
                 continue
-            if any(part in {".git", ".venv", "node_modules", "target", "__pycache__"} for part in path.parts):
+            if any(
+                part in {".git", ".venv", "node_modules", "target", "__pycache__"}
+                for part in path.parts
+            ):
                 continue
             yield path
 
 
-def scan_paths(root: pathlib.Path, paths: Iterable[str], allowlist: Sequence[dict[str, str]] = ()) -> list[Hit]:
+def scan_paths(
+    root: pathlib.Path, paths: Iterable[str], allowlist: Sequence[dict[str, str]] = ()
+) -> list[Hit]:
     hits: list[Hit] = []
     for path in _iter_documents(root, paths):
         rel = path.relative_to(root).as_posix()
         if any(rel == item or rel.startswith(item) for item in HISTORICAL_PATHS):
             continue
-        hits.extend(hit for hit in scan_text(path.read_text(encoding="utf-8", errors="ignore"), rel) if not _allowed(hit, allowlist))
+        hits.extend(
+            hit
+            for hit in scan_text(path.read_text(encoding="utf-8", errors="ignore"), rel)
+            if not _allowed(hit, allowlist)
+        )
     return hits
 
 
