@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Enterprise Pricing Guide
@@ -36,9 +36,9 @@ Total contract value is built from four independent parts rather than a single t
 
 $$\text{TCV} = \text{Base Subscription} + \sum \text{Engine Licenses} + \text{MGT Volume} + \text{Support Tier}$$
 
-> **`[HYPOTHESIS-UNVALIDATED]` — this model was built for AGPLv3-or-commercial and must be re-derived for Apache-2.0.** From `5.0.2` the source is licensed under the Apache License, Version 2.0 for every use (`docs/legal/LICENSE_TRANSITION_5.0.2.md`). A subscription can therefore no longer sell a licence grant, an AGPL §13 exemption or "production use": Apache-2.0 already grants those to everyone. Line items below that were priced as licence fees (the "Base Subscription" and "Engine Licenses" terms, and every figure that assumed an AGPL-avoidance premium) have **no basis as licence charges** until re-derived as support, indemnification, assurance or services. Entitlement tokens (`aegis/licensing`) are an opt-in signal for a deployment that wants entitlement checks; they are not a licence grant. The figures are retained as the recorded pre-relicence hypothesis, not as a current price list.
+> **`[HYPOTHESIS-UNVALIDATED]` — this model was built for AGPLv3-or-commercial and must be re-derived for the Aegis Commercial License 1.0.** From `v5.0.3` the source outside `sdk/` and `examples/` is licensed under the Aegis Commercial License 1.0 (`LicenseRef-Aegis-Commercial-1.0`): evaluation is free for thirty days and production use requires a paid Order ([`LICENSE`](../../LICENSE)). A subscription therefore prices the production right itself, not an AGPL §13 exemption; the line items carried over from the AGPL-avoidance model (the "Base Subscription" and "Engine Licenses" terms, and every figure that assumed an avoidance premium) are **planning inputs, not licence charges or a price list**, until re-derived against the v5.0.3 terms. Entitlement tokens (`aegis/licensing`) are an opt-in signal for a deployment that wants entitlement checks; they are not a licence grant. The figures are retained as the recorded pre-relicence hypothesis, not as a current price list.
 
-The Apache-2.0 distribution is free and fully functional — see "What the free tier keeps" below, because that boundary is a legal statement, not a marketing one.
+The evaluation distribution is free and fully functional — see "What evaluation keeps" below, because that boundary is a legal statement, not a marketing one.
 
 > **`[FRAMEWORK-ONLY]` — no support or services agreement template exists.** `CR-04` in [Commercial Readiness](COMMERCIAL_READINESS.md), re-scoped after the relicence, is `NOT STARTED`: counsel confirms the right to relicense and drafts a support/services template, 2–4 weeks, gated on a buyer who needs it. A buyer who asks today to see the agreement will find there is nothing to send.
 >
@@ -48,7 +48,7 @@ The Apache-2.0 distribution is free and fully functional — see "What the free 
 
 | SKU | Annual hypothesis `[UNVALIDATED]` | Engines included | Intended for |
 |---|---|---|---|
-| Community | $0 (Apache-2.0) | Standalone gateway; every engine importable | Evaluation, research, open-source deployment |
+| Community | $0 (thirty-day evaluation) | Standalone gateway; every engine importable | Evaluation and research |
 | Aegis Core | $45,000 | Control plane + any one engine | Teams needing one capability in production |
 | Aegis Enterprise | $95,000 | Control plane + Veracity + Sanctum | Regulated workloads needing evidence and redaction |
 | Aegis Omnia | $175,000 | All four engines | Organisations standardising on one governance layer |
@@ -106,19 +106,19 @@ The severity schedule below is a **template for negotiation**. Nothing in it is 
 
 **A prospective buyer should test these against `UC-019` before relying on them.** They describe an intended support operation. A staffed rota, an escalation path, and service credits are contract terms to be agreed, and the response targets above cannot be evidenced by anything in this repository.
 
-## What the free tier keeps
+## What evaluation keeps
 
-This matters legally, not just commercially. The Apache-2.0 distribution is **not** crippled:
+This matters legally, not just commercially. The build is **not** crippled:
 
 - Every engine in `aegis/engines/` is importable and fully functional without a licence token.
 - Licence enforcement is **off by default**. `AEGIS_LICENSE_ENFORCEMENT=required` is opt-in, and is intended for a deployment that wants entitlement mismatches to surface at startup.
-- No feature is withheld by a runtime check in the Apache-2.0 build.
+- No feature is withheld by a runtime check in the build.
 
-What a paid agreement can buy is **support, indemnification (if the owner offers it, as a contract term) and the professional services above**. It does not buy a licence (Apache-2.0 already grants one) and it does not buy access to code that was hidden.
+What a paid Order buys is **the production right the licence withholds without one, support, indemnification (if the owner offers it, as a contract term) and the professional services above**. It does not buy access to code that was hidden, and it does not change the terms of a copy published before `v5.0.3`.
 
 ## The licence question a legal team will raise
 
-Many corporate legal teams restrict AGPLv3 because of its Section 13 network provision. That objection does not apply to a `5.0.2` source tree, which is Apache-2.0: its conditions are a copy of the License and the NOTICE with every distribution, a statement of changes, preserved notices and the patent-termination clause. It does still apply to a release up to and including `5.0.1`, which was published under AGPLv3 (or a commercial agreement) and keeps those terms. **`5.0.2` is published**, so today a buyer pulling a published artifact receives the AGPLv3 terms.
+Many corporate legal teams restrict AGPLv3 because of its Section 13 network provision. That objection does not apply to the `v5.0.3` source, which is not AGPLv3: its conditions are the ones in `LICENSE` — a paid Order for production use, no redistribution, preserved notices. It does still apply to a release up to and including `5.0.1`, which was published under AGPLv3 (or a commercial agreement) and keeps those terms. **`5.0.2` is published**, and a buyer pulling an artifact from a release up to and including `5.0.1` receives the AGPLv3 terms.
 
 Two cautions for whoever writes the response:
 

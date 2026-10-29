@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Registry — Human Handoff Pack
@@ -96,10 +96,10 @@ Both are stated rather than silently carried, because a handoff pack that passes
 
 **Checklist**
 
-1. Confirm the Apache-2.0 relicence for 5.0.2 and decide what happens to any agreement made against a release published under AGPLv3 or a commercial licence (`docs/legal/LICENSE_TRANSITION_5.0.2.md`). The commercial-licence template is superseded in part.
+1. Confirm the v5.0.3 relicence and decide what happens to any agreement made against a release published under AGPLv3 or a commercial licence (`docs/legal/LICENSE_TRANSITION_5.0.3.md`, `docs/legal/LICENSE_TRANSITION_5.0.2.md`). The commercial-licence template is superseded in part.
 2. Decide the open-core boundary — currently **no feature is withheld by a runtime check**, and that is a deliberate legal position worth preserving explicitly.
 
-**Unblocks:** the buyers who needed a non-AGPL licence: from 5.0.2 the source is Apache-2.0, so what remains is the counsel confirmation of the right to relicense and a re-derivation of the commercial model in `ENTERPRISE_PRICING_GUIDE.md`.
+**Unblocks:** the buyers who needed a non-AGPL licence: from v5.0.3 the source is under the Aegis Commercial License 1.0, so what remains is the counsel confirmation of the right to relicense and a re-derivation of the commercial model in `ENTERPRISE_PRICING_GUIDE.md`.
 
 ## REG-H05 — Second maintainer
 

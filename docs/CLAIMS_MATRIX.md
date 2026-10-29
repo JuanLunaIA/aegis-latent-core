@@ -8,7 +8,7 @@
 **Canonical language:** US English
 **Last verified:** 2026-09-02 UTC
 **Release baseline:** four-layer truth model
-**Source baseline:** checked-out source metadata is synchronized at `v5.0.2`, the published Apache-2.0 release (`CLM-122`). The previous published release is `v5.0.1`, published under AGPLv3 or the commercial licence. The previous release `v5.0.0` was published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` was the last version published on every surface before `5.0.1` completed the set on 2026-09-26
+**Source baseline:** checked-out source metadata is synchronized at `v5.0.3`, the source target under the Aegis Commercial License 1.0, **not published**; the most recent published release is `v5.0.2` under Apache-2.0 (`CLM-122`). The previous published release is `v5.0.1`, published under AGPLv3 or the commercial licence. The previous release `v5.0.0` was published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` was the last version published on every surface before `5.0.1` completed the set on 2026-09-26
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` with `4.0.0` anchors
 **External lifecycle boundary:** source metadata does not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** published `v3.1.0` artifacts and retained measurements; post-v3.1.0 capabilities are not attributed to that distribution

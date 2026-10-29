@@ -15,6 +15,40 @@ All notable changes to **Aegis Latent Core** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.3] — prepared 2026-10-29, **not published**
+
+Release candidate on `release/v5.0.3`. Do not describe it as published until the
+tag, GitHub Release, registries and images are read back in
+`docs/RELEASE_STATUS.md`.
+
+### Changed
+
+- **Licence boundary.** The gateway, control plane and dashboard move from
+  Apache-2.0 to the Aegis Commercial License 1.0 (`LICENSE`, `NOTICE`,
+  `COMMERCIAL.md`, per-file headers, package metadata). The SDKs in `sdk/python`
+  and `sdk/typescript` and the examples stay Apache-2.0. Release 5.0.2 and
+  earlier keep the terms they were published under; those terms cannot be
+  revoked. See `docs/legal/LICENSE_TRANSITION_5.0.3.md`.
+- **All fourteen version anchors synchronized to 5.0.3**, including the Python
+  and TypeScript SDKs, the dashboard, the Rust crate and lockfile, and the Helm
+  chart. `scripts/verify_release_contract.py` reports `READY`.
+- **Password hashing** moves from scrypt `n=16384` to `n=65536` (64 MiB). Legacy
+  hashes still verify and are rewritten on the next successful login.
+- **Control plane (aegis-cloud) 5.0.3**: FastAPI 0.162, pytest 9.2,
+  pytest-asyncio 1.4, mypy 2.4, ruff 0.17 and Python 3.13. Adds provider
+  attribution on usage events, first-party product events, tenant and operator
+  statistics, a read-only audit API, atomic API-key rotation, account
+  export/deletion, JSON logs with CloudWatch EMF metrics, host allow-listing and
+  request-id sanitisation.
+
+### Security
+
+- API responses carry a sanitised `X-Request-Id`, a Host allow-list and
+  `default-src 'none'` CSP already enforced by middleware; the new analytics
+  routes inherit them.
+- `GET /v1/ops/stats` is disabled unless `OPS_TOKEN` is set and returns 404, not
+  403, when the token is absent or wrong.
+
 ## [Unreleased]
 
 ### Added

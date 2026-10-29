@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 # Build Aegis Rust extension with embedded profile (minimized for edge/OT deployment)
 # Usage: bash scripts/build_embedded.sh [TARGET]
 # Default target: current platform. Set TARGET for cross-compile e.g. aarch64-unknown-linux-musl

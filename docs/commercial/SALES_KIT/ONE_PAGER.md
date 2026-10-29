@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Aegis Latent Core — One Page
@@ -54,8 +54,8 @@ Full list: [Unsupported Claims](../../institutional/UNSUPPORTED_CLAIMS.md), 70 r
 
 | | |
 |---|---|
-| Core | **Free**, complete. Apache-2.0 from `5.0.2` (published release; published releases up to `5.0.1` are AGPLv3). No feature is withheld by a runtime check |
-| Paid terms | `[FRAMEWORK-ONLY]` — support and services, not a licence. **The template is not yet drafted** (`CR-04`) |
+| Core | **Source-available**, complete. Aegis Commercial License 1.0 from `v5.0.3`; thirty-day evaluation at no cost, production under a paid Order (earlier releases keep their published terms). No feature is withheld by a runtime check |
+| Paid terms | `[FRAMEWORK-ONLY]` — the production licence under an Order, plus support and services. **The template is not yet drafted** (`CR-04`) |
 | Pricing | `[HYPOTHESIS-UNVALIDATED]` — published so a conversation can start, not validated by any executed contract. [Pricing Guide](../ENTERPRISE_PRICING_GUIDE.md) |
 | Support | Community best-effort, no SLA. Support terms per agreement (`[FRAMEWORK-ONLY]`) |
 

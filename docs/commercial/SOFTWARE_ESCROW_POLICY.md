@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Software Escrow and Continuity Policy
@@ -19,7 +19,7 @@ What can honestly be said about it:
 
 **Mitigations that already exist**, and can be verified in this repository today:
 
-- The source is open: **Apache-2.0 from `5.0.2`** (a published release) and AGPLv3 for published releases up to `5.0.1`. A licensee already has the code, the right to run and modify it, and the right to fork. That is a stronger continuity position than most proprietary escrow arrangements deliver, and it does not depend on a trigger event or an agent.
+- The source is available: **Aegis Commercial License 1.0 from `v5.0.3`**, AGPLv3 for published releases up to `5.0.1`, and `5.0.2` under the terms it shipped with. A licensee already has the code, the right to run and modify it for internal use, and — for a `5.0.2` copy — the right to fork it. That is a stronger continuity position than most proprietary escrow arrangements deliver, and it does not depend on a trigger event or an agent.
 - The build is reproducible from the tree: pinned Actions, a hash-locked `requirements.lock`, a committed `Cargo.lock`, and SBOM generation.
 - Release provenance is published — signed tags, uploaded assets, and container images with signature objects present.
 

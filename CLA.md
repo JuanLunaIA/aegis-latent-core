@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Aegis Latent Core — Contributor License Agreement
@@ -12,17 +12,17 @@ Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 
 **Current public release:** `5.0.2`
 
-**Outbound project licence:** Apache License, Version 2.0 (`Apache-2.0`)
+**Outbound project licence:** Aegis Commercial License 1.0 (`LicenseRef-Aegis-Commercial-1.0`) from v5.0.3; the SDKs remain Apache-2.0
 
 **Effective scope:** Contributions intentionally submitted after this Agreement is published, unless a separate written agreement expressly provides otherwise.
 
-> **Important notice.** This document is a contribution-rights instrument, not legal advice. It is designed to make inbound contribution rights explicit while preserving contributor ownership and the Apache-2.0 outbound licence. A contributor acting for an employer, customer, university, government body, or other legal entity must obtain the necessary authorization before accepting this Agreement. If local law, an employment agreement, an institutional policy, or a separate signed agreement conflicts with this text, obtain advice from qualified counsel before submitting a Contribution.
+> **Important notice.** This document is a contribution-rights instrument, not legal advice. It is designed to make inbound contribution rights explicit while preserving contributor ownership and allowing the Maintainer to license each release under its current outbound terms. A contributor acting for an employer, customer, university, government body, or other legal entity must obtain the necessary authorization before accepting this Agreement. If local law, an employment agreement, an institutional policy, or a separate signed agreement conflicts with this text, obtain advice from qualified counsel before submitting a Contribution.
 
 ---
 
-## 1. Purpose and relationship to Apache-2.0
+## 1. Purpose and outbound licence
 
-Aegis Latent Core is distributed as open-source software under the Apache License, Version 2.0. The Project is an AI governance and evidence gateway; it is not a hosted service, certification, legal-admissibility determination, universal security boundary, or guarantee that an upstream model response is true.
+Aegis Latent Core is distributed under the Aegis Commercial License 1.0 from v5.0.3; release 5.0.2 and earlier keep the terms they were published under, including Apache-2.0 for 5.0.2. The Project is an AI governance and evidence gateway; it is not a hosted service, certification, legal-admissibility determination, universal security boundary, or guarantee that an upstream model response is true.
 
 This Contributor License Agreement (the **“Agreement”** or **“CLA”**) records the rights that a contributor grants for work intentionally submitted to the Project. It is intended to:
 

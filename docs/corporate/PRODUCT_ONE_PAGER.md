@@ -63,7 +63,7 @@ No SaaS. No managed service. No vendor access to any deployment.
 
 ## Licence
 
-Apache-2.0 from the published `5.0.2` release. Releases up to and including `5.0.1` were published under AGPLv3 or a commercial licence and keep those terms. See [COMMERCIAL.md](../../COMMERCIAL.md).
+Aegis Commercial License 1.0 (`LicenseRef-Aegis-Commercial-1.0`) from `v5.0.3`. Releases published before `v5.0.3` keep the terms they shipped with: `5.0.2` as published, and `5.0.1` and earlier under AGPLv3 or a commercial licence. See [COMMERCIAL.md](../../COMMERCIAL.md).
 
 ---
 

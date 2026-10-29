@@ -1,15 +1,15 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Aegis Latent Core — Benchmark and Measurement Record
 
-This document is the public benchmark and measurement record for the `v5.0.2` source baseline and for the retained `v3.1.0` release measurements. The most recent measurements were taken on the `v5.0.1` tree on 2026-09-24 and were not re-run for `5.0.2`. It routes readers to detailed methods and retained artifacts while preserving workload, environment and interpretation boundaries. The numbers below are named measurements, not production capacity, availability SLOs, universal WAF rates or cryptographic proofs.
+This document is the public benchmark and measurement record for the `v5.0.3` source baseline and for the retained `v3.1.0` release measurements. The most recent measurements were taken on the `v5.0.1` tree on 2026-09-24 and were not re-run for `5.0.2`. It routes readers to detailed methods and retained artifacts while preserving workload, environment and interpretation boundaries. The numbers below are named measurements, not production capacity, availability SLOs, universal WAF rates or cryptographic proofs.
 
 **Last verified:** 2026-09-24 UTC
-**Release baseline:** checked-out source baseline `v5.0.2` with fourteen synchronized anchors — the published Apache-2.0 release; the most recent published release is `v5.0.1`, **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a); the previous release is `v5.0.0` (2026-09-16, every surface except PyPI `aegis-latent-core`).
+**Release baseline:** checked-out source baseline `v5.0.3` with fourteen synchronized anchors — the published release that keeps the terms it shipped with; the most recent published release is `v5.0.1`, **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a); the previous release is `v5.0.0` (2026-09-16, every surface except PyPI `aegis-latent-core`).
 **Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical and are not `v5.0.1` results.
 **Detailed methods and results:** [`docs/benchmarks/BENCHMARK_RESULTS.md`](benchmarks/BENCHMARK_RESULTS.md)
 

@@ -25,6 +25,21 @@
 
 ---
 
+## Legal drafts
+
+Drafts prepared for counsel. Every one says on its face that it is not legal advice and carries `[COUNSEL-REVIEW-REQUIRED]`; none is an offer.
+
+| Document | Status |
+| --- | --- |
+| [Terms of Service](legal/TERMS_OF_SERVICE.md) | draft 1.0, effective only on the first paid Order |
+| [Privacy Policy](legal/PRIVACY_POLICY.md) | draft, subprocessor table in the same folder |
+| [Data Processing Addendum](legal/DATA_PROCESSING_ADDENDUM.md) | draft, controller/processor roles |
+| [Subprocessors](legal/SUBPROCESSORS.md) | current list: AWS, Stripe, Vercel, GitHub |
+| [Refund Policy](legal/REFUND_POLICY.md) | draft, first purchase and renewals |
+| [Licence Transition 5.0.3](legal/LICENSE_TRANSITION_5.0.3.md) | which copies keep which terms |
+| [AI Contributions](legal/AI_CONTRIBUTIONS.md) | factual record of agent-authored commits |
+| [Counsel Questions](legal/COUNSEL_QUESTIONS.md) | the questions only counsel can answer; blocks a public release |
+
 ## Claim control
 
 The documents that decide what may be said, and on what evidence.
@@ -173,7 +188,7 @@ The documents that decide what may be said, and on what evidence.
 | [Kill-Switch Register](cadence/KILL_SWITCH_REGISTER.md) | Every stop condition with status, owner answer and consequence (blank-state rendering). |
 | [Wind-Down Path](cadence/WIND_DOWN_PATH.md) | Ordered checklist if the plan stops; a draft for counsel, not a decision. |
 | [Weekly Report 2026-W40](cadence/weekly/WEEKLY_2026-W40.md) | Blank-state baseline weekly report. |
-| [Licence Transition 5.0.2](legal/LICENSE_TRANSITION_5.0.2.md) | The move from AGPLv3-or-commercial to Apache-2.0: what changed, which copies keep which terms, and what only the owner or counsel can decide. |
+| [Licence Transition 5.0.2](legal/LICENSE_TRANSITION_5.0.2.md) | The 5.0.2 transition: what changed, which copies keep which terms, and what only the owner or counsel can decide. |
 | [Commercial Licence Template](legal/COMMERCIAL_LICENSE_TEMPLATE.md) | Superseded-in-part draft from the AGPLv3-or-commercial model, kept for agreements made against releases up to 5.0.1; for counsel. |
 | [Paid Pilot Agreement Template](legal/PILOT_AGREEMENT_TEMPLATE.md) | Draft fixed-scope pilot contract, for counsel. |
 | [Escrow Term Sheet](legal/ESCROW_TERM_SHEET.md) | Terms to propose to an escrow agent. |

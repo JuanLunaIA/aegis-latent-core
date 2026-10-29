@@ -59,9 +59,9 @@ Stated here rather than in a footnote, because an executive reading only this pa
 
 ## Commercial path
 
-Licensed under Apache-2.0 from the published `5.0.2` release; releases up to and including `5.0.1` were published under AGPLv3 or a commercial licence and keep those terms. See [COMMERCIAL.md](../../COMMERCIAL.md).
+Licensed under the Aegis Commercial License 1.0 (`LicenseRef-Aegis-Commercial-1.0`) from `v5.0.3`; releases published before `v5.0.3` — including `5.0.2` — keep the terms they shipped with, and `5.0.1` and earlier were published under AGPLv3 or a commercial licence. See [COMMERCIAL.md](../../COMMERCIAL.md).
 
-Apache-2.0 has no network-copyleft clause. What can be sold is support, pilots, hardening and assurance work, not a licence.
+The commercial licence has no network-copyleft clause. What is sold is the production right under an Order, plus pilots, support, hardening and assurance work.
 
 Evaluation is self-service — the source, the claims register, and the pilot playbook are all public. See [Pilot Playbook](../enterprise/PILOT_PLAYBOOK.md).
 

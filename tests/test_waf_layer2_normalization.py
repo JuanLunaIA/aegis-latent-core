@@ -18,9 +18,9 @@ it is handed, and NFKC is lossy, so replacing raw with normalized could in
 principle lose a signal. Scanning both can only add a detection.
 """
 
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 from __future__ import annotations
 

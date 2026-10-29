@@ -282,7 +282,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `integrations/__init__.py` | package | — | allowlisted | — | @JuanLunaIA |
 | `integrations/huggingface_plugin.py` | module | integrations.huggingface_plugin — HuggingFace Transformers hook for Aegis. | allowlisted | — | @JuanLunaIA |
 | `integrations/vllm_plugin.py` | module | integrations.vllm_plugin — vLLM forward hook for full logit + MoE gate extraction. | allowlisted | — | @JuanLunaIA |
-| `scripts/apply_license_headers.py` | module | Apply copyright + Apache-2.0 headers to source files. | referenced | — | @JuanLunaIA |
+| `scripts/apply_license_headers.py` | module | Apply the copyright and licence header that each tree actually ships under. | referenced | — | @JuanLunaIA |
 | `scripts/audit_documentation_corpus.py` | module | Create a deterministic inventory and documentation-integrity audit. | referenced | — | @JuanLunaIA |
 | `scripts/build_embedded.sh` | shell script | Build Aegis Rust extension with embedded profile (minimized for edge/OT deployment) | unreferenced | — | @JuanLunaIA |
 | `scripts/build_execution_manifest.py` | module | Build the 2026-08-20 execution provenance envelope. | unreferenced | — | @JuanLunaIA |
@@ -301,7 +301,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `scripts/generate_sbom.sh` | shell script | Aegis Latent Core — SBOM Generation Script | referenced | — | @JuanLunaIA |
 | `scripts/generate_sdk_bundle_fixture.py` | module | Write the gateway-issued forensic bundle the Python SDK's tests verify. | referenced | — | @JuanLunaIA |
 | `scripts/import_reachability_allowlist.txt` | text/data | — | referenced | — | @JuanLunaIA |
-| `scripts/install_aegis.sh` | shell script | install_aegis.sh — Zero-touch POSIX installer for Aegis Latent Core v5.0.2 | unreferenced | — | @JuanLunaIA |
+| `scripts/install_aegis.sh` | shell script | install_aegis.sh — Zero-touch POSIX installer for Aegis Latent Core v5.0.3 | unreferenced | — | @JuanLunaIA |
 | `scripts/install_gitsign.sh` | shell script | — | referenced | — | @JuanLunaIA |
 | `scripts/integration_test_mock.py` | module | integration_test_mock.py — comprehensive local verification harness for Aegis v4.1.0. | unreferenced | — | @JuanLunaIA |
 | `scripts/license/license_scan.py` | module | License inventory and copyleft reconciliation across all three ecosystems. | referenced | — | @JuanLunaIA |

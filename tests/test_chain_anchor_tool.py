@@ -12,9 +12,9 @@ records where the v1 chain ended so a verifier can order the two chains — and
 these tests pin the property that makes it safe: **the v1 WAL is not touched**.
 """
 
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 from __future__ import annotations
 

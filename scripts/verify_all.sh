@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 #
 # One command for the licence + version + documentation gates.
 # Usage: bash scripts/verify_all.sh [--full]   (--full adds the whole pytest suite)
@@ -14,11 +14,11 @@ run() { # name, command...
   if "$@" >/tmp/verify_all.out 2>&1; then echo "PASS  $name"
   else echo "FAIL  $name"; tail -8 /tmp/verify_all.out | sed 's/^/        /'; fail=1; fi
 }
-EXPECT_SHA=cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
-run "LICENSE is verbatim Apache-2.0" bash -c "[ \"\$(sha256sum LICENSE | cut -d' ' -f1)\" = $EXPECT_SHA ]"
-run "LICENSE+NOTICE inside SDK packages" bash -c "cmp LICENSE sdk/python/LICENSE && cmp LICENSE sdk/typescript/LICENSE && cmp NOTICE sdk/python/NOTICE && cmp NOTICE sdk/typescript/NOTICE"
+EXPECT_SHA=$(cut -d' ' -f1 docs/legal/LICENSE.sha256)
+run "LICENSE matches its published pin" bash -c "[ \"\$(sha256sum LICENSE | cut -d' ' -f1)\" = $EXPECT_SHA ]"
+run "SDKs carry Apache-2.0 LICENSE and NOTICE" bash -c "cmp sdk/python/LICENSE sdk/typescript/LICENSE && grep -q 'Apache License' sdk/python/LICENSE && cmp sdk/python/NOTICE sdk/typescript/NOTICE && grep -q 'Apache' sdk/python/NOTICE"
 run "Release contract (14 anchors)" "$PY" scripts/verify_release_contract.py
-run "License headers idempotent" bash -c "$PY scripts/apply_license_headers.py | grep -q 'Updated 0 files'"
+run "License headers current" "$PY" scripts/apply_license_headers.py --check
 run "License files + metadata tests" "$PY" -m pytest -q -p no:cacheprovider tests/test_license_files.py tests/test_documentation_currency.py tests/test_ai_context.py
 run "verify_documentation --strict" "$PY" tools/docs/verify_documentation.py --root . --strict
 run "verify_claims" "$PY" scripts/verify_claims.py

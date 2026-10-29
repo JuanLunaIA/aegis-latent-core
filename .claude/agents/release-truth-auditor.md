@@ -23,7 +23,7 @@ Read `AGENTS.md` for the authoritative text before writing anything, and treat i
 as the source of truth over your own memory. The shape of it:
 
 - The checked-out source baseline is **5.0.2** with fourteen synchronized
-  anchors. It is an Apache-2.0 source target and is **not published**: no tag,
+  anchors. It is a commercial-licence source target and is **not published**: no tag,
   GitHub Release, registry package or image exists for it. The most recent
   published release is **5.0.1**, published 2026-09-24 to every surface but PyPI
   `aegis-latent-core`, which followed on 2026-09-26 (read back 2026-09-29).

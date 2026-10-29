@@ -13,7 +13,7 @@ not a containment boundary against the process it runs in. See
 :mod:`aegis.embedded`.
 """
 
-__version__ = "5.0.2"
+__version__ = "5.0.3"
 
 from aegis.embedded import AegisBlockedError, AegisEmbedded, AegisEmbeddedError, wrap
 
@@ -25,6 +25,6 @@ __all__ = [
     "wrap",
 ]
 
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.

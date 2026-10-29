@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Truncate a torn trailing line from a JSONL evidence WAL, under explicit consent.
 
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 **Why this exists.** A process killed between `write()` and the newline leaves a
 partial last line. Replay reaches it, cannot parse it, sets `wal_corrupt`, and

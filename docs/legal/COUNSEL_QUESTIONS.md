@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Questions for Counsel
@@ -29,3 +29,24 @@ Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 ## How answers are recorded
 
 Counsel replies in writing. The owner saves each reply in the data room, and the affected draft is updated with a note naming the question number and the date. A draft is ready to offer only when every question that blocks it has a recorded answer.
+
+## v5.0.3 — commercial licence questions
+
+Added when the source moved from Apache-2.0 to the Aegis Commercial License 1.0.
+These block the public v5.0.3 release; the earlier list remains open for the
+historical record.
+
+| # | Question | Why it matters | Blocks |
+| --- | --- | --- | --- |
+| 12 | Is the production-use restriction in `LICENSE` §2 enforceable against a recipient who also holds the Apache-2.0 `5.0.2` copy? | The forward-only boundary must survive contact with a fork | `docs/legal/LICENSE_TRANSITION_5.0.3.md` §4, release notes |
+| 13 | Is the "no competing managed service" clause (§3b) enforceable in the target markets, and does it cover a customer that hosts the software for its own customers? | It is the main commercial lever after the code is public | `LICENSE`, sales terms |
+| 14 | Does `CLA.md` §5 grant the right to relicense inbound contributions from Apache-2.0 to proprietary? | Without it, an outside contribution can block the model | Accepting any outside contribution |
+| 15 | Is the liability cap in §8 enforceable against small businesses and consumers in AR, EU and US? | Sets the insurance and contract structure | First paid Order |
+| 16 | Which governing law and forum should replace the draft (Argentina, Rosario)? | A forum the buyer does not accept stalls procurement | `LICENSE` §11 |
+| 17 | What must the privacy policy say about IP addresses and user agents stored with sessions (`app/repos/sessions.py`) and about Stripe/SES as subprocessors? | The policy must match the schema, not an aspiration | `docs/legal/PRIVACY_POLICY.md`, DPA |
+| 18 | Are automatic renewal and the refund terms compliant in each market? | Consumer law varies; a wrong clause is void | `docs/legal/REFUND_POLICY.md` |
+| 19 | Is an export classification required for the cryptographic functions and the PQC path? | Delivery to some countries | `LICENSE` §10, sales |
+| 20 | May the repository stay public under a proprietary licence without implying an open-source grant, and what wording is required? | The owner wants the repo public | `README.md`, `COMMERCIAL.md` |
+| 21 | Who is the merchant of record for VAT/GST, and does Stripe Tax cover the target markets? | Tax exposure on every subscription | Payment configuration |
+| 22 | What copyright notice and licensor name apply before and after a company is formed? | A licence from the wrong party is defective | First signature |
+
