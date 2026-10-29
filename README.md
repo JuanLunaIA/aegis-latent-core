@@ -19,7 +19,7 @@ Every load-bearing claim in this file carries a locator and a stated boundary; t
 > **Start here:** [prove an evidence record yourself](docs/PROVE_IT.md) · [choose a deployment profile](docs/operations/DEPLOYMENT_PROFILES.md) · [read the threat model](docs/security/THREAT_MODEL.md) · [inspect the claims matrix](docs/CLAIMS_MATRIX.md)
 
 > **Current release:** `v5.0.2` — published 2026-10-01 under Apache-2.0.
-> **Next release:** `v5.0.3` is prepared on `release/v5.0.3` and is **not published yet**;
+> **Next release:** `v5.0.3` is prepared on `main` and is **not published yet**;
 > from that commit the gateway, control plane and dashboard move to the Aegis
 > Commercial License 1.0, while the SDKs stay Apache-2.0. Nothing published under
 > Apache-2.0 can be revoked ([LICENSE_TRANSITION_5.0.3](docs/legal/LICENSE_TRANSITION_5.0.3.md)).
