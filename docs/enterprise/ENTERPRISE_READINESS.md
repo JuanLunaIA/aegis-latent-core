@@ -10,7 +10,7 @@
 
 | Dimension | Position |
 | --- | --- |
-| Deployment model | Self-hosted only. No SaaS, no hosted service, no vendor-operated infrastructure. |
+| Deployment model | Self-hosted gateway. A separate hosted evaluation console exists at `aegislatent.com`; it does not receive customer AI prompts or outputs and is not a managed gateway. |
 | Evidence custody | Entirely yours. The licensor never holds your evidence, keys, or payloads. |
 | Security controls | Implemented and tested; most require target configuration to be effective. |
 | Operational readiness | Runbooks exist. None is validated against a production deployment. |
@@ -26,13 +26,13 @@
 | Model | Available | Notes |
 | --- | --- | --- |
 | Self-hosted from source | Yes | The supported path. See [Deployment Profiles](../operations/DEPLOYMENT_PROFILES.md). |
-| Self-hosted container | Yes | `ghcr.io/juanlunaia/aegis-latent-core:5.0.2` — index digest `sha256:601dfb39…a63189e`, read back 2026-10-29; `cosign verify` against the `publish_oci.yml` workflow identity passed for `5.0.2` and its build-provenance attestation was present. Digest-pinnable. `5.0.1` (`sha256:2d22023e…090f3e`) and `4.1.2` (`sha256:b3f6aadc…f80710`) remain available; for those two, only the signature object's presence was read back, and `cosign verify` was not run. |
+| Self-hosted container | Yes | `ghcr.io/juanlunaia/aegis-latent-core:5.0.2` — index digest `sha256:601dfb39…a63189e`, read back 2026-10-29 via the OCI registry API; `cosign verify` was not re-run for `5.0.2`. Digest-pinnable. `5.0.1` (`sha256:2d22023e…090f3e`, read back 2026-09-24) and `4.1.2` (`sha256:b3f6aadc…f80710`) remain available; for the historical tags, only the signature object's presence was read back in some cases, and `cosign verify` was not run for every artifact. |
 | Kubernetes via Helm | Yes | `StatefulSet`, per-replica WAL volumes, default-deny NetworkPolicy. |
 | Air-gapped | Yes | With documented capability loss; no external anchoring. |
-| Vendor-hosted evidence gateway | No. A limited evaluation console is hosted at `aegislatent.com`; it does not receive customer AI traffic. |
-| Managed service | No | Does not exist. |
+| Vendor-hosted evaluation console | Limited | `aegislatent.com` hosts account, billing and demo surfaces. It is not a gateway and does not receive customer AI prompts or outputs. |
+| Managed gateway / SaaS | No | Does not exist and is not on the roadmap. |
 
-**You run it. You hold the data. The licensor has no operational access to your deployment and no ability to reach your evidence.** For many buyers that is the point; for buyers expecting a vendor-operated service, it is a disqualifier they should learn early.
+**You run the gateway. You hold the data. The licensor has no operational access to your deployment and no ability to reach your evidence.** The hosted evaluation console is a separate account/billing surface, not a gateway for customer inference. For many buyers that is the point; for buyers expecting a vendor-operated service, it is a disqualifier they should learn early.
 
 ## 3. Evidence custody
 
