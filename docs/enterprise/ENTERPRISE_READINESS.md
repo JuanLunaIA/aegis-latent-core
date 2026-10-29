@@ -26,10 +26,10 @@
 | Model | Available | Notes |
 | --- | --- | --- |
 | Self-hosted from source | Yes | The supported path. See [Deployment Profiles](../operations/DEPLOYMENT_PROFILES.md). |
-| Self-hosted container | Yes | `ghcr.io/juanlunaia/aegis-latent-core:5.0.1` — index digest `sha256:2d22023e…090f3e`, read back 2026-09-24; `cosign verify` against the `publish_oci.yml` workflow identity passed, and its build-provenance attestation verified (`docs/RELEASE_STATUS.md` §1.0a). Digest-pinnable. `5.0.0` (`sha256:81d106c9…a33c15a`, read back 2026-09-16) and `4.1.2` (`sha256:b3f6aadc…f80710`, read back 2026-09-04) remain available; for those two, only the signature object's presence was read back, and `cosign verify` was not run. |
+| Self-hosted container | Yes | `ghcr.io/juanlunaia/aegis-latent-core:5.0.2` — index digest `sha256:601dfb39…a63189e`, read back 2026-10-29; `cosign verify` against the `publish_oci.yml` workflow identity passed for `5.0.2` and its build-provenance attestation was present. Digest-pinnable. `5.0.1` (`sha256:2d22023e…090f3e`) and `4.1.2` (`sha256:b3f6aadc…f80710`) remain available; for those two, only the signature object's presence was read back, and `cosign verify` was not run. |
 | Kubernetes via Helm | Yes | `StatefulSet`, per-replica WAL volumes, default-deny NetworkPolicy. |
 | Air-gapped | Yes | With documented capability loss; no external anchoring. |
-| Vendor-hosted SaaS | No | Does not exist and is not on the roadmap. |
+| Vendor-hosted evidence gateway | No. A limited evaluation console is hosted at `aegislatent.com`; it does not receive customer AI traffic. |
 | Managed service | No | Does not exist. |
 
 **You run it. You hold the data. The licensor has no operational access to your deployment and no ability to reach your evidence.** For many buyers that is the point; for buyers expecting a vendor-operated service, it is a disqualifier they should learn early.
@@ -79,7 +79,7 @@ Runbooks are written from the source's actual behaviour, not invented. They have
 | --- | --- |
 | OpenAI-compatible gateway | Implemented |
 | Anthropic path | Implemented, bounded by SDK test coverage |
-| Python SDK | Implemented; PyPI `aegis-latent-sdk` carries `5.0.0` as of the 2026-09-16 readback — see [Release Status](../RELEASE_STATUS.md) §1.0 |
+| Python SDK | Implemented; PyPI `aegis-latent-sdk` carries `5.0.2` as of the 2026-10-01 readback — see [Release Status](../RELEASE_STATUS.md) §1.0d |
 | TypeScript SDK | Implemented; same registry caveat |
 | Proof verification in both SDKs | Implemented |
 | Forensic dashboard | Implemented; browser-facing authentication is yours |
@@ -97,7 +97,7 @@ Stated plainly, because a readiness document that omits these is not useful.
 | **No independent assurance** | No SOC 2, ISO 27001, penetration test, or third-party audit. Nothing to hand a security team that they did not derive themselves. |
 | **No production-scale evidence** | Benchmarks are local. No capacity, throughput, or latency claim survives contact with a target environment without your own measurement. |
 | **No cross-replica ordering** | A requirement for one global timeline cannot be met today. |
-| **Registry lag, gateway only (closed 2026-09-26)** | At `5.0.0` the gateway was never on PyPI, so a pip install gave `4.1.2` behavior, in particular the pre-rename `legal_admissibility` API field rather than the breaking `signature_assurance` rename (`CLM-090`). PyPI `aegis-latent-core` `5.0.1` was published on 2026-09-26 and read back on 2026-09-29, so a pip install now matches the source baseline; see [Release Status](../RELEASE_STATUS.md) §1.0b. |
+| **Registry lag, gateway only (closed for the published line)** | At `5.0.0` the gateway was never on PyPI, so a pip install gave `4.1.2` behavior, in particular the pre-rename `legal_admissibility` API field rather than the breaking `signature_assurance` rename (`CLM-090`). PyPI `aegis-latent-core` `5.0.2` was published on 2026-10-01 and read back on 2026-10-29, so a pip install matches the **published 5.0.2**, not the unpublished 5.0.3 source target; see [Release Status](../RELEASE_STATUS.md) §1.0d. |
 | **Single maintainer** | Bus factor of one. No independent second approver on the critical path. |
 | **No SLA** | Response targets are intent, not commitment, absent an executed agreement. |
 | **Untested runbooks at scale** | Procedures are written; rehearsal is yours. |
@@ -125,7 +125,7 @@ Stated plainly, because a readiness document that omits these is not useful.
 
 **Fits:** an organisation that wants evidence custody in its own infrastructure, has platform engineering capacity to run it, can perform its own security assessment, and values a documented boundary over a marketed one.
 
-**Does not fit:** an organisation that requires a vendor-operated service, needs certification before deployment, requires a contractual SLA from the open-source project, needs cross-replica global ordering today, or has no capacity to operate a stateful service.
+**Does not fit:** an organisation that requires a vendor-operated service, needs certification before deployment, requires a contractual SLA from the project, needs cross-replica global ordering today, or has no capacity to operate a stateful service.
 
 Saying the second list out loud costs a few prospects and saves everyone a failed evaluation.
 

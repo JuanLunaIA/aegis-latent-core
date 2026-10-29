@@ -48,7 +48,7 @@ In a regulated industry that is not a paperwork problem — it is an existential
 > **→ [Prove it yourself](docs/PROVE_IT.md)** — twelve lines of Python, no call to our servers, three cases of which two must fail.
 >
 > ```bash
-> pip install aegis-latent-sdk aegis-latent-core   # verifier + gateway, both 5.0.1 on PyPI
+> pip install aegis-latent-sdk aegis-latent-core   # verifier + gateway, both 5.0.2 on PyPI
 > python tools/sales/prove_it/prove_it.py --demo   # accepts one record, rejects two forgeries
 > python -m examples.demo                          # gateway + mock upstream, tamper detected
 > ```
@@ -110,7 +110,7 @@ Measured suite (dated records; counts move as tests are added — run `pytest -q
 
 ## Quickstart
 
-Three steps, copy-pasteable. Honest channel note first: **`pip install aegis-latent-core` installs `5.0.1`** (read back 2026-09-29, `CLM-113`); at `5.0.0` the gateway was never on PyPI (`UC-047`, kept as history). You can also use this repository, the GHCR image `ghcr.io/juanlunaia/aegis-latent-core:5.0.1`, or the wheel attached to the `v5.0.1` GitHub Release.
+Three steps, copy-pasteable. Honest channel note first: **`pip install aegis-latent-core` installs `5.0.2`** (read back 2026-10-01, `CLM-113`); at `5.0.0` the gateway was never on PyPI (`UC-047`, kept as history). You can also use this repository, the GHCR image `ghcr.io/juanlunaia/aegis-latent-core:5.0.2`, or the wheel attached to the `v5.0.2` GitHub Release.
 
 **Step 1 — get the source:**
 
@@ -187,15 +187,15 @@ The third case is the one to understand first: **a root supplied by the same gat
 Release assets carry a digest, and checking one needs no checkout and no cooperation from this project:
 
 ```
-curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.1/SHA256SUMS
+curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.2/SHA256SUMS
 # then, for each artifact you downloaded:
-curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.1/<artifact-name>
+curl -fsSL -O https://github.com/juanlunaia/aegis-latent-core/releases/download/v5.0.2/<artifact-name>
 sha256sum -c SHA256SUMS --ignore-missing
 ```
 
 Two things that snippet does not establish. It shows the bytes match the manifest; it does not show who built them — an OCI signature (`cosign verify`) and a build attestation (`gh attestation verify`) are separate checks against separate infrastructure. And it covers the **release assets only**: the PyPI wheels for `aegis-latent-core` are rebuilt from the same source on a different build host, so their bytes differ from the release assets of the same name and `SHA256SUMS` does not cover them (see [docs/RELEASE_STATUS.md](docs/RELEASE_STATUS.md)).
 
-`python scripts/verify_release_readback.py --tag v5.0.1 --verify-assets` automates the whole readback — the GitHub Release, the `SHA256SUMS` sweep, the PyPI and npm versions, and the GHCR manifest digests — and prints `NOT_EXECUTED`, with the reason, for anything it could not check from where it ran. This block is emitted by that same tool, so the documented commands cannot drift from it.
+`python scripts/verify_release_readback.py --tag v5.0.2 --verify-assets` automates the whole readback — the GitHub Release, the `SHA256SUMS` sweep, the PyPI and npm versions, and the GHCR manifest digests — and prints `NOT_EXECUTED`, with the reason, for anything it could not check from where it ran. This block is emitted by that same tool, so the documented commands cannot drift from it.
 
 ---
 
