@@ -1,0 +1,49 @@
+# Copyright (c) 2026 Juan Luna.
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+#
+# docs-index.yml — keep the published documentation index in step with the
+# documentation tree on every pull request.
+#
+# Two checks, both read-only and both dependency-free:
+#   1. tools/docs/verify_documentation.py --strict — the prose-level boundary
+#      and link contract that A6 gates on.
+#   2. tools/docs/build_index.py --check — fails when docs/DOCUMENTATION_INDEX.md
+#      is stale or missing relative to the pages it indexes.
+#
+# No setup action is used: the runner image ships Python 3.12, and the version
+# assertion below makes that a checked fact rather than an assumption. If the
+# image moves, this job fails loudly instead of silently testing another
+# interpreter.
+name: Documentation Index
+
+on:
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs-index:
+    name: Documentation index is current
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Confirm Python 3.12
+        run: |
+          python3.12 --version
+          python3.12 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
+
+      - name: Verify documentation contract
+        run: python3.12 tools/docs/verify_documentation.py --root . --strict
+
+      - name: Verify documentation index is current
+        run: python3.12 tools/docs/build_index.py --check
