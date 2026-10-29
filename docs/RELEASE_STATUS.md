@@ -5,10 +5,11 @@
 **Boundary:** this is the only document that states publication state. Every other document links here. Source metadata never establishes publication; readback does.
 
 **Last verified:** 2026-10-01 UTC (`5.0.2` GitHub Release, PyPI and npm); earlier external readbacks remain dated in their own sections
-**Source baseline:** `5.0.2`, fourteen synchronized anchors — the published Apache-2.0 release; the previous published release is `5.0.1`
-**Publication state of `5.0.1` (the most recent published release; the previous source baseline):** **published on every surface** — PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26 (§1.0b), and the other surfaces were read back 2026-09-24: Sigstore-signed annotated tag (`gitsign verify-tag` passed against the exact workflow identity), GitHub Release with 31 assets (full `SHA256SUMS` sweep: 15 of 15 verified), PyPI `aegis-latent-sdk` `5.0.1`, npm `aegis-latent-sdk` `5.0.1`, and both OCI images, whose signatures pass `cosign verify` and whose build-provenance attestations verify against the exact publishing workflow identity. **The gateway distribution `aegis-latent-core` was not on PyPI on 2026-09-24**; it was published there on 2026-09-26 by run `36224961909` of `publish_pypi_gateway.yml` and read back 2026-09-29 (§1.0b). `gh attestation verify` itself was not run — the same Sigstore bundles were verified with `cosign`; see §1.0a.
+**Source baseline:** `5.0.3`, fourteen synchronized anchors — the checked-out source target under the Aegis Commercial License 1.0, **not published**; the most recent published release is `5.0.2` under Apache-2.0 (2026-10-01, §1.0d)
+**Publication state of `5.0.1` (superseded by `5.0.2`; historical readback):** **published on every surface** — PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26 (§1.0b), and the other surfaces were read back 2026-09-24: Sigstore-signed annotated tag (`gitsign verify-tag` passed against the exact workflow identity), GitHub Release with 31 assets (full `SHA256SUMS` sweep: 15 of 15 verified), PyPI `aegis-latent-sdk` `5.0.1`, npm `aegis-latent-sdk` `5.0.1`, and both OCI images, whose signatures pass `cosign verify` and whose build-provenance attestations verify against the exact publishing workflow identity. **The gateway distribution `aegis-latent-core` was not on PyPI on 2026-09-24**; it was published there on 2026-09-26 by run `36224961909` of `publish_pypi_gateway.yml` and read back 2026-09-29 (§1.0b). `gh attestation verify` itself was not run — the same Sigstore bundles were verified with `cosign`; see §1.0a.
 **Publication state of `5.0.0` (previous release):** **published on every surface except PyPI `aegis-latent-core`.** Read back 2026-09-16: signed tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk`, and both OCI images with cosign signature objects present. **The gateway distribution `aegis-latent-core` was not published at `5.0.0`** and its latest on PyPI remains `4.1.2` — a regression against `4.1.2`, and one no workflow in this repository closes; see §1.0 — the owner position recorded on 2026-09-21 is that it stays that way for now, so read it as a stated gap rather than a pending upload. There is no `4.2.0` or `4.4.0` at any surface, and neither is planned — see §1.0 on the skipped numbers.
 **Most recent published release:** `5.0.2`, **published on GitHub Release, PyPI and npm; GHCR readback was not available from this environment.** The signed tag, GitHub Release and its 31 assets, PyPI core/SDK and npm were read back on 2026-10-01; earlier PyPI history remains below.
+**Publication state of `5.0.3`:** **not published on any surface.** No tag, GitHub Release, PyPI, npm or OCI object exists for it; the source target is public on `main` and the release contract reports `READY`. Publication is gated on counsel review and the owner's manual release. See §1.0e.
 **Publication state of `4.1.1`:** **published, except npm** — superseded by `4.1.2`. Read back on 2026-09-03; see §1.2. For the superseded `4.1.0`, a lightweight tag and an empty immutable release exist — see §1.3.
 
 ---
@@ -18,6 +19,19 @@
 **Read this section as separate per-surface observations.** `5.0.2` is now published: the GitHub Release, PyPI core/SDK and npm were read back on 2026-10-01; GHCR was not independently readable from this environment. The previous release was `5.0.1`, whose historical readbacks remain below. The previous release, `5.0.0`, reached the same surfaces as of the 2026-09-16 readback (§1.0). `4.1.2` was the most recent version published on *every* surface until `5.0.1` completed the set on 2026-09-26; it was read back 2026-09-04. The preceding `4.1.1` reached every surface except npm and is superseded. A `v4.1.0` tag and GitHub Release also exist, but neither came from the release pipeline and the release carries no assets. The `4.0.2` rows were last read back on 2026-09-02 and **describe `4.0.2` only**.
 
 Nothing in this table may be restated with the version number changed. A `4.0.2` digest is not a `4.1.1` digest, a `4.1.1` digest is not a `4.1.2` digest, and a `4.1.2` digest is not a `5.0.0` digest. Each row below records what was read back for the version in its own heading and nothing else.
+
+### 1.0e `5.0.3` — source target, not published (checked 2026-10-29)
+
+| Surface | State | Observed value |
+| --- | --- | --- |
+| Source target | Confirmed | `5.0.3`, fourteen synchronized anchors, `LicenseRef-Aegis-Commercial-1.0`; `verify_release_contract.py` reports `READY` |
+| GitHub tag `v5.0.3` | **Not published** | No tag exists (`git ls-remote --tags origin 'v5.0.3*'` returned nothing) |
+| GitHub Release `v5.0.3` | **Not published** | `gh release view v5.0.3` returns `release not found` |
+| PyPI `aegis-latent-core` / `aegis-latent-sdk` | **Not published** | Latest remains `5.0.2` |
+| npm `aegis-latent-sdk` | **Not published** | Latest remains `5.0.2` |
+| OCI images | **Not published** | No `5.0.3` publication recorded or read back |
+
+This is a pre-publication record. It does not assert that `5.0.3` will be approved, tagged or published, and it is not a deployment or legal-review claim. The `5.0.2` row in §1.0d remains the publication record for that release; its Apache-2.0 grant is irrevocable.
 
 ### 1.0d `5.0.2` — published 2026-10-01, read back 2026-10-01
 
@@ -371,11 +385,11 @@ A successful `gitsign verify` establishes that the signing workflow in this repo
 
 ## 4. Version anchors
 
-The release contract requires fourteen version anchors to agree before a tag is cut. They are: `core`, `core-runtime`, `python-sdk`, `python-sdk-runtime`, `typescript-sdk`, `typescript-lock`, `dashboard`, `dashboard-lock`, `rust-cargo`, `rust-pyproject`, `rust-lock`, `helm-chart`, `helm-app`, and `helm-image`. All fourteen read `4.1.2` in the working tree and at the `v4.1.2` tag, `4.1.1` at the `v4.1.1` tag, and `4.0.2` at the `v4.0.2` tag. Before the `v5.0.2` release, all fourteen read `5.0.2` in the working tree and no tag existed; that dated observation is superseded by §1.0d.
+The release contract requires fourteen version anchors to agree before a tag is cut. They are: `core`, `core-runtime`, `python-sdk`, `python-sdk-runtime`, `typescript-sdk`, `typescript-lock`, `dashboard`, `dashboard-lock`, `rust-cargo`, `rust-pyproject`, `rust-lock`, `helm-chart`, `helm-app`, and `helm-image`. At the `v4.1.2` tag all fourteen read `4.1.2`; at `v4.1.1` they read `4.1.1`, and at `v4.0.2` they read `4.0.2`. In the current checkout they read `5.0.3`; at the `v5.0.2` tag they read `5.0.2`. The `5.0.3` value is a source target, not a publication (see §1.0e).
 
 The immutable parent comparison commit `fdace8844568eb788216740b2cb5daf187d99d3b` retains fourteen synchronized `4.0.0` anchors and is the reference point for diffing source metadata between baselines.
 
-The anchor set is what the contract checks, not the whole of what carries a version. `SOURCE_RELEASE_TARGET_VERSION` in `scripts/generate_ai_context_manifest.py` is a fifteenth locus the contract does not check; it is bumped by hand and was left at `4.1.0` during the `4.1.1` cut until caught separately. It reads `4.1.2` now.
+The anchor set is what the contract checks, not the whole of what carries a version. `SOURCE_RELEASE_TARGET_VERSION` in `scripts/generate_ai_context_manifest.py` is a fifteenth locus the contract does not check; it is bumped by hand and was left at `4.1.0` during the `4.1.1` cut until caught separately. It reads `5.0.3` now.
 
 ## 5. Release envelope detail
 
