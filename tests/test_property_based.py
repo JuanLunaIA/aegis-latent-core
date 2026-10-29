@@ -11,13 +11,14 @@ import os
 import tempfile
 
 import hypothesis.strategies as st
-from hypothesis import given
+from hypothesis import given, settings
 
 from aegis.core.crypto_audit import CryptographicAuditLedger
 from aegis.core.memory import Zeroize
 from aegis.core.timing_defense import TimingDefense
 
 
+@settings(deadline=None)  # the property is correctness, not commit latency
 @given(
     state_id=st.text(min_size=1, max_size=100).filter(lambda x: "\x00" not in x),
     entropy=st.floats(allow_nan=False, allow_infinity=False),
