@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 """
 AegisProxy Kubernetes operator controller.
 
@@ -18,7 +18,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_AEGIS_IMAGE = "ghcr.io/juanlunaia/aegis-latent-core:5.0.2"
+DEFAULT_AEGIS_IMAGE = "ghcr.io/juanlunaia/aegis-latent-core:5.0.3"
 WRITABLE_TMP_PATH = "/tmp"  # noqa: S108 -- mounted emptyDir, not host temporary storage
 _OCI_DIGEST_REFERENCE = re.compile(r"^.+@sha256:[0-9a-fA-F]{64}$")
 _OCI_TAG_REFERENCE = re.compile(r"^.+:[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$")

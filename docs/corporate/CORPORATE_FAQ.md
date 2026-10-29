@@ -100,11 +100,11 @@ See [Enterprise Readiness](../enterprise/ENTERPRISE_READINESS.md) and [Pilot Pla
 
 ## What is the licence?
 
-**Apache License, Version 2.0, from `5.0.2`.**
+**Aegis Commercial License 1.0 (`LicenseRef-Aegis-Commercial-1.0`), from `v5.0.3`.**
 
-Apache-2.0 is permissive: use, modification and redistribution, including commercial and closed-source use, are allowed on conditions — a copy of the License and the NOTICE with every distribution, a statement of changes, preserved notices, and a patent-termination clause. It provides the software AS IS and grants no right to the project's name or marks. Confirm with counsel for your specific case.
+The commercial licence is source-available: you may read, compile and run the software for a thirty-day evaluation at no cost, modify it for internal use, and use it in production only under a paid Order. It does not permit redistribution, sublicensing, resale, hosting for third parties or a competing managed service, and it forbids removing notices or circumventing entitlement checks. It provides the software AS IS and grants no right to the project's name or marks. The SDKs in `sdk/python` and `sdk/typescript` ship their own `LICENSE` and stay on their published terms. Confirm with counsel for your specific case.
 
-**`5.0.2` is the published Apache-2.0 release.** Releases up to and including `5.0.1` were published under AGPLv3 (a copyleft licence with a network clause) or a separate commercial agreement, and keep those terms; a published artifact obtained today carries them. See [COMMERCIAL.md](../../COMMERCIAL.md) and [`docs/legal/LICENSE_TRANSITION_5.0.2.md`](../legal/LICENSE_TRANSITION_5.0.2.md).
+**`5.0.2` is the published release that keeps the terms it shipped with.** Releases up to and including `5.0.1` were published under AGPLv3 (a copyleft licence with a network clause) or a separate commercial agreement, and keep those terms; a published artifact obtained today carries them. See [COMMERCIAL.md](../../COMMERCIAL.md) and [`docs/legal/LICENSE_TRANSITION_5.0.2.md`](../legal/LICENSE_TRANSITION_5.0.2.md).
 
 Dependency licences are enumerated in the SPDX SBOMs published as release assets.
 

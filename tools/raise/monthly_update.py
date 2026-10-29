@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 """Draft the monthly investor update from what the owner recorded, and nothing else.
 
     python tools/raise/monthly_update.py --month YYYY-MM [--today YYYY-MM-DD] [--out FILE]

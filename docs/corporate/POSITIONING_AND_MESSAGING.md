@@ -56,7 +56,7 @@ That sentence carries the three things that matter: **ordering**, **verifiabilit
 
 **They care about:** licence, support, continuity, assurance artifacts, and risk.
 
-**Lead with:** self-hosted custody, the open licence (Apache-2.0 from `5.0.2`), and the disqualifier list.
+**Lead with:** self-hosted custody, the source-available licence (Aegis Commercial License 1.0 from `v5.0.3`), and the disqualifier list.
 
 **Be honest early about:** no certification, no SLA, single maintainer.
 

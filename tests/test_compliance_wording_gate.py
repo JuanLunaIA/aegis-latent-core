@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 """Wording gate for the compliance-label class (AUD-22 / REG-D26).
 
 The audit found SOC 2 / HIPAA / GDPR names used *as labels* on sample, tooling and

@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Paid Pilot Agreement: Template
@@ -12,7 +12,7 @@ Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 
 > **[COUNSEL-REVIEW-REQUIRED]** Draft prepared by an AI agent for the owner and qualified counsel. It is not legal advice, has not been reviewed by a lawyer, has not been offered to anyone, and nobody has signed it. Bracketed fields `[●]` are open decisions, not defaults. Do not send it to a counterparty before counsel has reviewed it.
 
-> **[SUPERSEDED-IN-PART — 5.0.2]** The pilot template referred to a commercial licence and the AGPLv3 as the "proceed" and "stop" outcomes. From `5.0.2` the source is Apache-2.0 and what follows a pilot is a support or services agreement. See [Licence Transition 5.0.2](LICENSE_TRANSITION_5.0.2.md).
+> **[SUPERSEDED-IN-PART — 5.0.2]** The pilot template referred to a commercial licence and the AGPLv3 as the "proceed" and "stop" outcomes. From `5.0.2` the source carried a permissive licence and what followed a pilot was a support or services agreement; from `v5.0.3` the source is under the Aegis Commercial License 1.0, so a pilot is followed by a paid Order. See [Licence Transition 5.0.2](LICENSE_TRANSITION_5.0.2.md).
 
 ## Parties and scope
 
@@ -30,7 +30,7 @@ Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 
 ## 1. Licence during the pilot
 
-The Customer may run the Licensed Software `[tag and commit]` in the named Environments for the duration under a non-exclusive, non-transferable evaluation licence. The licence the source carries (Apache-2.0 for `5.0.2`; the AGPLv3 for a release up to `5.0.1`) remains available for the same source; the pilot does not gate anything the Customer could run alone.
+The Customer may run the Licensed Software `[tag and commit]` in the named Environments for the duration under a non-exclusive, non-transferable evaluation licence. The licence the source carries (the terms `5.0.2` shipped with; the AGPLv3 for a release up to `5.0.1`; the Aegis Commercial License 1.0 for `v5.0.3` and later) remains available for the same source; the pilot does not gate anything the Customer could run alone.
 
 ## 2. Acceptance criteria
 

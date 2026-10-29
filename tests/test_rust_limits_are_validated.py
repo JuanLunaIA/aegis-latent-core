@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 """AUD-05 (REG-D09): every caller-controlled size must raise, never abort.
 
 ``aegis_rust`` ships from a release profile with ``panic = "abort"`` and

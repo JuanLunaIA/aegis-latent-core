@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Paid Pilot — Proposal Template
@@ -62,7 +62,7 @@ Written here, agreed before work begins, and evaluated literally. Each is a fals
 - A redaction measurement against their own corpus.
 - A written record of every acceptance criterion and its outcome.
 - Direct access to the maintainer for the duration.
-- **Everything learned, whether or not they proceed.** The source is open (Apache-2.0 from `5.0.2`, a published release; AGPLv3 for published releases up to `5.0.1`); the pilot does not gate anything they could not run alone.
+- **Everything learned, whether or not they proceed.** The source is available (Aegis Commercial License 1.0 from `v5.0.3`; AGPLv3 for published releases up to `5.0.1`, and `5.0.2` under the terms it shipped with); the pilot does not gate anything they could not read and evaluate alone.
 
 ## 4. What the vendor gets
 

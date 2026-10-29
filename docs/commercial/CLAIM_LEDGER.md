@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Sales Claim Ledger
@@ -71,7 +71,7 @@ That distribution is the finding. This corpus was not overselling the product �
 | 23 | Professional services `$35k / $50k / $25k` | `ENTERPRISE_PRICING_GUIDE.md` | `[HYPOTHESIS-UNVALIDATED]` |
 | 24 | Support severity response targets (1h / 4h / 1 business day) | `ENTERPRISE_PRICING_GUIDE.md` | `[FRAMEWORK-ONLY]` — was already "a template for negotiation"; token made explicit |
 | 25 | Escrow deposit scope and release conditions | `SOFTWARE_ESCROW_POLICY.md` | `[FRAMEWORK-ONLY]` — the file already opens with "not an executed arrangement"; token made explicit |
-| 26 | Paid support/services terms availability | `COMMERCIAL.md`, `ENTERPRISE_PRICING_GUIDE.md` | `[FRAMEWORK-ONLY]` — `CR-04` is `NOT STARTED`; **no signable template exists** (the earlier commercial-licence scope was superseded by the Apache-2.0 relicence) |
+| 26 | Paid support/services terms availability | `COMMERCIAL.md`, `ENTERPRISE_PRICING_GUIDE.md` | `[FRAMEWORK-ONLY]` — `CR-04` is `NOT STARTED`; **no signable template exists** (the earlier commercial-licence scope was superseded by the 5.0.2 relicence, and from v5.0.3 the licence itself is commercial again) |
 | 27 | Five-package hypothesis (Community → Sovereign/OEM) | `COMMERCIAL.md:26-32` | `[HYPOTHESIS-UNVALIDATED]` |
 | 28 | Certification posture | `SUPPORT_MODEL.md` §5, `README.md` | `[NOT-CERTIFIED]` — already stated as "does not exist"; token made explicit |
 

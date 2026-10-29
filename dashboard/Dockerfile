@@ -1,6 +1,6 @@
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 # syntax=docker/dockerfile:1.7
 
 ARG NODE_IMAGE=node:22.18.0-bookworm-slim@sha256:752ea8a2f758c34002a0461bd9f1cee4f9a3c36d48494586f60ffce1fc708e0e

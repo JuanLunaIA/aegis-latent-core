@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 """Claim-control consistency checks for ``docs/CLAIMS_MATRIX.md``.
 
 ``scripts/verify_docs.py`` checks that documents are structurally sound. This

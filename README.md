@@ -12,13 +12,17 @@ Aegis sits between your application and one or more LLM providers. It admits, bo
 [![CI](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/ci.yml)
 [![Security](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml/badge.svg)](https://github.com/JuanLunaIA/aegis-latent-core/actions/workflows/security.yml)
 [![coverage](https://img.shields.io/badge/coverage-91.30%25_(2026--09--24)-green)](#real-world-benchmarks)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-source--available%20commercial-blue)](LICENSE)
 
 Every load-bearing claim in this file carries a locator and a stated boundary; the gates that enforce that discipline run in CI.
 
 > **Start here:** [prove an evidence record yourself](docs/PROVE_IT.md) · [choose a deployment profile](docs/operations/DEPLOYMENT_PROFILES.md) · [read the threat model](docs/security/THREAT_MODEL.md) · [inspect the claims matrix](docs/CLAIMS_MATRIX.md)
 
-> **Current release:** `v5.0.2` — the published Apache-2.0 release, published 2026-10-01. GitHub Release, PyPI `aegis-latent-core`, PyPI `aegis-latent-sdk` and npm `aegis-latent-sdk` were read back at `5.0.2`; GHCR was not independently readable from this environment ([Release Status](docs/RELEASE_STATUS.md) §1.0d). The GitHub Release carries 31 assets, including `SHA256SUMS`; the registry package versions read back are `5.0.2`. The previous release `5.0.1` and its stronger signature/provenance readbacks remain documented in §1.0a–§1.0b. No current GHCR verification claim is made here. The previous release, `v5.0.0`, was published 2026-09-16 on the same surfaces (§1.0). There is no `4.2.0`; the number was skipped.
+> **Current release:** `v5.0.2` — published 2026-10-01 under Apache-2.0.
+> **Next release:** `v5.0.3` is prepared on `release/v5.0.3` and is **not published yet**;
+> from that commit the gateway, control plane and dashboard move to the Aegis
+> Commercial License 1.0, while the SDKs stay Apache-2.0. Nothing published under
+> Apache-2.0 can be revoked ([LICENSE_TRANSITION_5.0.3](docs/legal/LICENSE_TRANSITION_5.0.3.md)).
 >
 > **First published version with the gateway on PyPI:** `v4.1.2`, read back on 2026-09-04 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images. **`4.1.2` is the first version installable from PyPI as `aegis-latent-core`**; before it the gateway came from source or GHCR only. The npm version list skips `4.1.1`, whose publish step failed. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The two `4.1.2` PyPI gateway artifacts are byte-different from the release assets of the same name — same content, different build host — so `SHA256SUMS` does not cover those downloads; the `5.0.1` PyPI gateway artifacts match it. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
@@ -208,7 +212,7 @@ Two things that snippet does not establish. It shows the bytes match the manifes
 
 ## Support the project
 
-Aegis Latent Core is developed by one maintainer. A donation is voluntary: it buys no licence, support, feature or influence, and it is not tax-deductible. The source is licensed under Apache-2.0 for every use, commercial or not ([COMMERCIAL.md](COMMERCIAL.md)).
+Aegis Latent Core is developed by one maintainer. A donation is voluntary: it buys no licence, support, feature or influence, and it is not tax-deductible. The source is source-available under the Aegis Commercial License 1.0 from v5.0.3; evaluation is free for 30 days and production use requires a paid Order ([COMMERCIAL.md](COMMERCIAL.md)).
 
 [![Donate by card](docs/assets/donate/donate-card.svg)](https://donate.stripe.com/dRm6oG6Vpbnf3BB3sOfUQ00)
 [![Donate with PayPal](docs/assets/donate/donate-paypal.svg)](https://www.paypal.com/ncp/payment/PLB-ZBB5SW68AQNM)
@@ -225,4 +229,4 @@ Aegis Latent Core is developed by one maintainer. A donation is voluntary: it bu
 
 ---
 
-<sub>Copyright © 2026 Juan Luna. Licensed under the Apache License, Version 2.0 from 5.0.2 (releases up to 5.0.1 keep the AGPLv3-or-commercial terms they were published under; see [docs/legal/LICENSE_TRANSITION_5.0.2.md](docs/legal/LICENSE_TRANSITION_5.0.2.md)). Full documentation index: <a href="docs/INDEX.md">docs/INDEX.md</a></sub>
+<sub>Copyright © 2026 Juan Luna. Source-available under the Aegis Commercial License 1.0 from v5.0.3. Release 5.0.2 remains Apache-2.0; earlier releases keep the terms they were published under (see [docs/legal/LICENSE_TRANSITION_5.0.3.md](docs/legal/LICENSE_TRANSITION_5.0.3.md)). Full documentation index: <a href="docs/INDEX.md">docs/INDEX.md</a></sub>

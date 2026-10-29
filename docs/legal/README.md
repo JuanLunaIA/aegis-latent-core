@@ -1,13 +1,13 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Legal Stack: Drafts for Counsel
 
 **Audience:** the owner, and the qualified software-licensing and corporate counsel who will review these drafts.
-**Scope:** the documents needed to sell Aegis Latent Core under a commercial arrangement: licence, paid pilot, escrow term sheet, founder-to-company IP assignment, an open-core decision memo, and the questions counsel has to answer. Prepared 2026-09-29 (Mission XVI, Phase 2). **From `5.0.2` the source is licensed under Apache-2.0, which supersedes in part the commercial-licence premise of these drafts; see the [Licence Transition 5.0.2](LICENSE_TRANSITION_5.0.2.md) record.**
+**Scope:** the documents needed to sell Aegis Latent Core under a commercial arrangement: licence, paid pilot, escrow term sheet, founder-to-company IP assignment, an open-core decision memo, and the questions counsel has to answer. Prepared 2026-09-29 (Mission XVI, Phase 2). **From `v5.0.3` the source is licensed under the Aegis Commercial License 1.0, which restores the commercial-licence premise of these drafts; the permissive `5.0.2` licence had superseded it in part. See the [Licence Transition 5.0.2](LICENSE_TRANSITION_5.0.2.md) and [Licence Transition 5.0.3](LICENSE_TRANSITION_5.0.3.md) records.**
 **Boundary:** drafts only. Nothing here has been reviewed, offered, signed or filed. The agent that prepared them did not sign anything, engage any party or spend anything. The register items they serve (`REG-H03`, `REG-H04`, `REG-H09`, `REG-H10`) stay open until a human closes them.
 
 > **[COUNSEL-REVIEW-REQUIRED]** Draft prepared by an AI agent for the owner and qualified counsel. It is not legal advice, has not been reviewed by a lawyer, has not been offered to anyone, and nobody has signed it. Bracketed fields `[●]` are open decisions, not defaults. Do not send it to a counterparty before counsel has reviewed it.

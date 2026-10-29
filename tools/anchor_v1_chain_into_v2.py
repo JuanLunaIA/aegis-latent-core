@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Cross-sign a v1 MMR chain's terminal root into a new v2 chain's genesis.
 
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 **This is not a migration, and the difference is not pedantic.** An audit asked
 for a tool that exports v1 leaves and rebuilds them under v2. That cannot be

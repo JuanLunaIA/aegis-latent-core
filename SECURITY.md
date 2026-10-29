@@ -3,8 +3,8 @@
 This policy defines the vulnerability-reporting path, support boundary, production security baseline, runtime evidence rules and release security gates. It is for security researchers, customers, maintainers and operators. It is not a contractual SLA, certification, legal opinion or guarantee of future remediation.
 
 **Last verified:** 2026-10-01 UTC
-**Release baseline:** published release (`5.0.2`, Apache-2.0); latest published release `5.0.2`
-**Current source line:** `5.0.2` with fourteen synchronized anchors — the published Apache-2.0 release, read back on GitHub Release, PyPI and npm (`docs/RELEASE_STATUS.md` §1.0d); the previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` — see `docs/RELEASE_STATUS.md` §1.0
+**Release baseline:** published release (`5.0.2`, keeping the terms it shipped with); latest published release `5.0.2`
+**Current source line:** `5.0.2` with fourteen synchronized anchors — the published release that keeps the terms it shipped with, read back on GitHub Release, PyPI and npm (`docs/RELEASE_STATUS.md` §1.0d); the previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` — see `docs/RELEASE_STATUS.md` §1.0
 **Most recent published line:** `5.0.2`, read back on 2026-10-01 across GitHub Release, PyPI and npm; GHCR was not readable from this environment
 **External baseline:** signed annotated `v4.1.2` tag at `860f14177d94c194e5ae7156017d6fa74264e429`, with GitHub Release (31 assets), PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images, all read back on 2026-09-04
 **Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
@@ -16,14 +16,14 @@ Aegis Latent Core is security-sensitive infrastructure. The repository provides 
 
 | Version line | Support status |
 |---|---|
-| `5.0.x` | Current published line. `5.0.2` is the Apache-2.0 release read back on GitHub Release, PyPI and npm; GHCR was not read back here. |
+| `5.0.x` | Current published line. `5.0.2` is the release read back on GitHub Release, PyPI and npm, and it keeps the terms it shipped with; GHCR was not read back here. |
 | `5.0.1` | Previous published line; see the dated readback in `docs/RELEASE_STATUS.md`. |
 | `4.0.x` | Previous published line (`v4.0.2` tag, GitHub Release and GHCR images). Its SDK publish jobs were skipped, so neither registry received `4.0.2`. |
 | `3.1.x` | Historical v3.1.0 market-hardening line; fixes remain subject to the project's actual operating capacity and supported-version policy. |
 | `3.0.x` | Published v3.0.1 baseline. Upgrade to the candidate line for new hardening; security fixes remain subject to the project’s actual operating capacity. |
 | `<3.0.0` | Historical releases. Upgrade before requesting support; no default security-fix commitment is made. |
 
-The current source line is `5.0.2`, with `5.0.2` as the latest published Apache-2.0 release. The checked-out source is the published release; publication state is recorded only in `docs/RELEASE_STATUS.md` and must be read back from each external surface. The previous release is `5.0.0`: fourteen synchronized anchors, published on 2026-09-16 to the tag, the GitHub Release, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk` and both GHCR images, but **not** to PyPI `aegis-latent-core`; `cosign verify` and `gh attestation verify` were not run for it. The historical `4.1.2` release and earlier baselines remain documented as history. Release support must be evaluated from published artifacts, while source behavior must be evaluated from the named commit, tests, and deployment prerequisites.
+The current source line is `5.0.2`, with `5.0.2` as the latest published release, which keeps the terms it shipped with. The checked-out source is the published release; publication state is recorded only in `docs/RELEASE_STATUS.md` and must be read back from each external surface. The previous release is `5.0.0`: fourteen synchronized anchors, published on 2026-09-16 to the tag, the GitHub Release, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk` and both GHCR images, but **not** to PyPI `aegis-latent-core`; `cosign verify` and `gh attestation verify` were not run for it. The historical `4.1.2` release and earlier baselines remain documented as history. Release support must be evaluated from published artifacts, while source behavior must be evaluated from the named commit, tests, and deployment prerequisites.
 
 ## Distribution channels and what each one enforces
 
@@ -121,7 +121,7 @@ The external-assurance sequence is maintained in [`docs/SECURITY_ASSURANCE_ROADM
 
 ## License and disclosure caveat
 
-From 5.0.2 the source is licensed under the Apache License, Version 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)); releases up to and including 5.0.1 keep the terms they were published under, and [`COMMERCIAL.md`](COMMERCIAL.md) describes what is sold. License interpretation, contractual remedies, regulatory obligations and legal strategy require counsel in the applicable jurisdiction.
+From v5.0.3 the gateway, the control plane and the dashboard are licensed under the Aegis Commercial License 1.0 (`LicenseRef-Aegis-Commercial-1.0`; [`LICENSE`](LICENSE), [`NOTICE`](NOTICE)); releases published before v5.0.3 keep the terms they shipped with; the SDKs in `sdk/python` and `sdk/typescript` stay under their own Apache licence; and [`COMMERCIAL.md`](COMMERCIAL.md) describes what is sold. License interpretation, contractual remedies, regulatory obligations and legal strategy require counsel in the applicable jurisdiction.
 
 ## Related documents
 

@@ -3,9 +3,9 @@ aegis.core.boot_guard — Orchestrates the Measured Boot process.
 Ensures that the system only enters a 'Ready' state if the TPM verifies the chain of trust.
 """
 
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 from __future__ import annotations
 
 import logging

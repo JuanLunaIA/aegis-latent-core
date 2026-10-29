@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Contributing to Aegis Latent Core
@@ -9,22 +9,24 @@ Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
 This document defines the contribution workflow, DCO sign-off, forward-looking CLA language, test expectations and public-claim review for Aegis. It is for prospective contributors, maintainers and organizations evaluating contribution rights. It is not legal advice.
 
 **Last verified:** 2026-08-27 UTC
-**Release baseline:** published release (`5.0.2`, Apache-2.0); latest published release `5.0.2`
-**Source baseline:** `5.0.2` with fourteen synchronized anchors — the published Apache-2.0 release; the most recent published release is `5.0.1`, **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` was the last version published on every surface before `5.0.1` completed the set on 2026-09-26, whose publication was read back on 2026-09-04 and is recorded in `docs/RELEASE_STATUS.md` §1.1
+**Release baseline:** published release (`5.0.2`, keeping the terms it shipped with); latest published release `5.0.2`
+**Source baseline:** `5.0.2` with fourteen synchronized anchors — the published release that keeps the terms it shipped with; the most recent published release is `5.0.1`, **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see `docs/RELEASE_STATUS.md` §1.0); `v4.1.2` was the last version published on every surface before `5.0.1` completed the set on 2026-09-26, whose publication was read back on 2026-09-04 and is recorded in `docs/RELEASE_STATUS.md` §1.1
 **Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
 
 Thank you for your interest in contributing. This project is maintained by its
 sole copyright holder, **Juan Luna** (`juan.c.luna04@gmail.com`). From
-version `5.0.2` the source is licensed under the **Apache License, Version 2.0**
-(see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE)). Releases up to and including
-`5.0.1` were published under the GNU Affero General Public License v3 (AGPLv3)
-or a separate commercial licence; those published artifacts keep the terms they
-were published under (see
-[`docs/legal/LICENSE_TRANSITION_5.0.2.md`](docs/legal/LICENSE_TRANSITION_5.0.2.md)).
+version `v5.0.3` the gateway, the control plane and the dashboard are licensed
+under the **Aegis Commercial License 1.0** (`LicenseRef-Aegis-Commercial-1.0`;
+see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE)); the SDKs and the examples ship
+their own `LICENSE`. Releases published before `v5.0.3` keep the terms they
+shipped with: `5.0.2` under the licence it was published with, and `5.0.1` and
+earlier under the GNU Affero General Public License v3 (AGPLv3) or a separate
+commercial licence (see
+[`docs/legal/LICENSE_TRANSITION_5.0.3.md`](docs/legal/LICENSE_TRANSITION_5.0.3.md)).
 
-Under Section 5 of the Apache License, a contribution you intentionally submit
-is licensed under the same Apache-2.0 terms unless you state otherwise in
-writing. The framework below — a Developer Certificate of Origin (DCO) plus a
+Under the CLA (§3), a contribution you intentionally submit is licensed to the
+Maintainer, who may distribute it under the Project's outbound licence unless
+you state otherwise in writing. The framework below — a Developer Certificate of Origin (DCO) plus a
 lightweight Contributor License Agreement (CLA) — records provenance and keeps
 the maintainer able to keep maintaining and releasing the project, while keeping
 the contribution process fast and low-friction.
@@ -42,9 +44,9 @@ this repository were authored by Juan Luna (including work produced with
 AI-assisted tooling operated by Juan Luna). To the maintainer's knowledge there
 are **no third-party human contributions** in the project history. Accordingly,
 Juan Luna is the **sole copyright holder** of the existing work, and is entitled
-to license it under the Apache License, Version 2.0 (and was entitled to license
-it under the AGPLv3 and a commercial licence for the releases published before
-`5.0.2`).
+to license it under the Aegis Commercial License 1.0 from `v5.0.3` (and was
+entitled to license it under the AGPLv3 and a commercial licence for the
+releases published before `5.0.2`, and under the licence `5.0.2` shipped with).
 
 This section is a factual statement about the current state of the repository.
 It does not, and cannot, retroactively alter the terms under which any past
@@ -110,8 +112,8 @@ block, termination terms, and legal limitations.
 The CLA is forward-looking: it applies to Contributions intentionally submitted
 after the published CLA version is accepted. It does not retroactively change
 the terms of an earlier contribution or an artifact already distributed under
-its applicable licence. The current Project release is `5.0.2` under
-Apache-2.0. The CLA does not create a commercial licence, compensation right,
+its applicable licence. The Project's outbound licence from `v5.0.3` is the Aegis Commercial
+License 1.0. The CLA does not create a commercial licence, compensation right,
 merge obligation, support commitment, certification, or warranty.
 
 The DCO and CLA serve different purposes:
@@ -190,8 +192,9 @@ CLA service unless the Maintainer accepts that method for the repository.
 
 Unless explicitly stated otherwise in writing, your contributions are accepted
 under the terms above: licensed to the Maintainer per the CLA (§3) and
-distributable by the project under the Apache License, Version 2.0 (Section 5 of
-that License: inbound equals outbound). Section 6 of the License grants no right
+distributable by the project under its outbound licence, the Aegis Commercial
+License 1.0 (inbound equals outbound); the SDKs and the examples carry their own
+licences. Section 6 of the License grants no right
 to use the project's name or marks; the CLA does not either.
 
 ---

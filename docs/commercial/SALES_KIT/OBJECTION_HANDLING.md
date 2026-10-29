@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Objection Handling
@@ -28,7 +28,7 @@ This matters more here than in most categories. **The product is evidence integr
 
 **What actually mitigates it, today:**
 
-- **The source is open and complete** — Apache-2.0 from `5.0.2` (a published release; every published release up to `5.0.1` is AGPLv3). You already have the code, the right to run it, modify it and fork it. No trigger event, no agent, no release condition. That is a stronger position than most proprietary escrow arrangements deliver, and you can verify it in ten seconds.
+- **The source is available and complete** — Aegis Commercial License 1.0 from `v5.0.3`, with a thirty-day evaluation you can run today, and a copy of `5.0.2` under the terms it was published with (every published release up to `5.0.1` is AGPLv3). You can read, audit and hold the code, and modify it for internal use; a `5.0.2` copy also carries the right to fork and redistribute it. That is a stronger position than most proprietary escrow arrangements deliver, and you can verify it in ten seconds.
 - **The build is reproducible from the tree** — pinned Actions, hash-locked `requirements.lock`, committed `Cargo.lock`, SBOM generation.
 - **Pin and vendor.** Pin an exact commit and container digest and keep a verified copy.
 
@@ -78,14 +78,14 @@ This matters more here than in most categories. **The product is evidence integr
 
 **The truth:** this was the most common hard blocker, and it is a reasonable position. AGPLv3 §13 extends copyleft to network interaction, and many corporate policies restrict it categorically.
 
-**The honest current state, and this is the part that must not be soft-pedalled:** the `5.0.2` source is licensed under Apache-2.0, which has no network-copyleft clause, so for that source the objection no longer applies. **`5.0.2` is published**: every published release up to and including `5.0.1` is AGPLv3 (or a commercial agreement, none of which is recorded in this repository), and a buyer pulling a published artifact today receives those terms. The relicence also still needs counsel's written confirmation of title (`CR-04`, `NOT STARTED`).
+**The honest current state, and this is the part that must not be soft-pedalled:** the licence from `v5.0.3` is the Aegis Commercial License 1.0, not AGPLv3, so for the current source the AGPL objection does not apply — but the answer is now a commercial Order, not a permissive grant. Every published release up to and including `5.0.1` is AGPLv3 (or a commercial agreement, none of which is recorded in this repository), and a buyer pulling those artifacts receives those terms; `5.0.2` keeps the terms it was published with. The relicence also still needs counsel's written confirmation of title (`CR-04`, `NOT STARTED`).
 
 **The concrete step:** `CR-04`, counsel confirmation plus a support/services template, 2–4 weeks, ~$3–5k, then publication of `5.0.2` by the owner. **If you are the buyer waiting on this, say so and it moves to the front.**
 
 **What can be said about the licence question meanwhile:**
 
-- Apache-2.0 conditions are a copy of the License and the NOTICE with every distribution, a statement of changes, preserved notices and the patent-termination clause. **Whether your deployment meets them is your counsel's determination, not mine, and nothing here is legal advice.**
-- The free tier is not crippled. Every engine is importable and fully functional; licence enforcement is off by default. A paid agreement buys support and services — not a licence, and not access to withheld code.
+- The conditions of your copy are the conditions of the licence it carries: the Aegis Commercial License 1.0 for the `v5.0.3` source (paid Order for production use, no redistribution, preserved notices), or the terms an earlier release was published under. **Whether your deployment meets them is your counsel's determination, not mine, and nothing here is legal advice.**
+- The build is not crippled. Every engine is importable and fully functional; licence enforcement is off by default. A paid Order buys the production right the licence withholds without one, support and services — not access to withheld code.
 
 ## 5. "What's your SLA?"
 

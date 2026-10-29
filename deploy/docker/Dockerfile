@@ -1,16 +1,16 @@
-# Copyright (c) 2026 Juan Luna.
-# SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+# Copyright (c) 2026 Juan Luna. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+# Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 #
-# Aegis Latent Core v5.0.2 — strict deployment image (Python 3.12)
+# Aegis Latent Core v5.0.3 — strict deployment image (Python 3.12)
 #
-# Build: docker build -f deploy/docker/Dockerfile -t aegis-latent-core:5.0.2 .
+# Build: docker build -f deploy/docker/Dockerfile -t aegis-latent-core:5.0.3 .
 # Run with host-provided profiles and bounded privileges:
 # docker run --read-only --cap-drop=ALL --security-opt no-new-privileges=true \
 #   --security-opt seccomp=/etc/aegis/seccomp.json \
 #   --security-opt apparmor=aegis-latent-core \
 #   --tmpfs /tmp:rw,noexec,nosuid,size=64m -p 8080:8080 \
-#   --env-file .env -v /var/lib/aegis:/data aegis-latent-core:5.0.2
+#   --env-file .env -v /var/lib/aegis:/data aegis-latent-core:5.0.3
 #
 # Required env vars:
 #   AEGIS_BACKEND_API_KEY   — upstream LLM API key
@@ -55,7 +55,7 @@ RUN pip install --no-cache-dir --no-deps . && pip check
 FROM ${PYTHON_IMAGE}
 
 LABEL org.opencontainers.image.title="Aegis Latent Core" \
-      org.opencontainers.image.version="5.0.2" \
+      org.opencontainers.image.version="5.0.3" \
       org.opencontainers.image.description="Strict LLM gateway with durable signed forensic evidence" \
       org.opencontainers.image.licenses="Apache-2.0"
 

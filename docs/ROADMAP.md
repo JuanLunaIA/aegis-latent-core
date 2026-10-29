@@ -1,7 +1,7 @@
 <!--
-Copyright (c) 2026 Juan Luna.
-SPDX-License-Identifier: Apache-2.0
-Licensed under the Apache License, Version 2.0; see LICENSE and NOTICE.
+Copyright (c) 2026 Juan Luna. All rights reserved.
+SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
+Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 -->
 
 # Aegis Latent Core — Engineering and Market Roadmap
@@ -159,7 +159,7 @@ Historical implementation detail remains in [`CHANGELOG.md`](../CHANGELOG.md), g
 - [x] Define non-binding package hypotheses and support boundaries.
 - [ ] Validate pricing with at least three buyer interviews, cost-to-serve modeling, comparable quotes, and a paid pilot.
 - [ ] Build a support operation before promising contractual response targets, 24/7 coverage, or mission-critical SLA.
-- [ ] Create a customer data/retention/deletion statement and have counsel review the Apache-2.0 relicence and any earlier agreement before external sale.
+- [ ] Create a customer data/retention/deletion statement and have counsel review the v5.0.3 relicence and any earlier agreement before external sale.
 - [ ] Obtain independent security, cryptographic, and deployment assurance appropriate to the target buyer segment.
 
 ## Release gate

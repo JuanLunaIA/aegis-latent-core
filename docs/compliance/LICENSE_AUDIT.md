@@ -19,15 +19,21 @@ This is an inventory of the licence identifiers upstream projects declare, read 
 | UNKNOWN | 0 |
 | PERMISSIVE | 369 |
 
-## Compatibility with Apache-2.0
+## Compatibility with the current licence
 
-Aegis source is licensed under Apache-2.0 only. Apache-2.0 is permissive, so a copyleft dependency is where a distribution question arises: reciprocal terms on a component can extend to the combined work.
+From v5.0.3 the Aegis source is licensed under the Aegis Commercial License 1.0
+(see `LICENSE`). The SDKs remain Apache-2.0. The compatibility question is the
+same for either outbound licence: a permissive outbound licence is what makes a
+copyleft dependency a distribution question, because reciprocal terms on a
+component can extend to the combined work. The table below was written for the
+Apache-2.0 releases and is retained as the audit of record; re-run it against the
+commercial terms before shipping a binary that embeds a weak-copyleft component.
 
-| Classification | Apache-2.0 artifact |
+| Classification | Artifact under the current licence |
 | --- | --- |
 | PERMISSIVE | compatible; attribution required |
 | WEAK_COPYLEFT | compatible **only if** the component is dynamically linked or merely aggregated, and attribution plus a source offer accompany the artifact |
-| STRONG_COPYLEFT | **blocking** unless the component is not distributed with the Apache-2.0 artifact at all |
+| STRONG_COPYLEFT | **blocking** unless the component is not distributed with the artifact at all |
 | UNKNOWN | **blocking** — resolve before release |
 
 ## STRONG_COPYLEFT (0)
