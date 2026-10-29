@@ -331,8 +331,8 @@ def render(result: BuildResult, docs_dir: Path) -> str:
     if result.broken:
         lines.append("## Broken relative links")
         lines.append("")
-        for link in sorted(result.broken, key=lambda item: (item.page, item.line, item.target)):
-            lines.append(f"- `{link.page}:{link.line}` \u2192 `{link.target}`")
+        for broken in sorted(result.broken, key=lambda item: (item.page, item.line, item.target)):
+            lines.append(f"- `{broken.page}:{broken.line}` \u2192 `{broken.target}`")
         lines.append("")
 
     return "\n".join(lines).rstrip("\n") + "\n"
