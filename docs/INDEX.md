@@ -39,6 +39,13 @@ Drafts prepared for counsel. Every one says on its face that it is not legal adv
 | [Licence Transition 5.0.3](legal/LICENSE_TRANSITION_5.0.3.md) | which copies keep which terms |
 | [AI Contributions](legal/AI_CONTRIBUTIONS.md) | factual record of agent-authored commits |
 | [Counsel Questions](legal/COUNSEL_QUESTIONS.md) | the questions only counsel can answer; blocks a public release |
+| [Counsel Review Log](legal/COUNSEL_REVIEW_LOG.md) | which draft has been reviewed, by whom, and what remains |
+| [Entity and Tax Memo](legal/ENTITY_AND_TAX_MEMO.md) | incorporation, tax and merchant-of-record decisions |
+| [Data Map](legal/DATA_MAP.md) | data categories, storage, subprocessors and transfers |
+| [MSA and Order Form](legal/MSA_ORDER_FORM_TEMPLATE.md) | the paid-customer agreement template |
+| [Export and Crypto Classification](legal/EXPORT_AND_CRYPTO_CLASSIFICATION.md) | what is in the box and what is still unclassified |
+| [Insurance and Escrow Decisions](legal/INSURANCE_AND_ESCROW_DECISIONS.md) | policies, escrow, and the current "not bound" state |
+| [Legal Gate](legal/LEGAL_GATE.md) | the blocked/closed conditions for a paid Order |
 
 ## Claim control
 
@@ -104,6 +111,8 @@ The documents that decide what may be said, and on what evidence.
 | [Security Controls](security/SECURITY_CONTROLS.md) | Control-by-control status, evidence, boundary, and who configures it. |
 | [Security Architecture](security/SECURITY_ARCHITECTURE.md) | How the controls fit together across trust boundaries. |
 | [Incident Response](security/INCIDENT_RESPONSE.md) | Detection, containment, evidence preservation, recovery. |
+| [Incident Tabletop](security/INCIDENT_TABLETOP.md) | Scenarios and evaluation sheet; no exercise has been run. |
+| [Questionnaire Answer Bank](security/QUESTIONNAIRE_ANSWER_BANK.md) | Honest answers to recurring vendor-security questions. |
 | [Vulnerability Disclosure](security/VULNERABILITY_DISCLOSURE.md) | Private reporting, triage, coordination. |
 | [WAF Testing](security/WAF_TESTING.md) | The pinned corpus and what its result means. |
 | [PQC Constant Time](security/PQC_CONSTANT_TIME.md) | Post-quantum signer timing boundary. |
@@ -122,6 +131,7 @@ The documents that decide what may be said, and on what evidence.
 | [Azure Install Options](operations/AZURE_INSTALL_OPTIONS.md) | VM kit, AKS, Helm, Container Apps: advantages, disadvantages, costs. |
 | [Azure Kit Creator](operations/AZURE_KIT_CREATOR.md) | `doctor`, `estimate`, `create`, `verify`, and what a generated kit contains. |
 | [Monitoring and Alerting](operations/MONITORING_ALERTING.md) | Metrics, logs policy, alert rules. |
+| [SLO and Error Budget](operations/SLO.md) | Internal objectives, current baseline, and why no customer SLA exists. |
 | [Backup and Restore](operations/BACKUP_RESTORE.md) | Scope, integrity checks, restore drill. |
 | [Key Rotation Runbook](operations/KEY_ROTATION_RUNBOOK.md) | Signer and trusted-root rotation. |
 | [Rollback Runbook](operations/ROLLBACK_RUNBOOK.md) | Release and configuration rollback under evidence constraints. |
