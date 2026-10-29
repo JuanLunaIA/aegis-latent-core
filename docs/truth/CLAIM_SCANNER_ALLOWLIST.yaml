@@ -1,0 +1,11 @@
+# Allowlist for tools/truth/scan_public_claims.py.
+#
+# One entry per accepted historical sentence. There are no file-level
+# exemptions here: a hit is either fixed, or its exact line fragment is listed
+# with a reason. Entries expire when the sentence changes.
+#
+# Format:
+#   - path: docs/example.md
+#     contains: exact fragment of the line
+#     reason: why the statement is historical and scoped
+entries:

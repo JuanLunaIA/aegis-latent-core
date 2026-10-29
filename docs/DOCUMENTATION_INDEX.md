@@ -12,7 +12,7 @@ does not establish publication, deployment, or external acceptance. See
 
 - Pages indexed: 157
 - Directory groups: 22
-- Relative links in indexed pages: 1469
+- Relative links in indexed pages: 1468
 - Broken relative links in indexed pages: 0
 
 ## docs/
@@ -48,8 +48,8 @@ does not establish publication, deployment, or external acceptance. See
 - **[Rust Extension Build Guide](RUST_BUILD.md)** — Last verified: 2026-08-27 UTC Release baseline: four-layer truth model Source baseline: checked-out Rust and Python package metadata is synchronized at v5.0.2 — the published release that keeps the terms it shipped with; the most recent…
 - **[Security Assurance Roadmap — Aegis Latent Core](SECURITY_ASSURANCE_ROADMAP.md)** — This roadmap distinguishes repository evidence from deployment acceptance and independent assurance. Passing repository tests does not create a certification, attestation or customer-specific production SLO.
 - **[Documentation Style Guide](STYLE_GUIDE.md)** — Audience: anyone writing or reviewing documentation in this repository. Scope: every Markdown file tracked in this repository except vendored third-party content and dated files under evidence/, which are frozen records. Enforcement…
-- **[Upgrading to 5.0.0](UPGRADING.md)** — Audience: anyone running 4.1.2 — the most recent release on PyPI, npm and GHCR — or building from a 4.x source tree. Scope: every change between 4.1.2 and the 5.0.0 source target that can break a working deployment or a working…
-- **[Usage Examples — Aegis Latent Core](USAGE_EXAMPLES.md)** — Last verified: 2026-09-04 UTC Release baseline: v4.1.2 remains what PyPI serves for the gateway distribution (aegis-latent-core), read back 2026-09-04; 5.0.1 — the checked-out source baseline and the most recent published release — reached…
+- **[Upgrading to 5.0.0](UPGRADING.md)** — Audience: anyone upgrading from a 4.x release (4.1.2 was the last 4.x release) or building from a 4.x source tree. Scope: every change between 4.1.2 and the 5.0.0 source target that can break a working deployment or a working integration.…
+- **[Usage Examples — Aegis Latent Core](USAGE_EXAMPLES.md)** — Last verified: 2026-10-29 UTC Release baseline: v5.0.2 is the most recent published release, read back on 2026-10-01 (see docs/RELEASE_STATUS.md §1.0d); pip install aegis-latent-core resolves to 5.0.2. v5.0.1 and earlier remain historical.…
 
 ## docs/api/
 
