@@ -269,7 +269,9 @@ def group_pages(pages: list[Page]) -> list[tuple[str, list[Page]]]:
 
     result: list[tuple[str, list[Page]]] = []
     for directory in sorted(grouped, key=order):
-        entries = sorted(grouped[directory], key=lambda page: (page.relative.casefold(), page.relative))
+        entries = sorted(
+            grouped[directory], key=lambda page: (page.relative.casefold(), page.relative)
+        )
         result.append((directory, entries))
     return result
 
@@ -353,7 +355,9 @@ def build(root: Path, docs_dir: Path, output: Path) -> BuildResult:
         result.broken.extend(broken)
         result.pages.append(Page(relative, normalize_title(heading), summary))
 
-    result.directories = len({page.relative.rsplit("/", 1)[0] if "/" in page.relative else "" for page in result.pages})
+    result.directories = len(
+        {page.relative.rsplit("/", 1)[0] if "/" in page.relative else "" for page in result.pages}
+    )
     result.content = render(result, docs_dir)
     return result
 
@@ -380,7 +384,9 @@ def _summary_line(result: BuildResult) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument(
         "--root",
         type=Path,
