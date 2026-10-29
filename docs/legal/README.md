@@ -23,6 +23,13 @@ Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 | [IP Assignment Draft](IP_ASSIGNMENT_DRAFT.md) | `REG-H09` | Entity formed | Counsel review; founder and company sign |
 | [Open-core Decision Memo](OPEN_CORE_DECISION_MEMO.md) | `REG-H04` | Owner decision | Owner records the decision; counsel confirms |
 | [Questions for Counsel](COUNSEL_QUESTIONS.md) | `REG-H04`, `REG-H10` | None | Counsel answers in writing |
+| [Counsel Review Log](COUNSEL_REVIEW_LOG.md) | legal gate | Every draft above | A named lawyer returns a dated opinion per document |
+| [Entity and Tax Memo](ENTITY_AND_TAX_MEMO.md) | first paid Order | Owner decisions E1–E10 | Owner and accountant record each decision |
+| [Data Map](DATA_MAP.md) | DPA, privacy | Schema and subprocessors | Privacy counsel checks it against the code |
+| [MSA and Order Form](MSA_ORDER_FORM_TEMPLATE.md) | first paid customer | Entity, licence, DPA, support terms | Counsel review, then signature |
+| [Export and Crypto Classification](EXPORT_AND_CRYPTO_CLASSIFICATION.md) | international delivery | Export counsel | Classification recorded for the delivered version |
+| [Insurance and Escrow Decisions](INSURANCE_AND_ESCROW_DECISIONS.md) | enterprise procurement | Broker and escrow agent | Policy bound or a written decision to self-insure |
+| [Legal Gate](LEGAL_GATE.md) | release and first Order | All rows above | Gate record signed by the owner |
 
 ## Order of work
 
