@@ -10,9 +10,9 @@ index was generated. The index records what the documentation set contains; it
 does not establish publication, deployment, or external acceptance. See
 [Release Status](RELEASE_STATUS.md) and [Boundaries](BOUNDARIES.md).
 
-- Pages indexed: 156
+- Pages indexed: 157
 - Directory groups: 22
-- Relative links in indexed pages: 1465
+- Relative links in indexed pages: 1466
 - Broken relative links in indexed pages: 0
 
 ## docs/
@@ -236,3 +236,4 @@ does not establish publication, deployment, or external acceptance. See
 
 - **[Public surface map](truth/PUBLIC_SURFACE_MAP.md)** — One row per surface that a customer, investor, auditor, or agent can read. A surface with no canonical source does not get to publish the claim.
 - **[Truth surfaces](truth/README.md)** — This directory answers one question: where does a public claim live, what canonical source can prove it, and which gate stops it from drifting?
+- **[Truth gate — 2026-10-29](truth/TRUTH_GATE.md)** — TRUTH GATE: PASS
