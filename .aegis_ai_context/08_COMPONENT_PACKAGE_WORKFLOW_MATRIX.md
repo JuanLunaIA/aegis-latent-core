@@ -37,6 +37,7 @@ The authoritative loader is `_load_versions` in [`scripts/verify_release_contrac
 | Workflow | Source role | Publication boundary |
 |---|---|---|
 | [`ci.yml`](../.github/workflows/ci.yml) | Tests, lint, type checks, SDK/dashboard builds, Rust, formal, Helm, SBOM, Docker validation | Validation only; not a registry publication record. |
+| [`docs-index.yml`](../.github/workflows/docs-index.yml) | Pull-request check of `docs/DOCUMENTATION_INDEX.md` and the strict documentation verifier | Validation only; not a registry publication record. |
 | [`create_release_tag.yml`](../.github/workflows/create_release_tag.yml) | Manually authorize, create, verify, and push a Sigstore-signed annotated release tag, then dispatch downstream workflows | Configured mechanism only; it does not prove a run succeeded or retroactively establish provenance for the lightweight v4.0.1 tag or observed 4.0.0 registry packages. |
 | [`forensic.yml`](../.github/workflows/forensic.yml) | Scheduled/push/PR forensic checks | No release or package publication role. |
 | [`pqc-timing.yml`](../.github/workflows/pqc-timing.yml) | Manually initiated timing assessment | Measurement workflow, not publication. |

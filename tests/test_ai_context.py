@@ -219,6 +219,7 @@ def test_workflow_roles_and_publication_boundaries_match_source() -> None:
     assert set(workflows) == {
         "ci.yml",
         "create_release_tag.yml",
+        "docs-index.yml",
         "forensic.yml",
         "pqc-timing.yml",
         "publish.yml",

@@ -236,6 +236,12 @@ Long-form volumes for institutional review. Each is self-contained and carries i
 | [Document Control](institutional/DOCUMENT_CONTROL.md) | Volume control record |
 | [Claim Evidence Graph](institutional/CLAIM_EVIDENCE_GRAPH.md) | Claim-to-evidence relationships |
 
+## Generated
+
+| Document | Contents |
+|---|---|
+| [Documentation Index](DOCUMENTATION_INDEX.md) | Every page under `docs/`, grouped by directory, with its opening paragraph and resolved links. |
+
 ---
 
 **Related:** [README](../README.md) · [Boundaries](BOUNDARIES.md) · [Claims Matrix](CLAIMS_MATRIX.md) · [Governance](../GOVERNANCE.md)
