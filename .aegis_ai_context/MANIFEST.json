@@ -195,14 +195,14 @@
     {
       "category": "governed_input",
       "path": "requirements.txt",
-      "sha256": "268f920ed0a3828e5aab4a0ade6a94cca90947cc0277e8e6db5bc00b57bd7b78",
-      "size": 1731
+      "sha256": "d6598ec4649b1d497601f68b78bf207f0607ef0459679db0bb8989e789bc839e",
+      "size": 1832
     },
     {
       "category": "governed_input",
       "path": "requirements.lock",
-      "sha256": "b63d9cf910349df0a4b0dbf41ab2f5457f5d26db5aff7ff85afa24c03cbb39bd",
-      "size": 95901
+      "sha256": "5b39b8d13c090575b800128da030ef9b71c20a621a39472f74da56ab1692c4e6",
+      "size": 95930
     },
     {
       "category": "governed_input",
