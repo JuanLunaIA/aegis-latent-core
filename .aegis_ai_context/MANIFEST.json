@@ -3,8 +3,8 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/README.md",
-      "sha256": "f4a9b996a6fd9e0b0020ab6203f9dbf8aa69554863ca994ee6d4b6d908c5c3e2",
-      "size": 5780
+      "sha256": "a2a4728a63bb3c24adcddcc0daf622980488dedf7f4af09b19479140105c2205",
+      "size": 5797
     },
     {
       "category": "context",
@@ -93,8 +93,8 @@
     {
       "category": "governed_input",
       "path": ".github/copilot-instructions.md",
-      "sha256": "0ca1435ba2fdf478d1360ed60246f603f3b975353d135230626eee9c4510777a",
-      "size": 3868
+      "sha256": "433d0f8bc7657532e5323ebceaec40eb53c0c8f52dbb0b5a624c63e559562a80",
+      "size": 3923
     },
     {
       "category": "governed_input",
@@ -141,8 +141,8 @@
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_INTEGRATIONS_GUIDE.md",
-      "sha256": "f23b7354071604b46f302d83ca320c4f413bba4f91e288346ad645b70f25ae91",
-      "size": 10985
+      "sha256": "1963a3604e5cd197474f5f5cd67c0b975ca7bf7a6694b1c59526a050f4936903",
+      "size": 11008
     },
     {
       "category": "governed_input",

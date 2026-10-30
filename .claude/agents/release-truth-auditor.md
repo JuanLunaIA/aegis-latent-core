@@ -25,7 +25,7 @@ as the source of truth over your own memory. The shape of it:
 - The checked-out release is **5.0.3** with fourteen synchronized anchors,
   **published 2026-10-30** on GitHub Release, PyPI SDK, npm SDK and GHCR. The
   gateway distribution on PyPI remains **5.0.2**, published 2026-10-01 under
-  Apache-2.0. Releases up to and including 5.0.2 keep the terms they shipped
+  the licence it shipped with. Releases up to and including 5.0.2 keep the terms they shipped
   with (`docs/RELEASE_STATUS.md` §1.0d–§1.0e).
 - Readback of 5.0.1 established: the signed annotated tag, a GitHub Release with
   31 assets and a 15-of-15 `SHA256SUMS` sweep, PyPI `aegis-latent-sdk` 5.0.1,

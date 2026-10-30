@@ -6,7 +6,7 @@ Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 # Aegis Latent Core — Engineering and Market Roadmap
 
-**Status:** `v5.0.3` under the Aegis Commercial License 1.0, published 2026-10-30 on GitHub Release, PyPI SDK, npm SDK and GHCR; the PyPI gateway distribution remains `5.0.2` (`docs/RELEASE_STATUS.md` §1.0e). The previous published release is `v5.0.2` (Apache-2.0, §1.0d); `v5.0.1` (2026-09-24/26, §1.0a) and `v5.0.0` (2026-09-16 except PyPI `aegis-latent-core`) remain historical. Source metadata does not establish external lifecycle or target-acceptance state.
+**Status:** `v5.0.3` under the Aegis Commercial License 1.0, published 2026-10-30 on GitHub Release, PyPI SDK, npm SDK and GHCR; the PyPI gateway distribution remains `5.0.2` (`docs/RELEASE_STATUS.md` §1.0e). The previous published release is `v5.0.2` under the licence it shipped with (§1.0d); `v5.0.1` (2026-09-24/26, §1.0a) and `v5.0.0` (2026-09-16 except PyPI `aegis-latent-core`) remain historical. Source metadata does not establish external lifecycle or target-acceptance state.
 **Last verified:** 2026-10-29 UTC (source-target check; external readback values keep their recorded dates)
 **Release baseline:** `v5.0.3` with 14 synchronized anchors, published 2026-10-30; the PyPI gateway distribution remains `5.0.2` (§1.0e). Preceded by `v5.0.2` (2026-10-01, §1.0d), `v5.0.1` (2026-09-24/26, §1.0a) and `v5.0.0` (2026-09-16 except PyPI `aegis-latent-core`, §1.0).
 **Source baseline:** fourteen synchronized `v5.0.3` anchors, source target only; immutable parent comparison `fdace8844568eb788216740b2cb5daf187d99d3b` has fourteen `4.0.0` anchors
