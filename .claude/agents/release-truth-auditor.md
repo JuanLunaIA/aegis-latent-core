@@ -22,14 +22,11 @@ claimed. Reading back one does not establish another.
 Read `AGENTS.md` for the authoritative text before writing anything, and treat it
 as the source of truth over your own memory. The shape of it:
 
-- The checked-out source baseline is **5.0.2** with fourteen synchronized
-  anchors. It is a commercial-licence source target and is **not published**: no tag,
-  GitHub Release, registry package or image exists for it. The most recent
-  published release is **5.0.1**, published 2026-09-24 to every surface but PyPI
-  `aegis-latent-core`, which followed on 2026-09-26 (read back 2026-09-29).
-  Releases up to and including 5.0.1 were published under AGPLv3 or the
-  commercial licence and keep those terms
-  (`docs/legal/LICENSE_TRANSITION_5.0.2.md`).
+- The checked-out release is **5.0.3** with fourteen synchronized anchors,
+  **published 2026-10-30** on GitHub Release, PyPI SDK, npm SDK and GHCR. The
+  gateway distribution on PyPI remains **5.0.2**, published 2026-10-01 under
+  Apache-2.0. Releases up to and including 5.0.2 keep the terms they shipped
+  with (`docs/RELEASE_STATUS.md` §1.0d–§1.0e).
 - Readback of 5.0.1 established: the signed annotated tag, a GitHub Release with
   31 assets and a 15-of-15 `SHA256SUMS` sweep, PyPI `aegis-latent-sdk` 5.0.1,
   npm `aegis-latent-sdk` 5.0.1, and GHCR gateway and dashboard digests whose

@@ -1,6 +1,6 @@
 # Aegis Enterprise Integrations Guide
 
-**Status:** `v5.0.1` source baseline with fourteen synchronized anchors — **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (see `docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0` (2026-09-16 on every surface except PyPI `aegis-latent-core`, §1.0); the most recent version published on **every** surface is `v4.1.2`, read back on 2026-09-04 — signed tag, GitHub Release asset envelope, PyPI `aegis-latent-core` and `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway/dashboard objects; npm still observed at `4.0.0`
+**Status:** `v5.0.3` with fourteen synchronized anchors, published 2026-10-30 on GitHub Release, PyPI SDK, npm SDK and GHCR; the PyPI gateway distribution remains `5.0.2` (see `docs/RELEASE_STATUS.md` §1.0e). The previous release is `v5.0.2` (2026-10-01, Apache-2.0, §1.0d); `v5.0.1` and `v5.0.0` remain historical. `v4.1.2` was the last version published on every surface before `5.0.1` completed the set.
 
 **Claim boundary:** Source support and tests do not prove target-environment availability, regulatory retention, identity-provider correctness, legal admissibility, trusted publishing, or production readiness.
 

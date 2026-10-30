@@ -18,7 +18,7 @@ npm run build
 
 Then reference it from your project, or from the dashboard workspace which already does.
 
-> **Registry caution.** npm carries `aegis-latent-sdk` at `5.0.1` (read back 2026-09-24, byte-identical to the GitHub Release asset of the same name). This source tree is `5.0.2` (Apache-2.0, **not published**), so the registry version is the previous release by design; check the version you actually installed. The *gateway* distribution on PyPI (`aegis-latent-core`) was read back at `5.0.1` on 2026-09-29. See [Release Status](../../docs/RELEASE_STATUS.md).
+> **Registry caution.** npm carries `aegis-latent-sdk` at `5.0.3` (read back 2026-10-30). This source tree is `5.0.3`; the SDK is Apache-2.0, while the gateway, control plane and dashboard use the Aegis Commercial License 1.0. The *gateway* distribution on PyPI (`aegis-latent-core`) remains `5.0.2`, so install the package you actually need and check the version. See [Release Status](../../docs/RELEASE_STATUS.md).
 
 ## Configure a gateway
 
