@@ -201,8 +201,10 @@ def metrics() -> dict[str, dict[str, str]]:
             "margin": money((2 * prices["team"] - 19.47) / (2 * prices["team"]) * 100, locale, 1)
             + "%",
             "plan_team_annual": ("$" if locale == "en" else "USD ") + money(annual["team"], locale),
-            "plan_business_annual": ("$" if locale == "en" else "USD ") + money(annual["business"], locale),
-            "plan_enterprise_annual": ("$" if locale == "en" else "USD ") + money(annual["enterprise"], locale),
+            "plan_business_annual": ("$" if locale == "en" else "USD ")
+            + money(annual["business"], locale),
+            "plan_enterprise_annual": ("$" if locale == "en" else "USD ")
+            + money(annual["enterprise"], locale),
             "t1_pct": f"{tranches['T1'] / raise_value * 100:.0f}%",
             "t2_pct": f"{tranches['T2'] / raise_value * 100:.0f}%",
             "t3_pct": f"{tranches['T3'] / raise_value * 100:.0f}%",
