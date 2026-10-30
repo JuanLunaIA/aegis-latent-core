@@ -1,7 +1,7 @@
 # Product and Evidence Boundaries
 
-**Last verified:** 2026-10-29 UTC
-**Release baseline:** `v5.0.3` under the Aegis Commercial License 1.0, published 2026-10-30 on GitHub Release, PyPI SDK, npm SDK and GHCR; the PyPI gateway distribution remains `5.0.2` (2026-10-01, `docs/RELEASE_STATUS.md` §1.0e). The previous published release is `v5.0.2` under the licence it shipped with (§1.0d); `v5.0.1` (2026-09-24/26, §1.0a) and `v5.0.0` (2026-09-16 except PyPI `aegis-latent-core`, §1.0) remain historical.
+**Last verified:** 2026-10-30 UTC
+**Release baseline:** `v5.0.3` under the Aegis Commercial License 1.0, published 2026-10-30 on GitHub Release, both PyPI distributions, npm SDK and GHCR; the PyPI gateway distribution is published at `5.0.3` (2026-10-30, `docs/RELEASE_STATUS.md` §1.0e). The previous published release is `v5.0.2` under the licence it shipped with (§1.0d); `v5.0.1` (2026-09-24/26, §1.0a) and `v5.0.0` (2026-09-16 except PyPI `aegis-latent-core`, §1.0) remain historical.
 
 This document consolidates the boundary statements that apply across Aegis. It exists so that `README.md` and the developer guides can describe mechanisms plainly and link here once, instead of repeating a disclaimer beside every sentence.
 

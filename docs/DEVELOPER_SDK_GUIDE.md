@@ -1,8 +1,8 @@
 # Aegis SDK Developer Guide
 
-**Source version:** `5.0.2`
+**Source version:** `5.0.3`
 **Package identities:** Python `aegis-latent-sdk` / import `aegis_sdk`; npm `aegis-latent-sdk`
-**Status:** the checked-out source baseline is `v5.0.2` — the published release that keeps the terms it shipped with; the most recent published release is `v5.0.1`, published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26), read back the same day (`docs/RELEASE_STATUS.md` §1.0a) — and the SDKs are published at `5.0.1`: PyPI `aegis-latent-sdk` `5.0.1` and npm `aegis-latent-sdk` `5.0.1`, read back 2026-09-24. **The gateway distribution `aegis-latent-core` is not on PyPI at `5.0.1`** — `4.1.2` is still what `pip install aegis-latent-core` gets — so a gateway installed from PyPI is `4.1.2` while this tree is `5.0.1`. This guide does not establish trusted-publishing provenance, production fitness, or provider certification.
+**Status:** the checked-out source baseline is `v5.0.3`, published 2026-10-30 under the Aegis Commercial License 1.0; PyPI `aegis-latent-core` `5.0.3`, PyPI `aegis-latent-sdk` `5.0.3`, npm `aegis-latent-sdk` `5.0.3` and both GHCR images were read back (`docs/RELEASE_STATUS.md` §1.0e). Both `pip install aegis-latent-core` and `pip install aegis-latent-sdk` resolve to `5.0.3`. This guide does not establish production fitness or provider certification.
 
 ## 1. Scope
 
@@ -97,7 +97,7 @@ python -m pytest -q tests/integrations
 
 ### 2.4 Worked Python patterns
 
-Every symbol below is exported by the checked-out `5.0.2` source tree. The constructors are keyword-only; `aegis_api_key`, `gateway_url`, and `tenant_id` are required.
+Every symbol below is exported by the checked-out `5.0.3` source tree. The constructors are keyword-only; `aegis_api_key`, `gateway_url`, and `tenant_id` are required.
 
 **Synchronous drop-in.** The class subclasses the official client, so the request surface is unchanged.
 

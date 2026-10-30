@@ -6,7 +6,7 @@ advice, a binding offer, a warranty, a support SLA or a regulatory representatio
 
 **Effective:** v5.0.3 · **Status:** draft for counsel review (`docs/legal/COUNSEL_QUESTIONS.md`)
 **Last verified:** 2026-10-30 UTC
-**Release baseline:** `v5.0.3` published 2026-10-30; the PyPI gateway distribution remains at `5.0.2`
+**Release baseline:** `v5.0.3` published 2026-10-30; the PyPI gateway distribution is published at `5.0.3`
 **Licence source:** [`LICENSE`](LICENSE) · **Attribution:** [`NOTICE`](NOTICE)
 **Transition record:** [`docs/legal/LICENSE_TRANSITION_5.0.3.md`](docs/legal/LICENSE_TRANSITION_5.0.3.md)
 

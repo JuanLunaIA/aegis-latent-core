@@ -2,14 +2,14 @@
 
 All notable changes to **Aegis Latent Core** are documented in this file.
 
-**Last verified:** 2026-10-01 UTC
-**Published release:** `v5.0.2`, fourteen synchronized anchors, **Apache-2.0**, published 2026-10-01. GitHub Release, PyPI core/SDK and npm were read back; GHCR remains not read back from this environment (`docs/RELEASE_STATUS.md` §1.0d).
+**Last verified:** 2026-10-30 UTC
+**Published release:** `v5.0.3`, fourteen synchronized anchors, **Aegis Commercial License 1.0**, published 2026-10-30. GitHub Release, both PyPI distributions, npm and GHCR were read back; the gateway reached PyPI at 2026-10-30T07:13:42Z (`docs/RELEASE_STATUS.md` §1.0e).
 **Published release (2026-09-24):** `v5.0.1`, fourteen synchronized anchors, **published on every surface except PyPI `aegis-latent-core`, which followed on 2026-09-26 (`docs/RELEASE_STATUS.md` §1.0b)** — the signed tag (`gitsign verify-tag` passed), the GitHub Release with 31 assets (`SHA256SUMS` sweep 15 of 15), PyPI `aegis-latent-sdk` `5.0.1`, npm `aegis-latent-sdk` `5.0.1`, and both GHCR images (`cosign verify` and provenance attestations verified against the exact workflow identity) were read back; see `docs/RELEASE_STATUS.md` §1.0a.
 **Previous release (2026-09-16):** `v5.0.0`, fourteen synchronized anchors, **published on every surface except PyPI `aegis-latent-core`** — signed tag, GitHub Release with 31 assets, PyPI `aegis-latent-sdk`, npm `aegis-latent-sdk`, and both GHCR images were read back; the gateway distribution on PyPI remains `4.1.2`. Source metadata does not establish external lifecycle state, which requires independent readback; see `docs/RELEASE_STATUS.md` §1.0 for what was and was not verified. There is no `4.2.0` or `4.4.0`; both numbers were skipped deliberately and no artifact was ever published under either.
-**Most recent published release on every surface (readback 2026-09-04):** `v4.1.2` signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway image `sha256:b3f6aadc…f80710` and dashboard image `sha256:27e1bbc2…d92398`
+**Historical all-surface baseline (readback 2026-09-04):** `v4.1.2` signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway image `sha256:b3f6aadc…f80710` and dashboard image `sha256:27e1bbc2…d92398`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
-**Release baseline:** published `v5.0.3` (fourteen synchronized `5.0.3` anchors), read back on GitHub Release, PyPI SDK, npm and GHCR on 2026-10-30; the PyPI gateway distribution remains `5.0.2`; recorded in `docs/RELEASE_STATUS.md` §1.0e
+**Release baseline:** published `v5.0.3` (fourteen synchronized `5.0.3` anchors), read back on GitHub Release, both PyPI distributions, npm and GHCR on 2026-10-30; recorded in `docs/RELEASE_STATUS.md` §1.0e
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
@@ -17,10 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [5.0.3] — 2026-10-30
 
-Published on the annotated tag, GitHub Release (31 assets), PyPI `aegis-latent-sdk`,
-npm `aegis-latent-sdk` and GHCR, with a 15-of-15 `SHA256SUMS` sweep. The gateway
-distribution on PyPI remains `5.0.2`; the per-surface record is
-`docs/RELEASE_STATUS.md` §1.0e.
+Published on the annotated tag, GitHub Release (31 assets), PyPI
+`aegis-latent-core` and `aegis-latent-sdk`, npm `aegis-latent-sdk` and GHCR,
+with a 15-of-15 `SHA256SUMS` sweep. The gateway reached PyPI at
+2026-10-30T07:13:42Z; the per-surface record is `docs/RELEASE_STATUS.md` §1.0e.
 
 ### Changed
 

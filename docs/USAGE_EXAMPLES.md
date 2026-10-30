@@ -1,7 +1,7 @@
 # Usage Examples — Aegis Latent Core
 
 **Last verified:** 2026-10-29 UTC
-**Release baseline:** `v5.0.3` is published on GitHub Release, PyPI SDK, npm SDK and GHCR, read back on 2026-10-30 (see `docs/RELEASE_STATUS.md` §1.0e); `pip install aegis-latent-core` resolves to `5.0.2` because the gateway distribution keeps its own cadence, while `pip install aegis-latent-sdk` resolves to `5.0.3`. `v5.0.2` and earlier remain historical.
+**Release baseline:** `v5.0.3` is published on GitHub Release, both PyPI distributions, npm SDK and GHCR, read back on 2026-10-30 (see `docs/RELEASE_STATUS.md` §1.0e); both `pip install aegis-latent-core` and `pip install aegis-latent-sdk` resolve to `5.0.3`. `v5.0.2` and earlier remain historical.
 **Audience:** developers integrating Aegis for the first time
 **Root document:** [`README.md`](../README.md)
 

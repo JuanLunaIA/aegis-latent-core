@@ -4,9 +4,9 @@ One row per surface that a customer, investor, auditor, or agent can read. A
 surface with no canonical source does not get to publish the claim.
 
 **Last verified:** 2026-10-30 UTC
-**Current release:** `v5.0.3`, published 2026-10-30; PyPI gateway `5.0.2`
+**Current release:** `v5.0.3`, published 2026-10-30; PyPI gateway `5.0.3`
 **Last published release:** `v5.0.3` (2026-10-30), read back on GitHub Release,
-PyPI SDK, npm SDK and GHCR; the PyPI gateway distribution remains `5.0.2`
+both PyPI distributions, npm SDK and GHCR.
 
 | Surface | Path / URL | Audience | Claims it makes | Canonical source | Owner | Gate |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -19,11 +19,11 @@ PyPI SDK, npm SDK and GHCR; the PyPI gateway distribution remains `5.0.2`
 | Website legal pages | `aegisweb/src/routes/terminos.tsx`, `privacidad.tsx` | buyers, counsel | terms, privacy, subprocessors, refunds | `docs/legal/*`, `aegisweb/src/data/legal.ts` | owner + counsel | counsel sign-off record |
 | Website docs | `aegisweb/src/routes/docs/**` | evaluators | configuration, limits, operations | code, `docs/BOUNDARIES.md` | docs owner | `npm run audit` |
 | Public repository docs | `docs/**` | developers, auditors | architecture, guarantees, limits, release state | code + `docs/CLAIMS_MATRIX.md` | maintainer | `Documentation Gates`, `Documentation index is current` |
-| GitHub release page | `github.com/JuanLunaIA/aegis-latent-core/releases/tag/v5.0.2` | downloaders | version, assets, checksums, signature | release readback (`SHA256SUMS`, cosign, attestation) | release owner | `scripts/verify_release_readback.py` |
-| PyPI gateway | `pypi.org/project/aegis-latent-core/5.0.2/` | Python users | wheel, version, licence metadata | PyPI JSON API | release owner | readback §1.0d |
-| PyPI SDK | `pypi.org/project/aegis-latent-sdk/5.0.2/` | Python integrators | SDK version, licence | PyPI JSON API | release owner | readback §1.0d |
-| npm SDK | `npmjs.com/package/aegis-latent-sdk/v/5.0.2` | TypeScript integrators | SDK version, licence | npm registry JSON | release owner | readback §1.0d |
-| GHCR image | `ghcr.io/juanlunaia/aegis-latent-core:5.0.2` | operators | image digest, signature, provenance | OCI registry manifest + cosign | release owner | readback §1.0d |
+| GitHub release page | `github.com/JuanLunaIA/aegis-latent-core/releases/tag/v5.0.3` | downloaders | version, assets, checksums, signature | release readback (`SHA256SUMS`, cosign, attestation) | release owner | `scripts/verify_release_readback.py` |
+| PyPI gateway | `pypi.org/project/aegis-latent-core/5.0.3/` | Python users | wheel, version, licence metadata | PyPI JSON API | release owner | readback §1.0e |
+| PyPI SDK | `pypi.org/project/aegis-latent-sdk/5.0.3/` | Python integrators | SDK version, licence | PyPI JSON API | release owner | readback §1.0e |
+| npm SDK | `npmjs.com/package/aegis-latent-sdk/v/5.0.3` | TypeScript integrators | SDK version, licence | npm registry JSON | release owner | readback §1.0e |
+| GHCR image | `ghcr.io/juanlunaia/aegis-latent-core:5.0.3` | operators | image digest, signature, provenance | OCI registry manifest + cosign | release owner | readback §1.0e |
 | Investor pack | `investor_packs/**` (frozen historical); current pack is generated in the private workspace, not this repository | investors | metrics, market, pricing, use of funds | rebuild manifest + source data; no public facts file | founder | rebuild diff / manifest exit 0 |
 | Data room | `docs/raise/DATA_ROOM_INDEX.md` | investors | company, metrics, risk, evidence | manifest tool | founder | `manifest` exit 0 |
 | Impact / TechCamp | owner workspace (not in the public repository) | judges, accelerators | problem, theory of change, budget | owner source pack + dated public statistics | founder | source check before use |

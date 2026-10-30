@@ -3,7 +3,7 @@
 This document defines how Aegis benchmark results must be interpreted and routes readers to the retained results, including the `v5.0.1` documentation-pass suite. It is for engineers, security reviewers, release owners and procurement evaluators. A benchmark is evidence only for its declared workload, environment, code boundary, sample method and artifact.
 
 **Last verified:** 2026-09-24 UTC
-**Release baseline:** `v5.0.3` with fourteen synchronized anchors, published 2026-10-30 on GitHub Release, PyPI SDK, npm SDK and GHCR; the PyPI gateway distribution remains `5.0.2` (`docs/RELEASE_STATUS.md` §1.0e). No benchmark below was re-run on `v5.0.3`.
+**Release baseline:** `v5.0.3` with fourteen synchronized anchors, published 2026-10-30 on GitHub Release, both PyPI distributions, npm SDK and GHCR; the PyPI gateway distribution is published at `5.0.3` (`docs/RELEASE_STATUS.md` §1.0e). No benchmark below was re-run on `v5.0.3`.
 **Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical and are not `v5.0.1` results.
 **Detailed results:** [`BENCHMARK_RESULTS.md`](BENCHMARK_RESULTS.md)
 **Companion record:** [`../BENCHMARKS.md`](../BENCHMARKS.md)

@@ -3,68 +3,68 @@
     {
       "category": "context",
       "path": ".aegis_ai_context/README.md",
-      "sha256": "a2a4728a63bb3c24adcddcc0daf622980488dedf7f4af09b19479140105c2205",
-      "size": 5797
+      "sha256": "cce3142a78f807c41d6993be31178037fa3448628d9b05f0c2325adc48815a32",
+      "size": 5820
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/00_CORE_ONTOLOGY_AND_BOUNDARIES.xml",
-      "sha256": "abc65518e67573f18a1f968767cf74b5e39213e567ce4f7e5078969ba22da51f",
-      "size": 6761
+      "sha256": "28a7703377b4b62efa8bc62edbd25f907986a71994332f5cd221e31ef3bbb7e5",
+      "size": 6777
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/01_CANONICAL_SYMBOL_AND_TYPE_INDEX.tsv",
-      "sha256": "d404f79cf62688e8f7043f94c3b977917eb36fc501fcf8a04a086636295d052c",
-      "size": 7167
+      "sha256": "bf4d183b596f145cdb40081aa37a3a3ff5bc51ef20f346dd6cc7d2292e908c3f",
+      "size": 7077
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/02_OPERATIONAL_INVARIANTS_MATRIX.md",
-      "sha256": "a19b93cea2de64f654db6aa0639269413a1a88633ed4079cf04c2bdb0051dee8",
-      "size": 8230
+      "sha256": "670b3e11eb197771ea63b60205e97329f88b604cd4acf1fcf0a20f7e9104bd2d",
+      "size": 8238
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/03_STATE_MACHINES_AND_DAGS.mermaid",
-      "sha256": "a97125af7b9342f01d750d473495f39ff74de1ec64c0574e3f5326dc68dfd3dd",
-      "size": 2934
+      "sha256": "b53b58e70838c89836fc6937eb194173eebd6f8f754e9cd1c177adbfedc2043f",
+      "size": 2947
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/04_FORMAL_SPECIFICATIONS_MAPPING.md",
-      "sha256": "dbd5397260071503451f4c7f914dfb2f71ceae588189a070830a9fe095d584c7",
-      "size": 6628
+      "sha256": "a0afc6217ff3c19fe5992be8e59a2756eb7a554efeb65bb1b3f23ec1ad563685",
+      "size": 6636
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/05_DETERMINISTIC_RECIPES_PLAYBOOK.md",
-      "sha256": "aa7ec070f0d9dd7e5071d5f843da97be2f9df12bd10f95e4074680c1c4768dce",
+      "sha256": "57c0f0b21d9a296f785b00d74acbe7bef4af651998cdfbb535bee16957389bf1",
       "size": 8834
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/06_SECURITY_AND_SUPPLY_CHAIN_MANIFEST.xml",
-      "sha256": "3e590314adcaf0f82930af4eaeba744666dace946b36d7d0c89823aa3dac04dd",
-      "size": 7063
+      "sha256": "74b0cfa2e8dce3e5fcff16fa5a7c5328aaef18464b9a8e8730b3cda5ed5a23bf",
+      "size": 7047
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/07_SYSTEM_COMPACT_KERNEL.xml",
-      "sha256": "325667faf5661d76b309fbc5a614e49a00df73c3a5d7c606206fe2086eb2867f",
-      "size": 8944
+      "sha256": "5f40eb0ae89a736702fa9bd696dcb531826200e0bd98a79a09b44acfdd6391be",
+      "size": 8960
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/08_COMPONENT_PACKAGE_WORKFLOW_MATRIX.md",
-      "sha256": "422935ce3552eb0f2c23163fad0c9e8b668626ca20a8023927e5b646d46670f0",
-      "size": 10313
+      "sha256": "152c8c355311e994f02d08cf0e01fc85220df37270d317822b2afe1c591408c6",
+      "size": 10321
     },
     {
       "category": "context",
       "path": ".aegis_ai_context/09_COMMAND_AND_CI_MATRIX.md",
-      "sha256": "d6d7f5a620a3fcffc6fe54e9c7dcc394e0c75668f98be801afcc45dd4a19d9cf",
-      "size": 6921
+      "sha256": "9c86e876afd64c8282714451ae371cdfbc16f825c4922824078eadee486d0a84",
+      "size": 6929
     },
     {
       "category": "context",
@@ -99,14 +99,14 @@
     {
       "category": "governed_input",
       "path": "README.md",
-      "sha256": "7c4eea0eb587d436f7f21d3fe99686874d2ef492278ed6bd1b9ca7ab5e2f67de",
-      "size": 19396
+      "sha256": "9621962b36bc0d7a343a5f97d253632a339b3b62fe4631e7747b4bc181a9f5f2",
+      "size": 19281
     },
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "fb1b609826bded260ff8d3c29551f62401ddaa74c727001d0b29d66396eb01f0",
-      "size": 246424
+      "sha256": "1ba55bf7124ecd1a716213a41b7d812cb913586d60fd80b676886e9c99846e5a",
+      "size": 246435
     },
     {
       "category": "governed_input",
@@ -117,8 +117,8 @@
     {
       "category": "governed_input",
       "path": "DEPLOYMENT_GUIDE.md",
-      "sha256": "b9569f9391d38e768433eaf4fe73be49d47935671437c74ff1f2f10c11029aa7",
-      "size": 16629
+      "sha256": "c609bd779f1c968dd1d28b53f4f3512645e6c11ff074c9db6fbf52b328097eb3",
+      "size": 15878
     },
     {
       "category": "governed_input",
@@ -135,14 +135,14 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "9085b1c2b1cff0474a28d60f891c9b7c4c3e3b8996d69c29fb0e7ace382fc11a",
-      "size": 179925
+      "sha256": "050c7b72da73bc146f92b4f65f92ee67b5bd4682ee1f03fcea49040097471042",
+      "size": 180064
     },
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_INTEGRATIONS_GUIDE.md",
-      "sha256": "1963a3604e5cd197474f5f5cd67c0b975ca7bf7a6694b1c59526a050f4936903",
-      "size": 11008
+      "sha256": "f5c13e5be6f179a05347e9933e9a72c9c0f974880d22d916a11783ac4c2d7652",
+      "size": 11031
     },
     {
       "category": "governed_input",
@@ -153,8 +153,8 @@
     {
       "category": "governed_input",
       "path": "docs/DEVELOPER_SDK_GUIDE.md",
-      "sha256": "f7d20af1e82eb0f840391f2776689bd92cefb3df7cc1f6f0c52e79aceafe0633",
-      "size": 18030
+      "sha256": "e3ad705fa1b97b888fdbb3663f4f1fd73a4d0cb8474531a8b96f7a444d4e0f9d",
+      "size": 17709
     },
     {
       "category": "governed_input",
