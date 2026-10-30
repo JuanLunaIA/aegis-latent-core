@@ -1,12 +1,12 @@
 # Aegis Latent Core — Deployment Guide
 
-This guide distinguishes the checked-out `5.0.0` source baseline — published 2026-09-16 on every surface except PyPI `aegis-latent-core` — and the `4.1.2` release still served for the gateway distribution on PyPI from historical external baselines. It is for platform, SRE, security and procurement reviewers. It does not claim a v4 publication, grant regulatory certification, create a production SLO or replace an environment-specific review of kernel, storage, network, identity, secrets, backup and incident-response controls.
+This guide distinguishes the checked-out `5.0.3` source baseline — published 2026-10-30 on GitHub Release, both PyPI distributions, npm SDK and GHCR — from the historical `4.1.2` baseline. It is for platform, SRE, security and procurement reviewers. It does not grant regulatory certification, create a production SLO or replace an environment-specific review of kernel, storage, network, identity, secrets, backup and incident-response controls.
 
-**Last verified:** 2026-08-27 UTC
-**Release baseline:** source target (`5.0.2`, keeping its published terms, unpublished); latest published release `5.0.1`
-**Source baseline:** `5.0.2` with fourteen synchronized anchors — the published release that keeps the terms it shipped with; the most recent published release is `5.0.1`, **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day (`docs/RELEASE_STATUS.md` §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (read back and recorded in `docs/RELEASE_STATUS.md` §1.0); `4.1.2` was the last version published on *every* surface before `5.0.1` completed the set on 2026-09-26, recorded in §1.1
-**External baseline:** signed annotated `v4.1.2` tag at `860f14177d94c194e5ae7156017d6fa74264e429`, with GitHub Release (31 assets), PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images, all read back on 2026-09-04
-**Historical external baseline:** signed annotated `v4.0.2` tag at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`, with GitHub Release and GHCR gateway/dashboard images read back on 2026-09-02; before it, lightweight `v4.0.1` at `6469904380218584ae0b5221334bc9a46500f5ba` with failed tag workflows; PyPI/npm observed at `4.0.0` without attributed provenance
+**Last verified:** 2026-10-30 UTC
+**Release baseline:** `v5.0.3` published 2026-10-30; both PyPI distributions are at `5.0.3`
+**Source baseline:** `5.0.3` with fourteen synchronized anchors — published 2026-10-30 under the Aegis Commercial License 1.0; readback in `docs/RELEASE_STATUS.md` §1.0e. The previous release is `v5.0.2`, published 2026-10-01 under the licence it shipped with (§1.0d).
+**External baseline:** `v5.0.3` GitHub Release, PyPI `aegis-latent-core`/`aegis-latent-sdk`, npm `aegis-latent-sdk`, and both GHCR images read back on 2026-10-30
+**Historical external baseline:** signed annotated `v4.1.2` tag at `860f14177d94c194e5ae7156017d6fa74264e429`, read back on 2026-09-04; before it, `v4.0.2` at `a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`
 **Audience:** Platform operators, SRE, security and procurement reviewers
 
 ## 1. Strict runtime contract

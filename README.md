@@ -18,12 +18,11 @@ Every load-bearing claim in this file carries a locator and a stated boundary; t
 
 > **Start here:** [prove an evidence record yourself](docs/PROVE_IT.md) · [choose a deployment profile](docs/operations/DEPLOYMENT_PROFILES.md) · [read the threat model](docs/security/THREAT_MODEL.md) · [inspect the claims matrix](docs/CLAIMS_MATRIX.md)
 
-> **Current release:** `v5.0.3` — published 2026-10-30; GitHub Release, PyPI SDK,
-> npm SDK and GHCR read back. The gateway distribution on PyPI remains at `5.0.2`;
-> that split is recorded in [Release Status](docs/RELEASE_STATUS.md) §1.0e.
-> From `v5.0.3` the gateway, control plane and dashboard use the Aegis Commercial
-> License 1.0, while the SDKs stay Apache-2.0. Nothing published under Apache-2.0
-> can be revoked ([LICENSE_TRANSITION_5.0.3](docs/legal/LICENSE_TRANSITION_5.0.3.md)).
+> **Current release:** `v5.0.3` — published 2026-10-30; GitHub Release, both
+> PyPI distributions, npm SDK and GHCR read back. From `v5.0.3` the gateway,
+> control plane and dashboard use the Aegis Commercial License 1.0, while the
+> SDKs stay Apache-2.0. Nothing published under Apache-2.0 can be revoked
+> ([LICENSE_TRANSITION_5.0.3](docs/legal/LICENSE_TRANSITION_5.0.3.md)).
 >
 > **First published version with the gateway on PyPI:** `v4.1.2`, read back on 2026-09-04 — signed annotated tag, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, and GHCR gateway and dashboard images. **`4.1.2` is the first version installable from PyPI as `aegis-latent-core`**; before it the gateway came from source or GHCR only. The npm version list skips `4.1.1`, whose publish step failed. A `v4.1.0` release object also exists but was created outside the pipeline and carries no assets; ignore it. The two `4.1.2` PyPI gateway artifacts are byte-different from the release assets of the same name — same content, different build host — so `SHA256SUMS` does not cover those downloads; the `5.0.1` PyPI gateway artifacts match it. See [Release Status](docs/RELEASE_STATUS.md) for provenance and readback.
 
@@ -49,7 +48,7 @@ In a regulated industry that is not a paperwork problem — it is an existential
 > **→ [Prove it yourself](docs/PROVE_IT.md)** — twelve lines of Python, no call to our servers, three cases of which two must fail.
 >
 > ```bash
-> pip install aegis-latent-sdk aegis-latent-core   # verifier + gateway, both 5.0.2 on PyPI
+> pip install aegis-latent-sdk aegis-latent-core   # verifier + gateway, both 5.0.3 on PyPI
 > python tools/sales/prove_it/prove_it.py --demo   # accepts one record, rejects two forgeries
 > python -m examples.demo                          # gateway + mock upstream, tamper detected
 > ```
@@ -111,7 +110,7 @@ Measured suite (dated records; counts move as tests are added — run `pytest -q
 
 ## Quickstart
 
-Three steps, copy-pasteable. Honest channel note first: **`pip install aegis-latent-core` installs `5.0.2`** (read back 2026-10-01, `CLM-113`); at `5.0.0` the gateway was never on PyPI (`UC-047`, kept as history). You can also use this repository, the GHCR image `ghcr.io/juanlunaia/aegis-latent-core:5.0.2`, or the wheel attached to the `v5.0.2` GitHub Release.
+Three steps, copy-pasteable. Honest channel note first: **`pip install aegis-latent-core` installs `5.0.3`** (read back 2026-10-30, `CLM-123`); at `5.0.0` the gateway was never on PyPI (`UC-047`, kept as history). You can also use this repository, the GHCR image `ghcr.io/juanlunaia/aegis-latent-core:5.0.3`, or the wheel attached to the `v5.0.3` GitHub Release.
 
 **Step 1 — get the source:**
 

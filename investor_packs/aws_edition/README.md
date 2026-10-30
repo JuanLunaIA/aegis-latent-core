@@ -55,5 +55,4 @@ keeps each section from breaking across pages.
   `aegis_investor_pack_en/data/model_outputs.json`.
 - The AWS p50, p95, rate and answer counts are in `aws_facts.json` under
   `throughput`; the clean-tree gate count is under `gates`.
-- The gateway distribution on PyPI is at 5.0.2; the SDKs and OCI images are at
-  5.0.3. The document states that split without turning it into a headline.
+- The gateway distribution on PyPI, both SDKs and both OCI images are at 5.0.3. The document lists each surface without turning the version into a headline.

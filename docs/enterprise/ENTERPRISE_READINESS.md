@@ -97,7 +97,7 @@ Stated plainly, because a readiness document that omits these is not useful.
 | **No independent assurance** | No SOC 2, ISO 27001, penetration test, or third-party audit. Nothing to hand a security team that they did not derive themselves. |
 | **No production-scale evidence** | Benchmarks are local. No capacity, throughput, or latency claim survives contact with a target environment without your own measurement. |
 | **No cross-replica ordering** | A requirement for one global timeline cannot be met today. |
-| **Registry lag, gateway only (closed for the published line)** | At `5.0.0` the gateway was never on PyPI, so a pip install gave `4.1.2` behavior, in particular the pre-rename `legal_admissibility` API field rather than the breaking `signature_assurance` rename (`CLM-090`). PyPI `aegis-latent-core` `5.0.2` was published on 2026-10-01 and read back on 2026-10-29, so a pip install matches the **published 5.0.2**, not the unpublished 5.0.3 source target; see [Release Status](../RELEASE_STATUS.md) §1.0d. |
+| **Registry alignment (closed for the published line)** | At `5.0.0` the gateway was never on PyPI, so a pip install gave `4.1.2` behavior, in particular the pre-rename `legal_admissibility` API field rather than the breaking `signature_assurance` rename (`CLM-090`). PyPI `aegis-latent-core` `5.0.3` was published on 2026-10-30 and read back on 2026-10-30, so a pip install matches the **published 5.0.3**; see [Release Status](../RELEASE_STATUS.md) §1.0e. |
 | **Single maintainer** | Bus factor of one. No independent second approver on the critical path. |
 | **No SLA** | Response targets are intent, not commitment, absent an executed agreement. |
 | **Untested runbooks at scale** | Procedures are written; rehearsal is yours. |

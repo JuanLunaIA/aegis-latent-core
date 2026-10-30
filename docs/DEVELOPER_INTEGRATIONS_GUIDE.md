@@ -1,6 +1,6 @@
 # Aegis Enterprise Integrations Guide
 
-**Status:** `v5.0.3` with fourteen synchronized anchors, published 2026-10-30 on GitHub Release, PyPI SDK, npm SDK and GHCR; the PyPI gateway distribution remains `5.0.2` (see `docs/RELEASE_STATUS.md` §1.0e). The previous release is `v5.0.2` (2026-10-01, under the licence it shipped with, §1.0d); `v5.0.1` and `v5.0.0` remain historical. `v4.1.2` was the last version published on every surface before `5.0.1` completed the set.
+**Status:** `v5.0.3` with fourteen synchronized anchors, published 2026-10-30 on GitHub Release, both PyPI distributions, npm SDK and GHCR; the PyPI gateway distribution is published at `5.0.3` (see `docs/RELEASE_STATUS.md` §1.0e). The previous release is `v5.0.2` (2026-10-01, under the licence it shipped with, §1.0d); `v5.0.1` and `v5.0.0` remain historical. `v4.1.2` was the last version published on every surface before `5.0.1` completed the set.
 
 **Claim boundary:** Source support and tests do not prove target-environment availability, regulatory retention, identity-provider correctness, legal admissibility, trusted publishing, or production readiness.
 

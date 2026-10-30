@@ -8,7 +8,7 @@
     "assets": 31,
     "sha256sums": "32de4a55564786298f7b65a2963a2d120fa93c891cf67893360e8ed06f885c5b",
     "github_release": "https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v5.0.3",
-    "pypi_core": "5.0.2",
+    "pypi_core": "5.0.3",
     "pypi_sdk": "5.0.3",
     "npm_sdk": "5.0.3",
     "oci_gateway": "sha256:1dc040290b662a101ff50525a4bc8db314186efa80bc48ef335d6e7dc54183b3",

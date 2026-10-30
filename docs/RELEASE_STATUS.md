@@ -6,8 +6,8 @@
 
 **Last verified:** 2026-10-30 UTC for the `5.0.3` publication readback in §1.0e; the `5.0.2` readback remains dated 2026-10-01 in §1.0d, and earlier external readbacks remain dated in their own sections
 **Source baseline:** `5.0.3`, fourteen synchronized anchors — under the Aegis Commercial License 1.0
-**Most recent published release:** `5.0.3`, **published on GitHub Release, PyPI `aegis-latent-sdk`, npm and GHCR** on 2026-10-30. The gateway distribution `aegis-latent-core` remains at `5.0.2` on PyPI; that gap is stated in §1.0e.
-**Publication state of `5.0.3`:** **published** on the tag, GitHub Release, PyPI SDK, npm SDK and both OCI images; the PyPI gateway distribution is the one surface not published. See §1.0e.
+**Most recent published release:** `5.0.3`, **published on GitHub Release, both PyPI distributions, npm and GHCR** on 2026-10-30. The gateway distribution `aegis-latent-core` reached `5.0.3` on PyPI at 2026-10-30T07:13:42Z; the readback is in §1.0e.
+**Publication state of `5.0.3`:** **published on every surface** — tag, GitHub Release, PyPI core/SDK, npm SDK and both OCI images. See §1.0e.
 **Publication state of `5.0.2`:** **published** on GitHub Release, PyPI core/SDK, npm and GHCR; read back 2026-10-01. See §1.0d.
 **Publication state of `5.0.1` (superseded):** **published on every surface** — PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26 (§1.0b), and the other surfaces were read back 2026-09-24.
 
@@ -15,7 +15,7 @@
 
 ## 1. Publication state
 
-**Read this section as separate per-surface observations.** `5.0.3` is now published on the tag, GitHub Release, PyPI SDK, npm and GHCR; its readback is in §1.0e. The gateway distribution on PyPI remains at `5.0.2`, whose readback is in §1.0d. The previous release was `5.0.1`, whose historical readbacks remain below. The previous release, `5.0.0`, reached the same surfaces as of the 2026-09-16 readback (§1.0). `4.1.2` was the most recent version published on *every* surface until `5.0.1` completed the set on 2026-09-26; it was read back 2026-09-04. The preceding `4.1.1` reached every surface except npm and is superseded. A `v4.1.0` tag and GitHub Release also exist, but neither came from the release pipeline and the release carries no assets. The `4.0.2` rows were last read back on 2026-09-02 and **describe `4.0.2` only**.
+**Read this section as separate per-surface observations.** `5.0.3` is published on the tag, GitHub Release, PyPI core/SDK, npm and GHCR; its readback is in §1.0e. The previous release was `5.0.1`, whose historical readbacks remain below. The previous release, `5.0.0`, reached the same surfaces as of the 2026-09-16 readback (§1.0). `4.1.2` was the most recent version published on *every* surface until `5.0.1` completed the set on 2026-09-26; it was read back 2026-09-04. The preceding `4.1.1` reached every surface except npm and is superseded. A `v4.1.0` tag and GitHub Release also exist, but neither came from the release pipeline and the release carries no assets. The `4.0.2` rows were last read back on 2026-09-02 and **describe `4.0.2` only**.
 
 Nothing in this table may be restated with the version number changed. A `4.0.2` digest is not a `4.1.1` digest, a `4.1.1` digest is not a `4.1.2` digest, and a `4.1.2` digest is not a `5.0.0` digest. Each row below records what was read back for the version in its own heading and nothing else.
 
@@ -24,10 +24,10 @@ Nothing in this table may be restated with the version number changed. A `4.0.2`
 | Surface | State | Observed value |
 | --- | --- | --- |
 | Source baseline | Confirmed | `5.0.3`, fourteen synchronized anchors, `LicenseRef-Aegis-Commercial-1.0`; `verify_release_contract.py --tag v5.0.3` reports `READY` |
-| GitHub tag `v5.0.3` | **Confirmed** | Annotated tag object `eeafb814d94a195d04121a6f9c5300a5fbfaf18e`, target `71a756be2135a1b6b752a97c6064ee941a6e3486`; created by `create_release_tag.yml` under Sigstore keyless signing (run `41002565231`, conclusion `success`). The Sigstore signature was **not re-verified** in this readback; the gitsign certificate chain was unavailable on the reading host |
+| GitHub tag `v5.0.3` | **Confirmed** | Annotated tag object `eeafb814d94a195d04121a6f9c5300a5fbfaf18e`, target `71a756be2135a1b6b752a97c6064ee941a6e3486`; created by `create_release_tag.yml` under Sigstore keyless signing (run `41002565231`, conclusion `success`). `scripts/verify_release_tag.sh v5.0.3 71a756be…` passed in the gateway-publish run `41018668975` (gitsign verify-tag, exact workflow identity, ancestor check) |
 | GitHub Release `v5.0.3` | **Confirmed** | Non-draft, non-prerelease, published `2026-10-30T04:28:49Z`, **31 uploaded assets**, including `SHA256SUMS`, `release-asset-manifest.json`, the core wheel/sdist, both SDKs and all `aegis_rust` wheels (run `41002592469`, conclusion `success`) |
 | `SHA256SUMS` sweep | **Confirmed** | All 31 assets downloaded to a clean directory; `sha256sum -c SHA256SUMS` returned 15 of 15 listed files matching, 0 mismatched, 0 absent. `SHA256SUMS` itself is `sha256:32de4a55564786298f7b65a2963a2d120fa93c891cf67893360e8ed06f885c5b` |
-| PyPI `aegis-latent-core` | **Not published at 5.0.3** | Registry JSON still reports `5.0.2`; the gateway distribution has no `5.0.3` workflow in this repository. This is the single published surface that lags, stated rather than inferred |
+| PyPI `aegis-latent-core` | **Confirmed** | `info.version` `5.0.3`; wheel `sha256:9d4508c924a7c1aa877e792bb348f46551ebac5a5970f1d4417b73ddbbfb6b88` and sdist `sha256:00182ec1d59c5a54e20d8c297f1acf37b6c81cdaf0d32d8e996cb257de5e312e`, uploaded `2026-10-30T07:13:42Z`/`45Z` by `publish_pypi_gateway.yml` run `41018668975` (conclusion `success`), OIDC trusted publishing and attestations enabled |
 | PyPI `aegis-latent-sdk` | **Confirmed** | `info.version` `5.0.3`; wheel `sha256:b45e5c8e5658b68487ed9f6c8e6fccc55b12ba897a577fddcb792caac8465379` and sdist `sha256:f2e411835c7d28b6c16f9ab64a5bc9f2e69a65db3269614345d0e5475ad4d258`, uploaded `2026-10-30T04:24:41Z`/`42Z` (run `41002594432`, conclusion `success`) |
 | npm `aegis-latent-sdk` | **Confirmed** | Registry `latest` `5.0.3`; `dist.integrity` `sha512-bxdSRhurJc3eIz4DyNxhz1BiTqL84FXfnU6MCSPrd2YGfzfYKN6c6loouKVOqru/OUeqN6HsTwWeJwSu9b8F4Q==`; SLSA v1 provenance object present (run `41002596562`, conclusion `success`) |
 | GHCR gateway `5.0.3` | **Confirmed** | OCI image index digest `sha256:1dc040290b662a101ff50525a4bc8db314186efa80bc48ef335d6e7dc54183b3`, with `linux/amd64` and `linux/arm64` manifests (run `41002598362`, conclusion `success`) |
@@ -241,7 +241,7 @@ Retained as the record of what that version's surfaces actually carried, and sti
 
 Run these yourself. Do not accept this document's table as evidence of the current state — it records what was observed on the date above.
 
-These commands target the published surfaces. `v5.0.2` — the most recent published release — was read back on 2026-10-01 (§1.0d); `v5.0.1` was read back on 2026-09-24 and 2026-09-29 (§1.0a, §1.0b), `v5.0.0` on 2026-09-16 on every surface except PyPI `aegis-latent-core`, and `v4.1.2` was the last version published on *every* surface before `5.0.1` completed the set on 2026-09-26, including the gateway distribution on PyPI. The `4.1.1` values in §1.2 and the `4.0.2` values in §1.4 came from the same commands run against those tags on 2026-09-03 and 2026-09-02; substitute the tag to reproduce them.
+These commands target the published surfaces. `v5.0.3` — the most recent published release — was read back on 2026-10-30 (§1.0e); `v5.0.2` on 2026-10-01 (§1.0d); `v5.0.1` was read back on 2026-09-24 and 2026-09-29 (§1.0a, §1.0b), `v5.0.0` on 2026-09-16 on every surface except PyPI `aegis-latent-core`, and `v4.1.2` was the last version published on *every* surface before `5.0.1` completed the set on 2026-09-26, including the gateway distribution on PyPI. The `4.1.1` values in §1.2 and the `4.0.2` values in §1.4 came from the same commands run against those tags on 2026-09-03 and 2026-09-02; substitute the tag to reproduce them.
 
 ### 2.1 Source baseline
 
@@ -388,7 +388,7 @@ A successful `gitsign verify` establishes that the signing workflow in this repo
 
 ## 4. Version anchors
 
-The release contract requires fourteen version anchors to agree before a tag is cut. They are: `core`, `core-runtime`, `python-sdk`, `python-sdk-runtime`, `typescript-sdk`, `typescript-lock`, `dashboard`, `dashboard-lock`, `rust-cargo`, `rust-pyproject`, `rust-lock`, `helm-chart`, `helm-app`, and `helm-image`. At the `v4.1.2` tag all fourteen read `4.1.2`; at `v4.1.1` they read `4.1.1`, and at `v4.0.2` they read `4.0.2`. In the current checkout they read `5.0.3`; at the `v5.0.2` tag they read `5.0.2`. The `5.0.3` value is a source target, not a publication (see §1.0e).
+The release contract requires fourteen version anchors to agree before a tag is cut. They are: `core`, `core-runtime`, `python-sdk`, `python-sdk-runtime`, `typescript-sdk`, `typescript-lock`, `dashboard`, `dashboard-lock`, `rust-cargo`, `rust-pyproject`, `rust-lock`, `helm-chart`, `helm-app`, and `helm-image`. At the `v4.1.2` tag all fourteen read `4.1.2`; at `v4.1.1` they read `4.1.1`, and at `v4.0.2` they read `4.0.2`. In the current checkout they read `5.0.3`; at the `v5.0.2` tag they read `5.0.2`. The `5.0.3` value is published and read back (see §1.0e).
 
 The immutable parent comparison commit `fdace8844568eb788216740b2cb5daf187d99d3b` retains fourteen synchronized `4.0.0` anchors and is the reference point for diffing source metadata between baselines.
 
