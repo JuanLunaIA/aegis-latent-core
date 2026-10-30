@@ -56,8 +56,6 @@
     "raise": "{raise} in three tranches tied to milestones — {t1}, {t2}, {t3} — against an 18-month plan, {opex} monthly operating cost and a {runway}-month runway after closing.",
     "funds_title": "Use of funds",
     "funds": "Engineering continuity {fund_engineer} · go-to-market {fund_gtm} · assurance {fund_assurance} · legal {fund_legal} · founder {fund_founder} · infrastructure {fund_infra} · recruiting {fund_recruit} · contingency {fund_contingency}.",
-    "limits_title": "What we do not claim",
-    "limits": "No certifications, no paying customers, no SLA, a single-AZ database and no restore drill executed. Each is a milestone with an owner, not a footnote.",
     "footer": "Every figure above is produced by a command; the pack reproduces them and the checksums travel with this PDF.",
     "flow": [
       [
@@ -73,17 +71,63 @@
         "The customer exports a signed pack and verifies inclusion offline. Our credentials are not part of the proof."
       ]
     ],
-    "milestones_title": "Next four milestones",
-    "milestones": [
-      "Restore drill, executed and timed",
-      "Multi-AZ database and a second region",
-      "Stripe live with a real test-card charge",
-      "SDKs published to PyPI and npm"
-    ],
     "margin_title": "Margin at list",
     "margin_cost": "Unit cost",
     "margin_price": "List price, 1M requests",
-    "margin_note": "Team lists 500,000 requests for {team}. Two blocks minus the {cost} unit cost is a {margin} gross margin. A model built from published prices, not a booking."
+    "margin_note": "Team lists 500,000 requests for {team}. Two blocks minus the {cost} unit cost is a {margin} gross margin. A model built from published prices, not a booking.",
+    "plans_title": "Commercial plans",
+    "plans_note": "Annual reference values; final scope and terms are confirmed in a proposal.",
+    "plans": [
+      [
+        "Team",
+        "{plan_team_annual}",
+        "6.4%"
+      ],
+      [
+        "Business",
+        "{plan_business_annual}",
+        "23.1%"
+      ],
+      [
+        "Enterprise",
+        "{plan_enterprise_annual}",
+        "100%"
+      ]
+    ],
+    "tranches_title": "The raise, in three tranches",
+    "tranches_note": "Each tranche is tied to a milestone.",
+    "tranches": [
+      [
+        "T1",
+        "{t1}",
+        "{t1_pct}"
+      ],
+      [
+        "T2",
+        "{t2}",
+        "{t2_pct}"
+      ],
+      [
+        "T3",
+        "{t3}",
+        "{t3_pct}"
+      ]
+    ],
+    "value_title": "What the buyer can verify",
+    "value_cards": [
+      [
+        "Inclusion",
+        "One record, one path to the Merkle root, checked against the published root."
+      ],
+      [
+        "Signature",
+        "The export is signed; a verifier rejects any altered byte."
+      ],
+      [
+        "Offline",
+        "The check runs on the buyer machine, without our service or credentials."
+      ]
+    ]
   },
   "es": {
     "eyebrow": "Seed · {month_year}",
@@ -131,8 +175,6 @@
     "raise": "{raise} en tres tramos atados a hitos —{t1}, {t2}, {t3}— contra un plan de 18 meses, un costo operativo de {opex} por mes y una pista de {runway} meses después del cierre.",
     "funds_title": "Uso de fondos",
     "funds": "Continuidad de ingeniería {fund_engineer} · go-to-market {fund_gtm} · assurance {fund_assurance} · legal {fund_legal} · fundador {fund_founder} · infraestructura {fund_infra} · recruiting {fund_recruit} · contingencia {fund_contingency}.",
-    "limits_title": "Lo que no afirmamos",
-    "limits": "Sin certificaciones, sin clientes pagos, sin SLA, base de datos en una sola zona y ninguna prueba de restore ejecutada. Cada punto es un hito con responsable, no una nota al pie.",
     "footer": "Cada cifra de esta hoja sale de un comando; el paquete las reproduce y los checksums viajan con este PDF.",
     "flow": [
       [
@@ -148,16 +190,62 @@
         "El cliente exporta un paquete firmado y verifica la inclusión sin conexión. Nuestras credenciales no forman parte de la prueba."
       ]
     ],
-    "milestones_title": "Los próximos cuatro hitos",
-    "milestones": [
-      "Prueba de restore ejecutada y cronometrada",
-      "Base multi-AZ y una segunda región",
-      "Stripe en vivo con un cargo de prueba real",
-      "SDK publicados en PyPI y npm"
-    ],
     "margin_title": "Margen a lista",
     "margin_cost": "Costo unitario",
     "margin_price": "Precio de lista, 1M peticiones",
-    "margin_note": "Team lista 500.000 peticiones por {team}. Dos bloques menos el costo unitario de {cost} dan un margen bruto de {margin}. Un modelo con precios publicados, no una reserva."
+    "margin_note": "Team lista 500.000 peticiones por {team}. Dos bloques menos el costo unitario de {cost} dan un margen bruto de {margin}. Un modelo con precios publicados, no una reserva.",
+    "plans_title": "Planes comerciales",
+    "plans_note": "Valores anuales de referencia; el alcance y las condiciones finales se confirman en una propuesta.",
+    "plans": [
+      [
+        "Team",
+        "{plan_team_annual}",
+        "6.4%"
+      ],
+      [
+        "Business",
+        "{plan_business_annual}",
+        "23.1%"
+      ],
+      [
+        "Enterprise",
+        "{plan_enterprise_annual}",
+        "100%"
+      ]
+    ],
+    "tranches_title": "La ronda, en tres tramos",
+    "tranches_note": "Cada tramo está atado a un hito.",
+    "tranches": [
+      [
+        "T1",
+        "{t1}",
+        "{t1_pct}"
+      ],
+      [
+        "T2",
+        "{t2}",
+        "{t2_pct}"
+      ],
+      [
+        "T3",
+        "{t3}",
+        "{t3_pct}"
+      ]
+    ],
+    "value_title": "Lo que el comprador puede verificar",
+    "value_cards": [
+      [
+        "Inclusión",
+        "Un registro, una ruta a la raíz Merkle, contra la raíz publicada."
+      ],
+      [
+        "Firma",
+        "La exportación está firmada; un byte alterado se rechaza."
+      ],
+      [
+        "Sin conexión",
+        "Corre en la máquina del comprador, sin nuestro servicio."
+      ]
+    ]
   }
 }

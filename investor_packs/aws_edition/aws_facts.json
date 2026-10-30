@@ -1,0 +1,50 @@
+{
+  "release": {
+    "version": "5.0.3",
+    "tag": "v5.0.3",
+    "tag_object": "eeafb814d94a195d04121a6f9c5300a5fbfaf18e",
+    "commit": "71a756be2135a1b6b752a97c6064ee941a6e3486",
+    "published_at": "2026-10-30T04:28:49Z",
+    "assets": 31,
+    "sha256sums": "32de4a55564786298f7b65a2963a2d120fa93c891cf67893360e8ed06f885c5b",
+    "github_release": "https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v5.0.3",
+    "pypi_core": "5.0.2",
+    "pypi_sdk": "5.0.3",
+    "npm_sdk": "5.0.3",
+    "oci_gateway": "sha256:1dc040290b662a101ff50525a4bc8db314186efa80bc48ef335d6e7dc54183b3",
+    "oci_dashboard": "sha256:1ff3d0d2ee62e21f2eab52519c5e428b8f7714a42c3a76776c24d884f54f3fde",
+    "runs": {
+      "tag": "41002565231",
+      "release": "41002592469",
+      "pypi_sdk": "41002594432",
+      "npm_sdk": "41002596562",
+      "oci": "41002598362"
+    }
+  },
+  "aws": {
+    "region": "us-east-1",
+    "account_label": "production",
+    "function_url": "https://6h4tdy5ukmd5yiztp2ytigut7u0mbgsx.lambda-url.us-east-1.on.aws",
+    "health_version": "5.0.3",
+    "ready": "db ok",
+    "audit_status": "401 invalid_session",
+    "last_code_update": "2026-10-30T04:18:38Z",
+    "runtime": "python3.13",
+    "memory_mb": 1024,
+    "timeout_s": 29,
+    "month_to_date_usd": 16.0,
+    "budget_usd": 25
+  },
+  "throughput": {
+    "p50_ms": 19.7,
+    "p95_ms": 26.5,
+    "rate": 50,
+    "sent": 1000,
+    "completed": 1000
+  },
+  "gates": {
+    "pass": 17,
+    "total": 17,
+    "seconds": 226.1
+  }
+}

@@ -3,10 +3,10 @@
 One row per surface that a customer, investor, auditor, or agent can read. A
 surface with no canonical source does not get to publish the claim.
 
-**Last verified:** 2026-10-29 UTC
-**Source target:** `v5.0.3`, not published
-**Last published release:** `v5.0.2` (2026-10-01), read back on every registry
-surface listed below
+**Last verified:** 2026-10-30 UTC
+**Current release:** `v5.0.3`, published 2026-10-30; PyPI gateway `5.0.2`
+**Last published release:** `v5.0.3` (2026-10-30), read back on GitHub Release,
+PyPI SDK, npm SDK and GHCR; the PyPI gateway distribution remains `5.0.2`
 
 | Surface | Path / URL | Audience | Claims it makes | Canonical source | Owner | Gate |
 | --- | --- | --- | --- | --- | --- | --- |

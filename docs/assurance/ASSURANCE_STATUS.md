@@ -8,7 +8,7 @@ Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 **Audience:** anyone about to write a sentence about the product's independent assurance, and any buyer asking for it.
 **Scope:** one place that states, per assurance item, where it stands and the exact wording that state allows. The machine-readable copy is [`ASSURANCE_STATUS.json`](ASSURANCE_STATUS.json); `tests/test_assurance_tools.py` checks it.
-**Boundary:** a status page, not evidence. As of 2026-10-29, **no independent assurance exists**. Every item below is `NOT_STARTED` or `DRAFTED`, and none is `COMPLETE`. A state changes only when the evidence path listed for it exists. The checked-out source target is `5.0.3` (not published); the most recent published release is `5.0.2`.
+**Boundary:** a status page, not evidence. As of 2026-10-29, **no independent assurance exists**. Every item below is `NOT_STARTED` or `DRAFTED`, and none is `COMPLETE`. A state changes only when the evidence path listed for it exists. The checked-out baseline is `5.0.3`, published 2026-10-30; the PyPI gateway distribution remains `5.0.2`.
 
 ## States
 

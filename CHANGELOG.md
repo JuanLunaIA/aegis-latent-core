@@ -9,17 +9,18 @@ All notable changes to **Aegis Latent Core** are documented in this file.
 **Most recent published release on every surface (readback 2026-09-04):** `v4.1.2` signed annotated tag at `860f14177d94c194e5ae7156017d6fa74264e429`, GitHub Release with 31 assets, PyPI `aegis-latent-core` `4.1.2`, PyPI `aegis-latent-sdk` `4.1.2`, npm `aegis-latent-sdk` `4.1.2`, GHCR gateway image `sha256:b3f6aadc…f80710` and dashboard image `sha256:27e1bbc2…d92398`
 **Historical GitHub baseline:** `v4.0.1`, a lightweight tag targeting `6469904380218584ae0b5221334bc9a46500f5ba`
 **Immutable source baseline:** `fdace8844568eb788216740b2cb5daf187d99d3b` (fourteen `4.0.0` anchors)
-**Release baseline:** published `v5.0.2` (fourteen synchronized `5.0.2` anchors), read back on GitHub Release, PyPI core/SDK and npm on 2026-10-01; recorded in `docs/RELEASE_STATUS.md` §1.0d
+**Release baseline:** published `v5.0.3` (fourteen synchronized `5.0.3` anchors), read back on GitHub Release, PyPI SDK, npm and GHCR on 2026-10-30; the PyPI gateway distribution remains `5.0.2`; recorded in `docs/RELEASE_STATUS.md` §1.0e
 **Documentation verification baseline:** Public claims remain controlled by `docs/CLAIMS_MATRIX.md`; framework references are contribution mappings, not certifications.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [5.0.3] — prepared 2026-10-29, **not published**
+## [5.0.3] — 2026-10-30
 
-Release candidate on `release/v5.0.3`. Do not describe it as published until the
-tag, GitHub Release, registries and images are read back in
-`docs/RELEASE_STATUS.md`.
+Published on the annotated tag, GitHub Release (31 assets), PyPI `aegis-latent-sdk`,
+npm `aegis-latent-sdk` and GHCR, with a 15-of-15 `SHA256SUMS` sweep. The gateway
+distribution on PyPI remains `5.0.2`; the per-surface record is
+`docs/RELEASE_STATUS.md` §1.0e.
 
 ### Changed
 

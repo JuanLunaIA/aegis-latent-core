@@ -1,3 +1,8 @@
+> **Edición vigente para inversores:** [`../aws_edition/README.md`](../aws_edition/README.md)
+> — autocontenida, con la lectura de AWS y la release 5.0.3. Esta carpeta conserva
+> el modelo financiero y las fuentes de gráficos del 30 de septiembre de 2026; use
+> la edición AWS para una primera reunión y para cifras de hosting o release.
+
 # Aegis Latent Core: paquete para inversores semilla (castellano rioplatense)
 
 **Fecha de creación:** 25 de septiembre de 2026 (2026-09-25). **Actualizado:** 29 de octubre de 2026 (2026-10-29): actualización de evidencia y hoja A4 de una página; el modelo financiero no cambió desde el 30 de septiembre de 2026.

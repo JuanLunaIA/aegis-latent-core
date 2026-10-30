@@ -5,8 +5,8 @@ It is for procurement, legal, commercial and technical buyers. It is not legal
 advice, a binding offer, a warranty, a support SLA or a regulatory representation.
 
 **Effective:** v5.0.3 · **Status:** draft for counsel review (`docs/legal/COUNSEL_QUESTIONS.md`)
-**Last verified:** 2026-10-29 UTC
-**Release baseline:** `v5.0.3` prepared, **not published**; `v5.0.2` remains the latest published release
+**Last verified:** 2026-10-30 UTC
+**Release baseline:** `v5.0.3` published 2026-10-30; the PyPI gateway distribution remains at `5.0.2`
 **Licence source:** [`LICENSE`](LICENSE) · **Attribution:** [`NOTICE`](NOTICE)
 **Transition record:** [`docs/legal/LICENSE_TRANSITION_5.0.3.md`](docs/legal/LICENSE_TRANSITION_5.0.3.md)
 

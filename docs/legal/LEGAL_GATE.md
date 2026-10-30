@@ -8,8 +8,10 @@ Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 **Audience:** owner, counsel, and any buyer asking whether the legal pack is
 ready.
-**Scope:** the conditions that must be true before a paid Order, a public
-`5.0.3` release, or a customer-facing legal statement.
+**Scope:** the conditions that must be true before a paid Order or a
+customer-facing legal statement. The `5.0.3` source was published on 2026-10-30
+before this gate closed; that exception is recorded below and is not evidence of
+counsel review.
 **Boundary:** a gate record. It does not provide legal advice and does not
 substitute for the signed opinions in `COUNSEL_REVIEW_LOG.md`.
 
@@ -30,12 +32,15 @@ substitute for the signed opinions in `COUNSEL_REVIEW_LOG.md`.
 | No cookie inventory | `PRIVACY_POLICY.md` cookie section | web owner confirms only essential cookies, or adds notice |
 | No merchant-of-record decision | `ENTITY_AND_TAX_MEMO.md` E6 | owner and accountant select; Stripe Tax or alternative configured |
 | Insurance not bound | `INSURANCE_AND_ESCROW_DECISIONS.md` | broker quote and bound policy, or a written decision to self-insure |
-| `5.0.3` not published | `docs/RELEASE_STATUS.md` | release gate, not this one |
+| `5.0.3` published before counsel review | `docs/RELEASE_STATUS.md` §1.0e; `COUNSEL_REVIEW_LOG.md` | governance exception recorded 2026-10-30; counsel review remains open |
 
 ## What may ship while blocked
 
-- The source under the draft commercial licence may be published **only** after
-  the release gate and counsel sign-off; it is not published today.
+- The source under the draft commercial licence was published as `5.0.3` on
+  2026-10-30 before counsel sign-off. That is a recorded governance exception,
+  not evidence that the terms were reviewed or are enforceable. No further
+  commercial surface should be published while this gate is `BLOCKED` without a
+  written decision.
 - The website may describe the product, its boundaries, and the absence of
   certifications. It may not describe the terms as reviewed, offered, or
   enforceable.

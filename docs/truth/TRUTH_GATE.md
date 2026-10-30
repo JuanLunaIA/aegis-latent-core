@@ -1,5 +1,9 @@
 # Truth gate — 2026-10-29
 
+> **Historical snapshot.** `5.0.3` was published on 2026-10-30 after this gate
+> ran. The identity table below is preserved as the state it audited; the
+> current publication record is `docs/RELEASE_STATUS.md` §1.0e.
+
 **TRUTH GATE: PASS**
 
 This record freezes the state of the public-claim gate before any commercial
@@ -15,7 +19,7 @@ change.
 | Website commit | `aegisweb` `4c446d6` (`main`) |
 | Core repository commit | `aegis-latent-core` `3061f92` (branch `docs/align-control-baselines`) |
 | Published release inspected | `v5.0.2` (2026-10-01) |
-| Source target inspected | `v5.0.3` (not published) |
+| Source target inspected | `v5.0.3` (published 2026-10-30, after this snapshot) |
 | Local preview | `http://127.0.0.1:4176`, built from the website commit above |
 
 ## Commands and real output

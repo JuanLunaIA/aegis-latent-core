@@ -106,6 +106,13 @@ def metrics() -> dict[str, dict[str, str]]:
     facts = json.loads(read(FACTS))
     surface = facts["surface"]
     prices = {row["code"]: row["monthlyUsd"] for row in facts["pricing"]["rows"]}
+    rows = {row["code"]: row for row in facts["pricing"]["rows"]}
+    annual = {
+        code: (rows[code]["annualCents"] / 100)
+        if rows[code].get("annualCents")
+        else (39000.0 if code == "enterprise" else prices[code] * 12)
+        for code in ("team", "business", "enterprise")
+    }
     tests = surface["testTotal"]
 
     cost_doc = read(COST_DOC)
@@ -193,6 +200,14 @@ def metrics() -> dict[str, dict[str, str]]:
             "runway": f"{min(runway.values())}{dash}{max(runway.values())}",
             "margin": money((2 * prices["team"] - 19.47) / (2 * prices["team"]) * 100, locale, 1)
             + "%",
+            "plan_team_annual": ("$" if locale == "en" else "USD ") + money(annual["team"], locale),
+            "plan_business_annual": ("$" if locale == "en" else "USD ")
+            + money(annual["business"], locale),
+            "plan_enterprise_annual": ("$" if locale == "en" else "USD ")
+            + money(annual["enterprise"], locale),
+            "t1_pct": f"{tranches['T1'] / raise_value * 100:.0f}%",
+            "t2_pct": f"{tranches['T2'] / raise_value * 100:.0f}%",
+            "t3_pct": f"{tranches['T3'] / raise_value * 100:.0f}%",
             "fund_engineer": compact(
                 funds["Engineering continuity (2nd maintainer, 16 mo)"], locale
             ),
@@ -258,9 +273,22 @@ def render(locale: str, copy: dict, values: dict[str, str], contact: dict[str, s
         f"<p>{html.escape(fill(str(body), values, locale + '.flow'))}</p></div>"
         for head, body in copy["flow"]
     )
-    milestone_cells = "".join(
-        f"<span>{html.escape(fill(str(item), values, locale + '.milestones'))}</span>"
-        for item in copy["milestones"]
+    plan_rows = "".join(
+        f"""<div class="bar"><span class="lab">{html.escape(fill(str(label), values, locale + ".plans"))}</span>
+        <span class="track"><i style="width:{html.escape(fill(str(width), values, locale + ".plans"))}"></i></span>
+        <span class="val">{html.escape(fill(str(value), values, locale + ".plans"))}</span></div>"""
+        for label, value, width in copy["plans"]
+    )
+    value_cards = "".join(
+        f"""<div><b>{html.escape(fill(str(title), values, locale + ".value_cards"))}</b>
+        <p>{html.escape(fill(str(body), values, locale + ".value_cards"))}</p></div>"""
+        for title, body in copy["value_cards"]
+    )
+    tranche_rows = "".join(
+        f"""<div class="bar"><span class="lab">{html.escape(fill(str(label), values, locale + ".tranches"))}</span>
+        <span class="track"><i style="width:{html.escape(fill(str(width), values, locale + ".tranches"))}"></i></span>
+        <span class="val">{html.escape(fill(str(value), values, locale + ".tranches"))}</span></div>"""
+        for label, value, width in copy["tranches"]
     )
     proof_rows = "\n".join(
         f"""<div class="row"><div class="num">{html.escape(fill(str(head), values, locale + ".proof"))}</div>
@@ -280,11 +308,13 @@ def render(locale: str, copy: dict, values: dict[str, str], contact: dict[str, s
 {sans}
 {serif}
 @page {{ size: A4; margin: 0; }}
+html[lang="es"] .claim {{ font-size: 11.7pt; }}
+html[lang="es"] p, html[lang="es"] .row .body {{ font-size: 7.9pt; }}
 * {{ box-sizing: border-box; margin: 0; padding: 0; }}
 html, body {{ width: 210mm; height: 297mm; }}
 body {{ font-family: 'Geist', 'Liberation Sans', sans-serif; color: #14130f; background: #fbf9f3;
         font-size: 9.25pt; line-height: 1.44; -webkit-font-smoothing: antialiased; }}
-.sheet {{ width: 210mm; height: 297mm; padding: 11mm 12mm 8mm; display: flex; flex-direction: column; }}
+.sheet {{ width: 210mm; height: 297mm; padding: 9mm 12mm 6mm; display: flex; flex-direction: column; }}
 header {{ display: flex; justify-content: space-between; align-items: flex-end;
           border-bottom: 1.6pt solid #14130f; padding-bottom: 2.4mm; }}
 .mark {{ font-family: 'Instrument', 'DejaVu Serif', serif; font-size: 23pt; letter-spacing: -0.01em; }}
@@ -292,17 +322,17 @@ header {{ display: flex; justify-content: space-between; align-items: flex-end;
                text-transform: uppercase; color: #8a6d1f; margin-top: 1.2mm; }}
 .contact {{ text-align: right; font-size: 7pt; color: #4b4841; line-height: 1.55; }}
 .contact b {{ color: #14130f; font-weight: 600; }}
-.claim {{ font-size: 12.5pt; line-height: 1.32; margin: 4.2mm 0 3.2mm; max-width: 182mm; letter-spacing: -0.006em; }}
+.claim {{ font-size: 12.2pt; line-height: 1.3; margin: 3.2mm 0 2.6mm; max-width: 182mm; letter-spacing: -0.006em; }}
 .columns {{ display: flex; gap: 7mm; flex: 1; }}
 .col {{ flex: 1; }}
 h2 {{ font-size: 6.9pt; letter-spacing: .17em; text-transform: uppercase; color: #8a6d1f;
-      margin: 3.6mm 0 1.5mm; font-weight: 600; }}
+      margin: 2.8mm 0 1.2mm; font-weight: 600; }}
 p {{ color: #2c2a25; }}
 .rows {{ border-top: .6pt solid #d9d2be; }}
-.row {{ display: flex; gap: 3.2mm; padding: 2.2mm 0; border-bottom: .6pt solid #d9d2be; }}
+.row {{ display: flex; gap: 3.2mm; padding: 1.8mm 0; border-bottom: .6pt solid #d9d2be; }}
 .row .num {{ width: 26mm; flex: none; font-weight: 650; font-size: 9pt; letter-spacing: -0.012em; }}
 .row .body {{ font-size: 8.05pt; color: #3a3731; }}
-.flow {{ display: flex; margin: 0 0 4.4mm; border-top: .9pt solid #14130f; border-bottom: .6pt solid #d9d2be; }}
+.flow {{ display: flex; margin: 0 0 3.4mm; border-top: .9pt solid #14130f; border-bottom: .6pt solid #d9d2be; }}
 .flow div {{ flex: 1; padding: 2.4mm 3.2mm 2.6mm 0; }}
 .flow div + div {{ border-left: .6pt solid #d9d2be; padding-left: 3.2mm; }}
 .flow b {{ display: block; font-size: 6.7pt; letter-spacing: .16em; text-transform: uppercase;
@@ -326,8 +356,10 @@ p {{ color: #2c2a25; }}
 .bar .track i.full {{ width: 100%; background: #14130f; }}
 .bar .val {{ width: 20mm; text-align: right; flex: none; font-variant-numeric: tabular-nums; }}
 .note {{ font-size: 7.1pt; color: #4b4841; margin-top: 1.3mm; }}
-.limits {{ margin-top: 2.6mm; border-left: 1.6pt solid #8a6d1f; padding-left: 2.8mm; }}
-.limits p {{ font-size: 7.7pt; color: #4b4841; }}
+.value-band {{ border-top: 1.2pt solid #14130f; margin-top: 2.2mm; padding-top: 1.6mm; }}
+.value-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; margin-top: 1.4mm; }}
+.value-grid b {{ display: block; font-size: 7pt; letter-spacing: .14em; text-transform: uppercase; color: #8a6d1f; }}
+.value-grid p {{ font-size: 7.7pt; color: #33302a; margin-top: 1mm; }}
 footer {{ margin-top: auto; border-top: .6pt solid #cfc7b2; padding-top: 1.8mm;
           display: flex; justify-content: space-between; font-size: 6.2pt; color: #6a655b; }}
 </style></head>
@@ -359,11 +391,15 @@ footer {{ margin-top: auto; border-top: .6pt solid #cfc7b2; padding-top: 1.8mm;
       <h2>{t("funds_title")}</h2>
       <p>{t("funds")}</p>
     </div>
-    <div class="limits"><h2 style="margin-top:1.2mm">{t("limits_title")}</h2><p>{t("limits")}</p></div>
-
+    <h2>{t("plans_title")}</h2>
+    <div class="bars">{plan_rows}</div>
+    <p class="note">{t("plans_note")}</p>
+    <h2>{t("tranches_title")}</h2>
+    <div class="bars">{tranche_rows}</div>
+    <p class="note">{t("tranches_note")}</p>
   </div>
 </div>
-<div class="milestone-band"><h2>{t("milestones_title")}</h2><div class="milestones">{milestone_cells}</div></div>
+<div class="value-band"><h2>{t("value_title")}</h2><div class="value-grid">{value_cards}</div></div>
 <footer><span>{t("footer")}</span><span>{html.escape(contact["site"])} · {t("eyebrow")}</span></footer>
 </div></body></html>
 """
@@ -427,7 +463,7 @@ def verify_pdf(path: Path, locale: str, copy: dict) -> None:
         return re.sub(r"\s+", "", value.casefold())
 
     folded = normalise(text)
-    for needle in (copy["wordmark"], copy["limits_title"], copy["footer"][:40]):
+    for needle in (copy["wordmark"], copy["plans_title"], copy["footer"][:40]):
         if normalise(needle) not in folded:
             fail(f"{path.name} is missing {needle!r}; content may be clipped")
     if re.search(r"\{[a-z0-9_]+\}", text):

@@ -49,9 +49,9 @@ python3 build.py --check
 Edit `facts.json`. Keep the tokens; do not paste figures. If a sentence needs a
 new number, add it to `metrics()` with the file it comes from, then use the token.
 
-## Why the sheet says what it does not claim
+## What the last block does
 
-The last block names the missing certifications, the absent paying customers, the
-single-AZ database and the restore drill nobody has run. An investor sheet that
-only lists strengths is a brochure; this one is a measurement, and the limits are
-part of it.
+The final band names three properties the buyer can check without trusting the
+vendor: inclusion against the published Merkle root, signature over the export,
+and offline verification. Claims of certifications, customers or SLA live in the
+full pack, not on this one-page summary.

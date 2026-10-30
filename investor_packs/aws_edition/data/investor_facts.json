@@ -1,0 +1,112 @@
+{
+  "generatedAt": "2026-10-29T14:18:30.603Z",
+  "gitSha": "364986f71515",
+  "provenance": {
+    "pricing": {
+      "source": "aegis-cloud/app/migrations/0006_pricing_alignment.sql cross-checked against aegisweb/src/data/facts.ts",
+      "asOf": "2026-10-29",
+      "verifiedBy": "tools/build-investor-pack.mjs refuses to emit when the two disagree"
+    },
+    "surface": {
+      "source": "aegis-cloud/app/routers/*.py, app/migrations/*.sql, aegisweb/src/i18n/locales.ts",
+      "asOf": "2026-10-29"
+    },
+    "size": {
+      "source": "test functions counted in aegis-cloud/tests/*.py and sdk/*/tests, lines counted in the shipped trees",
+      "asOf": "2026-10-29"
+    }
+  },
+  "pricing": {
+    "label": "UNVALIDATED HYPOTHESIS",
+    "rows": [
+      {
+        "sku": "Developer",
+        "price": "$0",
+        "note": "para siempre",
+        "engines": "10.000 peticiones/mes · 2 claves · 7 días de evidencia",
+        "audience": "Evaluar el producto dentro de un equipo",
+        "monthlyUsd": 0,
+        "code": "developer",
+        "monthlyCents": 0,
+        "annualCents": 0,
+        "includedRequests": 10000
+      },
+      {
+        "sku": "Team",
+        "price": "$249",
+        "note": "por mes · $2.490 al año",
+        "engines": "500.000 peticiones/mes · 5 asientos de escritura · 30 días",
+        "audience": "Un equipo que ya atiende clientes reales",
+        "monthlyUsd": 249,
+        "code": "team",
+        "monthlyCents": 24900,
+        "annualCents": 249000,
+        "includedRequests": 500000
+      },
+      {
+        "sku": "Business",
+        "price": "$899",
+        "note": "por mes · $8.990 al año",
+        "engines": "2,5 M peticiones/mes · 15 asientos · 90 días",
+        "audience": "Varias áreas y auditoría trimestral",
+        "monthlyUsd": 899,
+        "code": "business",
+        "monthlyCents": 89900,
+        "annualCents": 899000,
+        "includedRequests": 2500000
+      },
+      {
+        "sku": "Enterprise",
+        "price": "$3.900",
+        "note": "desde, por mes · $39.000 al año",
+        "engines": "12,5 M peticiones/mes · asientos ilimitados · 365 días",
+        "audience": "Cargas reguladas y contrato a medida",
+        "monthlyUsd": 3900,
+        "code": "enterprise",
+        "monthlyCents": null,
+        "annualCents": null,
+        "includedRequests": null
+      }
+    ]
+  },
+  "surface": {
+    "apiRoutes": 35,
+    "routerFiles": 13,
+    "migrations": 10,
+    "locales": 13,
+    "localeList": [
+      "en",
+      "es",
+      "pt",
+      "fr",
+      "de",
+      "zh",
+      "ja",
+      "it",
+      "ko",
+      "nl",
+      "pl",
+      "tr",
+      "ar"
+    ],
+    "webRoutes": 27,
+    "tests": {
+      "controlPlane": 126,
+      "pythonSdk": 13,
+      "typescriptSdk": 12
+    },
+    "testTotal": 151
+  },
+  "size": {
+    "total": 394441,
+    "byLang": {
+      "py": 217655,
+      "mjs": 84895,
+      "ts": 45555,
+      "tsx": 31587,
+      "rs": 7319,
+      "js": 6871,
+      "sql": 559
+    }
+  }
+}
