@@ -112,6 +112,8 @@ jobs:
         run: bash scripts/verify_links.sh --root .
       - name: Prose boundary language
         run: python tools/docs/verify_documentation.py --root . --strict
+      - name: Stale licence, release and assurance claims
+        run: python tools/truth/scan_public_claims.py --root . --paths README.md AGENTS.md docs
       - name: Whitespace
         run: git diff --check
 

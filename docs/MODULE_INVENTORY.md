@@ -2,7 +2,7 @@
 
 Every file under the six source roots, with what it is, what reaches it, what tests it, and who owns it. Generated — edit `scripts/generate_module_inventory.py`, not this file. Currency is enforced by `tests/test_module_inventory_current.py`.
 
-`python scripts/generate_module_inventory.py` — 332 files.
+`python scripts/generate_module_inventory.py` — 333 files.
 
 ## What the status column means
 
@@ -18,9 +18,9 @@ Every file under the six source roots, with what it is, what reaches it, what te
 
 ## Coverage and ownership
 
-- **Navigation coverage:** 70 of 332 files (21%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
-- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 71, `roadmap-omit` 34, `unreferenced` 18.
-- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 332 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
+- **Navigation coverage:** 70 of 333 files (21%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
+- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 131, `referenced` 72, `roadmap-omit` 34, `unreferenced` 18.
+- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 333 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
 
 Tests are the test files that import the module directly, capped at 4 per row; the count is exact, the list is not exhaustive.
 
@@ -356,6 +356,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `tools/sales/prove_it/record.json` | text/data | — | referenced | — | @JuanLunaIA |
 | `tools/sales/prove_it/record_tampered.json` | text/data | — | referenced | — | @JuanLunaIA |
 | `tools/security/run_waf_corpus.py` | module | — | referenced | — | @JuanLunaIA |
+| `tools/truth/scan_public_claims.py` | module | Fail-closed scanner for stale licence, release and assurance claims. | referenced | — | @JuanLunaIA |
 | `tools/validation/PLAN.template.json` | text/data | — | unreferenced | — | @JuanLunaIA |
 | `tools/validation/brevo_export.py` | module | Turn the owner's private contact sheet into a Brevo import file. | referenced | — | @JuanLunaIA |
 | `tools/validation/kill_criteria.json` | text/data | — | referenced | — | @JuanLunaIA |

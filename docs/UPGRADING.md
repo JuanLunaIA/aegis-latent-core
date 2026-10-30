@@ -1,6 +1,6 @@
 # Upgrading to 5.0.0
 
-**Audience:** anyone running `4.1.2` — the most recent release on PyPI, npm and GHCR — or building from a `4.x` source tree.
+**Audience:** anyone upgrading from a `4.x` release (`4.1.2` was the last `4.x` release) or building from a `4.x` source tree.
 **Scope:** every change between `4.1.2` and the `5.0.0` source target that can break a working deployment or a working integration.
 **Boundary:** this guide covers upgrade mechanics. It makes no claim that `5.0.0` is on any registry; consult [Release Status](RELEASE_STATUS.md) for what is actually published, and never infer publication from a version number appearing here.
 
@@ -90,7 +90,7 @@ Lowering the cap shrinks request and response previews in new leaves only; exist
 
 ## 9. Signature verification pins keys, and the ledger refuses commits while faulted (unreleased source)
 
-These changes are on `main` after `5.0.1` and are not in any published release. They change what verification reports, so read this before you upgrade a verifier.
+These changes are on `main` after the `5.0.1` release; consult `CHANGELOG.md` for whether a given change is in `5.0.2`. They change what verification reports, so read this before you upgrade a verifier.
 
 **ML-DSA keys are pinned.** Earlier builds checked a `pqc-ml-dsa` signature against the public key recorded in the node itself, so anyone able to rewrite the WAL could re-sign a rewritten chain under a new key and it verified. A verifier now pins the public half of its own ML-DSA identity (`AEGIS_PQC_IDENTITY_PATH`) plus every key listed in `AEGIS_TRUSTED_SIGNING_PUBLIC_KEYS`, a comma-separated list of hex-encoded public keys.
 
@@ -109,7 +109,7 @@ These changes are on `main` after `5.0.1` and are not in any published release. 
 
 ## 10. Malformed bodies answer `400`, a strict gateway refuses `tsa_url`, and the WAF refuses less ordinary prose (unreleased source)
 
-These changes are on `main` after `5.0.1` and are not in any published release.
+These changes are on `main` after the `5.0.1` release; consult `CHANGELOG.md` for whether a given change is in `5.0.2`.
 
 **Malformed bodies answer `400`, not `500`** (`CLM-118`). The three model endpoints parse every body with one helper.
 

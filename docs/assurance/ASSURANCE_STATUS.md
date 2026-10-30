@@ -8,7 +8,7 @@ Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 **Audience:** anyone about to write a sentence about the product's independent assurance, and any buyer asking for it.
 **Scope:** one place that states, per assurance item, where it stands and the exact wording that state allows. The machine-readable copy is [`ASSURANCE_STATUS.json`](ASSURANCE_STATUS.json); `tests/test_assurance_tools.py` checks it.
-**Boundary:** a status page, not evidence. As of 2026-09-29 (Mission XVI, Phase 4), **no independent assurance exists**. Every item below is `NOT_STARTED` or `DRAFTED`, and none is `COMPLETE`. A state changes only when the evidence path listed for it exists.
+**Boundary:** a status page, not evidence. As of 2026-10-29, **no independent assurance exists**. Every item below is `NOT_STARTED` or `DRAFTED`, and none is `COMPLETE`. A state changes only when the evidence path listed for it exists. The checked-out source target is `5.0.3` (not published); the most recent published release is `5.0.2`.
 
 ## States
 
@@ -39,5 +39,5 @@ The claims register and `docs/institutional/UNSUPPORTED_CLAIMS.md` hold the full
 
 ```bash
 python -m pytest tests/test_assurance_tools.py -q
-python tools/assurance/escrow_manifest.py build --ref v5.0.1
+python tools/assurance/escrow_manifest.py build --ref v5.0.2
 ```
