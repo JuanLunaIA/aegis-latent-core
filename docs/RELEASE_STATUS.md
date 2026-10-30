@@ -32,9 +32,9 @@ Nothing in this table may be restated with the version number changed. A `4.0.2`
 | npm `aegis-latent-sdk` | **Confirmed** | Registry `latest` `5.0.3`; `dist.integrity` `sha512-bxdSRhurJc3eIz4DyNxhz1BiTqL84FXfnU6MCSPrd2YGfzfYKN6c6loouKVOqru/OUeqN6HsTwWeJwSu9b8F4Q==`; SLSA v1 provenance object present (run `41002596562`, conclusion `success`) |
 | GHCR gateway `5.0.3` | **Confirmed** | OCI image index digest `sha256:1dc040290b662a101ff50525a4bc8db314186efa80bc48ef335d6e7dc54183b3`, with `linux/amd64` and `linux/arm64` manifests (run `41002598362`, conclusion `success`) |
 | GHCR dashboard `5.0.3` | **Confirmed** | OCI image index digest `sha256:1ff3d0d2ee62e21f2eab52519c5e428b8f7714a42c3a76776c24d884f54f3fde` (same run) |
-| Image signatures | **Not re-verified** | The publication workflow names `cosign` signing and SLSA provenance; this readback confirmed the tags and manifests but did not run `cosign verify` against the workflow identity |
+| Image signatures | **Confirmed** | `cosign verify` passed for both images with the exact workflow identity `https://github.com/JuanLunaIA/aegis-latent-core/.github/workflows/publish_oci.yml@refs/heads/main` and issuer `https://token.actions.githubusercontent.com`; each signature attests the digest above and SLSA provenance v1. `gh attestation verify` was not executed |
 
-The `5.0.2` record in §1.0d remains the last readback for the PyPI gateway distribution. The Apache-2.0 grant of `5.0.2` is irrevocable. The `5.0.3` source and release are under the Aegis Commercial License 1.0.
+`scripts/verify_release_readback.py --tag v5.0.3` reports **10 checked, 0 mismatched, 2 not executed**: the two unexecuted observables are the `SHA256SUMS` download in that script (run separately above, 15/15) and `gh attestation verify`, which needs an artifact name. The Apache-2.0 grant of `5.0.2` is irrevocable. The `5.0.3` source and release are under the Aegis Commercial License 1.0.
 
 ### 1.0d `5.0.2` — published 2026-10-01, read back 2026-10-01
 
