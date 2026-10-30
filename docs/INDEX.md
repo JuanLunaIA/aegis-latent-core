@@ -195,6 +195,7 @@ The documents that decide what may be said, and on what evidence.
 | [Data-Room Index](raise/DATA_ROOM_INDEX.md) | Which files exist, which only the founder can supply, and how to hash them. |
 | [SAFE Sheet](raise/SAFE_SHEET.md) | Tranche amounts, caps, conditions and questions for counsel; no instrument text. |
 | [Tranche Evidence Packs](raise/TRANCHE_EVIDENCE_PACKS.md) | What an investor checks at each gate and what evidence exists today. |
+| [AWS Investor Edition](../investor_packs/aws_edition/README.md) | Self-contained ES/EN HTML, A4 sheets and the 2026-10-30 AWS readback. |
 | [Monthly Investor Update](raise/MONTHLY_UPDATE.md) | How the update draft is generated from recorded facts. |
 | [Downgrade Memo Draft](raise/DOWNGRADE_MEMO_DRAFT.md) | Pre-drafted letter to SAFE holders if a gate or kill criterion fires. |
 | [Operating Cadence](cadence/README.md) | Weekly report, monthly recompute and kill-switch register: commands, inputs and rules. |
