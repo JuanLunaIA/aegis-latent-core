@@ -1,4 +1,4 @@
-> **Edición vigente para inversores:** [`../aws_edition/aegis-aws-edition-es.html`](../aws_edition/aegis-aws-edition-es.html)
+> **Edición vigente para inversores:** [`../aws_edition/README.md`](../aws_edition/README.md)
 > — autocontenida, con la lectura de AWS y la release 5.0.3. Esta carpeta conserva
 > el modelo financiero y las fuentes de gráficos del 30 de septiembre de 2026; use
 > la edición AWS para una primera reunión y para cifras de hosting o release.

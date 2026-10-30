@@ -16,21 +16,13 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 GATEWAY = HERE.parents[1]
-WORKSPACE = HERE.parents[2]
-FACTS = WORKSPACE / "docs/investor/facts.json"
+FACTS = HERE / "data/investor_facts.json"
 MODEL = GATEWAY / "investor_packs/aegis_investor_pack_en/data/model_outputs.json"
-LOAD = WORKSPACE / "docs/SCALABILITY.md"
-GATES = WORKSPACE / "orch/reports/integration/section12-reproduction.md"
 AWS = HERE / "aws_facts.json"
-OUT = HERE
+OUT = HERE / "out"
 
-SANS = (
-    WORKSPACE / "aegisweb/.vercel/output/static/assets/geist-latin-ext-wght-normal-DC-KSUi6.woff2"
-)
-SERIF = (
-    WORKSPACE
-    / "aegisweb/.vercel/output/static/assets/instrument-serif-latin-400-normal-DnYpCC2O.woff2"
-)
+SANS = HERE / "assets/geist-latin-ext-wght-normal-DC-KSUi6.woff2"
+SERIF = HERE / "assets/instrument-serif-latin-400-normal-DnYpCC2O.woff2"
 
 
 def fail(msg: str) -> None:
@@ -66,32 +58,20 @@ def load_facts() -> dict:
     facts = json.loads(read(FACTS))
     model = json.loads(read(MODEL))
     aws = json.loads(read(AWS))
-    load_doc = read(LOAD)
-    start = load_doc.find("Measured on AWS")
-    end = load_doc.find("## 8.", start)
-    if start < 0 or end < 0:
-        fail("SCALABILITY.md has no AWS section")
-    aws_doc = load_doc[start:end]
-    p = re.search(r"p50=([\d.]+)\s+p95=([\d.]+)\s+p99=([\d.]+)", aws_doc)
-    rate = re.search(r"--rate\s+(\d+)", aws_doc)
-    answered = re.search(r"sent=(\d+)\s+completed=(\d+)", aws_doc)
-    if not p or not rate or not answered:
-        fail("SCALABILITY.md lacks the measured p50/rate/answered values")
-    gates = re.findall(r"PASS\s+(\d+)/(\d+) ran \(0 cached\) in ([\d.]+)s", read(GATES))
-    if not gates:
-        fail("gate report lacks a clean-tree run")
+    throughput = aws["throughput"]
+    gates = aws["gates"]
     return {
         "facts": facts,
         "model": model,
         "aws": aws,
-        "p50": float(p.group(1)),
-        "p95": float(p.group(2)),
-        "rate": int(rate.group(1)),
-        "sent": int(answered.group(1)),
-        "done": int(answered.group(2)),
-        "gate_pass": gates[-1][0],
-        "gate_total": gates[-1][1],
-        "gate_seconds": float(gates[-1][2]),
+        "p50": float(throughput["p50_ms"]),
+        "p95": float(throughput["p95_ms"]),
+        "rate": int(throughput["rate"]),
+        "sent": int(throughput["sent"]),
+        "done": int(throughput["completed"]),
+        "gate_pass": str(gates["pass"]),
+        "gate_total": str(gates["total"]),
+        "gate_seconds": float(gates["seconds"]),
     }
 
 
@@ -505,6 +485,7 @@ footer{{margin-top:40px;border-top:1px solid var(--line);padding-top:12px;displa
 
 def main() -> int:
     check = "--check" in __import__("sys").argv
+    OUT.mkdir(exist_ok=True)
     data = load_facts()
     stale = 0
     for locale in ("en", "es"):

@@ -1,4 +1,4 @@
-> **Current investor edition:** [`../aws_edition/aegis-aws-edition-en.html`](../aws_edition/aegis-aws-edition-en.html)
+> **Current investor edition:** [`../aws_edition/README.md`](../aws_edition/README.md)
 > — self-contained, AWS deployment readback, release 5.0.3. This folder remains the
 > 30 September 2026 financial model and chart source; use the AWS edition for a
 > first meeting and for hosting or release figures.

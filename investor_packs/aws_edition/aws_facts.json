@@ -34,5 +34,17 @@
     "timeout_s": 29,
     "month_to_date_usd": 16.0,
     "budget_usd": 25
+  },
+  "throughput": {
+    "p50_ms": 19.7,
+    "p95_ms": 26.5,
+    "rate": 50,
+    "sent": 1000,
+    "completed": 1000
+  },
+  "gates": {
+    "pass": 17,
+    "total": 17,
+    "seconds": 226.1
   }
 }
