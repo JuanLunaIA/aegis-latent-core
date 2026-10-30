@@ -147,9 +147,14 @@ def test_unclosed_template_braces_scale_linearly() -> None:
     timings = []
     for n in (8_000, 16_000):
         body = _chat("{{" * n)
-        start = time.perf_counter()
-        waf.inspect_payload(body)
-        timings.append(time.perf_counter() - start)
+        samples = []
+        for _ in range(3):
+            start = time.perf_counter()
+            waf.inspect_payload(body)
+            samples.append(time.perf_counter() - start)
+        # Best-of-three removes scheduler and allocator noise without hiding a
+        # scaling law: a quadratic scan still lands near 4x, a linear one near 2x.
+        timings.append(min(samples))
     assert timings[1] < 1.0, timings
     assert timings[1] < 3.2 * max(timings[0], 0.005), timings
 
