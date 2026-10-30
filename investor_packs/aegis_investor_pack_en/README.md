@@ -1,3 +1,8 @@
+> **Current investor edition:** [`../aws_edition/aegis-aws-edition-en.html`](../aws_edition/aegis-aws-edition-en.html)
+> — self-contained, AWS deployment readback, release 5.0.3. This folder remains the
+> 30 September 2026 financial model and chart source; use the AWS edition for a
+> first meeting and for hosting or release figures.
+
 # Aegis Latent Core: Seed Investor Pack (English)
 
 **Date created:** 25 September 2026 (2026-09-25). **Updated:** 29 October 2026 (2026-10-29): evidence update and one-page A4 sheet; the financial model is unchanged since 30 September 2026.
