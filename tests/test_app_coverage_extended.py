@@ -925,7 +925,7 @@ def test_chat_streaming_rejects_slow_drip_after_total_deadline(tmp_path):
 
     fwd_inst.stream_sse = MagicMock(return_value=_sse_gen())
     with patch("aegis.proxy.app.LLMForwarder", return_value=fwd_inst):
-        cfg = _make_settings(tmp_path, max_stream_duration_seconds=0.1)
+        cfg = _make_settings(tmp_path, max_stream_duration_seconds=0.5)
         app = create_app(cfg)
         with TestClient(app) as client:
             resp = client.post(

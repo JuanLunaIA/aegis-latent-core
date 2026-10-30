@@ -547,6 +547,11 @@ class BoundedStreamProxy:
     async def _iterate(self) -> AsyncIterator[bytes]:
         if self._producer is not None:
             raise RuntimeError("BoundedStreamProxy is single-use")
+        # The total deadline governs consumption, not construction.  A proxy
+        # built during request admission can wait behind other work before the
+        # response body starts; charging that queueing time would drop a stream
+        # whose first byte was never even requested from upstream.
+        self._started = time.perf_counter()
         self._producer = asyncio.create_task(self._produce(), name="aegis-stream-producer")
         try:
             while True:
