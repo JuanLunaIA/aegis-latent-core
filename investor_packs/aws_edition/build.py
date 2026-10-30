@@ -5,6 +5,7 @@ Every figure comes from a repository file or from the 2026-10-30 readback in
 aws_facts.json. The generator writes one self-contained HTML per locale; fonts
 are embedded so the file can be opened offline and printed to A4.
 """
+
 from __future__ import annotations
 
 import base64
@@ -23,8 +24,13 @@ GATES = WORKSPACE / "orch/reports/integration/section12-reproduction.md"
 AWS = HERE / "aws_facts.json"
 OUT = HERE
 
-SANS = WORKSPACE / "aegisweb/.vercel/output/static/assets/geist-latin-ext-wght-normal-DC-KSUi6.woff2"
-SERIF = WORKSPACE / "aegisweb/.vercel/output/static/assets/instrument-serif-latin-400-normal-DnYpCC2O.woff2"
+SANS = (
+    WORKSPACE / "aegisweb/.vercel/output/static/assets/geist-latin-ext-wght-normal-DC-KSUi6.woff2"
+)
+SERIF = (
+    WORKSPACE
+    / "aegisweb/.vercel/output/static/assets/instrument-serif-latin-400-normal-DnYpCC2O.woff2"
+)
 
 
 def fail(msg: str) -> None:
@@ -145,9 +151,16 @@ def values(data: dict, locale: str) -> dict[str, str]:
         "opex": money(opex, locale),
         "runway": f"{min(runway.values())}–{max(runway.values())}",
         "fund_engineer": money(funds["Engineering continuity (2nd maintainer, 16 mo)"], locale),
-        "fund_gtm": money(funds["Go-to-market (solutions engineer 12 mo + design-partner program)"], locale),
-        "fund_assurance": money(funds["Assurance (pen test + retest, SOC 2 Type I, escrow)"], locale),
-        "fund_legal": money(funds["Legal & corporate (entity, IP, licence, regulatory, AI-authorship opinion)"], locale),
+        "fund_gtm": money(
+            funds["Go-to-market (solutions engineer 12 mo + design-partner program)"], locale
+        ),
+        "fund_assurance": money(
+            funds["Assurance (pen test + retest, SOC 2 Type I, escrow)"], locale
+        ),
+        "fund_legal": money(
+            funds["Legal & corporate (entity, IP, licence, regulatory, AI-authorship opinion)"],
+            locale,
+        ),
         "fund_founder": money(funds["Founder salary (18 mo)"], locale),
         "fund_infra": money(funds["Infra, tools, insurance, accounting (18 mo)"], locale),
         "fund_recruit": money(funds["Recruiting"], locale),
@@ -191,9 +204,18 @@ COPY = {
         "product_title": "The product",
         "product_lead": "A gateway, a ledger and an offline verifier. It sits between the application and the model, so the team changes nothing in the assistant it already uses.",
         "product_cards": [
-            ("01 · Request", "A key names the tenant, the quota and the route. The gateway enforces all three before the upstream call."),
-            ("02 · Ledger", "The request and the response digest enter an append-only log; each entry carries the previous hash."),
-            ("03 · Proof", "The customer exports a signed pack and verifies inclusion offline. Our credentials are not part of the proof."),
+            (
+                "01 · Request",
+                "A key names the tenant, the quota and the route. The gateway enforces all three before the upstream call.",
+            ),
+            (
+                "02 · Ledger",
+                "The request and the response digest enter an append-only log; each entry carries the previous hash.",
+            ),
+            (
+                "03 · Proof",
+                "The customer exports a signed pack and verifies inclusion offline. Our credentials are not part of the proof.",
+            ),
         ],
         "aws_title": "Running on AWS",
         "aws_lead": "The control plane is deployed, not planned. These values were read back from the public Function URL on 30 October 2026.",
@@ -204,7 +226,10 @@ COPY = {
             ("GET /v1/audit", "{aws_audit} — the endpoint exists and requires a session"),
             ("Runtime", "{runtime} · {memory} MB · {timeout} s"),
             ("Last code update", "{aws_updated}"),
-            ("October run-rate", "US$ {aws_cost} month-to-date, estimated; planning budget US$ {aws_budget}/month"),
+            (
+                "October run-rate",
+                "US$ {aws_cost} month-to-date, estimated; planning budget US$ {aws_budget}/month",
+            ),
         ],
         "arch_title": "How a call moves",
         "arch": [
@@ -226,7 +251,11 @@ COPY = {
         "business_lead": "Reference values, not a booking. The annual plan ladder and the unit-cost bar come from the same files the repository publishes.",
         "plans_title": "Annual plan ladder",
         "plans_note": "Annual reference values; final scope and terms are confirmed in a proposal.",
-        "plans": [("Team", "{team_year}"), ("Business", "{business_year}"), ("Enterprise", "{enterprise_year}")],
+        "plans": [
+            ("Team", "{team_year}"),
+            ("Business", "{business_year}"),
+            ("Enterprise", "{enterprise_year}"),
+        ],
         "unit_title": "Unit cost per million requests",
         "unit_note": "{cost} at one million requests, computed from list prices. Team lists at ${team}/month; two blocks minus the unit cost is the gross-margin model.",
         "raise_title": "The raise",
@@ -237,8 +266,14 @@ COPY = {
         "data_title": "Data room",
         "data_lead": "Every figure is reproducible from the repository or from a public registry.",
         "data_links": [
-            ("GitHub Release", "https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v5.0.3"),
-            ("Release status", "https://github.com/JuanLunaIA/aegis-latent-core/blob/main/docs/RELEASE_STATUS.md"),
+            (
+                "GitHub Release",
+                "https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v5.0.3",
+            ),
+            (
+                "Release status",
+                "https://github.com/JuanLunaIA/aegis-latent-core/blob/main/docs/RELEASE_STATUS.md",
+            ),
             ("Public site", "https://aegislatent.com"),
             ("One-page A4", "aegis-one-page-en.pdf"),
         ],
@@ -261,9 +296,18 @@ COPY = {
         "product_title": "El producto",
         "product_lead": "Un gateway, un libro y un verificador sin conexión. Se coloca entre la aplicación y el modelo, así que el equipo no cambia el asistente que ya usa.",
         "product_cards": [
-            ("01 · Petición", "Una clave nombra el tenant, la cuota y la ruta. El gateway aplica las tres antes de llamar al proveedor."),
-            ("02 · Libro", "La petición y el digest de la respuesta entran en un registro append-only; cada entrada lleva el hash anterior."),
-            ("03 · Prueba", "El cliente exporta un paquete firmado y verifica la inclusión sin conexión. Nuestras credenciales no forman parte de la prueba."),
+            (
+                "01 · Petición",
+                "Una clave nombra el tenant, la cuota y la ruta. El gateway aplica las tres antes de llamar al proveedor.",
+            ),
+            (
+                "02 · Libro",
+                "La petición y el digest de la respuesta entran en un registro append-only; cada entrada lleva el hash anterior.",
+            ),
+            (
+                "03 · Prueba",
+                "El cliente exporta un paquete firmado y verifica la inclusión sin conexión. Nuestras credenciales no forman parte de la prueba.",
+            ),
         ],
         "aws_title": "Funcionando en AWS",
         "aws_lead": "El plano de control está desplegado, no proyectado. Estos valores se leyeron de la Function URL pública el 30 de octubre de 2026.",
@@ -274,7 +318,10 @@ COPY = {
             ("GET /v1/audit", "{aws_audit} — el endpoint existe y exige sesión"),
             ("Runtime", "{runtime} · {memory} MB · {timeout} s"),
             ("Última actualización de código", "{aws_updated}"),
-            ("Consumo de octubre", "USD {aws_cost} acumulado estimado; presupuesto de planificación USD {aws_budget}/mes"),
+            (
+                "Consumo de octubre",
+                "USD {aws_cost} acumulado estimado; presupuesto de planificación USD {aws_budget}/mes",
+            ),
         ],
         "arch_title": "Cómo viaja una llamada",
         "arch": [
@@ -296,7 +343,11 @@ COPY = {
         "business_lead": "Valores de referencia, no una reserva. La escalera anual y la barra de costo unitario salen de los mismos archivos que publica el repositorio.",
         "plans_title": "Escalera anual de planes",
         "plans_note": "Valores anuales de referencia; el alcance y las condiciones finales se confirman en una propuesta.",
-        "plans": [("Team", "{team_year}"), ("Business", "{business_year}"), ("Enterprise", "{enterprise_year}")],
+        "plans": [
+            ("Team", "{team_year}"),
+            ("Business", "{business_year}"),
+            ("Enterprise", "{enterprise_year}"),
+        ],
         "unit_title": "Costo unitario por millón de peticiones",
         "unit_note": "{cost} a un millón de peticiones, calculado con precios de lista. Team lista USD {team}/mes; dos bloques menos el costo unitario dan el modelo de margen bruto.",
         "raise_title": "La ronda",
@@ -307,8 +358,14 @@ COPY = {
         "data_title": "Data room",
         "data_lead": "Cada cifra se reproduce desde el repositorio o desde un registro público.",
         "data_links": [
-            ("GitHub Release", "https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v5.0.3"),
-            ("Estado del release", "https://github.com/JuanLunaIA/aegis-latent-core/blob/main/docs/RELEASE_STATUS.md"),
+            (
+                "GitHub Release",
+                "https://github.com/JuanLunaIA/aegis-latent-core/releases/tag/v5.0.3",
+            ),
+            (
+                "Estado del release",
+                "https://github.com/JuanLunaIA/aegis-latent-core/blob/main/docs/RELEASE_STATUS.md",
+            ),
             ("Sitio público", "https://aegislatent.com"),
             ("Hoja A4", "aegis-one-page-es.pdf"),
         ],
@@ -327,18 +384,31 @@ def fmt(template: str, vals: dict[str, str]) -> str:
 def render(locale: str, data: dict) -> str:
     c = COPY[locale]
     v = values(data, locale)
-    t = lambda s: fmt(esc(s), {k: esc(x) for k, x in v.items()})
-    metrics = "".join(f"<div class='metric'><b>{t(a)}</b><span>{t(b)}</span></div>" for a, b in c["metrics"])
-    cards = "".join(f"<article class='step'><h3>{t(a)}</h3><p>{t(b)}</p></article>" for a, b in c["product_cards"])
+
+    def t(text: str) -> str:
+        return fmt(esc(text), {k: esc(x) for k, x in v.items()})
+
+    metrics = "".join(
+        f"<div class='metric'><b>{t(a)}</b><span>{t(b)}</span></div>" for a, b in c["metrics"]
+    )
+    cards = "".join(
+        f"<article class='step'><h3>{t(a)}</h3><p>{t(b)}</p></article>"
+        for a, b in c["product_cards"]
+    )
     aws_rows = "".join(f"<tr><th>{t(a)}</th><td>{t(b)}</td></tr>" for a, b in c["aws_rows"])
     arch = "".join(f"<div class='node'><b>{t(a)}</b><p>{t(b)}</p></div>" for a, b in c["arch"])
-    release_rows = "".join(f"<tr><th>{t(a)}</th><td class='mono'>{t(b)}</td></tr>" for a, b in c["release_rows"])
+    release_rows = "".join(
+        f"<tr><th>{t(a)}</th><td class='mono'>{t(b)}</td></tr>" for a, b in c["release_rows"]
+    )
     plans = "".join(
-        f"<div class='bar'><span class='lab'>{t(a)}</span><span class='track'><i style='width:{pct}%'></i></span><span class='val'>{v["currency"]}{t(b)}</span></div>"
-        for (a, b), pct in zip(c["plans"], (v["plan_team_pct"], v["plan_business_pct"], "100"))
+        f"<div class='bar'><span class='lab'>{t(a)}</span><span class='track'><i style='width:{pct}%'></i></span><span class='val'>{v['currency']}{t(b)}</span></div>"
+        for (a, b), pct in zip(
+            c["plans"], (v["plan_team_pct"], v["plan_business_pct"], "100"), strict=True
+        )
     )
     tranches = "".join(
-        f"<div class='tranche'><b>{t(a)}</b><span>{v["currency"]}{t(b)}</span></div>" for a, b in c["tranches"]
+        f"<div class='tranche'><b>{t(a)}</b><span>{v['currency']}{t(b)}</span></div>"
+        for a, b in c["tranches"]
     )
     funds = [
         ("Engineering", v["fund_pct_eng"]),
@@ -346,9 +416,13 @@ def render(locale: str, data: dict) -> str:
         ("Assurance & legal", v["fund_pct_assurance"]),
         ("Infra & contingency", v["fund_pct_infra"]),
     ]
-    fund_bar = "".join(f"<i style='width:{pct}%' title='{esc(name)} {pct}%'></i>" for name, pct in funds)
+    fund_bar = "".join(
+        f"<i style='width:{pct}%' title='{esc(name)} {pct}%'></i>" for name, pct in funds
+    )
     fund_legend = "".join(f"<span><i></i>{esc(name)} {pct}%</span>" for name, pct in funds)
-    links = "".join(f"<li><a href='{esc(href)}'>{t(label)}</a></li>" for label, href in c["data_links"])
+    links = "".join(
+        f"<li><a href='{esc(href)}'>{t(label)}</a></li>" for label, href in c["data_links"]
+    )
     sans = font_face(SANS, "Geist")
     serif = font_face(SERIF, "Instrument", "400")
 
@@ -422,7 +496,7 @@ footer{{margin-top:40px;border-top:1px solid var(--line);padding-top:12px;displa
 <section><h2>{t(c["product_title"])}</h2><p class="lede">{t(c["product_lead"])}</p><div class="grid3">{cards}</div></section>
 <section><h2>{t(c["aws_title"])}</h2><p class="lede">{t(c["aws_lead"])}</p><div class="split"><table>{aws_rows}</table><div class="arch">{arch}</div></div></section>
 <section><h2>{t(c["release_title"])}</h2><p class="lede">{t(c["release_lead"])}</p><table>{release_rows}</table></section>
-<section><h2>{t(c["business_title"])}</h2><p class="lede">{t(c["business_lead"])}</p><div class="split"><div><h3>{t(c["plans_title"])}</h3><div class="chart">{plans}<p class="note">{t(c["plans_note"])}</p></div></div><div><h3>{t(c["unit_title"])}</h3><div class="chart"><p style="font-family:'Instrument',serif;font-size:34px;margin:0">${t(c["unit_note"]).split(' ')[0]}</p><div class="bar"><span class="lab">Unit cost</span><span class="track"><i style="width:4%"></i></span><span class="val">${esc(v["cost"])}</span></div><p class="note">{t(c["unit_note"])}</p></div></div></div></section>
+<section><h2>{t(c["business_title"])}</h2><p class="lede">{t(c["business_lead"])}</p><div class="split"><div><h3>{t(c["plans_title"])}</h3><div class="chart">{plans}<p class="note">{t(c["plans_note"])}</p></div></div><div><h3>{t(c["unit_title"])}</h3><div class="chart"><p style="font-family:'Instrument',serif;font-size:34px;margin:0">${t(c["unit_note"]).split(" ")[0]}</p><div class="bar"><span class="lab">Unit cost</span><span class="track"><i style="width:4%"></i></span><span class="val">${esc(v["cost"])}</span></div><p class="note">{t(c["unit_note"])}</p></div></div></div></section>
 <section><h2>{t(c["raise_title"])}</h2><p class="lede">{t(c["raise_body"])}</p><div class="tranches">{tranches}</div><h3 style="margin-top:20px">{t(c["funds_title"])}</h3><div class="fundbar">{fund_bar}</div><div class="fundlegend">{fund_legend}</div><p class="note">{t(c["funds_note"])}</p></section>
 <section><h2>{t(c["data_title"])}</h2><p class="lede">{t(c["data_lead"])}</p><ul>{links}</ul></section>
 <footer><span>{t(c["footer"])}</span><span>aegislatent.com · v{esc(v["version"])}</span></footer>
