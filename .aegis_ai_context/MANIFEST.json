@@ -75,8 +75,8 @@
     {
       "category": "governed_input",
       "path": "AGENTS.md",
-      "sha256": "7ec79415b0615e2c1a8b1ce0055b4495d9d9e7c88b683ac8c20199c317858b90",
-      "size": 4635
+      "sha256": "1f1c90c29e4fb33f85ca0adb7804d9e1671eebbab472338f6da0facc67f38a4d",
+      "size": 4662
     },
     {
       "category": "governed_input",
@@ -111,8 +111,8 @@
     {
       "category": "governed_input",
       "path": "SECURITY.md",
-      "sha256": "a5ba7a7897b7f87744446d9e394177d11d83746ff3f87b04578ed36d08480b1f",
-      "size": 12530
+      "sha256": "2ead99775ff95e24b308bf078cdc85893e42c3b91a16a8b69e8d67416ced9798",
+      "size": 12424
     },
     {
       "category": "governed_input",
@@ -285,14 +285,14 @@
     {
       "category": "governed_input",
       "path": "deploy/docker/Dockerfile",
-      "sha256": "5c4493918baad4d7915ee482bb6004155717b321189e6879a0bc025019822292",
-      "size": 4549
+      "sha256": "6d83eae14e521bf16c6fd17545bd8b1e54ebc0b03d8129f02882caa02b4af26f",
+      "size": 4538
     },
     {
       "category": "governed_input",
       "path": "deploy/docker/Dockerfile.airgap",
-      "sha256": "2e5d7b32ee6af9bdf0aaa3ef27cdb2dc7818b50473ed5fe281a4faa1cb9bb862",
-      "size": 5406
+      "sha256": "6c53af1c269346c462ed058fc8f79f5bbbe524ba258a66527a1313e661ea0f0d",
+      "size": 5395
     },
     {
       "category": "governed_input",
