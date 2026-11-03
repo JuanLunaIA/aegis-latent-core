@@ -54,6 +54,7 @@ from aegis.core.secrets import VaultManager
 from aegis.core.session_manager import SessionLifecycleManager
 from aegis.core.waf_session import WAFSessionTracker
 from aegis.core.zk_native import forensic_preview_warning
+from aegis.proxy import metering
 from aegis.proxy.analyzer import ResponseAnalyzer
 from aegis.proxy.attestation_api import build_attestation_router
 from aegis.proxy.audit_api import build_audit_router
@@ -1458,6 +1459,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
 
             egress_guard = cfg.get_egress_guard()
+            metering._EGRESS_GUARD = egress_guard
             state.forwarder = LLMForwarder(
                 forwarder_cfg, provider=provider, egress_guard=egress_guard
             )
@@ -1591,6 +1593,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     pending_workers,
                 )
         await state.forwarder.stop()
+        await metering.drain(timeout=cfg.analysis_shutdown_timeout_seconds)
         if state.siem_exporter is not None:
             try:
                 await asyncio.to_thread(state.siem_exporter.shutdown, 5.0, drain=False)
@@ -2287,6 +2290,17 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                         provider="openai", outcome=summary.terminal_outcome
                     ).observe(summary.elapsed_seconds)
                     observability.STREAM_TOKENS.labels(provider="openai").inc(summary.token_count)
+                    if summary.token_count > 0:
+                        metering.report_usage(
+                            request_id,
+                            model=str(body.get("model", "unknown")),
+                            provider="openai",
+                            usage=(
+                                metering.usage_from_response("openai", None, raw_body)[0],
+                                summary.token_count,
+                                0,
+                            ),
+                        )
                     for entity, count in summary.redaction_hits.items():
                         observability.STREAM_REDACTIONS.labels(
                             provider="openai", entity=entity
@@ -2490,6 +2504,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             _scrub_method,
         )
 
+        metering.report_usage(
+            request_id,
+            model=str(body.get("model", "unknown")),
+            provider="openai",
+            usage=metering.usage_from_response("openai", resp_json, raw_body),
+        )
         observability.REQUEST_TOTAL.labels(
             method="POST", endpoint="chat_completions", status_class="2xx"
         ).inc()
@@ -2620,6 +2640,17 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     provider="anthropic", outcome=summary.terminal_outcome
                 ).observe(summary.elapsed_seconds)
                 observability.STREAM_TOKENS.labels(provider="anthropic").inc(summary.token_count)
+                if summary.token_count > 0:
+                    metering.report_usage(
+                        request_id,
+                        model=str(body["model"]),
+                        provider="anthropic",
+                        usage=(
+                            metering.usage_from_response("anthropic", None, raw_body)[0],
+                            summary.token_count,
+                            0,
+                        ),
+                    )
                 for entity, count in summary.redaction_hits.items():
                     observability.STREAM_REDACTIONS.labels(provider="anthropic", entity=entity).inc(
                         count
@@ -2799,6 +2830,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             endpoint="anthropic.messages",
             tenant_id=tenant_id,
         )
+        metering.report_usage(
+            request_id,
+            model=str(body["model"]),
+            provider="anthropic",
+            usage=metering.usage_from_response("anthropic", response_json, raw_body),
+        )
         response = Response(
             content=response_content,
             status_code=upstream.status_code,
@@ -2966,6 +3003,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             response_complete=True,
             endpoint="completions",
             tenant_id=tenant_id,
+        )
+        metering.report_usage(
+            request_id,
+            model=str(body.get("model", "unknown")),
+            provider="openai",
+            usage=metering.usage_from_response("openai", response_json, raw_body),
         )
         queued = _enqueue_analysis(
             request_id,
