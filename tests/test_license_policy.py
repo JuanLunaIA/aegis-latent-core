@@ -164,3 +164,11 @@ def test_documentation_outside_history_does_not_call_the_product_apache() -> Non
         if pattern.search(text):
             offenders.append(rel)
     assert offenders == [], f"Apache-2.0 named on current surfaces: {offenders[:15]}"
+
+
+def test_commercial_images_are_not_labelled_apache() -> None:
+    """The OCI licence label is what registries and scanners show buyers."""
+    label = re.compile(r'org\.opencontainers\.image\.licenses="([^"]+)"')
+    for rel in ("deploy/docker/Dockerfile", "deploy/docker/Dockerfile.airgap"):
+        found = label.findall((ROOT / rel).read_text(encoding="utf-8"))
+        assert found == [COMMERCIAL], (rel, found)

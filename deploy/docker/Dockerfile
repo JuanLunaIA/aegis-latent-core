@@ -57,7 +57,7 @@ FROM ${PYTHON_IMAGE}
 LABEL org.opencontainers.image.title="Aegis Latent Core" \
       org.opencontainers.image.version="5.0.3" \
       org.opencontainers.image.description="Strict LLM gateway with durable signed forensic evidence" \
-      org.opencontainers.image.licenses="Apache-2.0"
+      org.opencontainers.image.licenses="LicenseRef-Aegis-Commercial-1.0"
 
 # Non-root user — principle of least privilege
 RUN groupadd -g 10001 aegis \
@@ -74,7 +74,7 @@ COPY aegis_server ./aegis_server
 COPY integrations ./integrations
 COPY deploy/seccomp/aegis.json /etc/aegis/seccomp.json
 
-# Licence texts travel with every image (Apache-2.0 section 4(a), 4(d))
+# Licence texts travel with every image
 COPY LICENSE NOTICE /licenses/
 
 # Persistent data directory — mount a volume here in production
