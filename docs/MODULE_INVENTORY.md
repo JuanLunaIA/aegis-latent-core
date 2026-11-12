@@ -108,7 +108,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis/core/ebpf_monitor.py` | module | aegis.core.ebpf_monitor — eBPF-based Real-time Observability. | roadmap-omit | `tests/test_hardware_modules.py` | @JuanLunaIA |
 | `aegis/core/enclave_provider.py` | module | aegis.core.enclave_provider — Hardware Enclave Integration (SGX/SEV). | roadmap-omit | `tests/test_hardware_modules.py` | @JuanLunaIA |
 | `aegis/core/entropy_analysis.py` | module | aegis.core.entropy_analysis — Shannon entropy and drift monitoring for LLM payloads. | reachable | — | @JuanLunaIA |
-| `aegis/core/evidence_hash.py` | module | Doble hash de evidencia: bytes del proveedor frente a bytes del cliente. | reachable | `tests/test_text_delta_restore.py` | @JuanLunaIA |
+| `aegis/core/evidence_hash.py` | module | Dual evidence hash: provider bytes versus client bytes. | reachable | `tests/test_text_delta_restore.py` | @JuanLunaIA |
 | `aegis/core/export_audit_log.py` | module | aegis.core.export_audit_log — Tamper-evident compliance export audit log. | allowlisted | `tests/test_export_audit_log.py` | @JuanLunaIA |
 | `aegis/core/forensic.py` | module | aegis.core.forensic — Forensic record builders for the audit ledger. | reachable | `tests/test_forensic.py`, `tests/test_forensic_builders.py`, `tests/test_part11_annotation_binding.py`, `tests/test_pre_admission_rejection.py`, … (+3 more)` | @JuanLunaIA |
 | `aegis/core/forensic_bundle.py` | module | Bounded forensic bundle construction for authenticated audit exports. | reachable | `tests/test_audit_api_new.py`, `tests/test_forensic_bundle.py`, `tests/test_forensic_bundle_manifest_signature.py`, `tests/test_hardening_crypto_hub7_timestamp_readonly.py` | @JuanLunaIA |
@@ -157,7 +157,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis/core/phi_deidentifier.py` | module | Best-effort PHI identifier redaction using deterministic regex patterns. | reachable | `tests/redteam/fuzz/fuzz_phi_deidentifier.py`, `tests/redteam/test_redos_bounds.py`, `tests/test_phi_address_bound.py`, `tests/test_phi_audit_trail.py`, … (+3 more)` | @JuanLunaIA |
 | `aegis/core/phi_encryption.py` | module | aegis.core.phi_encryption — AES-256-GCM field-level encryption for PHI payloads. | allowlisted | `tests/test_phi_encryption.py` | @JuanLunaIA |
 | `aegis/core/pii_confidence.py` | module | aegis.core.pii_confidence — PII confidence scoring per response with block/flag/log actions. | allowlisted | `tests/test_pii_confidence.py` | @JuanLunaIA |
-| `aegis/core/pii_vault.py` | module | Tokenización reversible de identificadores estructurados, con límites declarados. | reachable | `tests/test_pii_vault.py`, `tests/test_text_delta_restore.py` | @JuanLunaIA |
+| `aegis/core/pii_vault.py` | module | Reversible tokenisation of structured identifiers, with declared limits. | reachable | `tests/test_pii_vault.py`, `tests/test_text_delta_restore.py` | @JuanLunaIA |
 | `aegis/core/pinned_ca_bundle.py` | module | aegis.core.pinned_ca_bundle — Domain 1.3 air-gapped certificate chain verification. | allowlisted | `tests/test_pinned_ca_bundle.py` | @JuanLunaIA |
 | `aegis/core/pqc_signer.py` | module | aegis.core.pqc_signer — the single, real post-quantum signer (ML-DSA-65 / FIPS 204). | reachable | `tests/crypto/test_capabilities.py`, `tests/engines/test_modular_engines.py`, `tests/test_artifact_signing.py`, `tests/test_boot_attestation.py`, … (+1 more)` | @JuanLunaIA |
 | `aegis/core/pqc_tls.py` | module | aegis.core.pqc_tls — real hybrid post-quantum key exchange (X25519 + ML-KEM-1024). | reachable | `tests/test_pqc_tls.py` | @JuanLunaIA |
@@ -193,8 +193,8 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis/core/tee_backends.py` | module | Concrete :class:`~aegis.core.tee_manager.AttestationVerifier` backends. | allowlisted | `tests/test_tee_backends.py` | @JuanLunaIA |
 | `aegis/core/tee_manager.py` | module | Fail-closed TEE discovery and attestation-policy boundary. | allowlisted | `tests/test_hardware_modules.py`, `tests/test_tee_backends.py` | @JuanLunaIA |
 | `aegis/core/telemetry.py` | module | telemetry.py - Advanced Information-Theoretic Signal Analysis Layer | reachable | `tests/test_core.py`, `tests/test_coverage_final.py`, `tests/test_production_stresses.py`, `tests/test_red_team.py`, … (+5 more)` | @JuanLunaIA |
-| `aegis/core/tenancy.py` | module | Resuelve la organización desde el Host o el path, sin confiar en el cliente. | reachable | `tests/test_tenancy.py` | @JuanLunaIA |
-| `aegis/core/text_delta_restore.py` | module | Restaura tokens en SSE sin romper un token partido entre eventos. | reachable | `tests/test_text_delta_restore.py` | @JuanLunaIA |
+| `aegis/core/tenancy.py` | module | Resolve the organisation from the Host or the path, without trusting the client. | reachable | `tests/test_tenancy.py` | @JuanLunaIA |
+| `aegis/core/text_delta_restore.py` | module | Restore tokens in SSE without breaking a token split across events. | reachable | `tests/test_text_delta_restore.py` | @JuanLunaIA |
 | `aegis/core/ti_sharing.py` | module | aegis.core.ti_sharing — Domain 5.4 anonymized threat intelligence sharing. | allowlisted | `tests/test_ti_sharing.py` | @JuanLunaIA |
 | `aegis/core/timing_defense.py` | module | aegis.core.timing_defense — Side-Channel Timing Mitigation. | allowlisted | `tests/test_misc_gaps.py`, `tests/test_property_based.py`, `tests/test_timing_defense_new.py` | @JuanLunaIA |
 | `aegis/core/token_split_detector.py` | module | aegis.core.token_split_detector — Domain 5.2 token-split reassembly attack detection. | allowlisted | `tests/test_token_split_detector.py` | @JuanLunaIA |
@@ -239,7 +239,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis/proxy/body_limits.py` | module | Streaming request-body limits, installed by both HTTP surfaces. | reachable | `tests/test_enterprise_body_limits.py` | @JuanLunaIA |
 | `aegis/proxy/dependencies.py` | module | Principal-first FastAPI authentication and authorization dependencies. | reachable | `tests/auth/test_oidc_rbac.py`, `tests/security/test_tenant_isolation.py`, `tests/test_attestation_capabilities.py`, `tests/test_audit_api_new.py`, … (+2 more)` | @JuanLunaIA |
 | `aegis/proxy/dmz_middleware.py` | module | aegis.proxy.dmz_middleware — DMZ-mode source-IP allowlist middleware. | reachable | `tests/test_dmz_middleware.py` | @JuanLunaIA |
-| `aegis/proxy/edge.py` | module | Rechaza tráfico que no venga de CloudFront. | reachable | `tests/proxy/test_edge.py` | @JuanLunaIA |
+| `aegis/proxy/edge.py` | module | Reject traffic that does not come from CloudFront. | reachable | `tests/proxy/test_edge.py` | @JuanLunaIA |
 | `aegis/proxy/egress_guard.py` | module | aegis.proxy.egress_guard — Application-layer egress enforcement for air-gapped zones. | reachable | `tests/test_egress_guard.py` | @JuanLunaIA |
 | `aegis/proxy/forwarder.py` | module | aegis.proxy.forwarder — Provider-aware async HTTP forwarding. | reachable | `tests/test_chaos.py`, `tests/test_coverage_final.py`, `tests/test_egress_guard.py`, `tests/test_forwarder_deep.py`, … (+8 more)` | @JuanLunaIA |
 | `aegis/proxy/mtls.py` | module | aegis.proxy.mtls — Mutual TLS and SPIFFE Identity Validation. | roadmap-omit | `tests/test_cac_piv.py` | @JuanLunaIA |

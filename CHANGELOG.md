@@ -15,6 +15,40 @@ All notable changes to **Aegis Latent Core** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.0] — not yet released
+
+Source release target only. `docs/RELEASE_STATUS.md` records no publication
+readback for `5.1.0`. When the release is cut, replace this paragraph with the
+dated readback: the release workflow uses this section as the release body.
+
+### Added
+
+- **Reversible PII vault (`aegis/core/pii_vault.py`)**: opt-in tokenisation of
+  detectable values (DNI, CUIT/CUIL, email, phone, card, and person names only
+  when they follow an explicit `Persona:`, `Nombre:` or `Cliente:` label) into
+  `[[AEGIS:KIND:hex]]` tokens before the upstream call, restored in the response.
+  In 5.1.0 the policy is gateway-wide: `pii_vault_for(tenant_id)` is an extension
+  point and applies no per-organisation policy yet. The map lives in memory only.
+  Detection is pattern-based, not semantic, so this is not anonymisation.
+- **Tenant resolution (`aegis/core/tenancy.py`)**: tenant taken from the request
+  host or `X-Aegis-Host`, with slug validation and a refusal on mismatch.
+- **Stream restore (`aegis/core/text_delta_restore.py`)**: restores tokens split
+  across SSE events for OpenAI and Anthropic stream formats.
+- **Edge middleware (`aegis/proxy/edge.py`)**: shared-secret check for traffic
+  from the edge proxy; `/health` and `/ready` exempt; `/metrics` loopback only.
+- **Dual response hash (`aegis/core/evidence_hash.py`)**: evidence records the
+  upstream response hash and the client-facing response hash.
+
+### Changed
+
+- Version anchors synchronized at `5.1.0`; navigation and baseline documents
+  name `5.1.0` as the source target with no publication readback and `5.0.3` as
+  the most recent published release.
+
+### Removed
+
+- `tests/final_audit_suite.py`.
+
 ## [5.0.3] — 2026-10-30
 
 Published on the annotated tag, GitHub Release (31 assets), PyPI

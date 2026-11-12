@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
 # Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
-"""Secreto de borde: 403 sin cabecera, 404 de /metrics fuera de loopback."""
+"""Edge secret: 403 without the header, 404 for /metrics outside loopback."""
 
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ def test_rejects_wrong_secret() -> None:
 
 
 def test_empty_secret_fails_closed() -> None:
-    """Un middleware construido con secreto vacío no autentica ni una petición."""
+    """A middleware built with an empty secret authenticates no request at all."""
     app = make_app(secret="")
     http = TestClient(app)
     assert http.get("/v1/x", headers={"x-aegis-edge": ""}).status_code == 403
@@ -86,7 +86,7 @@ def test_metrics_not_public() -> None:
 
 
 def test_metrics_hidden_even_with_valid_secret_from_public_client() -> None:
-    """El secreto no abre /metrics: la ruta es sólo loopback."""
+    """The secret does not open /metrics: the route is loopback only."""
     response = client().get("/metrics", headers={"x-aegis-edge": SECRET})
     assert response.status_code == 404
     assert response.json() == {"detail": "not found"}
@@ -97,7 +97,7 @@ def test_metrics_served_to_loopback() -> None:
     response = http.get("/metrics")
     assert response.status_code == 200
     assert response.json() == {"metrics": True}
-    # Y también desde el otro literal loopback.
+    # And from the other loopback literal too.
     http_v6 = TestClient(make_app(), client=("::1", 50000))
     assert http_v6.get("/metrics").status_code == 200
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
 # Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
-"""Resolución de tenant por Host o path, y rechazo de cruces de organización."""
+"""Tenant resolution by Host or path, and refusal of cross-organisation requests."""
 
 from __future__ import annotations
 
@@ -22,14 +22,14 @@ from aegis.core.tenancy import (
         ("acme.api.aegislatent.com", "/v1/chat/completions", None, "acme"),
         ("api.aegislatent.com", "/o/acme/v1/chat/completions", "acme", "acme"),
         ("api.aegislatent.com", "/v1/chat/completions", "legacy", "legacy"),
-        # El puerto del Host no forma parte del slug.
+        # The Host port is not part of the slug.
         ("acme.api.aegislatent.com:443", "/v1/chat/completions", None, "acme"),
-        # El Host llega con mayúsculas de algunos clientes.
+        # Some clients send the Host in uppercase.
         ("ACME.API.AEGISLATENT.COM", "/v1/chat/completions", None, "acme"),
-        # El path de tenant también funciona sin principal.
+        # The tenant path also works without a principal.
         ("api.aegislatent.com", "/o/acme/", None, "acme"),
         ("api.aegislatent.com", "/o/acme", None, "acme"),
-        # La barra doble no cambia el slug resuelto.
+        # A double slash does not change the resolved slug.
         ("api.aegislatent.com", "/o/acme//v1/x", None, "acme"),
     ],
 )
@@ -53,7 +53,7 @@ def test_no_tenant_anywhere_is_an_error() -> None:
 
 
 def test_x_aegis_host_wins_over_origin_host() -> None:
-    """CloudFront escribe el host del visitante; el Host del origen es la IP."""
+    """CloudFront writes the visitor's host; the origin Host is the IP."""
     assert (
         tenant_from_headers(
             "54-211-93-10.sslip.io",
@@ -82,12 +82,12 @@ def test_x_aegis_host_still_rejects_cross_tenant() -> None:
 @pytest.mark.parametrize(
     "host",
     [
-        "api.aegislatent.com",  # sin slug
+        "api.aegislatent.com",  # no slug
         "acme.api.aegislatent.com.evil.example",  # sufijo extra
         "-acme.api.aegislatent.com",  # guion inicial
         "acme-.api.aegislatent.com",  # guion final
         "ac. me.api.aegislatent.com",  # espacio
-        "acme.api.aegislatent.com:notaport",  # puerto no numérico
+        "acme.api.aegislatent.com:notaport",  # non-numeric port
     ],
 )
 def test_non_tenant_hosts_do_not_match(host: str) -> None:
@@ -95,20 +95,20 @@ def test_non_tenant_hosts_do_not_match(host: str) -> None:
 
 
 def test_punycode_is_out_of_scope_for_resolution() -> None:
-    """El resolver aplica la gramática de slug; el rechazo de punycode es del
-    alta de organización (T1.8), no del gateway."""
+    """The resolver applies the slug grammar; rejecting punycode belongs to
+    organisation sign-up (T1.8), not to the gateway."""
     assert tenant_from_request("xn--acme-9ja.api.aegislatent.com", "/v1/x", None) == "xn--acme-9ja"
 
 
 @pytest.mark.parametrize(
     "path",
     [
-        "/o/ACME/v1/x",  # mayúsculas
+        "/o/ACME/v1/x",  # uppercase
         "/o/-acme/v1/x",
         "/o/acme-/v1/x",
         "/o/acme.evil/v1/x",
         "/o/",
-        "/o",  # sin slug: no es un path de tenant
+        "/o",  # no slug: not a tenant path
     ],
 )
 def test_non_tenant_paths_do_not_match(path: str) -> None:

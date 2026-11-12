@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
 # Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
-"""Integración mínima del gateway: vault reversible, tenancy y secreto de borde."""
+"""Minimal gateway integration: reversible vault, tenancy and edge secret."""
 
 from __future__ import annotations
 
@@ -97,7 +97,7 @@ def test_provider_never_sees_the_dni(tmp_path):
     node = app.state.aegis.ledger.chain[-1]
     assert node.sampling_params["pii_restored"] is True
     assert node.sampling_params["response_upstream_sha256"] != node.response_hash
-    # La evidencia compromete el cuerpo tokenizado, no el original.
+    # The evidence commits to the tokenised body, not the original.
     assert node.request_hash == hashlib.sha256(json.dumps(sent[0]).encode()).hexdigest()
 
 
@@ -175,14 +175,14 @@ def test_edge_secret_registered_only_when_configured(tmp_path):
                 headers={"Authorization": "Bearer sk-valid"},
                 json={"model": "gpt-4", "messages": [{"role": "user", "content": "x"}]},
             )
-            # Con el secreto válido la petición ya no la corta el borde.
+            # With a valid secret the edge no longer stops the request.
             allowed = client.get(
                 "/v1/audit/proofs/does-not-exist", headers={"x-aegis-edge": "topsecret"}
             )
             metrics = client.get("/metrics")
 
     assert blocked.status_code == 403
-    assert allowed.status_code != 403  # la cabecera ausente ya no es lo que falla
+    assert allowed.status_code != 403  # the missing header is no longer what fails
     assert metrics.status_code == 404
 
 
@@ -190,8 +190,8 @@ def test_no_edge_secret_means_no_middleware(tmp_path):
     with patch("aegis.proxy.app.LLMForwarder", return_value=_forwarder(AsyncMock())):
         app = create_app(_settings(tmp_path))
         with TestClient(app) as client:
-            # Sin secreto configurado la petición llega al handler (401/422/200),
-            # nunca al 403 del middleware de borde.
+            # Without a configured secret the request reaches the handler (401/422/200),
+            # never the edge middleware's 403.
             resp = client.post(
                 "/v1/chat/completions",
                 headers={"Authorization": "Bearer sk-valid"},
@@ -226,7 +226,7 @@ def _deltas(body: bytes) -> str:
 
 
 def test_stream_restores_a_token_split_across_events(tmp_path):
-    """El token se parte entre dos eventos; el cliente recibe el valor, no el token."""
+    """The token is split across two events; the client receives the value, not the token."""
     sent: list[dict] = []
 
     async def reply(path, body, extra_headers=None):
