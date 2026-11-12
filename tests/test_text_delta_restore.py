@@ -52,7 +52,7 @@ def _chunks(text: str, sizes: Iterable[int]) -> list[str]:
     return out
 
 
-# ── clase TextDeltaRestorer (§27) ───────────────────────────────────────────
+# ── TextDeltaRestorer class (§27) ───────────────────────────────────────────
 
 
 def test_feed_restores_complete_token() -> None:
