@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
 # Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
-"""PII vault: formato de token, roundtrip, colisión y límites declarados."""
+"""PII vault: token format, round trip, collisions and declared limits."""
 
 from __future__ import annotations
 
@@ -25,17 +25,17 @@ from aegis.core.pii_vault import (
     tokenize_text,
 )
 
-try:  # Hypothesis es opcional en el entorno de desarrollo.
+try:  # Hypothesis is optional in the development environment.
     from hypothesis import HealthCheck, given, settings
     from hypothesis import strategies as st
 
     HAS_HYPOTHESIS = True
-except ImportError:  # pragma: no cover - se ejecuta sólo sin la dependencia
+except ImportError:  # pragma: no cover - runs only without the dependency
     HAS_HYPOTHESIS = False
     given = None  # type: ignore[assignment]
 
 
-# ── formato y roundtrip ───────────────────────────────────────────────────────
+# ── format and round trip ───────────────────────────────────────────────────────
 
 
 def test_email_roundtrip():
@@ -74,7 +74,7 @@ def test_phone_with_separators_roundtrip():
 
 
 def test_bare_eight_digit_integer_is_not_a_phone():
-    """Un entero suelto es un ID o una fecha, no un teléfono (falso positivo)."""
+    """A bare integer is an ID or a date, not a phone number (false positive)."""
     m = PIIMap()
     text = "orden 30123456 del 2026-11-11"
     out = tokenize_text(text, m)
@@ -120,10 +120,10 @@ def test_restore_unknown_token_is_noop():
 def test_restore_malformed_token_is_noop():
     m = PIIMap()
     for text in (
-        "[[AEGIS:EMAIL:DEADBEEF00]]",  # hex en mayúsculas: no es el formato
+        "[[AEGIS:EMAIL:DEADBEEF00]]",  # uppercase hex: not the format
         "[[AEGIS:EMAIL:deadbeef0]]",  # 9 hex
-        "[[aegis:EMAIL:deadbeef00]]",  # prefijo en minúsculas
-        "[[AEGIS:email:deadbeef00]]",  # tipo en minúsculas
+        "[[aegis:EMAIL:deadbeef00]]",  # lowercase prefix
+        "[[AEGIS:email:deadbeef00]]",  # lowercase kind
     ):
         assert m.restore(text) == text
 
@@ -136,14 +136,14 @@ def test_token_length_and_real_max():
 
 
 def test_max_token_len_matches_longest_kind():
-    """El tope cubre el ancho máximo que admite ``TOKEN_RE`` (12)."""
+    """The cap covers the widest kind ``TOKEN_RE`` accepts (12)."""
     assert MAX_TOKEN_LEN == len("[[AEGIS:") + 12 + 1 + 10 + len("]]")
     for kind, _pattern in RULES:
         assert len(kind) <= 12
 
 
 def test_collision_is_checked(monkeypatch):
-    """Si el generador repite un token vivo, se descarta y se prueba otro."""
+    """If the generator repeats a live token, it is discarded and another is tried."""
     m = PIIMap()
     first = m.token_for("EMAIL", "a@b.com")
     duplicate_hex = TOKEN_RE.match(first).group("hex")
@@ -196,7 +196,7 @@ def test_clear_drops_both_directions():
 
 
 def test_module_does_not_log(caplog):
-    """El módulo no registra ni el texto ni los valores."""
+    """The module logs neither the text nor the values."""
     caplog.set_level(logging.DEBUG)
     m = PIIMap()
     out = tokenize_text("DNI: 30123456 juan@example.com", m)
@@ -279,7 +279,7 @@ def test_text_keys_is_declared_surface():
     assert {"content", "text", "system", "prompt"} <= TEXT_KEYS
 
 
-# ── instrucción de placeholders ─────────────────────────────────────────────
+# ── placeholder instruction ─────────────────────────────────────────────
 
 
 def test_instruction_preserves_existing_system():
@@ -333,8 +333,8 @@ def test_roundtrip_arbitrary_text(text: str):
 )
 @settings(max_examples=500, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 def test_roundtrip_with_embedded_email(before: str, email: str, after: str):
-    """El correo puede quedar sin tokenizar si no empieza en frontera de palabra;
-    lo que no puede pasar es que la restauración devuelva algo distinto."""
+    """An email may stay untokenised if it does not start at a word boundary;
+    what must never happen is restoration returning something different."""
     m = PIIMap()
     text = f"{before} {email} {after}"
     out = tokenize_text(text, m)

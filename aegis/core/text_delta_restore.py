@@ -1,10 +1,10 @@
-"""Restaura tokens en SSE sin romper un token partido entre eventos.
+"""Restore tokens in SSE without breaking a token split across events.
 
-El restaurador de eventos completos (T2.3) falla si el proveedor emite
-``[[AEGIS:D`` en un evento y ``NI:abc]]`` en el siguiente. ``TextDeltaRestorer``
-mantiene, por flujo de texto, el sufijo que todavía podría ser el comienzo de un
-token y lo prefija al delta siguiente: la restauración es exacta para cualquier
-frontera de evento, no sólo para las que caen fuera del token.
+The whole-event restorer (T2.3) fails when the provider emits ``[[AEGIS:D`` in
+one event and ``NI:abc]]`` in the next. ``TextDeltaRestorer`` keeps, per text
+stream, the suffix that could still be the start of a token and prepends it to
+the next delta, so restoration is exact at any event boundary, not only at
+boundaries that fall outside a token.
 """
 
 # Copyright (c) 2026 Juan Luna. All rights reserved.
@@ -20,9 +20,9 @@ from typing import Any
 from aegis.core.evidence_hash import StreamDigestRecorder
 from aegis.core.pii_vault import PREFIX, SUFFIX, PIIMap, restore_text
 
-#: Sufijo máximo que un delta puede retener esperando el cierre de un token.
-#: Un token nunca supera ``MAX_TOKEN_LEN``; el tope superior sólo evita que un
-#: flujo malformado (un ``[[AEGIS:`` sin cierre) retenga memoria sin límite.
+#: Largest suffix a delta may hold back while waiting for a token to close.
+#: A token never exceeds ``MAX_TOKEN_LEN``; this upper bound only stops a
+#: malformed stream (an unclosed ``[[AEGIS:``) from holding unbounded memory.
 DEFAULT_MAX_PENDING = 65_536
 
 TEXT_FIELDS = frozenset({"content", "text", "reasoning", "reasoning_content"})
@@ -40,11 +40,11 @@ _ANTHROPIC_EVENTS = frozenset(
 
 
 class TextDeltaRestorer:
-    """Restaura tokens a través de deltas de texto consecutivos.
+    """Restore tokens across consecutive text deltas.
 
-    Uso por flujo de texto (un ``content``, un ``arguments`` de herramienta):
-    cada instancia mantiene su propio buffer. No se debe compartir una instancia
-    entre dos flujos distintos o los buffers se mezclan.
+    One instance per text stream (a ``content``, a tool's ``arguments``): each
+    instance keeps its own buffer. Do not share an instance between two streams
+    or their buffers mix.
     """
 
     def __init__(self, mapping: PIIMap, max_pending: int = DEFAULT_MAX_PENDING) -> None:
@@ -59,33 +59,34 @@ class TextDeltaRestorer:
         return self._pending
 
     def feed(self, delta: str) -> str:
-        """Añade *delta* y devuelve el texto que ya es seguro emitir."""
+        """Add *delta* and return the text that is now safe to emit."""
         if not delta:
             return ""
         buf = self._pending + delta
         cut = len(buf)
         start = buf.rfind(PREFIX)
         if start != -1 and SUFFIX not in buf[start:]:
-            # Hay un token abierto: se retiene desde su prefijo, no desde el
-            # final, porque el cierre puede llegar en cualquier delta posterior.
+            # A token is open: hold back from its prefix, not from the end,
+            # because the closing marker can arrive in any later delta.
             cut = start
         else:
-            # Sin token abierto, sólo se retiene un sufijo que aún podría ser el
-            # comienzo de ``[[AEGIS:``. Sin esto, el prefijo partido se escaparía
-            # como texto y el token nunca se reconocería.
+            # No open token: hold back only a suffix that could still be the
+            # start of ``[[AEGIS:``. Without this, a split prefix would leak as
+            # text and the token would never be recognised.
             for n in range(min(len(PREFIX) - 1, len(buf)), 0, -1):
                 if buf.endswith(PREFIX[:n]):
                     cut = min(cut, len(buf) - n)
                     break
         ready, self._pending = buf[:cut], buf[cut:]
         if len(self._pending) > self._max_pending:
-            # Flujo malformado (prefijo sin cierre): se libera para no crecer sin
-            # límite. El texto se emite literal; no hay valor que restaurar.
+            # Malformed stream (prefix never closed): release it so the buffer
+            # cannot grow without bound. The text is emitted as is; there is no
+            # value to restore.
             ready, self._pending = ready + self._pending, ""
         return restore_text(ready, self._mapping)
 
     def flush(self) -> str:
-        """Devuelve el remanente al cerrar el flujo y vacía el buffer."""
+        """Return what is left when the stream closes and empty the buffer."""
         out, self._pending = self._pending, ""
         return restore_text(out, self._mapping)
 
@@ -111,11 +112,11 @@ def _encode_openai(payload: dict[str, Any]) -> bytes:
 
 
 class SseDeltaRestorer:
-    """Aplica ``TextDeltaRestorer`` a cada flujo de texto de un SSE.
+    """Apply ``TextDeltaRestorer`` to each text stream of an SSE response.
 
-    Un stream SSE puede llevar contenido y argumentos de herramientas a la vez;
-    cada uno es un flujo independiente y recibe su propio buffer. Los eventos
-    sin campos de texto se devuelven byte a byte sin re-serializar.
+    An SSE stream can carry content and tool arguments at the same time; each is
+    an independent stream with its own buffer. Events without text fields are
+    returned byte for byte, without re-serialising.
     """
 
     def __init__(self, mapping: PIIMap, max_pending: int = DEFAULT_MAX_PENDING) -> None:
@@ -137,7 +138,7 @@ class SseDeltaRestorer:
         return self._restorer(key, kind).feed(text)
 
     def restore_event(self, raw: bytes, parsed: Any) -> tuple[bytes, Any]:
-        """Restaura un evento ``(raw, parsed)`` y devuelve la pareja actualizada."""
+        """Restore one ``(raw, parsed)`` event and return the updated pair."""
         if not isinstance(parsed, dict):
             return raw, parsed
         payload = copy.deepcopy(parsed)
@@ -186,7 +187,7 @@ class SseDeltaRestorer:
                                 function["arguments"],
                             )
                             changed = True
-            # Endpoint legado /v1/completions en modo stream.
+            # Legacy /v1/completions endpoint in stream mode.
             if isinstance(choice.get("text"), str) and "delta" not in choice:
                 choice["text"] = self._feed(f"text:{index}", "text", choice["text"])
                 changed = True
@@ -218,7 +219,7 @@ class SseDeltaRestorer:
         return changed
 
     def flush_events(self) -> list[tuple[bytes, dict[str, Any]]]:
-        """Emite el remanente de cada flujo con la forma del protocolo en uso."""
+        """Emit what is left of each stream, shaped for the protocol in use."""
         events: list[tuple[bytes, dict[str, Any]]] = []
         for key, restorer in self._restorers.items():
             text = restorer.flush()
@@ -270,7 +271,7 @@ class SseDeltaRestorer:
 
 
 def is_terminal_event(raw: bytes, parsed: Any) -> bool:
-    """``data: [DONE]`` o ``message_stop``: el stream no emite más contenido."""
+    """``data: [DONE]`` or ``message_stop``: the stream emits no more content."""
     if raw.strip() == b"data: [DONE]":
         return True
     return isinstance(parsed, dict) and parsed.get("type") == "message_stop"
@@ -281,11 +282,10 @@ async def restoring_delta_stream(
     mapping: PIIMap,
     digests: StreamDigestRecorder | None = None,
 ) -> AsyncIterator[tuple[bytes, Any]]:
-    """Envuelve un stream SSE ``(raw, parsed)`` restaurando los tokens.
+    """Wrap an SSE ``(raw, parsed)`` stream, restoring tokens.
 
-    El remanente se emite justo antes del evento terminal, de modo que el
-    consumidor (``BoundedStreamProxy``) lo cuenta como contenido y no como
-    bytes posteriores al cierre.
+    What is left is emitted just before the terminal event, so the consumer
+    (``BoundedStreamProxy``) counts it as content and not as bytes after close.
     """
     restorer = SseDeltaRestorer(mapping)
     async for raw, parsed in source:

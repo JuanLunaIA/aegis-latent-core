@@ -1815,10 +1815,10 @@ class CryptographicAuditLedger:
         ):
             raise ValueError("response_hash must be a lowercase SHA-256 hex digest")
 
-        # Doble hash (T7.12): con el vault activo, los bytes del proveedor y los
-        # del cliente difieren. ``response_hash`` es siempre el digest del
-        # cliente; el del proveedor se registra aparte. Un cliente declarado que
-        # no coincide con el hash firmado sería una evidencia incoherente.
+        # Dual hash (T7.12): with the vault on, the provider's bytes and the
+        # client's differ. ``response_hash`` is always the client digest; the
+        # provider digest is recorded separately. A declared client digest that
+        # does not match the signed hash would be incoherent evidence.
         def _check_sha256(name: str, value: str | None) -> None:
             if value is None:
                 return

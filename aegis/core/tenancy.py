@@ -1,9 +1,9 @@
-"""Resuelve la organización desde el Host o el path, sin confiar en el cliente.
+"""Resolve the organisation from the Host or the path, without trusting the client.
 
-``Host`` es la fuente por defecto. Cuando el gateway está detrás de CloudFront,
-la función de borde copia el host del visitante a ``X-Aegis-Host`` y el gateway
-sólo lo acepta si el secreto de borde es válido (``EdgeSecretMiddleware``); por
-eso la resolución prefiere ``X-Aegis-Host`` sobre el ``Host`` del origen.
+``Host`` is the default source. Behind CloudFront, the edge function copies the
+visitor's host into ``X-Aegis-Host``, and the gateway accepts it only when the
+edge secret is valid (``EdgeSecretMiddleware``); that is why resolution prefers
+``X-Aegis-Host`` over the origin ``Host``.
 """
 
 # Copyright (c) 2026 Juan Luna. All rights reserved.
@@ -13,40 +13,40 @@ from __future__ import annotations
 
 import re
 
-# Mismo vocabulario que el slug de organización (T1.8): minúsculas, dígitos y
-# guiones interiores. Un punto, un guion bajo o un guion final no son tenants.
+# Same vocabulary as the organisation slug (T1.8): lowercase, digits and inner
+# hyphens. A dot, an underscore or a trailing hyphen is not a tenant.
 _SLUG = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
 
 TENANT_HOST = re.compile(rf"^(?P<slug>{_SLUG})\.api\.aegislatent\.com$")
 TENANT_PATH = re.compile(rf"^/o/(?P<slug>{_SLUG})(?:/|$)")
 
-# Un puerto al final se descarta antes de comparar; un IPv6 literal no es un
-# tenant y no debe confundirse con "host:puerto".
+# A trailing port is dropped before comparing; an IPv6 literal is not a tenant
+# and must not be mistaken for "host:port".
 _PORT_SUFFIX = re.compile(r":\d{1,5}$")
 
 
 class TenantMismatch(ValueError):  # noqa: N818 - name fixed by the 5.1.0 API
-    """El host/path y la clave autenticada no identifican la misma organización."""
+    """The host/path and the authenticated key do not identify the same organisation."""
 
 
 def normalize_host(host: str) -> str:
-    """Minúsculas, sin espacios y sin puerto final."""
+    """Lowercase, no surrounding spaces, no trailing port."""
     value = (host or "").strip().lower()
-    if value.startswith("["):  # IPv6 literal: no es un host de tenant
+    if value.startswith("["):  # IPv6 literal: not a tenant host
         return value
     return _PORT_SUFFIX.sub("", value)
 
 
 def tenant_from_request(host: str, path: str, principal_tenant: str | None) -> str:
-    """Devuelve el slug de la organización que corresponde a la petición.
+    """Return the slug of the organisation the request belongs to.
 
     - ``acme.api.aegislatent.com`` → ``acme``
     - ``/o/acme/v1/...`` → ``acme``
-    - Sin host ni path de tenant → el tenant de la clave, si existe.
+    - No tenant host or path → the key's tenant, if it has one.
 
     Raises:
-        TenantMismatch: no hay tenant en host/path y la clave tampoco lo aporta,
-            o el host/path contradicen el tenant de la clave autenticada.
+        TenantMismatch: there is no tenant in host/path and the key has none,
+            or the host/path contradicts the authenticated key's tenant.
     """
     host = normalize_host(host)
     match = TENANT_HOST.match(host)
@@ -68,11 +68,11 @@ def tenant_from_headers(
     path: str,
     principal_tenant: str | None,
 ) -> str:
-    """Resuelve el tenant prefiriendo ``X-Aegis-Host`` (escrito por el borde).
+    """Resolve the tenant, preferring ``X-Aegis-Host`` (written by the edge).
 
-    ``X-Aegis-Host`` es aceptable únicamente porque el middleware de borde
-    rechaza cualquier petición que no traiga el secreto compartido; sin él, un
-    cliente podría elegir su propio tenant con una cabecera.
+    ``X-Aegis-Host`` is acceptable only because the edge middleware rejects any
+    request without the shared secret; without it, a client could pick its own
+    tenant with a header.
     """
     host = (x_aegis_host or "").strip() or host_header
     return tenant_from_request(host, path, principal_tenant)

@@ -401,11 +401,11 @@ class _AppState:
         return self.analyzers.get(session_id)
 
     def pii_vault_for(self, tenant_id: str) -> PIIVaultPolicy | None:
-        """Política efectiva del vault para una organización, o None si está off.
+        """The effective vault policy for an organisation, or None when it is off.
 
-        El argumento es el punto de extensión de la configuración por
-        organización (T2.8, endpoint interno de config); en 5.1.0 la política es
-        global al gateway y se valida al cargar ``AegisSettings``.
+        The argument is the extension point for per-organisation configuration
+        (T2.8, internal config endpoint); in 5.1.0 the policy is gateway-wide
+        and is validated when ``AegisSettings`` loads.
         """
         settings = getattr(self, "settings", None)
         if settings is None or not getattr(settings, "pii_vault_enabled", False):
@@ -413,8 +413,8 @@ class _AppState:
         try:
             return PIIVaultPolicy.from_spec(settings.pii_vault_types)
         except ValueError:
-            # Config inválida no puede degradar a "sin tokenizar": se usa el
-            # conjunto completo, que es el comportamiento más protector.
+            # Invalid config must not degrade to "no tokenisation": the full set
+            # is used, which is the most protective behaviour.
             return PIIVaultPolicy()
 
 
@@ -1040,11 +1040,11 @@ def _scrub_anthropic_payload(
 
 
 def _request_tenant(request: Request, principal: Principal) -> str:
-    """Tenant efectivo de la petición, o 403 si contradice la clave.
+    """The request's effective tenant, or 403 if it contradicts the key.
 
-    ``X-Aegis-Host`` lo escribe la CloudFront Function y sólo llega aquí si el
-    middleware de borde aceptó el secreto; el ``Host`` del origen no decide
-    tenant cuando esa cabecera está presente.
+    ``X-Aegis-Host`` is written by the CloudFront Function and only arrives here
+    if the edge middleware accepted the secret; the origin ``Host`` does not
+    decide the tenant when that header is present.
     """
     try:
         return tenant_from_headers(
@@ -1066,11 +1066,11 @@ def _request_tenant(request: Request, principal: Principal) -> str:
 def _apply_pii_vault_request(
     body: dict[str, Any], state: _AppState, tenant_id: str
 ) -> tuple[dict[str, Any], PIIMap | None]:
-    """Tokeniza el cuerpo si la organización tiene el vault activo.
+    """Tokenise the body when the organisation has the vault on.
 
-    Devuelve el cuerpo (tokenizado o intacto) y el mapa efímero que restaura la
-    respuesta. Si el vault está apagado el mapa es None y el llamador conserva
-    el scrub irreversible existente.
+    Returns the body (tokenised or untouched) and the ephemeral map that restores
+    the response. With the vault off the map is None and the caller keeps the
+    existing irreversible scrub.
     """
     policy = state.pii_vault_for(tenant_id)
     if policy is None:
@@ -1142,8 +1142,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     state._phi_scrubber = PHIDeidentifier() if cfg.phi_deidentify else None
     state._pci_scrubber = PCIScrubber() if cfg.pci_scrub else None
     if cfg.pii_vault_enabled and not cfg.pii_redact_tenant_id:
-        # T2.6: el vault protege el contenido, no el identificador de sesión del
-        # WAL. Sin la pseudonimización, el tenant sigue en claro en la evidencia.
+        # T2.6: the vault protects content, not the WAL session identifier.
+        # Without pseudonymisation the tenant stays in clear in the evidence.
         logger.warning(
             "AEGIS_PII_VAULT_ENABLED is on but AEGIS_PII_REDACT_TENANT_ID is off: "
             "prompts are tokenized, tenant identifiers in the WAL are not pseudonymized"
@@ -1744,8 +1744,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             trust_proxy_headers=cfg.dmz_trust_proxy_headers,
         )
 
-    # T1.6: segunda barrera del gateway. Sin secreto configurado no se registra:
-    # el proceso no está detrás de CloudFront (desarrollo o pruebas locales).
+    # T1.6: the gateway's second barrier. Not registered without a secret:
+    # the process is not behind CloudFront (development or local tests).
     if cfg.edge_secret:
         app.add_middleware(EdgeSecretMiddleware, secret=cfg.edge_secret)
 
@@ -1811,10 +1811,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     sampling_params={
                         "evidence_status": "durable",
                         "response_complete": response_complete,
-                        # T7.12: con el vault activo, los bytes del proveedor
-                        # (tokens) y los del cliente (restaurados) difieren. El
-                        # hash del cliente es el `response_hash` firmado; el del
-                        # proveedor queda en el mismo registro del nodo.
+                        # T7.12: with the vault on, the provider's bytes
+                        # (tokens) and the client's (restored) differ. The
+                        # client hash is the signed `response_hash`; the provider
+                        # hash stays in the same node record.
                         **response_digests(
                             upstream_bytes if upstream_bytes is not None else response_bytes,
                             response_bytes,
@@ -2272,10 +2272,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         # Best-effort PHI identifier redaction on the hot request path.
         # Scrubs 18 HIPAA identifier categories from message content before forwarding.
         # raw_body (used for audit) retains the original; body is the scrubbed copy.
-        # T2.4: el vault reversible sustituye a la máscara irreversible. Si está
-        # on, el valor se guarda en memoria y se envía un token; si está off, se
-        # mantiene el scrub actual. Tokenizar después del scrub no serviría: el
-        # valor ya estaría destruido y no habría nada que restaurar.
+        # T2.4: the reversible vault replaces the irreversible mask. When it is
+        # on, the value is kept in memory and a token is sent; when it is off,
+        # the current scrub stays. Tokenising after the scrub would be useless:
+        # the value would already be destroyed, with nothing to restore.
         body, pii_map = _apply_pii_vault_request(body, state, request_tenant)
         if pii_map is not None:
             _phi_scrubbed = False
@@ -2289,9 +2289,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             if _pci_scrubbed:
                 _scrub_method = (_scrub_method + "+pci_pan_mask").lstrip("+")
 
-        # T2.4: cuando el vault está activo, la evidencia compromete el cuerpo
-        # tokenizado. `raw_body` conserva los valores originales y no debe
-        # terminar en el preview del WAL.
+        # T2.4: with the vault on, the evidence commits to the tokenised body.
+        # `raw_body` keeps the original values and must not end up in
+        # the WAL preview.
         evidence_request_bytes = raw_body if pii_map is None else json.dumps(body).encode()
 
         session_id = (
@@ -2350,9 +2350,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             stream = state.forwarder.stream_sse(
                 "/v1/chat/completions", body, extra_headers=_outbound_trace_headers(request)
             )
-            # T2.5/T7.11: el restaurador va por delante del proxy acotado, de modo
-            # que el hash del stream sea el de los bytes que recibe el cliente y
-            # el remanente de un token partido se emita antes del terminal.
+            # T2.5/T7.11: the restorer runs ahead of the bounded proxy, so the
+            # stream hash is that of the bytes the client receives, and the rest
+            # of a split token is emitted before the terminal event.
             stream_digests: StreamDigestRecorder | None = None
             if pii_map is not None:
                 stream_digests = StreamDigestRecorder()
@@ -2389,9 +2389,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                         ),
                         signer_name=principal.subject,
                         signature_meaning="stream-terminal-evidence",
-                        # T7.12: el proveedor vio los tokens; el cliente recibió
-                        # los valores restaurados. `summary.response_hash` es el
-                        # hash firmado de los bytes entregados al cliente.
+                        # T7.12: the provider saw tokens; the client received
+                        # the restored values. `summary.response_hash` is the
+                        # signed hash of the bytes delivered to the client.
                         response_upstream_sha256=(
                             stream_digests.snapshot().upstream_sha256
                             if stream_digests is not None
@@ -2460,8 +2460,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 queue_max_bytes=cfg.stream_queue_max_bytes,
                 preview_bytes=cfg.max_forensic_bytes,
                 deidentifier_window_chars=cfg.stream_deidentifier_window_chars,
-                # Con el vault activo el texto ya no lleva valores: el scrub por
-                # ventana sólo podría dañar los valores restaurados.
+                # With the vault on the text no longer carries values: a windowed
+                # scrub could only damage the restored values.
                 enable_phi=state._phi_scrubber is not None and pii_map is None,
                 enable_pci=state._pci_scrubber is not None and pii_map is None,
                 streaming_engine=cfg.streaming_engine,
@@ -2579,7 +2579,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return settled
         response_rate_decision = settled or rate_decision
         # PHI de-identification on the hot response path: scrub before returning to client.
-        # Con el vault activo no se aplica: destruiría los valores recién restaurados.
+        # Not applied with the vault on: it would destroy the values just restored.
         if pii_map is not None:
             resp_json = restore_json(resp_json, pii_map)
         else:
@@ -2687,7 +2687,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             state, body, tenant_id=principal.tenant_id, endpoint=request.url.path
         )
         _apply_request_entropy_guard(request, body, state)
-        # T2.4/T7.11: vault reversible en `/v1/messages`, incluido el `system`.
+        # T2.4/T7.11: reversible vault on `/v1/messages`, including `system`.
         body, pii_map = _apply_pii_vault_request(body, state, request_tenant)
         if pii_map is not None:
             request_scrubbed = False
@@ -2695,7 +2695,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         else:
             body, request_scrubbed, scrub_method = _scrub_anthropic_payload(body, state)
 
-        # T2.4: con vault, la evidencia compromete el cuerpo tokenizado.
+        # T2.4: with the vault, the evidence commits to the tokenised body.
         evidence_request_bytes = raw_body if pii_map is None else json.dumps(body).encode()
 
         session_id = (
@@ -3012,7 +3012,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         _apply_request_entropy_guard(request, body, state)
 
-        # T2.4: mismo vault reversible en el endpoint legado de completions.
+        # T2.4: the same reversible vault on the legacy completions endpoint.
         body, pii_map = _apply_pii_vault_request(body, state, request_tenant)
         evidence_request_bytes = raw_body if pii_map is None else json.dumps(body).encode()
 

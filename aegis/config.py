@@ -1117,8 +1117,8 @@ class AegisSettings(BaseSettings):
     @field_validator("pii_vault_types")
     @classmethod
     def _validate_pii_vault_types(cls, v: str) -> str:
-        # Import local: ``aegis.config`` se carga antes que el resto del paquete
-        # y no debe arrastrar el módulo del vault en el arranque.
+        # Local import: ``aegis.config`` loads before the rest of the package
+        # and must not pull in the vault module at startup.
         from aegis.core.pii_vault import UnknownPIIKind, parse_vault_types
 
         try:

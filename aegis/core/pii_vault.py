@@ -1,11 +1,11 @@
-"""Tokenización reversible de identificadores estructurados, con límites declarados.
+"""Reversible tokenisation of structured identifiers, with declared limits.
 
-No detecta nombres libres sin una etiqueta explícita (Persona/Nombre/Cliente).
-No sustituye una evaluación de impacto ni una garantía de anonimización.
+It does not detect free-form names without an explicit label (Persona/Nombre/Cliente).
+It does not replace an impact assessment and is not an anonymisation guarantee.
 
-El módulo no emite logs: los valores originales sólo viven en el ``PIIMap`` en
-memoria del proceso que atiende la petición. No hay persistencia ni escritura a
-disco, y ninguna función de este módulo registra el texto recibido.
+The module emits no logs: original values live only in the in-memory ``PIIMap``
+of the process serving the request. Nothing is persisted or written to disk,
+and no function in this module logs the text it receives.
 """
 
 # Copyright (c) 2026 Juan Luna. All rights reserved.
@@ -22,21 +22,21 @@ from typing import Any
 TOKEN_RE = re.compile(r"\[\[AEGIS:(?P<kind>[A-Z_]{2,12}):(?P<hex>[0-9a-f]{10})\]\]")
 PREFIX = "[[AEGIS:"
 SUFFIX = "]]"
-# Longitud máxima real de un token: prefijo + tipo más largo (12) + ":" + 10 hex + sufijo.
+# Real maximum token length: prefix + longest kind (12) + ":" + 10 hex + suffix.
 MAX_TOKEN_LEN = len(PREFIX) + 12 + 1 + 10 + len(SUFFIX)
 
 RULES: list[tuple[str, re.Pattern[str]]] = [
     ("EMAIL", re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)),
-    # DNI va antes que PHONE: si no, "DNI: 30123456" se tokeniza como teléfono y
-    # se pierde la etiqueta semántica.
+    # DNI comes before PHONE: otherwise "DNI: 30123456" is tokenised as a phone
+    # number and the semantic label is lost.
     ("DNI", re.compile(r"(?i)\bDNI\s*[:#]?\s*(\d{7,8})\b")),
     ("CUIL", re.compile(r"(?i)\bCUIL\s*[:#]?\s*(\d{2}-?\d{8}-?\d)")),
     ("CUIT", re.compile(r"(?i)\bCUIT\s*[:#]?\s*(\d{2}-?\d{8}-?\d)")),
     ("SSN", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
     ("CARD", re.compile(r"\b(?:\d[ -]*?){13,19}\b")),
     ("IBAN", re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b")),
-    # PHONE exige separadores o prefijo internacional; un entero de 8 dígitos
-    # suelto no se toca (evita destrozar fechas, IDs y códigos).
+    # PHONE requires separators or an international prefix; a bare 8-digit
+    # integer is left alone (so dates, IDs and codes are not mangled).
     (
         "PHONE",
         re.compile(
@@ -46,8 +46,8 @@ RULES: list[tuple[str, re.Pattern[str]]] = [
     ),
     (
         "PERSON",
-        # La etiqueta es case-insensitive; el nombre no, para no arrastrar la
-        # palabra siguiente en minúsculas ("Juan Pérez llamó" → "Juan Pérez").
+        # The label is case-insensitive; the name is not, so the following
+        # lowercase word is not swallowed ("Juan Pérez llamó" → "Juan Pérez").
         re.compile(
             r"(?i:\b(?:persona|nombre|cliente)\s*:\s*)"
             r"([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){0,2})"
@@ -58,20 +58,20 @@ RULES: list[tuple[str, re.Pattern[str]]] = [
 VALID_KINDS: frozenset[str] = frozenset(kind for kind, _ in RULES)
 DEFAULT_KINDS: str = "EMAIL,DNI,CUIL,CUIT,SSN,PHONE,CARD,IBAN,PERSON"
 
-# Claves cuyo valor de texto se tokeniza. El resto del cuerpo (rol, modelo,
-# identificadores de herramienta) se conserva literal: no es contenido libre.
+# Keys whose text value is tokenised. The rest of the body (role, model,
+# tool identifiers) is kept literally: it is not free-form content.
 TEXT_KEYS = {"content", "text", "system", "prompt"}
 
 
 class UnknownPIIKind(ValueError):  # noqa: N818 - name is part of the module's public contract
-    """Se pidió tokenizar un tipo que no está en :data:`RULES`."""
+    """A kind that is not in :data:`RULES` was requested."""
 
 
 def parse_vault_types(spec: str) -> frozenset[str]:
-    """Convierte ``"EMAIL,DNI"`` en el conjunto de tipos validados.
+    """Turn ``"EMAIL,DNI"`` into the set of validated kinds.
 
-    Un tipo desconocido es un error de arranque, no un aviso: tokenizar con un
-    conjunto que el operador cree mayor de lo que es sería una falsa garantía.
+    An unknown kind is a startup error, not a warning: tokenising with a set the
+    operator believes is larger than it is would be a false guarantee.
     """
     kinds = {part.strip().upper() for part in (spec or "").split(",") if part.strip()}
     unknown = kinds - VALID_KINDS
@@ -82,7 +82,7 @@ def parse_vault_types(spec: str) -> frozenset[str]:
 
 @dataclass(frozen=True)
 class PIIVaultPolicy:
-    """Política efectiva de una organización, ya validada."""
+    """An organisation's effective, validated policy."""
 
     kinds: frozenset[str] = field(default_factory=lambda: frozenset(VALID_KINDS))
 
@@ -93,11 +93,11 @@ class PIIVaultPolicy:
 
 @dataclass
 class PIIMap:
-    """Mapa bidireccional token ↔ valor de una sola petición.
+    """Two-way token ↔ value map for a single request.
 
-    ``by_value`` deduplica: el mismo valor produce el mismo token dentro de la
-    petición, de modo que el modelo ve una referencia estable. El mapa se
-    descarta al terminar la respuesta; no se serializa ni se registra.
+    ``by_value`` deduplicates: the same value yields the same token within the
+    request, so the model sees a stable reference. The map is discarded when the
+    response ends; it is never serialised or logged.
     """
 
     by_token: dict[str, str] = field(default_factory=dict)
@@ -110,8 +110,8 @@ class PIIMap:
         existing = self.by_value.get(key)
         if existing is not None:
             return existing
-        # La colisión es improbable (40 bits) pero no se asume: se comprueba
-        # contra todos los tokens vivos antes de aceptar el nuevo.
+        # A collision is unlikely (40 bits) but not assumed away: the new token
+        # is checked against every live token before it is accepted.
         for _ in range(64):
             token = f"{PREFIX}{kind}:{secrets.token_hex(5)}{SUFFIX}"
             if token not in self.by_token:
@@ -121,7 +121,7 @@ class PIIMap:
         raise RuntimeError("PII vault token space exhausted for this request")
 
     def restore(self, text: str) -> str:
-        """Sustituye los tokens conocidos; los desconocidos quedan intactos."""
+        """Replace known tokens; unknown ones are left intact."""
         if not text or PREFIX not in text:
             return text
         return TOKEN_RE.sub(lambda m: self.by_token.get(m.group(0), m.group(0)), text)
@@ -131,7 +131,7 @@ class PIIMap:
         self.by_value.clear()
 
     def counts(self) -> dict[str, int]:
-        """Número de valores distintos por tipo. Sólo cifras, nunca valores."""
+        """Number of distinct values per kind. Counts only, never values."""
         counts: dict[str, int] = {}
         for kind, _value in self.by_value:
             counts[kind] = counts.get(kind, 0) + 1
@@ -147,11 +147,11 @@ def _replace_rule(
     kind: str,
     mapping: PIIMap,
 ) -> str:
-    """Tokeniza sólo el grupo capturado, preservando la etiqueta de contexto.
+    """Tokenise only the captured group, keeping the context label.
 
-    Se reconstruye por tramos en vez de usar ``str.replace``: un valor que
-    aparezca también en la etiqueta (p. ej. ``CUIT: CUIT``) no puede provocar
-    que se sustituya la parte equivocada.
+    The string is rebuilt piece by piece instead of using ``str.replace``: a
+    value that also appears in the label (e.g. ``CUIT: CUIT``) cannot cause the
+    wrong part to be replaced.
     """
     pieces: list[str] = []
     last = 0
@@ -180,11 +180,11 @@ def tokenize_text(
     mapping: PIIMap,
     kinds: Iterable[str] | None = None,
 ) -> str:
-    """Tokeniza los identificadores reconocidos en *text*.
+    """Tokenise the identifiers recognised in *text*.
 
-    ``kinds`` restringe las reglas activas (configuración por organización).
-    Las reglas se aplican en orden: las más específicas primero, para que una
-    etiqueta semántica (DNI, CUIT, PERSON) no se degrade a un tipo genérico.
+    ``kinds`` restricts the active rules (per-organisation configuration). Rules
+    apply in order, most specific first, so a semantic label (DNI, CUIT, PERSON)
+    is not downgraded to a generic kind.
     """
     if not text:
         return text
@@ -198,7 +198,7 @@ def tokenize_text(
 
 
 def restore_text(text: str, mapping: PIIMap) -> str:
-    """Restaura los tokens presentes en *text* usando *mapping*."""
+    """Restore the tokens present in *text* using *mapping*."""
     return mapping.restore(text)
 
 
@@ -207,10 +207,10 @@ def tokenize_json(
     mapping: PIIMap,
     kinds: Iterable[str] | None = None,
 ) -> Any:
-    """Tokeniza recursivamente los campos de texto de un cuerpo JSON.
+    """Recursively tokenise the text fields of a JSON body.
 
-    Se recorre todo contenedor (una lista bajo ``messages`` o ``content``), pero
-    sólo se transforman las cadenas bajo :data:`TEXT_KEYS`.
+    Every container is walked (a list under ``messages`` or ``content``), but
+    only strings under :data:`TEXT_KEYS` are transformed.
     """
     if isinstance(value, str):
         return tokenize_text(value, mapping, kinds)
@@ -222,8 +222,8 @@ def tokenize_json(
             if key in TEXT_KEYS and isinstance(item, str):
                 out[key] = tokenize_text(item, mapping, kinds)
             elif isinstance(item, (dict, list)):
-                # Se recorre el contenedor para llegar a messages/content, pero
-                # una cadena fuera de TEXT_KEYS (rol, modelo, id) no se toca.
+                # The container is walked to reach messages/content, but a string
+                # outside TEXT_KEYS (role, model, id) is left alone.
                 out[key] = tokenize_json(item, mapping, kinds)
             else:
                 out[key] = item
@@ -232,7 +232,7 @@ def tokenize_json(
 
 
 def restore_json(value: Any, mapping: PIIMap) -> Any:
-    """Restaura todos los tokens de un cuerpo JSON, a cualquier profundidad."""
+    """Restore every token in a JSON body, at any depth."""
     if isinstance(value, str):
         return mapping.restore(value)
     if isinstance(value, list):
@@ -271,10 +271,10 @@ def _instruction_present(system: Any, messages: Any) -> bool:
 
 
 def inject_vault_instruction(body: dict[str, Any]) -> dict[str, Any]:
-    """Añade la instrucción sin borrar el system prompt existente.
+    """Add the instruction without removing the existing system prompt.
 
-    Idempotente: un cuerpo que ya la lleva no recibe una segunda copia. Un
-    cuerpo sin ``messages`` no se toca (no es una conversación de chat).
+    Idempotent: a body that already carries it does not get a second copy. A
+    body without ``messages`` is left untouched (it is not a chat conversation).
     """
     if not isinstance(body, dict) or body.get("messages") is None:
         return body

@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
 # Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
-"""Restauración de tokens SSE con el token partido en cualquier frontera."""
+"""SSE token restoration with the token split at any boundary."""
 
 from __future__ import annotations
 
@@ -95,7 +95,7 @@ def test_three_way_split_inside_prefix() -> None:
 
 
 def test_prefix_partial_is_held_not_leaked() -> None:
-    """Un prefijo incompleto no se emite: se emitiría como texto y no se restauraría."""
+    """An incomplete prefix is not emitted: it would go out as text and never be restored."""
     m = PIIMap()
     token = m.token_for("EMAIL", "a@b.com")
     restorer = TextDeltaRestorer(m)
@@ -324,10 +324,10 @@ def test_non_text_events_are_byte_identical() -> None:
 
 
 def test_terminal_flushes_pending_before_done() -> None:
-    """Un flujo cortado dentro de un token no pierde el texto pendiente."""
+    """A stream cut inside a token does not lose the pending text."""
     m = PIIMap()
     token = _token_for(m)
-    half = token[:9]  # corta dentro del tipo
+    half = token[:9]  # cut inside the kind
     events = [
         openai_event({"choices": [{"index": 0, "delta": {"content": f"DNI: {half}"}}]}),
         (b"data: [DONE]\n\n", None),
@@ -339,12 +339,12 @@ def test_terminal_flushes_pending_before_done() -> None:
 
     out = _run(_collect(restoring_delta_stream(source(), m)))
     assert out[-1][0] == b"data: [DONE]\n\n"
-    # El remanente es un prefijo incompleto: se emite literal, nunca se pierde.
+    # What is left is an incomplete prefix: emitted as is, never lost.
     assert half in _content_events(out)
 
 
 def test_multiple_streams_do_not_share_buffers() -> None:
-    """Contenido y argumentos de herramientas se restauran por separado."""
+    """Content and tool arguments are restored separately."""
     m = PIIMap()
     token = _token_for(m)
     events = [
@@ -379,7 +379,7 @@ def test_multiple_streams_do_not_share_buffers() -> None:
         for tool_call in choice.get("delta", {}).get("tool_calls", [])
     )
     assert arguments == DNI
-    assert content == f"DNI: {DNI}"  # el contenido se cerró con su propio buffer
+    assert content == f"DNI: {DNI}"  # content was closed with its own buffer
 
 
 def test_digest_recorder_sees_both_sides() -> None:
@@ -426,7 +426,7 @@ def test_is_terminal_event() -> None:
 )
 @settings(max_examples=500, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 def test_token_split_across_arbitrary_parts(text: str, parts: int) -> None:
-    """Cualquier texto, partido en `parts` trozos iguales, se restaura exacto."""
+    """Any text, split into `parts` equal pieces, is restored exactly."""
     m = PIIMap()
     tokenized = tokenize_text(f"DNI: {DNI} {text}", m)
     expected = f"DNI: {DNI} {text}"

@@ -1,11 +1,11 @@
-"""Doble hash de evidencia: bytes del proveedor frente a bytes del cliente.
+"""Dual evidence hash: provider bytes versus client bytes.
 
-Con el PII vault activo, lo que el proveedor recibe (tokens) y lo que el cliente
-recibe (valores restaurados) son distintos. Un único ``response_hash`` no puede
-probar ambas cosas; este módulo calcula y transporta los dos digests.
+With the PII vault active, what the provider receives (tokens) and what the
+client receives (restored values) differ. A single ``response_hash`` cannot
+prove both; this module computes and carries the two digests.
 
-El digest del cliente es el ``response_hash`` firmado del nodo; el digest del
-proveedor se registra en ``sampling_params`` del mismo nodo (ver
+The client digest is the node's signed ``response_hash``; the provider digest is
+recorded in the same node's ``sampling_params`` (see
 ``CryptographicAuditLedger.commit_forensic`` / ``commit_forensic_summary``).
 """
 
@@ -31,18 +31,18 @@ def is_sha256_hex(value: object) -> bool:
 
 @dataclass(frozen=True)
 class ResponseDigests:
-    """Los dos extremos de una respuesta, ya hasheados."""
+    """Both ends of a response, already hashed."""
 
     upstream_sha256: str
     client_sha256: str
 
     @property
     def restored(self) -> bool:
-        """True cuando el cliente recibió bytes distintos de los del proveedor."""
+        """True when the client received different bytes from the provider's."""
         return self.upstream_sha256 != self.client_sha256
 
     def evidence_params(self, *, pii_restored: bool = False) -> dict[str, Any]:
-        """Campos para ``sampling_params``; nunca incluye contenido."""
+        """Fields for ``sampling_params``; never includes content."""
         params: dict[str, Any] = {
             "response_upstream_sha256": self.upstream_sha256,
             "response_client_sha256": self.client_sha256,
@@ -53,7 +53,7 @@ class ResponseDigests:
 
 
 def response_digests(upstream_bytes: bytes, client_bytes: bytes) -> ResponseDigests:
-    """Hash de los bytes enviados por el proveedor y de los entregados al cliente."""
+    """Hash of the bytes the provider sent and of the bytes delivered to the client."""
     return ResponseDigests(
         upstream_sha256=sha256_hex(upstream_bytes),
         client_sha256=sha256_hex(client_bytes),
@@ -61,11 +61,11 @@ def response_digests(upstream_bytes: bytes, client_bytes: bytes) -> ResponseDige
 
 
 class StreamDigestRecorder:
-    """Acumula ambos digests mientras un stream cruza el restaurador.
+    """Accumulates both digests while a stream passes through the restorer.
 
-    Se actualiza en el mismo punto en que los bytes pasan: ``update_upstream``
-    antes de restaurar, ``update_client`` después. El objeto no retiene los
-    bytes, sólo el estado de SHA-256.
+    It is updated at the point the bytes pass: ``update_upstream`` before
+    restoring, ``update_client`` after. The object keeps no bytes, only the
+    SHA-256 state.
     """
 
     def __init__(self) -> None:

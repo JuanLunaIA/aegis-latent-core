@@ -1,12 +1,12 @@
-"""Rechaza tráfico que no venga de CloudFront.
+"""Reject traffic that does not come from CloudFront.
 
-Segunda barrera del gateway: el security group sólo admite el prefijo
-``com.amazonaws.global.cloudfront.origin-facing`` y este middleware exige el
-secreto compartido que CloudFront añade como cabecera personalizada.
+The gateway's second barrier: the security group only admits the
+``com.amazonaws.global.cloudfront.origin-facing`` prefix, and this middleware
+requires the shared secret CloudFront adds as a custom header.
 
-``/health`` y ``/ready`` quedan exentos (los consume el balanceador y el propio
-borde). ``/metrics`` no se exime: sólo se sirve a loopback, y a cualquier otro
-origen se le responde 404 — no 403 — para no revelar que el endpoint existe.
+``/health`` and ``/ready`` are exempt (the load balancer and the edge itself use
+them). ``/metrics`` is not exempt: it is served to loopback only, and any other
+origin gets 404, not 403, so the endpoint's existence is not revealed.
 """
 
 # Copyright (c) 2026 Juan Luna. All rights reserved.
@@ -27,7 +27,7 @@ METRICS_PATH = "/metrics"
 
 
 class EdgeSecretMiddleware(BaseHTTPMiddleware):
-    """Exige ``x-aegis-edge: <secreto>`` en todo lo que no sea sonda de salud."""
+    """Require ``x-aegis-edge: <secret>`` on everything except health probes."""
 
     def __init__(self, app: ASGIApp, secret: str, header: str = "x-aegis-edge") -> None:
         super().__init__(app)
@@ -44,16 +44,16 @@ class EdgeSecretMiddleware(BaseHTTPMiddleware):
                 return await call_next(request)
             return JSONResponse({"detail": "not found"}, status_code=404)
         supplied = request.headers.get(self._header, "").encode("utf-8")
-        # Comparación en tiempo constante. Un secreto vacío nunca autentica: el
-        # middleware no se registra sin secreto, pero si se construyera a mano
-        # con "" fallaría cerrado en vez de aceptar cualquier cabecera ausente.
+        # Constant-time comparison. An empty secret never authenticates: the
+        # middleware is not registered without a secret, but if it were built by
+        # hand with "" it fails closed instead of accepting a missing header.
         if not self._secret or not hmac.compare_digest(supplied, self._secret):
             return JSONResponse({"detail": "edge authentication required"}, status_code=403)
         return await call_next(request)
 
 
 def install_edge_middleware(app: ASGIApp, secret: str) -> bool:
-    """Registra el middleware sólo si hay secreto. Devuelve si quedó activo."""
+    """Register the middleware only when a secret is set. Return whether it is active."""
     if not secret:
         return False
     app.add_middleware(EdgeSecretMiddleware, secret=secret)  # type: ignore[attr-defined]
