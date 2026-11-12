@@ -306,7 +306,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `scripts/generate_sbom.sh` | shell script | Aegis Latent Core — SBOM Generation Script | referenced | — | @JuanLunaIA |
 | `scripts/generate_sdk_bundle_fixture.py` | module | Write the gateway-issued forensic bundle the Python SDK's tests verify. | referenced | — | @JuanLunaIA |
 | `scripts/import_reachability_allowlist.txt` | text/data | — | referenced | — | @JuanLunaIA |
-| `scripts/install_aegis.sh` | shell script | install_aegis.sh — Zero-touch POSIX installer for Aegis Latent Core v5.0.3 | unreferenced | — | @JuanLunaIA |
+| `scripts/install_aegis.sh` | shell script | install_aegis.sh — Zero-touch POSIX installer for Aegis Latent Core v5.1.0 | unreferenced | — | @JuanLunaIA |
 | `scripts/install_gitsign.sh` | shell script | — | referenced | — | @JuanLunaIA |
 | `scripts/integration_test_mock.py` | module | integration_test_mock.py — comprehensive local verification harness for Aegis v4.1.0. | unreferenced | — | @JuanLunaIA |
 | `scripts/license/license_scan.py` | module | License inventory and copyleft reconciliation across all three ecosystems. | referenced | — | @JuanLunaIA |

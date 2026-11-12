@@ -1814,6 +1814,7 @@ class CryptographicAuditLedger:
             or any(ch not in "0123456789abcdef" for ch in response_hash)
         ):
             raise ValueError("response_hash must be a lowercase SHA-256 hex digest")
+
         # Doble hash (T7.12): con el vault activo, los bytes del proveedor y los
         # del cliente difieren. ``response_hash`` es siempre el digest del
         # cliente; el del proveedor se registra aparte. Un cliente declarado que
