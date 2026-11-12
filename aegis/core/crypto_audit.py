@@ -1818,18 +1818,14 @@ class CryptographicAuditLedger:
         # del cliente difieren. ``response_hash`` es siempre el digest del
         # cliente; el del proveedor se registra aparte. Un cliente declarado que
         # no coincide con el hash firmado sería una evidencia incoherente.
-        for name, value in (
-            ("response_upstream_sha256", response_upstream_sha256),
-            ("response_client_sha256", response_client_sha256),
-        ):
+        def _check_sha256(name: str, value: str | None) -> None:
             if value is None:
-                continue
-            if (
-                not isinstance(value, str)
-                or len(value) != 64
-                or any(ch not in "0123456789abcdef" for ch in value)
-            ):
+                return
+            if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
                 raise ValueError(f"{name} must be a lowercase SHA-256 hex digest")
+
+        _check_sha256("response_upstream_sha256", response_upstream_sha256)
+        _check_sha256("response_client_sha256", response_client_sha256)
         if response_client_sha256 is not None and response_client_sha256 != response_hash:
             raise ValueError("response_client_sha256 must equal the signed response_hash")
         if not isinstance(pii_restored, bool):
