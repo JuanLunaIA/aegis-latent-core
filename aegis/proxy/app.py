@@ -42,16 +42,20 @@ from aegis.config import AegisSettings, get_settings
 from aegis.core import observability
 from aegis.core.circuit_breaker import CircuitOpenError
 from aegis.core.crypto_audit import AuditNode, CryptographicAuditLedger
+from aegis.core.evidence_hash import StreamDigestRecorder, response_digests
 from aegis.core.forensic import WAF_VERDICT_PASSED
 from aegis.core.hsm import HSMSigningBackend
 from aegis.core.mmr import MMR_PROOF_VERSION_V1
 from aegis.core.normalization import canonical_normalize
 from aegis.core.pci_detector import PCIScrubber
 from aegis.core.phi_deidentifier import PHIDeidentifier
+from aegis.core.pii_vault import PIIMap, PIIVaultPolicy, restore_json, tokenize_json
 from aegis.core.rag_injection_scanner import RAGInjectionScanner
 from aegis.core.ratelimiter import RateLimitBackendUnavailable as LegacyRateLimitBackendUnavailable
 from aegis.core.secrets import VaultManager
 from aegis.core.session_manager import SessionLifecycleManager
+from aegis.core.tenancy import TenantMismatch, tenant_from_headers
+from aegis.core.text_delta_restore import restoring_delta_stream
 from aegis.core.waf_session import WAFSessionTracker
 from aegis.core.zk_native import forensic_preview_warning
 from aegis.proxy.analyzer import ResponseAnalyzer
@@ -60,6 +64,7 @@ from aegis.proxy.audit_api import build_audit_router
 from aegis.proxy.body_limits import RequestBodyLimitMiddleware
 from aegis.proxy.dependencies import validate_audit_auth, validate_proxy_auth
 from aegis.proxy.dmz_middleware import DMZSourceIPMiddleware
+from aegis.proxy.edge import EdgeSecretMiddleware
 from aegis.proxy.forwarder import LLMForwarder
 from aegis.proxy.rate_limiter import (
     DualRateLimiter,
@@ -394,6 +399,23 @@ class _AppState:
 
     def get_analyzer(self, session_id: str) -> ResponseAnalyzer:
         return self.analyzers.get(session_id)
+
+    def pii_vault_for(self, tenant_id: str) -> PIIVaultPolicy | None:
+        """Política efectiva del vault para una organización, o None si está off.
+
+        El argumento es el punto de extensión de la configuración por
+        organización (T2.8, endpoint interno de config); en 5.1.0 la política es
+        global al gateway y se valida al cargar ``AegisSettings``.
+        """
+        settings = getattr(self, "settings", None)
+        if settings is None or not getattr(settings, "pii_vault_enabled", False):
+            return None
+        try:
+            return PIIVaultPolicy.from_spec(settings.pii_vault_types)
+        except ValueError:
+            # Config inválida no puede degradar a "sin tokenizar": se usa el
+            # conjunto completo, que es el comportamiento más protector.
+            return PIIVaultPolicy()
 
 
 # Deeper than any chat, completions or messages body needs, and far below the
@@ -1017,6 +1039,46 @@ def _scrub_anthropic_payload(
     return result, changed, "+".join(sorted(methods))
 
 
+def _request_tenant(request: Request, principal: Principal) -> str:
+    """Tenant efectivo de la petición, o 403 si contradice la clave.
+
+    ``X-Aegis-Host`` lo escribe la CloudFront Function y sólo llega aquí si el
+    middleware de borde aceptó el secreto; el ``Host`` del origen no decide
+    tenant cuando esa cabecera está presente.
+    """
+    try:
+        return tenant_from_headers(
+            request.headers.get("host", ""),
+            request.headers.get("x-aegis-host", ""),
+            request.url.path,
+            principal.tenant_id,
+        )
+    except TenantMismatch as exc:
+        logger.warning(
+            "request rejected: tenant in host/path does not match the authenticated key (path=%s)",
+            request.url.path,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Tenant mismatch"
+        ) from exc
+
+
+def _apply_pii_vault_request(
+    body: dict[str, Any], state: _AppState, tenant_id: str
+) -> tuple[dict[str, Any], PIIMap | None]:
+    """Tokeniza el cuerpo si la organización tiene el vault activo.
+
+    Devuelve el cuerpo (tokenizado o intacto) y el mapa efímero que restaura la
+    respuesta. Si el vault está apagado el mapa es None y el llamador conserva
+    el scrub irreversible existente.
+    """
+    policy = state.pii_vault_for(tenant_id)
+    if policy is None:
+        return body, None
+    mapping = PIIMap()
+    return tokenize_json(body, mapping, kinds=policy.kinds), mapping
+
+
 def _extract_logprobs(resp_json: dict[str, Any]) -> list[Any]:
     try:
         content = resp_json.get("choices", [])[0].get("logprobs", {}).get("content", [])
@@ -1079,6 +1141,13 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     )
     state._phi_scrubber = PHIDeidentifier() if cfg.phi_deidentify else None
     state._pci_scrubber = PCIScrubber() if cfg.pci_scrub else None
+    if cfg.pii_vault_enabled and not cfg.pii_redact_tenant_id:
+        # T2.6: el vault protege el contenido, no el identificador de sesión del
+        # WAL. Sin la pseudonimización, el tenant sigue en claro en la evidencia.
+        logger.warning(
+            "AEGIS_PII_VAULT_ENABLED is on but AEGIS_PII_REDACT_TENANT_ID is off: "
+            "prompts are tokenized, tenant identifiers in the WAL are not pseudonymized"
+        )
 
     # HSM/PKCS#11 signing backend (optional; degrades gracefully when unavailable).
     _hsm_backend: HSMSigningBackend | None = None
@@ -1675,6 +1744,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             trust_proxy_headers=cfg.dmz_trust_proxy_headers,
         )
 
+    # T1.6: segunda barrera del gateway. Sin secreto configurado no se registra:
+    # el proceso no está detrás de CloudFront (desarrollo o pruebas locales).
+    if cfg.edge_secret:
+        app.add_middleware(EdgeSecretMiddleware, secret=cfg.edge_secret)
+
     app.include_router(build_audit_router(state.ledger, validate_audit_auth), prefix="/v1/audit")
     app.include_router(build_attestation_router(), prefix="/v1/attestation")
 
@@ -1698,6 +1772,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         scrub_method: str = "",
         endpoint: str = "chat.completions",
         tenant_id: str | None = None,
+        upstream_bytes: bytes | None = None,
+        pii_restored: bool = False,
     ) -> AuditNode:
         """Commit mandatory request-response evidence before any terminal response."""
         # PII redaction: replace tenant_id with a one-way hash prefix when
@@ -1735,6 +1811,14 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     sampling_params={
                         "evidence_status": "durable",
                         "response_complete": response_complete,
+                        # T7.12: con el vault activo, los bytes del proveedor
+                        # (tokens) y los del cliente (restaurados) difieren. El
+                        # hash del cliente es el `response_hash` firmado; el del
+                        # proveedor queda en el mismo registro del nodo.
+                        **response_digests(
+                            upstream_bytes if upstream_bytes is not None else response_bytes,
+                            response_bytes,
+                        ).evidence_params(pii_restored=pii_restored),
                     },
                     phi_scrubbed=phi_scrubbed,
                     scrub_method=scrub_method,
@@ -2153,6 +2237,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         body = await _parse_governed_body(
             state, raw_body, tenant_id=principal.tenant_id, endpoint=request.url.path
         )
+        request_tenant = _request_tenant(request, principal)
 
         with observability.record_span("aegis.waf.check") as sp:
             waf_result = state.waf.inspect_payload(body)
@@ -2187,12 +2272,27 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         # Best-effort PHI identifier redaction on the hot request path.
         # Scrubs 18 HIPAA identifier categories from message content before forwarding.
         # raw_body (used for audit) retains the original; body is the scrubbed copy.
-        body, _phi_scrubbed, _scrub_method = _apply_phi_scrub_request(body, state)
+        # T2.4: el vault reversible sustituye a la máscara irreversible. Si está
+        # on, el valor se guarda en memoria y se envía un token; si está off, se
+        # mantiene el scrub actual. Tokenizar después del scrub no serviría: el
+        # valor ya estaría destruido y no habría nada que restaurar.
+        body, pii_map = _apply_pii_vault_request(body, state, request_tenant)
+        if pii_map is not None:
+            _phi_scrubbed = False
+            _pci_scrubbed = False
+            _scrub_method = "pii_vault"
+        else:
+            body, _phi_scrubbed, _scrub_method = _apply_phi_scrub_request(body, state)
 
-        # PCI-DSS cardholder-data scrubbing (PAN/CVV/Track) before forwarding.
-        body, _pci_scrubbed = _apply_pci_scrub_request(body, state)
-        if _pci_scrubbed:
-            _scrub_method = (_scrub_method + "+pci_pan_mask").lstrip("+")
+            # PCI-DSS cardholder-data scrubbing (PAN/CVV/Track) before forwarding.
+            body, _pci_scrubbed = _apply_pci_scrub_request(body, state)
+            if _pci_scrubbed:
+                _scrub_method = (_scrub_method + "+pci_pan_mask").lstrip("+")
+
+        # T2.4: cuando el vault está activo, la evidencia compromete el cuerpo
+        # tokenizado. `raw_body` conserva los valores originales y no debe
+        # terminar en el preview del WAL.
+        evidence_request_bytes = raw_body if pii_map is None else json.dumps(body).encode()
 
         session_id = (
             request.headers.get("x-aegis-session-id")
@@ -2201,7 +2301,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             or str(uuid.uuid4())
         )
         session_id = await _validated_session(request, session_id, body, principal.tenant_id)
-        tenant_id = principal.tenant_id
+        tenant_id = request_tenant
         request_id = str(uuid.uuid4())
 
         # Multi-turn behavioral WAF check (Domain 5.1): accumulate per-session WAF
@@ -2250,6 +2350,13 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             stream = state.forwarder.stream_sse(
                 "/v1/chat/completions", body, extra_headers=_outbound_trace_headers(request)
             )
+            # T2.5/T7.11: el restaurador va por delante del proxy acotado, de modo
+            # que el hash del stream sea el de los bytes que recibe el cliente y
+            # el remanente de un token partido se emita antes del terminal.
+            stream_digests: StreamDigestRecorder | None = None
+            if pii_map is not None:
+                stream_digests = StreamDigestRecorder()
+                stream = restoring_delta_stream(stream, pii_map, stream_digests)
 
             async def _commit_stream_terminal(summary: StreamEvidenceSummary) -> None:
                 audit_sid = (
@@ -2262,7 +2369,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     await asyncio.to_thread(
                         _commit_stream_evidence,
                         state_id=request_id,
-                        request_bytes=raw_body,
+                        request_bytes=evidence_request_bytes,
                         response_hash=summary.response_hash,
                         response_size=summary.response_size,
                         response_preview=summary.response_preview,
@@ -2282,6 +2389,18 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                         ),
                         signer_name=principal.subject,
                         signature_meaning="stream-terminal-evidence",
+                        # T7.12: el proveedor vio los tokens; el cliente recibió
+                        # los valores restaurados. `summary.response_hash` es el
+                        # hash firmado de los bytes entregados al cliente.
+                        response_upstream_sha256=(
+                            stream_digests.snapshot().upstream_sha256
+                            if stream_digests is not None
+                            else None
+                        ),
+                        response_client_sha256=(
+                            summary.response_hash if stream_digests is not None else None
+                        ),
+                        pii_restored=stream_digests is not None,
                     )
                     observability.STREAM_DURATION.labels(
                         provider="openai", outcome=summary.terminal_outcome
@@ -2311,8 +2430,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             stream_replay = (
                 TerminalReplayContext(
                     state_id=request_id,
-                    request_hash=hashlib.sha256(raw_body).hexdigest(),
-                    request_size=len(raw_body),
+                    request_hash=hashlib.sha256(evidence_request_bytes).hexdigest(),
+                    request_size=len(evidence_request_bytes),
                     tenant_id=(
                         hashlib.sha256(tenant_id.encode()).hexdigest()[:16]
                         if cfg.pii_redact_tenant_id
@@ -2341,8 +2460,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 queue_max_bytes=cfg.stream_queue_max_bytes,
                 preview_bytes=cfg.max_forensic_bytes,
                 deidentifier_window_chars=cfg.stream_deidentifier_window_chars,
-                enable_phi=state._phi_scrubber is not None,
-                enable_pci=state._pci_scrubber is not None,
+                # Con el vault activo el texto ya no lleva valores: el scrub por
+                # ventana sólo podría dañar los valores restaurados.
+                enable_phi=state._phi_scrubber is not None and pii_map is None,
+                enable_pci=state._pci_scrubber is not None and pii_map is None,
                 streaming_engine=cfg.streaming_engine,
             )
             # Admission is taken here, immediately before ownership passes to
@@ -2403,7 +2524,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
-                raw_body=raw_body,
+                raw_body=evidence_request_bytes,
                 model=body.get("model", "unknown"),
                 request_start=request_start,
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -2416,7 +2537,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
-                raw_body=raw_body,
+                raw_body=evidence_request_bytes,
                 model=body.get("model", "unknown"),
                 request_start=request_start,
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -2434,7 +2555,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
-                raw_body=raw_body,
+                raw_body=evidence_request_bytes,
                 model=body.get("model", "unknown"),
                 request_start=request_start,
                 status_code=upstream.status_code,
@@ -2448,7 +2569,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             provider="openai",
             request_id=request_id,
             session_id=session_id,
-            raw_body=raw_body,
+            raw_body=evidence_request_bytes,
             model=body.get("model", "unknown"),
             request_start=request_start,
             endpoint="chat.completions",
@@ -2458,18 +2579,22 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return settled
         response_rate_decision = settled or rate_decision
         # PHI de-identification on the hot response path: scrub before returning to client.
-        resp_json = _apply_phi_scrub_response(resp_json, state)
-        # PCI-DSS cardholder-data scrubbing on the hot response path.
-        resp_json = _apply_pci_scrub_response(resp_json, state)
+        # Con el vault activo no se aplica: destruiría los valores recién restaurados.
+        if pii_map is not None:
+            resp_json = restore_json(resp_json, pii_map)
+        else:
+            resp_json = _apply_phi_scrub_response(resp_json, state)
+            # PCI-DSS cardholder-data scrubbing on the hot response path.
+            resp_json = _apply_pci_scrub_response(resp_json, state)
         resp_content = (
             json.dumps(resp_json).encode()
-            if (state._phi_scrubber or state._pci_scrubber)
+            if (state._phi_scrubber or state._pci_scrubber or pii_map is not None)
             else upstream.content
         )
         evidence_node = await _commit_evidence(
             request_id,
             session_id,
-            raw_body,
+            evidence_request_bytes,
             resp_content,
             body.get("model", "unknown"),
             request_start,
@@ -2477,6 +2602,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             phi_scrubbed=_phi_scrubbed,
             scrub_method=_scrub_method,
             tenant_id=tenant_id,
+            upstream_bytes=upstream.content,
+            pii_restored=pii_map is not None,
         )
         queued = _enqueue_analysis(
             request_id,
@@ -2536,6 +2663,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         max_tokens = body.get("max_tokens")
         if not isinstance(max_tokens, int) or isinstance(max_tokens, bool) or max_tokens < 1:
             raise HTTPException(status_code=422, detail="max_tokens must be a positive integer")
+        request_tenant = _request_tenant(request, principal)
 
         waf_result = state.waf.inspect_payload(body)
         if not waf_result.allowed:
@@ -2559,7 +2687,16 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             state, body, tenant_id=principal.tenant_id, endpoint=request.url.path
         )
         _apply_request_entropy_guard(request, body, state)
-        body, request_scrubbed, scrub_method = _scrub_anthropic_payload(body, state)
+        # T2.4/T7.11: vault reversible en `/v1/messages`, incluido el `system`.
+        body, pii_map = _apply_pii_vault_request(body, state, request_tenant)
+        if pii_map is not None:
+            request_scrubbed = False
+            scrub_method = "pii_vault"
+        else:
+            body, request_scrubbed, scrub_method = _scrub_anthropic_payload(body, state)
+
+        # T2.4: con vault, la evidencia compromete el cuerpo tokenizado.
+        evidence_request_bytes = raw_body if pii_map is None else json.dumps(body).encode()
 
         session_id = (
             request.headers.get("x-aegis-session-id")
@@ -2567,7 +2704,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             or str(uuid.uuid4())
         )
         session_id = await _validated_session(request, session_id, body, principal.tenant_id)
-        tenant_id = principal.tenant_id
+        tenant_id = request_tenant
         request_id = str(uuid.uuid4())
         rate_decision, reservation = await _reserve_budget(principal, body)
         if state.forwarder.provider.name != "anthropic":
@@ -2575,7 +2712,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
-                raw_body=raw_body,
+                raw_body=evidence_request_bytes,
                 model=body["model"],
                 request_start=request_start,
                 status_code=status.HTTP_409_CONFLICT,
@@ -2589,6 +2726,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 body, extra_headers=_outbound_trace_headers(request)
             )
             terminal_marker = b'event: message_stop\ndata: {"type":"message_stop"}\n\n'
+            stream_digests: StreamDigestRecorder | None = None
+            if pii_map is not None:
+                stream_digests = StreamDigestRecorder()
+                upstream_stream = restoring_delta_stream(upstream_stream, pii_map, stream_digests)
 
             async def _commit_anthropic_terminal(summary: StreamEvidenceSummary) -> None:
                 audit_tenant = (
@@ -2599,7 +2740,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 await asyncio.to_thread(
                     _commit_stream_evidence,
                     state_id=request_id,
-                    request_bytes=raw_body,
+                    request_bytes=evidence_request_bytes,
                     response_hash=summary.response_hash,
                     response_size=summary.response_size,
                     response_preview=summary.response_preview,
@@ -2615,6 +2756,15 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     scrub_method=scrub_method,
                     signer_name=principal.subject,
                     signature_meaning="stream-terminal-evidence",
+                    response_upstream_sha256=(
+                        stream_digests.snapshot().upstream_sha256
+                        if stream_digests is not None
+                        else None
+                    ),
+                    response_client_sha256=(
+                        summary.response_hash if stream_digests is not None else None
+                    ),
+                    pii_restored=stream_digests is not None,
                 )
                 observability.STREAM_DURATION.labels(
                     provider="anthropic", outcome=summary.terminal_outcome
@@ -2638,8 +2788,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             anthropic_replay = (
                 TerminalReplayContext(
                     state_id=request_id,
-                    request_hash=hashlib.sha256(raw_body).hexdigest(),
-                    request_size=len(raw_body),
+                    request_hash=hashlib.sha256(evidence_request_bytes).hexdigest(),
+                    request_size=len(evidence_request_bytes),
                     tenant_id=(
                         hashlib.sha256(tenant_id.encode()).hexdigest()[:16]
                         if cfg.pii_redact_tenant_id
@@ -2668,8 +2818,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 queue_max_bytes=cfg.stream_queue_max_bytes,
                 preview_bytes=cfg.max_forensic_bytes,
                 deidentifier_window_chars=cfg.stream_deidentifier_window_chars,
-                enable_phi=state._phi_scrubber is not None,
-                enable_pci=state._pci_scrubber is not None,
+                enable_phi=state._phi_scrubber is not None and pii_map is None,
+                enable_pci=state._pci_scrubber is not None and pii_map is None,
                 streaming_engine=cfg.streaming_engine,
                 protocol="anthropic",
                 terminal_predicate=lambda _raw, event: (
@@ -2729,7 +2879,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
-                raw_body=raw_body,
+                raw_body=evidence_request_bytes,
                 model=body["model"],
                 request_start=request_start,
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -2743,7 +2893,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
-                raw_body=raw_body,
+                raw_body=evidence_request_bytes,
                 model=body["model"],
                 request_start=request_start,
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -2757,7 +2907,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
-                raw_body=raw_body,
+                raw_body=evidence_request_bytes,
                 model=body["model"],
                 request_start=request_start,
                 status_code=upstream.status_code,
@@ -2771,7 +2921,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             provider="anthropic",
             request_id=request_id,
             session_id=session_id,
-            raw_body=raw_body,
+            raw_body=evidence_request_bytes,
             model=body["model"],
             request_start=request_start,
             endpoint="anthropic.messages",
@@ -2780,16 +2930,21 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         if isinstance(settled, Response):
             return settled
         response_rate_decision = settled or rate_decision
-        response_json, response_scrubbed, response_scrub_method = _scrub_anthropic_payload(
-            response_json, state
-        )
+        if pii_map is not None:
+            response_json = restore_json(response_json, pii_map)
+            response_scrubbed = False
+            response_scrub_method = ""
+        else:
+            response_json, response_scrubbed, response_scrub_method = _scrub_anthropic_payload(
+                response_json, state
+            )
         response_content = json.dumps(
             response_json, separators=(",", ":"), ensure_ascii=True
         ).encode("utf-8")
         evidence_node = await _commit_evidence(
             request_id,
             session_id,
-            raw_body,
+            evidence_request_bytes,
             response_content,
             body["model"],
             request_start,
@@ -2798,6 +2953,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             scrub_method="+".join(part for part in (scrub_method, response_scrub_method) if part),
             endpoint="anthropic.messages",
             tenant_id=tenant_id,
+            upstream_bytes=upstream.content,
+            pii_restored=pii_map is not None,
         )
         response = Response(
             content=response_content,
@@ -2829,6 +2986,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         body = await _parse_governed_body(
             state, raw_body, tenant_id=principal.tenant_id, endpoint=request.url.path
         )
+        request_tenant = _request_tenant(request, principal)
 
         waf_result = state.waf.inspect_payload(body)
         if not waf_result.allowed:
@@ -2854,6 +3012,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         _apply_request_entropy_guard(request, body, state)
 
+        # T2.4: mismo vault reversible en el endpoint legado de completions.
+        body, pii_map = _apply_pii_vault_request(body, state, request_tenant)
+        evidence_request_bytes = raw_body if pii_map is None else json.dumps(body).encode()
+
         if not hasattr(state, "forwarder") or state.forwarder is None:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -2865,7 +3027,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             or str(uuid.uuid4())
         )
         session_id = await _validated_session(request, session_id, body, principal.tenant_id)
-        tenant_id = principal.tenant_id
+        tenant_id = request_tenant
         request_id = str(uuid.uuid4())
 
         session_waf = state.waf_session_tracker.record_and_check(
@@ -2903,7 +3065,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
-                raw_body=raw_body,
+                raw_body=evidence_request_bytes,
                 model=body.get("model", "unknown"),
                 request_start=completions_start,
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -2917,7 +3079,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
-                raw_body=raw_body,
+                raw_body=evidence_request_bytes,
                 model=body.get("model", "unknown"),
                 request_start=completions_start,
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -2929,7 +3091,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             return await _durable_error_response(
                 request_id=request_id,
                 session_id=session_id,
-                raw_body=raw_body,
+                raw_body=evidence_request_bytes,
                 model=body.get("model", "unknown"),
                 request_start=completions_start,
                 status_code=upstream.status_code,
@@ -2947,7 +3109,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             provider="openai",
             request_id=request_id,
             session_id=session_id,
-            raw_body=raw_body,
+            raw_body=evidence_request_bytes,
             model=body.get("model", "unknown"),
             request_start=completions_start,
             endpoint="completions",
@@ -2956,16 +3118,22 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         if isinstance(settled, Response):
             return settled
         response_rate_decision = settled or rate_decision
+        response_bytes = upstream.content
+        if pii_map is not None and isinstance(response_json, dict):
+            response_json = restore_json(response_json, pii_map)
+            response_bytes = json.dumps(response_json).encode()
         evidence_node = await _commit_evidence(
             request_id,
             session_id,
-            raw_body,
-            upstream.content,
+            evidence_request_bytes,
+            response_bytes,
             body.get("model", "unknown"),
             completions_start,
             response_complete=True,
             endpoint="completions",
             tenant_id=tenant_id,
+            upstream_bytes=upstream.content,
+            pii_restored=pii_map is not None,
         )
         queued = _enqueue_analysis(
             request_id,
@@ -2974,12 +3142,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             [],
             {"endpoint": "completions", "model": body.get("model")},
             raw_body,
-            upstream.content,
+            response_bytes,
             False,
             "",
         )
 
-        resp = Response(content=upstream.content, status_code=200)
+        resp = Response(content=response_bytes, status_code=200)
         resp.headers["X-Aegis-Request-ID"] = request_id
         resp.headers["X-Aegis-Session-ID"] = session_id
         resp.headers["X-Aegis-Evidence-Status"] = "durable"

@@ -1730,6 +1730,9 @@ class CryptographicAuditLedger:
         signer_name: str = "",
         signature_meaning: str = "stream-terminal-evidence",
         request_digest: tuple[str, int] | None = None,
+        response_upstream_sha256: str | None = None,
+        response_client_sha256: str | None = None,
+        pii_restored: bool = False,
     ) -> AuditNode:
         """Commit one terminal record for an incrementally hashed response.
 
@@ -1811,6 +1814,26 @@ class CryptographicAuditLedger:
             or any(ch not in "0123456789abcdef" for ch in response_hash)
         ):
             raise ValueError("response_hash must be a lowercase SHA-256 hex digest")
+        # Doble hash (T7.12): con el vault activo, los bytes del proveedor y los
+        # del cliente difieren. ``response_hash`` es siempre el digest del
+        # cliente; el del proveedor se registra aparte. Un cliente declarado que
+        # no coincide con el hash firmado sería una evidencia incoherente.
+        for name, value in (
+            ("response_upstream_sha256", response_upstream_sha256),
+            ("response_client_sha256", response_client_sha256),
+        ):
+            if value is None:
+                continue
+            if (
+                not isinstance(value, str)
+                or len(value) != 64
+                or any(ch not in "0123456789abcdef" for ch in value)
+            ):
+                raise ValueError(f"{name} must be a lowercase SHA-256 hex digest")
+        if response_client_sha256 is not None and response_client_sha256 != response_hash:
+            raise ValueError("response_client_sha256 must equal the signed response_hash")
+        if not isinstance(pii_restored, bool):
+            raise ValueError("pii_restored must be a bool")
         if (
             isinstance(response_size, bool)
             or not isinstance(response_size, int)
@@ -1870,6 +1893,12 @@ class CryptographicAuditLedger:
             "terminal_outcome": terminal_outcome,
             "token_count": token_count,
         }
+        if response_upstream_sha256 is not None:
+            params["response_upstream_sha256"] = response_upstream_sha256
+        if response_client_sha256 is not None:
+            params["response_client_sha256"] = response_client_sha256
+        if pii_restored:
+            params["pii_restored"] = True
 
         with self._lock:
             self._refuse_if_faulted()

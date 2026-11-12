@@ -3,7 +3,7 @@
 # Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 [package]
 name = "aegis_rust"
-version = "5.0.3"
+version = "5.1.0"
 edition = "2021"
 description = "Tier-4 Rust core: zero-copy forwarder, Aho-Corasick WAF, BLAKE3 audit chain, mmap WAL, lock-free rate limiter & session store, ML-DSA PQC signing"
 license = "LicenseRef-Aegis-Commercial-1.0"

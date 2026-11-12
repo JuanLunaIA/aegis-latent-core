@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aegis-latent-core"
-version = "5.0.3"
+version = "5.1.0"
 description = "Fail-closed LLM gateway with durable signed forensic evidence and bounded response enrichment"
 readme = "README.md"
 license = "LicenseRef-Aegis-Commercial-1.0"

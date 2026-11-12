@@ -1035,6 +1035,37 @@ class AegisSettings(BaseSettings):
             "the durable WAL record. Cannot be reversed without the original ID."
         ),
     )
+    pii_vault_enabled: bool = Field(
+        default=False,
+        description=(
+            "When True, structured identifiers (EMAIL, DNI, CUIL, CUIT, SSN, PHONE, "
+            "CARD, IBAN, PERSON-with-label) are replaced by reversible "
+            "[[AEGIS:TYPE:hex]] tokens before forwarding, and restored in the "
+            "response (JSON and SSE deltas). The mapping lives only in process "
+            "memory for the duration of the request; it is never logged or written. "
+            "Not an anonymization guarantee: free-form names without a label are "
+            "not detected."
+        ),
+    )
+    pii_vault_types: str = Field(
+        default="EMAIL,DNI,CUIL,CUIT,SSN,PHONE,CARD,IBAN,PERSON",
+        description=(
+            "Comma-separated list of PII vault types to tokenize. An unknown type "
+            "is a startup error, not a warning: a narrower set than declared would "
+            "be a false assurance."
+        ),
+    )
+
+    # ── Edge ──────────────────────────────────────────────────────────────
+    edge_secret: str = Field(
+        default="",
+        description=(
+            "Shared secret CloudFront sends as X-Aegis-Edge. When set, the gateway "
+            "rejects any request without it (health/ready exempt; /metrics is "
+            "loopback-only). Leave empty only when the gateway is not behind the "
+            "edge, e.g. local development."
+        ),
+    )
 
     # ── Alerting ──────────────────────────────────────────────────────────
     webhook_url: str = Field(
@@ -1082,6 +1113,19 @@ class AegisSettings(BaseSettings):
                     "AEGIS_TRUSTED_SIGNING_PUBLIC_KEYS must be comma-separated hex public keys"
                 )
         return ",".join(key.lower() for key in keys)
+
+    @field_validator("pii_vault_types")
+    @classmethod
+    def _validate_pii_vault_types(cls, v: str) -> str:
+        # Import local: ``aegis.config`` se carga antes que el resto del paquete
+        # y no debe arrastrar el módulo del vault en el arranque.
+        from aegis.core.pii_vault import UnknownPIIKind, parse_vault_types
+
+        try:
+            parse_vault_types(v)
+        except UnknownPIIKind as exc:
+            raise ValueError(f"AEGIS_PII_VAULT_TYPES: {exc}") from exc
+        return v
 
     @field_validator("rate_limit_backend")
     @classmethod
