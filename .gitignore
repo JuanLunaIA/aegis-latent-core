@@ -82,3 +82,6 @@ aegis-azure-kits/
 # Contact data stays out of the repository (tools/validation/brevo_export.py)
 contacts_private*.csv
 brevo_import*.csv
+
+# Local agent-tool telemetry; never versioned
+.cto-toolkit/
