@@ -182,7 +182,7 @@ def tokenize_text(
 ) -> str:
     """Tokenise the identifiers recognised in *text*.
 
-    ``kinds`` restricts the active rules (per-organisation configuration). Rules
+    ``kinds`` restricts the active rules (the per-organisation extension point; gateway-wide in 5.1.0). Rules
     apply in order, most specific first, so a semantic label (DNI, CUIT, PERSON)
     is not downgraded to a generic kind.
     """
