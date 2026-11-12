@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
 # Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 #
-# install_aegis.sh — Zero-touch POSIX installer for Aegis Latent Core v5.0.3
+# install_aegis.sh — Zero-touch POSIX installer for Aegis Latent Core v5.1.0
 #
 # Supported platforms: Linux (x86_64, aarch64), macOS (x86_64, Apple Silicon)
 # Requires: Python 3.11+, curl or wget, git (optional for source install)
@@ -16,7 +16,7 @@
 set -euo pipefail
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-AEGIS_VERSION="5.0.3"
+AEGIS_VERSION="5.1.0"
 AEGIS_WHEEL_NAME="aegis_latent_core-${AEGIS_VERSION}-py3-none-any.whl"
 AEGIS_RELEASE_BASE_URL="https://github.com/JuanLunaIA/aegis-latent-core/releases/download/v${AEGIS_VERSION}"
 AEGIS_WHEEL_URL="${AEGIS_RELEASE_BASE_URL}/${AEGIS_WHEEL_NAME}"
@@ -198,9 +198,9 @@ if ! "${SKIP_ENV_GEN}" && [[ ! -f "${ENV_FILE}" ]]; then
     AUDIT_KEY="sk-audit-$("${PYTHON}" -c 'import secrets; print(secrets.token_hex(16))')"
 
     cat > "${ENV_FILE}" <<EOF
-# Aegis Latent Core v${AEGIS_VERSION} — Auto-generated environment
-# Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-# IMPORTANT: AEGIS_BACKEND_API_KEY must be set manually.
+    # Aegis Latent Core v${AEGIS_VERSION} — Auto-generated environment
+    # Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    # IMPORTANT: AEGIS_BACKEND_API_KEY must be set manually.
 
 AEGIS_PROVIDER=openai
 AEGIS_BACKEND_URL=https://api.openai.com

@@ -23,7 +23,7 @@
 #   docker save python:3.11-slim | gzip > vendor/python-3.11-slim.tar.gz
 #   # Then transfer vendor/ to the air-gapped machine and build:
 #   docker load < vendor/python-3.11-slim.tar.gz
-#   docker build --network=none -f deploy/docker/Dockerfile.airgap -t aegis-latent-core:5.0.3-airgap .
+#   docker build --network=none -f deploy/docker/Dockerfile.airgap -t aegis-latent-core:5.1.0-airgap .
 
 set -euo pipefail
 
@@ -89,7 +89,7 @@ if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
         echo "[vendor_wheels]   docker build --network=none \\"
         echo "[vendor_wheels]     --build-arg PYTHON_BASE_DIGEST=${DIGEST} \\"
         echo "[vendor_wheels]     -f deploy/docker/Dockerfile.airgap \\"
-        echo "[vendor_wheels]     -t aegis-latent-core:5.0.3-airgap ."
+        echo "[vendor_wheels]     -t aegis-latent-core:5.1.0-airgap ."
     fi
 else
     echo "[vendor_wheels] Docker not available — skipping base image digest capture"
