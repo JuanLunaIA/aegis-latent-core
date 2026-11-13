@@ -339,3 +339,108 @@ def test_roundtrip_with_embedded_email(before: str, email: str, after: str):
     text = f"{before} {email} {after}"
     out = tokenize_text(text, m)
     assert m.restore(out) == text
+
+
+# ── PR #276 review findings ─────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("spec", ["", " , ", ","])
+def test_empty_vault_types_are_refused(spec: str) -> None:
+    """An enabled vault with no kinds would tokenise nothing while claiming to run."""
+    with pytest.raises(UnknownPIIKind):
+        parse_vault_types(spec)
+
+
+def test_tool_arguments_tool_input_and_user_are_tokenised() -> None:
+    mapping = PIIMap()
+    body = {
+        "user": "ana@example.com",
+        "messages": [
+            {
+                "role": "assistant",
+                "tool_calls": [
+                    {"function": {"name": "lookup", "arguments": '{"email": "ana@example.com"}'}}
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "lookup",
+                        "input": {"who": {"email": "ana@example.com"}, "tags": ["DNI: 30123456"]},
+                    }
+                ],
+            },
+        ],
+    }
+    out = tokenize_json(body, mapping)
+    assert "ana@example.com" not in str(out)
+    assert "30123456" not in str(out)
+    assert out["user"].startswith("[[AEGIS:EMAIL:")
+    assert restore_json(out, mapping) == body
+
+
+def test_strings_outside_text_fields_are_left_alone() -> None:
+    """A tool schema's enum and a stop sequence are not content: the provider must
+    receive them exactly as sent, even when they look like an identifier."""
+    mapping = PIIMap()
+    body = {
+        "stop": ["ana@example.com"],
+        "tools": [
+            {
+                "type": "function",
+                "function": {
+                    "name": "notify",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"to": {"type": "string", "enum": ["ana@example.com"]}},
+                    },
+                },
+            }
+        ],
+        "messages": [{"role": "user", "content": "hola"}],
+    }
+    assert tokenize_json(body, mapping) == body
+    assert len(mapping) == 0
+
+
+def test_a_text_field_list_still_tokenises_its_strings() -> None:
+    mapping = PIIMap()
+    out = tokenize_json({"prompt": ["DNI: 30123456", "ok"]}, mapping)
+    assert "30123456" not in out["prompt"][0]
+    assert out["prompt"][1] == "ok"
+
+
+@pytest.mark.parametrize(
+    ("text", "kind", "value"),
+    [
+        ("IBAN GB82 WEST 1234 5698 7654 32 ok", "IBAN", "GB82 WEST 1234 5698 7654 32"),
+        ("IBAN GB82WEST12345698765432 ok", "IBAN", "GB82WEST12345698765432"),
+        ("llamar al +14155552671 hoy", "PHONE", "+14155552671"),
+        ("llamar al +4930123456789 hoy", "PHONE", "+4930123456789"),
+    ],
+)
+def test_common_identifier_formats_are_tokenised_whole(text: str, kind: str, value: str) -> None:
+    mapping = PIIMap()
+    out = tokenize_text(text, mapping)
+    assert value not in out
+    assert mapping.by_value.get((kind, value)) in out
+
+
+def test_restore_counts_only_tokens_it_replaced() -> None:
+    mapping = PIIMap()
+    token = mapping.token_for("DNI", "30123456")
+    assert mapping.restore("no tokens here") == "no tokens here"
+    assert mapping.restore("[[AEGIS:DNI:abcdef1234]]") == "[[AEGIS:DNI:abcdef1234]]"
+    assert mapping.restored == 0
+    assert mapping.restore(f"{token} y {token}") == "30123456 y 30123456"
+    assert mapping.restored == 2
+
+
+def test_a_token_body_is_never_all_digits(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The PHI/PCI scrubbers run after the vault; an all-digit body could be read
+    as a number by them and the token would be destroyed."""
+    draws = iter(["1234567890", "abcdef1234"])
+    monkeypatch.setattr("aegis.core.pii_vault.secrets.token_hex", lambda _n: next(draws))
+    assert PIIMap().token_for("DNI", "30123456") == "[[AEGIS:DNI:abcdef1234]]"
