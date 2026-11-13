@@ -1284,6 +1284,26 @@ class AegisSettings(BaseSettings):
             hashlib.sha256,
         ).hexdigest()
 
+    def principal_signer_ref(self, auth_method: str, subject: str) -> str:
+        """Return the pseudonymous signer recorded on evidence nodes.
+
+        OIDC ``sub`` and mTLS common names can be emails or real names, and
+        ``signer_name`` is exported (Part 11), so they are keyed-hashed. An
+        API-key subject is already a keyed digest and is kept as is.
+        """
+
+        if auth_method == "api_key":
+            return subject
+        digest = hmac.new(
+            self.auth_identity_hmac_key.encode("utf-8"),
+            b"aegis-principal-signer-v1\x00"
+            + auth_method.encode("utf-8")
+            + b"\x00"
+            + subject.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        return f"{auth_method}:{digest[:16]}"
+
     def get_api_key_principals(self) -> dict[str, dict[str, object]]:
         if not self.api_key_principals_json:
             return {}

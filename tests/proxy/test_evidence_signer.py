@@ -52,3 +52,17 @@ def test_durable_error_node_names_the_principal(tmp_path):
     node = app.state.aegis.ledger.chain[-1]
     assert node.signature_meaning == "request-response-evidence"
     assert node.signer_name == _expected_signer(settings)
+
+
+def test_oidc_and_mtls_subjects_are_keyed_pseudonyms(tmp_path):
+    # An OIDC `sub` or mTLS CN can be an email; it must not reach the exported signer.
+    settings = _settings(tmp_path)
+    oidc = settings.principal_signer_ref("oidc", "ana@example.com")
+    mtls = settings.principal_signer_ref("mtls", "ana@example.com")
+    assert oidc.startswith("oidc:")
+    assert len(oidc) == len("oidc:") + 16
+    assert "ana" not in oidc
+    assert "example" not in oidc
+    assert oidc != mtls.replace("mtls:", "oidc:")
+    assert oidc == settings.principal_signer_ref("oidc", "ana@example.com")
+    assert settings.principal_signer_ref("api_key", "api-key:abc") == "api-key:abc"
