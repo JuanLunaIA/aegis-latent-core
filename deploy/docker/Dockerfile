@@ -2,15 +2,15 @@
 # SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
 # Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 #
-# Aegis Latent Core v5.0.3 — strict deployment image (Python 3.12)
+# Aegis Latent Core v5.1.0 — strict deployment image (Python 3.12)
 #
-# Build: docker build -f deploy/docker/Dockerfile -t aegis-latent-core:5.0.3 .
+# Build: docker build -f deploy/docker/Dockerfile -t aegis-latent-core:5.1.0 .
 # Run with host-provided profiles and bounded privileges:
 # docker run --read-only --cap-drop=ALL --security-opt no-new-privileges=true \
 #   --security-opt seccomp=/etc/aegis/seccomp.json \
 #   --security-opt apparmor=aegis-latent-core \
 #   --tmpfs /tmp:rw,noexec,nosuid,size=64m -p 8080:8080 \
-#   --env-file .env -v /var/lib/aegis:/data aegis-latent-core:5.0.3
+#   --env-file .env -v /var/lib/aegis:/data aegis-latent-core:5.1.0
 #
 # Required env vars:
 #   AEGIS_BACKEND_API_KEY   — upstream LLM API key
@@ -55,9 +55,9 @@ RUN pip install --no-cache-dir --no-deps . && pip check
 FROM ${PYTHON_IMAGE}
 
 LABEL org.opencontainers.image.title="Aegis Latent Core" \
-      org.opencontainers.image.version="5.0.3" \
+      org.opencontainers.image.version="5.1.0" \
       org.opencontainers.image.description="Strict LLM gateway with durable signed forensic evidence" \
-      org.opencontainers.image.licenses="Apache-2.0"
+      org.opencontainers.image.licenses="LicenseRef-Aegis-Commercial-1.0"
 
 # Non-root user — principle of least privilege
 RUN groupadd -g 10001 aegis \
@@ -74,7 +74,7 @@ COPY aegis_server ./aegis_server
 COPY integrations ./integrations
 COPY deploy/seccomp/aegis.json /etc/aegis/seccomp.json
 
-# Licence texts travel with every image (Apache-2.0 section 4(a), 4(d))
+# Licence texts travel with every image
 COPY LICENSE NOTICE /licenses/
 
 # Persistent data directory — mount a volume here in production

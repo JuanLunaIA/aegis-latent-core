@@ -41,7 +41,7 @@ RUN groupadd --system --gid 10001 nextjs \
 COPY --from=builder --chown=nextjs:nextjs /workspace/dashboard/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /workspace/dashboard/.next/static ./dashboard/.next/static
 
-# Licence texts travel with every image (Apache-2.0 section 4(a), 4(d))
+# Licence texts travel with every image
 COPY LICENSE NOTICE /licenses/
 
 USER 10001:10001

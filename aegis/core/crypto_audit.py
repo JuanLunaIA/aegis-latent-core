@@ -880,6 +880,26 @@ def _part11_annotation_token(signer_name: str, signature_meaning: str) -> str:
     return hashlib.sha256(f"{signer_name}\x00{signature_meaning}".encode()).hexdigest()
 
 
+#: Plain SHA-256 digests the PII vault records beside the signed ``response_hash``.
+DUAL_DIGEST_KEYS = ("response_upstream_sha256", "response_client_sha256")
+
+
+def _dual_digest_binding(params: dict[str, Any]) -> str:
+    """Signed token for the PII-vault dual-hash fields of ``sampling_params``.
+
+    ``""`` when the node carries none of the provider digest, the client
+    digest or ``pii_restored``, so every node without them rebuilds the payload
+    it was signed over. With them, editing any of the three in the stored record
+    changes this token and the signature no longer verifies.
+    """
+    upstream = params.get("response_upstream_sha256")
+    client = params.get("response_client_sha256")
+    restored = params.get("pii_restored") is True
+    if upstream is None and client is None and not restored:
+        return ""
+    return f"upstream={upstream or ''};client={client or ''};restored={int(restored)}"
+
+
 def _build_signed_payload(
     prev_hash: str,
     merkle_root: str,
@@ -890,6 +910,7 @@ def _build_signed_payload(
     signature_meaning: str = "",
     status: str = NODE_STATUS_COMMITTED,
     signature_scheme: str = "",
+    dual_digest: str = "",
 ) -> bytes:
     """Canonical bytes covered by a node's signature.
 
@@ -972,6 +993,10 @@ def _build_signed_payload(
         fields.append(status)
     if signature_scheme:
         fields.append(validate_signature_scheme(signature_scheme))
+    # The PII-vault dual hash follows the same value-derived conditional: a node
+    # without it rebuilds the shorter payload (see `_dual_digest_binding`).
+    if dual_digest:
+        fields.append(dual_digest)
     return "|".join(fields).encode()
 
 
@@ -1014,6 +1039,7 @@ def signed_payload_candidates_for(node: AuditNode) -> list[bytes]:
     1: the fallbacks exist for records that predate the binding, not as an
     alternative reading of a current one.
     """
+    dual_digest = _dual_digest_binding(node.sampling_params or {})
     annotated = _build_signed_payload(
         prev_hash=node.prev_hash,
         merkle_root=node.merkle_root,
@@ -1023,6 +1049,7 @@ def signed_payload_candidates_for(node: AuditNode) -> list[bytes]:
         signer_name=node.signer_name,
         signature_meaning=node.signature_meaning,
         status=node.status,
+        dual_digest=dual_digest,
     )
     prebinding = _build_prebinding_signed_payload(
         prev_hash=node.prev_hash,
@@ -1044,6 +1071,7 @@ def signed_payload_candidates_for(node: AuditNode) -> list[bytes]:
                 signature_meaning=node.signature_meaning,
                 status=node.status,
                 signature_scheme=node.signature_scheme,
+                dual_digest=dual_digest,
             )
         )
     for candidate in (annotated, prebinding):
@@ -1425,6 +1453,7 @@ class CryptographicAuditLedger:
         if usage:
             params["usage"] = usage
         _require_finite_json(params, field="sampling_params")
+        dual_digest = self._dual_digest_params(params)
 
         req_hash = self._payload_digest(request_bytes, tenant_id)
         resp_hash = self._payload_digest(response_bytes, tenant_id) if response_bytes else ""
@@ -1477,6 +1506,7 @@ class CryptographicAuditLedger:
                         signature_meaning=signature_meaning,
                         status=NODE_STATUS_COMMITTED,
                         signature_scheme=bound_scheme,
+                        dual_digest=dual_digest,
                     )
                 )
             except Exception:
@@ -1730,6 +1760,9 @@ class CryptographicAuditLedger:
         signer_name: str = "",
         signature_meaning: str = "stream-terminal-evidence",
         request_digest: tuple[str, int] | None = None,
+        response_upstream_sha256: str | None = None,
+        response_client_sha256: str | None = None,
+        pii_restored: bool = False,
     ) -> AuditNode:
         """Commit one terminal record for an incrementally hashed response.
 
@@ -1811,6 +1844,23 @@ class CryptographicAuditLedger:
             or any(ch not in "0123456789abcdef" for ch in response_hash)
         ):
             raise ValueError("response_hash must be a lowercase SHA-256 hex digest")
+
+        # Dual hash (T7.12): with the vault on, the provider's bytes and the
+        # client's differ. ``response_hash`` is always the client digest; the
+        # provider digest is recorded separately. A declared client digest that
+        # does not match the signed hash would be incoherent evidence.
+        def _check_sha256(name: str, value: str | None) -> None:
+            if value is None:
+                return
+            if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
+                raise ValueError(f"{name} must be a lowercase SHA-256 hex digest")
+
+        _check_sha256("response_upstream_sha256", response_upstream_sha256)
+        _check_sha256("response_client_sha256", response_client_sha256)
+        if response_client_sha256 is not None and response_client_sha256 != response_hash:
+            raise ValueError("response_client_sha256 must equal the signed response_hash")
+        if not isinstance(pii_restored, bool):
+            raise ValueError("pii_restored must be a bool")
         if (
             isinstance(response_size, bool)
             or not isinstance(response_size, int)
@@ -1870,6 +1920,13 @@ class CryptographicAuditLedger:
             "terminal_outcome": terminal_outcome,
             "token_count": token_count,
         }
+        if response_upstream_sha256 is not None:
+            params["response_upstream_sha256"] = response_upstream_sha256
+        if response_client_sha256 is not None:
+            params["response_client_sha256"] = response_client_sha256
+        if pii_restored:
+            params["pii_restored"] = True
+        dual_digest = self._dual_digest_params(params)
 
         with self._lock:
             self._refuse_if_faulted()
@@ -1896,6 +1953,7 @@ class CryptographicAuditLedger:
                         signature_meaning=signature_meaning,
                         status=NODE_STATUS_COMMITTED,
                         signature_scheme=bound_scheme,
+                        dual_digest=dual_digest,
                     )
                 )
             except Exception:
@@ -2503,6 +2561,29 @@ class CryptographicAuditLedger:
             logger.warning("HSM reported an unknown scheme %r; learning it by signing", label)
             return ""
         return label
+
+    def _dual_digest_params(self, params: dict[str, Any]) -> str:
+        """Validate the PII-vault digests in *params* and return their signed token.
+
+        With cryptographic shredding on, the plain digests are dropped: the
+        signed hashes are keyed under the subject's key precisely so that a
+        holder of a candidate value cannot confirm it after erasure, and a plain
+        SHA-256 beside them would undo that.
+        """
+        if self._shredder is not None:
+            for key in DUAL_DIGEST_KEYS:
+                params.pop(key, None)
+        for key in DUAL_DIGEST_KEYS:
+            value = params.get(key)
+            if value is not None and not (
+                isinstance(value, str)
+                and len(value) == 64
+                and all(ch in "0123456789abcdef" for ch in value)
+            ):
+                raise ValueError(f"{key} must be a lowercase SHA-256 hex digest")
+        if "pii_restored" in params and not isinstance(params["pii_restored"], bool):
+            raise ValueError("pii_restored must be a bool")
+        return _dual_digest_binding(params)
 
     def _payload_digest(self, data: bytes, subject_id: str) -> str:
         """Digest a request or response body for storage on the node.
