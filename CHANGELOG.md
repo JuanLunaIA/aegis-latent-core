@@ -68,6 +68,14 @@ dated readback: the release workflow uses this section as the release body.
   (`oidc:<hmac[:16]>`, `mtls:<hmac[:16]>`) on streaming and buffered nodes alike;
   API-key subjects are already keyed digests. This names the credential; it is
   not per-user identity and adds no team label.
+- `POST /v1/audit/forensics/export` now signs `manifest.json` with Ed25519 when
+  `AEGIS_FORENSIC_BUNDLE_SIGNING_KEY` (hex 32-byte seed) is set; the HTTP export
+  never passed a key before, so every downloaded bundle was unsigned and its
+  digests detected only corruption. In strict mode the endpoint answers `503`
+  instead of serving an unsigned bundle (**breaking** for strict deployments
+  without the key; see `docs/UPGRADING.md`). Every export carries
+  `X-Aegis-Bundle-Signed: true|false`. The public key is never written into the
+  bundle; recipients verify offline with `aegis-sdk verify --public-key`.
 
 ### Removed
 

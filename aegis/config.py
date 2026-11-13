@@ -149,6 +149,15 @@ class AegisSettings(BaseSettings):
             "If empty and auth is not disabled, a warning is emitted at startup."
         ),
     )
+    forensic_bundle_signing_key: str = Field(
+        default="",
+        description=(
+            "Hex-encoded 32-byte Ed25519 private seed that signs every forensic "
+            "export's manifest.json. Distribute the public half to recipients out "
+            "of band; it is never written into the bundle. Strict mode refuses "
+            "/v1/audit/forensics/export while this is empty."
+        ),
+    )
     auth_mode: Literal["api_key", "oidc", "mtls", "api_key_mtls", "oidc_mtls"] = Field(
         default="api_key",
         description="Single configured authentication mode; composite modes require both factors.",
@@ -1102,6 +1111,18 @@ class AegisSettings(BaseSettings):
         if value not in {"strict", "development"}:
             raise ValueError("security_enforcement_mode must be 'strict' or 'development'")
         return value
+
+    @field_validator("forensic_bundle_signing_key")
+    @classmethod
+    def _validate_forensic_bundle_signing_key(cls, v: str) -> str:
+        value = v.strip()
+        if value and (len(value) != 64 or any(c not in "0123456789abcdefABCDEF" for c in value)):
+            raise ValueError("forensic_bundle_signing_key must be 64 hex characters (32 bytes)")
+        return value
+
+    def forensic_bundle_signing_seed(self) -> bytes | None:
+        """Raw Ed25519 seed for forensic exports, or ``None`` when not configured."""
+        return bytes.fromhex(self.forensic_bundle_signing_key) if self.forensic_bundle_signing_key else None
 
     @field_validator("trusted_signing_public_keys")
     @classmethod

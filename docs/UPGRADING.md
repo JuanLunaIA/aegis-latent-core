@@ -162,6 +162,20 @@ A tool description or metadata string that contains a Layer-2 phrase can now cau
 
 **Migration.** No code change is required. If you hold a copy of `5.0.2`, its terms still govern that copy. If you run the `v5.0.3` source in production, you need an Order; evaluation needs none. See [`legal/LICENSE_TRANSITION_5.0.3.md`](legal/LICENSE_TRANSITION_5.0.3.md) and [`COMMERCIAL.md`](../COMMERCIAL.md).
 
+## 12. Strict mode signs every forensic export, or refuses it (`5.1.0` source target, breaking)
+
+**What changed.** `POST /v1/audit/forensics/export` signs `manifest.json` with Ed25519 when `AEGIS_FORENSIC_BUNDLE_SIGNING_KEY` holds a 64-hex (32-byte) seed. In `AEGIS_SECURITY_ENFORCEMENT_MODE=strict`, the endpoint returns `503` while the key is unset, instead of serving an unsigned bundle. Development mode still exports unsigned bundles. Every response carries `X-Aegis-Bundle-Signed: true|false`.
+
+**Why.** An unsigned bundle's digests detect corruption, not tampering: whoever can rewrite the archive can rewrite the digests too.
+
+**Migration.**
+
+1. Generate a seed in your secret manager, for example with `python -c "import secrets; print(secrets.token_hex(32))"`, and set `AEGIS_FORENSIC_BUNDLE_SIGNING_KEY`. Keep it separate from `AEGIS_SIGNING_KEY`.
+2. Derive the public key and give it to bundle recipients out of band. It is never in the bundle.
+3. Recipients verify with `aegis-sdk verify bundle.zip --public-key <file>` or with `AEGIS_BUNDLE_PUBKEY=<file> sh VERIFY.sh`.
+
+A bad value (not 64 hex characters) fails settings validation at startup.
+
 ---
 
 ## Upgrade order

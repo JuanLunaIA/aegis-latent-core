@@ -1790,7 +1790,15 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     if cfg.edge_secret:
         app.add_middleware(EdgeSecretMiddleware, secret=cfg.edge_secret)
 
-    app.include_router(build_audit_router(state.ledger, validate_audit_auth), prefix="/v1/audit")
+    app.include_router(
+        build_audit_router(
+            state.ledger,
+            validate_audit_auth,
+            bundle_signing_key=cfg.forensic_bundle_signing_seed(),
+            require_signed_bundle=cfg.security_enforcement_mode == "strict",
+        ),
+        prefix="/v1/audit",
+    )
     app.include_router(build_attestation_router(), prefix="/v1/attestation")
 
     if observability.prometheus_available():
