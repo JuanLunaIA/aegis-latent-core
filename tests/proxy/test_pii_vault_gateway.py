@@ -534,3 +534,18 @@ def test_stream_with_the_vault_persists_no_restored_preview(tmp_path):
 def test_empty_vault_types_are_a_startup_error():
     with pytest.raises(ValueError):
         AegisSettings(pii_vault_types="")
+
+
+@pytest.mark.parametrize(
+    ("content", "vault_on"),
+    [
+        (b"\xff\xfe [[AEGIS:", True),  # not UTF-8: the client gets the provider's bytes
+        (b'{"error": "no tokens"}', True),  # nothing to restore
+        (b'{"error": "[[AEGIS:DNI:abcdef1234]]"}', False),  # vault off
+    ],
+)
+def test_error_body_restore_falls_back_to_the_provider_bytes(content: bytes, vault_on: bool):
+    from aegis.core.pii_vault import PIIMap
+    from aegis.proxy.app import _restored_error_body
+
+    assert _restored_error_body(content, PIIMap() if vault_on else None) is None
