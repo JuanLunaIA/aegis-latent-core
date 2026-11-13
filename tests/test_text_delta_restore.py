@@ -451,3 +451,55 @@ def test_token_split_at_random_sizes(text: str, sizes: list[int]) -> None:
     out = "".join(restorer.feed(piece) for piece in _chunks(tokenized, sizes))
     out += restorer.flush()
     assert out == expected
+
+
+# ── PR #276 review findings ─────────────────────────────────────────────────
+
+
+def test_stream_that_ends_without_terminal_event_keeps_the_held_text() -> None:
+    mapping = PIIMap()
+    token = _token_for(mapping)
+
+    async def source() -> AsyncIterator[tuple[bytes, Any]]:
+        yield openai_event({"choices": [{"index": 0, "delta": {"content": "DNI " + token[:5]}}]})
+
+    events = _run(_collect(restoring_delta_stream(source(), mapping)))
+    assert _content_events(events) == "DNI " + token[:5]
+
+
+def test_stream_that_fails_emits_the_held_text_then_reraises() -> None:
+    mapping = PIIMap()
+    token = _token_for(mapping)
+    emitted: list[tuple[bytes, Any]] = []
+
+    async def source() -> AsyncIterator[tuple[bytes, Any]]:
+        yield openai_event({"choices": [{"index": 0, "delta": {"content": "fin " + token[:4]}}]})
+        raise ConnectionError("upstream reset")
+
+    async def drain() -> None:
+        async for event in restoring_delta_stream(source(), mapping):
+            emitted.append(event)
+
+    with pytest.raises(ConnectionError):
+        _run(drain())
+    assert _content_events(emitted) == "fin " + token[:4]
+
+
+@pytest.mark.parametrize("field", ["reasoning", "reasoning_content", "refusal"])
+def test_stream_restores_every_openai_text_field(field: str) -> None:
+    mapping = PIIMap()
+    token = _token_for(mapping)
+
+    async def source() -> AsyncIterator[tuple[bytes, Any]]:
+        yield openai_event({"choices": [{"index": 0, "delta": {field: token[:6]}}]})
+        yield openai_event({"choices": [{"index": 0, "delta": {field: token[6:]}}]})
+        yield b"data: [DONE]\n\n", None
+
+    events = _run(_collect(restoring_delta_stream(source(), mapping)))
+    text = "".join(
+        choice["delta"].get(field, "")
+        for _, parsed in events
+        if isinstance(parsed, dict)
+        for choice in parsed.get("choices", [])
+    )
+    assert text == mapping.by_token[token]

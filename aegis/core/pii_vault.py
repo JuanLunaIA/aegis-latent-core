@@ -33,15 +33,26 @@ RULES: list[tuple[str, re.Pattern[str]]] = [
     ("CUIL", re.compile(r"(?i)\bCUIL\s*[:#]?\s*(\d{2}-?\d{8}-?\d)")),
     ("CUIT", re.compile(r"(?i)\bCUIT\s*[:#]?\s*(\d{2}-?\d{8}-?\d)")),
     ("SSN", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
-    ("CARD", re.compile(r"\b(?:\d[ -]*?){13,19}\b")),
-    ("IBAN", re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b")),
+    # IBAN comes before CARD: the digit groups of a printed IBAN
+    # ("GB82 WEST 1234 5698 7654 32") would otherwise be taken as a card number
+    # and the country and bank code would reach the provider. Groups of four
+    # separated by one space are the printed form; the contiguous form matches too.
+    (
+        "IBAN",
+        re.compile(
+            r"\b[A-Z]{2}\d{2}(?=(?: ?[A-Z0-9]){11})(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,3})?\b"
+        ),
+    ),
+    # A "+" prefix marks a phone number (E.164), not a card.
+    ("CARD", re.compile(r"(?<!\+)\b(?:\d[ -]*?){13,19}\b")),
     # PHONE requires separators or an international prefix; a bare 8-digit
-    # integer is left alone (so dates, IDs and codes are not mangled).
+    # integer is left alone (so dates, IDs and codes are not mangled). An
+    # unseparated E.164 number ("+14155552671") is recognised by its "+".
     (
         "PHONE",
         re.compile(
-            r"(?<![\w+])(?:\+\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)[\s.-]?)?"
-            r"\d{3,4}[\s.-]\d{3,4}(?:[\s.-]\d{2,4})?(?!\w)"
+            r"(?<![\w+])(?:\+\d{8,15}(?!\w)|(?:\+\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)[\s.-]?)?"
+            r"\d{3,4}[\s.-]\d{3,4}(?:[\s.-]\d{2,4})?(?!\w))"
         ),
     ),
     (
@@ -59,8 +70,13 @@ VALID_KINDS: frozenset[str] = frozenset(kind for kind, _ in RULES)
 DEFAULT_KINDS: str = "EMAIL,DNI,CUIL,CUIT,SSN,PHONE,CARD,IBAN,PERSON"
 
 # Keys whose text value is tokenised. The rest of the body (role, model,
-# tool identifiers) is kept literally: it is not free-form content.
-TEXT_KEYS = {"content", "text", "system", "prompt"}
+# tool identifiers, schemas, stop sequences) is kept literally: it is not
+# free-form content. ``arguments`` is a tool call's JSON string and ``user`` the
+# caller-supplied end-user id, both of which can carry an identifier.
+TEXT_KEYS = {"content", "text", "system", "prompt", "arguments", "user"}
+# Keys whose whole subtree is caller data: an Anthropic ``tool_use`` block's
+# ``input`` is arbitrary JSON, so every string inside it is tokenised.
+DEEP_KEYS = {"input"}
 
 
 class UnknownPIIKind(ValueError):  # noqa: N818 - name is part of the module's public contract
@@ -77,6 +93,10 @@ def parse_vault_types(spec: str) -> frozenset[str]:
     unknown = kinds - VALID_KINDS
     if unknown:
         raise UnknownPIIKind(f"unknown PII vault types: {sorted(unknown)}")
+    if not kinds:
+        # An enabled vault with no kinds tokenises nothing while the gateway
+        # treats it as active: refuse it like an unknown kind.
+        raise UnknownPIIKind("no PII vault types configured")
     return frozenset(kinds)
 
 
@@ -102,6 +122,9 @@ class PIIMap:
 
     by_token: dict[str, str] = field(default_factory=dict)
     by_value: dict[tuple[str, str], str] = field(default_factory=dict)
+    #: Number of tokens replaced by :meth:`restore` so far. Evidence records
+    #: ``pii_restored`` only when this is non-zero.
+    restored: int = 0
 
     def token_for(self, kind: str, value: str) -> str:
         if kind not in VALID_KINDS:
@@ -113,7 +136,13 @@ class PIIMap:
         # A collision is unlikely (40 bits) but not assumed away: the new token
         # is checked against every live token before it is accepted.
         for _ in range(64):
-            token = f"{PREFIX}{kind}:{secrets.token_hex(5)}{SUFFIX}"
+            hex_part = secrets.token_hex(5)
+            if hex_part.isdigit():
+                # An all-digit token body could be read as a phone or account
+                # number by the PHI/PCI scrubbers that run after the vault,
+                # which would break the token.
+                continue
+            token = f"{PREFIX}{kind}:{hex_part}{SUFFIX}"
             if token not in self.by_token:
                 self.by_value[key] = token
                 self.by_token[token] = value
@@ -124,11 +153,20 @@ class PIIMap:
         """Replace known tokens; unknown ones are left intact."""
         if not text or PREFIX not in text:
             return text
-        return TOKEN_RE.sub(lambda m: self.by_token.get(m.group(0), m.group(0)), text)
+
+        def _swap(match: re.Match[str]) -> str:
+            value = self.by_token.get(match.group(0))
+            if value is None:
+                return match.group(0)
+            self.restored += 1
+            return value
+
+        return TOKEN_RE.sub(_swap, text)
 
     def clear(self) -> None:
         self.by_token.clear()
         self.by_value.clear()
+        self.restored = 0
 
     def counts(self) -> dict[str, int]:
         """Number of distinct values per kind. Counts only, never values."""
@@ -206,28 +244,33 @@ def tokenize_json(
     value: Any,
     mapping: PIIMap,
     kinds: Iterable[str] | None = None,
+    *,
+    _text: bool = False,
+    _deep: bool = False,
 ) -> Any:
     """Recursively tokenise the text fields of a JSON body.
 
-    Every container is walked (a list under ``messages`` or ``content``), but
-    only strings under :data:`TEXT_KEYS` are transformed.
+    Every container is walked (a list under ``messages`` or ``content``), but a
+    string is transformed only when its key is in :data:`TEXT_KEYS` (a list
+    under such a key passes that on to its strings) or it sits anywhere under a
+    :data:`DEEP_KEYS` key. Strings elsewhere (role, model, ids, a tool schema's
+    ``enum``, ``stop``) reach the provider unchanged.
     """
     if isinstance(value, str):
-        return tokenize_text(value, mapping, kinds)
+        return tokenize_text(value, mapping, kinds) if (_text or _deep) else value
     if isinstance(value, list):
-        return [tokenize_json(item, mapping, kinds) for item in value]
+        return [tokenize_json(item, mapping, kinds, _text=_text, _deep=_deep) for item in value]
     if isinstance(value, dict):
-        out: dict[Any, Any] = {}
-        for key, item in value.items():
-            if key in TEXT_KEYS and isinstance(item, str):
-                out[key] = tokenize_text(item, mapping, kinds)
-            elif isinstance(item, (dict, list)):
-                # The container is walked to reach messages/content, but a string
-                # outside TEXT_KEYS (role, model, id) is left alone.
-                out[key] = tokenize_json(item, mapping, kinds)
-            else:
-                out[key] = item
-        return out
+        return {
+            key: tokenize_json(
+                item,
+                mapping,
+                kinds,
+                _text=key in TEXT_KEYS,
+                _deep=_deep or key in DEEP_KEYS,
+            )
+            for key, item in value.items()
+        }
     return value
 
 
@@ -294,6 +337,7 @@ def inject_vault_instruction(body: dict[str, Any]) -> dict[str, Any]:
 
 
 __all__ = [
+    "DEEP_KEYS",
     "DEFAULT_KINDS",
     "MAX_TOKEN_LEN",
     "PIIMap",

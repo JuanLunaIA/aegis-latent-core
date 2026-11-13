@@ -25,7 +25,8 @@ from aegis.core.pii_vault import PREFIX, SUFFIX, PIIMap, restore_text
 #: malformed stream (an unclosed ``[[AEGIS:``) from holding unbounded memory.
 DEFAULT_MAX_PENDING = 65_536
 
-TEXT_FIELDS = frozenset({"content", "text", "reasoning", "reasoning_content"})
+#: Text fields of an OpenAI-format ``delta`` that can carry a token.
+TEXT_FIELDS = frozenset({"content", "text", "reasoning", "reasoning_content", "refusal"})
 
 _ANTHROPIC_EVENTS = frozenset(
     {
@@ -168,9 +169,13 @@ class SseDeltaRestorer:
             index = choice.get("index", 0)
             delta = choice.get("delta")
             if isinstance(delta, dict):
-                if isinstance(delta.get("content"), str):
-                    delta["content"] = self._feed(f"content:{index}", "text", delta["content"])
-                    changed = True
+                for name in sorted(TEXT_FIELDS):
+                    if isinstance(delta.get(name), str):
+                        # One buffer per field: ``content`` keeps its historical
+                        # key so its flush stays a ``content`` delta.
+                        key = f"content:{index}" if name == "content" else f"{name}:{index}"
+                        delta[name] = self._feed(key, name, delta[name])
+                        changed = True
                 tool_calls = delta.get("tool_calls")
                 if isinstance(tool_calls, list):
                     for position, tool_call in enumerate(tool_calls):
@@ -189,7 +194,7 @@ class SseDeltaRestorer:
                             changed = True
             # Legacy /v1/completions endpoint in stream mode.
             if isinstance(choice.get("text"), str) and "delta" not in choice:
-                choice["text"] = self._feed(f"text:{index}", "text", choice["text"])
+                choice["text"] = self._feed(f"legacy_text:{index}", "legacy_text", choice["text"])
                 changed = True
         return changed
 
@@ -257,7 +262,11 @@ class SseDeltaRestorer:
                     }
                 ]
             }
-        return {"choices": [{"index": index, "delta": {"content": text}}]}
+        if kind == "legacy_text":
+            # Legacy /v1/completions chunks carry the text on the choice itself.
+            return {"choices": [{"index": index, "text": text}]}
+        field = kind if kind in TEXT_FIELDS else "content"
+        return {"choices": [{"index": index, "delta": {field: text}}]}
 
     @staticmethod
     def _anthropic_flush_payload(kind: str, index: int, text: str) -> dict[str, Any]:
@@ -286,22 +295,38 @@ async def restoring_delta_stream(
 
     What is left is emitted just before the terminal event, so the consumer
     (``BoundedStreamProxy``) counts it as content and not as bytes after close.
+    A stream that ends, or fails, without a terminal event still gets the held
+    text: it is emitted before the end or before the error is re-raised, so the
+    consumer reports the stream as incomplete without truncating the text.
     """
     restorer = SseDeltaRestorer(mapping)
-    async for raw, parsed in source:
+
+    def flushed() -> list[tuple[bytes, Any]]:
+        events = restorer.flush_events()
         if digests is not None:
-            digests.update_upstream(raw)
-        if is_terminal_event(raw, parsed):
-            for flush_raw, flush_parsed in restorer.flush_events():
-                if digests is not None:
-                    digests.update_client(flush_raw)
-                yield flush_raw, flush_parsed
-            out_raw, out_parsed = raw, parsed
-        else:
-            out_raw, out_parsed = restorer.restore_event(raw, parsed)
-        if digests is not None:
-            digests.update_client(out_raw)
-        yield out_raw, out_parsed
+            for flush_raw, _ in events:
+                digests.update_client(flush_raw)
+        return events
+
+    try:
+        async for raw, parsed in source:
+            if digests is not None:
+                digests.update_upstream(raw)
+            if is_terminal_event(raw, parsed):
+                for event in flushed():
+                    yield event
+                out_raw, out_parsed = raw, parsed
+            else:
+                out_raw, out_parsed = restorer.restore_event(raw, parsed)
+            if digests is not None:
+                digests.update_client(out_raw)
+            yield out_raw, out_parsed
+    except Exception:
+        for event in flushed():
+            yield event
+        raise
+    for event in flushed():
+        yield event
 
 
 __all__ = [
