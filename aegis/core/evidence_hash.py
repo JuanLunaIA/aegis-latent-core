@@ -47,7 +47,9 @@ class ResponseDigests:
             "response_upstream_sha256": self.upstream_sha256,
             "response_client_sha256": self.client_sha256,
         }
-        if pii_restored or self.restored:
+        # Only the caller knows whether the vault replaced a value: the bytes can
+        # also differ because a scrubber masked text or the body was re-serialised.
+        if pii_restored:
             params["pii_restored"] = True
         return params
 
