@@ -407,9 +407,14 @@ def test_provider_error_that_echoes_a_token_is_restored_for_the_client(tmp_path)
     assert resp.status_code == 400
     assert DNI in resp.json()["error"]["message"]
     assert DNI.encode() not in provider[0]
-    # The evidence keeps the provider's tokenised bytes.
+    # As on success: the signed hash is over what the caller received and the
+    # provider's tokenised bytes are the upstream digest.
     node = app.state.aegis.ledger.chain[-1]
-    assert node.response_hash == hashlib.sha256(provider[0]).hexdigest()
+    assert node.response_hash == hashlib.sha256(resp.content).hexdigest()
+    assert node.sampling_params["response_upstream_sha256"] == hashlib.sha256(
+        provider[0]
+    ).hexdigest()
+    assert node.sampling_params["pii_restored"] is True
 
 
 def test_tool_fields_are_tokenised_and_the_session_keeps_the_callers_id(tmp_path):
@@ -542,6 +547,7 @@ def test_empty_vault_types_are_a_startup_error():
         (b"\xff\xfe [[AEGIS:", True),  # not UTF-8: the client gets the provider's bytes
         (b'{"error": "no tokens"}', True),  # nothing to restore
         (b'{"error": "[[AEGIS:DNI:abcdef1234]]"}', False),  # vault off
+        (b'{"error": "[[AEGIS:DNI:abcdef1234]]"}', True),  # unknown token: nothing restored
     ],
 )
 def test_error_body_restore_falls_back_to_the_provider_bytes(content: bytes, vault_on: bool):

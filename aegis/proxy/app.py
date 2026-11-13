@@ -1103,7 +1103,7 @@ def _with_vault_instruction(body: dict[str, Any], pii_map: PIIMap | None) -> dic
 def _restored_error_body(content: bytes, pii_map: PIIMap | None) -> bytes | None:
     """The provider's error body with the vault's tokens restored, for the client.
 
-    ``None`` when there is nothing to restore. Restoration is textual: vault
+    ``None`` when no known token was restored. Restoration is textual: vault
     values are drawn from the rule alphabets (letters, digits, ``@._%+-``,
     spaces), none of which needs escaping inside a JSON string.
     """
@@ -1113,7 +1113,11 @@ def _restored_error_body(content: bytes, pii_map: PIIMap | None) -> bytes | None
         text = content.decode("utf-8")
     except UnicodeDecodeError:
         return None
-    return restore_text(text, pii_map).encode("utf-8")
+    before = pii_map.restored
+    restored = restore_text(text, pii_map)
+    if pii_map.restored == before:
+        return None
+    return restored.encode("utf-8")
 
 
 def _extract_logprobs(resp_json: dict[str, Any]) -> list[Any]:
@@ -2083,23 +2087,27 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     ) -> Response:
         """Persist an error response before exposing it to the caller.
 
-        ``client_content`` is what the caller receives when it differs from the
-        committed ``content`` (the vault restored tokens the provider echoed);
-        the evidence keeps the provider's tokenised bytes.
+        ``client_content`` is what the caller receives when the vault restored
+        tokens the provider echoed. As on the success path, the signed
+        ``response_hash`` is over the bytes the caller receives and the
+        provider's bytes are recorded as the upstream digest.
         """
+        delivered = content if client_content is None else client_content
         node = await _commit_evidence(
             request_id,
             session_id,
             raw_body,
-            content,
+            delivered,
             model,
             request_start,
             response_complete=True,
             endpoint=endpoint,
             tenant_id=tenant_id,
+            upstream_bytes=content,
+            pii_restored=client_content is not None,
         )
         error_response = Response(
-            content=content if client_content is None else client_content,
+            content=delivered,
             status_code=status_code,
             media_type="application/json",
         )

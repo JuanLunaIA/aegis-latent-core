@@ -64,6 +64,7 @@ def test_an_untouched_node_with_digests_verifies(tmp_path: Path) -> None:
     "edit",
     [
         {"response_upstream_sha256": hashlib.sha256(b"forged").hexdigest()},
+        {"response_client_sha256": hashlib.sha256(b"forged").hexdigest()},
         {"pii_restored": False},
     ],
 )

@@ -887,18 +887,17 @@ DUAL_DIGEST_KEYS = ("response_upstream_sha256", "response_client_sha256")
 def _dual_digest_binding(params: dict[str, Any]) -> str:
     """Signed token for the PII-vault dual-hash fields of ``sampling_params``.
 
-    ``""`` when the node carries neither the provider digest nor
-    ``pii_restored``, so every node without them rebuilds the payload it was
-    signed over. With them, editing the provider digest or the restoration flag
-    in the stored record changes this token and the signature no longer
-    verifies. The client digest is not bound here: it must equal the signed
-    ``response_hash``, which a verifier checks directly.
+    ``""`` when the node carries none of the provider digest, the client
+    digest or ``pii_restored``, so every node without them rebuilds the payload
+    it was signed over. With them, editing any of the three in the stored record
+    changes this token and the signature no longer verifies.
     """
     upstream = params.get("response_upstream_sha256")
+    client = params.get("response_client_sha256")
     restored = params.get("pii_restored") is True
-    if upstream is None and not restored:
+    if upstream is None and client is None and not restored:
         return ""
-    return f"upstream={upstream or ''};restored={int(restored)}"
+    return f"upstream={upstream or ''};client={client or ''};restored={int(restored)}"
 
 
 def _build_signed_payload(
