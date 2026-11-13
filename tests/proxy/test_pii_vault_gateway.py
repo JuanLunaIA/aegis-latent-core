@@ -379,9 +379,9 @@ def test_upstream_digest_is_the_provider_bytes(tmp_path):
             resp = _chat(client, f"DNI: {DNI}")
 
     node = app.state.aegis.ledger.chain[-1]
-    assert node.sampling_params["response_upstream_sha256"] == hashlib.sha256(
-        upstream[0]
-    ).hexdigest()
+    assert (
+        node.sampling_params["response_upstream_sha256"] == hashlib.sha256(upstream[0]).hexdigest()
+    )
     assert node.response_hash == hashlib.sha256(resp.content).hexdigest()
     assert node.sampling_params["response_client_sha256"] == node.response_hash
 
@@ -411,9 +411,9 @@ def test_provider_error_that_echoes_a_token_is_restored_for_the_client(tmp_path)
     # provider's tokenised bytes are the upstream digest.
     node = app.state.aegis.ledger.chain[-1]
     assert node.response_hash == hashlib.sha256(resp.content).hexdigest()
-    assert node.sampling_params["response_upstream_sha256"] == hashlib.sha256(
-        provider[0]
-    ).hexdigest()
+    assert (
+        node.sampling_params["response_upstream_sha256"] == hashlib.sha256(provider[0]).hexdigest()
+    )
     assert node.sampling_params["pii_restored"] is True
 
 
@@ -572,6 +572,11 @@ def test_provider_failure_with_the_vault_on_fails_closed(tmp_path):
     assert resp.status_code == 503
     assert DNI not in resp.text
     node = app.state.aegis.ledger.chain[-1]
-    assert node.request_hash != hashlib.sha256(
-        json.dumps({"model": "gpt-4", "messages": [{"role": "user", "content": f"DNI: {DNI}"}]}).encode()
-    ).hexdigest()
+    assert (
+        node.request_hash
+        != hashlib.sha256(
+            json.dumps(
+                {"model": "gpt-4", "messages": [{"role": "user", "content": f"DNI: {DNI}"}]}
+            ).encode()
+        ).hexdigest()
+    )
