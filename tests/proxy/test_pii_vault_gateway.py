@@ -549,3 +549,23 @@ def test_error_body_restore_falls_back_to_the_provider_bytes(content: bytes, vau
     from aegis.proxy.app import _restored_error_body
 
     assert _restored_error_body(content, PIIMap() if vault_on else None) is None
+
+
+def test_provider_failure_with_the_vault_on_fails_closed(tmp_path):
+    """The provider call raises: the client gets the fixed 503 body and the
+    evidence commits to the tokenised request, never the original value."""
+
+    async def reply(path, body, extra_headers=None):
+        raise httpx.ConnectError("upstream down")
+
+    with patch("aegis.proxy.app.LLMForwarder", return_value=_forwarder(reply)):
+        app = create_app(_settings(tmp_path, pii_vault_enabled=True))
+        with TestClient(app) as client:
+            resp = _chat(client, f"DNI: {DNI}")
+
+    assert resp.status_code == 503
+    assert DNI not in resp.text
+    node = app.state.aegis.ledger.chain[-1]
+    assert node.request_hash != hashlib.sha256(
+        json.dumps({"model": "gpt-4", "messages": [{"role": "user", "content": f"DNI: {DNI}"}]}).encode()
+    ).hexdigest()
