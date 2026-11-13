@@ -115,7 +115,7 @@ memmap2 = "0.9"
 crc32fast = "1"
 
 # Low-contention Mutex for mmap WAL writes
-parking_lot = "0.12"
+parking_lot = "0.13"
 
 # Post-quantum signing (ML-DSA-65 / FIPS 204)
 pqcrypto-mldsa = { version = "0.1", optional = true }
