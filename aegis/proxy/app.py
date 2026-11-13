@@ -1801,6 +1801,10 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             """Prometheus metrics endpoint. Available when prometheus-client is installed."""
             return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
+    def _signer(principal: Principal) -> str:
+        """Keyed pseudonym of the authenticated principal for ``signer_name``."""
+        return cfg.principal_signer_ref(principal.auth_method, principal.subject)
+
     async def _commit_evidence(
         rid: str,
         sid: str,
@@ -1815,6 +1819,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         tenant_id: str | None = None,
         upstream_bytes: bytes | None = None,
         pii_restored: bool = False,
+        *,
+        signer_name: str,
     ) -> AuditNode:
         """Commit mandatory request-response evidence before any terminal response."""
         # PII redaction: replace tenant_id with a one-way hash prefix when
@@ -1863,7 +1869,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     },
                     phi_scrubbed=phi_scrubbed,
                     scrub_method=scrub_method,
-                    signer_name="",
+                    signer_name=signer_name,
                     signature_meaning="request-response-evidence",
                     # Reaching this line means the WAF allowed the request: the
                     # check above raises HTTPException when it does not, so a
@@ -2084,6 +2090,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         endpoint: str = "chat.completions",
         tenant_id: str | None = None,
         client_content: bytes | None = None,
+        signer_name: str,
     ) -> Response:
         """Persist an error response before exposing it to the caller.
 
@@ -2105,6 +2112,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             tenant_id=tenant_id,
             upstream_bytes=content,
             pii_restored=client_content is not None,
+            signer_name=signer_name,
         )
         error_response = Response(
             content=delivered,
@@ -2134,6 +2142,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         request_start: float,
         endpoint: str,
         tenant_id: str,
+        signer_name: str,
     ) -> RateLimitDecision | Response | None:
         """Do not expose provider output when final quota accounting fails."""
         try:
@@ -2160,6 +2169,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             content=content,
             endpoint=endpoint,
             tenant_id=tenant_id,
+            signer_name=signer_name,
         )
 
     def _enqueue_analysis(
@@ -2439,7 +2449,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                             if summary.redaction_hits
                             else _scrub_method
                         ),
-                        signer_name=principal.subject,
+                        signer_name=_signer(principal),
                         signature_meaning="stream-terminal-evidence",
                         # T7.12: the provider saw tokens; the client received
                         # the restored values. `summary.response_hash` is the
@@ -2494,7 +2504,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     phi_scrubbed=_phi_scrubbed,
                     scrub_method=_scrub_method,
                     append_stream_window_method=True,
-                    signer_name=principal.subject,
+                    signer_name=_signer(principal),
                 )
                 if state.terminal_outbox is not None
                 else None
@@ -2586,6 +2596,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 request_start=request_start,
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 content=b'{"detail":"Upstream temporarily unavailable (circuit breaker OPEN)"}',
+                signer_name=_signer(principal),
             )
         except Exception:
             observability.FORWARD_ERRORS.labels(stage="network").inc()
@@ -2599,6 +2610,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 request_start=request_start,
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 content=b'{"detail":"Upstream forwarding failed"}',
+                signer_name=_signer(principal),
             )
         forward_timer.record("forward")
 
@@ -2618,6 +2630,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 status_code=upstream.status_code,
                 content=upstream.content,
                 client_content=_restored_error_body(upstream.content, pii_map),
+                signer_name=_signer(principal),
             )
 
         resp_json = upstream.json()
@@ -2632,6 +2645,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             request_start=request_start,
             endpoint="chat.completions",
             tenant_id=tenant_id,
+            signer_name=_signer(principal),
         )
         if isinstance(settled, Response):
             return settled
@@ -2667,6 +2681,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             tenant_id=tenant_id,
             upstream_bytes=upstream.content,
             pii_restored=pii_map is not None and pii_map.restored > 0,
+            signer_name=_signer(principal),
         )
         queued = _enqueue_analysis(
             request_id,
@@ -2782,6 +2797,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 content=b'{"detail":"Native Anthropic ingress requires AEGIS_PROVIDER=anthropic"}',
                 endpoint="anthropic.messages",
                 tenant_id=tenant_id,
+                signer_name=_signer(principal),
             )
 
         if body.get("stream") is True:
@@ -2817,7 +2833,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     endpoint="anthropic.messages",
                     phi_scrubbed=request_scrubbed or bool(summary.redaction_hits),
                     scrub_method=scrub_method,
-                    signer_name=principal.subject,
+                    signer_name=_signer(principal),
                     signature_meaning="stream-terminal-evidence",
                     response_upstream_sha256=(
                         stream_digests.snapshot().upstream_sha256
@@ -2863,7 +2879,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     phi_scrubbed=request_scrubbed,
                     scrub_method=scrub_method,
                     append_stream_window_method=False,
-                    signer_name=principal.subject,
+                    signer_name=_signer(principal),
                 )
                 if state.terminal_outbox is not None
                 else None
@@ -2950,6 +2966,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 content=b'{"type":"error","error":{"type":"overloaded_error","message":"Upstream temporarily unavailable"}}',
                 endpoint="anthropic.messages",
                 tenant_id=tenant_id,
+                signer_name=_signer(principal),
             )
         except Exception:
             logger.exception("native Anthropic forwarding failed")
@@ -2964,6 +2981,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 content=b'{"type":"error","error":{"type":"api_error","message":"Upstream forwarding failed"}}',
                 endpoint="anthropic.messages",
                 tenant_id=tenant_id,
+                signer_name=_signer(principal),
             )
         response_json = upstream.json()
         if upstream.status_code < 200 or upstream.status_code >= 300:
@@ -2979,6 +2997,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 endpoint="anthropic.messages",
                 tenant_id=tenant_id,
                 client_content=_restored_error_body(upstream.content, pii_map),
+                signer_name=_signer(principal),
             )
         settled = await _settle_or_refuse(
             reservation,
@@ -2991,6 +3010,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             request_start=request_start,
             endpoint="anthropic.messages",
             tenant_id=tenant_id,
+            signer_name=_signer(principal),
         )
         if isinstance(settled, Response):
             return settled
@@ -3018,6 +3038,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             tenant_id=tenant_id,
             upstream_bytes=upstream.content,
             pii_restored=pii_map is not None and pii_map.restored > 0,
+            signer_name=_signer(principal),
         )
         response = Response(
             content=response_content,
@@ -3136,6 +3157,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 content=b'{"detail":"Upstream temporarily unavailable (circuit breaker OPEN)"}',
                 endpoint="completions",
+                signer_name=_signer(principal),
             )
         except Exception:
             observability.FORWARD_ERRORS.labels(stage="network").inc()
@@ -3150,6 +3172,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 content=b'{"detail":"Upstream forwarding failed"}',
                 endpoint="completions",
+                signer_name=_signer(principal),
             )
         if upstream.status_code != 200:
             await reservation.refund(0)
@@ -3163,6 +3186,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 content=upstream.content,
                 endpoint="completions",
                 client_content=_restored_error_body(upstream.content, pii_map),
+                signer_name=_signer(principal),
             )
 
         try:
@@ -3180,6 +3204,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             request_start=completions_start,
             endpoint="completions",
             tenant_id=tenant_id,
+            signer_name=_signer(principal),
         )
         if isinstance(settled, Response):
             return settled
@@ -3200,6 +3225,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             tenant_id=tenant_id,
             upstream_bytes=upstream.content,
             pii_restored=pii_map is not None and pii_map.restored > 0,
+            signer_name=_signer(principal),
         )
         queued = _enqueue_analysis(
             request_id,

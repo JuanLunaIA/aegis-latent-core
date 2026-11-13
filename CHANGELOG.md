@@ -57,6 +57,18 @@ dated readback: the release workflow uses this section as the release body.
   name `5.1.0` as the source target with no publication readback and `5.0.3` as
   the most recent published release.
 
+### Fixed
+
+- Buffered request-response evidence nodes (success and durable-error paths on
+  chat completions, messages and completions) now carry the authenticated
+  principal's pseudonymous subject as `signer_name`, as streaming nodes already
+  did; they used to write an empty signer. `signer_name` is a required argument
+  of every evidence-commit helper, so a call site cannot omit it. OIDC and mTLS
+  subjects (which can be emails or names) are recorded as a keyed pseudonym
+  (`oidc:<hmac[:16]>`, `mtls:<hmac[:16]>`) on streaming and buffered nodes alike;
+  API-key subjects are already keyed digests. This names the credential; it is
+  not per-user identity and adds no team label.
+
 ### Removed
 
 - `tests/final_audit_suite.py`.
