@@ -195,13 +195,13 @@
     {
       "category": "governed_input",
       "path": "requirements.txt",
-      "sha256": "d6598ec4649b1d497601f68b78bf207f0607ef0459679db0bb8989e789bc839e",
+      "sha256": "c6598e9e2f9b8f6c53db2eafc0807c52d5b9c906d6c2af1570b2fb107ff33c1d",
       "size": 1832
     },
     {
       "category": "governed_input",
       "path": "requirements.lock",
-      "sha256": "d1b5ed793332641c6ab88d2d5074548c1a9d093322f4c5cf53f7761937ca3ba3",
+      "sha256": "28f213661ed82f08f9ce09d4e67f9178b98443fb49fa57d76d28b1036cedc608",
       "size": 95930
     },
     {
@@ -249,7 +249,7 @@
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/Cargo.toml",
-      "sha256": "d62889f7128357cbe0f47178a60ccf8788e97a70f729ea1fa38fe0e35b711840",
+      "sha256": "6422f333abf0137242f050ce0d6755a262dafce1097679d92c3e410a6ed4cfeb",
       "size": 10619
     },
     {
@@ -261,8 +261,8 @@
     {
       "category": "governed_input",
       "path": "aegis_rust_v2/Cargo.lock",
-      "sha256": "8fd942c880c8693d0427cc427c76d066070ee22d0cff0b87f9506d0b8823df1a",
-      "size": 80463
+      "sha256": "c25d6b0f389e4504e4e69ae9de6b1b005e157b3d632585f4b154187146f38a31",
+      "size": 80461
     },
     {
       "category": "governed_input",
@@ -321,7 +321,7 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "9b9a63fb26c44b1a97fa072883505ba62439afaffe9f232f7e648fd813d2275a",
+      "sha256": "4c38e7f24ceb5be4bd1e822c161517fd5cf39335a8d3baa29114defb7fdf4f75",
       "size": 41588
     },
     {
@@ -375,7 +375,7 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/security.yml",
-      "sha256": "b3b07aac3fcbdc92c9bd9182eb8e16649f7980c2ada6b4d9da0653e83b53851b",
+      "sha256": "e8b73c3e340a46327405cfcf3a8e3030544fcc16780391040e3612192df22921",
       "size": 7924
     },
     {

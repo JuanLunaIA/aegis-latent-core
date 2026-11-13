@@ -50,6 +50,17 @@ updates:
     groups:
       cargo-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # parking_lot 0.13, lock_api 0.5 and parking_lot_core 0.10 require
+      # rustc 1.95. The Kani job (cargo-kani 0.67) runs on nightly rustc 1.93
+      # and refuses to build them. Remove this when the Kani toolchain reaches
+      # rustc 1.95.
+      - dependency-name: "parking_lot"
+        versions: [">=0.13"]
+      - dependency-name: "lock_api"
+        versions: [">=0.5"]
+      - dependency-name: "parking_lot_core"
+        versions: [">=0.10"]
 
   # ── GitHub Actions workflows ───────────────────────────────────────────────
   - package-ecosystem: "github-actions"
