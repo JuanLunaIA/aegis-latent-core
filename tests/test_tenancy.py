@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Juan Luna. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-Aegis-Commercial-1.0
 # Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
-"""Tenant resolution by Host or path, and refusal of cross-organisation requests."""
+"""Tenant resolution by Host, and refusal of cross-organisation requests."""
 
 from __future__ import annotations
 
@@ -20,17 +20,11 @@ from aegis.core.tenancy import (
     [
         ("acme.api.aegislatent.com", "/v1/chat/completions", "acme", "acme"),
         ("acme.api.aegislatent.com", "/v1/chat/completions", None, "acme"),
-        ("api.aegislatent.com", "/o/acme/v1/chat/completions", "acme", "acme"),
         ("api.aegislatent.com", "/v1/chat/completions", "legacy", "legacy"),
         # The Host port is not part of the slug.
         ("acme.api.aegislatent.com:443", "/v1/chat/completions", None, "acme"),
         # Some clients send the Host in uppercase.
         ("ACME.API.AEGISLATENT.COM", "/v1/chat/completions", None, "acme"),
-        # The tenant path also works without a principal.
-        ("api.aegislatent.com", "/o/acme/", None, "acme"),
-        ("api.aegislatent.com", "/o/acme", None, "acme"),
-        # A double slash does not change the resolved slug.
-        ("api.aegislatent.com", "/o/acme//v1/x", None, "acme"),
     ],
 )
 def test_resolves(host: str, path: str, principal: str | None, expected: str) -> None:
@@ -42,9 +36,12 @@ def test_rejects_cross_tenant() -> None:
         tenant_from_request("acme.api.aegislatent.com", "/v1/x", "globex")
 
 
-def test_rejects_cross_tenant_via_path() -> None:
+def test_path_does_not_select_a_tenant() -> None:
+    """There are no ``/o/<slug>/`` routes, so the path cannot pick a tenant:
+    the key's tenant is used, and a key without one is refused."""
+    assert tenant_from_request("api.aegislatent.com", "/o/acme/v1/x", "globex") == "globex"
     with pytest.raises(TenantMismatch):
-        tenant_from_request("api.aegislatent.com", "/o/acme/v1/x", "globex")
+        tenant_from_request("api.aegislatent.com", "/o/acme/v1/x", None)
 
 
 def test_no_tenant_anywhere_is_an_error() -> None:
