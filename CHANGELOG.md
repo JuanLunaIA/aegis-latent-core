@@ -76,6 +76,9 @@ dated readback: the release workflow uses this section as the release body.
   without the key; see `docs/UPGRADING.md`). Every export carries
   `X-Aegis-Bundle-Signed: true|false`. The public key is never written into the
   bundle; recipients verify offline with `aegis-sdk verify --public-key`.
+  The key is a `SecretStr`, and settings validation errors no longer echo
+  input values (`hide_input_in_errors`), so a mistyped seed or any other
+  secret setting does not reach startup logs.
 
 ### Removed
 

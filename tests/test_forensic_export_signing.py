@@ -37,16 +37,6 @@ SEED = bytes(range(32))
 
 
 async def _export(tmp_path: Path, **router_kwargs: object) -> httpx.Response:
-    ledger = CryptographicAuditLedger(
-        persistence_path=str(tmp_path / "audit.jsonl"), signing_key="test-signing-key"
-    )
-    ledger.commit_forensic(
-        state_id="export-1",
-        request_bytes=b"request",
-        response_bytes=b"response",
-        tenant_id="tenant-a",
-    )
-
     async def auth() -> Principal:
         return Principal(
             subject="examiner",
@@ -56,10 +46,18 @@ async def _export(tmp_path: Path, **router_kwargs: object) -> httpx.Response:
             auth_method="test",
         )
 
-    app = FastAPI()
-    app.include_router(build_audit_router(ledger, auth, **router_kwargs), prefix="/v1/audit")
     now = datetime.now(UTC)
-    try:
+    with CryptographicAuditLedger(
+        persistence_path=str(tmp_path / "audit.jsonl"), signing_key="test-signing-key"
+    ) as ledger:
+        ledger.commit_forensic(
+            state_id="export-1",
+            request_bytes=b"request",
+            response_bytes=b"response",
+            tenant_id="tenant-a",
+        )
+        app = FastAPI()
+        app.include_router(build_audit_router(ledger, auth, **router_kwargs), prefix="/v1/audit")
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://test"
         ) as client:
@@ -72,8 +70,6 @@ async def _export(tmp_path: Path, **router_kwargs: object) -> httpx.Response:
                     "acquisition_reason": "Authorized test",
                 },
             )
-    finally:
-        ledger.close()
 
 
 @pytest.mark.asyncio
@@ -90,8 +86,8 @@ async def test_strict_export_is_signed_and_verifies_offline(tmp_path):
     report = verify_bundle(response.content, public_key=public_key)
     assert report.result == "verified", report.to_mapping()
 
-    wrong_key = Ed25519PrivateKey.generate().public_key().public_bytes(
-        Encoding.Raw, PublicFormat.Raw
+    wrong_key = (
+        Ed25519PrivateKey.generate().public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
     )
     assert verify_bundle(response.content, public_key=wrong_key).result == "failed"
 
@@ -115,7 +111,11 @@ async def test_development_export_without_a_key_is_marked_unsigned(tmp_path):
 
 def test_signing_key_setting_accepts_only_32_hex_bytes():
     assert AegisSettings(forensic_bundle_signing_key="").forensic_bundle_signing_seed() is None
-    assert AegisSettings(forensic_bundle_signing_key=SEED.hex()).forensic_bundle_signing_seed() == SEED
-    for bad in ("00" * 31, "zz" * 32, "00" * 33):
-        with pytest.raises(ValidationError):
+    assert (
+        AegisSettings(forensic_bundle_signing_key=SEED.hex()).forensic_bundle_signing_seed() == SEED
+    )
+    for bad in ("ab" * 31, "zz" * 32, "cd" * 33):
+        with pytest.raises(ValidationError) as excinfo:
             AegisSettings(forensic_bundle_signing_key=bad)
+        # A mistyped seed is nearly the real one: it must not reach startup logs.
+        assert bad[:8] not in str(excinfo.value)
