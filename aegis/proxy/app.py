@@ -16,7 +16,7 @@ import time
 import uuid
 from collections import OrderedDict
 from collections.abc import AsyncIterator
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from dataclasses import dataclass
 from datetime import timedelta
 from secrets import randbelow
@@ -73,6 +73,7 @@ from aegis.proxy.dependencies import validate_audit_auth, validate_proxy_auth
 from aegis.proxy.dmz_middleware import DMZSourceIPMiddleware
 from aegis.proxy.edge import EdgeSecretMiddleware
 from aegis.proxy.forwarder import LLMForwarder
+from aegis.proxy.metering import Usage, UsageOutbox, cloud_config, usage_from_response
 from aegis.proxy.rate_limiter import (
     DualRateLimiter,
     RateLimitBackendUnavailableError,
@@ -403,6 +404,9 @@ class _AppState:
     # Multi-replica writer lease and global sequence (aegis.core.ha). None for
     # ha_mode='single'. When set, _require_intact_ledger consults it.
     ha: Any
+    # Aegis Cloud usage metering (aegis.proxy.metering). None when it is off.
+    usage_outbox: UsageOutbox | None
+    usage_task: asyncio.Task[None] | None
 
     def get_analyzer(self, session_id: str) -> ResponseAnalyzer:
         return self.analyzers.get(session_id)
@@ -1156,6 +1160,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     state.analysis_workers = []
     state.terminal_handoff = TerminalCommitHandoff()
     state.terminal_outbox = None
+    state.usage_outbox = None
+    state.usage_task = None
     state.proxy_auth = ProxyKeyAuth(cfg)
     state.audit_auth = AuditKeyAuth(cfg)
     state.waf = AegisWAF(strict_mode=cfg.waf_strict_mode)
@@ -1573,6 +1579,14 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
             await state.forwarder.start()
             startup_cleanup.push_async_callback(state.forwarder.stop)
+            if cloud_config() is not None:
+                state.usage_outbox = UsageOutbox(
+                    cfg.wal_path.with_name(cfg.wal_path.name + ".usage-outbox.jsonl"),
+                    egress_guard=egress_guard,
+                )
+                state.usage_task = asyncio.create_task(
+                    state.usage_outbox.run(), name="aegis-usage-metering"
+                )
             state.sessions = SessionLifecycleManager(max_sessions=4_096)
             state.analysis_workers = [
                 asyncio.create_task(_analysis_worker(state), name=f"aegis-analysis-{index}")
@@ -1701,6 +1715,18 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     pending_workers,
                 )
         await state.forwarder.stop()
+        if state.usage_task is not None:
+            state.usage_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await state.usage_task
+            if state.usage_outbox is not None:
+                try:
+                    await asyncio.wait_for(
+                        state.usage_outbox.flush_once(),
+                        timeout=cfg.analysis_shutdown_timeout_seconds,
+                    )
+                except Exception:  # noqa: BLE001 - unsent events stay on disk
+                    logger.warning("final usage flush did not complete; events kept on disk")
         if state.siem_exporter is not None:
             try:
                 await asyncio.to_thread(state.siem_exporter.shutdown, 5.0, drain=False)
@@ -1812,6 +1838,26 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
     def _signer(principal: Principal) -> str:
         """Keyed pseudonym of the authenticated principal for ``signer_name``."""
         return cfg.principal_signer_ref(principal.auth_method, principal.subject)
+
+    def _meter(
+        principal: Principal, request_id: str, *, model: object, provider: str, usage: Usage
+    ) -> None:
+        """Queue one committed request for Cloud metering; never affects the response.
+
+        The organisation is the authenticated principal's tenant, never a header.
+        """
+        if state.usage_outbox is None:
+            return
+        try:
+            state.usage_outbox.record(
+                request_id,
+                tenant_id=principal.tenant_id,
+                model=str(model or "unknown"),
+                provider=provider,
+                usage=usage,
+            )
+        except OSError:
+            logger.exception("usage event not written to the metering outbox")
 
     async def _commit_evidence(
         rid: str,
@@ -2476,6 +2522,19 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                         provider="openai", outcome=summary.terminal_outcome
                     ).observe(summary.elapsed_seconds)
                     observability.STREAM_TOKENS.labels(provider="openai").inc(summary.token_count)
+                    # Every committed stream is billed: input by size, tool calls counted.
+                    # Output is the provider's usage total when it sends one, else one per delta.
+                    _meter(
+                        principal,
+                        request_id,
+                        model=body.get("model"),
+                        provider="openai",
+                        usage=(
+                            usage_from_response("openai", None, raw_body)[0],
+                            summary.token_count,
+                            summary.tool_calls,
+                        ),
+                    )
                     for entity, count in summary.redaction_hits.items():
                         observability.STREAM_REDACTIONS.labels(
                             provider="openai", entity=entity
@@ -2691,6 +2750,13 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             pii_restored=pii_map is not None and pii_map.restored > 0,
             signer_name=_signer(principal),
         )
+        _meter(
+            principal,
+            request_id,
+            model=body.get("model"),
+            provider="openai",
+            usage=usage_from_response("openai", resp_json, raw_body),
+        )
         queued = _enqueue_analysis(
             request_id,
             session_id,
@@ -2857,6 +2923,19 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     provider="anthropic", outcome=summary.terminal_outcome
                 ).observe(summary.elapsed_seconds)
                 observability.STREAM_TOKENS.labels(provider="anthropic").inc(summary.token_count)
+                # Every committed stream is billed: input by size, tool calls counted.
+                # Output is the provider's usage total when it sends one, else one per delta.
+                _meter(
+                    principal,
+                    request_id,
+                    model=body.get("model"),
+                    provider="anthropic",
+                    usage=(
+                        usage_from_response("anthropic", None, raw_body)[0],
+                        summary.token_count,
+                        summary.tool_calls,
+                    ),
+                )
                 for entity, count in summary.redaction_hits.items():
                     observability.STREAM_REDACTIONS.labels(provider="anthropic", entity=entity).inc(
                         count
@@ -3048,6 +3127,13 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             pii_restored=pii_map is not None and pii_map.restored > 0,
             signer_name=_signer(principal),
         )
+        _meter(
+            principal,
+            request_id,
+            model=body.get("model"),
+            provider="anthropic",
+            usage=usage_from_response("anthropic", response_json, raw_body),
+        )
         response = Response(
             content=response_content,
             status_code=upstream.status_code,
@@ -3234,6 +3320,13 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             upstream_bytes=upstream.content,
             pii_restored=pii_map is not None and pii_map.restored > 0,
             signer_name=_signer(principal),
+        )
+        _meter(
+            principal,
+            request_id,
+            model=body.get("model"),
+            provider="openai",
+            usage=usage_from_response("openai", response_json, raw_body),
         )
         queued = _enqueue_analysis(
             request_id,
