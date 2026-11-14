@@ -35,7 +35,7 @@ A status describes this repository's source. `IMPLEMENTED` never means "conforms
 | Standard | Class | Gateway contribution | Evidence | Status |
 |---|---|---|---|---|
 | ISO/IEC 27037:2012 (identification, collection, acquisition, preservation) | F | See [ISO/IEC 27037 Technical Inputs](ISO_27037_TECHNICAL_INPUTS.md). The gateway produces artifacts; people perform the process | that document | `LEGAL-REVIEW-REQUIRED` |
-| ISO/IEC 27041:2015 (suitability of investigative methods) | F | The offline verifiers are reproducible and tested. No known-answer vectors from NIST or another published source are in the repository | `sdk/`; [Certification Scope](CERTIFICATION_SCOPE.md) §5 | `NOT_EVIDENCED` for published test vectors |
+| ISO/IEC 27041:2015 (suitability of investigative methods) | F | Assuring an investigative method is the practitioner's. The offline verifiers are reproducible and tested, which a practitioner may cite | `sdk/` | `CUSTOMER-ASSESSMENT` |
 | ISO/IEC 27042:2015, 27043:2015 (analysis; incident investigation) | F | Practitioner process. A broken chain makes the gateway refuse governed traffic with 503 until repaired, which preserves the state an investigator examines | `aegis/proxy/app.py` (`_require_intact_ledger`) | `CUSTOMER-ASSESSMENT` |
 | ISO/IEC 27050 series (electronic discovery) | F | `/v1/audit/proofs/{state_id}` returns an O(log n) inclusion proof for one disclosed record against a separately trusted root, so one record can be produced without the others | `aegis/proxy/audit_api.py`; `aegis/core/mmr.py` | `IMPLEMENTED` |
 | ISO 14721 (OAIS archival) | F | Forensic bundles are signed and verifiable offline. The register does not map them to OAIS information packages | `aegis/core/forensic_bundle.py` | No contribution claimed |
@@ -46,7 +46,7 @@ A status describes this repository's source. `IMPLEMENTED` never means "conforms
 | Standard | Class | Gateway contribution | Evidence | Status |
 |---|---|---|---|---|
 | ISO/IEC 27001:2022 (ISMS) | O | Annex A, control by control: [Audit Readiness](AUDIT_READINESS.md) §4.3 | that table | `CUSTOMER-ASSESSMENT` |
-| ISO/IEC 27002:2022 (control guidance) | F | The same controls, implementation level. 8.25, 8.28 and 8.29 are met by CI gates on every change | `.github/workflows/ci.yml` | `IMPLEMENTED` (CI gates) |
+| ISO/IEC 27002:2022 (control guidance) | F | The same controls, implementation level. CI gates on every change contribute evidence to 8.25, 8.28 and 8.29; the secure-development process and its operating effectiveness are the organisation's | `.github/workflows/ci.yml` | `IMPLEMENTED` (CI gates); `CUSTOMER-ASSESSMENT` (controls) |
 | ISO/IEC 27005:2022 (security risk management) | F | Organisational process | — | No contribution claimed |
 | ISO/IEC 27017:2015 (cloud controls) | F, used inside a 27001 scope | Applies to a cloud service provider and its customers. Self-hosted, the deployer is the provider. Tenant separation is logical, never physical | `aegis/auth/principal.py`; tenant-isolation tests | `CUSTOMER-ASSESSMENT` |
 | ISO/IEC 27018:2025 (PII in public clouds, replaces 2019) | F, used inside a 27001 scope | Applies to a public-cloud PII processor. The gateway keeps request and response bodies as digests in the WAL, and cryptographic shredding can make a subject's sealed payload unreadable | `aegis/core/crypto_shredder.py`; [Data Retention](../privacy/DATA_RETENTION.md) | `CONFIGURATION-DEPENDENT` |
@@ -75,6 +75,7 @@ A status describes this repository's source. `IMPLEMENTED` never means "conforms
 | ISO/IEC 11770 series (key management) | F | Versioned keyring with rotation and overlap; PKCS#11 and HSM signing tiers | `aegis/core/hsm.py`; [Compliance Mapping](COMPLIANCE_MAPPING.md) "Signing and key rotation" | `CONFIGURATION-DEPENDENT` |
 | ISO/IEC 18031 (random bit generation) | F | The gateway implements no generator. Keys, nonces and identifiers come from the operating system through Python's `secrets` and `os.urandom` and the `cryptography` library | `aegis/core/` | `IMPLEMENTED` (delegated) |
 | ISO/IEC 29115:2013 (entity authentication assurance) | F | Each record's signer reference names the authentication method (`api_key`, OIDC, mTLS). No assurance level is mapped | `aegis/config.py` (`principal_signer_ref`) | `IMPLEMENTED` (method only) |
+| ISO/IEC 18367 (conformance testing of cryptographic algorithms and mechanisms) | F | Known-answer testing belongs here. No known-answer vectors from NIST or another published source are in the repository | [Certification Scope](CERTIFICATION_SCOPE.md) §5 | `NOT_EVIDENCED` |
 | ISO/IEC 15408 (Common Criteria), ISO/IEC 18045 | P | No evaluation | — | None |
 
 ## 7. Software supply chain and the web surface
