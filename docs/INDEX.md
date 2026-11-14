@@ -152,6 +152,7 @@ The documents that decide what may be said, and on what evidence.
 | [HIPAA Technical Inputs](compliance/HIPAA_TECHNICAL_INPUTS.md) | Safe Harbor-inspired redaction contribution. |
 | [MiFID II Technical Inputs](compliance/MIFID_II_TECHNICAL_INPUTS.md) | Record-keeping helper contribution. |
 | [ISO/IEC 27037 Technical Inputs](compliance/ISO_27037_TECHNICAL_INPUTS.md) | Evidence handling contribution. |
+| [ISO/IEC Standards Register](compliance/ISO_STANDARDS_REGISTER.md) | Every ISO/IEC standard a buyer may name: certificate class, gateway contribution, status, rejected mappings (`CLM-129`). |
 | [Data Retention](privacy/DATA_RETENTION.md) | What is retained, for how long, under whose control. |
 | [PII Redaction Boundaries](privacy/PII_REDACTION_BOUNDARIES.md) | What redaction does and does not catch. |
 | [Data Processing Checklist](privacy/DATA_PROCESSING_CHECKLIST.md) | Questions to answer before processing personal data. |
