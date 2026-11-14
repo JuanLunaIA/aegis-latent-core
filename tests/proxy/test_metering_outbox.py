@@ -206,3 +206,74 @@ def test_flush_does_nothing_when_metering_is_off(
     assert _flush(outbox) == 0
     assert seen == []
     assert (tmp_path / "usage.jsonl").exists()
+
+
+def test_a_full_spool_drops_new_events_instead_of_filling_the_wal_volume(tmp_path: Path) -> None:
+    outbox = UsageOutbox(tmp_path / "usage.jsonl", max_spool_bytes=400)
+    accepted = sum(
+        outbox.record(f"req-{i}", tenant_id="acme", model="m", provider="p", usage=(1, 1, 0))
+        for i in range(20)
+    )
+
+    assert 0 < accepted < 20
+    assert (tmp_path / "usage.jsonl").stat().st_size <= 400
+
+
+def test_the_rejected_file_is_bounded_too(tmp_path: Path) -> None:
+    outbox = UsageOutbox(
+        tmp_path / "usage.jsonl", transport=_transport(422), max_spool_bytes=10_000
+    )
+    for round_ in range(5):
+        for i in range(30):
+            _record(outbox, f"req-{round_}-{i}")
+        _flush(outbox)
+
+    assert (tmp_path / "usage.jsonl.rejected").stat().st_size < 10_000 + 6_000
+
+
+async def _stream_summary(events: list[dict], *, protocol: str = "openai"):
+    from aegis.proxy.streaming import BoundedStreamProxy
+
+    summaries = []
+
+    async def upstream():
+        for event in events:
+            yield b"data: " + json.dumps(event).encode() + b"\n\n", event
+        yield b"data: [DONE]\n\n", None
+
+    async def commit(summary) -> None:
+        summaries.append(summary)
+
+    proxy = BoundedStreamProxy(
+        upstream(),
+        terminal_commit=commit,
+        max_response_bytes=65536,
+        max_duration_seconds=2,
+        max_event_bytes=8192,
+        queue_max_items=16,
+        queue_max_bytes=65536,
+        protocol=protocol,
+    )
+    _ = [part async for part in proxy]
+    (summary,) = summaries
+    return summary
+
+
+def test_streamed_openai_tool_calls_are_counted_once_per_call() -> None:
+    def call(index: int, args: str) -> dict:
+        tool = {"index": index, "function": {"arguments": args}}
+        return {"choices": [{"index": 0, "delta": {"tool_calls": [tool]}}]}
+
+    summary = asyncio.run(_stream_summary([call(0, '{"a"'), call(0, ":1}"), call(1, "{}")]))
+    assert summary.tool_calls == 2
+    assert summary.token_count == 0
+
+
+def test_streamed_anthropic_tool_use_blocks_are_counted() -> None:
+    events = [
+        {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}},
+        {"type": "content_block_start", "index": 1, "content_block": {"type": "tool_use"}},
+        {"type": "content_block_start", "index": 2, "content_block": {"type": "tool_use"}},
+    ]
+    summary = asyncio.run(_stream_summary(events, protocol="anthropic"))
+    assert summary.tool_calls == 2

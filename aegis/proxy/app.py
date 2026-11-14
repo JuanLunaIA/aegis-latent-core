@@ -2522,18 +2522,19 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                         provider="openai", outcome=summary.terminal_outcome
                     ).observe(summary.elapsed_seconds)
                     observability.STREAM_TOKENS.labels(provider="openai").inc(summary.token_count)
-                    if summary.token_count > 0:
-                        _meter(
-                            principal,
-                            request_id,
-                            model=body.get("model"),
-                            provider="openai",
-                            usage=(
-                                usage_from_response("openai", None, raw_body)[0],
-                                summary.token_count,
-                                0,
-                            ),
-                        )
+                    # Every committed stream is billed: input by size, tool calls counted.
+                    # Output is the provider's usage total when it sends one, else one per delta.
+                    _meter(
+                        principal,
+                        request_id,
+                        model=body.get("model"),
+                        provider="openai",
+                        usage=(
+                            usage_from_response("openai", None, raw_body)[0],
+                            summary.token_count,
+                            summary.tool_calls,
+                        ),
+                    )
                     for entity, count in summary.redaction_hits.items():
                         observability.STREAM_REDACTIONS.labels(
                             provider="openai", entity=entity
@@ -2922,18 +2923,19 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     provider="anthropic", outcome=summary.terminal_outcome
                 ).observe(summary.elapsed_seconds)
                 observability.STREAM_TOKENS.labels(provider="anthropic").inc(summary.token_count)
-                if summary.token_count > 0:
-                    _meter(
-                        principal,
-                        request_id,
-                        model=body.get("model"),
-                        provider="anthropic",
-                        usage=(
-                            usage_from_response("anthropic", None, raw_body)[0],
-                            summary.token_count,
-                            0,
-                        ),
-                    )
+                # Every committed stream is billed: input by size, tool calls counted.
+                # Output is the provider's usage total when it sends one, else one per delta.
+                _meter(
+                    principal,
+                    request_id,
+                    model=body.get("model"),
+                    provider="anthropic",
+                    usage=(
+                        usage_from_response("anthropic", None, raw_body)[0],
+                        summary.token_count,
+                        summary.tool_calls,
+                    ),
+                )
                 for entity, count in summary.redaction_hits.items():
                     observability.STREAM_REDACTIONS.labels(provider="anthropic", entity=entity).inc(
                         count

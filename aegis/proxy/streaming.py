@@ -64,6 +64,9 @@ class StreamEvidenceSummary:
     token_count: int
     elapsed_seconds: float
     redaction_hits: dict[str, int]
+    # Tool calls the upstream started: distinct OpenAI delta.tool_calls indexes
+    # per choice, or Anthropic tool_use content blocks. Metering bills on them.
+    tool_calls: int = 0
 
 
 _DETACHED_TERMINAL_COMMITS: set[asyncio.Task[None]] = set()
@@ -486,6 +489,7 @@ class BoundedStreamProxy:
         self._size = 0
         self._preview = bytearray()
         self._token_count = 0
+        self._tool_calls: set[tuple[int, int]] = set()
         self._last_content_template: dict[str, Any] | None = None
         self._producer: asyncio.Task[None] | None = None
         self._finalized = False
@@ -679,6 +683,14 @@ class BoundedStreamProxy:
                 if not isinstance(choice, dict):
                     continue
                 delta = choice.get("delta")
+                calls = delta.get("tool_calls") if isinstance(delta, dict) else None
+                if isinstance(calls, list):
+                    choice_index = choice.get("index", 0)
+                    if not isinstance(choice_index, int):
+                        choice_index = 0
+                    for call in calls:
+                        if isinstance(call, dict) and isinstance(call.get("index"), int):
+                            self._tool_calls.add((choice_index, call["index"]))
                 if not isinstance(delta, dict) or not isinstance(delta.get("content"), str):
                     continue
                 self._last_content_template = copy.deepcopy(payload)
@@ -708,6 +720,11 @@ class BoundedStreamProxy:
                     self._token_count += 1
         elif event_type == "content_block_start":
             block = payload.get("content_block")
+            if isinstance(block, dict) and block.get("type") == "tool_use":
+                index = payload.get("index")
+                if not isinstance(index, int):
+                    index = len(self._tool_calls)
+                self._tool_calls.add((0, index))
             if isinstance(block, dict) and isinstance(block.get("text"), str):
                 settled = self._deidentifier.feed(block["text"])
                 block["text"] = settled
@@ -809,6 +826,7 @@ class BoundedStreamProxy:
             token_count=self._token_count,
             elapsed_seconds=time.perf_counter() - self._started,
             redaction_hits=self._deidentifier.stats.entity_hits,
+            tool_calls=len(self._tool_calls),
         )
         return summary
 

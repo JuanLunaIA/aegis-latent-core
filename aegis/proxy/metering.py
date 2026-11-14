@@ -52,6 +52,10 @@ _MAX_TOOL_CALLS = 1000
 _SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,79}$")
 _MIN_SECRET = 32
 _BATCH_PATH = "/v1/usage/batch"
+# The spool lives beside the evidence WAL: an unbounded backlog during a long
+# Cloud outage could fill the volume and make evidence commits fail, so new
+# events are dropped (and logged) once the spool reaches this size.
+DEFAULT_MAX_SPOOL_BYTES = 64 * 1024 * 1024
 _TIMEOUT = httpx.Timeout(5.0)
 
 Usage = tuple[int, int, int]  # (input_tokens, output_tokens, tool_calls)
@@ -140,13 +144,21 @@ class UsageOutbox:
         *,
         egress_guard: Any = None,
         transport: httpx.AsyncBaseTransport | None = None,
+        max_spool_bytes: int = DEFAULT_MAX_SPOOL_BYTES,
     ) -> None:
         self.path = path
         self.rejected_path = path.with_name(path.name + ".rejected")
         self._egress_guard = egress_guard
         self._transport = transport
+        self._max_bytes = max_spool_bytes
         self._lock = threading.Lock()
         path.parent.mkdir(parents=True, exist_ok=True)
+        self._spool_bytes = self._measure()
+
+    def _measure(self) -> int:
+        """Bytes held by the outbox and its pending segments."""
+        files = [self.path, *self._segments()]
+        return sum(f.stat().st_size for f in files if f.exists())
 
     # ── write side (request path) ───────────────────────────────────────────
     def record(
@@ -170,21 +182,30 @@ class UsageOutbox:
             },
             separators=(",", ":"),
         )
-        # write+flush only: the flusher fsyncs the segment it takes, so a process
-        # crash loses nothing and a host crash loses at most one flush interval.
-        with self._lock, self.path.open("a", encoding="utf-8") as handle:
-            handle.write(line + "\n")
-            handle.flush()
+        data = line + "\n"
+        # write+flush only, into the page cache: the flusher fsyncs the segment
+        # it takes (outside this lock), so a process crash loses nothing and a
+        # host crash loses at most one flush interval.
+        with self._lock:
+            if self._spool_bytes + len(data) > self._max_bytes:
+                logger.error("usage not recorded: metering spool is full (Cloud unreachable?)")
+                return False
+            with self.path.open("a", encoding="utf-8") as handle:
+                handle.write(data)
+                handle.flush()
+            self._spool_bytes += len(data)
         return True
 
     # ── read side (background) ──────────────────────────────────────────────
     def _rotate(self) -> None:
+        segment = self.path.with_name(f"{self.path.name}.{time.time_ns()}.sending")
         with self._lock:
-            if self.path.exists() and self.path.stat().st_size > 0:
-                segment = self.path.with_name(f"{self.path.name}.{time.time_ns()}.sending")
-                os.replace(self.path, segment)
-                with segment.open("rb") as handle:
-                    os.fsync(handle.fileno())
+            if not (self.path.exists() and self.path.stat().st_size > 0):
+                return
+            os.replace(self.path, segment)
+        # fsync after releasing the lock, so request-path appends never wait on disk.
+        with segment.open("rb") as handle:
+            os.fsync(handle.fileno())
 
     def _segments(self) -> list[Path]:
         return sorted(self.path.parent.glob(f"{self.path.name}.*.sending"))
@@ -210,7 +231,12 @@ class UsageOutbox:
                 sent, remaining = await self._send_segment(client, base_url, secret, segment)
                 accepted += sent
                 await asyncio.to_thread(self._settle, segment, remaining)
+        await asyncio.to_thread(self._remeasure)
         return accepted
+
+    def _remeasure(self) -> None:
+        with self._lock:
+            self._spool_bytes = self._measure()
 
     @staticmethod
     def _settle(segment: Path, remaining: list[str]) -> None:
@@ -296,6 +322,9 @@ class UsageOutbox:
         return "rejected"
 
     def _dead_letter(self, org: str, events: list[dict[str, Any]]) -> None:
+        if self.rejected_path.exists() and self.rejected_path.stat().st_size >= self._max_bytes:
+            logger.error("rejected usage dropped: %d events, rejected file is full", len(events))
+            return
         with self.rejected_path.open("a", encoding="utf-8") as handle:
             for event in events:
                 handle.write(json.dumps({"org_slug": org, **event}, separators=(",", ":")) + "\n")

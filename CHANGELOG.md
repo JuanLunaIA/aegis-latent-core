@@ -33,7 +33,12 @@ dated readback: the release workflow uses this section as the release body.
   100 events with a deterministic `batch_id`, so a retry cannot double count; a
   4xx is moved to `<outbox>.rejected`, a 5xx or network error stays on disk for
   the next pass, and a restart resumes from the outbox. Metering never delays or
-  alters the response. It obeys the airgap egress allowlist.
+  alters the response. It obeys the airgap egress allowlist. The spool and the
+  rejected file are capped (64 MiB each) because they share the WAL volume; past
+  the cap new events are dropped and logged. Streams report the tool calls they
+  started (`StreamEvidenceSummary.tool_calls`), and every committed stream is
+  metered; streamed output is the provider's usage total when sent, else one per
+  content delta.
 - **Reversible PII vault (`aegis/core/pii_vault.py`)**: opt-in tokenisation of
   detectable values (DNI, CUIT/CUIL, email, phone, card, and person names only
   when they follow an explicit `Persona:`, `Nombre:` or `Cliente:` label) into
