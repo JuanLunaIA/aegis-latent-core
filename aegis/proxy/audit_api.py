@@ -43,7 +43,16 @@ logger = logging.getLogger(__name__)
 def build_audit_router(
     ledger: Any,
     auth_dependency: Any,
+    *,
+    bundle_signing_key: bytes | None = None,
+    require_signed_bundle: bool = False,
 ) -> APIRouter:
+    """Build the audit router.
+
+    ``bundle_signing_key`` is the raw 32-byte Ed25519 seed used to sign every
+    forensic export's ``manifest.json``. With ``require_signed_bundle`` (strict
+    mode) an export that cannot be signed is refused instead of served unsigned.
+    """
     router = APIRouter(tags=["audit"])
     read_dependency = auth_dependency
 
@@ -323,6 +332,14 @@ def build_audit_router(
     ) -> Response:
         """Export a bounded ISO/IEC 27037-oriented technical evidence bundle."""
         principal = _require(auth, SCOPE_AUDIT_EXPORT)
+        if require_signed_bundle and bundle_signing_key is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "Forensic export is disabled: strict mode signs every bundle and "
+                    "AEGIS_FORENSIC_BUNDLE_SIGNING_KEY is not configured."
+                ),
+            )
         effective_tenant = principal_tenant(principal, payload.tenant_id)
         start = payload.start_time
         end = payload.end_time
@@ -354,6 +371,7 @@ def build_audit_router(
                 acquisition_reason=payload.acquisition_reason,
                 scope_start=start_utc,
                 scope_end=end_utc,
+                manifest_signing_key=bundle_signing_key,
             )
         except ForensicBundleError as exc:
             raise HTTPException(
@@ -368,6 +386,7 @@ def build_audit_router(
                 "Cache-Control": "no-store",
                 "Content-Disposition": f'attachment; filename="aegis-forensic-{stamp}.zip"',
                 "X-Content-Type-Options": "nosniff",
+                "X-Aegis-Bundle-Signed": "true" if bundle_signing_key is not None else "false",
             },
         )
 

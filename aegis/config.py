@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urlparse
 
-from pydantic import AnyHttpUrl, Field, field_validator, model_validator
+from pydantic import AnyHttpUrl, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +26,8 @@ class AegisSettings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        # Settings hold keys and secrets; a startup ValidationError must not echo them.
+        hide_input_in_errors=True,
     )
 
     # ── Provider ─────────────────────────────────────────────────────────
@@ -147,6 +149,15 @@ class AegisSettings(BaseSettings):
             "MUST be separate from AEGIS_API_KEYS. "
             "Generate with: python -c 'import secrets; print(secrets.token_hex(32))' "
             "If empty and auth is not disabled, a warning is emitted at startup."
+        ),
+    )
+    forensic_bundle_signing_key: SecretStr = Field(
+        default=SecretStr(""),
+        description=(
+            "Hex-encoded 32-byte Ed25519 private seed that signs every forensic "
+            "export's manifest.json. Distribute the public half to recipients out "
+            "of band; it is never written into the bundle. Strict mode refuses "
+            "/v1/audit/forensics/export while this is empty."
         ),
     )
     auth_mode: Literal["api_key", "oidc", "mtls", "api_key_mtls", "oidc_mtls"] = Field(
@@ -1102,6 +1113,20 @@ class AegisSettings(BaseSettings):
         if value not in {"strict", "development"}:
             raise ValueError("security_enforcement_mode must be 'strict' or 'development'")
         return value
+
+    @field_validator("forensic_bundle_signing_key")
+    @classmethod
+    def _validate_forensic_bundle_signing_key(cls, v: SecretStr) -> SecretStr:
+        # SecretStr keeps the seed out of repr(); hide_input_in_errors keeps it out of errors.
+        value = v.get_secret_value().strip()
+        if value and (len(value) != 64 or any(c not in "0123456789abcdefABCDEF" for c in value)):
+            raise ValueError("forensic_bundle_signing_key must be 64 hex characters (32 bytes)")
+        return SecretStr(value)
+
+    def forensic_bundle_signing_seed(self) -> bytes | None:
+        """Raw Ed25519 seed for forensic exports, or ``None`` when not configured."""
+        value = self.forensic_bundle_signing_key.get_secret_value()
+        return bytes.fromhex(value) if value else None
 
     @field_validator("trusted_signing_public_keys")
     @classmethod
