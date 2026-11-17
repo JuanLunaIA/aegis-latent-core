@@ -1425,6 +1425,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             format="%(asctime)s %(levelname)s %(name)s — %(message)s",
         )
         observability.setup_otel(service_name="aegis-proxy")
+        # Before outbox replay: replay commits evidence, and a refused clock must
+        # not have timestamped any of it.
+        _check_clock_sync(cfg)
 
         async def _stop_siem_exporter_on_startup_failure() -> None:
             # Only ever registered from the `if state.siem_exporter is not None:`
@@ -1565,8 +1568,6 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 if cfg.security_enforcement_mode == "strict" and cfg.require_lsm:
                     raise RuntimeError(f"LSM enforcement required but unavailable: {exc}") from exc
                 logger.warning("LSM module unavailable in development runtime: %s", exc)
-
-            _check_clock_sync(cfg)
 
             cfg.wal_path.parent.mkdir(parents=True, exist_ok=True)
 

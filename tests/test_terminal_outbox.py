@@ -733,6 +733,33 @@ def test_the_app_replays_the_spool_before_serving(tmp_path: Path) -> None:
     assert records == []
 
 
+def test_a_refused_clock_check_replays_nothing(tmp_path: Path) -> None:
+    """Codex review on PR #297: the startup clock check ran after outbox replay,
+    so a strict refusal still left recovered nodes timestamped by the clock it
+    refused. The check now runs before replay; a refusal commits nothing.
+    """
+    from fastapi.testclient import TestClient
+
+    from aegis.proxy.app import create_app
+
+    spool = tmp_path / "app.wal.jsonl.terminal-outbox.jsonl"
+    outbox = _open(spool)
+    outbox.record(_context("from-before"), _summary())
+    outbox.close()
+    pending = spool.read_bytes()
+
+    def _refuse(cfg: Any) -> None:
+        raise RuntimeError("strict runtime requires a synchronised clock")
+
+    app = create_app(_settings(tmp_path, terminal_outbox_enabled=True))
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setitem(create_app.__globals__, "_check_clock_sync", _refuse)
+        with pytest.raises(RuntimeError, match="synchronised clock"), TestClient(app):
+            pass
+    assert _nodes_for(app.state.aegis.ledger, "from-before") == []
+    assert spool.read_bytes() == pending
+
+
 def test_the_outbox_is_off_by_default(tmp_path: Path) -> None:
     from fastapi.testclient import TestClient
 
