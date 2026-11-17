@@ -75,7 +75,7 @@ A status describes this repository's source. `IMPLEMENTED` never means "conforms
 | ISO/IEC 11770 series (key management) | F | Versioned keyring with rotation and overlap; PKCS#11 and HSM signing tiers | `aegis/core/hsm.py`; [Compliance Mapping](COMPLIANCE_MAPPING.md) "Signing and key rotation" | `CONFIGURATION-DEPENDENT` |
 | ISO/IEC 18031 (random bit generation) | F | The gateway implements no generator. Keys, nonces and identifiers come from the operating system through Python's `secrets` and `os.urandom` and the `cryptography` library | `aegis/core/` | `IMPLEMENTED` (delegated) |
 | ISO/IEC 29115:2013 (entity authentication assurance) | F | Each record's signer reference names the authentication method (`api_key`, OIDC, mTLS). No assurance level is mapped | `aegis/config.py` (`principal_signer_ref`) | `IMPLEMENTED` (method only) |
-| ISO/IEC 18367 (conformance testing of cryptographic algorithms and mechanisms) | F | Known-answer testing belongs here. No known-answer vectors from NIST or another published source are in the repository | [Certification Scope](CERTIFICATION_SCOPE.md) §5 | `NOT_EVIDENCED` |
+| ISO/IEC 18367 (conformance testing of cryptographic algorithms and mechanisms) | F | Known-answer tests pin SHA-256, HMAC-SHA256, AES-256-GCM and Ed25519 to their published vectors, through the gateway's own digest and HMAC functions. ML-DSA-65 has no known-answer test. This is testing, not a laboratory's conformance evaluation | `tests/test_known_answer_vectors.py` | `IMPLEMENTED` (four primitives) |
 | ISO/IEC 15408 (Common Criteria), ISO/IEC 18045 | P | No evaluation | — | None |
 
 ## 7. Software supply chain and the web surface
@@ -84,7 +84,7 @@ A status describes this repository's source. `IMPLEMENTED` never means "conforms
 |---|---|---|---|---|
 | ISO/IEC 5230:2020 (OpenChain licence compliance) | O, self-certification available | Licence headers are checked in CI, and a licence audit is kept. No OpenChain programme has been declared | [License Audit](LICENSE_AUDIT.md); CI `License Headers` | `NOT_EVIDENCED` for conformance |
 | ISO/IEC 18974:2023 (OpenChain security assurance) | O, self-certification available | Dependency, OSV, Trivy, cargo and CodeQL scans in CI; hash-pinned lock files. No programme has been declared | `.github/workflows/` | `NOT_EVIDENCED` for conformance |
-| ISO/IEC 5962:2021 (SPDX) | F, format specification | CI emits an SPDX JSON SBOM (`sbom.spdx.json`, Syft) for main and release builds. ISO/IEC 5962:2021 standardises SPDX 2.2.1; the SBOM uses the version Syft emits. `scripts/generate_sbom.sh` writes Syft's native JSON, not SPDX | `.github/workflows/ci.yml` (`sbom` job) | `IMPLEMENTED` in CI; a release asset needs its own readback |
+| ISO/IEC 5962:2021 (SPDX) | F, format specification | CI emits an SPDX JSON SBOM (`sbom.spdx.json`, Syft) for main and release builds. ISO/IEC 5962:2021 standardises SPDX 2.2.1; the SBOM uses the version Syft emits (SPDX 2.3 for the pinned Syft 1.0.0). `scripts/generate_sbom.sh` writes the same format locally (`aegis-sbom.spdx.json`) | `.github/workflows/ci.yml` (`sbom` job); `scripts/generate_sbom.sh` | `IMPLEMENTED`; a release asset needs its own readback |
 | ISO/IEC 25010:2023 (product quality model) | F | Benchmarks are measured locally under named conditions | [Benchmarks](../BENCHMARKS.md) | `MEASURED` / local scope |
 | ISO/IEC 40500:2025 (WCAG 2.2) | F | The dashboard has not been assessed against WCAG 2.2 | `dashboard/` | `NOT_EVIDENCED` |
 
@@ -104,7 +104,7 @@ These appear in circulated mappings and are wrong or unsupported:
 - **Writing ISO control identifiers into evidence records.** A signed record cannot be corrected. A wrong clause number would become permanent evidence, and every verifier would need a schema change. Mappings stay in documents like this one, versioned and correctable.
 - **"ISO 42001", "ISO 27001" or "ISO 27701" badges** on a product page. They read as certification. Allowed wording is in [Compliance Mapping](COMPLIANCE_MAPPING.md) "ISO/IEC 42001 and ISO/IEC 27001".
 - **ISO/IEC 27701:2019 and 27018:2019** as current editions. Both were replaced in 2025.
-- **Features the gateway does not have**, presented as ISO mappings: provider and model disclosure headers, risk-tier fields, impact-assessment presets, Roughtime anchoring, customer-managed key services, multi-region replication, a recovery point objective of zero, and published known-answer vectors.
+- **Features the gateway does not have**, presented as ISO mappings: provider and model disclosure headers, risk-tier fields, impact-assessment presets, Roughtime anchoring, customer-managed key services, multi-region replication, a recovery point objective of zero, and known-answer vectors for ML-DSA-65.
 
 ## 10. Related documents
 

@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-OUTPUT_FILE="aegis-sbom.json"
+OUTPUT_FILE="aegis-sbom.spdx.json"
 
 # Pin the Syft version for reproducible, auditable SBOM generation.
 # Override via environment: SYFT_VERSION=v1.2.3 ./scripts/generate_sbom.sh
@@ -41,14 +41,14 @@ if ! command -v syft &> /dev/null; then
         echo "Set SYFT_INSTALL_SHASUM to the expected SHA256 for stronger supply-chain guarantees."
     fi
 
-    sh "${SYFT_INSTALL_SCRIPT}" -b /tmp "syft@${SYFT_VERSION}"
+    sh "${SYFT_INSTALL_SCRIPT}" -b /tmp "${SYFT_VERSION}"
     rm -f "${SYFT_INSTALL_SCRIPT}"
     SYFT_CMD="/tmp/syft"
 else
     SYFT_CMD="$(command -v syft)"
 fi
 
-"${SYFT_CMD}" . -o json > "${OUTPUT_FILE}"
+"${SYFT_CMD}" . -o spdx-json > "${OUTPUT_FILE}"
 
 echo "SBOM generated at ${OUTPUT_FILE}"
 echo "Attach this file to Releases for supply-chain compliance (Executive Order 14028)."

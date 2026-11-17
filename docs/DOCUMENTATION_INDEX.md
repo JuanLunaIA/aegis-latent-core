@@ -12,7 +12,7 @@ does not establish publication, deployment, or external acceptance. See
 
 - Pages indexed: 172
 - Directory groups: 22
-- Relative links in indexed pages: 1514
+- Relative links in indexed pages: 1513
 - Broken relative links in indexed pages: 0
 
 ## docs/
