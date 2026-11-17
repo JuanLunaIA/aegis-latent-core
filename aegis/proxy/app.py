@@ -1137,6 +1137,27 @@ def create_proxy_app(settings: AegisSettings | None = None) -> FastAPI:
     return create_app(settings)
 
 
+def _check_clock_sync(cfg: AegisSettings) -> None:
+    """Refuse a strict start on an unsynchronised clock when the operator asks for it.
+
+    Evidence timestamps come from the host clock. The check runs only when
+    ``require_clock_sync`` is set; an undetermined status counts as unsynchronised.
+    """
+    if not cfg.require_clock_sync:
+        return
+    from aegis.core.clock_integrity import ClockIntegrityAssertion
+
+    status = ClockIntegrityAssertion().assert_startup()
+    if status.ntp_synchronized is True:
+        return
+    if cfg.security_enforcement_mode == "strict":
+        raise RuntimeError(
+            "strict runtime requires a synchronised clock: "
+            f"{status.warning or status.source} (AEGIS_REQUIRE_CLOCK_SYNC=true)"
+        )
+    logger.warning("host clock not confirmed synchronised: %s", status.warning or status.source)
+
+
 def create_app(settings: AegisSettings | None = None) -> FastAPI:
     cfg = settings or get_settings()
 
@@ -1544,6 +1565,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 if cfg.security_enforcement_mode == "strict" and cfg.require_lsm:
                     raise RuntimeError(f"LSM enforcement required but unavailable: {exc}") from exc
                 logger.warning("LSM module unavailable in development runtime: %s", exc)
+
+            _check_clock_sync(cfg)
 
             cfg.wal_path.parent.mkdir(parents=True, exist_ok=True)
 

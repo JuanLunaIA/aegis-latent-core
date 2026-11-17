@@ -23,6 +23,14 @@ dated readback: the release workflow uses this section as the release body.
 
 ### Added
 
+- **Startup clock check (`AEGIS_REQUIRE_CLOCK_SYNC`, default off)**: when set, the
+  gateway runs `aegis/core/clock_integrity.py` at startup. Strict runtime refuses to
+  start unless the host clock is confirmed NTP-synchronised (an undetermined status
+  counts as unsynchronised); other modes log a warning. Evidence timestamps come
+  from the host clock; the module existed but nothing called it.
+- **Known-answer tests and SPDX from the local SBOM script**: SHA-256, HMAC-SHA256,
+  AES-256-GCM and Ed25519 are pinned to published vectors
+  (`tests/test_known_answer_vectors.py`); `scripts/generate_sbom.sh` writes SPDX JSON.
 - **Aegis Cloud usage metering (`aegis/proxy/metering.py`)**: with
   `AEGIS_CLOUD_URL` and `AEGIS_CLOUD_INTERNAL_HMAC` set, each committed request
   (evidence already durable) is appended to a JSONL outbox beside the WAL and

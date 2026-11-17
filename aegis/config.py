@@ -399,6 +399,13 @@ class AegisSettings(BaseSettings):
         default=True,
         description="Require an active seccomp filter in strict runtime mode.",
     )
+    require_clock_sync: bool = Field(
+        default=False,
+        description=(
+            "Check at startup that the host clock is NTP-synchronised. Strict runtime refuses "
+            "to start unless the check confirms synchronisation; other modes log a warning."
+        ),
+    )
     max_request_body_bytes: int = Field(
         default=1_048_576,
         ge=1_024,
