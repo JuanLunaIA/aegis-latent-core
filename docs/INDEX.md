@@ -270,6 +270,23 @@ Long-form volumes for institutional review. Each is self-contained and carries i
 | [Document Control](institutional/DOCUMENT_CONTROL.md) | Volume control record |
 | [Claim Evidence Graph](institutional/CLAIM_EVIDENCE_GRAPH.md) | Claim-to-evidence relationships |
 
+## Archive
+
+Dated records, each bound to its own version and commit. None describes the current tree.
+
+| Document | Contents |
+|---|---|
+| [Archive](archive/README.md) | What the archive holds and why |
+| [Audit report, 5.0.1 prep](archive/AUDIT_REPORT_v5.0.1_PREP.md) | Forensic audit before `5.0.1` |
+| [Implementation log, 5.0.1](archive/IMPLEMENTATION_LOG_5.0.1.md) | `5.0.1` implementation record |
+| [Release halted, 5.0.1](archive/RELEASE_HALTED_CRITICAL_ERRORS.md) | Superseded release halt |
+| [Release readiness, 5.0.1](archive/RELEASE_READINESS_v5.0.1.md) | `5.0.1` release decision |
+| [Integrity seal, 5.0.0](archive/INTEGRITY_SEAL.md) | Verification battery of 2026-09-16 |
+| [State manifest](archive/STATE_MANIFEST.md) | Tree measurement of 2026-09-16 |
+| [Enterprise hardening PR summary](archive/PR_FINAL_ENTERPRISE_HARDENING.md) | PR #157, `4.3.0` |
+| [Security audit report](archive/SECURITY_AUDIT_REPORT.md) | Historical automated report |
+| [Security audit execution log](archive/SECURITY_AUDIT_EXECUTION_LOG.md) | Historical execution log |
+
 ## Generated
 
 | Document | Contents |

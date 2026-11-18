@@ -85,7 +85,8 @@ def test_table_rows_are_checked_individually(tmp_path: Path) -> None:
 
 def test_exempt_audit_report_is_skipped(tmp_path: Path) -> None:
     """The audit report quotes the defective text as its evidence."""
-    (tmp_path / "AUDIT_REPORT_v5.0.1_PREP.md").write_text(
+    (tmp_path / "docs" / "archive").mkdir(parents=True)
+    (tmp_path / "docs" / "archive" / "AUDIT_REPORT_v5.0.1_PREP.md").write_text(
         "**Defect.** The prospectus cites p99 1,189.89 ms with no producer artifact.\n",
         encoding="utf-8",
     )

@@ -1073,7 +1073,7 @@ Everything below is appended to the registers in the same commit as this report;
 
 ## 9. Re-verification at `9df5fd3` (2026-09-24)
 
-This mission order was re-issued on 2026-09-24. It was executed as a **verification pass at current `main` (`9df5fd3`)** rather than a second from-scratch audit: this report is the first pass's product, and re-running the same scans over an equivalent tree would produce a second copy of it, not new evidence. Every line below is an executed output on the stated host; the raw captures are in [`evidence/registry/reanchor_2026-09-24.txt`](evidence/registry/reanchor_2026-09-24.txt).
+This mission order was re-issued on 2026-09-24. It was executed as a **verification pass at current `main` (`9df5fd3`)** rather than a second from-scratch audit: this report is the first pass's product, and re-running the same scans over an equivalent tree would produce a second copy of it, not new evidence. Every line below is an executed output on the stated host; the raw captures are in [`evidence/registry/reanchor_2026-09-24.txt`](../../evidence/registry/reanchor_2026-09-24.txt).
 
 **Registry state read first.** §4.6's `[AUDIT]` block: 30 rows, all terminal (`REG-D05`–`REG-D34`; the last three `FIXED` 2026-09-22). At `9df5fd3`: `OPEN` = 0, `SEED` = 0. Audit backlog: `AUD-01`–`AUD-30` `[x]`; open: `AUD-35` [P2] inert settings, `AUD-36` [P2] MiFID/MAR wire-or-retire, `AUD-37` [P3] date-bound documents, each with owner and its own quoted unblock path in `docs/MODULE_INVENTORY.md`.
 

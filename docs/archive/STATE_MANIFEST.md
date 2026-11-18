@@ -65,7 +65,7 @@ retained report is at `20fa011`, which predates the group-commit engine (`CLM-08
 in tree from 2026-09-10), so it measured a ledger that fsynced once per node. Full
 record, including why the millisecond delta is not a controlled speedup measurement
 and why this latency is queueing rather than per-request overhead, in
-[`evidence/backpressure_group_commit_remeasurement_2026-09-16.md`](evidence/backpressure_group_commit_remeasurement_2026-09-16.md).
+[`evidence/backpressure_group_commit_remeasurement_2026-09-16.md`](../../evidence/backpressure_group_commit_remeasurement_2026-09-16.md).
 
 ## 5. Static analysis
 
@@ -111,4 +111,4 @@ distribution metadata for its version assertions.
 
 ---
 
-**Related:** [Release Status](docs/RELEASE_STATUS.md) · [Release Epistemic Statement](docs/RELEASE_EPISTEMIC_STATEMENT.md) · [Platform Compatibility](docs/PLATFORM_COMPATIBILITY.md) · [Claims Matrix](docs/CLAIMS_MATRIX.md)
+**Related:** [Release Status](../RELEASE_STATUS.md) · [Release Epistemic Statement](../RELEASE_EPISTEMIC_STATEMENT.md) · [Platform Compatibility](../PLATFORM_COMPATIBILITY.md) · [Claims Matrix](../CLAIMS_MATRIX.md)

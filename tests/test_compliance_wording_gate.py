@@ -29,8 +29,8 @@ LABEL_SURFACES = (
     "examples/README.md",
     "tools/visualizer/README.md",
     "Samples/README.md",
-    "SECURITY_AUDIT_EXECUTION_LOG.md",
-    "SECURITY_AUDIT_REPORT.md",
+    "docs/archive/SECURITY_AUDIT_EXECUTION_LOG.md",
+    "docs/archive/SECURITY_AUDIT_REPORT.md",
 )
 
 COMPRESSED_FORMS = (
