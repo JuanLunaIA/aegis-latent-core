@@ -19,7 +19,7 @@ Every file under the six source roots, with what it is, what reaches it, what te
 ## Coverage and ownership
 
 - **Navigation coverage:** 70 of 339 files (21%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
-- **Status counts:** `allowlisted` 77, `n/a` 1, `reachable` 137, `referenced` 72, `roadmap-omit` 34, `unreferenced` 18.
+- **Status counts:** `allowlisted` 76, `n/a` 1, `reachable` 138, `referenced` 72, `roadmap-omit` 34, `unreferenced` 18.
 - **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 339 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
 
 Tests are the test files that import the module directly, capped at 4 per row; the count is exact, the list is not exhaustive.
@@ -89,7 +89,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis/core/circuit_breaker.py` | module | aegis.core.circuit_breaker — Thread-safe upstream circuit breaker. | reachable | `tests/test_app_coverage_extended.py`, `tests/test_chaos.py`, `tests/test_circuit_breaker.py`, `tests/test_circuit_breaker_new.py`, … (+1 more)` | @JuanLunaIA |
 | `aegis/core/classified_marker_detector.py` | module | aegis.core.classified_marker_detector — Pre-forwarding classified-data blocking. | allowlisted | `tests/test_classified_marker_detector.py` | @JuanLunaIA |
 | `aegis/core/clinical_claim_detector.py` | module | aegis.core.clinical_claim_detector — de-novo clinical claim detection. | allowlisted | `tests/test_clinical_claim_detector.py` | @JuanLunaIA |
-| `aegis/core/clock_integrity.py` | module | aegis.core.clock_integrity — System clock integrity assertion. | allowlisted | `tests/test_clock_integrity.py` | @JuanLunaIA |
+| `aegis/core/clock_integrity.py` | module | aegis.core.clock_integrity — System clock integrity assertion. | reachable | `tests/test_clock_integrity.py`, `tests/test_clock_sync_startup.py` | @JuanLunaIA |
 | `aegis/core/cnsa_negotiation.py` | module | aegis.core.cnsa_negotiation — NSA Suite B / CNSA 2.0 algorithm negotiation. | allowlisted | `tests/test_cnsa_negotiation.py` | @JuanLunaIA |
 | `aegis/core/codeql_config.py` | module | aegis.core.codeql_config — CodeQL Query Integration for CI/CD. | roadmap-omit | `tests/test_codeql_config.py` | @JuanLunaIA |
 | `aegis/core/conversation_graph.py` | module | aegis.core.conversation_graph — Conversation graph crescendo analysis. | allowlisted | `tests/test_conversation_graph.py` | @JuanLunaIA |
@@ -233,7 +233,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis/providers/openai_provider.py` | module | aegis.providers.openai_provider — Passthrough adapter for OpenAI and any | reachable | `tests/test_forwarder_deep.py`, `tests/test_provider_contracts.py`, `tests/test_providers.py`, `tests/test_upstream_url_join.py` | @JuanLunaIA |
 | `aegis/proxy/__init__.py` | package | FastAPI proxy, WAF, and audit REST endpoints. | reachable | `tests/proxy/test_metering_outbox.py`, `tests/test_analyzer_deep.py`, `tests/test_app_coverage.py`, `tests/test_app_coverage_extended.py`, … (+1 more)` | @JuanLunaIA |
 | `aegis/proxy/analyzer.py` | module | aegis.proxy.analyzer — Entropy analysis on OpenAI logprobs payloads. | reachable | `tests/test_analyzer_deep.py`, `tests/test_coverage_final.py`, `tests/test_misc_gaps.py`, `tests/test_observability.py` | @JuanLunaIA |
-| `aegis/proxy/app.py` | module | — | reachable | `tests/compat/test_public_api_compat.py`, `tests/ha/test_ha_lease.py`, `tests/proxy/test_evidence_signer.py`, `tests/proxy/test_metering_outbox.py`, … (+32 more)` | @JuanLunaIA |
+| `aegis/proxy/app.py` | module | — | reachable | `tests/compat/test_public_api_compat.py`, `tests/ha/test_ha_lease.py`, `tests/proxy/test_evidence_signer.py`, `tests/proxy/test_metering_outbox.py`, … (+33 more)` | @JuanLunaIA |
 | `aegis/proxy/attestation_api.py` | module | aegis.proxy.attestation_api — honest per-control capability reporting. | reachable | `tests/test_attestation_capabilities.py` | @JuanLunaIA |
 | `aegis/proxy/audit_api.py` | module | aegis.proxy.audit_api — Read-only REST endpoints for the Merkle audit chain. | reachable | `tests/test_audit_api_new.py`, `tests/test_audit_read_snapshot.py`, `tests/test_forensic_export_signing.py` | @JuanLunaIA |
 | `aegis/proxy/body_limits.py` | module | Streaming request-body limits, installed by both HTTP surfaces. | reachable | `tests/test_enterprise_body_limits.py` | @JuanLunaIA |

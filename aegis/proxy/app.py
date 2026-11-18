@@ -1137,6 +1137,27 @@ def create_proxy_app(settings: AegisSettings | None = None) -> FastAPI:
     return create_app(settings)
 
 
+def _check_clock_sync(cfg: AegisSettings) -> None:
+    """Refuse a strict start on an unsynchronised clock when the operator asks for it.
+
+    Evidence timestamps come from the host clock. The check runs only when
+    ``require_clock_sync`` is set; an undetermined status counts as unsynchronised.
+    """
+    if not cfg.require_clock_sync:
+        return
+    from aegis.core.clock_integrity import ClockIntegrityAssertion
+
+    status = ClockIntegrityAssertion().assert_startup()
+    if status.ntp_synchronized is True:
+        return
+    if cfg.security_enforcement_mode == "strict":
+        raise RuntimeError(
+            "strict runtime requires a synchronised clock: "
+            f"{status.warning or status.source} (AEGIS_REQUIRE_CLOCK_SYNC=true)"
+        )
+    logger.warning("host clock not confirmed synchronised: %s", status.warning or status.source)
+
+
 def create_app(settings: AegisSettings | None = None) -> FastAPI:
     cfg = settings or get_settings()
 
@@ -1404,6 +1425,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             format="%(asctime)s %(levelname)s %(name)s — %(message)s",
         )
         observability.setup_otel(service_name="aegis-proxy")
+        # Before outbox replay: replay commits evidence, and a refused clock must
+        # not have timestamped any of it.
+        _check_clock_sync(cfg)
 
         async def _stop_siem_exporter_on_startup_failure() -> None:
             # Only ever registered from the `if state.siem_exporter is not None:`

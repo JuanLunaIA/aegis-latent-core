@@ -39,7 +39,6 @@ aegis.core.cds_guard
 aegis.core.cgroups_quota
 aegis.core.classified_marker_detector
 aegis.core.clinical_claim_detector
-aegis.core.clock_integrity
 aegis.core.cnsa_negotiation
 aegis.core.conversation_graph
 aegis.core.cpu_affinity
