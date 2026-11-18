@@ -132,4 +132,4 @@ what it *does* in any deployment.
 
 ---
 
-**Related:** [State Manifest](STATE_MANIFEST.md) · [Claims Matrix](docs/CLAIMS_MATRIX.md) · [Release Status](docs/RELEASE_STATUS.md) · [Commercial Readiness](docs/commercial/COMMERCIAL_READINESS.md) · [Release Epistemic Statement](docs/RELEASE_EPISTEMIC_STATEMENT.md)
+**Related:** [State Manifest](STATE_MANIFEST.md) · [Claims Matrix](../CLAIMS_MATRIX.md) · [Release Status](../RELEASE_STATUS.md) · [Commercial Readiness](../commercial/COMMERCIAL_READINESS.md) · [Release Epistemic Statement](../RELEASE_EPISTEMIC_STATEMENT.md)

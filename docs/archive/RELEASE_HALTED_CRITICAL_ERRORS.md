@@ -6,7 +6,7 @@
 **Date:** 2026-09-24 UTC
 **Tree verified:** `origin/main` at `1bda9f9b250ba570155eed33c1cd1a7d176d53e2` (PR #202), plus this branch's changes, which touch documentation, evidence and one test-fixture script only — no runtime code.
 **Environment:** Linux 6.18.44-fc-v37 x86_64, 4 shared vCPU; CPython 3.11.15; pytest 9.1.1; coverage 7.16.0; cargo 1.94.1; clippy 0.1.94; cargo-audit 0.22.2; ruff 0.16.8; mypy 1.19.1; bandit 1.9.4; pip-audit 2.10.1; detect-secrets 1.5.0; node v22.22.2; npm 10.9.7.
-**Registry rows:** `REG-D65`–`REG-D77` ([Defect Registry](docs/REGISTRY.md)); evidence under `evidence/registry/reg-d6*_*.txt` and `reg-d7*_*.txt`.
+**Registry rows:** `REG-D65`–`REG-D77` ([Defect Registry](../REGISTRY.md)); evidence under `evidence/registry/reg-d6*_*.txt` and `reg-d7*_*.txt`.
 
 The mission order asked for `FINAL_RELEASE_ATTESTATION_v5.0.1.md` and, if **any** check failed, for this report instead. Checks failed, so no attestation was written. This report nevertheless carries every section the attestation would have had, each check marked **[PASS]**, **[FAIL]** or **[NOT EXECUTED]** (with the reason). There is no fourth state.
 
@@ -213,7 +213,7 @@ A report like this records what was run, on one machine, on one date. It is not 
 
 ## 6. Performance baseline
 
-From the retained artifact [`evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json`](evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json). It was produced by `scripts/run_benchmarks_5.0.1.py` at `ce58c58` on 2026-09-24T06:45:35Z: one shared, unpinned 4-vCPU x86_64 VM, CPython 3.11.15. **None of these is a capacity claim**, and the artifact says so itself.
+From the retained artifact [`evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json`](../../evidence/benchmarks/benchmarks_5.0.1_2026-09-24.json). It was produced by `scripts/run_benchmarks_5.0.1.py` at `ce58c58` on 2026-09-24T06:45:35Z: one shared, unpinned 4-vCPU x86_64 VM, CPython 3.11.15. **None of these is a capacity claim**, and the artifact says so itself.
 
 | Metric | Value |
 |---|---|
@@ -308,4 +308,4 @@ A tag message, if one is ever written by hand, should state only what is true: `
 
 ---
 
-**Related:** [Defect Registry](docs/REGISTRY.md) · [Unsupported Claims](docs/institutional/UNSUPPORTED_CLAIMS.md) · [Claims Matrix](docs/CLAIMS_MATRIX.md) · [Release Status](docs/RELEASE_STATUS.md) · [Integrity Seal (5.0.0)](INTEGRITY_SEAL.md) · [Changelog](CHANGELOG.md)
+**Related:** [Defect Registry](../REGISTRY.md) · [Unsupported Claims](../institutional/UNSUPPORTED_CLAIMS.md) · [Claims Matrix](../CLAIMS_MATRIX.md) · [Release Status](../RELEASE_STATUS.md) · [Integrity Seal (5.0.0)](INTEGRITY_SEAL.md) · [Changelog](../../CHANGELOG.md)

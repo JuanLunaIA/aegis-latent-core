@@ -533,12 +533,12 @@ the same surfaces showed nothing for `5.0.1`.
 verification pass found two release-blocking defects in the gateway's in-process
 seccomp control and two supply-chain consistency defects; they are flagged, not
 fixed. Every check and its result is in
-[`RELEASE_HALTED_CRITICAL_ERRORS.md`](RELEASE_HALTED_CRITICAL_ERRORS.md).
+[`RELEASE_HALTED_CRITICAL_ERRORS.md`](docs/archive/RELEASE_HALTED_CRITICAL_ERRORS.md).
 
 **Remediation (2026-09-24, PR #205): the halt is resolved in source.** Every
 blocker and every open finding above was fixed, and ten more were found and
 fixed along the way. The current state is
-[`RELEASE_READINESS_v5.0.1.md`](RELEASE_READINESS_v5.0.1.md), and the
+[`RELEASE_READINESS_v5.0.1.md`](docs/archive/RELEASE_READINESS_v5.0.1.md), and the
 per-item evidence is `evidence/registry/reg-d67_d86_closure.txt`. The owner
 then merged it and authorized the release recorded above.
 

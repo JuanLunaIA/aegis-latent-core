@@ -122,7 +122,7 @@ def test_the_cited_group_commit_reports_are_retained_and_carry_their_provenance(
 def test_the_document_that_cites_the_reports_cites_paths_that_exist() -> None:
     cited = re.findall(
         r"evidence/execution_2026-09-21/[\w.\-]+",
-        (ROOT / "PR_FINAL_ENTERPRISE_HARDENING.md").read_text(encoding="utf-8"),
+        (ROOT / "docs" / "archive" / "PR_FINAL_ENTERPRISE_HARDENING.md").read_text(encoding="utf-8"),
     )
     assert cited, "PR_FINAL_ENTERPRISE_HARDENING.md no longer cites a retained artifact"
     for relative in cited:
