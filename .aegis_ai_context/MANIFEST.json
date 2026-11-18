@@ -465,7 +465,7 @@
     {
       "category": "governed_input",
       "path": "scripts/verify_release_contract.py",
-      "sha256": "a670ec2550b322b3934a62bfb261d917facfb6630e7a19a8e3c6c7f55d0b11f6",
+      "sha256": "9cbc559777c541e6afe58579462f08aa280791b5e5a82bfb7a1ff825bc16ddcc",
       "size": 42562
     },
     {
