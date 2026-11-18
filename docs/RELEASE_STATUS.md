@@ -5,8 +5,9 @@
 **Boundary:** this is the only document that states publication state. Every other document links here. Source metadata never establishes publication; readback does.
 
 **Last verified:** 2026-10-30 UTC for the `5.0.3` publication readback in §1.0e; the `5.0.2` readback remains dated 2026-10-01 in §1.0d, and earlier external readbacks remain dated in their own sections
-**Source baseline:** `5.0.3`, fourteen synchronized anchors — under the Aegis Commercial License 1.0
+**Source baseline:** `5.1.0`, fourteen synchronized anchors — under the Aegis Commercial License 1.0. **Not published:** no tag, GitHub Release, registry artifact or image has been read back for `5.1.0`, and none is claimed. Source metadata establishes no external state.
 **Most recent published release:** `5.0.3`, **published on GitHub Release, both PyPI distributions, npm and GHCR** on 2026-10-30. The gateway distribution `aegis-latent-core` reached `5.0.3` on PyPI at 2026-10-30T07:13:42Z; the readback is in §1.0e.
+**Publication state of `5.1.0`:** **not published** — no readback exists. Until a dated §1.0f readback is added, `5.0.3` remains the most recent published release.
 **Publication state of `5.0.3`:** **published on every surface** — tag, GitHub Release, PyPI core/SDK, npm SDK and both OCI images. See §1.0e.
 **Publication state of `5.0.2`:** **published** on GitHub Release, PyPI core/SDK, npm and GHCR; read back 2026-10-01. See §1.0d.
 **Publication state of `5.0.1` (superseded):** **published on every surface** — PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26 (§1.0b), and the other surfaces were read back 2026-09-24.
