@@ -15,7 +15,7 @@
   "dependencies": {
     "@tanstack/react-virtual": "3.14.10",
     "aegis-latent-sdk": "file:../sdk/typescript",
-    "next": "^16.4.3",
+    "next": "^16.4.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "3.10.1",
