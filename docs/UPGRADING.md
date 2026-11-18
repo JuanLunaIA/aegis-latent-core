@@ -176,6 +176,30 @@ A tool description or metadata string that contains a Layer-2 phrase can now cau
 
 A bad value (not 64 hex characters) fails settings validation at startup.
 
+## 13. Startup licence check in strict mode (`5.1.0` source target, breaking)
+
+**What changed.** The gateway checks its licence once at startup, before it binds. A configured `AEGIS_LICENSE_TOKEN` must verify offline under `AEGIS_LICENSE_ROOT_PUBKEY` (Ed25519) and must not be expired; a bad, expired or unverifiable token refuses start in every enforcement mode. Without a token:
+
+| `AEGIS_SECURITY_ENFORCEMENT_MODE` | `AEGIS_LICENSE_MODE` | Result |
+|---|---|---|
+| `development` | any | Starts, logs a warning |
+| `strict` | `evaluation` (default) | Starts for 30 days from the first strict start, warning on each start, then refuses |
+| `strict` | `required` | Refuses at once |
+
+The evaluation start is recorded in a small file next to the WAL. It is a courtesy window, not a technical control: deleting the file restarts it, and the licence terms are what bind.
+
+**Migration.**
+
+1. Production deployments: obtain a licence token and set `AEGIS_LICENSE_TOKEN` and `AEGIS_LICENSE_ROOT_PUBKEY` from your secret manager before upgrading.
+2. To make a missing token fail the rollout instead of silently starting an evaluation, set `AEGIS_LICENSE_MODE=required`.
+3. A licence expiring within 30 days logs a renewal warning on every start.
+
+The older opt-in `AEGIS_LICENSE_ENFORCEMENT` is unchanged.
+
+## 14. Hosted multi-tenant mode (`5.1.0` source target, additive)
+
+`AEGIS_AUTH_MODE=aegis_cloud` is new and off by default. It requires `AEGIS_CLOUD_URL` (HTTPS), `AEGIS_CLOUD_INTERNAL_HMAC` (must equal the control plane's internal HMAC) and `AEGIS_CLOUD_GATEWAY_PRIVATE_KEY` (X25519, used to open tenants' sealed provider keys). Unknown keys answer `401`, inactive endpoints `403`, and an unreachable control plane or an envelope that does not open answers `503`; nothing falls back to another upstream. Self-hosted deployments that keep `AEGIS_API_KEYS` need no change.
+
 ---
 
 ## Upgrade order

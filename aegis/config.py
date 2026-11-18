@@ -160,9 +160,23 @@ class AegisSettings(BaseSettings):
             "/v1/audit/forensics/export while this is empty."
         ),
     )
-    auth_mode: Literal["api_key", "oidc", "mtls", "api_key_mtls", "oidc_mtls"] = Field(
-        default="api_key",
-        description="Single configured authentication mode; composite modes require both factors.",
+    auth_mode: Literal["api_key", "oidc", "mtls", "api_key_mtls", "oidc_mtls", "aegis_cloud"] = (
+        Field(
+            default="api_key",
+            description=(
+                "Single configured authentication mode; composite modes require both factors. "
+                "aegis_cloud resolves tenant keys and upstreams from the Aegis Cloud control "
+                "plane (AEGIS_CLOUD_URL, AEGIS_CLOUD_INTERNAL_HMAC)."
+            ),
+        )
+    )
+    cloud_gateway_private_key: SecretStr = Field(
+        default=SecretStr(""),
+        description=(
+            "X25519 private key (64 hex) that opens tenant provider keys sealed by Aegis "
+            "Cloud. Only used with auth_mode=aegis_cloud; without it, tenants that bring "
+            "their own provider key are refused with 503."
+        ),
     )
     auth_identity_hmac_key: str = Field(
         default="",
@@ -385,6 +399,14 @@ class AegisSettings(BaseSettings):
             "strict is the only production mode: required auth, durable signed evidence, "
             "distributed rate limiting, and privileged kernel controls. development is for "
             "isolated tests/local work and must never be used for a production claim."
+        ),
+    )
+    license_mode: Literal["evaluation", "required"] = Field(
+        default="evaluation",
+        description=(
+            "Strict-mode start without AEGIS_LICENSE_TOKEN: evaluation allows 30 days from the "
+            "first strict start with a warning, then refuses; required refuses at once. A "
+            "configured token must always verify."
         ),
     )
     require_durable_evidence: bool = Field(
@@ -1256,6 +1278,14 @@ class AegisSettings(BaseSettings):
             raise ValueError("strict runtime requires require_durable_evidence=True")
         if self.rate_limit_backend != "redis":
             raise ValueError("strict runtime requires rate_limit_backend='redis'")
+        if self.auth_mode == "aegis_cloud":
+            from aegis.proxy.metering import cloud_config
+
+            if cloud_config() is None:
+                raise ValueError(
+                    "auth_mode='aegis_cloud' requires AEGIS_CLOUD_URL (https) and "
+                    "AEGIS_CLOUD_INTERNAL_HMAC (32+ characters)"
+                )
         if self.auth_mode in {"api_key", "api_key_mtls"} and not self.get_api_keys():
             raise ValueError("strict runtime requires at least one AEGIS_API_KEYS value")
         if not self.signing_key and not self.pkcs11_library_path:
