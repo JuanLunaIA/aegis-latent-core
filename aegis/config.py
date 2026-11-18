@@ -401,6 +401,14 @@ class AegisSettings(BaseSettings):
             "isolated tests/local work and must never be used for a production claim."
         ),
     )
+    license_mode: Literal["evaluation", "required"] = Field(
+        default="evaluation",
+        description=(
+            "Strict-mode start without AEGIS_LICENSE_TOKEN: evaluation allows 30 days from the "
+            "first strict start with a warning, then refuses; required refuses at once. A "
+            "configured token must always verify."
+        ),
+    )
     require_durable_evidence: bool = Field(
         default=True,
         description="Reject governed requests when signed durable evidence cannot be committed.",

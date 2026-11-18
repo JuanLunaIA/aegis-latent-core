@@ -23,6 +23,19 @@ dated readback: the release workflow uses this section as the release body.
 
 ### Added
 
+- **Hosted multi-tenant mode (`AEGIS_AUTH_MODE=aegis_cloud`)**: tenant keys are
+  verified against the Aegis Cloud control plane over the internal HMAC channel,
+  and each tenant's upstream is resolved per request: the gateway's own upstream
+  for `source=platform`, or the tenant's own provider key, sealed to
+  `AEGIS_CLOUD_GATEWAY_PRIVATE_KEY` (X25519), for `source=byok`. Unknown keys are
+  401, inactive endpoints 403, and an unreachable control plane or an envelope that
+  does not open is 503; nothing falls back to another upstream.
+- **Startup licence check (`AEGIS_LICENSE_MODE`, default `evaluation`)**: a
+  configured `AEGIS_LICENSE_TOKEN` must verify offline (Ed25519) or the gateway
+  refuses to start. Strict runtime without a token runs a 30-day evaluation counted
+  from the first strict start, with a warning on each start, then refuses;
+  `required` refuses at once. Development mode starts with a warning. The window is
+  kept in a file next to the WAL and is a courtesy, not a technical control.
 - **Startup clock check (`AEGIS_REQUIRE_CLOCK_SYNC`, default off)**: when set, the
   gateway runs `aegis/core/clock_integrity.py` at startup. Strict runtime refuses to
   start unless the host clock is confirmed NTP-synchronised (an undetermined status

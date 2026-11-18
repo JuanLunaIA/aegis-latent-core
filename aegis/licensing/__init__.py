@@ -5,11 +5,11 @@
 """Offline verification of entitlement tokens.
 
 The entitlement carried by a token gates the optional engine facades in
-:mod:`aegis.engines`, and only when ``AEGIS_LICENSE_ENFORCEMENT=required``. It
-is an entitlement signal, not a legal licence grant: the source is licensed
-under Apache-2.0 regardless of any token. Nothing in this package reaches the
-network, and nothing in it changes gateway behaviour: the gateway runs with no
-token.
+:mod:`aegis.engines` when ``AEGIS_LICENSE_ENFORCEMENT=required``, and
+:mod:`aegis.licensing.startup` checks it once before the gateway binds (a strict
+gateway needs a verified token after a 30-day evaluation). A token is an
+entitlement signal; the licence terms themselves are in ``LICENSE``. Nothing in
+this package reaches the network.
 
 :mod:`aegis.licensing.model` holds the entitlement data model on its own;
 :mod:`aegis.licensing.validator` holds token decoding and signature checking.

@@ -65,6 +65,7 @@ from aegis.core.tenancy import TenantMismatch, tenant_from_headers
 from aegis.core.text_delta_restore import restoring_delta_stream
 from aegis.core.waf_session import WAFSessionTracker
 from aegis.core.zk_native import forensic_preview_warning
+from aegis.licensing.startup import StartupLicense, check_startup_license
 from aegis.proxy.analyzer import ResponseAnalyzer
 from aegis.proxy.attestation_api import build_attestation_router
 from aegis.proxy.audit_api import build_audit_router
@@ -345,6 +346,8 @@ class _BoundedAnalyzerCache:
 
 class _AppState:
     forwarder: LLMForwarder
+    cloud_tenancy: CloudTenancy | None
+    license: StartupLicense
     ledger: CryptographicAuditLedger
     sessions: SessionLifecycleManager
     ratelimiter: Any
@@ -1424,6 +1427,11 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         logging.basicConfig(
             level=getattr(logging, cfg.log_level),
             format="%(asctime)s %(levelname)s %(name)s — %(message)s",
+        )
+        state.license = check_startup_license(
+            enforcement_mode=cfg.security_enforcement_mode,
+            license_mode=cfg.license_mode,
+            marker=cfg.wal_path.with_name(cfg.wal_path.name + ".evaluation.json"),
         )
         observability.setup_otel(service_name="aegis-proxy")
         # Before outbox replay: replay commits evidence, and a refused clock must
