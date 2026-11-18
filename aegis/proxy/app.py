@@ -1765,8 +1765,9 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     pending_workers,
                 )
         await state.forwarder.stop()
-        if getattr(state, "cloud_tenancy", None) is not None:
-            await state.cloud_tenancy.stop()
+        tenancy_client = getattr(state, "cloud_tenancy", None)
+        if tenancy_client is not None:
+            await tenancy_client.stop()
         if state.usage_task is not None:
             state.usage_task.cancel()
             with suppress(asyncio.CancelledError):
