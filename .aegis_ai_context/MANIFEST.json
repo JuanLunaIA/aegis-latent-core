@@ -237,13 +237,13 @@
     {
       "category": "governed_input",
       "path": "dashboard/package.json",
-      "sha256": "3408af4ba273b67b52f694085ac8c98fb2c4fe5e76bcc0c129d1255f858d8ed2",
+      "sha256": "a45d89608466cc8577ec52cc92701a5acaaffaf08a62426801034e1581f8b3c7",
       "size": 1145
     },
     {
       "category": "governed_input",
       "path": "dashboard/package-lock.json",
-      "sha256": "4f1ec365355b6df4285209eb3e949579e4ca59dfcea714241caf0ac94b81165c",
+      "sha256": "c5ed56520e84aa87b3251d0b96ba8113a91d4c12916e62dd382e3c13f28f66ec",
       "size": 124802
     },
     {
@@ -321,62 +321,62 @@
     {
       "category": "governed_input",
       "path": ".github/workflows/ci.yml",
-      "sha256": "a457cf2e30b94f5117b097b4289efe9055c558e89d52659f3c9d26bb389dca15",
-      "size": 41592
+      "sha256": "894208a7129e537f277f87aefc0ba013a75e985ddf1b1548c0d1d822312c5afb",
+      "size": 41656
     },
     {
       "category": "governed_input",
       "path": ".github/workflows/create_release_tag.yml",
-      "sha256": "73b3610a7de81bcddaeb20849a76e834ff1460882f35ff43957e0c5844db8bfc",
-      "size": 3155
+      "sha256": "9748c06c345e5b0612a12f8fb54936f537205a918ed3c176990fdc6f30da93a2",
+      "size": 3159
     },
     {
       "category": "governed_input",
       "path": ".github/workflows/forensic.yml",
-      "sha256": "444788a8a0f49fceb9480a4a29528e23de7701123a4201d17d3c53dc19c224df",
-      "size": 3285
+      "sha256": "d561855c9d37f0c2948b2e8689acda09a5fa0845420f949f0493c833b7a5b072",
+      "size": 3289
     },
     {
       "category": "governed_input",
       "path": ".github/workflows/pqc-timing.yml",
-      "sha256": "ed4f2d9f94d2f755ba7cda44a8f320ea70db55d561c7f020c316d74b77e07bc0",
-      "size": 1961
+      "sha256": "6e024f833cbb63b9ade7ed2729f2639e601112ae0f1b18e6435fdd368f71a813",
+      "size": 1965
     },
     {
       "category": "governed_input",
       "path": ".github/workflows/publish.yml",
-      "sha256": "03b08d58dc866e4779f6bb472e4382c89015dcaa6a9296bb8bf53c95be62cf21",
-      "size": 1504
+      "sha256": "738ab31c874aff35c99564202c622ad23b909d556f3714a9d49890f16ea70c35",
+      "size": 1508
     },
     {
       "category": "governed_input",
       "path": ".github/workflows/publish_npm.yml",
-      "sha256": "ee81b7d4fe6445da7a946ce421fdc90bce7058b8c2f1d8bed3093e1c4eed4bad",
-      "size": 5492
+      "sha256": "947a46f0e22a21b38e0ea878adf549e64bc002a5b83dd86b9b2dee9e56481db7",
+      "size": 5500
     },
     {
       "category": "governed_input",
       "path": ".github/workflows/publish_oci.yml",
-      "sha256": "f6e4760613db4d676f90961b6a9c61b7119590b3ce4b9e5b99d98e75c4fc644d",
-      "size": 5635
+      "sha256": "3a26c5552824a3097f04bdd77d4225009d43f356286bb6945bebd6039d5d9844",
+      "size": 5639
     },
     {
       "category": "governed_input",
       "path": ".github/workflows/publish_pypi.yml",
-      "sha256": "c8c279acc984da5e32efc36527ecc376c06ae6ec43e8b2cffcae6637b0ab2a3d",
-      "size": 4021
+      "sha256": "1beb5a736fe1c296bb845d69d5d12d602ae9b2ed8ca555f34ae7b921287ddac9",
+      "size": 4025
     },
     {
       "category": "governed_input",
       "path": ".github/workflows/release.yml",
-      "sha256": "f56e0171b1f9777a13bca7eafe492cbe587391ced6f822bfbf3d495b194b912c",
-      "size": 10269
+      "sha256": "7f69047a8f7b472abfeb1b856e2c19491a0fb3d645d77b93bc54154baeec0f61",
+      "size": 10293
     },
     {
       "category": "governed_input",
       "path": ".github/workflows/security.yml",
-      "sha256": "7bcd3091045a87e15da745f76a393743cd03a3e6bac042f03ccb1c9e657c76f6",
-      "size": 7924
+      "sha256": "4caaad0cc358cbe0aaf7eb5dcf816e4dc14ff408eb623d4d23cd86b46afd937d",
+      "size": 7932
     },
     {
       "category": "governed_input",
