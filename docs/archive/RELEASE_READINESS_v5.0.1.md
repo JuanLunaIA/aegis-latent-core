@@ -1,13 +1,13 @@
 # Aegis Latent Core `v5.0.1` — Release Readiness After Remediation
 
-> **Released 2026-09-24.** After PR #205 merged, the owner kept the version at `5.0.1` (§5) and authorized the release. It was published from `main` at `46db6c0` on every surface except PyPI `aegis-latent-core` (which followed on 2026-09-26, [Release Status](docs/RELEASE_STATUS.md) §1.0b), and every other surface was read back the same day. The tag signature, the image signatures and the build-provenance attestations were verified against the exact publishing workflow identities ([Release Status](docs/RELEASE_STATUS.md) §1.0a). The report below is unchanged: it records the pre-release state, and its "not released" statements (the verdict, §3, §4 "No publication") describe that state.
+> **Released 2026-09-24.** After PR #205 merged, the owner kept the version at `5.0.1` (§5) and authorized the release. It was published from `main` at `46db6c0` on every surface except PyPI `aegis-latent-core` (which followed on 2026-09-26, [Release Status](../RELEASE_STATUS.md) §1.0b), and every other surface was read back the same day. The tag signature, the image signatures and the build-provenance attestations were verified against the exact publishing workflow identities ([Release Status](../RELEASE_STATUS.md) §1.0a). The report below is unchanged: it records the pre-release state, and its "not released" statements (the verdict, §3, §4 "No publication") describe that state.
 
-**Verdict: source ready for professional review and for the owner's release steps; not released.** Every defect that halted `v5.0.1` is fixed in source. Every row in the [Defect Registry](docs/REGISTRY.md) is terminal (`SEED` = 0). The checks in §3 pass locally. PR #205's CI on the last code commit, `626c790`, passed every job except CodeQL. CodeQL's one alert is a verified false positive that only the owner can dismiss. That dismissal and the publication steps in §6 remain.
+**Verdict: source ready for professional review and for the owner's release steps; not released.** Every defect that halted `v5.0.1` is fixed in source. Every row in the [Defect Registry](../REGISTRY.md) is terminal (`SEED` = 0). The checks in §3 pass locally. PR #205's CI on the last code commit, `626c790`, passed every job except CodeQL. CodeQL's one alert is a verified false positive that only the owner can dismiss. That dismissal and the publication steps in §6 remain.
 **Date:** 2026-09-24 UTC
 **Branch:** `claude/aegis-v4-comprehensive-audit-m2qyka` (PR #205), on top of `origin/main` at `1bda9f9`.
 **Supersedes:** [RELEASE_HALTED_CRITICAL_ERRORS.md](RELEASE_HALTED_CRITICAL_ERRORS.md), which is kept unchanged below its banner as the record of the halt.
 
-This report records what was run, on one machine, on one date. It is not a certification, an audit opinion, a compliance determination or evidence of external acceptance ([Claims Matrix](docs/CLAIMS_MATRIX.md), [Unsupported Claims](docs/institutional/UNSUPPORTED_CLAIMS.md)).
+This report records what was run, on one machine, on one date. It is not a certification, an audit opinion, a compliance determination or evidence of external acceptance ([Claims Matrix](../CLAIMS_MATRIX.md), [Unsupported Claims](../institutional/UNSUPPORTED_CLAIMS.md)).
 
 ---
 
@@ -42,9 +42,9 @@ The lower-severity findings of the halt are also fixed: `REG-D73`, `REG-D74`, `R
 **Beyond single-user operation**, the owner chose active-passive, active-active, multi-team use and bus-factor work. Built:
 
 - Replicas under a Redis writer lease with epoch fencing.
-- A hash-linked global sequence in PostgreSQL across replicas, with an auditor's `verify` command. Governed by `AD-17` and `CLM-108`; operated per [High Availability](docs/operations/HIGH_AVAILABILITY.md).
-- An assessor's package ([Audit Readiness](docs/compliance/AUDIT_READINESS.md)) with an evidence collector (`CLM-110`).
-- A [Maintainer Handbook](docs/MAINTAINER_HANDBOOK.md).
+- A hash-linked global sequence in PostgreSQL across replicas, with an auditor's `verify` command. Governed by `AD-17` and `CLM-108`; operated per [High Availability](../operations/HIGH_AVAILABILITY.md).
+- An assessor's package ([Audit Readiness](../compliance/AUDIT_READINESS.md)) with an evidence collector (`CLM-110`).
+- A [Maintainer Handbook](../MAINTAINER_HANDBOOK.md).
 
 ## 3. Verification on this branch
 
@@ -67,8 +67,8 @@ The lower-severity findings of the halt are also fixed: `REG-D73`, `REG-D74`, `R
 
 ## 4. Not established
 
-- **No certification of any kind**, and none can come from source. SOC 2, ISO/IEC 27001, HIPAA, EU AI Act and MiFID II outcomes belong to the deploying organisation and its assessors. [Audit Readiness](docs/compliance/AUDIT_READINESS.md) §1 and §6 say exactly what the organisation must supply.
-- **No publication.** Nothing is released for `5.0.1`; [Release Status](docs/RELEASE_STATUS.md) is unchanged. `cosign verify` and `gh attestation verify` have never been run for any release.
+- **No certification of any kind**, and none can come from source. SOC 2, ISO/IEC 27001, HIPAA, EU AI Act and MiFID II outcomes belong to the deploying organisation and its assessors. [Audit Readiness](../compliance/AUDIT_READINESS.md) §1 and §6 say exactly what the organisation must supply.
+- **No publication.** Nothing is released for `5.0.1`; [Release Status](../RELEASE_STATUS.md) is unchanged. `cosign verify` and `gh attestation verify` have never been run for any release.
 - **No independent assurance.** No penetration test or external code audit has been done (`CLM-041`).
 - **HA scope.** HA has not been tested on real `ReadWriteMany` storage classes, under network partitions, through Redis or PostgreSQL failover, under sustained load or across zones (`CLM-108`).
 - **Platform scope.** Kubernetes runtimes and arm64 were not executed.
@@ -78,7 +78,7 @@ The lower-severity findings of the halt are also fixed: `REG-D73`, `REG-D74`, `R
 
 The fourteen anchors say `5.0.1`. This branch adds backwards-compatible functionality (HA modes, new tools, the metrics dependency in the image) as well as fixes. Semantic Versioning would call that `5.1.0`. Releasing it as `5.0.1` is allowed, but it labels new capability as a patch.
 
-Recommendation: move the anchors to `5.1.0` before tagging. The procedure is `scripts/verify_release_contract.py` and the version-anchor steps in the [Maintainer Handbook](docs/MAINTAINER_HANDBOOK.md) §5. This report does not change them.
+Recommendation: move the anchors to `5.1.0` before tagging. The procedure is `scripts/verify_release_contract.py` and the version-anchor steps in the [Maintainer Handbook](../MAINTAINER_HANDBOOK.md) §5. This report does not change them.
 
 ## 6. Owner's release steps
 
@@ -101,8 +101,8 @@ gh workflow run publish_pypi.yml -f release_tag=$TAG -f expected_target=$SHA
 gh workflow run publish_npm.yml  -f release_tag=$TAG -f expected_target=$SHA
 ```
 
-Then read back every surface — tag, Release assets and `SHA256SUMS`, PyPI, npm, GHCR digests, `cosign verify`, `gh attestation verify` — with `scripts/verify_release_readback.py` and [Audit Readiness](docs/compliance/AUDIT_READINESS.md) §3.1, and only then update [Release Status](docs/RELEASE_STATUS.md). The gateway distribution `aegis-latent-core` is published to PyPI by no workflow (latest there: `4.1.2`). Uploading it is a separate, manual owner decision.
+Then read back every surface — tag, Release assets and `SHA256SUMS`, PyPI, npm, GHCR digests, `cosign verify`, `gh attestation verify` — with `scripts/verify_release_readback.py` and [Audit Readiness](../compliance/AUDIT_READINESS.md) §3.1, and only then update [Release Status](../RELEASE_STATUS.md). The gateway distribution `aegis-latent-core` is published to PyPI by no workflow (latest there: `4.1.2`). Uploading it is a separate, manual owner decision.
 
 ---
 
-**Related:** [Defect Registry](docs/REGISTRY.md) · [CHANGELOG](CHANGELOG.md) · [Audit Readiness](docs/compliance/AUDIT_READINESS.md) · [High Availability](docs/operations/HIGH_AVAILABILITY.md) · [Maintainer Handbook](docs/MAINTAINER_HANDBOOK.md) · [Release Status](docs/RELEASE_STATUS.md)
+**Related:** [Defect Registry](../REGISTRY.md) · [CHANGELOG](../../CHANGELOG.md) · [Audit Readiness](../compliance/AUDIT_READINESS.md) · [High Availability](../operations/HIGH_AVAILABILITY.md) · [Maintainer Handbook](../MAINTAINER_HANDBOOK.md) · [Release Status](../RELEASE_STATUS.md)

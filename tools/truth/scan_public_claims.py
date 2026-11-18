@@ -40,6 +40,7 @@ HISTORICAL_PATHS = (
     "docs/DOCUMENTATION_INDEX.md",
     "docs/truth/PUBLIC_SURFACE_MAP.md",
     "docs/truth/TRUTH_GATE.md",
+    "docs/archive/",  # dated records moved from the root; each is pinned to its own version
     "evidence/",
     "investor_packs/",
     "site/",
