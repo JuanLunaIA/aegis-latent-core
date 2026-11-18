@@ -485,7 +485,7 @@ def _validate_release_architectures(root: Path, diagnostics: list[Diagnostic]) -
         "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
         "docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1",
         "docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e",
-        "docker/login-action@dbcb813823bdd20940b903addbd779551569679f",
+        "docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550",
         "docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a",
         "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8",
         "sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac",
@@ -509,7 +509,7 @@ def _validate_release_architectures(root: Path, diagnostics: list[Diagnostic]) -
         "oci.exact-source": "ref: main" in provenance_job
         and "ref: ${{ env.EXPECTED_TAG_TARGET }}" in provenance_job
         and "ref: ${{ env.EXPECTED_TAG_TARGET }}" in publish_job
-        and "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1" in provenance_job
+        and "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0" in provenance_job
         and 'python-version: "3.12"' in provenance_job,
         "oci.permissions": top_permissions == [{"contents": "read"}]
         and publish_permissions
@@ -602,7 +602,7 @@ def _validate_release_workflow(root: Path, diagnostics: list[Diagnostic]) -> Non
     )
     expected_actions = (
         "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
-        "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
+        "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
         "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
         "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8",
     )
@@ -690,7 +690,7 @@ def _validate_release_tag_workflow(root: Path, diagnostics: list[Diagnostic]) ->
         "tag-workflow.dispatch-only": _has_dispatch_only_trigger(workflow),
         "tag-workflow.environment": re.search(r"(?m)^    environment:\s*$", job) is not None
         and re.search(r"(?m)^      name:\s*release\s*$", job) is not None,
-        "tag-workflow.python-runtime": "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
+        "tag-workflow.python-runtime": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0"
         in job
         and 'python-version: "3.12"' in job,
         "tag-workflow.permissions": top_permissions == [{"contents": "read"}]
