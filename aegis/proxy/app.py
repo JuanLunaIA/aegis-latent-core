@@ -69,6 +69,7 @@ from aegis.proxy.analyzer import ResponseAnalyzer
 from aegis.proxy.attestation_api import build_attestation_router
 from aegis.proxy.audit_api import build_audit_router
 from aegis.proxy.body_limits import RequestBodyLimitMiddleware
+from aegis.proxy.cloud_tenancy import CloudTenancy, TenancyError, parse_private_key
 from aegis.proxy.dependencies import validate_audit_auth, validate_proxy_auth
 from aegis.proxy.dmz_middleware import DMZSourceIPMiddleware
 from aegis.proxy.edge import EdgeSecretMiddleware
@@ -1603,6 +1604,23 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
             await state.forwarder.start()
             startup_cleanup.push_async_callback(state.forwarder.stop)
+            state.cloud_tenancy = None
+            if cfg.auth_mode == "aegis_cloud":
+                cloud = cloud_config()
+                if cloud is None:
+                    raise RuntimeError(
+                        "auth_mode='aegis_cloud' requires AEGIS_CLOUD_URL and "
+                        "AEGIS_CLOUD_INTERNAL_HMAC"
+                    )
+                private_hex = cfg.cloud_gateway_private_key.get_secret_value()
+                state.cloud_tenancy = CloudTenancy(
+                    cfg,
+                    cloud_url=cloud[0],
+                    secret=cloud[1],
+                    private_key=parse_private_key(private_hex) if private_hex else None,
+                    egress_guard=egress_guard,
+                )
+                startup_cleanup.push_async_callback(state.cloud_tenancy.stop)
             if cloud_config() is not None:
                 state.usage_outbox = UsageOutbox(
                     cfg.wal_path.with_name(cfg.wal_path.name + ".usage-outbox.jsonl"),
@@ -1739,6 +1757,8 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                     pending_workers,
                 )
         await state.forwarder.stop()
+        if getattr(state, "cloud_tenancy", None) is not None:
+            await state.cloud_tenancy.stop()
         if state.usage_task is not None:
             state.usage_task.cancel()
             with suppress(asyncio.CancelledError):
@@ -2080,6 +2100,17 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             "X-RateLimit-Limit-Tokens": str(cfg.rate_limit_token_capacity),
             "X-RateLimit-Remaining-Tokens": str(decision.token_remaining),
         }
+
+    async def _forwarder_for(principal: Principal) -> LLMForwarder:
+        """The platform forwarder, or the tenant's own one in aegis_cloud mode."""
+        tenancy = getattr(state, "cloud_tenancy", None)
+        if tenancy is None or principal.auth_method != "aegis_cloud":
+            return state.forwarder
+        try:
+            forwarder: LLMForwarder = await tenancy.forwarder_for(principal, state.forwarder)
+        except TenancyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from None
+        return forwarder
 
     async def _reserve_budget(
         principal: Principal,
@@ -2478,16 +2509,21 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 detail="Proxy not ready: forwarder has not been initialized. "
                 "Ensure the server lifespan completed before sending requests.",
             )
+        try:
+            forwarder = await _forwarder_for(principal)
+        except HTTPException:
+            await reservation.refund(0)
+            raise
         if (
             cfg.force_logprobs
-            and state.forwarder.provider.supports_logprobs
+            and forwarder.provider.supports_logprobs
             and not body.get("logprobs", False)
         ):
             body["logprobs"] = True
             body["top_logprobs"] = cfg.top_logprobs
 
         if body.get("stream", False):
-            stream = state.forwarder.stream_sse(
+            stream = forwarder.stream_sse(
                 "/v1/chat/completions", body, extra_headers=_outbound_trace_headers(request)
             )
             # T2.5/T7.11: the restorer runs ahead of the bounded proxy, so the
@@ -2673,7 +2709,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             with observability.record_span(
                 "aegis.forward", provider=cfg.provider, endpoint="chat.completions"
             ):
-                upstream = await state.forwarder.forward_json(
+                upstream = await forwarder.forward_json(
                     "/v1/chat/completions", body, extra_headers=_outbound_trace_headers(request)
                 )
         except CircuitOpenError:
@@ -2883,7 +2919,12 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
         tenant_id = request_tenant
         request_id = str(uuid.uuid4())
         rate_decision, reservation = await _reserve_budget(principal, body)
-        if state.forwarder.provider.name != "anthropic":
+        try:
+            forwarder = await _forwarder_for(principal)
+        except HTTPException:
+            await reservation.refund(0)
+            raise
+        if forwarder.provider.name != "anthropic":
             await reservation.refund(0)
             return await _durable_error_response(
                 request_id=request_id,
@@ -2899,7 +2940,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
 
         if body.get("stream") is True:
-            upstream_stream = state.forwarder.stream_native_anthropic(
+            upstream_stream = forwarder.stream_native_anthropic(
                 body, extra_headers=_outbound_trace_headers(request)
             )
             terminal_marker = b'event: message_stop\ndata: {"type":"message_stop"}\n\n'
@@ -3062,7 +3103,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
             )
 
         try:
-            upstream = await state.forwarder.forward_native_anthropic(
+            upstream = await forwarder.forward_native_anthropic(
                 body, extra_headers=_outbound_trace_headers(request)
             )
         except CircuitOpenError:
@@ -3223,6 +3264,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Proxy not ready: forwarder has not been initialized.",
             )
+        forwarder = await _forwarder_for(principal)
         session_id = (
             request.headers.get("x-aegis-session-id")
             or request.headers.get("x-session-id")
@@ -3260,7 +3302,7 @@ def create_app(settings: AegisSettings | None = None) -> FastAPI:
 
         completions_start = time.perf_counter()
         try:
-            upstream = await state.forwarder.forward_json(
+            upstream = await forwarder.forward_json(
                 "/v1/completions", body, extra_headers=_outbound_trace_headers(request)
             )
         except CircuitOpenError:

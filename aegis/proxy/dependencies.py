@@ -27,6 +27,7 @@ from aegis.auth.scopes import (
     SCOPE_PROXY_COMPLETIONS,
     parse_scope_config,
 )
+from aegis.proxy.cloud_tenancy import TenancyError
 
 
 def _bearer(request: Request) -> str:
@@ -214,6 +215,20 @@ async def authenticate_principal(request: Request) -> Principal:
         bearer_principal: Principal | None = None
         if mode in {"api_key", "api_key_mtls"}:
             bearer_principal = _api_key_principal(request, _bearer(request))
+        elif mode == "aegis_cloud":
+            tenancy = getattr(state, "cloud_tenancy", None)
+            if tenancy is None:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Aegis Cloud tenancy is not configured",
+                )
+            try:
+                bearer_principal = await tenancy.principal_for_key(_bearer(request))
+            except TenancyError as exc:
+                headers = {"WWW-Authenticate": "Bearer"} if exc.status_code == 401 else None
+                raise HTTPException(
+                    status_code=exc.status_code, detail=exc.detail, headers=headers
+                ) from None
         elif mode in {"oidc", "oidc_mtls"}:
             manager = getattr(state, "oidc_manager", None)
             if manager is None:
