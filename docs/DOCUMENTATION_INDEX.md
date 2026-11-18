@@ -10,9 +10,9 @@ index was generated. The index records what the documentation set contains; it
 does not establish publication, deployment, or external acceptance. See
 [Release Status](RELEASE_STATUS.md) and [Boundaries](BOUNDARIES.md).
 
-- Pages indexed: 172
-- Directory groups: 22
-- Relative links in indexed pages: 1514
+- Pages indexed: 182
+- Directory groups: 23
+- Relative links in indexed pages: 1582
 - Broken relative links in indexed pages: 0
 
 ## docs/
@@ -65,6 +65,19 @@ does not establish publication, deployment, or external acceptance. See
 - **[Aegis Latent Core — Architecture Deep Dive](architecture/DEEP_DIVE.md)** — Cryptographic flow · Merkle Mountain Range · terminal evidence persistence. This document is one of the system "laws" referenced by the top-level README.md. It describes what the code does, not what it aspires to do. Unmeasured or…
 - **[Failure Semantics](architecture/FAILURE_SEMANTICS.md)** — Audience: developers, SRE, security reviewers. Scope: what happens on every failure path, what the caller observes, and what evidence exists afterwards. Boundary: describes the checked-out source. It does not establish that any…
 - **[Aegis Architecture Index — v5.0.2 Source Baseline](architecture/README.md)** — This index routes readers to the current architecture description, trust-boundary decisions, state machine, and related operational evidence. It is for engineers, security reviewers, and technical buyers who need a fast route into the…
+
+## docs/archive/
+
+- **[AUDIT_REPORT_v5.0.1_PREP](archive/AUDIT_REPORT_v5.0.1_PREP.md)** — Mission: deep forensic audit, gap analysis and registry consolidation toward v5.0.1. Target: JuanLunaIA/aegis-latent-core, branch registry-closure-2026-09-21, HEAD 289e4ea (tree clean at audit start). Date: 2026-09-21 (UTC). Performed by…
+- **[Implementation Log — 5.0.1](archive/IMPLEMENTATION_LOG_5.0.1.md)** — Prepared: 2026-09-21 Source target: 5.0.1 — fourteen synchronized anchors, READY; published nowhere Branch: registry-closure-2026-09-21 Base: cd8ec4f (REG-D27 closure); origin/main at dc20a2c
+- **[Aegis Latent Core 5.0.0 — Integrity Seal](archive/INTEGRITY_SEAL.md)** — Date: 2026-09-16 UTC Base commit: d1b229c31df34ca3a77ac0582cd6b1b72a94ae24 (the tree this battery ran against, plus the working changes it describes) Gates passed: 11 / 11 Environment: Linux 6.18.44-fc-v33, 4 shared unpinned vCPU; CPython…
+- **[PR summary — enterprise hardening pass](archive/PR_FINAL_ENTERPRISE_HARDENING.md)** — Branch: claude/aegis-v4-comprehensive-audit-m2qyka · Base: main · PR: #157 Source baseline: 4.3.0, fourteen synchronized anchors, unpublished — no tag, GitHub Release, PyPI or npm artifact, or OCI image exists for it. The most recent…
+- **[Archive](archive/README.md)** — Audience: reviewers who need the historical record. Scope: dated release, audit and measurement records that were previously kept at the repository root. Boundary: every file here is bound to its own date, commit and version, and none…
+- **[Aegis Latent Core v5.0.1 — Release Halted: Critical Errors](archive/RELEASE_HALTED_CRITICAL_ERRORS.md)** — Superseded 2026-09-24 — kept as the record of the halt. All four blockers (H-1 to H-4: REG-D67–REG-D70) and the remaining open findings (REG-D60, REG-D73–REG-D75, REG-D77) are fixed on PR #205. The same work found and fixed…
+- **[Aegis Latent Core v5.0.1 — Release Readiness After Remediation](archive/RELEASE_READINESS_v5.0.1.md)** — Released 2026-09-24. After PR #205 merged, the owner kept the version at 5.0.1 (§5) and authorized the release. It was published from main at 46db6c0 on every surface except PyPI aegis-latent-core (which followed on 2026-09-26, Release…
+- **[Security Audit Execution Log](archive/SECURITY_AUDIT_EXECUTION_LOG.md)** — Historical archive (2026-06-13). This execution log is retained unchanged as evidence for its stated version and scope; it does not describe current v4 status. Use the current evidence index for newer gates, bounded observations, and…
+- **[SECURITY_AUDIT_REPORT](archive/SECURITY_AUDIT_REPORT.md)** — python tools/forensic/forensic_checks.py
+- **[State Manifest](archive/STATE_MANIFEST.md)** — Measured: 2026-09-16 UTC Baseline commit: 46654e9b6794d83fe7f420f483f31250b58205a5 (origin/main, PR #179 merged) Source baseline: 5.0.0, fourteen synchronized anchors, published 2026-09-16 on every surface except PyPI aegis-latent-core…
 
 ## docs/assurance/
 
@@ -252,3 +265,7 @@ does not establish publication, deployment, or external acceptance. See
 - **[Public surface map](truth/PUBLIC_SURFACE_MAP.md)** — One row per surface that a customer, investor, auditor, or agent can read. A surface with no canonical source does not get to publish the claim.
 - **[Truth surfaces](truth/README.md)** — This directory answers one question: where does a public claim live, what canonical source can prove it, and which gate stops it from drifting?
 - **[Truth gate — 2026-10-29](truth/TRUTH_GATE.md)** — Historical snapshot. 5.0.3 was published on 2026-10-30 after this gate ran. The identity table below is preserved as the state it audited; the current publication record is docs/RELEASE_STATUS.md §1.0e.
+
+## Pages without an H1
+
+- `archive/SECURITY_AUDIT_REPORT.md`

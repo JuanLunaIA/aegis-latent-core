@@ -148,7 +148,7 @@ RETRACTION_MARKERS: tuple[str, ...] = ("retract", "uc-018", "not citable")
 
 #: Files that record the finding instead of citing the figure: the forensic
 #: audit report quotes the defective text verbatim as its evidence.
-RETRACTION_EXEMPT_PATHS: tuple[str, ...] = ("AUDIT_REPORT_v5.0.1_PREP.md",)
+RETRACTION_EXEMPT_PATHS: tuple[str, ...] = ("docs/archive/AUDIT_REPORT_v5.0.1_PREP.md",)
 
 
 @dataclass(frozen=True)

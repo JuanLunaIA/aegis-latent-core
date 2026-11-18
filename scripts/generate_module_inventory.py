@@ -136,6 +136,9 @@ def _navigation_text() -> str:
     return text
 
 
+ARCHIVE = ROOT / "docs" / "archive"
+
+
 def _reference_text() -> str:
     text = ""
     for rel in REFERENCE_SOURCES:
@@ -147,6 +150,10 @@ def _reference_text() -> str:
                     # file under the roots, so including it would mark every script
                     # "referenced" by the table that reports the status.
                     if child == OUTPUT:
+                        continue
+                    # Dated records under docs/archive/ name files as they were, not
+                    # as live documentation, so they do not make a script "referenced".
+                    if ARCHIVE in child.parents:
                         continue
                     text += child.read_text(encoding="utf-8", errors="replace")
         elif path.is_file():
