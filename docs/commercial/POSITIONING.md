@@ -99,6 +99,35 @@ Question 6 is the one that separates the field, and it costs a vendor nothing to
 
 When a prospect asks how we compare: *"I can tell you precisely what we do and show you the code that does it. Put the same six questions to them, and compare the answers rather than the brochures."* That is a stronger position than a matrix we would have to defend.
 
+### 4.2 The category: an evidence plane, not another gateway
+
+Aegis is positioned as an **AI evidence plane**: the layer that turns selected high-impact AI executions into evidence bundles a third party can verify, export and review. It does not replace the buyer's gateway, observability, SIEM, GRC, model-risk or quality system. It feeds them.
+
+The separation is mechanical, and it keeps the sale out of a price comparison with general-purpose gateways:
+
+| Layer the buyer already has | What it does | How Aegis relates |
+|---|---|---|
+| Model gateway / routing | routing, budgets, retries, fallback | Aegis can sit in that path, but it is not sold on provider count, latency or routing features |
+| Observability and evaluation | tracing, debugging, quality metrics | keep it; Aegis adds commit-before-response, failure semantics, export and offline verification |
+| SIEM / security operations | detection and investigation | receives exported evidence; Aegis does not detect threats for the SOC |
+| GRC / AI governance workflow | control inventory and evidence workflows | Aegis is a verifiable runtime source for those controls, not the control system |
+| Data lineage / catalogue | datasets, metadata, ownership | referenced from the evidence; not replaced |
+
+This table describes layers, not vendors, so it stays inside the rule in §4.
+
+Every buyer conversation keeps seven properties apart, because confusing them is the most damaging commercial error available: **integrity** (the bytes did not change, per the verifier), **authenticity** (the signature matches an identity inside the declared trust model), **completeness** (everything in the defined scope was captured), **coverage** (which paths and windows were not observed), **availability** (the bundle can be retrieved and verified for the contracted period), **material truth** (the AI output was correct) and **legal admissibility**. Aegis makes claims about the first five within their boundaries. It makes none about the last two (`UC-022`, `UC-034`).
+
+### 4.3 Short answers to the common objections
+
+| The buyer says | The answer |
+|---|---|
+| "We already have tracing and evaluation." | Keep it for quality. Aegis adds the evidence path: the record exists before the answer, fails closed, and verifies offline. |
+| "Our gateway already has audit logs." | A routing log does not by itself show that the response was withheld when the evidence could not be written, or let a third party verify it without trusting the operator. |
+| "Our SIEM ingests everything." | The SIEM detects and investigates. The properties Aegis records are formed at the source; shipping more logs does not create them. |
+| "Our GRC platform covers compliance." | It organises controls. Aegis produces the verifiable runtime artefact those controls point to. |
+| "We cannot capture sensitive prompts." | The pilot defines selective capture, redaction, retention and access first. Nothing is captured by default beyond the declared scope. |
+| "Cryptography does not prove the answer was true." | Correct. Aegis claims integrity and authenticity under a trust model, not truth, absence of bias or admissibility. |
+
 ## 5. Anti-positioning: what this is not
 
 For this buyer, the disqualifier list is a feature. A security reviewer who finds an undisclosed limitation stops believing the disclosed ones — so the limitations lead rather than trail.
@@ -121,7 +150,7 @@ For this buyer, the disqualifier list is a feature. A security reviewer who find
 Stated because a pilot that should never have started costs both sides more than a fast no.
 
 - **No statutory or contractual need for defensible records.** The mechanism is expensive in operational discipline and buys nothing without the requirement.
-- **Needs a managed service.** There is none, and there is no roadmap to one.
+- **Needs a managed service with an SLA or a certification behind it.** The managed service at aegislatent.com runs the same source in hosted mode, but it carries no SLA, no certification and no BAA. A buyer whose gate is any of those fails it today.
 - **Needs a certification today.** `CR-01` and `CR-02` are `NOT STARTED` (`COMMERCIAL_READINESS.md`). If the procurement gate is a SOC 2 report, this fails it now.
 - **Needs prompt-injection prevention as the primary control.** Buy a different category, and read `UC-042` before believing anyone who says they sell it.
 - **Cannot accept a single-maintainer dependency**, and cannot mitigate it with a pinned fork or contracted continuity.
