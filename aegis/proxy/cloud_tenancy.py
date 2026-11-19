@@ -286,7 +286,7 @@ class CloudTenancy:
                 "org_id": org_id,
                 "key_id": key_id,
                 "plan": str(body.get("plan", "")),
-                "endpoint": str(body.get("tenant_id", "")),
+                "endpoint": str(body.get("tenant_id") or ""),
             },
         )
 

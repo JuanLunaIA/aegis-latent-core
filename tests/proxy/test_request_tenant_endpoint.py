@@ -54,7 +54,7 @@ def test_the_org_slug_is_not_accepted_when_the_label_differs():
 
 
 def test_edge_header_is_checked_against_the_label():
-    req = _request("origin.internal", x_aegis_host="acme-prod.api.aegislatent.com")
+    req = _request("globex.api.aegislatent.com", x_aegis_host="acme-prod.api.aegislatent.com")
     assert _request_tenant(req, _cloud("acme", "acme-prod")) == "acme"
 
 
@@ -68,3 +68,9 @@ def test_without_an_endpoint_the_slug_is_compared_as_before():
     assert _request_tenant(_request("acme.api.aegislatent.com"), principal) == "acme"
     with pytest.raises(HTTPException):
         _request_tenant(_request("globex.api.aegislatent.com"), principal)
+
+
+def test_edge_header_naming_another_label_is_rejected():
+    req = _request("acme-prod.api.aegislatent.com", x_aegis_host="globex.api.aegislatent.com")
+    with pytest.raises(HTTPException):
+        _request_tenant(req, _cloud("acme", "acme-prod"))

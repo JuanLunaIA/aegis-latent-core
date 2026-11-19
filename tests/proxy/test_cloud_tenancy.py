@@ -177,6 +177,18 @@ def test_valid_key_becomes_a_tenant_principal_without_admin(tmp_path) -> None:
     assert cloud.seen[0].headers["x-aegis-key"] == "aeg_live_abc"
 
 
+def test_a_null_subdomain_label_is_kept_absent(tmp_path) -> None:
+    """A null tenant_id must not become the label "None" and 403 the org's own host."""
+    tenancy = _tenancy(tmp_path, _Cloud(verify=(200, _verified(tenant_id=None))))
+
+    async def go() -> Any:
+        principal = await tenancy.principal_for_key("aeg_live_abc")
+        await tenancy.stop()
+        return principal
+
+    assert _run(go()).attributes["endpoint"] == ""
+
+
 def test_verify_request_is_signed_the_way_the_control_plane_checks(tmp_path) -> None:
     cloud = _Cloud()
     tenancy = _tenancy(tmp_path, cloud)
