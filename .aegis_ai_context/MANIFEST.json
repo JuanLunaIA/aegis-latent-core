@@ -75,8 +75,8 @@
     {
       "category": "governed_input",
       "path": "AGENTS.md",
-      "sha256": "1c2a8b02ca0329950c442564e4cf2b8f9876876e18dbb5e7d70c284993845345",
-      "size": 4839
+      "sha256": "6457609975b0a17e61e509d516efb7f0be10253f30f8e03bb736888d10dfca3e",
+      "size": 5042
     },
     {
       "category": "governed_input",
@@ -93,8 +93,8 @@
     {
       "category": "governed_input",
       "path": ".github/copilot-instructions.md",
-      "sha256": "3ffbb2c8ed66362c2762a3bc33cc26678efa42c3b7e51b9e50d695925b789016",
-      "size": 4026
+      "sha256": "faf4ff83d97ceb56fe9dad1f5450db7086a0cbacce54b707d91de21c4d817cd8",
+      "size": 4123
     },
     {
       "category": "governed_input",
@@ -105,14 +105,14 @@
     {
       "category": "governed_input",
       "path": "CHANGELOG.md",
-      "sha256": "6ed16e5a3db1d7b23997c304e57b66adbb1248e0c4a7ef99f76a70fd3552d839",
-      "size": 253337
+      "sha256": "b8c91e2e3cb536b2d1eea23b2cc6ba0a98c57ee9d66f4b2fa7bcad626c4bc168",
+      "size": 253820
     },
     {
       "category": "governed_input",
       "path": "SECURITY.md",
-      "sha256": "0636ebe16c5331f8ccbee117e689f5104a4be4114b93fd78e4f7f92123b351fd",
-      "size": 12407
+      "sha256": "eb0a0acd2ff23b02b5d5c824db7658a8c0cd8be037259174575c6f760ee418fe",
+      "size": 12396
     },
     {
       "category": "governed_input",
@@ -135,8 +135,8 @@
     {
       "category": "governed_input",
       "path": "docs/CLAIMS_MATRIX.md",
-      "sha256": "8ddf03caa9fcd90b04e27c4419df646eb5f4566dfc05833bbbc07bd377192820",
-      "size": 185610
+      "sha256": "07adc868d54d0456cb930edfca3c72b94ad93e05a334f8ab3b74263e75b55cd0",
+      "size": 186783
     },
     {
       "category": "governed_input",
@@ -177,8 +177,8 @@
     {
       "category": "governed_input",
       "path": "docs/REPOSITORY_MAP.md",
-      "sha256": "bcb8ffc325ed837268cd25df2127a4eb974a7db64284b5471ed927b682494f52",
-      "size": 8218
+      "sha256": "b681c1885f8fd247f1f5eec81357ad4a176788e4d8e38031b3ddd20c522ff212",
+      "size": 8194
     },
     {
       "category": "governed_input",
