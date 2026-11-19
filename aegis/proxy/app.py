@@ -1060,13 +1060,18 @@ def _request_tenant(request: Request, principal: Principal) -> str:
     ``X-Aegis-Host`` is written by the CloudFront Function and only arrives here
     if the edge middleware accepted the secret; the origin ``Host`` does not
     decide the tenant when that header is present.
+
+    An Aegis Cloud key carries its API subdomain label (``endpoint``), which may
+    differ from the organisation slug; the host is checked against that label,
+    and the organisation slug stays the effective tenant.
     """
+    endpoint = str(principal.attributes.get("endpoint") or "").strip()
     try:
-        return tenant_from_headers(
+        tenant = tenant_from_headers(
             request.headers.get("host", ""),
             request.headers.get("x-aegis-host", ""),
             request.url.path,
-            principal.tenant_id,
+            endpoint or principal.tenant_id,
         )
     except TenantMismatch as exc:
         logger.warning(
@@ -1076,6 +1081,7 @@ def _request_tenant(request: Request, principal: Principal) -> str:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Tenant mismatch"
         ) from exc
+    return principal.tenant_id if endpoint else tenant
 
 
 def _apply_pii_vault_request(

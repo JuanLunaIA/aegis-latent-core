@@ -11,6 +11,7 @@ edge secret is valid (``EdgeSecretMiddleware``); that is why resolution prefers
 # Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 from __future__ import annotations
 
+import hmac
 import re
 
 # Same vocabulary as the organisation slug (T1.8): lowercase, digits and inner
@@ -56,7 +57,7 @@ def tenant_from_request(host: str, path: str, principal_tenant: str | None) -> s
             return principal_tenant
         raise TenantMismatch("no tenant in host and key has no tenant")
     slug = match.group("slug")
-    if principal_tenant and principal_tenant != slug:
+    if principal_tenant and not hmac.compare_digest(principal_tenant.encode(), slug.encode()):
         raise TenantMismatch("key tenant does not match request host")
     return slug
 
