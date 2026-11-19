@@ -4,10 +4,10 @@
 **Scope:** the version, publication, and provenance record for this repository.
 **Boundary:** this is the only document that states publication state. Every other document links here. Source metadata never establishes publication; readback does.
 
-**Last verified:** 2026-10-30 UTC for the `5.0.3` publication readback in §1.0e; the `5.0.2` readback remains dated 2026-10-01 in §1.0d, and earlier external readbacks remain dated in their own sections
-**Source baseline:** `5.1.0`, fourteen synchronized anchors — under the Aegis Commercial License 1.0. **Not published:** no tag, GitHub Release, registry artifact or image has been read back for `5.1.0`, and none is claimed. Source metadata establishes no external state.
-**Most recent published release:** `5.0.3`, **published on GitHub Release, both PyPI distributions, npm and GHCR** on 2026-10-30. The gateway distribution `aegis-latent-core` reached `5.0.3` on PyPI at 2026-10-30T07:13:42Z; the readback is in §1.0e.
-**Publication state of `5.1.0`:** **not published** — no readback exists. Until a dated §1.0f readback is added, `5.0.3` remains the most recent published release.
+**Last verified:** 2026-11-19 UTC for the `5.1.0` publication readback in §1.0f; the `5.0.3` readback remains dated 2026-10-30 in §1.0e; the `5.0.2` readback remains dated 2026-10-01 in §1.0d, and earlier external readbacks remain dated in their own sections
+**Source baseline:** `5.1.0`, fourteen synchronized anchors — under the Aegis Commercial License 1.0. Source metadata establishes no external state; the readback in §1.0f does.
+**Most recent published release:** `5.1.0`, **published on the signed tag, GitHub Release, both PyPI distributions, npm and GHCR** on 2026-11-19. The gateway distribution `aegis-latent-core` reached `5.1.0` on PyPI at 2026-11-19T01:34:04Z; the readback is in §1.0f.
+**Publication state of `5.1.0`:** **published on every surface** — tag, GitHub Release, PyPI core/SDK, npm SDK and both OCI images. `cosign verify` and `gh attestation verify` were **not executed** from the readback host. See §1.0f.
 **Publication state of `5.0.3`:** **published on every surface** — tag, GitHub Release, PyPI core/SDK, npm SDK and both OCI images. See §1.0e.
 **Publication state of `5.0.2`:** **published** on GitHub Release, PyPI core/SDK, npm and GHCR; read back 2026-10-01. See §1.0d.
 **Publication state of `5.0.1` (superseded):** **published on every surface** — PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26 (§1.0b), and the other surfaces were read back 2026-09-24.
@@ -16,9 +16,26 @@
 
 ## 1. Publication state
 
-**Read this section as separate per-surface observations.** `5.0.3` is published on the tag, GitHub Release, PyPI core/SDK, npm and GHCR; its readback is in §1.0e. The previous release was `5.0.2` (Apache-2.0), read back in §1.0d; before it, `5.0.1` and `5.0.0` remain historical. `4.1.2` was the most recent version published on *every* surface until `5.0.1` completed the set on 2026-09-26; it was read back 2026-09-04. The preceding `4.1.1` reached every surface except npm and is superseded. A `v4.1.0` tag and GitHub Release also exist, but neither came from the release pipeline and the release carries no assets. The `4.0.2` rows were last read back on 2026-09-02 and **describe `4.0.2` only**.
+**Read this section as separate per-surface observations.** `5.1.0` is published on the tag, GitHub Release, PyPI core/SDK, npm and GHCR; its readback is in §1.0f. The previous release is `5.0.3`, read back in §1.0e. Before it was `5.0.2` (Apache-2.0), read back in §1.0d; before it, `5.0.1` and `5.0.0` remain historical. `4.1.2` was the most recent version published on *every* surface until `5.0.1` completed the set on 2026-09-26; it was read back 2026-09-04. The preceding `4.1.1` reached every surface except npm and is superseded. A `v4.1.0` tag and GitHub Release also exist, but neither came from the release pipeline and the release carries no assets. The `4.0.2` rows were last read back on 2026-09-02 and **describe `4.0.2` only**.
 
 Nothing in this table may be restated with the version number changed. A `4.0.2` digest is not a `4.1.1` digest, a `4.1.1` digest is not a `4.1.2` digest, and a `4.1.2` digest is not a `5.0.0` digest. Each row below records what was read back for the version in its own heading and nothing else.
+
+### 1.0f `5.1.0` — published 2026-11-19, read back 2026-11-19
+
+| Surface | State | Observed value |
+| --- | --- | --- |
+| Source baseline | Confirmed | `5.1.0`, fourteen synchronized anchors, `LicenseRef-Aegis-Commercial-1.0`; `verify_release_contract.py --tag v5.1.0` reports `READY` |
+| GitHub tag `v5.1.0` | **Confirmed** | Annotated tag object `9f1a089167de23bb6510e2eb003ce771708c133e`, target `3ff16df308adec2c53b3329b0beffada0f71ad56`; created by `create_release_tag.yml` under Sigstore keyless signing (run `44434165996`, conclusion `success`). `scripts/verify_release_tag.sh v5.1.0 3ff16df3…` passed in the Release run `44437621677` and the gateway-publish run `44437625639` (signed tag, exact workflow identity, ancestor check) |
+| GitHub Release `v5.1.0` | **Confirmed** | Non-draft, non-prerelease, published `2026-11-19T01:54:31Z`, **31 uploaded assets**, including `SHA256SUMS`, `release-asset-manifest.json`, the core wheel/sdist, both SDKs and all `aegis_rust` wheels (run `44437621677`, conclusion `success`). The first Release run `44434233968` was cancelled because the `macos-14` runner label is no longer accepted; #304 moved the Apple wheel jobs to `macos-15` and the run was dispatched again for the same tag |
+| `SHA256SUMS` sweep | **Confirmed** | All 31 assets downloaded to a clean directory; `sha256sum -c SHA256SUMS` returned 15 of 15 listed files matching, 0 mismatched, 0 absent. `SHA256SUMS` itself is `sha256:bd27aba209bc7952d3b1e9310c67a2a8610828e606d630be52e9a927c46cb8e3` |
+| PyPI `aegis-latent-core` | **Confirmed** | `info.version` `5.1.0`; wheel `sha256:5c3a9127ec5108a08026a042567a4d7c1e91fe111c6e549e423ab90565eec8dc` and sdist `sha256:360a01bac510929178c44ef148877527e814bb0093211b647cca0615e143d0cb`, uploaded `2026-11-19T01:34:04Z`/`07Z` by `publish_pypi_gateway.yml` run `44437625639` (conclusion `success`) |
+| PyPI `aegis-latent-sdk` | **Confirmed** | `info.version` `5.1.0`; wheel `sha256:d320ffe656f940a3c610560abe1fb5f1a9201a42905d7a61ac0862cbb4f7d6c6` and sdist `sha256:6e8164d5c9255efc0a0c39b07f53401f9d563f8ab89001dae4bc33c31fe9238f`, uploaded `2026-11-19T01:06:59Z`/`01:07:00Z` (run `44434236906`, conclusion `success`) |
+| npm `aegis-latent-sdk` | **Confirmed** | Registry `latest` `5.1.0`; `dist.integrity` `sha512-Ftcb2h5P5tafK4OqLBEO7W+1pAeY+5D+RSYaYeZ0DX+jMR4w9ZrCQUW5g0wYUIImdwd6zUKDhtCfVkUvoCbp7A==`; an attestations object is present (run `44434239875`, conclusion `success`) |
+| GHCR gateway `5.1.0` | **Confirmed** | Manifest digest `sha256:542cc3d4ab9d8c6817d579e52cbc50b23d1760674594cf6b96643bd7cebbd41b` (run `44434243197`, conclusion `success`) |
+| GHCR dashboard `5.1.0` | **Confirmed** | Manifest digest `sha256:c343e0e9c2204d6c9f134e2ac2c3547e0c7a40f54d9d530189aa7a866154ff95` (same run) |
+| Image signatures and attestations | **Not executed** | `cosign verify` and `gh attestation verify` could not reach the Sigstore TUF repository from the readback host (`tuf-repo-cdn.sigstore.dev` refused). Nothing is claimed about signature or attestation verification for `5.1.0` until they are run elsewhere |
+
+`scripts/verify_release_readback.py --tag v5.1.0 --verify-assets` reports **10 checked, 0 mismatched, 3 not executed**, including a **15-of-15 `SHA256SUMS` sweep**. The three not-executed rows are the two `cosign verify` checks and `gh attestation verify`. The `5.1.0` source and release are under the Aegis Commercial License 1.0.
 
 ### 1.0e `5.0.3` — published 2026-10-30, read back 2026-10-30
 
@@ -242,7 +259,7 @@ Retained as the record of what that version's surfaces actually carried, and sti
 
 Run these yourself. Do not accept this document's table as evidence of the current state — it records what was observed on the date above.
 
-These commands target the published surfaces. `v5.0.3` — the most recent published release — was read back on 2026-10-30 (§1.0e); `v5.0.2` on 2026-10-01 (§1.0d); `v5.0.1` was read back on 2026-09-24 and 2026-09-29 (§1.0a, §1.0b), `v5.0.0` on 2026-09-16 on every surface except PyPI `aegis-latent-core`, and `v4.1.2` was the last version published on *every* surface before `5.0.1` completed the set on 2026-09-26, including the gateway distribution on PyPI. The `4.1.1` values in §1.2 and the `4.0.2` values in §1.4 came from the same commands run against those tags on 2026-09-03 and 2026-09-02; substitute the tag to reproduce them.
+These commands target the published surfaces. `v5.1.0` — the most recent published release — was read back on 2026-11-19 (§1.0f); `v5.0.3` on 2026-10-30 (§1.0e); `v5.0.2` on 2026-10-01 (§1.0d); `v5.0.1` was read back on 2026-09-24 and 2026-09-29 (§1.0a, §1.0b), `v5.0.0` on 2026-09-16 on every surface except PyPI `aegis-latent-core`, and `v4.1.2` was the last version published on *every* surface before `5.0.1` completed the set on 2026-09-26, including the gateway distribution on PyPI. The `4.1.1` values in §1.2 and the `4.0.2` values in §1.4 came from the same commands run against those tags on 2026-09-03 and 2026-09-02; substitute the tag to reproduce them.
 
 ### 2.1 Source baseline
 
