@@ -324,9 +324,11 @@ class DynamoDBStorageProvider(StorageProvider):
     # Read
     # ------------------------------------------------------------------
 
-    async def get_latest_node(self) -> dict[str, Any] | None:
+    async def get_latest_node(self, tenant_id: str | None = None) -> dict[str, Any] | None:
         """
         Return the most recently inserted audit node, or None.
+
+        P0.4: Optional tenant_id for interface compatibility (ignored in DynamoDB).
 
         BLOCKER-NEW fix: implements the abstract method added to StorageProvider
         in v2.2.0.
@@ -357,9 +359,11 @@ class DynamoDBStorageProvider(StorageProvider):
         except Exception as exc:
             raise RuntimeError(f"DynamoDBStorageProvider.get_latest_node failed: {exc}") from exc
 
-    async def get_node(self, node_hash: str) -> dict[str, Any] | None:
+    async def get_node(self, node_hash: str, tenant_id: str | None = None) -> dict[str, Any] | None:
         """
         Retrieve a node by SHA-256 hash via ``GetItem`` (strongly consistent).
+
+        P0.4: Optional tenant_id for interface compatibility (ignored in DynamoDB).
 
         Returns:
             Dict compatible with ``StorageNode.from_dict``, or ``None``.
