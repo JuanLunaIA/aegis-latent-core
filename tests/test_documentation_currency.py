@@ -202,11 +202,10 @@ CURRENCY_SCAN_EXEMPT = {
     "docs/commercial/CLAIM_LEDGER.md",  # its whole subject is cataloguing stale claim
     # surfaces; every one of its rows quotes the
     # stale text it reports as corrected
-    "docs/archive/AUDIT_REPORT_v5.0.1_PREP.md",
+    "docs/archive/AUDIT_REPORT_v5.1.0_PREP.md",  # dated record for v5.1.0 audit prep
     "docs/archive/IMPLEMENTATION_LOG_5.0.1.md",  # dated release-process record; quotes the
     # pre-bump state it describes
-    "docs/archive/RELEASE_READINESS_v5.0.1.md",  # dated record of the 5.0.1 release decision; its
-    # subject is that release, so it names 5.0.1 throughout
+    "docs/archive/RELEASE_READINESS_v5.1.0.md",  # dated record for v5.1.0 release decision
     "docs/archive/STATE_MANIFEST.md",  # dated measurement snapshot; every value is bound to
     # its commit and time
     "docs/commercial/ARTIFACT_INVENTORY.md",  # self-declared pre-change snapshot;
