@@ -470,9 +470,11 @@ class PostgreSQLStorageProvider(StorageProvider):
     # Read
     # ------------------------------------------------------------------
 
-    async def get_latest_node(self) -> dict[str, Any] | None:
+    async def get_latest_node(self, tenant_id: str | None = None) -> dict[str, Any] | None:
         """
         Return the most recently inserted audit node (highest seq), or None.
+
+        P0.4: Optional tenant_id for RLS context.
 
         BLOCKER-NEW fix: implements the abstract method added to StorageProvider
         in v2.2.0.  PostgreSQL uses ORDER BY seq DESC LIMIT 1 — same semantics
@@ -485,6 +487,9 @@ class PostgreSQLStorageProvider(StorageProvider):
         self._require_pool()
         try:
             async with self._pool.acquire() as conn:  # type: ignore[union-attr]
+                # P0.4: Set tenant context for RLS
+                if tenant_id:
+                    await conn.execute("SELECT set_tenant_context($1)", tenant_id)
                 row = await conn.fetchrow(_LATEST_NODE_SQL)
             if row is None:
                 return None
