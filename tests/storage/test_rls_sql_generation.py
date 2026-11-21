@@ -11,10 +11,6 @@ are correctly formed. They run without a database.
 
 from __future__ import annotations
 
-import re
-
-import pytest
-
 
 class TestRLSSQLGeneration:
     """Verify RLS DDL statements are correctly formed."""
@@ -96,10 +92,11 @@ class TestRLSSQLGeneration:
     def test_all_rls_ddls_present_in_initialize(self) -> None:
         """All RLS DDLs must be executed in initialize()."""
         import inspect
+
         from aegis_server.storage.postgres_provider import PostgreSQLStorageProvider
 
         source = inspect.getsource(PostgreSQLStorageProvider.initialize)
-        
+
         # All RLS DDL constants must be referenced
         required_ddls = [
             "_DDL_TENANT_ID_COLUMN",
@@ -112,13 +109,14 @@ class TestRLSSQLGeneration:
             "_DDL_SET_TENANT_FUNCTION",
             "_DDL_RESET_TENANT_FUNCTION",
         ]
-        
+
         for ddl in required_ddls:
             assert ddl in source, f"{ddl} not executed in initialize()"
 
     def test_write_node_sets_tenant_context(self) -> None:
         """write_node must call set_tenant_context when client_id provided."""
         import inspect
+
         from aegis_server.storage.postgres_provider import PostgreSQLStorageProvider
 
         source = inspect.getsource(PostgreSQLStorageProvider.write_node)
@@ -128,6 +126,7 @@ class TestRLSSQLGeneration:
     def test_write_node_atomic_sets_tenant_context(self) -> None:
         """write_node_atomic must call set_tenant_context when client_id provided."""
         import inspect
+
         from aegis_server.storage.postgres_provider import PostgreSQLStorageProvider
 
         source = inspect.getsource(PostgreSQLStorageProvider.write_node_atomic)
@@ -137,6 +136,7 @@ class TestRLSSQLGeneration:
     def test_list_nodes_sets_tenant_context(self) -> None:
         """list_nodes must call set_tenant_context when tenant_id provided."""
         import inspect
+
         from aegis_server.storage.postgres_provider import PostgreSQLStorageProvider
 
         source = inspect.getsource(PostgreSQLStorageProvider.list_nodes)
@@ -146,6 +146,7 @@ class TestRLSSQLGeneration:
     def test_get_node_sets_tenant_context(self) -> None:
         """get_node must call set_tenant_context when tenant_id provided."""
         import inspect
+
         from aegis_server.storage.postgres_provider import PostgreSQLStorageProvider
 
         source = inspect.getsource(PostgreSQLStorageProvider.get_node)
@@ -155,6 +156,7 @@ class TestRLSSQLGeneration:
     def test_get_latest_node_sets_tenant_context(self) -> None:
         """get_latest_node must call set_tenant_context when tenant_id provided."""
         import inspect
+
         from aegis_server.storage.postgres_provider import PostgreSQLStorageProvider
 
         source = inspect.getsource(PostgreSQLStorageProvider.get_latest_node)
@@ -164,7 +166,8 @@ class TestRLSSQLGeneration:
     def test_no_direct_header_tenant_in_storage(self) -> None:
         """Storage layer must not reference X-Tenant-ID or x-tenant-id headers."""
         import inspect
-        from aegis_server.storage import postgres_provider, sqlite_provider, dynamodb_provider, base
+
+        from aegis_server.storage import base, dynamodb_provider, postgres_provider, sqlite_provider
 
         for mod in [postgres_provider, sqlite_provider, dynamodb_provider, base]:
             source = inspect.getsource(mod)
@@ -177,6 +180,7 @@ class TestRLSSQLGeneration:
     def test_tenant_id_parameter_in_base_interface(self) -> None:
         """StorageProvider base class must have tenant_id parameter on read methods."""
         import inspect
+
         from aegis_server.storage.base import StorageProvider
 
         # get_node

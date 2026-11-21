@@ -16,10 +16,9 @@ Run with: AEGIS_TEST_PG_DSN=postgresql://... pytest tests/storage/test_rls_cross
 
 from __future__ import annotations
 
-import asyncio
 import os
 import uuid
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import asyncpg
 import pytest
