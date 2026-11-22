@@ -13,7 +13,7 @@ does not establish publication, deployment, or external acceptance. See
 - Pages indexed: 182
 - Directory groups: 23
 - Relative links in indexed pages: 1583
-- Broken relative links in indexed pages: 4
+- Broken relative links in indexed pages: 0
 
 ## docs/
 
@@ -269,10 +269,3 @@ does not establish publication, deployment, or external acceptance. See
 ## Pages without an H1
 
 - `archive/SECURITY_AUDIT_REPORT.md`
-
-## Broken relative links
-
-- `ROADMAP.md:174` → `archive/AUDIT_REPORT_v5.0.1_PREP.md`
-- `archive/README.md:9` → `AUDIT_REPORT_v5.0.1_PREP.md`
-- `archive/README.md:12` → `RELEASE_READINESS_v5.0.1.md`
-- `archive/RELEASE_HALTED_CRITICAL_ERRORS.md:3` → `RELEASE_READINESS_v5.0.1.md`

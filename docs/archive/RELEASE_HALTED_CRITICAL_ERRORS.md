@@ -1,6 +1,6 @@
 # Aegis Latent Core `v5.0.1` — Release Halted: Critical Errors
 
-> **Superseded 2026-09-24 — kept as the record of the halt.** All four blockers (H-1 to H-4: `REG-D67`–`REG-D70`) and the remaining open findings (`REG-D60`, `REG-D73`–`REG-D75`, `REG-D77`) are fixed on PR #205. The same work found and fixed `REG-D78`–`REG-D86`. The current state is [RELEASE_READINESS_v5.0.1.md](RELEASE_READINESS_v5.0.1.md); the per-item evidence is `evidence/registry/reg-d67_d86_closure.txt`. **Correction:** §2's Kubernetes line says H-1's exposure applied under containerd. It did not for the shipped image, which already set `UV_USE_IO_URING=0` (`deploy/docker/Dockerfile`), and the Helm chart runs that image.
+> **Superseded 2026-09-24 — kept as the record of the halt.** All four blockers (H-1 to H-4: `REG-D67`–`REG-D70`) and the remaining open findings (`REG-D60`, `REG-D73`–`REG-D75`, `REG-D77`) are fixed on PR #205. The same work found and fixed `REG-D78`–`REG-D86`. The current state is [RELEASE_READINESS_v5.1.0.md](RELEASE_READINESS_v5.1.0.md); the per-item evidence is `evidence/registry/reg-d67_d86_closure.txt`. **Correction:** §2's Kubernetes line says H-1's exposure applied under containerd. It did not for the shipped image, which already set `UV_USE_IO_URING=0` (`deploy/docker/Dockerfile`), and the Helm chart runs that image.
 
 **Verdict: HALTED.** `v5.0.1` must not be tagged, released or published from this tree.
 **Date:** 2026-09-24 UTC
