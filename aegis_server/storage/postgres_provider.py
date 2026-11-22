@@ -169,6 +169,63 @@ FROM audit_nodes
 ORDER BY seq ASC;
 """
 
+# ── RLS (Row Level Security) for tenant isolation ──────────────────────────
+# P0.4: Enable RLS with transaction-local tenant context.
+# The table uses `client_id` as the tenant identifier.
+# Context is set via `set_config('aegis.tenant_id', tenant_id, false)`
+# in a transaction, and cleared on pool release.
+
+_DDL_TENANT_ID_COLUMN = """
+ALTER TABLE audit_nodes ADD COLUMN IF NOT EXISTS tenant_id TEXT NOT NULL DEFAULT '';
+"""
+
+_DDL_BACKFILL_TENANT_ID = """
+UPDATE audit_nodes
+   SET tenant_id = COALESCE(client_id, '')
+ WHERE tenant_id = '';
+"""
+
+_DDL_ENABLE_RLS = """
+ALTER TABLE audit_nodes ENABLE ROW LEVEL SECURITY;
+"""
+
+_DDL_RLS_POLICY_SELECT = """
+CREATE POLICY audit_nodes_tenant_isolation_select ON audit_nodes
+    FOR SELECT USING (tenant_id = current_setting('aegis.tenant_id', true));
+"""
+
+_DDL_RLS_POLICY_INSERT = """
+CREATE POLICY audit_nodes_tenant_isolation_insert ON audit_nodes
+    FOR INSERT WITH CHECK (tenant_id = current_setting('aegis.tenant_id', true));
+"""
+
+_DDL_RLS_POLICY_UPDATE = """
+CREATE POLICY audit_nodes_tenant_isolation_update ON audit_nodes
+    FOR UPDATE USING (tenant_id = current_setting('aegis.tenant_id', true))
+    WITH CHECK (tenant_id = current_setting('aegis.tenant_id', true));
+"""
+
+_DDL_RLS_POLICY_DELETE = """
+CREATE POLICY audit_nodes_tenant_isolation_delete ON audit_nodes
+    FOR DELETE USING (tenant_id = current_setting('aegis.tenant_id', true));
+"""
+
+_DDL_SET_TENANT_FUNCTION = """
+CREATE OR REPLACE FUNCTION set_tenant_context(p_tenant_id text) RETURNS void AS $$
+BEGIN
+    PERFORM set_config('aegis.tenant_id', p_tenant_id, false);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+"""
+
+_DDL_RESET_TENANT_FUNCTION = """
+CREATE OR REPLACE FUNCTION reset_tenant_context() RETURNS void AS $$
+BEGIN
+    PERFORM set_config('aegis.tenant_id', '', false);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+"""
+
 # BLOCKER-NEW fix: correct query for get_latest_node() — ORDER BY seq DESC LIMIT 1
 _LATEST_NODE_SQL = """
 SELECT node_id, timestamp, request_hash, response_hash,
@@ -239,6 +296,16 @@ class PostgreSQLStorageProvider(StorageProvider):
                     await conn.execute(_DDL_UNIQUE_IDX)
                     await conn.execute(_DDL_TIMESTAMP_IDX)
                     await conn.execute(_DDL_CLIENT_IDX)
+                    # P0.4: RLS tenant isolation
+                    await conn.execute(_DDL_TENANT_ID_COLUMN)
+                    await conn.execute(_DDL_BACKFILL_TENANT_ID)
+                    await conn.execute(_DDL_ENABLE_RLS)
+                    await conn.execute(_DDL_RLS_POLICY_SELECT)
+                    await conn.execute(_DDL_RLS_POLICY_INSERT)
+                    await conn.execute(_DDL_RLS_POLICY_UPDATE)
+                    await conn.execute(_DDL_RLS_POLICY_DELETE)
+                    await conn.execute(_DDL_SET_TENANT_FUNCTION)
+                    await conn.execute(_DDL_RESET_TENANT_FUNCTION)
                     await self._migrate_prev_hash(conn)
         except Exception as exc:
             await self._pool.close()
@@ -323,6 +390,9 @@ class PostgreSQLStorageProvider(StorageProvider):
         try:
             async with self._pool.acquire() as conn:  # type: ignore[union-attr]
                 async with conn.transaction():
+                    # P0.4: Set tenant context for RLS
+                    if client_id:
+                        await conn.execute("SELECT set_tenant_context($1)", client_id)
                     written = await conn.fetchval(
                         _INSERT_ATOMIC_SQL,
                         node_id,
@@ -367,6 +437,8 @@ class PostgreSQLStorageProvider(StorageProvider):
         """
         Insert an audit node.  Uses ``ON CONFLICT DO NOTHING`` for idempotency.
 
+        P0.4: Sets tenant context for RLS before insert.
+
         Raises:
             RuntimeError: When the pool is not initialized or on I/O failure.
         """
@@ -375,6 +447,9 @@ class PostgreSQLStorageProvider(StorageProvider):
 
         try:
             async with self._pool.acquire() as conn:  # type: ignore[union-attr]
+                # P0.4: Set tenant context for RLS
+                if client_id:
+                    await conn.execute("SELECT set_tenant_context($1)", client_id)
                 await conn.execute(
                     _INSERT_SQL,
                     node_id,
@@ -395,9 +470,11 @@ class PostgreSQLStorageProvider(StorageProvider):
     # Read
     # ------------------------------------------------------------------
 
-    async def get_latest_node(self) -> dict[str, Any] | None:
+    async def get_latest_node(self, tenant_id: str | None = None) -> dict[str, Any] | None:
         """
         Return the most recently inserted audit node (highest seq), or None.
+
+        P0.4: Optional tenant_id for RLS context.
 
         BLOCKER-NEW fix: implements the abstract method added to StorageProvider
         in v2.2.0.  PostgreSQL uses ORDER BY seq DESC LIMIT 1 — same semantics
@@ -410,6 +487,9 @@ class PostgreSQLStorageProvider(StorageProvider):
         self._require_pool()
         try:
             async with self._pool.acquire() as conn:  # type: ignore[union-attr]
+                # P0.4: Set tenant context for RLS
+                if tenant_id:
+                    await conn.execute("SELECT set_tenant_context($1)", tenant_id)
                 row = await conn.fetchrow(_LATEST_NODE_SQL)
             if row is None:
                 return None
@@ -423,9 +503,11 @@ class PostgreSQLStorageProvider(StorageProvider):
         except Exception as exc:
             raise RuntimeError(f"PostgreSQLStorageProvider.get_latest_node failed: {exc}") from exc
 
-    async def get_node(self, node_hash: str) -> dict[str, Any] | None:
+    async def get_node(self, node_hash: str, tenant_id: str | None = None) -> dict[str, Any] | None:
         """
         Retrieve a node by SHA-256 hash.
+
+        P0.4: Sets tenant context for RLS when tenant_id is provided.
 
         Returns:
             Dict compatible with ``StorageNode.from_dict``, or ``None``.
@@ -437,6 +519,9 @@ class PostgreSQLStorageProvider(StorageProvider):
 
         try:
             async with self._pool.acquire() as conn:  # type: ignore[union-attr]
+                # P0.4: Set tenant context for RLS
+                if tenant_id:
+                    await conn.execute("SELECT set_tenant_context($1)", tenant_id)
                 row = await conn.fetchrow(_SELECT_BY_ID_SQL, node_hash)
         except Exception as exc:
             raise RuntimeError(
@@ -456,6 +541,8 @@ class PostgreSQLStorageProvider(StorageProvider):
         """
         Return a paginated list of nodes in insertion order.
 
+        P0.4: Sets tenant context for RLS when tenant_id is provided.
+
         Raises:
             ValueError:   If ``offset < 0``.
             RuntimeError: On pool or I/O failure.
@@ -466,7 +553,9 @@ class PostgreSQLStorageProvider(StorageProvider):
 
         try:
             async with self._pool.acquire() as conn:  # type: ignore[union-attr]
+                # P0.4: Set tenant context for RLS
                 if tenant_id:
+                    await conn.execute("SELECT set_tenant_context($1)", tenant_id)
                     rows = await conn.fetch(_LIST_TENANT_SQL, tenant_id, clamped, offset)
                 else:
                     rows = await conn.fetch(_LIST_ALL_SQL, clamped, offset)

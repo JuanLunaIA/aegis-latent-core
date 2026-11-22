@@ -290,9 +290,11 @@ class StorageProvider(abc.ABC):
     # ------------------------------------------------------------------
 
     @abc.abstractmethod
-    async def get_latest_node(self) -> dict[str, Any] | None:
+    async def get_latest_node(self, tenant_id: str | None = None) -> dict[str, Any] | None:
         """
         Return the most recently inserted audit node, or ``None`` if empty.
+
+        P0.4: Optional tenant_id for RLS context.
 
         This is used exclusively by the chain-linkage logic in
         ``_run_forensic_analytics`` to retrieve the correct ``prev_hash``
@@ -312,12 +314,15 @@ class StorageProvider(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def get_node(self, node_hash: str) -> dict[str, Any] | None:
+    async def get_node(self, node_hash: str, tenant_id: str | None = None) -> dict[str, Any] | None:
         """
         Retrieve a single audit node by its SHA-256 hash identifier.
 
+        P0.4: Optional tenant_id for RLS context.
+
         Args:
             node_hash: Exact ``node_id`` to look up.
+            tenant_id: Optional tenant identifier for RLS context.
 
         Returns:
             A dict compatible with ``StorageNode.from_dict``, or ``None``

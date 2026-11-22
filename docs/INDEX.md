@@ -3,6 +3,7 @@
 **Audience:** everyone. This is the entry point to the documentation corpus.
 **Scope:** every maintained document, grouped by who needs it.
 **Boundary:** documents describe the checked-out source. They do not establish publication, deployment, or external acceptance — see [Release Status](RELEASE_STATUS.md).
+**Version:** This documentation covers `v5.1.0`, the current source baseline with 14 synchronized anchors, published 2026-11-19.
 
 ---
 
@@ -167,10 +168,10 @@ The documents that decide what may be said, and on what evidence.
 | [Benchmark Results](benchmarks/BENCHMARK_RESULTS.md) | Measured numbers with environment and date. |
 | [Benchmark Method](benchmarks/BENCHMARK_METHOD.md) | How measurements are taken and what they exclude. |
 | [Azure Benchmarks](benchmarks/AZURE_BENCHMARKS.md) | Disk and gateway measurements on one Azure VM, 2026-09-26. |
-| [Benchmarks](BENCHMARKS.md) | The v3.1.0 measurement record. |
+| [Benchmarks](BENCHMARKS.md) | The v5.1.0 measurement record. |
 
 | [Prove It Yourself](PROVE_IT.md) | Reproduce the evidence on your own machine, command by command. |
-| [Benchmark Methodology and Index](benchmarks/README.md) | How to read benchmark results, and the retained v3.1.0 measurements. |
+| [Benchmark Methodology and Index](benchmarks/README.md) | How to read benchmark results, and the retained v5.1.0 measurements. |
 ## Enterprise and procurement
 
 | Document | Purpose |
@@ -277,10 +278,10 @@ Dated records, each bound to its own version and commit. None describes the curr
 | Document | Contents |
 |---|---|
 | [Archive](archive/README.md) | What the archive holds and why |
-| [Audit report, 5.0.1 prep](archive/AUDIT_REPORT_v5.0.1_PREP.md) | Forensic audit before `5.0.1` |
-| [Implementation log, 5.0.1](archive/IMPLEMENTATION_LOG_5.0.1.md) | `5.0.1` implementation record |
+| [Audit report, 5.1.0 prep](archive/AUDIT_REPORT_v5.1.0_PREP.md) | Forensic audit before `5.1.0`
+| [Implementation log, 5.1.0](archive/IMPLEMENTATION_LOG_5.0.1.md) | `5.1.0` implementation record |
 | [Release halted, 5.0.1](archive/RELEASE_HALTED_CRITICAL_ERRORS.md) | Superseded release halt |
-| [Release readiness, 5.0.1](archive/RELEASE_READINESS_v5.0.1.md) | `5.0.1` release decision |
+| [Release readiness, 5.1.0](archive/RELEASE_READINESS_v5.1.0.md) | `5.1.0` release decision |
 | [Integrity seal, 5.0.0](archive/INTEGRITY_SEAL.md) | Verification battery of 2026-09-16 |
 | [State manifest](archive/STATE_MANIFEST.md) | Tree measurement of 2026-09-16 |
 | [Enterprise hardening PR summary](archive/PR_FINAL_ENTERPRISE_HARDENING.md) | PR #157, `4.3.0` |

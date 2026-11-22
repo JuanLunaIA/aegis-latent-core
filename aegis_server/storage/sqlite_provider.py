@@ -291,9 +291,11 @@ class SQLiteStorageProvider(StorageProvider):
     # Write
     # ------------------------------------------------------------------
 
-    async def get_latest_node(self) -> dict[str, Any] | None:
+    async def get_latest_node(self, tenant_id: str | None = None) -> dict[str, Any] | None:
         """
         Return the most recently inserted audit node (highest seq), or None.
+
+        P0.4: Optional tenant_id for interface compatibility (ignored in SQLite).
 
         BLOCKER-01 fix: uses ORDER BY seq DESC LIMIT 1 so callers always
         receive the last node, not the genesis node.
@@ -459,9 +461,11 @@ class SQLiteStorageProvider(StorageProvider):
     # Read
     # ------------------------------------------------------------------
 
-    async def get_node(self, node_hash: str) -> dict[str, Any] | None:
+    async def get_node(self, node_hash: str, tenant_id: str | None = None) -> dict[str, Any] | None:
         """
         Retrieve a node by its SHA-256 hash.
+
+        P0.4: Optional tenant_id for interface compatibility (ignored in SQLite).
 
         Returns:
             Dict compatible with ``StorageNode.from_dict``, or ``None``.

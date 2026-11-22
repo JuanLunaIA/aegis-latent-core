@@ -181,7 +181,14 @@ async def test_write_node_success():
         client_id="client1",
     )
 
-    mock_conn.execute.assert_called_once()
+    # P0.4 RLS: two calls - set_tenant_context + INSERT
+    assert mock_conn.execute.call_count == 2
+    # First call: set_tenant_context
+    first_call = mock_conn.execute.call_args_list[0]
+    assert "set_tenant_context" in str(first_call)
+    # Second call: INSERT
+    second_call = mock_conn.execute.call_args_list[1]
+    assert "INSERT INTO audit_nodes" in str(second_call)
 
 
 @pytest.mark.asyncio
