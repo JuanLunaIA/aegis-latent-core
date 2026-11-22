@@ -2,7 +2,7 @@
 
 **Source version:** `5.0.3`
 **Package identities:** Python `aegis-latent-sdk` / import `aegis_sdk`; npm `aegis-latent-sdk`
-**Status:** the checked-out source baseline is `v5.0.3`, published 2026-10-30 under the Aegis Commercial License 1.0; PyPI `aegis-latent-core` `5.0.3`, PyPI `aegis-latent-sdk` `5.0.3`, npm `aegis-latent-sdk` `5.0.3` and both GHCR images were read back (`docs/RELEASE_STATUS.md` §1.0e). Both `pip install aegis-latent-core` and `pip install aegis-latent-sdk` resolve to `5.0.3`. This guide does not establish production fitness or provider certification.
+**Status:** the checked-out source baseline is `v5.1.0`, published 2026-10-30 under the Aegis Commercial License 1.0; PyPI `aegis-latent-core` `5.0.3`, PyPI `aegis-latent-sdk` `5.0.3`, npm `aegis-latent-sdk` `5.0.3` and both GHCR images were read back (`docs/RELEASE_STATUS.md` §1.0e). Both `pip install aegis-latent-core` and `pip install aegis-latent-sdk` resolve to `5.0.3`. This guide does not establish production fitness or provider certification.
 
 ## 1. Scope
 
