@@ -1,7 +1,7 @@
 # Usage Examples — Aegis Latent Core
 
-**Last verified:** 2026-10-29 UTC
-**Release baseline:** `v5.0.3` is published on GitHub Release, both PyPI distributions, npm SDK and GHCR, read back on 2026-10-30 (see `docs/RELEASE_STATUS.md` §1.0e); both `pip install aegis-latent-core` and `pip install aegis-latent-sdk` resolve to `5.0.3`. `v5.0.2` and earlier remain historical.
+**Last verified:** 2026-11-21 UTC
+**Release baseline:** `v5.1.0` is published on GitHub Release, both PyPI distributions, npm SDK and GHCR, read back on 2026-10-30 (see `docs/RELEASE_STATUS.md` §1.0e); both `pip install aegis-latent-core` and `pip install aegis-latent-sdk` resolve to `5.0.3`. `v5.0.2` and earlier remain historical.
 **Audience:** developers integrating Aegis for the first time
 **Root document:** [`README.md`](../README.md)
 
@@ -32,7 +32,7 @@ disable controls that make records meaningful in production; see
 | --- | --- | --- |
 | Govern calls your code makes | `pip install aegis-latent-core` | `aegis.wrap()` — in-process WAF, redaction, signed ledger |
 | Run a gateway other services call | `pip install aegis-latent-core` | the `aegis` / `aegis-server` console scripts |
-| Run the gateway as a container | `docker pull ghcr.io/juanlunaia/aegis-latent-core:5.0.1` | the same gateway, packaged. GHCR is one gateway channel; PyPI `aegis-latent-core` `5.0.1` is another |
+| Run the gateway as a container | `docker pull ghcr.io/juanlunaia/aegis-latent-core:5.0.1` | the same gateway, packaged. GHCR is one gateway channel; PyPI `aegis-latent-core` `5.1.0` is another |
 | Check a proof someone handed you | `pip install aegis-latent-sdk` | verifiers only — no key, no enforcement |
 | Check a proof from TypeScript | `npm install aegis-latent-sdk` | the same verifiers, Web Crypto |
 

@@ -2,7 +2,7 @@
 
 This document defines how Aegis benchmark results must be interpreted and routes readers to the retained results, including the `v5.0.1` documentation-pass suite. It is for engineers, security reviewers, release owners and procurement evaluators. A benchmark is evidence only for its declared workload, environment, code boundary, sample method and artifact.
 
-**Last verified:** 2026-09-24 UTC
+**Last verified:** 2026-11-21 UTC
 **Source baseline:** `v5.1.0` is checked out; no benchmark was re-run on it. **Release baseline:** `v5.1.0` with fourteen synchronized anchors, published 2026-11-19 on every surface (`docs/RELEASE_STATUS.md` §1.0f). No benchmark below was re-run on `v5.1.0`.
 **Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical and are not `v5.0.1` results.
 **Detailed results:** [`BENCHMARK_RESULTS.md`](BENCHMARK_RESULTS.md)

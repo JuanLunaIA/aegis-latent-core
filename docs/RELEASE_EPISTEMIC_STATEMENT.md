@@ -1,7 +1,7 @@
 # Release Epistemic Statement
 
 **Review date:** 2026-09-15 UTC
-**Source baseline:** `5.0.1`, fourteen synchronized anchors — **published 2026-09-24 on every surface (PyPI `aegis-latent-core` `5.0.1` followed on 2026-09-26)**, read back the same day ([RELEASE_STATUS.md](RELEASE_STATUS.md) §1.0a). The previous release is `v5.0.0`, published 2026-09-16 on every surface except PyPI `aegis-latent-core` (see [RELEASE_STATUS.md](RELEASE_STATUS.md) §1.0)
+**Source baseline:** `5.0.1`, fourteen synchronized anchors — **published 2026-11-19 on every surface (PyPI `aegis-latent-core` `5.1.0` followed on 2026-09-26)**, read back the same day ([RELEASE_STATUS.md](RELEASE_STATUS.md) §1.0a). The previous release is `v5.0.3`, published 2026-11-19 on every surface except PyPI `aegis-latent-core` (see [RELEASE_STATUS.md](RELEASE_STATUS.md) §1.0)
 **Purpose:** a single index of what this release's evidence actually establishes, organized by epistemic status rather than by subsystem. This document adds no new claims; every row links to the document that carries the underlying evidence. Where this document and a linked one disagree, the linked one is authoritative — this is an index, not a second ledger.
 
 ## 1. What IS verified, with evidence locators
@@ -18,7 +18,7 @@
 | SQLite storage-provider fork prevention | `CLM-081`, `tests/storage/test_chain_fork_prevention.py` (SQLite path only — see §2) |
 | Block-buffer panic safety under Miri | `CLM-085`, CI job `Miri Undefined Behaviour` |
 | Full test suite, Linux/glibc, Python 3.11–3.13 | CI jobs `Test (Python 3.11/3.12/3.13)`; see [PLATFORM_COMPATIBILITY.md](PLATFORM_COMPATIBILITY.md) |
-| Fourteen release-contract version anchors agree at `5.0.0` | `python scripts/verify_release_contract.py --root .` → `READY` |
+| Fourteen release-contract version anchors agree at `5.1.0` | `python scripts/verify_release_contract.py --root .` → `READY` |
 | Import reachability: every module is either reached from a real entrypoint or on a declared exception list | `scripts/verify_import_reachability.py`, `scripts/import_reachability_allowlist.txt` |
 
 The full, per-claim register is [CLAIMS_MATRIX.md](CLAIMS_MATRIX.md); this table is a curated entry point, not a substitute for it.

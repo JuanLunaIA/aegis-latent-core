@@ -3,7 +3,7 @@
 One row per surface that a customer, investor, auditor, or agent can read. A
 surface with no canonical source does not get to publish the claim.
 
-**Last verified:** 2026-10-30 UTC
+**Last verified:** 2026-11-21 UTC
 **Current release:** `v5.0.3`, published 2026-10-30; PyPI gateway `5.0.3`
 **Last published release:** `v5.0.3` (2026-10-30), read back on GitHub Release,
 both PyPI distributions, npm SDK and GHCR.

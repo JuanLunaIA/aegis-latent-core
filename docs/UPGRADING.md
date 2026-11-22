@@ -2,7 +2,7 @@
 
 **Audience:** anyone upgrading from a `4.x` release (`4.1.2` was the last `4.x` release) or building from a `4.x` source tree.
 **Scope:** every change between `4.1.2` and the `5.0.0` source target that can break a working deployment or a working integration.
-**Boundary:** this guide covers upgrade mechanics. It makes no claim that `5.0.0` is on any registry; consult [Release Status](RELEASE_STATUS.md) for what is actually published, and never infer publication from a version number appearing here.
+**Boundary:** this guide covers upgrade mechanics. It makes no claim that `5.1.0` is on any registry; consult [Release Status](RELEASE_STATUS.md) for what is actually published, and never infer publication from a version number appearing here.
 
 `5.0.0` is a major version because it breaks the public JSON API. The jump from `4.3.0` skips `4.4.0` deliberately; `4.2.0` was skipped earlier for the same kind of reason. Neither number exists at any surface.
 

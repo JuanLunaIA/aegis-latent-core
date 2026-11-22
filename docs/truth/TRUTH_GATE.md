@@ -50,7 +50,7 @@ date `2026-10-21`.
 | Exception | Why it exists | Owner | Expiry |
 | --- | --- | --- | --- |
 | `aegisweb/src/data/sections/pricing.ts` is not scanned by `audit-claims.mjs` | The route imports a small subset of `PRICING_COPY`; the file still contains unused legacy plan/FAQ strings that mention unbacked features. The rendered surface is quote-only and is scanned. | web owner | 2026-11-30 |
-| `README.md`, `NOTICE`, `COMMERCIAL.md`, `docs/CLAIMS_MATRIX.md` may name the historical licence | These are the licence-boundary documents that must say what `5.0.2` shipped with. They are not a claim that `5.0.3` is under that licence. | release owner | no expiry; scoped to the boundary docs |
+| `README.md`, `NOTICE`, `COMMERCIAL.md`, `docs/CLAIMS_MATRIX.md` may name the historical licence | These are the licence-boundary documents that must say what `5.1.0` shipped with. They are not a claim that `5.1.0` is under that licence. | release owner | no expiry; scoped to the boundary docs |
 | `investor_packs/**`, `evidence/**`, `site/**` are not rewritten | Historical artifacts keep the text they shipped with; they are not current claims. They must not be linked as current evidence. | founder | no expiry |
 | Social profiles and third-party listings are not repository-controlled | They must be updated from this map before any campaign; the repository cannot gate them. | founder | 2026-11-15 |
 

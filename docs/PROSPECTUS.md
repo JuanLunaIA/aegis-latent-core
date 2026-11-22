@@ -3,7 +3,7 @@
 
 This prospectus is for US enterprise platform, AppSec, AI engineering, compliance, legal and procurement teams evaluating Aegis. It explains the product category, evidence wedge, measured boundaries and recommended evaluation path. It is not a certification, legal opinion, production SLO, warranty or binding commercial offer.
 
-**Last verified:** 2026-09-24 UTC
+**Last verified:** 2026-11-21 UTC
 
 ## Baseline note
 

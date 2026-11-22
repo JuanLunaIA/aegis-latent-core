@@ -1,8 +1,8 @@
 # Rust Extension Build Guide
 
-**Last verified:** 2026-08-27 UTC
+**Last verified:** 2026-11-21 UTC
 **Release baseline:** four-layer truth model
-**Source baseline:** Rust and Python package metadata is synchronized at `v5.0.3`, published 2026-10-30 on GitHub Release, both PyPI distributions, npm SDK and GHCR; the PyPI gateway distribution is published at `5.0.3` (`docs/RELEASE_STATUS.md` §1.0e). `v5.0.2` is the previous published release.
+**Source baseline:** Rust and Python package metadata is synchronized at `v5.0.3`, published 2026-11-19 on GitHub Release, both PyPI distributions, npm SDK and GHCR; the PyPI gateway distribution is published at `5.1.0` (`docs/RELEASE_STATUS.md` §1.0e). `v5.0.2` is the previous published release.
 **Immutable comparison source:** `fdace8844568eb788216740b2cb5daf187d99d3b` retains the historical `4.0.0` comparison anchors documented by [`evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md`](../evidence/v4_0_0_post_merge_release_readiness_2026-08-25.md)
 **External lifecycle boundary:** source metadata and a successful local build do not prove a tag, GitHub Release, registry package, OCI image, deployment, or acceptance; verify each surface by external readback
 **Historical evidence baseline:** previously published `v3.1.0` artifacts remain historical

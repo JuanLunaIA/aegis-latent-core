@@ -8,7 +8,7 @@ Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 **Audience:** the owner, counsel, procurement reviewers and anyone deciding which terms apply to which copy of Aegis Latent Core.
 **Scope:** what changed when the `5.0.2` source line moved to the Apache License, Version 2.0; which published copies keep which terms; what was changed in the repository; and what only the owner or counsel can decide.
-**Boundary:** a factual record of a repository change and a list of open questions. It is not a legal opinion, not a relicensing instrument, and not evidence that `5.0.2` is published.
+**Boundary:** a factual record of a repository change and a list of open questions. It is not a legal opinion, not a relicensing instrument, and not evidence that `5.1.0` is published.
 
 > **[COUNSEL-REVIEW-REQUIRED]** Prepared by an AI agent for the owner and qualified counsel. It is not legal advice, has not been reviewed by a lawyer, has not been offered to anyone, and nobody has signed it. The relicensing authority described below rests on the owner's written instruction and on the repository's own statements; counsel has not confirmed it.
 

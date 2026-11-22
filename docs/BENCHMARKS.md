@@ -8,7 +8,7 @@ Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 This document is the public benchmark and measurement record for the `v5.1.0` source baseline and for the retained `v3.1.0` release measurements. The most recent measurements were taken on the `v5.0.1` tree on 2026-09-24 and were not re-run for `5.0.2`. It routes readers to detailed methods and retained artifacts while preserving workload, environment and interpretation boundaries. The numbers below are named measurements, not production capacity, availability SLOs, universal WAF rates or cryptographic proofs.
 
-**Last verified:** 2026-10-30 UTC
+**Last verified:** 2026-11-21 UTC
 **Source baseline:** `v5.1.0` is checked out; no benchmark was re-run on it. **Release baseline:** `v5.1.0` with fourteen synchronized anchors, published 2026-11-19 on every surface (`docs/RELEASE_STATUS.md` §1.0f). The retained measurements were taken on the `v5.0.1` tree; no benchmark was re-run on `v5.1.0`.
 **Historical evidence baseline:** retained `v3.1.0` artifacts and measurements remain historical and are not `v5.0.1` results.
 **Detailed methods and results:** [`docs/benchmarks/BENCHMARK_RESULTS.md`](benchmarks/BENCHMARK_RESULTS.md)

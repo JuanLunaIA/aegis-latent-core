@@ -91,7 +91,7 @@ Stated intent: acknowledgement within seven days, assessment within fourteen. No
 
 Fixes target the versions listed in [SECURITY.md](../../SECURITY.md). Older versions receive nothing.
 
-**Check which artifact you are actually running.** The SDK is `5.0.1` on **both** PyPI and npm, and the gateway image is on GHCR at tag `5.0.1` (readback 2026-09-24). **PyPI `aegis-latent-core` followed on 2026-09-26** (readback 2026-09-29): it was never published at `5.0.0`, and it now resolves to `5.0.1`. A pinned `4.1.2` install has older behavior, so check `pip show aegis-latent-core`. See [Release Status](../RELEASE_STATUS.md) §1.0b.
+**Check which artifact you are actually running.** The SDK is `5.0.1` on **both** PyPI and npm, and the gateway image is on GHCR at tag `5.0.1` (readback 2026-09-24). **PyPI `aegis-latent-core` followed on 2026-09-26** (readback 2026-09-29): it was never published at `5.1.0`, and it now resolves to `5.0.1`. A pinned `4.1.2` install has older behavior, so check `pip show aegis-latent-core`. See [Release Status](../RELEASE_STATUS.md) §1.0b.
 
 ---
 

@@ -9,7 +9,7 @@ Licensed under the Aegis Commercial License 1.0; see LICENSE and NOTICE.
 
 **Audiencia:** equipos de plataforma, AppSec, AI engineering, compliance, legal y procurement
 **Estado:** prospecto de producto. No es certificación, dictamen legal, SLO ni oferta comercial vinculante.
-**Last verified:** 2026-09-24 UTC
+**Last verified:** 2026-11-21 UTC
 **Línea base de código:** `5.1.0` con catorce anclas sincronizadas — un objetivo de código bajo la Aegis Commercial License 1.0 (`LicenseRef-Aegis-Commercial-1.0`) **sin readback de publicación**. La release publicada más reciente es `5.0.3` (2026-10-30; GitHub Release, ambas distribuciones PyPI, npm y GHCR verificados — `docs/RELEASE_STATUS.md` §1.0e); antes, `5.0.2` (2026-10-01, Apache-2.0).
 **Líneas base externas históricas:** tags anotado firmado `v4.0.2` (`a6eb58dcc03f8b638c8f3e35f0300f5443a926ca`) y ligero `v4.0.1` (`6469904380218584ae0b5221334bc9a46500f5ba`, workflows fallidos); las lecturas por superficie y las líneas base vigentes se declaran una sola vez en [`docs/RELEASE_STATUS.md`](RELEASE_STATUS.md) §1.0–§1.1
 

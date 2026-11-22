@@ -85,7 +85,7 @@ These are prohibited in every channel, to every audience, regardless of who is a
 | Production-ready | Source baseline; target acceptance required |
 | Guaranteed, SLA, uptime | No service level exists outside an executed agreement |
 | Enterprise-grade, best-in-class, unmatched | Say what it does |
-| `pip install aegis-latent-core` gets 5.0.1 | Correct since 2026-09-26 (`CLM-113`); it gave `4.1.2` before that, and `5.0.0` was never on PyPI. SDKs are at `5.0.1` on both registries |
+| `pip install aegis-latent-core` gets 5.0.1 | Correct since 2026-09-26 (`CLM-113`); it gave `4.1.2` before that, and `5.0.0` was never on PyPI. SDKs are at `5.1.0` on both registries |
 
 Full list: [Style Guide §3](../STYLE_GUIDE.md#3-prohibited-language) and [Unsupported Claims](../institutional/UNSUPPORTED_CLAIMS.md).
 
