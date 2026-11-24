@@ -7,8 +7,8 @@ transforms, writes only when changed, and reports a diff summary.
 
 Scope of this engine (mechanical only — human judgment decides the rest):
 * align superseded baseline version tokens (4.1.2 / 5.0.0 / 5.0.1 / 5.0.3) ->
-  5.1.0, leaving historical framing (published / read back / most recent /
-  prior / legacy / superseded / retained / frozen) untouched.
+  5.1.0, but ONLY when the token is presented as the current checked-out
+  source baseline and is NOT framed as a historical/published release.
 * ensure a final newline.
 * report (never auto-remove) prohibited phrases and placeholders; those need a
   reviewer decision per docs/STYLE_GUIDE.md sections 3 and 11.
@@ -23,6 +23,18 @@ CURRENT_VERSION = "5.1.0"
 # 5.0.3 is the immediately preceding baseline that surfaces as "checked out" in
 # many docs and must be realigned to 5.1.0.
 SUPERSEDED = ("4.1.2", "5.0.0", "5.0.1", "5.0.3")
+
+# Present-as-current-baseline indicators (required for a replacement).
+_CURRENT_CONTEXT_RE = re.compile(
+    r"\b(?:baseline|source|checked.out|current|target|synchronized)\b",
+    re.IGNORECASE,
+)
+
+# Historical/published framing (forbids replacement of the token).
+_HISTORICAL_CONTEXT_RE = re.compile(
+    r"\b(?:published|released|read ?back|historical|prior|legacy|superseded|retained|frozen)\b",
+    re.IGNORECASE,
+)
 
 # Phrases that must never be asserted as fact (STYLE_GUIDE.md section 3).
 PROHIBITED = (
@@ -48,16 +60,23 @@ PLACEHOLDER_RE = re.compile(
 def align_version_tokens(line: str, current: str = CURRENT_VERSION) -> str:
     """Replace a superseded version presented as current baseline.
 
-    Only touches a superseded token when it is NOT framed as historical
-    (published / read back / most recent / prior / legacy / superseded /
-    retained / frozen).
+    A superseded token is replaced only when the line presents it as the
+    current checked-out/source baseline (baseline/source/checked-out/current/
+    target/synchronized) AND the line does not frame it as a historical or
+    published release (published/released/read back/historical/prior/legacy/
+    superseded/retained/frozen).
     """
+    if not _CURRENT_CONTEXT_RE.search(line):
+        return line
     for sup in SUPERSEDED:
-        pattern = re.compile(
-            rf"\bv?{re.escape(sup)}\b(?![^.]*\b(?:published|read ?back|most recent|historical|prior|legacy|superseded|retained|frozen)\b)",
-            re.IGNORECASE,
-        )
-        line = pattern.sub(current, line)
+        pattern = re.compile(rf"\bv?{re.escape(sup)}\b", re.IGNORECASE)
+
+        def repl(m: re.Match[str], _sup: str = sup) -> str:
+            if _HISTORICAL_CONTEXT_RE.search(line):
+                return m.group(0)
+            return current
+
+        line = pattern.sub(repl, line)
     return line
 
 

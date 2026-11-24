@@ -15,3 +15,8 @@ def test_version_alignment_replaces_stale_baseline_token() -> None:
     result = align_version_tokens(line, current="5.1.0")
     assert "5.1.0" in result
     assert "v5.0.3" not in result or "historical" in result or "superseded" in result
+
+
+def test_version_alignment_preserves_historical_framing() -> None:
+    hist = "Published 2026-10-30 on GitHub Release, both PyPI distributions at v5.0.3"
+    assert align_version_tokens(hist) == hist, "historical framing must be preserved"
