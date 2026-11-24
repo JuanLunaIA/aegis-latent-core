@@ -42,5 +42,5 @@ The output is the record. No commit message or file claims authorship beyond it.
 ## Open question for counsel
 
 Does the current `CLA.md` and `AUTHORS` combination give the owner sufficient
-rights to license v5.0.3 commercially in the target markets, or is a separate
+rights to license 5.1.0 commercially in the target markets, or is a separate
 assignment or opinion required for agent-assisted material?

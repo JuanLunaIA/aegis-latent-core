@@ -337,7 +337,7 @@ No components in this bucket.
 | @acemir/cssom | 0.9.31 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | @adobe/css-tools | 4.5.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | @anthropic-ai/sdk | 0.123.0 | npm | direct | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
-| @asamuzakjp/css-color | 4.1.2 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
+| @asamuzakjp/css-color | 5.1.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | @asamuzakjp/dom-selector | 6.8.1 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | @asamuzakjp/nwsapi | 2.3.9 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | @babel/code-frame | 7.29.7 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
@@ -431,7 +431,7 @@ No components in this bucket.
 | @vitest/spy | 4.1.11 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | @vitest/utils | 4.1.11 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | agent-base | 7.1.4 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
-| ansi-regex | 5.0.1 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
+| ansi-regex | 5.1.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | ansi-styles | 5.2.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | aria-query | 5.3.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares Apache-2.0 |
 | assertion-error | 2.0.1 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
@@ -527,7 +527,7 @@ No components in this bucket.
 | react-redux | 9.3.0 | npm | transitive | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
 | recharts | 3.10.1 | npm | direct | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
 | redent | 3.0.0 | npm | transitive | Unmaintained | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
-| redux | 5.0.1 | npm | transitive | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
+| redux | 5.1.0 | npm | transitive | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
 | redux-thunk | 3.1.0 | npm | transitive | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
 | require-from-string | 2.0.2 | npm | transitive | Unmaintained | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | reselect | 5.2.0 | npm | transitive | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
@@ -565,15 +565,15 @@ No components in this bucket.
 | vite | 8.2.2 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | vitest | 4.1.11 | npm | direct | Medium CVE | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | vitest-axe | 0.1.0 | npm | direct | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
-| w3c-xmlserializer | 5.0.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
+| w3c-xmlserializer | 5.1.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | webidl-conversions | 8.0.1 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares BSD-2-Clause |
 | whatwg-encoding | 3.1.1 | npm | transitive | Deprecated | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | whatwg-mimetype | 4.0.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
-| whatwg-mimetype | 5.0.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
+| whatwg-mimetype | 5.1.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | whatwg-url | 15.1.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | why-is-node-running | 2.3.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | ws | 8.21.3 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
-| xml-name-validator | 5.0.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares Apache-2.0 |
+| xml-name-validator | 5.1.0 | npm | transitive | — | informational | BUCKET-6 | document and close | development/build-only dependency, declares Apache-2.0 |
 | xmlchars | 2.2.0 | npm | transitive | Unmaintained | informational | BUCKET-6 | document and close | development/build-only dependency, declares MIT |
 | zod | 4.5.4 | npm | direct | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |
 | annotated-doc | 0.0.5 | pypi | transitive | — | informational | BUCKET-6 | document and close | no advisory, no copyleft, no registered sink |

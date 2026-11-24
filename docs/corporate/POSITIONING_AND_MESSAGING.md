@@ -40,7 +40,7 @@ That sentence carries the three things that matter: **ordering**, **verifiabilit
 
 **Do not lead with:** compliance, cryptography theory, or enterprise framing.
 
-**Be honest early about:** `pending-terminal` semantics, one worker per WAL path, and that the gateway distribution reached PyPI only on 2026-09-26, three days after the other surfaces: anyone who read older material may still expect `pip install aegis-latent-core` to give `4.1.2`. It now gives `5.0.1`, the same version as the SDKs on both registries.
+**Be honest early about:** `pending-terminal` semantics, one worker per WAL path, and that the gateway distribution reached PyPI only on 2026-09-26, three days after the other surfaces: anyone who read older material may still expect `pip install aegis-latent-core` to give `5.1.0`. It now gives `5.1.0`, the same version as the SDKs on both registries.
 
 ### Security reviewers
 
@@ -56,7 +56,7 @@ That sentence carries the three things that matter: **ordering**, **verifiabilit
 
 **They care about:** licence, support, continuity, assurance artifacts, and risk.
 
-**Lead with:** self-hosted custody, the source-available licence (Aegis Commercial License 1.0 from `v5.0.3`), and the disqualifier list.
+**Lead with:** self-hosted custody, the source-available licence (Aegis Commercial License 1.0 from `5.1.0`), and the disqualifier list.
 
 **Be honest early about:** no certification, no SLA, single maintainer.
 
@@ -85,7 +85,7 @@ These are prohibited in every channel, to every audience, regardless of who is a
 | Production-ready | Source baseline; target acceptance required |
 | Guaranteed, SLA, uptime | No service level exists outside an executed agreement |
 | Enterprise-grade, best-in-class, unmatched | Say what it does |
-| `pip install aegis-latent-core` gets 5.0.1 | Correct since 2026-09-26 (`CLM-113`); it gave `4.1.2` before that, and `5.0.0` was never on PyPI. SDKs are at `5.0.1` on both registries |
+| `pip install aegis-latent-core` gets 5.1.0 | Correct since 2026-09-26 (`CLM-113`); it gave `5.1.0` before that, and `5.1.0` was never on PyPI. SDKs are at `5.1.0` on both registries |
 
 Full list: [Style Guide §3](../STYLE_GUIDE.md#3-prohibited-language) and [Unsupported Claims](../institutional/UNSUPPORTED_CLAIMS.md).
 

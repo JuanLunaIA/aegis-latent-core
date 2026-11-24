@@ -554,7 +554,7 @@ fixed. Every check and its result is in
 **Remediation (2026-09-24, PR #205): the halt is resolved in source.** Every
 blocker and every open finding above was fixed, and ten more were found and
 fixed along the way. The current state is
-[`RELEASE_READINESS_v5.0.1.md`](docs/archive/RELEASE_READINESS_v5.0.1.md), and the
+[`RELEASE_READINESS_v5.1.0.md`](docs/archive/RELEASE_READINESS_v5.1.0.md), and the
 per-item evidence is `evidence/registry/reg-d67_d86_closure.txt`. The owner
 then merged it and authorized the release recorded above.
 

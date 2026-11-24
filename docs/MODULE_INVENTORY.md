@@ -2,7 +2,7 @@
 
 Every file under the six source roots, with what it is, what reaches it, what tests it, and who owns it. Generated — edit `scripts/generate_module_inventory.py`, not this file. Currency is enforced by `tests/test_module_inventory_current.py`.
 
-`python scripts/generate_module_inventory.py` — 341 files.
+`python scripts/generate_module_inventory.py` — 342 files.
 
 ## What the status column means
 
@@ -18,9 +18,9 @@ Every file under the six source roots, with what it is, what reaches it, what te
 
 ## Coverage and ownership
 
-- **Navigation coverage:** 70 of 341 files (21%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
-- **Status counts:** `allowlisted` 76, `n/a` 1, `reachable` 140, `referenced` 72, `roadmap-omit` 34, `unreferenced` 18.
-- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 341 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
+- **Navigation coverage:** 70 of 342 files (20%) are named in a navigation source (`llms.txt`, `docs/REPOSITORY_MAP.md`, `AGENTS.md`, `README.md`, `SECURITY.md`, `docs/architecture/ARCHITECTURE.md`, and `.aegis_ai_context/`). The rest are reachable from these tables alone, which is the point of the inventory.
+- **Status counts:** `allowlisted` 76, `n/a` 1, `reachable` 140, `referenced` 72, `roadmap-omit` 34, `unreferenced` 19.
+- **Ownership:** resolved from `.github/CODEOWNERS` by longest path prefix. `@JuanLunaIA` 342 files. This is a single accountable owner, as CODEOWNERS itself states, not a staffed review team — per-module maintainers cannot be named until one exists, so no row invents one.
 
 Tests are the test files that import the module directly, capped at 4 per row; the count is exact, the list is not exhaustive.
 
@@ -282,10 +282,10 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `aegis_server/crypto/keyring.py` | module | Versioned HMAC keyring with atomic, fail-closed configuration reload. | reachable | `tests/test_keyring_rotation.py` | @JuanLunaIA |
 | `aegis_server/crypto/vault_signer.py` | module | aegis_server.crypto.vault_signer — HashiCorp Vault Transit Engine signing provider. | reachable | `tests/test_vault_signer_new.py`, `tests/test_zz_server_factory_additional.py` | @JuanLunaIA |
 | `aegis_server/main.py` | module | aegis_server.main — Enterprise FastAPI application entry point. | reachable | `tests/test_enterprise_body_limits.py`, `tests/test_enterprise_durable_evidence.py`, `tests/test_error_response_hygiene.py`, `tests/test_main_new.py` | @JuanLunaIA |
-| `aegis_server/storage/__init__.py` | package | aegis_server.storage — Pluggable async audit node persistence layer. | reachable | `tests/test_security_fixes.py`, `tests/test_server_factory.py`, `tests/test_zz_server_factory_additional.py` | @JuanLunaIA |
-| `aegis_server/storage/base.py` | module | aegis_server.storage.base — Abstract storage provider interface and shared data models. | reachable | `tests/storage/test_chain_fork_prevention.py`, `tests/test_dynamodb_concurrent_append_race.py`, `tests/test_postgres_concurrent_append_race.py`, `tests/test_storage_base_new.py` | @JuanLunaIA |
+| `aegis_server/storage/__init__.py` | package | aegis_server.storage — Pluggable async audit node persistence layer. | reachable | `tests/storage/test_rls_sql_generation.py`, `tests/test_security_fixes.py`, `tests/test_server_factory.py`, `tests/test_zz_server_factory_additional.py` | @JuanLunaIA |
+| `aegis_server/storage/base.py` | module | aegis_server.storage.base — Abstract storage provider interface and shared data models. | reachable | `tests/storage/test_chain_fork_prevention.py`, `tests/storage/test_rls_sql_generation.py`, `tests/test_dynamodb_concurrent_append_race.py`, `tests/test_postgres_concurrent_append_race.py`, … (+1 more)` | @JuanLunaIA |
 | `aegis_server/storage/dynamodb_provider.py` | module | aegis_server.storage.dynamodb_provider — AWS DynamoDB audit node persistence. | reachable | `tests/test_dynamodb_concurrent_append_race.py`, `tests/test_dynamodb_provider_new.py`, `tests/test_zz_dynamodb_additional.py`, `tests/test_zz_server_factory_additional.py` | @JuanLunaIA |
-| `aegis_server/storage/postgres_provider.py` | module | aegis_server.storage.postgres_provider — PostgreSQL audit node persistence. | reachable | `tests/test_postgres_concurrent_append_race.py`, `tests/test_postgres_provider_new.py`, `tests/test_zz_server_factory_additional.py` | @JuanLunaIA |
+| `aegis_server/storage/postgres_provider.py` | module | aegis_server.storage.postgres_provider — PostgreSQL audit node persistence. | reachable | `tests/storage/test_rls_cross_tenant.py`, `tests/storage/test_rls_sql_generation.py`, `tests/test_postgres_concurrent_append_race.py`, `tests/test_postgres_provider_new.py`, … (+1 more)` | @JuanLunaIA |
 | `aegis_server/storage/sqlite_provider.py` | module | aegis_server.storage.sqlite_provider — SQLite audit node persistence. | reachable | `tests/storage/test_chain_fork_prevention.py`, `tests/test_server_factory.py`, `tests/test_sqlite_additional.py`, `tests/test_sqlite_provider_new.py` | @JuanLunaIA |
 | `integrations/__init__.py` | package | — | allowlisted | — | @JuanLunaIA |
 | `integrations/huggingface_plugin.py` | module | integrations.huggingface_plugin — HuggingFace Transformers hook for Aegis. | allowlisted | — | @JuanLunaIA |
@@ -300,6 +300,7 @@ Every open roadmap ticket, its owner, and the ticket's own `Proposed solution` q
 | `scripts/collect_github_security_status.sh` | shell script | — | unreferenced | — | @JuanLunaIA |
 | `scripts/container_smoke_test.py` | module | Run the built gateway image the way the hardened deployment does, and prove it serves. | referenced | — | @JuanLunaIA |
 | `scripts/create_github_release.py` | module | Create one GitHub Release through a create-only, integrity-checked gh CLI surface. | referenced | — | @JuanLunaIA |
+| `scripts/docs_update_engine.py` | module | Idempotent documentation text transformations for the 5.1.0 baseline pass. | unreferenced | — | @JuanLunaIA |
 | `scripts/extract_release_notes.py` | module | Extract one exact, non-empty stable-version section from CHANGELOG.md. | referenced | — | @JuanLunaIA |
 | `scripts/generate_ai_context_manifest.py` | module | Generate the deterministic manifest for the advisory AI context pack. | referenced | — | @JuanLunaIA |
 | `scripts/generate_commercial_license.py` | module | Vendor tool: mint and sign an entitlement token. | referenced | — | @JuanLunaIA |

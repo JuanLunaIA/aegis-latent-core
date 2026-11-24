@@ -30,7 +30,7 @@ python deploy/azure/kit-creator/aegis_azure_kit.py <command>
 | `--ssh-key` | `~/.ssh/id_ed25519.pub` | Public key only; a private key is refused |
 | `--ssh-source` | `auto` | `auto` opens SSH to your current IP only, `none` opens no SSH, or give a CIDR. `0.0.0.0/0` is refused |
 | `--budget`, `--email` | off | Monthly budget with alerts at 50, 80 and 95 % actual and 100 % forecast. Alerts notify; Azure does not stop spend |
-| `--image` | `ghcr.io/juanlunaia/aegis-latent-core:5.0.1` | Accepts `repo@sha256:<digest>`; pin a digest for reproducibility |
+| `--image` | `ghcr.io/juanlunaia/aegis-latent-core:5.1.0` | Accepts `repo@sha256:<digest>`; pin a digest for reproducibility |
 | `--provider`, `--backend-url` | `openai`, `https://api.openai.com` | HTTPS only |
 | `--zone`, `--data-disk-gb` | none, `32` | |
 
