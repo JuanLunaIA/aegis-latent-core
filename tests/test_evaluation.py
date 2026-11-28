@@ -67,9 +67,7 @@ async def test_report_is_deterministic_and_never_contains_raw_corpus_text() -> N
     assert b"buyer@example.test" not in raw
     assert b"123-45-6789" not in raw
     assert b"synthetic-email" in raw
-    measurement = next(
-        check for check in report.checks if check.id == "redaction_measurement"
-    )
+    measurement = next(check for check in report.checks if check.id == "redaction_measurement")
     row = measurement.evidence["rows"][0]
     assert row["misses"] == []
     assert row["observed"] == ["EMAIL", "SSN"]

@@ -6,6 +6,7 @@ This module exercises real mechanisms with synthetic local fixtures. It is not
 customer acceptance, an independent root channel, or a production assessment.
 Reports never contain raw corpus text or credentials.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -27,6 +28,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 from fastapi import FastAPI
+from pydantic import SecretStr
 from starlette.testclient import TestClient
 
 from aegis_server import __version__ as _source_version
@@ -126,7 +128,7 @@ def _settings() -> Any:
     workdir = tempfile.mkdtemp(prefix="aegis-evaluation-enterprise-")
     return EnterpriseSettings(
         signer_provider="hmac",
-        hmac_signing_key="e" * 32,
+        hmac_signing_key=SecretStr("e" * 32),
         storage_provider="sqlite",
         sqlite_path=str(Path(workdir) / "audit.db"),
         auth_disabled=True,
@@ -208,7 +210,9 @@ def _non_streaming_ordering() -> tuple[bool, dict[str, Any]]:
         "evidence_header": result.headers.get("X-Aegis-Evidence-Status"),
         "durable_writes": calls,
     }
-    return result.status_code == 200 and calls == 1 and evidence["evidence_header"] == "durable", evidence
+    return result.status_code == 200 and calls == 1 and evidence[
+        "evidence_header"
+    ] == "durable", evidence
 
 
 def _evidence_failure() -> tuple[bool, dict[str, Any]]:
@@ -274,7 +278,9 @@ def _rejection_evidence() -> tuple[bool, dict[str, Any]]:
         "integrity_error_index": error_index,
         "hostile_payload_stored": b"synthetic hostile input" in raw,
     }
-    return node.status == "rejected" and chained and valid and not evidence["hostile_payload_stored"], evidence
+    return node.status == "rejected" and chained and valid and not evidence[
+        "hostile_payload_stored"
+    ], evidence
 
 
 def _sse_event(content: str) -> tuple[bytes, dict[str, Any]]:
@@ -299,12 +305,17 @@ async def _streaming_success() -> dict[str, Any]:
         await release.wait()
 
     proxy = BoundedStreamProxy(
-        upstream(), terminal_commit=commit, max_response_bytes=4096,
-        max_duration_seconds=2, max_event_bytes=1024, queue_max_items=2, queue_max_bytes=2048,
+        upstream(),
+        terminal_commit=commit,
+        max_response_bytes=4096,
+        max_duration_seconds=2,
+        max_event_bytes=1024,
+        queue_max_items=2,
+        queue_max_bytes=2048,
     )
     iterator = proxy.__aiter__()
     first = await anext(iterator)
-    pending = asyncio.create_task(anext(iterator))
+    pending: asyncio.Future[bytes] = asyncio.ensure_future(anext(iterator))
     await asyncio.wait_for(started.wait(), timeout=1)
     blocked_before_commit = not pending.done()
     release.set()
@@ -328,8 +339,13 @@ async def _streaming_commit_failure() -> bool:
         raise OSError("synthetic fsync failure")
 
     proxy = BoundedStreamProxy(
-        upstream(), terminal_commit=fail_commit, max_response_bytes=4096,
-        max_duration_seconds=2, max_event_bytes=1024, queue_max_items=2, queue_max_bytes=2048,
+        upstream(),
+        terminal_commit=fail_commit,
+        max_response_bytes=4096,
+        max_duration_seconds=2,
+        max_event_bytes=1024,
+        queue_max_items=2,
+        queue_max_bytes=2048,
     )
     output = b"".join([part async for part in proxy])
     return b"hello" in output and b"[DONE]" not in output
@@ -339,7 +355,9 @@ async def _streaming() -> tuple[bool, dict[str, Any]]:
     success = await _streaming_success()
     withheld = await _streaming_commit_failure()
     evidence = {**success, "done_withheld_on_commit_failure": withheld}
-    return all((success["terminal_marker_after_commit"], success["response_hash_matches"], withheld)), evidence
+    return all(
+        (success["terminal_marker_after_commit"], success["response_hash_matches"], withheld)
+    ), evidence
 
 
 def measure_redaction(corpus: Sequence[dict[str, Any]]) -> dict[str, Any]:
@@ -366,19 +384,25 @@ def measure_redaction(corpus: Sequence[dict[str, Any]]) -> dict[str, Any]:
         phi_result = phi.scrub(text)
         pci_result = pci.scan(text)
         counts = dict(phi_result.hits)
-        for label, count in (("PAN", pci_result.pan_count), ("CVV", pci_result.cvv_count), ("TRACK_DATA", pci_result.track_count)):
+        for label, count in (
+            ("PAN", pci_result.pan_count),
+            ("CVV", pci_result.cvv_count),
+            ("TRACK_DATA", pci_result.track_count),
+        ):
             if count:
                 counts[label] = count
         observed = set(counts)
-        rows.append({
-            "id": identifier[:80],
-            "text_sha256": hashlib.sha256(text.encode()).hexdigest(),
-            "expected": sorted(expected_set),
-            "observed": sorted(observed),
-            "misses": sorted(expected_set - observed),
-            "unexpected": sorted(observed - expected_set),
-            "hits": counts,
-        })
+        rows.append(
+            {
+                "id": identifier[:80],
+                "text_sha256": hashlib.sha256(text.encode()).hexdigest(),
+                "expected": sorted(expected_set),
+                "observed": sorted(observed),
+                "misses": sorted(expected_set - observed),
+                "unexpected": sorted(observed - expected_set),
+                "hits": counts,
+            }
+        )
     misses = sum(len(row["misses"]) for row in rows)
     return {"sample_count": len(rows), "miss_count": misses, "rows": rows}
 
@@ -390,8 +414,16 @@ def _redaction_outcome(corpus: Sequence[dict[str, Any]]) -> tuple[bool, dict[str
 
 def _default_corpus() -> list[dict[str, Any]]:
     return [
-        {"id": "synthetic-contact", "text": "Email buyer@example.test and SSN 123-45-6789", "expected": ["EMAIL", "SSN"]},
-        {"id": "synthetic-card", "text": "Card 4111 1111 1111 1111 CVV: 123", "expected": ["ACCOUNT", "PAN", "CVV"]},
+        {
+            "id": "synthetic-contact",
+            "text": "Email buyer@example.test and SSN 123-45-6789",
+            "expected": ["EMAIL", "SSN"],
+        },
+        {
+            "id": "synthetic-card",
+            "text": "Card 4111 1111 1111 1111 CVV: 123",
+            "expected": ["ACCOUNT", "PAN", "CVV"],
+        },
     ]
 
 
@@ -408,40 +440,72 @@ async def _tenant_negative() -> tuple[bool, dict[str, Any]]:
         app = FastAPI()
 
         async def tenant_auth() -> Principal:
-            return Principal(subject="auditor", tenant_id="tenant-a", roles=frozenset({Role.AUDIT_READER}), scopes=frozenset({SCOPE_AUDIT_READ}), auth_method="evaluation")
+            return Principal(
+                subject="auditor",
+                tenant_id="tenant-a",
+                roles=frozenset({Role.AUDIT_READER}),
+                scopes=frozenset({SCOPE_AUDIT_READ}),
+                auth_method="evaluation",
+            )
 
-        app.include_router(build_audit_router(ledger, auth_dependency=tenant_auth), prefix="/v1/audit")
+        app.include_router(
+            build_audit_router(ledger, auth_dependency=tenant_auth), prefix="/v1/audit"
+        )
 
         async def request_all() -> dict[str, Any]:
-            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://evaluation") as client:
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://evaluation"
+            ) as client:
                 listing = await client.get("/v1/audit/nodes")
                 crossing = await client.get("/v1/audit/nodes", params={"tenant_id": "tenant-b"})
                 direct = await client.get(f"/v1/audit/nodes/{other.node_hash}")
                 tenants = await client.get("/v1/audit/tenants")
-            return {"listing_status": listing.status_code, "listing_tenants": [row["tenant_id"] for row in listing.json()], "cross_tenant_status": crossing.status_code, "direct_cross_tenant_status": direct.status_code, "tenant_listing_status": tenants.status_code}
+            return {
+                "listing_status": listing.status_code,
+                "listing_tenants": [row["tenant_id"] for row in listing.json()],
+                "cross_tenant_status": crossing.status_code,
+                "direct_cross_tenant_status": direct.status_code,
+                "tenant_listing_status": tenants.status_code,
+            }
 
         evidence = await request_all()
         ledger.close()
-    ok = evidence["listing_status"] == 200 and evidence["listing_tenants"] == ["tenant-a"] and evidence["cross_tenant_status"] == 403 and evidence["direct_cross_tenant_status"] == 404 and evidence["tenant_listing_status"] == 403
+    ok = (
+        evidence["listing_status"] == 200
+        and evidence["listing_tenants"] == ["tenant-a"]
+        and evidence["cross_tenant_status"] == 403
+        and evidence["direct_cross_tenant_status"] == 404
+        and evidence["tenant_listing_status"] == 403
+    )
     return ok, evidence
 
 
-async def _automatic(identifier: str, summary: str, function: Callable[[], Any], limitations: list[str] | None = None) -> CheckResult:
+async def _automatic(
+    identifier: str, summary: str, function: Callable[[], Any], limitations: list[str] | None = None
+) -> CheckResult:
     try:
         outcome = function()
         if inspect.isawaitable(outcome):
             outcome = await outcome
         passed, evidence = outcome
-        return CheckResult(identifier, "passed" if passed else "failed", summary, evidence, limitations or [])
+        return CheckResult(
+            identifier, "passed" if passed else "failed", summary, evidence, limitations or []
+        )
     except Exception as exc:
-        return CheckResult(identifier, "failed", summary, {"error_type": type(exc).__name__}, limitations or [])
+        return CheckResult(
+            identifier, "failed", summary, {"error_type": type(exc).__name__}, limitations or []
+        )
 
 
-def _manual(identifier: str, summary: str, evidence: dict[str, Any], limitation: str) -> CheckResult:
+def _manual(
+    identifier: str, summary: str, evidence: dict[str, Any], limitation: str
+) -> CheckResult:
     return CheckResult(identifier, "manual_required", summary, evidence, [limitation])
 
 
-async def run_evaluation(*, workflow: str, redaction_corpus: Sequence[dict[str, Any]] | None = None) -> EvaluationReport:
+async def run_evaluation(
+    *, workflow: str, redaction_corpus: Sequence[dict[str, Any]] | None = None
+) -> EvaluationReport:
     """Run the local witness suite and return all ten GTM check results."""
     workflow = workflow.strip()
     if not 1 <= len(workflow) <= 120:
@@ -450,16 +514,64 @@ async def run_evaluation(*, workflow: str, redaction_corpus: Sequence[dict[str, 
     started = time.monotonic()
     corpus = list(redaction_corpus) if redaction_corpus is not None else _default_corpus()
     checks = [
-        await _automatic("non_streaming_ordering", "Durable evidence precedes the local non-streaming response.", _non_streaming_ordering, ["Mock storage and upstream; target durability is not measured."]),
-        await _automatic("independent_inclusion", "Portable inclusion accepts genuine data and rejects alteration and an unrelated root.", _independent_inclusion),
-        await _automatic("rejection_evidence", "A rejection is signed, linked and replay-verified without storing the hostile payload.", _rejection_evidence),
-        await _automatic("evidence_failure", "A synthetic storage failure refuses the governed response without a success claim.", _evidence_failure),
-        await _automatic("streaming", "The terminal marker waits for commit and is withheld after commit failure.", _streaming),
-        _manual("root_design", "Root distribution, retention, rotation and compromise handling need review.", {"documented": False}, MANUAL_LIMIT),
-        await _automatic("redaction_measurement", "Declared labels are measured on a bounded synthetic corpus; raw text is excluded.", lambda: _redaction_outcome(corpus), ["Synthetic labels are not customer-corpus recall, Safe Harbor or universal redaction."]),
-        _manual("operations", "Setup, operator time, failures, recovery, storage and retention need an operator log.", {"runner_elapsed_ms": round((time.monotonic() - started) * 1000, 3)}, MANUAL_LIMIT),
-        await _automatic("tenant_negative", "The audit router rejects cross-tenant filters, direct reads and tenant enumeration.", _tenant_negative, ["Local ASGI tenant fixture; target identity and RLS still need acceptance."]),
-        _manual("claim_review", "Every final claim needs linked evidence and explicit untested surfaces.", {"reviewed": False}, MANUAL_LIMIT),
+        await _automatic(
+            "non_streaming_ordering",
+            "Durable evidence precedes the local non-streaming response.",
+            _non_streaming_ordering,
+            ["Mock storage and upstream; target durability is not measured."],
+        ),
+        await _automatic(
+            "independent_inclusion",
+            "Portable inclusion accepts genuine data and rejects alteration and an unrelated root.",
+            _independent_inclusion,
+        ),
+        await _automatic(
+            "rejection_evidence",
+            "A rejection is signed, linked and replay-verified without storing the hostile payload.",
+            _rejection_evidence,
+        ),
+        await _automatic(
+            "evidence_failure",
+            "A synthetic storage failure refuses the governed response without a success claim.",
+            _evidence_failure,
+        ),
+        await _automatic(
+            "streaming",
+            "The terminal marker waits for commit and is withheld after commit failure.",
+            _streaming,
+        ),
+        _manual(
+            "root_design",
+            "Root distribution, retention, rotation and compromise handling need review.",
+            {"documented": False},
+            MANUAL_LIMIT,
+        ),
+        await _automatic(
+            "redaction_measurement",
+            "Declared labels are measured on a bounded synthetic corpus; raw text is excluded.",
+            lambda: _redaction_outcome(corpus),
+            [
+                "Synthetic labels are not customer-corpus recall, Safe Harbor or universal redaction."
+            ],
+        ),
+        _manual(
+            "operations",
+            "Setup, operator time, failures, recovery, storage and retention need an operator log.",
+            {"runner_elapsed_ms": round((time.monotonic() - started) * 1000, 3)},
+            MANUAL_LIMIT,
+        ),
+        await _automatic(
+            "tenant_negative",
+            "The audit router rejects cross-tenant filters, direct reads and tenant enumeration.",
+            _tenant_negative,
+            ["Local ASGI tenant fixture; target identity and RLS still need acceptance."],
+        ),
+        _manual(
+            "claim_review",
+            "Every final claim needs linked evidence and explicit untested surfaces.",
+            {"reviewed": False},
+            MANUAL_LIMIT,
+        ),
     ]
     redaction = next(check for check in checks if check.id == "redaction_measurement")
     if redaction.status == "passed" and redaction.evidence.get("miss_count") != 0:
@@ -467,12 +579,19 @@ async def run_evaluation(*, workflow: str, redaction_corpus: Sequence[dict[str, 
     inclusion = next(check for check in checks if check.id == "independent_inclusion")
     if inclusion.status == "passed":
         inclusion.status = "manual_required"
-        inclusion.limitations = ["A second operator and independently held root are still required."]
+        inclusion.limitations = [
+            "A second operator and independently held root are still required."
+        ]
     return EvaluationReport(
-        evaluation_id=str(uuid.uuid4()), workflow=workflow,
+        evaluation_id=str(uuid.uuid4()),
+        workflow=workflow,
         environment={"kind": "local-mock", "source_version": _source_version},
-        started_at=started_at, completed_at=_utc_now(), checks=checks,
-        limitations=["Local synthetic witness only; not buyer acceptance, certification, legal compliance or production readiness."],
+        started_at=started_at,
+        completed_at=_utc_now(),
+        checks=checks,
+        limitations=[
+            "Local synthetic witness only; not buyer acceptance, certification, legal compliance or production readiness."
+        ],
     )
 
 
